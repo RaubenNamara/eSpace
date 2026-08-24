@@ -1,0 +1,6 @@
+# Prevent execution of any script inside the uploads directory
+php_flag engine off
+
+<FilesMatch "\.(php|php\d|phtml|phar|pl|py|cgi|sh)$">
+    Require all denied
+</FilesMatch>

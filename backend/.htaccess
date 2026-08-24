@@ -1,0 +1,11 @@
+# In production this directory sits inside the web root (public_html/eSpace/backend/), but only
+# backend/public/ is meant to ever be requested directly - everything else here (.env, vendor/,
+# app/, config/, database/, and any loose setup scripts) must never be servable over HTTP.
+# backend/public/.htaccess carries an explicit override so that subdirectory keeps working.
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+</IfModule>

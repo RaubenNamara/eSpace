@@ -1,0 +1,41 @@
+# Override the parent backend/.htaccess's deny-all - this directory is the one part of backend/
+# that's meant to be requested directly.
+<IfModule mod_authz_core.c>
+    Require all granted
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Allow from all
+</IfModule>
+
+# Enable URL Rewriting
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Redirect Trailing Slashes If Not A Folder
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} (.+)/$
+    RewriteRule ^ %1 [L,R=301]
+    
+    # Handle Front Controller
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+# Security Headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Disable Directory Browsing
+Options -Indexes
+
+# Protect sensitive files
+<FilesMatch "\.(env|log|sql)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
