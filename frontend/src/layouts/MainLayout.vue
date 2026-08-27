@@ -570,7 +570,6 @@ const academicMenu = computed(() => {
     return [
       { path: '/hod/teachers', label: 'Teachers', icon: 'UsersIcon' },
       { path: '/hod/students', label: 'Students', icon: 'AcademicCapIcon' },
-      { path: '/hod/subjects', label: 'Subjects', icon: 'BookIcon' },
       { path: '/hod/live-classes', label: 'Live Classes', icon: 'VideoCameraIcon' }
     ]
   } else if (role === 'admin' || role === 'super_admin') {
