@@ -1,0 +1,1 @@
+const o={physics:"⚡",chemistry:"🧪",biology:"🧬",agriculture:"🌾"},r={physics:"Physics",chemistry:"Chemistry",biology:"Biology",agriculture:"Agriculture"},i={physics:"from-indigo-500 to-blue-600",chemistry:"from-emerald-500 to-teal-600",biology:"from-purple-500 to-fuchsia-600",agriculture:"from-amber-500 to-orange-600"};export{i as C,o as a,r as b};

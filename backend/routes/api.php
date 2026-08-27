@@ -609,7 +609,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/enotes-curriculum/{id}', 'eSpace\App\Controllers\Admin\ENoteCurriculumController@show');
         Router::put('/enotes-curriculum/{id}', 'eSpace\App\Controllers\Admin\ENoteCurriculumController@update');
         Router::delete('/enotes-curriculum/{id}', 'eSpace\App\Controllers\Admin\ENoteCurriculumController@destroy');
-        
+
         // Reports
         Router::get('/reports/system', 'eSpace\App\Controllers\Admin\ReportController@system');
         Router::get('/reports/users', 'eSpace\App\Controllers\Admin\ReportController@users');

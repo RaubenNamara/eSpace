@@ -1,0 +1,50 @@
+# eSpace production deployment - public_html/eSpace/
+#
+# Layout this expects, side by side under public_html/eSpace/:
+#   index.html, assets/, manifest.webmanifest, registerSW.js, sw.js, images/, ...  (this dist/ build)
+#   backend/                                                                        (uploaded separately, unchanged)
+#
+# Four jobs, in order: (1) let real requests into backend/ pass through untouched so its own
+# .htaccess/front-controller still handles them exactly as it does today, (2) alias the clean
+# /eSpace/api/... URL the frontend calls onto the backend's front controller, (3) alias the clean
+# /eSpace/uploads/... URL (built by frontend/src/utils/url.ts's resolveAssetUrl - videos, chat
+# attachments, profile photos, eNote narration audio, school logos, etc.) straight onto the real
+# uploaded files, so they're served directly rather than 404ing/hitting the SPA fallback below,
+# (4) serve any existing static file/directory as-is, otherwise fall back to index.html so Vue
+# Router's history mode keeps working on a hard refresh of a route like /eSpace/student/dashboard.
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Requests under backend/ (e.g. someone hitting it directly, or the LiveClassController BBB
+  # return URL) are left completely alone - backend/public/.htaccess owns that space already.
+  RewriteRule ^backend/ - [L]
+
+  # Clean API alias: /eSpace/api/* -> the backend's own front controller. (Backend/app/Routes/Router.php
+  # resolves this correctly - see its getRequestUri() /api anchor fallback.)
+  RewriteRule ^api/(.*)$ backend/public/index.php [L]
+
+  # Clean uploads alias: /eSpace/uploads/* -> the real files under backend/public/uploads/*.
+  RewriteRule ^uploads/(.*)$ backend/public/uploads/$1 [L]
+
+  # Any file or directory that actually exists (assets/*.js, *.css, manifest.webmanifest,
+  # registerSW.js, sw.js, images/*, favicon, fonts, etc.) is served directly - never rewritten.
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Everything else is a Vue Router route (e.g. student/dashboard) - hand it to the SPA shell.
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+# Static assets are content-hashed by Vite - safe to cache aggressively.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(js|css|woff2?|ttf|eot|svg|png|jpg|jpeg|gif|webp|ico)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+  <FilesMatch "^(index\.html|manifest\.webmanifest|registerSW\.js|sw\.js)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>
+
+Options -Indexes
