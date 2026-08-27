@@ -69,7 +69,7 @@ class UserRepository extends Repository
         }
 
         // Check teachers table directly
-        $stmt = $db->prepare("SELECT id, username, email, password, role, profile_photo, phone, is_active, last_login_at, last_login_ip, 'teacher' as table_name FROM teachers WHERE (username = :identifier1 OR email = :identifier2) AND deleted_at IS NULL");
+        $stmt = $db->prepare("SELECT id, username, email, password, must_change_password, role, profile_photo, phone, is_active, last_login_at, last_login_ip, 'teacher' as table_name FROM teachers WHERE (username = :identifier1 OR email = :identifier2) AND deleted_at IS NULL");
         $stmt->execute(['identifier1' => $identifier, 'identifier2' => $identifier]);
         $teacher = $stmt->fetch();
         if ($teacher) {

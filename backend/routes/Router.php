@@ -9,6 +9,7 @@ use eSpace\App\Middleware\AuthMiddleware;
 use eSpace\App\Middleware\RoleMiddleware;
 use eSpace\App\Middleware\CSRFMiddleware;
 use eSpace\App\Middleware\RateLimitMiddleware;
+use eSpace\App\Middleware\MustChangePasswordMiddleware;
 
 /**
  * Router Class
@@ -354,6 +355,7 @@ class Router
             'auth' => new AuthMiddleware($controller),
             'csrf' => new CSRFMiddleware($controller),
             'rate_limit' => new RateLimitMiddleware($controller),
+            'must_change_password' => new MustChangePasswordMiddleware($controller),
             default => null
         };
     }

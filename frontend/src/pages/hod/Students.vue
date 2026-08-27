@@ -79,6 +79,7 @@
               <th class="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Class</th>
               <th class="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Academic Year</th>
               <th class="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+              <th class="px-5 py-3 text-right text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -115,6 +116,16 @@
                 >
                   {{ student.is_active ? 'Active' : 'Suspended' }}
                 </span>
+              </td>
+              <td class="px-5 py-3 whitespace-nowrap text-right">
+                <button
+                  @click="deenrollStudent(student)"
+                  :disabled="deenrolling === student.id"
+                  class="text-xs font-medium text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 disabled:opacity-50"
+                  title="De-enroll from department"
+                >
+                  {{ deenrolling === student.id ? 'De-enrolling...' : 'De-enroll' }}
+                </button>
               </td>
             </tr>
           </tbody>
@@ -180,6 +191,7 @@ const pagination = ref<Pagination>({ page: 1, limit: 20, total: 0, pages: 0 })
 const loading = ref(false)
 const error = ref('')
 const search = ref('')
+const deenrolling = ref<number | null>(null)
 
 let searchTimer: number | null = null
 const debouncedSearch = () => {
@@ -204,6 +216,32 @@ const fetchStudents = async (page = 1) => {
     error.value = err.response?.data?.message || 'Failed to load students'
   } finally {
     loading.value = false
+  }
+}
+
+const deenrollStudent = async (student: Student) => {
+  const name = `${student.first_name} ${student.last_name}`
+  if (!confirm(`De-enroll ${name} from your department?\n\nThis removes them from every teacher in the department, not just your view. Their account and historical records (submissions, marks, attendance) are kept.`)) {
+    return
+  }
+
+  const reason = prompt('Reason (optional):') || undefined
+
+  deenrolling.value = student.id
+  try {
+    const response = await apiService.post('/hod/students/deenroll', {
+      student_ids: [student.id],
+      reason
+    })
+    if (response.data.success) {
+      await fetchStudents(pagination.value.page)
+    } else {
+      alert(response.data.message || 'Failed to de-enroll student')
+    }
+  } catch (err: any) {
+    alert(err.response?.data?.message || 'Failed to de-enroll student')
+  } finally {
+    deenrolling.value = null
   }
 }
 

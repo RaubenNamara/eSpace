@@ -212,7 +212,11 @@ class SimpleUploadAdapter {
         data.append('upload', file)
 
         this.xhr = new XMLHttpRequest()
-        const uploadUrl = '/api/teacher/enotes/upload-image'
+        // This is a raw XMLHttpRequest (not the shared axios instance), so it doesn't inherit
+        // main.ts's axios.defaults.baseURL - it needs the same /eSpace base prefix applied here
+        // directly, or the request 404s (it hits the domain root instead of the app's subpath in
+        // both dev and production, since import.meta.env.BASE_URL is '/eSpace/' in both).
+        const uploadUrl = import.meta.env.BASE_URL.replace(/\/$/, '') + '/api/teacher/enotes/upload-image'
         console.log('Uploading to:', uploadUrl)
         this.xhr.open('POST', uploadUrl, true)
         
@@ -238,9 +242,17 @@ class SimpleUploadAdapter {
             const response = this.xhr.response
             console.log('Upload response:', response)
             if (response.url) {
-              console.log('Resolving with URL:', response.url)
+              // The backend returns a root-relative path (e.g. '/uploads/enotes/xxx.png'),
+              // relative to backend/public/ - not aware of the /eSpace/ subpath the app is
+              // served under. Resolve it the same way resolveAssetUrl() does for every other
+              // uploaded-file reference, so the <img src> baked into the saved content (and
+              // shown immediately in the editor) is correct in both dev and production.
+              const resolvedUrl = /^(https?:|data:|blob:)/i.test(response.url)
+                ? response.url
+                : import.meta.env.BASE_URL.replace(/\/$/, '') + (response.url.startsWith('/') ? response.url : `/${response.url}`)
+              console.log('Resolving with URL:', resolvedUrl)
               resolve({
-                default: response.url
+                default: resolvedUrl
               })
             } else if (response.error) {
               console.error('Server returned error:', response.error)

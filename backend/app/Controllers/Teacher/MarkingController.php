@@ -151,6 +151,23 @@ class MarkingController extends Controller
 
                 $question['answer'] = $answersByQuestion[$questionId] ?? null;
                 $question['question_mark'] = $marksByQuestion[$questionId] ?? null;
+
+                // Read-only curriculum context (section 24: informational labels only, never
+                // touches marking/grading logic) - additive fields, absent for any question
+                // without a linked curriculum_topic_id/learning_outcome_id.
+                if (!empty($question['curriculum_topic_id'])) {
+                    $topicStmt = $db->prepare('SELECT theme_branch, topic FROM enote_curriculum_topics WHERE id = :id');
+                    $topicStmt->execute(['id' => $question['curriculum_topic_id']]);
+                    $topicRow = $topicStmt->fetch();
+                    $question['curriculum_topic_name'] = $topicRow['topic'] ?? null;
+                    $question['curriculum_theme_branch'] = $topicRow['theme_branch'] ?? null;
+                }
+                if (!empty($question['learning_outcome_id'])) {
+                    $loStmt = $db->prepare('SELECT learning_outcome FROM enote_learning_outcomes WHERE id = :id');
+                    $loStmt->execute(['id' => $question['learning_outcome_id']]);
+                    $loRow = $loStmt->fetch();
+                    $question['curriculum_learning_outcome_text'] = $loRow['learning_outcome'] ?? null;
+                }
             }
 
             $this->success([

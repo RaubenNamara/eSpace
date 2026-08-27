@@ -1,13 +1,16 @@
 /**
  * eNotes TypeScript Interfaces
- * 
+ *
  * Type definitions for the professional eNotes module
  */
+import type { ClassTarget } from '@/components/teacher/TeacherClassSelector.vue'
 
 export interface ENoteTopic {
   id: number
   teacher_id: number
+  content_group_id?: number | null
   class_id: number | null
+  class_group_name?: string | null
   subject_id: number
   department_id: number
   title: string
@@ -106,7 +109,7 @@ export interface ENoteTopicForm {
   description: string
   learning_outcomes: string[]
   subject_id: string
-  class_id: string
+  classTarget: ClassTarget
   status: 'draft' | 'published' | 'archived'
 }
 

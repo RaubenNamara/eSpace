@@ -99,10 +99,66 @@ class AssignmentPreviewService
         return [
             'assignment' => $assignment,
             'questions' => $questions,
+            'curriculum' => $this->getCurriculumStructure((int) $assignment['id'], $assignment['assessment_category'] ?? null),
             'submission_id' => null,
             'submission_status' => 'preview',
             'answers' => [],
             'answer_annotations' => [],
+        ];
+    }
+
+    /**
+     * Mirrors Student\AssignmentController::getCurriculumStructure() exactly, so "Preview as
+     * Student" shows the identical LOA/AOI/EOC grouping a real student would see. Null for any
+     * assignment without an assessment_category (every assignment created before this feature).
+     */
+    private function getCurriculumStructure(int $assignmentId, ?string $category): ?array
+    {
+        if ($category === null) {
+            return null;
+        }
+
+        $db = $this->getDb();
+
+        if ($category === 'LOA') {
+            $stmt = $db->prepare(
+                'SELECT ct.id, ct.theme_branch, ct.topic, ct.competence
+                 FROM assignment_curriculum_topics act
+                 INNER JOIN enote_curriculum_topics ct ON act.curriculum_topic_id = ct.id
+                 WHERE act.assignment_id = :id
+                 LIMIT 1'
+            );
+            $stmt->execute(['id' => $assignmentId]);
+            $topic = $stmt->fetch();
+
+            $outcomesStmt = $db->prepare(
+                'SELECT lo.id, lo.learning_outcome, lo.order_number
+                 FROM assignment_learning_outcomes alo
+                 INNER JOIN enote_learning_outcomes lo ON alo.learning_outcome_id = lo.id
+                 WHERE alo.assignment_id = :id
+                 ORDER BY lo.order_number ASC'
+            );
+            $outcomesStmt->execute(['id' => $assignmentId]);
+
+            return [
+                'category' => 'LOA',
+                'topic' => $topic ?: null,
+                'learning_outcomes' => $outcomesStmt->fetchAll()
+            ];
+        }
+
+        $stmt = $db->prepare(
+            'SELECT ct.id, ct.theme_branch, ct.topic
+             FROM assignment_curriculum_topics act
+             INNER JOIN enote_curriculum_topics ct ON act.curriculum_topic_id = ct.id
+             WHERE act.assignment_id = :id
+             ORDER BY ct.theme_branch ASC, ct.topic ASC'
+        );
+        $stmt->execute(['id' => $assignmentId]);
+
+        return [
+            'category' => $category,
+            'topics' => $stmt->fetchAll()
         ];
     }
 }

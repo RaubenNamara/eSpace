@@ -125,7 +125,10 @@
             <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
               {{ video.subject_name || 'Unknown Subject' }}
             </span>
-            <span v-if="video.class_name" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+            <span v-if="video.class_group_name" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+              {{ video.class_group_name }} (All Streams)
+            </span>
+            <span v-else-if="video.class_name" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
               {{ video.class_name }}{{ video.class_stream_name ? ' - ' + video.class_stream_name : '' }}
             </span>
             <span class="ml-auto text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">{{ formatFileSize(video.file_size) }}</span>
@@ -214,20 +217,7 @@
 
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Class *</label>
-                <select
-                  v-model="videoForm.class_id"
-                  required
-                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-                  :disabled="!assignments?.classes || assignments.classes.length === 0"
-                >
-                  <option value="">Select Class</option>
-                  <option v-for="cls in assignments?.classes" :key="cls.id" :value="cls.id">
-                    {{ cls.name }} ({{ cls.level }}{{ cls.stream_name ? ' - ' + cls.stream_name : '' }})
-                  </option>
-                </select>
-                <p v-if="!assignments?.classes || assignments.classes.length === 0" class="text-xs text-red-600 dark:text-red-400 mt-1">
-                  No classes available. Please ensure you are assigned to a department with classes.
-                </p>
+                <TeacherClassSelector v-model="videoForm.classTarget" />
               </div>
             </div>
 
@@ -295,6 +285,7 @@
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import VideoPlayerModal from '@/components/video/VideoPlayerModal.vue'
+import TeacherClassSelector from '@/components/teacher/TeacherClassSelector.vue'
 import type { VideoResource, VideoForm } from '@/types/video'
 import type { ENoteAssignments } from '@/types/enotes'
 
@@ -320,7 +311,7 @@ const videoForm = ref<VideoForm>({
   title: '',
   description: '',
   subject_id: '',
-  class_id: '',
+  classTarget: { scope: 'stream', class_id: null, class_group_name: null },
   status: 'draft',
   file: null
 })
@@ -397,7 +388,7 @@ const loadAssignments = async () => {
 
 const openCreateModal = () => {
   editingVideo.value = null
-  videoForm.value = { title: '', description: '', subject_id: '', class_id: '', status: 'draft', file: null }
+  videoForm.value = { title: '', description: '', subject_id: '', classTarget: { scope: 'stream', class_id: null, class_group_name: null }, status: 'draft', file: null }
   showVideoModal.value = true
 }
 
@@ -407,7 +398,9 @@ const editVideo = (video: VideoResource) => {
     title: video.title,
     description: video.description || '',
     subject_id: video.subject_id?.toString() || '',
-    class_id: video.class_id?.toString() || '',
+    classTarget: video.class_group_name
+      ? { scope: 'all_streams', class_id: null, class_group_name: video.class_group_name }
+      : { scope: 'stream', class_id: video.class_id, class_group_name: null },
     status: video.status,
     file: null
   }
@@ -433,7 +426,9 @@ const saveVideo = async () => {
         title: videoForm.value.title,
         description: videoForm.value.description,
         subject_id: videoForm.value.subject_id,
-        class_id: videoForm.value.class_id,
+        scope: videoForm.value.classTarget.scope,
+        class_id: videoForm.value.classTarget.class_id,
+        class_group_name: videoForm.value.classTarget.class_group_name,
         status: videoForm.value.status
       })
     } else {
@@ -445,7 +440,9 @@ const saveVideo = async () => {
       formData.append('title', videoForm.value.title)
       formData.append('description', videoForm.value.description)
       formData.append('subject_id', videoForm.value.subject_id)
-      formData.append('class_id', videoForm.value.class_id)
+      formData.append('scope', videoForm.value.classTarget.scope)
+      if (videoForm.value.classTarget.class_id !== null) formData.append('class_id', String(videoForm.value.classTarget.class_id))
+      if (videoForm.value.classTarget.class_group_name !== null) formData.append('class_group_name', videoForm.value.classTarget.class_group_name)
       formData.append('status', videoForm.value.status)
       formData.append('file', videoForm.value.file)
 

@@ -271,10 +271,10 @@
                   <div
                     v-for="(block, i) in contentBlocks"
                     :key="i"
-                    :ref="el => setBlockRef(el, i)"
+                    :ref="el => block.narrationIndex !== null && setBlockRef(el, block.narrationIndex)"
                     class="ai-tutor-block"
-                    :class="{ 'ai-tutor-active': tutorActiveBlockIndex === i }"
-                    v-html="block"
+                    :class="{ 'ai-tutor-active': block.narrationIndex !== null && tutorActiveBlockIndex === block.narrationIndex }"
+                    v-html="block.html"
                   ></div>
                 </template>
                 <div v-else v-html="formatContent(currentPage.content)"></div>
@@ -319,6 +319,79 @@
         </div>
       </div>
     </div>
+
+    <!-- Student "before you start" intro: shown once per topic-open, gates reading behind an
+         overview of what the topic covers and what the student should get out of it. -->
+    <div
+      v-if="isStudentMode && showIntro && topic"
+      class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+    >
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg md:max-w-xl lg:max-w-2xl max-h-[90vh] sm:max-h-[85vh] overflow-hidden flex flex-col">
+        <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-5 sm:px-6 py-5 sm:py-6 text-center flex-shrink-0">
+          <div class="w-12 h-12 sm:w-14 sm:h-14 mx-auto mb-2.5 sm:mb-3 rounded-2xl bg-white/15 flex items-center justify-center">
+            <svg class="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+            </svg>
+          </div>
+          <p v-if="topic.subject_name" class="text-indigo-100 text-xs font-semibold uppercase tracking-wide mb-1">{{ topic.subject_name }}</p>
+          <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-white leading-snug">{{ topic.title }}</h2>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
+          <div v-if="topic.description">
+            <h3 class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide flex items-center gap-1.5 mb-1.5">
+              <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              Competence
+            </h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">You should be able to:</p>
+            <p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{{ topic.description }}</p>
+          </div>
+
+          <div v-if="topic.learning_outcomes && topic.learning_outcomes.length">
+            <h3 class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide flex items-center gap-1.5 mb-1.5">
+              <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path>
+              </svg>
+              Learning Outcomes
+            </h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">By the end, you'll be able to:</p>
+            <ul class="space-y-2">
+              <li
+                v-for="(outcome, i) in topic.learning_outcomes"
+                :key="i"
+                class="flex items-start gap-2.5 text-sm text-gray-700 dark:text-gray-300"
+              >
+                <span class="mt-0.5 w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 text-[11px] font-bold flex items-center justify-center flex-shrink-0">
+                  {{ i + 1 }}
+                </span>
+                <span class="pt-px">{{ outcome }}</span>
+              </li>
+            </ul>
+          </div>
+
+          <p
+            v-if="!topic.description && !(topic.learning_outcomes && topic.learning_outcomes.length)"
+            class="text-sm text-gray-500 dark:text-gray-400 text-center py-4"
+          >
+            {{ topic.total_pages }} page{{ topic.total_pages === 1 ? '' : 's' }} &middot; Ready when you are.
+          </p>
+        </div>
+
+        <div class="p-5 sm:p-6 pt-2 flex-shrink-0">
+          <button
+            @click="showIntro = false"
+            class="w-full py-2.5 sm:py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
+          >
+            <span>Start Reading</span>
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -328,7 +401,7 @@ import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
 import type { ENoteTopic, ENotePage } from '@/types/enotes'
 import { AI_VOICES } from '@/types/enotes'
-import { autoEmbedYoutube, splitContentBlocks } from '@/utils/richContent'
+import { autoEmbedYoutube, resolveContentAssetUrls, splitContentBlocks } from '@/utils/richContent'
 import { resolveAssetUrl } from '@/utils/url'
 import AITutorPlayer from '@/components/enotes/AITutorPlayer.vue'
 
@@ -354,6 +427,7 @@ const pages = ref<ENotePage[]>([])
 const currentPage = ref<ENotePage | null>(null)
 const isFullscreen = ref(false)
 const showToc = ref(false)
+const showIntro = ref(false)
 const contentRef = ref<HTMLElement | null>(null)
 
 const hasPreviousPage = computed(() => {
@@ -435,9 +509,16 @@ const loadTopic = async () => {
     if (isStudentMode.value) {
       url = `${API_BASE}/student/enotes/topics/${topicId.value}`
       config = undefined
-    } else if (isPreviewMode.value) {
+    } else if (isPreviewMode.value && route.params.classId) {
+      // "Preview as student" for a specific class - published topics from any teacher in the
+      // department, scoped to that class.
       url = `${API_BASE}/${previewRole.value}/enotes/preview/topics/${topicId.value}`
       config = { params: { class_id: route.params.classId } }
+    } else if (isPreviewMode.value) {
+      // HOD/admin browsing one teacher's topic directly (no class_id) - any status, not just
+      // published, since this is oversight rather than a student-facing preview.
+      url = `${API_BASE}/${previewRole.value}/enotes/${topicId.value}`
+      config = undefined
     } else {
       url = `${API_BASE}/teacher/enotes/topics/${topicId.value}`
       config = undefined
@@ -449,6 +530,10 @@ const loadTopic = async () => {
 
       if (pages.value.length > 0) {
         currentPage.value = pages.value[0]
+      }
+
+      if (isStudentMode.value) {
+        showIntro.value = true
       }
     }
   } catch (error) {
@@ -492,6 +577,10 @@ const formatContent = (content: string): string => {
     /<oembed url="https:\/\/vimeo\.com\/(\d+)"><\/oembed>/gi,
     '<iframe width="560" height="315" src="https://player.vimeo.com/video/$1" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>'
   )
+
+  // Safety net for images/GIFs saved before the upload adapter baked the /eSpace/ base path into
+  // the src itself - see resolveContentAssetUrls().
+  formatted = resolveContentAssetUrls(formatted)
 
   return formatted
 }
@@ -556,8 +645,12 @@ const goBack = () => {
     router.push('/student/enotes')
     return
   }
-  if (isPreviewMode.value) {
+  if (isPreviewMode.value && route.params.classId) {
     router.push(`/teacher/preview/enotes/${route.params.classId}`)
+    return
+  }
+  if (isPreviewMode.value) {
+    router.push(`/${previewRole.value}/enotes`)
     return
   }
   router.push('/teacher/enotes')

@@ -137,22 +137,29 @@ class AnalyticsController extends Controller
         }
 
         $stmt = $this->getDb()->prepare(
-            "SELECT t.id, t.first_name, t.last_name,
+            "SELECT t.id, t.first_name, t.last_name, t.employee_number,
                     COUNT(DISTINCT a.id) as assignments_count,
+                    COUNT(DISTINCT sub.id) as total_submissions,
                     COUNT(DISTINCT CASE WHEN sub.status IN ('graded', 'returned') THEN sub.id END) as submissions_marked,
+                    COUNT(DISTINCT CASE WHEN sub.status IN ('submitted', 'marking') THEN sub.id END) as submissions_pending,
+                    COUNT(DISTINCT sub.student_id) as students_reached,
                     AVG(sub.percentage) as average_percentage
              FROM teachers t
              LEFT JOIN assignments a ON a.teacher_id = t.id AND a.deleted_at IS NULL
-             LEFT JOIN assignment_submissions sub ON sub.assignment_id = a.id AND sub.deleted_at IS NULL AND sub.percentage IS NOT NULL
+             LEFT JOIN assignment_submissions sub ON sub.assignment_id = a.id AND sub.deleted_at IS NULL
              WHERE t.deleted_at IS NULL
                AND EXISTS (SELECT 1 FROM teacher_department_assignments tda WHERE tda.teacher_id = t.id AND tda.department_id = :department_id AND tda.deleted_at IS NULL)
-             GROUP BY t.id, t.first_name, t.last_name
+             GROUP BY t.id, t.first_name, t.last_name, t.employee_number
              ORDER BY t.first_name, t.last_name"
         );
         $stmt->execute(['department_id' => $departmentId]);
         $teachers = $stmt->fetchAll();
 
         foreach ($teachers as &$teacher) {
+            // AVG(sub.percentage) only makes sense over graded submissions - now that the LEFT
+            // JOIN above no longer filters sub.percentage IS NOT NULL (needed so
+            // total_submissions/submissions_pending count ungraded rows too), MySQL's AVG already
+            // ignores NULLs on its own, so this stays correct without a separate query.
             $teacher['average_percentage'] = $teacher['average_percentage'] !== null ? round((float) $teacher['average_percentage'], 1) : null;
         }
 

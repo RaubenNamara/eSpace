@@ -50,7 +50,7 @@
       </div>
     </template>
 
-    <LibraryPdfViewer v-if="previewBook" :book="previewBook" @close="previewBook = null" />
+    <LibraryDocumentViewer v-if="previewBook" :book="previewBook" @close="previewBook = null" />
   </div>
 </template>
 
@@ -60,7 +60,7 @@ import { useRoute } from 'vue-router'
 import axios from 'axios'
 import PreviewBanner from '@/components/preview/PreviewBanner.vue'
 import BookCover from '@/components/library/BookCover.vue'
-import LibraryPdfViewer from '@/components/library/LibraryPdfViewer.vue'
+import LibraryDocumentViewer from '@/components/library/LibraryDocumentViewer.vue'
 import type { LibraryBook } from '@/types/library'
 
 interface SubjectGroup {

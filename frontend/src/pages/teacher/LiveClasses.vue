@@ -107,7 +107,10 @@
             <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300">
               {{ cls.subject_name || 'Unknown Subject' }}
             </span>
-            <span v-if="cls.class_name" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+            <span v-if="cls.class_group_name" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+              {{ cls.class_group_name }} (All Streams)
+            </span>
+            <span v-else-if="cls.class_name" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
               {{ cls.class_name }}{{ cls.class_stream_name ? ' - ' + cls.class_stream_name : '' }}
             </span>
           </div>
@@ -201,17 +204,10 @@
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Class *</label>
-                <select
-                  v-model="form.class_id"
-                  required
+                <TeacherClassSelector
+                  v-model="form.classTarget"
                   :disabled="!!editingClass"
-                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 dark:bg-gray-700 dark:text-white disabled:opacity-60"
-                >
-                  <option value="">Select Class</option>
-                  <option v-for="cls in assignments?.classes" :key="cls.id" :value="cls.id">
-                    {{ cls.name }} ({{ cls.level }}{{ cls.stream_name ? ' - ' + cls.stream_name : '' }})
-                  </option>
-                </select>
+                />
               </div>
             </div>
 
@@ -346,6 +342,7 @@ import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import type { LiveClass, LiveClassForm, LiveClassRecording, LiveClassAttendanceRow } from '@/types/liveclass'
 import type { ENoteAssignments } from '@/types/enotes'
+import TeacherClassSelector from '@/components/teacher/TeacherClassSelector.vue'
 
 const API_BASE = '/api'
 
@@ -372,7 +369,11 @@ const liveParticipantCount = ref<number | null>(null)
 const loadingAttendance = ref(false)
 
 function blankForm(): LiveClassForm {
-  return { title: '', description: '', subject_id: '', class_id: '', scheduled_start: '', scheduled_end: '', is_recorded: false }
+  return {
+    title: '', description: '', subject_id: '',
+    classTarget: { scope: 'stream', class_id: null, class_group_name: null },
+    scheduled_start: '', scheduled_end: '', is_recorded: false
+  }
 }
 
 const stats = computed(() => ({
@@ -456,7 +457,9 @@ const editClass = (cls: LiveClass) => {
     title: cls.title,
     description: cls.description || '',
     subject_id: cls.subject_id?.toString() || '',
-    class_id: cls.class_id?.toString() || '',
+    classTarget: cls.class_group_name
+      ? { scope: 'all_streams', class_id: null, class_group_name: cls.class_group_name }
+      : { scope: 'stream', class_id: cls.class_id, class_group_name: null },
     scheduled_start: toDatetimeLocal(cls.scheduled_start),
     scheduled_end: toDatetimeLocal(cls.scheduled_end),
     is_recorded: !!cls.is_recorded
@@ -482,7 +485,17 @@ const saveClass = async () => {
         is_recorded: form.value.is_recorded
       })
     } else {
-      await axios.post(`${API_BASE}/teacher/live-classes`, form.value)
+      await axios.post(`${API_BASE}/teacher/live-classes`, {
+        title: form.value.title,
+        description: form.value.description,
+        subject_id: form.value.subject_id,
+        scope: form.value.classTarget.scope,
+        class_id: form.value.classTarget.class_id,
+        class_group_name: form.value.classTarget.class_group_name,
+        scheduled_start: form.value.scheduled_start,
+        scheduled_end: form.value.scheduled_end,
+        is_recorded: form.value.is_recorded
+      })
     }
 
     closeModal()

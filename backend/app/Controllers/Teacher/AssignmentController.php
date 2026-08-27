@@ -75,6 +75,416 @@ class AssignmentController extends Controller
     }
 
     /**
+     * Validates the optional assessment_category value. Returns null for "not curriculum-aligned"
+     * (every assignment created before this feature, and any teacher who opts out), the
+     * upper-cased LOA/AOI/EOC string when valid, or false when the caller passed something else
+     * (the route handler turns that into a validation error).
+     * @return string|null|false
+     */
+    private function normalizeAssessmentCategory($rawValue)
+    {
+        if ($rawValue === null || $rawValue === '') {
+            return null;
+        }
+        $value = strtoupper(trim((string) $rawValue));
+        return in_array($value, ['LOA', 'AOI', 'EOC'], true) ? $value : false;
+    }
+
+    /**
+     * A curriculum topic is only linkable to an assignment if it was authored for that
+     * assignment's own subject - prevents a teacher from wiring in another department's
+     * curriculum data by editing the request (subject_id itself is already re-validated against
+     * the teacher's own department in create()/update(), so this check transitively keeps
+     * curriculum linkage within that same boundary).
+     */
+    private function curriculumTopicMatchesSubject(int $curriculumTopicId, $subjectId): bool
+    {
+        if (empty($subjectId)) {
+            return false;
+        }
+        $stmt = $this->getDb()->prepare(
+            'SELECT id FROM enote_curriculum_topics WHERE id = :id AND subject_id = :subject_id AND deleted_at IS NULL'
+        );
+        $stmt->execute(['id' => $curriculumTopicId, 'subject_id' => (int) $subjectId]);
+        return (bool) $stmt->fetch();
+    }
+
+    /**
+     * @param int[] $outcomeIds
+     */
+    private function learningOutcomesBelongToTopic(array $outcomeIds, int $curriculumTopicId): bool
+    {
+        if (empty($outcomeIds)) {
+            return false;
+        }
+        $placeholders = implode(',', array_fill(0, count($outcomeIds), '?'));
+        $stmt = $this->getDb()->prepare(
+            "SELECT COUNT(*) AS c FROM enote_learning_outcomes WHERE id IN ({$placeholders}) AND curriculum_topic_id = ?"
+        );
+        $stmt->execute([...$outcomeIds, $curriculumTopicId]);
+        return (int) $stmt->fetch()['c'] === count(array_unique($outcomeIds));
+    }
+
+    /**
+     * Publish-time curriculum completeness check (never trust the frontend for this - see
+     * publish()). Returns a field=>message map, empty when everything required is satisfied.
+     * LOA needs >=1 selected Learning Outcome and every top-level question linked to one of them.
+     * AOI/EOC need >=1 selected Topic and every selected Topic to have >=1 top-level question.
+     */
+    private function validateCurriculumCompleteness(int $assignmentId, string $category): array
+    {
+        $db = $this->getDb();
+        $errors = [];
+
+        if ($category === 'LOA') {
+            $loCount = $db->prepare('SELECT COUNT(*) AS c FROM assignment_learning_outcomes WHERE assignment_id = :id');
+            $loCount->execute(['id' => $assignmentId]);
+            if ((int) $loCount->fetch()['c'] === 0) {
+                $errors['learning_outcomes'] = 'Select at least one Learning Outcome to assess.';
+                return $errors;
+            }
+
+            $qCount = $db->prepare(
+                'SELECT COUNT(*) AS c FROM assignment_questions
+                 WHERE assignment_id = :id AND parent_question_id IS NULL AND deleted_at IS NULL'
+            );
+            $qCount->execute(['id' => $assignmentId]);
+            if ((int) $qCount->fetch()['c'] === 0) {
+                $errors['questions'] = 'Add at least one question before publishing.';
+                return $errors;
+            }
+
+            $unlinked = $db->prepare(
+                'SELECT COUNT(*) AS c FROM assignment_questions
+                 WHERE assignment_id = :id AND parent_question_id IS NULL AND deleted_at IS NULL
+                   AND learning_outcome_id IS NULL'
+            );
+            $unlinked->execute(['id' => $assignmentId]);
+            if ((int) $unlinked->fetch()['c'] > 0) {
+                $errors['questions'] = 'Every question must be linked to one of the selected Learning Outcomes.';
+            }
+        } elseif ($category === 'AOI' || $category === 'EOC') {
+            $topics = $db->prepare(
+                'SELECT act.curriculum_topic_id, ct.topic AS topic_name,
+                        (SELECT COUNT(*) FROM assignment_questions aq
+                         WHERE aq.assignment_id = :sub_id AND aq.curriculum_topic_id = act.curriculum_topic_id
+                           AND aq.parent_question_id IS NULL AND aq.deleted_at IS NULL) AS question_count
+                 FROM assignment_curriculum_topics act
+                 INNER JOIN enote_curriculum_topics ct ON act.curriculum_topic_id = ct.id
+                 WHERE act.assignment_id = :id'
+            );
+            $topics->execute(['id' => $assignmentId, 'sub_id' => $assignmentId]);
+            $rows = $topics->fetchAll();
+
+            if (empty($rows)) {
+                $errors['topics'] = 'Select at least one Topic.';
+                return $errors;
+            }
+
+            $missing = [];
+            foreach ($rows as $row) {
+                if ((int) $row['question_count'] === 0) {
+                    $missing[] = $row['topic_name'];
+                }
+            }
+            if (!empty($missing)) {
+                $errors['topics'] = implode(' ', array_map(
+                    fn($name) => "\"{$name}\" requires at least one question before this {$category} assessment can be published.",
+                    $missing
+                ));
+            }
+        }
+
+        return $errors;
+    }
+
+    /**
+     * Current curriculum linkage for an assignment - lets the builder reconstruct its
+     * category/Topic/Learning-Outcome selection state when reopening a draft.
+     * GET /teacher/assignments/{id}/curriculum
+     */
+    public function getCurriculum(): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+
+        $teacherId = $this->getTeacherId();
+        if (!$teacherId) {
+            $this->error('Teacher not found', 403);
+            return;
+        }
+
+        $assignmentId = (int) $this->routeParam('id');
+        if (!$this->verifyAssignmentOwnership($assignmentId, $teacherId)) {
+            $this->forbidden('You do not have permission to view this assignment');
+            return;
+        }
+
+        $db = $this->getDb();
+
+        $topicsStmt = $db->prepare(
+            'SELECT ct.id, ct.theme_branch, ct.topic
+             FROM assignment_curriculum_topics act
+             INNER JOIN enote_curriculum_topics ct ON act.curriculum_topic_id = ct.id
+             WHERE act.assignment_id = :id
+             ORDER BY ct.theme_branch ASC, ct.topic ASC'
+        );
+        $topicsStmt->execute(['id' => $assignmentId]);
+        $topics = $topicsStmt->fetchAll();
+
+        $outcomesStmt = $db->prepare(
+            'SELECT alo.curriculum_topic_id, alo.learning_outcome_id, lo.learning_outcome, lo.order_number
+             FROM assignment_learning_outcomes alo
+             INNER JOIN enote_learning_outcomes lo ON alo.learning_outcome_id = lo.id
+             WHERE alo.assignment_id = :id
+             ORDER BY lo.order_number ASC'
+        );
+        $outcomesStmt->execute(['id' => $assignmentId]);
+        $learningOutcomes = $outcomesStmt->fetchAll();
+
+        $this->success([
+            'topics' => $topics,
+            'learning_outcomes' => $learningOutcomes
+        ]);
+    }
+
+    /**
+     * Replaces the assignment's curriculum linkage in one call (delete-then-reinsert, same
+     * pattern as ENoteCurriculumController's learning-outcomes replace on edit). For LOA, expects
+     * `curriculum_topic_id` (single) + `learning_outcome_ids[]`. For AOI/EOC, expects
+     * `topic_ids[]`. Does not touch existing questions' own curriculum_topic_id/learning_outcome_id
+     * - the teacher builder is responsible for re-pointing/removing those before unselecting a
+     * Topic/Learning Outcome (see section 10 of the spec: never silently orphan question data).
+     * PUT /teacher/assignments/{id}/curriculum
+     */
+    public function updateCurriculum(): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+
+        $teacherId = $this->getTeacherId();
+        if (!$teacherId) {
+            $this->error('Teacher not found', 403);
+            return;
+        }
+
+        $assignmentId = (int) $this->routeParam('id');
+        if (!$this->verifyAssignmentOwnership($assignmentId, $teacherId)) {
+            $this->forbidden('You do not have permission to edit this assignment');
+            return;
+        }
+
+        $data = $this->input();
+        $db = $this->getDb();
+
+        $assignmentStmt = $db->prepare('SELECT assessment_category, subject_id FROM assignments WHERE id = :id');
+        $assignmentStmt->execute(['id' => $assignmentId]);
+        $assignmentRow = $assignmentStmt->fetch();
+        $category = $assignmentRow['assessment_category'] ?? null;
+        $subjectId = $assignmentRow['subject_id'] ?? null;
+
+        if ($category === null) {
+            $this->validationError(['assessment_category' => 'Set an assessment category (LOA/AOI/EOC) before linking curriculum']);
+            return;
+        }
+
+        try {
+            Database::beginTransaction();
+
+            $db->prepare('DELETE FROM assignment_learning_outcomes WHERE assignment_id = :id')->execute(['id' => $assignmentId]);
+            $db->prepare('DELETE FROM assignment_curriculum_topics WHERE assignment_id = :id')->execute(['id' => $assignmentId]);
+
+            if ($category === 'LOA') {
+                $topicId = !empty($data['curriculum_topic_id']) ? (int) $data['curriculum_topic_id'] : null;
+                $outcomeIds = is_array($data['learning_outcome_ids'] ?? null) ? array_map('intval', $data['learning_outcome_ids']) : [];
+
+                if ($topicId === null || empty($outcomeIds)) {
+                    Database::rollback();
+                    $this->validationError(['learning_outcome_ids' => 'Select a Topic and at least one Learning Outcome']);
+                    return;
+                }
+
+                // Never trust a curriculum_topic_id/learning_outcome_id straight from the client -
+                // reject anything that doesn't actually belong to this assignment's own subject
+                // (a teacher could otherwise link curriculum data from another department/subject
+                // by editing the request).
+                if (!$this->curriculumTopicMatchesSubject($topicId, $subjectId)) {
+                    Database::rollback();
+                    $this->validationError(['curriculum_topic_id' => 'That Topic does not belong to this assignment\'s Subject']);
+                    return;
+                }
+                if (!$this->learningOutcomesBelongToTopic($outcomeIds, $topicId)) {
+                    Database::rollback();
+                    $this->validationError(['learning_outcome_ids' => 'One or more Learning Outcomes do not belong to the selected Topic']);
+                    return;
+                }
+
+                $db->prepare(
+                    'INSERT INTO assignment_curriculum_topics (assignment_id, curriculum_topic_id, created_at)
+                     VALUES (:assignment_id, :topic_id, NOW())'
+                )->execute(['assignment_id' => $assignmentId, 'topic_id' => $topicId]);
+
+                $insertOutcome = $db->prepare(
+                    'INSERT INTO assignment_learning_outcomes (assignment_id, curriculum_topic_id, learning_outcome_id, created_at)
+                     VALUES (:assignment_id, :topic_id, :outcome_id, NOW())'
+                );
+                foreach ($outcomeIds as $outcomeId) {
+                    $insertOutcome->execute([
+                        'assignment_id' => $assignmentId,
+                        'topic_id' => $topicId,
+                        'outcome_id' => $outcomeId
+                    ]);
+                }
+            } else {
+                $topicIds = is_array($data['topic_ids'] ?? null) ? array_unique(array_map('intval', $data['topic_ids'])) : [];
+                if (empty($topicIds)) {
+                    Database::rollback();
+                    $this->validationError(['topic_ids' => 'Select at least one Topic']);
+                    return;
+                }
+
+                foreach ($topicIds as $topicId) {
+                    if (!$this->curriculumTopicMatchesSubject($topicId, $subjectId)) {
+                        Database::rollback();
+                        $this->validationError(['topic_ids' => 'One or more Topics do not belong to this assignment\'s Subject']);
+                        return;
+                    }
+                }
+
+                $insertTopic = $db->prepare(
+                    'INSERT INTO assignment_curriculum_topics (assignment_id, curriculum_topic_id, created_at)
+                     VALUES (:assignment_id, :topic_id, NOW())'
+                );
+                foreach ($topicIds as $topicId) {
+                    $insertTopic->execute(['assignment_id' => $assignmentId, 'topic_id' => $topicId]);
+                }
+            }
+
+            Database::commit();
+            $this->success([], 'Curriculum linkage updated successfully');
+        } catch (Exception $e) {
+            Database::rollback();
+            error_log('Failed to update assignment curriculum: ' . $e->getMessage());
+            $this->serverError('Failed to update curriculum linkage');
+        }
+    }
+
+    /**
+     * The extra class-streams (beyond the single class_id/class_group_name on `assignments`
+     * itself) this assignment is also visible to - lets the builder's checkbox multi-select
+     * reconstruct which streams were checked when reopening a draft.
+     * GET /teacher/assignments/{id}/classes
+     */
+    public function getClasses(): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+
+        $teacherId = $this->getTeacherId();
+        if (!$teacherId) {
+            $this->error('Teacher not found', 403);
+            return;
+        }
+
+        $assignmentId = (int) $this->routeParam('id');
+        if (!$this->verifyAssignmentOwnership($assignmentId, $teacherId)) {
+            $this->forbidden('You do not have permission to view this assignment');
+            return;
+        }
+
+        $db = $this->getDb();
+        $stmt = $db->prepare(
+            "SELECT ac.class_id, CONCAT(c.name, '-', c.stream_name) AS display_name
+             FROM assignment_classes ac
+             INNER JOIN classes c ON ac.class_id = c.id
+             WHERE ac.assignment_id = :id
+             ORDER BY c.level ASC, c.name ASC, c.stream_name ASC"
+        );
+        $stmt->execute(['id' => $assignmentId]);
+        $this->success(['classes' => $stmt->fetchAll()]);
+    }
+
+    /**
+     * Replaces the assignment's full "visible to" class-stream list (delete-then-reinsert, same
+     * pattern as updateCurriculum()). This is additive to, not a replacement for, the existing
+     * single class_id/class_group_name on `assignments` itself - create()/update() keep setting
+     * those to the first checked stream for backward compatibility with any code that only reads
+     * the single-value columns; this table is what actually drives visibility to every OTHER
+     * checked stream (see Student\AssignmentController's visibility query).
+     * PUT /teacher/assignments/{id}/classes
+     */
+    public function updateClasses(): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+
+        $teacherId = $this->getTeacherId();
+        if (!$teacherId) {
+            $this->error('Teacher not found', 403);
+            return;
+        }
+
+        $assignmentId = (int) $this->routeParam('id');
+        if (!$this->verifyAssignmentOwnership($assignmentId, $teacherId)) {
+            $this->forbidden('You do not have permission to edit this assignment');
+            return;
+        }
+
+        $data = $this->input();
+        $classIds = is_array($data['class_ids'] ?? null) ? array_unique(array_map('intval', $data['class_ids'])) : [];
+
+        if (empty($classIds)) {
+            $this->validationError(['class_ids' => 'Select at least one class-stream']);
+            return;
+        }
+
+        $departmentId = $this->getActiveDepartmentId();
+        if (!$departmentId) {
+            $this->error('Teacher must be assigned to a department', 403);
+            return;
+        }
+
+        // Never trust class ids straight from the client - each must be a class-stream this
+        // teacher's department actually has active students in (same rule create()/update() apply
+        // to the single legacy class_id).
+        foreach ($classIds as $classId) {
+            if (!$this->classBelongsToDepartment($classId, $departmentId)) {
+                $this->validationError(['class_ids' => 'One or more selected classes are not in your department']);
+                return;
+            }
+        }
+
+        $db = $this->getDb();
+        try {
+            Database::beginTransaction();
+
+            $db->prepare('DELETE FROM assignment_classes WHERE assignment_id = :id')->execute(['id' => $assignmentId]);
+
+            $insert = $db->prepare(
+                'INSERT INTO assignment_classes (assignment_id, class_id, created_at) VALUES (:assignment_id, :class_id, NOW())'
+            );
+            foreach ($classIds as $classId) {
+                $insert->execute(['assignment_id' => $assignmentId, 'class_id' => $classId]);
+            }
+
+            Database::commit();
+            $this->success([], 'Visibility updated successfully');
+        } catch (Exception $e) {
+            Database::rollback();
+            error_log('Failed to update assignment classes: ' . $e->getMessage());
+            $this->serverError('Failed to update class visibility');
+        }
+    }
+
+    /**
      * List all assignments for the current teacher
      * GET /teacher/assignments
      */
@@ -254,24 +664,53 @@ class AssignmentController extends Controller
 
         $db = $this->getDb();
 
+        // Subject and class were previously trusted straight from client input with zero
+        // verification, unlike every other content module - a teacher could set any subject_id
+        // (any department) or class_id (any class) on their own assignment. Both are now
+        // re-validated against the teacher's own active department, matching the rule everywhere
+        // else: "a teacher cannot target another department."
+        $departmentId = $this->getActiveDepartmentId();
+        if (!$departmentId) {
+            $this->error('Teacher must be assigned to a department to create assignments', 403);
+            return;
+        }
+
+        $subjectId = (isset($data['subject_id']) && $data['subject_id'] !== '') ? (int) $data['subject_id'] : null;
+        if ($subjectId !== null) {
+            $stmt = $db->prepare('SELECT id FROM subjects WHERE id = :subject_id AND department_id = :department_id');
+            $stmt->execute(['subject_id' => $subjectId, 'department_id' => $departmentId]);
+            if (!$stmt->fetch()) {
+                $this->validationError(['subject_id' => 'Subject not found in your department']);
+                return;
+            }
+        }
+
+        $classTarget = $this->resolveClassTarget($data, $departmentId, false);
+        if (!$classTarget['ok']) {
+            $this->validationError(['class_id' => $classTarget['message']]);
+            return;
+        }
+
+        $assessmentCategory = $this->normalizeAssessmentCategory($data['assessment_category'] ?? null);
+        if ($assessmentCategory === false) {
+            $this->validationError(['assessment_category' => 'Must be one of LOA, AOI, or EOC']);
+            return;
+        }
+
         try {
             Database::beginTransaction();
 
-            // Convert empty strings to null for foreign key fields
-            $subjectId = (isset($data['subject_id']) && $data['subject_id'] !== '') ? $data['subject_id'] : null;
-            $classId = (isset($data['class_id']) && $data['class_id'] !== '') ? $data['class_id'] : null;
-
             $sql = "INSERT INTO assignments (
-                teacher_id, subject_id, class_id, title, description, type,
+                teacher_id, subject_id, class_id, class_group_name, title, description, type,
                 total_marks, due_date, instructions, attachments, rubric,
-                category, open_at, deadline_at, duration_minutes, pass_mark,
+                category, assessment_category, academic_year_id, term_id, open_at, deadline_at, duration_minutes, pass_mark,
                 allow_late_submission, attempts_allowed, shuffle_questions, shuffle_options,
                 show_marks_immediately, show_answers_after_submission, allow_save_resume, status,
                 is_published, academic_year, created_at, updated_at
             ) VALUES (
-                :teacher_id, :subject_id, :class_id, :title, :description, :type,
+                :teacher_id, :subject_id, :class_id, :class_group_name, :title, :description, :type,
                 :total_marks, :due_date, :instructions, :attachments, :rubric,
-                :category, :open_at, :deadline_at, :duration_minutes, :pass_mark,
+                :category, :assessment_category, :academic_year_id, :term_id, :open_at, :deadline_at, :duration_minutes, :pass_mark,
                 :allow_late_submission, :attempts_allowed, :shuffle_questions, :shuffle_options,
                 :show_marks_immediately, :show_answers_after_submission, :allow_save_resume, :status,
                 :is_published, :academic_year, NOW(), NOW()
@@ -281,7 +720,8 @@ class AssignmentController extends Controller
             $stmt->execute([
                 'teacher_id' => $teacherId,
                 'subject_id' => $subjectId,
-                'class_id' => $classId,
+                'class_id' => $classTarget['class_id'],
+                'class_group_name' => $classTarget['class_group_name'],
                 'title' => $data['title'],
                 'description' => $data['description'] ?? null,
                 'type' => $data['type'] ?? 'mixed',
@@ -291,6 +731,9 @@ class AssignmentController extends Controller
                 'attachments' => $data['attachments'] ?? null,
                 'rubric' => $data['rubric'] ?? null,
                 'category' => $data['category'] ?? null,
+                'assessment_category' => $assessmentCategory,
+                'academic_year_id' => !empty($data['academic_year_id']) ? (int) $data['academic_year_id'] : null,
+                'term_id' => !empty($data['term_id']) ? (int) $data['term_id'] : null,
                 'open_at' => $data['open_at'] ?? null,
                 'deadline_at' => $data['deadline_at'] ?? $data['due_date'],
                 'duration_minutes' => $data['duration_minutes'] ?? null,
@@ -360,13 +803,64 @@ class AssignmentController extends Controller
                 'attachments', 'rubric', 'category', 'open_at', 'deadline_at', 'duration_minutes',
                 'pass_mark', 'allow_late_submission', 'attempts_allowed', 'shuffle_questions',
                 'shuffle_options', 'show_marks_immediately', 'show_answers_after_submission',
-                'allow_save_resume', 'status', 'is_published', 'subject_id', 'class_id', 'academic_year'
+                'allow_save_resume', 'status', 'is_published', 'subject_id', 'academic_year',
+                'academic_year_id', 'term_id'
             ];
+
+            if (array_key_exists('assessment_category', $data)) {
+                $assessmentCategory = $this->normalizeAssessmentCategory($data['assessment_category']);
+                if ($assessmentCategory === false) {
+                    Database::rollback();
+                    $this->validationError(['assessment_category' => 'Must be one of LOA, AOI, or EOC']);
+                    return;
+                }
+                $updateFields[] = 'assessment_category = :assessment_category';
+                $params['assessment_category'] = $assessmentCategory;
+            }
+
+            // subject_id/class_id/class_group_name are re-validated against the teacher's own
+            // department before this generic loop even runs - see create()'s comment on why this
+            // was previously trusted raw from the client.
+            $departmentId = $this->getActiveDepartmentId();
+            if (isset($data['subject_id']) && $data['subject_id'] !== '') {
+                if (!$departmentId) {
+                    $this->error('Teacher must be assigned to a department', 403);
+                    Database::rollback();
+                    return;
+                }
+                $stmt = $db->prepare('SELECT id FROM subjects WHERE id = :subject_id AND department_id = :department_id');
+                $stmt->execute(['subject_id' => (int) $data['subject_id'], 'department_id' => $departmentId]);
+                if (!$stmt->fetch()) {
+                    Database::rollback();
+                    $this->validationError(['subject_id' => 'Subject not found in your department']);
+                    return;
+                }
+            } elseif (isset($data['subject_id'])) {
+                $data['subject_id'] = null;
+            }
+
+            if (array_key_exists('class_id', $data) || array_key_exists('class_group_name', $data) || array_key_exists('scope', $data)) {
+                if (!$departmentId) {
+                    Database::rollback();
+                    $this->error('Teacher must be assigned to a department', 403);
+                    return;
+                }
+                $classTarget = $this->resolveClassTarget($data, $departmentId, false);
+                if (!$classTarget['ok']) {
+                    Database::rollback();
+                    $this->validationError(['class_id' => $classTarget['message']]);
+                    return;
+                }
+                $updateFields[] = 'class_id = :class_id';
+                $params['class_id'] = $classTarget['class_id'];
+                $updateFields[] = 'class_group_name = :class_group_name';
+                $params['class_group_name'] = $classTarget['class_group_name'];
+            }
 
             foreach ($allowedFields as $field) {
                 if (isset($data[$field])) {
                     // Convert empty strings to null for foreign key fields
-                    if (in_array($field, ['subject_id', 'class_id']) && $data[$field] === '') {
+                    if (in_array($field, ['subject_id', 'academic_year_id', 'term_id'], true) && $data[$field] === '') {
                         $data[$field] = null;
                     }
                     $updateFields[] = "$field = :$field";
@@ -462,6 +956,18 @@ class AssignmentController extends Controller
 
         $db = $this->getDb();
 
+        $categoryStmt = $db->prepare('SELECT assessment_category FROM assignments WHERE id = :id');
+        $categoryStmt->execute(['id' => $assignmentId]);
+        $assessmentCategory = $categoryStmt->fetch()['assessment_category'] ?? null;
+
+        if ($assessmentCategory !== null) {
+            $curriculumErrors = $this->validateCurriculumCompleteness($assignmentId, $assessmentCategory);
+            if (!empty($curriculumErrors)) {
+                $this->validationError($curriculumErrors, 'This assessment cannot be published yet');
+                return;
+            }
+        }
+
         try {
             Database::beginTransaction();
 
@@ -471,16 +977,24 @@ class AssignmentController extends Controller
 
             Database::commit();
 
-            $stmt = $db->prepare('SELECT title, class_id FROM assignments WHERE id = :id');
+            $stmt = $db->prepare(
+                'SELECT a.title, a.class_id, a.class_group_name, s.department_id
+                 FROM assignments a LEFT JOIN subjects s ON a.subject_id = s.id
+                 WHERE a.id = :id'
+            );
             $stmt->execute(['id' => $assignmentId]);
             $assignment = $stmt->fetch();
-            if ($assignment) {
-                (new NotificationService())->notifyClass(
+            if ($assignment && $assignment['department_id'] !== null) {
+                // notifyDepartmentClass (not notifyClass) so an "All Streams" assignment notifies
+                // every stream of that class level in the department, not zero students.
+                (new NotificationService())->notifyDepartmentClass(
+                    (int) $assignment['department_id'],
                     $assignment['class_id'] !== null ? (int) $assignment['class_id'] : null,
                     'new_assessment',
                     'New assessment',
                     "A new assessment \"{$assignment['title']}\" has been posted.",
-                    ['assignment_id' => $assignmentId]
+                    ['assignment_id' => $assignmentId],
+                    $assignment['class_group_name']
                 );
             }
 
@@ -535,14 +1049,14 @@ class AssignmentController extends Controller
 
             // Create duplicate with modified title and status
             $sql = "INSERT INTO assignments (
-                teacher_id, subject_id, class_id, title, description, type,
+                teacher_id, subject_id, class_id, class_group_name, title, description, type,
                 total_marks, due_date, instructions, attachments, rubric,
                 category, open_at, deadline_at, duration_minutes, pass_mark,
                 allow_late_submission, attempts_allowed, shuffle_questions, shuffle_options,
                 show_marks_immediately, show_answers_after_submission, allow_save_resume, status,
                 is_published, academic_year, created_at, updated_at
             ) VALUES (
-                :teacher_id, :subject_id, :class_id, :title, :description, :type,
+                :teacher_id, :subject_id, :class_id, :class_group_name, :title, :description, :type,
                 :total_marks, :due_date, :instructions, :attachments, :rubric,
                 :category, :open_at, :deadline_at, :duration_minutes, :pass_mark,
                 :allow_late_submission, :attempts_allowed, :shuffle_questions, :shuffle_options,
@@ -555,6 +1069,7 @@ class AssignmentController extends Controller
                 'teacher_id' => $teacherId,
                 'subject_id' => $original['subject_id'],
                 'class_id' => $original['class_id'],
+                'class_group_name' => $original['class_group_name'],
                 'title' => $original['title'] . ' (Copy)',
                 'description' => $original['description'],
                 'type' => $original['type'],
@@ -684,9 +1199,18 @@ class AssignmentController extends Controller
                 return;
             }
         } else {
-            $required = ['question_type', 'question_text', 'marks'];
+            $required = ['question_type', 'marks'];
+            // A teacher-uploaded PDF stands in for typing the question out - only require one or
+            // the other, not both. The PDF itself is uploaded via a separate call right after this
+            // question is created (it needs a real question id first), so at this point all the
+            // frontend can send is attachment_type: 'pdf' as a promise that the upload is coming.
+            $pdfPending = ($data['attachment_type'] ?? 'none') === 'pdf';
+            if (empty($data['question_text']) && empty($data['attachment_path']) && !$pdfPending) {
+                $this->validationError(['question_text' => 'Question text or an attached PDF is required']);
+                return;
+            }
         }
-        
+
         $errors = $this->validateRequired($required, $data);
         
         if (!empty($errors)) {
@@ -712,10 +1236,12 @@ class AssignmentController extends Controller
             $attachmentType = $data['attachment_type'] ?? (!$isObjective && $attachmentPath ? self::DEFAULT_ANSWER_DOCUMENT_TYPE : 'none');
 
             $sql = "INSERT INTO assignment_questions (
-                assignment_id, parent_question_id, question_type, question_text, scenario_text,
+                assignment_id, parent_question_id, curriculum_topic_id, learning_outcome_id,
+                question_type, question_text, scenario_text,
                 marks, display_order, allow_drawing, response_type, attachment_path, attachment_type, created_at, updated_at
             ) VALUES (
-                :assignment_id, :parent_question_id, :question_type, :question_text, :scenario_text,
+                :assignment_id, :parent_question_id, :curriculum_topic_id, :learning_outcome_id,
+                :question_type, :question_text, :scenario_text,
                 :marks, :display_order, :allow_drawing, :response_type, :attachment_path, :attachment_type, NOW(), NOW()
             )";
 
@@ -723,6 +1249,8 @@ class AssignmentController extends Controller
             $stmt->execute([
                 'assignment_id' => $assignmentId,
                 'parent_question_id' => $data['parent_question_id'] ?? null,
+                'curriculum_topic_id' => !empty($data['curriculum_topic_id']) ? (int) $data['curriculum_topic_id'] : null,
+                'learning_outcome_id' => !empty($data['learning_outcome_id']) ? (int) $data['learning_outcome_id'] : null,
                 'question_type' => $data['question_type'],
                 'question_text' => $data['question_text'] ?? null,
                 'scenario_text' => $data['scenario_text'] ?? null,
@@ -821,9 +1349,18 @@ class AssignmentController extends Controller
             $updateFields = [];
             $params = ['question_id' => $questionId];
 
-            $allowedFields = ['question_text', 'scenario_text', 'marks', 'display_order', 'allow_drawing', 'response_type'];
+            $allowedFields = ['question_text', 'scenario_text', 'marks', 'display_order', 'allow_drawing', 'response_type', 'attachment_path', 'attachment_type', 'curriculum_topic_id', 'learning_outcome_id'];
             foreach ($allowedFields as $field) {
                 if (isset($data[$field])) {
+                    // An empty string clears a previously-set attachment (e.g. the teacher removed
+                    // an uploaded question PDF before saving) - store it as NULL/none rather than ''.
+                    if ($field === 'attachment_path' && $data[$field] === '') {
+                        $updateFields[] = "attachment_path = NULL";
+                        continue;
+                    }
+                    if (in_array($field, ['curriculum_topic_id', 'learning_outcome_id'], true) && $data[$field] === '') {
+                        $data[$field] = null;
+                    }
                     $updateFields[] = "$field = :$field";
                     $params[$field] = $data[$field];
                 }

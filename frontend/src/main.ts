@@ -1,9 +1,30 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import axios from 'axios'
+import { useRegisterSW } from 'virtual:pwa-register/vue'
 import App from './App.vue'
 import router from './router'
 import './assets/style.css'
+
+// Actively checks for a new deployment every 60s (rather than only whenever the browser
+// happens to check on its own, which can be as rarely as once per navigation per day) and
+// reloads as soon as one's found - registerType: 'autoUpdate' in vite.config.ts handles the
+// new service worker taking over, but a tab already open still needs this to actually pick it
+// up. See vite.config.ts's injectRegister: false for why this replaces the default script.
+const { updateServiceWorker } = useRegisterSW({
+  immediate: true,
+  onRegisteredSW(_swScriptUrl, registration) {
+    if (!registration) return
+    setInterval(() => {
+      registration.update().catch(() => {
+        // Offline or a transient network error - the next interval will just try again.
+      })
+    }, 60 * 1000)
+  },
+  onNeedRefresh() {
+    updateServiceWorker(true)
+  }
+})
 
 // Every page in this app calls the default `axios` import directly with paths hardcoded like
 // `/api/...` (relative to the domain root) rather than going through a shared instance - a

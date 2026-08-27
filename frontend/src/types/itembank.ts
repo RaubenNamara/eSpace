@@ -3,6 +3,7 @@
  *
  * Type definitions for the PDF item bank module - identical in shape to the eLibrary types.
  */
+import type { ClassTarget } from '@/components/teacher/TeacherClassSelector.vue'
 
 export interface ItemBankResource {
   id: number
@@ -10,6 +11,7 @@ export interface ItemBankResource {
   description: string | null
   subject_id: number | null
   class_id: number | null
+  class_group_name?: string | null
   department_id?: number | null
   file_path: string
   file_type: string
@@ -32,7 +34,7 @@ export interface ItemBankResourceForm {
   title: string
   description: string
   subject_id: string
-  class_id: string
+  classTarget: ClassTarget
   status: 'draft' | 'published' | 'archived'
   file: File | null
 }

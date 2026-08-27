@@ -60,9 +60,9 @@ class NoteController extends Controller
 
         $db = $this->getDb();
         $stmt = $db->prepare("
-            SELECT department_id 
-            FROM student_department_enrollments 
-            WHERE student_id = :student_id AND deleted_at IS NULL 
+            SELECT department_id
+            FROM student_department_enrollments
+            WHERE student_id = :student_id AND deleted_at IS NULL AND status = 'active'
             LIMIT 1
         ");
         $stmt->execute(['student_id' => $studentId]);
@@ -106,11 +106,18 @@ class NoteController extends Controller
             'n.deleted_at IS NULL',
             'n.is_published = 1',
             'n.assigned_to = :assigned_to',
-            'n.assigned_id = :department_id'
+            'n.assigned_id = :department_id',
+            'NOT EXISTS (
+                SELECT 1 FROM student_teacher_enrollments ste
+                WHERE ste.student_id = :student_id_te AND ste.teacher_id = n.created_by
+                  AND ste.department_id = :department_id_te AND ste.status = \'withdrawn\'
+            )'
         ];
         $params = [
             'assigned_to' => 'department',
-            'department_id' => $departmentId
+            'department_id' => $departmentId,
+            'student_id_te' => $studentId,
+            'department_id_te' => $departmentId,
         ];
 
         if (!empty($search)) {
@@ -211,7 +218,12 @@ class NoteController extends Controller
                   AND n.is_published = 1
                   AND n.assigned_to = :assigned_to
                   AND n.assigned_id = :department_id
-                  AND n.deleted_at IS NULL";
+                  AND n.deleted_at IS NULL
+                  AND NOT EXISTS (
+                      SELECT 1 FROM student_teacher_enrollments ste
+                      WHERE ste.student_id = :student_id_te AND ste.teacher_id = n.created_by
+                        AND ste.department_id = :department_id_te AND ste.status = 'withdrawn'
+                  )";
 
         $stmt = $db->prepare($sql);
         $stmt->execute([
@@ -219,7 +231,9 @@ class NoteController extends Controller
             'student_id' => $studentId,
             'student_id_bookmark' => $studentId,
             'assigned_to' => 'department',
-            'department_id' => $departmentId
+            'department_id' => $departmentId,
+            'student_id_te' => $studentId,
+            'department_id_te' => $departmentId,
         ]);
         $note = $stmt->fetch();
 

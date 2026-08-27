@@ -525,7 +525,7 @@ class VirtualLabService
         return (bool) $stmt->fetch();
     }
 
-    public function publishExperiment(int $experimentId, int $classId, int $teacherId, int $termId, ?string $dueDate, ?float $marksOverride): int
+    public function publishExperiment(int $experimentId, ?int $classId, ?string $classGroupName, int $teacherId, int $termId, ?string $dueDate, ?float $marksOverride): int
     {
         $experiment = $this->getExperimentDetail($experimentId);
         if (!$experiment) {
@@ -536,14 +536,10 @@ class VirtualLabService
         $term->execute(['id' => $termId]);
         $academicYear = $term->fetch()['academic_year'] ?? null;
 
-        $stmt = $this->getDb()->prepare(
-            'INSERT INTO virtual_lab_assignments (experiment_id, class_id, subject_id, teacher_id, term_id, academic_year, due_date, marks, status, created_at, updated_at)
-             VALUES (:experiment_id, :class_id, :subject_id, :teacher_id, :term_id, :academic_year, :due_date, :marks, :status, NOW(), NOW())
-             ON DUPLICATE KEY UPDATE due_date = VALUES(due_date), marks = VALUES(marks), status = VALUES(status), updated_at = NOW()'
-        );
-        $stmt->execute([
+        $params = [
             'experiment_id' => $experimentId,
             'class_id' => $classId,
+            'class_group_name' => $classGroupName,
             'subject_id' => $experiment['subject_id'],
             'teacher_id' => $teacherId,
             'term_id' => $termId,
@@ -551,15 +547,50 @@ class VirtualLabService
             'due_date' => $dueDate,
             'marks' => $marksOverride ?? $experiment['marks'],
             'status' => 'active',
-        ]);
+        ];
 
-        if (\eSpace\Config\Database::lastInsertId() > 0) {
-            return (int) \eSpace\Config\Database::lastInsertId();
+        if ($classId !== null) {
+            // unique_lab_assignment (experiment_id, class_id, term_id) covers this case natively.
+            $stmt = $this->getDb()->prepare(
+                'INSERT INTO virtual_lab_assignments (experiment_id, class_id, class_group_name, subject_id, teacher_id, term_id, academic_year, due_date, marks, status, created_at, updated_at)
+                 VALUES (:experiment_id, :class_id, :class_group_name, :subject_id, :teacher_id, :term_id, :academic_year, :due_date, :marks, :status, NOW(), NOW())
+                 ON DUPLICATE KEY UPDATE due_date = VALUES(due_date), marks = VALUES(marks), status = VALUES(status), updated_at = NOW()'
+            );
+            $stmt->execute($params);
+
+            if (\eSpace\Config\Database::lastInsertId() > 0) {
+                return (int) \eSpace\Config\Database::lastInsertId();
+            }
+
+            $stmt = $this->getDb()->prepare('SELECT id FROM virtual_lab_assignments WHERE experiment_id = :e AND class_id = :c AND term_id = :t');
+            $stmt->execute(['e' => $experimentId, 'c' => $classId, 't' => $termId]);
+            return (int) $stmt->fetch()['id'];
         }
 
-        $stmt = $this->getDb()->prepare('SELECT id FROM virtual_lab_assignments WHERE experiment_id = :e AND class_id = :c AND term_id = :t');
-        $stmt->execute(['e' => $experimentId, 'c' => $classId, 't' => $termId]);
-        return (int) $stmt->fetch()['id'];
+        // "All Streams": class_id is NULL, so the unique key can't de-duplicate re-publishing to
+        // the same class level (InnoDB treats every NULL as distinct) - look up any existing row
+        // for this (experiment, class_group_name, term) by hand and update it instead of blindly
+        // inserting a second row.
+        $stmt = $this->getDb()->prepare(
+            'SELECT id FROM virtual_lab_assignments WHERE experiment_id = :e AND class_id IS NULL AND class_group_name = :g AND term_id = :t'
+        );
+        $stmt->execute(['e' => $experimentId, 'g' => $classGroupName, 't' => $termId]);
+        $existing = $stmt->fetch();
+
+        if ($existing) {
+            $stmt = $this->getDb()->prepare(
+                'UPDATE virtual_lab_assignments SET due_date = :due_date, marks = :marks, status = :status, updated_at = NOW() WHERE id = :id'
+            );
+            $stmt->execute(['due_date' => $dueDate, 'marks' => $params['marks'], 'status' => 'active', 'id' => $existing['id']]);
+            return (int) $existing['id'];
+        }
+
+        $stmt = $this->getDb()->prepare(
+            'INSERT INTO virtual_lab_assignments (experiment_id, class_id, class_group_name, subject_id, teacher_id, term_id, academic_year, due_date, marks, status, created_at, updated_at)
+             VALUES (:experiment_id, NULL, :class_group_name, :subject_id, :teacher_id, :term_id, :academic_year, :due_date, :marks, :status, NOW(), NOW())'
+        );
+        $stmt->execute($params);
+        return (int) \eSpace\Config\Database::lastInsertId();
     }
 
     public function listAssignmentsForTeacher(int $teacherId, array $filters = []): array
@@ -581,7 +612,7 @@ class VirtualLabService
                     (SELECT COUNT(*) FROM virtual_lab_attempts att WHERE att.assignment_id = a.id AND att.status = 'graded') AS graded_count
                 FROM virtual_lab_assignments a
                 INNER JOIN virtual_lab_experiments e ON a.experiment_id = e.id
-                INNER JOIN classes c ON a.class_id = c.id
+                LEFT JOIN classes c ON a.class_id = c.id
                 WHERE " . implode(' AND ', $where) . '
                 ORDER BY a.created_at DESC';
         $stmt = $this->getDb()->prepare($sql);
@@ -658,9 +689,23 @@ class VirtualLabService
         // joined it - matches how the assignments module itself behaves.
         $where[] = "EXISTS (
             SELECT 1 FROM student_department_enrollments sde
-            WHERE sde.class_id = a.class_id AND sde.student_id = :student_id AND sde.deleted_at IS NULL
+            LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
+            WHERE (
+                sde.class_id = a.class_id
+                OR (a.class_group_name IS NOT NULL AND sde_c.name = a.class_group_name)
+              )
+              AND sde.student_id = :student_id AND sde.deleted_at IS NULL
+              AND sde.status = 'active'
+              AND sde.department_id = (SELECT department_id FROM subjects WHERE id = a.subject_id)
               AND a.created_at BETWEEN sde.start_date AND COALESCE(sde.end_date, NOW())
         )";
+        $where[] = "NOT EXISTS (
+            SELECT 1 FROM student_teacher_enrollments ste
+            WHERE ste.student_id = :student_id_te AND ste.teacher_id = a.teacher_id
+              AND ste.department_id = (SELECT department_id FROM subjects WHERE id = a.subject_id)
+              AND ste.status = 'withdrawn'
+        )";
+        $params['student_id_te'] = $studentId;
 
         $sql = "SELECT a.*, e.title AS experiment_title, e.category, e.topic, e.objective, e.difficulty, e.estimated_duration_minutes,
                     s.name AS subject_name,
@@ -718,11 +763,23 @@ class VirtualLabService
     {
         $stmt = $this->getDb()->prepare(
             "SELECT 1 FROM virtual_lab_assignments a
-             INNER JOIN student_department_enrollments sde ON sde.class_id = a.class_id AND sde.student_id = :student_id AND sde.deleted_at IS NULL
+             INNER JOIN student_department_enrollments sde ON (
+                    sde.class_id = a.class_id
+                    OR (a.class_group_name IS NOT NULL AND EXISTS (SELECT 1 FROM classes sde_c WHERE sde_c.id = sde.class_id AND sde_c.name = a.class_group_name))
+                 ) AND sde.student_id = :student_id AND sde.deleted_at IS NULL
+                AND sde.status = 'active'
+                AND sde.department_id = (SELECT department_id FROM subjects WHERE id = a.subject_id)
                 AND a.created_at BETWEEN sde.start_date AND COALESCE(sde.end_date, NOW())
-             WHERE a.id = :assignment_id AND a.deleted_at IS NULL LIMIT 1"
+             WHERE a.id = :assignment_id AND a.deleted_at IS NULL
+               AND NOT EXISTS (
+                   SELECT 1 FROM student_teacher_enrollments ste
+                   WHERE ste.student_id = :student_id_te AND ste.teacher_id = a.teacher_id
+                     AND ste.department_id = (SELECT department_id FROM subjects WHERE id = a.subject_id)
+                     AND ste.status = 'withdrawn'
+               )
+             LIMIT 1"
         );
-        $stmt->execute(['student_id' => $studentId, 'assignment_id' => $assignmentId]);
+        $stmt->execute(['student_id' => $studentId, 'assignment_id' => $assignmentId, 'student_id_te' => $studentId]);
         return (bool) $stmt->fetch();
     }
 

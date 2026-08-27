@@ -226,8 +226,9 @@ export interface TeacherAssignment {
   experiment_id: number
   experiment_title: string
   category: LabCategory
-  class_id: number
-  class_name: string
+  class_id: number | null
+  class_group_name?: string | null
+  class_name: string | null
   term_id: number
   due_date: string | null
   marks: number

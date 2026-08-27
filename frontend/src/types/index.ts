@@ -14,6 +14,7 @@ export interface User {
   first_name?: string
   last_name?: string
   admission_number?: string
+  must_change_password?: boolean // Teachers only - still on a temporary/admin-set password
 }
 
 export interface AuthPayload {
@@ -191,6 +192,7 @@ export interface Assignment {
   teacher_id: number
   subject_id?: number
   class_id?: number
+  class_group_name?: string | null
   stream_id?: number
   class_subject_id?: number
   topic_id?: number

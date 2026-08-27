@@ -75,17 +75,30 @@ class NotificationService
      * source content row means "whole department", matching the student-facing list queries for
      * each of those modules).
      */
-    public function notifyDepartmentClass(?int $departmentId, ?int $classId, string $type, string $title, string $message, ?array $data = null): void
+    public function notifyDepartmentClass(?int $departmentId, ?int $classId, string $type, string $title, string $message, ?array $data = null, ?string $classGroupName = null): void
     {
         if (!$departmentId) {
             return;
         }
 
-        $sql = 'SELECT student_id FROM student_department_enrollments WHERE department_id = :department_id AND deleted_at IS NULL';
-        $params = ['department_id' => $departmentId];
-        if ($classId) {
-            $sql .= ' AND class_id = :class_id';
-            $params['class_id'] = $classId;
+        if ($classGroupName !== null) {
+            // "All Streams" for a class level: every actively-enrolled student across every
+            // stream named $classGroupName in this department - see
+            // Controller::getStudentIdsByDepartmentAndClassLevel() for the read-side equivalent.
+            $sql = "SELECT DISTINCT sde.student_id
+                    FROM student_department_enrollments sde
+                    INNER JOIN classes c ON c.id = sde.class_id
+                    WHERE c.name = :class_group_name AND c.deleted_at IS NULL
+                      AND sde.department_id = :department_id
+                      AND sde.status = 'active' AND sde.deleted_at IS NULL";
+            $params = ['class_group_name' => $classGroupName, 'department_id' => $departmentId];
+        } else {
+            $sql = 'SELECT student_id FROM student_department_enrollments WHERE department_id = :department_id AND deleted_at IS NULL';
+            $params = ['department_id' => $departmentId];
+            if ($classId) {
+                $sql .= ' AND class_id = :class_id';
+                $params['class_id'] = $classId;
+            }
         }
 
         $stmt = $this->getDb()->prepare($sql);

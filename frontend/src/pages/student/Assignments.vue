@@ -148,6 +148,12 @@
               <span :class="getStatusClass(assignment.status)" class="px-2 py-1 text-xs font-medium rounded-full">
                 {{ formatStatus(assignment.status) }}
               </span>
+              <span
+                v-if="assignment.assessment_category"
+                class="px-2 py-1 text-xs font-medium rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300"
+              >
+                {{ assignment.assessment_category }} &ndash; {{ ASSESSMENT_CATEGORY_LABELS[assignment.assessment_category] }}
+              </span>
             </div>
             
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600 dark:text-gray-400 mb-3">
@@ -224,11 +230,18 @@ interface StudentAssignment {
   due_date: string
   total_marks: number
   status: 'new' | 'in_progress' | 'submitted' | 'marked' | 'late' | 'overdue'
+  assessment_category?: 'LOA' | 'AOI' | 'EOC' | null
   submission?: {
     id: number
     total_score: number
     percentage: number
   }
+}
+
+const ASSESSMENT_CATEGORY_LABELS: Record<'LOA' | 'AOI' | 'EOC', string> = {
+  LOA: 'Learning Outcome Assessment',
+  AOI: 'Activity of Integration',
+  EOC: 'Elements of Construct'
 }
 
 interface FilterOption {

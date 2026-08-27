@@ -204,7 +204,11 @@
               <div class="flex items-center gap-3 min-w-0">
                 <span class="w-9 h-9 flex-shrink-0 rounded-xl bg-gradient-to-br flex items-center justify-center text-base print-color-exact" :class="CATEGORY_COLORS[a.category]">{{ CATEGORY_ICONS[a.category] }}</span>
                 <div class="min-w-0">
-                  <p class="font-semibold text-gray-900 dark:text-white text-sm truncate">{{ a.experiment_title }} &middot; {{ a.class_name }}</p>
+                  <p class="font-semibold text-gray-900 dark:text-white text-sm truncate">
+                    {{ a.experiment_title }} &middot;
+                    <span v-if="a.class_group_name" class="text-green-600 dark:text-green-400">{{ a.class_group_name }} (All Streams)</span>
+                    <span v-else>{{ a.class_name }}</span>
+                  </p>
                   <p class="text-xs text-gray-400 dark:text-gray-500">{{ a.attempt_count }} attempts &middot; {{ a.submitted_count }} submitted &middot; {{ a.graded_count }} graded</p>
                 </div>
               </div>
@@ -469,7 +473,7 @@
           <button @click="publishTarget = null" class="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">✕</button>
         </div>
         <div><label class="text-xs font-medium text-gray-500 dark:text-gray-400">Class</label>
-          <select v-model="publishForm.class_id" class="input-field w-full mt-1"><option v-for="c in classes" :key="c.id" :value="c.id">{{ c.name }}{{ c.stream_name ? ' - ' + c.stream_name : '' }}</option></select>
+          <TeacherClassSelector v-model="publishForm.classTarget" class="mt-1" />
         </div>
         <div><label class="text-xs font-medium text-gray-500 dark:text-gray-400">Term</label>
           <select v-model="publishForm.term_id" class="input-field w-full mt-1"><option v-for="t in terms" :key="t.id" :value="t.id">{{ t.name }}</option></select>
@@ -624,6 +628,8 @@ import type { ExperimentSummary, ExperimentDetail, LabObjectDef, TeacherAssignme
 import VirtualLabSkillsPanel from '@/components/virtuallab/VirtualLabSkillsPanel.vue'
 import VirtualLabGraph from '@/components/virtuallab/VirtualLabGraph.vue'
 import { RENDER_2D_REGISTRY } from '@/components/virtuallab/render2d/registry'
+import TeacherClassSelector from '@/components/teacher/TeacherClassSelector.vue'
+import type { ClassTarget } from '@/components/teacher/TeacherClassSelector.vue'
 
 // Restricted to what's actually registered, not free text - a typo'd slug would silently fall back
 // to the 3D engine (resolve2DRenderer() returns null for an unknown slug).
@@ -730,7 +736,7 @@ const onRenderModeChange = () => { if (form.value.render_mode !== '2d') form.val
 const form = ref<any>(emptyForm())
 
 const publishTarget = ref<ExperimentSummary | null>(null)
-const publishForm = ref({ class_id: null as number | null, term_id: null as number | null, due_date: '', marks: 20 })
+const publishForm = ref({ classTarget: { scope: 'stream', class_id: null, class_group_name: null } as ClassTarget, term_id: null as number | null, due_date: '', marks: 20 })
 
 const gradingAttempt = ref<AttemptDetail | null>(null)
 const gradeScore = ref(0)
@@ -879,20 +885,33 @@ const deleteExperiment = async (id: number) => {
 const openPublish = (e: ExperimentSummary) => {
   error.value = null
   publishTarget.value = e
-  publishForm.value = { class_id: classes.value[0]?.id ?? null, term_id: terms.value[0]?.id ?? null, due_date: '', marks: e.marks }
+  publishForm.value = {
+    classTarget: { scope: 'stream', class_id: classes.value[0]?.id ?? null, class_group_name: null },
+    term_id: terms.value[0]?.id ?? null,
+    due_date: '',
+    marks: e.marks
+  }
 }
 
 const publishing = ref(false)
 const confirmPublish = async () => {
   if (!publishTarget.value) return
-  if (!publishForm.value.class_id || !publishForm.value.term_id) {
+  const target = publishForm.value.classTarget
+  if ((!target.class_id && !target.class_group_name) || !publishForm.value.term_id) {
     error.value = 'Select a class and term before publishing.'
     return
   }
   error.value = null
   publishing.value = true
   try {
-    await axios.post(`${API_BASE}/virtual-lab/experiments/${publishTarget.value.id}/publish`, publishForm.value)
+    await axios.post(`${API_BASE}/virtual-lab/experiments/${publishTarget.value.id}/publish`, {
+      scope: target.scope,
+      class_id: target.class_id,
+      class_group_name: target.class_group_name,
+      term_id: publishForm.value.term_id,
+      due_date: publishForm.value.due_date,
+      marks: publishForm.value.marks
+    })
     publishTarget.value = null
     await loadExperiments()
   } catch (err: any) {

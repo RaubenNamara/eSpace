@@ -1,30 +1,30 @@
 <template>
-  <div class="p-6">
+  <div class="p-3 sm:p-6">
     <div v-if="loading" class="flex items-center justify-center py-12">
       <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
     </div>
 
-    <div v-else-if="error" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 mb-6">
+    <div v-else-if="error" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 sm:p-6 mb-4 sm:mb-6">
       <div class="flex items-center">
-        <svg class="w-5 h-5 text-red-600 dark:text-red-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="w-5 h-5 text-red-600 dark:text-red-400 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
         </svg>
-        <p class="text-red-800 dark:text-red-200">{{ error }}</p>
+        <p class="text-red-800 dark:text-red-200 break-words">{{ error }}</p>
       </div>
     </div>
 
     <div v-else-if="assignment">
       <!-- Header -->
-      <div class="mb-6">
-        <div class="flex items-center justify-between mb-4">
-          <div>
-            <div class="flex items-center gap-2 mb-2">
-              <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ assignment.title }}</h1>
+      <div class="mb-4 sm:mb-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+          <div class="min-w-0">
+            <div class="flex items-center flex-wrap gap-2 mb-2">
+              <h1 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white break-words">{{ assignment.title }}</h1>
               <span v-if="isPreview" class="px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
                 Preview
               </span>
             </div>
-            <p class="text-gray-600 dark:text-gray-400">{{ assignment.subject_name }} • {{ assignment.teacher_name }}</p>
+            <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400 break-words">{{ assignment.subject_name }} • {{ assignment.teacher_name }}</p>
           </div>
           <div v-if="!isLocked && autoSaveStatus" class="flex items-center text-sm text-gray-600 dark:text-gray-400">
             <svg v-if="autoSaveStatus === 'saving'" class="animate-spin w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -60,8 +60,8 @@
         </div>
 
         <!-- Assignment Info -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-4 mb-4 sm:mb-6">
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 text-sm">
             <div>
               <span class="text-gray-600 dark:text-gray-400">Total Marks:</span>
               <span class="font-medium text-gray-900 dark:text-white ml-2">{{ assignment.total_marks }}</span>
@@ -79,27 +79,50 @@
               <span class="font-medium ml-2">{{ formatTime(timeRemaining) }}</span>
             </div>
           </div>
-          
-          <div v-if="assignment.instructions" class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+
+          <div v-if="assignment.instructions" class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 overflow-x-auto">
             <h3 class="font-medium text-gray-900 dark:text-white mb-2">Instructions</h3>
-            <p class="text-gray-600 dark:text-gray-400 text-sm" v-html="assignment.instructions"></p>
+            <p class="text-gray-600 dark:text-gray-400 text-sm break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="assignment.instructions"></p>
           </div>
         </div>
       </div>
 
+      <!-- Curriculum context (LOA/AOI/EOC) - which Topic/Learning Outcomes this assessment
+           covers, read-only, shown once above the questions. Absent entirely for any assignment
+           without an assessment_category (every assignment created before this feature). -->
+      <div v-if="curriculum" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 mb-4 sm:mb-6">
+        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 mb-3">
+          {{ curriculum.category }} &ndash; {{ ASSESSMENT_CATEGORY_LABELS[curriculum.category] }}
+        </span>
+        <template v-if="curriculum.category === 'LOA' && curriculum.topic">
+          <p class="text-sm text-gray-500 dark:text-gray-400">Topic</p>
+          <p class="font-semibold text-gray-900 dark:text-white mb-3">{{ curriculum.topic.topic }}</p>
+          <p v-if="curriculum.learning_outcomes?.length" class="text-sm text-gray-500 dark:text-gray-400 mb-1">Learning Outcomes Being Assessed</p>
+          <ol v-if="curriculum.learning_outcomes?.length" class="list-decimal list-inside space-y-1 text-sm text-gray-700 dark:text-gray-300">
+            <li v-for="lo in curriculum.learning_outcomes" :key="lo.id">{{ lo.learning_outcome }}</li>
+          </ol>
+        </template>
+      </div>
+
       <!-- Questions -->
-      <div class="space-y-6">
-        <div
-          v-for="(question, index) in questions"
+      <div class="space-y-4 sm:space-y-6">
+        <template
+          v-for="({ question, groupHeader }, index) in displayQuestions"
           :key="question.id"
-          class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6"
         >
+          <div v-if="groupHeader" class="pt-2 first:pt-0">
+            <p v-if="groupHeader.theme" class="text-xs font-semibold text-indigo-500 dark:text-indigo-400 uppercase tracking-wide">{{ groupHeader.theme }}</p>
+            <h2 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white">{{ groupHeader.label }}</h2>
+          </div>
+          <div
+            class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6"
+          >
           <!-- Scenario Question -->
           <div v-if="question.question_type === 'scenario'">
             <div class="mb-4">
               <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Scenario</h3>
-              <div v-if="question.scenario_text" class="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg mb-4">
-                <p class="text-gray-700 dark:text-gray-300 whitespace-pre-line" v-html="question.scenario_text"></p>
+              <div v-if="question.scenario_text" class="bg-gray-50 dark:bg-gray-700/50 p-3 sm:p-4 rounded-lg mb-4 overflow-x-auto">
+                <p class="text-gray-700 dark:text-gray-300 whitespace-pre-line break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.scenario_text"></p>
               </div>
             </div>
             
@@ -117,7 +140,7 @@
                     <span class="text-sm text-gray-600 dark:text-gray-400">{{ subQ.marks }} marks</span>
                   </div>
                 </div>
-                <div class="ml-6">
+                <div class="ml-3 sm:ml-6">
                   <FreeResponseAnswer
                     :question="subQ"
                     :assignment-id="Number(route.params.id)"
@@ -153,16 +176,16 @@
 
           <!-- Regular Question -->
           <div v-else>
-            <div class="flex items-start justify-between mb-4">
-              <div>
+            <div class="flex flex-wrap items-start justify-between gap-2 mb-4">
+              <div class="min-w-0 overflow-x-auto">
                 <p class="text-xs font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">Question {{ index + 1 }} · {{ Number(question.marks).toFixed(2) }} Marks</p>
-                <p class="text-gray-900 dark:text-white mt-1" v-html="question.question_text"></p>
+                <p class="text-gray-900 dark:text-white mt-1 break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.question_text"></p>
               </div>
-              <span class="shrink-0 ml-4 px-2.5 py-1 rounded-full text-xs font-medium border" :class="questionStatusBadgeClass">{{ questionStatusLabel }}</span>
+              <span class="shrink-0 px-2.5 py-1 rounded-full text-xs font-medium border" :class="questionStatusBadgeClass">{{ questionStatusLabel }}</span>
             </div>
 
             <!-- Multiple Choice Single -->
-            <div v-if="question.question_type === 'multiple_choice_single'" class="ml-6 space-y-2">
+            <div v-if="question.question_type === 'multiple_choice_single'" class="ml-3 sm:ml-6 space-y-2">
               <label
                 v-for="(option, optIndex) in question.options"
                 :key="optIndex"
@@ -181,7 +204,7 @@
             </div>
 
             <!-- Multiple Choice Multiple -->
-            <div v-else-if="question.question_type === 'multiple_choice_multiple'" class="ml-6 space-y-2">
+            <div v-else-if="question.question_type === 'multiple_choice_multiple'" class="ml-3 sm:ml-6 space-y-2">
               <label
                 v-for="(option, optIndex) in question.options"
                 :key="optIndex"
@@ -200,7 +223,7 @@
             </div>
 
             <!-- True/False -->
-            <div v-else-if="question.question_type === 'true_false'" class="ml-6 space-y-2">
+            <div v-else-if="question.question_type === 'true_false'" class="ml-3 sm:ml-6 space-y-2">
               <label class="flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer">
                 <input
                   v-model="answers[question.id]"
@@ -226,7 +249,7 @@
             </div>
 
             <!-- Fill in Blank, Short Answer, Essay, Structured -->
-            <div v-else class="ml-6">
+            <div v-else class="ml-3 sm:ml-6">
               <FreeResponseAnswer
                 :question="question"
                 :assignment-id="Number(route.params.id)"
@@ -242,27 +265,28 @@
               />
             </div>
           </div>
-        </div>
+          </div>
+        </template>
       </div>
 
       <!-- Sticky bottom action bar -->
-      <div v-if="!isLocked" class="sticky bottom-0 -mx-6 px-6 py-3 mt-6 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 z-10">
+      <div v-if="!isLocked" class="sticky bottom-0 -mx-3 sm:-mx-6 px-3 sm:px-6 py-3 mt-6 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 z-10">
         <p v-if="autoSaveStatus !== 'saved'" class="text-sm text-amber-700 dark:text-amber-400">
           Unsaved changes - press Save Progress before leaving.
         </p>
         <p v-else class="text-sm text-gray-500 dark:text-gray-400">Submit only when every question is ready. Submitted answers are locked for teacher review.</p>
-        <div class="flex items-center gap-3 shrink-0">
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 shrink-0">
           <button
             @click="saveDraft"
             :disabled="saving"
-            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+            class="w-full sm:w-auto px-4 py-2.5 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
           >
             {{ saving ? 'Saving...' : '✓ Save Progress' }}
           </button>
           <button
             @click="showSubmitConfirm = true"
             :disabled="!canSubmit || submitting"
-            class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+            class="w-full sm:w-auto px-4 py-2.5 sm:py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
           >
             {{ submitting ? 'Submitting...' : '⬆ Submit for Review' }}
           </button>
@@ -270,23 +294,23 @@
       </div>
 
       <!-- Submit Confirmation Modal -->
-      <div v-if="showSubmitConfirm" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
-          <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Submit Assignment</h2>
+      <div v-if="showSubmitConfirm" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 max-w-md w-full">
+          <h2 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-4">Submit Assignment</h2>
           <p class="text-gray-600 dark:text-gray-400 mb-6">
             Are you sure you want to submit your assignment? You will not be able to make changes after submission unless another attempt is allowed.
           </p>
-          <div class="flex justify-end space-x-4">
+          <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-4">
             <button
               @click="showSubmitConfirm = false"
-              class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              class="w-full sm:w-auto px-4 py-2.5 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
               Cancel
             </button>
             <button
               @click="submitAssignment"
               :disabled="submitting"
-              class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+              class="w-full sm:w-auto px-4 py-2.5 sm:py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
             >
               {{ submitting ? 'Submitting...' : 'Submit' }}
             </button>
@@ -309,8 +333,68 @@ const route = useRoute()
 
 const API_BASE = '/api'
 
+const ASSESSMENT_CATEGORY_LABELS: Record<'LOA' | 'AOI' | 'EOC', string> = {
+  LOA: 'Learning Outcome Assessment',
+  AOI: 'Activity of Integration',
+  EOC: 'Elements of Construct'
+}
+
+interface CurriculumStructure {
+  category: 'LOA' | 'AOI' | 'EOC'
+  topic?: { id: number; theme_branch: string; topic: string; competence: string } | null
+  learning_outcomes?: { id: number; learning_outcome: string; order_number: number }[]
+  topics?: { id: number; theme_branch: string; topic: string }[]
+}
+
 const assignment = ref<any>(null)
 const questions = ref<AssignmentQuestion[]>([])
+// Read-only curriculum structure (null for any assignment without an assessment_category - every
+// assignment created before this feature) - see Student\AssignmentController::getCurriculumStructure().
+const curriculum = ref<CurriculumStructure | null>(null)
+
+// Groups the flat `questions` array (unchanged - still the single source of truth for answer
+// state, keyed by question.id) into the Topic/Learning-Outcome order the teacher organized them
+// under, with a header inserted before each group's first question. Falls back to the original
+// flat order untouched when there's no assessment_category (legacy assignments).
+const displayQuestions = computed(() => {
+  if (!curriculum.value) {
+    return questions.value.map(question => ({ question, groupHeader: null as null | { theme: string | null; label: string } }))
+  }
+
+  const topicById = new Map<number, { theme_branch: string; topic: string }>()
+  if (curriculum.value.category === 'LOA' && curriculum.value.topic) {
+    topicById.set(curriculum.value.topic.id, curriculum.value.topic)
+  }
+  for (const t of curriculum.value.topics || []) {
+    topicById.set(t.id, t)
+  }
+  const outcomeById = new Map((curriculum.value.learning_outcomes || []).map(o => [o.id, o]))
+
+  const groupKeyFor = (q: any): string => {
+    if (curriculum.value!.category === 'LOA') return `lo-${q.learning_outcome_id ?? 'none'}`
+    return `topic-${q.curriculum_topic_id ?? 'none'}`
+  }
+
+  const seenGroups = new Set<string>()
+  return questions.value.map((question) => {
+    const q = question as any
+    const key = groupKeyFor(q)
+    let groupHeader: { theme: string | null; label: string } | null = null
+
+    if (!seenGroups.has(key)) {
+      seenGroups.add(key)
+      if (curriculum.value!.category === 'LOA') {
+        const outcome = outcomeById.get(q.learning_outcome_id)
+        groupHeader = outcome ? { theme: null, label: `Learning Outcome ${outcome.order_number}: ${outcome.learning_outcome}` } : null
+      } else {
+        const topic = topicById.get(q.curriculum_topic_id)
+        groupHeader = topic ? { theme: curriculum.value!.category === 'EOC' ? topic.theme_branch : null, label: topic.topic } : null
+      }
+    }
+
+    return { question, groupHeader }
+  })
+})
 const loading = ref(false)
 const error = ref<string | null>(null)
 const saving = ref(false)
@@ -409,6 +493,7 @@ const loadAssignment = async () => {
     if (response.data.success) {
       assignment.value = response.data.data.assignment
       questions.value = response.data.data.questions
+      curriculum.value = response.data.data.curriculum || null
       submissionId.value = response.data.data.submission_id || null
       submissionStatus.value = response.data.data.submission_status || null
       answerAnnotationsByQuestion.value = response.data.data.answer_annotations || {}

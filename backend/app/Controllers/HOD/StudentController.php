@@ -370,6 +370,72 @@ class StudentController extends Controller
     }
 
     /**
+     * De-enroll students from the HOD's own department - closes their
+     * student_department_enrollments row(s) for this department (status='withdrawn'), which
+     * hides them from every teacher in the department (see the NOT EXISTS/status='active'
+     * checks added to every Student\* content controller), the HOD's own roster, and this
+     * department's class/student lists. Their enrollment in any OTHER department, their
+     * account, and all historical records (submissions, marks, attendance) are untouched.
+     * Admin retains full visibility via student_department_enrollments regardless of status.
+     * POST /hod/students/deenroll
+     * Body: { student_ids: number[], reason?: string }
+     */
+    public function deenroll(): void
+    {
+        if (!$this->isHOD()) {
+            $this->forbidden();
+            return;
+        }
+
+        $departmentId = $this->getHODDepartmentId();
+        if (!$departmentId) {
+            $this->error('Department not found for HOD', 404);
+            return;
+        }
+
+        $data = $this->input();
+        $studentIds = $data['student_ids'] ?? [];
+
+        if (!is_array($studentIds) || empty($studentIds)) {
+            $this->validationError(['student_ids' => 'At least one student must be selected']);
+            return;
+        }
+
+        $studentIds = array_values(array_unique(array_map('intval', $studentIds)));
+        $reason = !empty($data['reason']) ? (string) $data['reason'] : null;
+
+        try {
+            $placeholders = implode(',', array_fill(0, count($studentIds), '?'));
+
+            $selectStmt = $this->db->prepare(
+                "SELECT student_id, department_id FROM student_department_enrollments
+                 WHERE student_id IN ({$placeholders}) AND department_id = ? AND status = 'active'"
+            );
+            $selectStmt->execute([...$studentIds, $departmentId]);
+            $affected = $selectStmt->fetchAll();
+
+            $updateStmt = $this->db->prepare(
+                "UPDATE student_department_enrollments
+                 SET status = 'withdrawn', end_date = CURDATE(), updated_at = NOW()
+                 WHERE student_id IN ({$placeholders}) AND department_id = ? AND status = 'active'"
+            );
+            $updateStmt->execute([...$studentIds, $departmentId]);
+
+            $affectedRows = $updateStmt->rowCount();
+
+            $performedBy = $this->getCurrentUserId();
+            foreach ($affected as $row) {
+                $this->logEnrollmentAudit((int) $row['student_id'], 'department_de_enroll', null, (int) $row['department_id'], (int) $performedBy, 'hod', $reason);
+            }
+
+            $this->success(['deenrolled_count' => $affectedRows], "Successfully de-enrolled {$affectedRows} student(s) from the department");
+        } catch (\PDOException $e) {
+            error_log("HOD de-enrollment failed: " . $e->getMessage());
+            $this->error('Failed to de-enroll students: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
      * Check if current user is HOD
      */
     private function isHOD(): bool

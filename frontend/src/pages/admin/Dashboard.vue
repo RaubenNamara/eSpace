@@ -122,10 +122,6 @@
         <div v-else class="flex items-center justify-center h-full text-gray-500">No data available</div>
       </div>
     </div>
-    <div class="card">
-      <p class="text-gray-600 dark:text-gray-400">Admin dashboard content will be implemented in the next phase.</p>
-    </div>
-
     <!-- View Enrolled Students Modal -->
     <div v-if="showViewEnrolledModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
       <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
@@ -899,7 +895,7 @@ const yearChartData = computed(() => ({
 }))
 
 const classChartData = computed(() => ({
-  labels: analytics.value.by_class.map((c: any) => `${c.class_name} (${c.level})`),
+  labels: analytics.value.by_class.map((c: any) => c.stream_name ? `${c.class_name} ${c.stream_name}` : c.class_name),
   datasets: [{
     label: 'Enrollments',
     data: analytics.value.by_class.map((c: any) => c.count),

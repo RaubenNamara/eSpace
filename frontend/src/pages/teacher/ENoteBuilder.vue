@@ -326,10 +326,11 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter, useRoute, onBeforeRouteLeave } from 'vue-router'
 import axios from 'axios'
 import CKEditor from '@/components/teacher/CKEditor.vue'
 import NarrationControls from '@/components/enotes/NarrationControls.vue'
+import { resolveContentAssetUrls } from '@/utils/richContent'
 import type { ENoteTopic, ENotePage, ENotePageForm, ENotePageNarration } from '@/types/enotes'
 
 const router = useRouter()
@@ -366,7 +367,14 @@ const loadTopic = async () => {
     console.log('Topic response:', response.data)
     if (response.data.success) {
       topic.value = response.data.data
-      pages.value = response.data.data.pages || []
+      pages.value = (response.data.data.pages || []).map((page: ENotePage) => ({
+        ...page,
+        // Safety net for images/GIFs saved before the upload adapter baked the /eSpace/ base
+        // path into the src itself - without this, reopening an older page to edit it would
+        // show a broken image even though the same content renders fine after this fix (see
+        // resolveContentAssetUrls()). Re-saving the page persists the corrected src for good.
+        content: resolveContentAssetUrls(page.content || '')
+      }))
       console.log('Pages loaded:', pages.value.length)
       
       if (pages.value.length > 0) {
@@ -397,12 +405,15 @@ const onNarrationGenerated = (narration: ENotePageNarration) => {
   currentPage.value.narrations = [...list]
 }
 
-const selectPage = (pageId: number) => {
+const selectPage = async (pageId: number) => {
+  await flushAutosave()
   currentPage.value = pages.value.find(p => p.id === pageId) || null
 }
 
 const addPage = async () => {
   try {
+    await flushAutosave()
+
     const newPage: ENotePageForm = {
       title: 'Page',
       content: '',
@@ -464,6 +475,17 @@ const scheduleAutosave = () => {
   }, 2000)
 }
 
+// Navigating away or switching pages while a debounced autosave is still pending
+// used to just clearTimeout() it, silently discarding the edit (e.g. an inserted
+// image) instead of saving it. Anything that leaves the current page must flush first.
+const flushAutosave = async () => {
+  if (autosaveTimeout.value) {
+    clearTimeout(autosaveTimeout.value)
+    autosaveTimeout.value = null
+    await updatePage()
+  }
+}
+
 const duplicatePage = async (pageId: number) => {
   try {
     await axios.post(`${API_BASE}/teacher/enotes/pages/${pageId}/duplicate`)
@@ -488,18 +510,20 @@ const deletePage = async (pageId: number) => {
   }
 }
 
-const previousPage = () => {
+const previousPage = async () => {
   if (!hasPreviousPage.value || !currentPage.value) return
 
+  await flushAutosave()
   const currentIndex = pages.value.findIndex(p => p.id === currentPage.value!.id)
   if (currentIndex > 0) {
     currentPage.value = pages.value[currentIndex - 1]
   }
 }
 
-const nextPage = () => {
+const nextPage = async () => {
   if (!hasNextPage.value || !currentPage.value) return
 
+  await flushAutosave()
   const currentIndex = pages.value.findIndex(p => p.id === currentPage.value!.id)
   if (currentIndex < pages.value.length - 1) {
     currentPage.value = pages.value[currentIndex + 1]
@@ -510,6 +534,8 @@ const publishTopic = async () => {
   if (!topic.value) return
 
   try {
+    await flushAutosave()
+
     if (topic.value.status === 'published') {
       await axios.post(`${API_BASE}/teacher/enotes/topics/${topic.value.id}/unpublish`)
     } else {
@@ -522,11 +548,13 @@ const publishTopic = async () => {
   }
 }
 
-const openPreview = () => {
+const openPreview = async () => {
+  await flushAutosave()
   router.push(`/teacher/enotes/preview/${topicId.value}`)
 }
 
-const goBack = () => {
+const goBack = async () => {
+  await flushAutosave()
   router.push('/teacher/enotes')
 }
 
@@ -642,6 +670,10 @@ const movePageDown = async (index: number) => {
 onMounted(() => {
   console.log('ENoteBuilder mounted, topicId:', topicId.value)
   loadTopic()
+})
+
+onBeforeRouteLeave(async () => {
+  await flushAutosave()
 })
 
 onUnmounted(() => {

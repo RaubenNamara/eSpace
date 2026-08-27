@@ -2,9 +2,9 @@
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
     <!-- Header -->
     <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-      <div class="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-16 py-4">
+      <div class="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-16 py-3 sm:py-4">
         <div class="flex items-center justify-between">
-          <div class="flex items-center space-x-4 min-w-0">
+          <div class="flex items-center space-x-3 sm:space-x-4 min-w-0">
             <button
               @click="markingData ? backToList() : router.push('/teacher/assignments')"
               class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex-shrink-0"
@@ -23,19 +23,19 @@
     </div>
 
     <!-- Main Content -->
-    <div class="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-16 py-6">
+    <div class="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-16 py-4 sm:py-6">
       <!-- Loading State -->
       <div v-if="loading" class="flex items-center justify-center py-12">
         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
       </div>
 
       <!-- Error State -->
-      <div v-else-if="error" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 mb-6">
+      <div v-else-if="error" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 sm:p-6 mb-4 sm:mb-6">
         <div class="flex items-center">
-          <svg class="w-6 h-6 text-red-600 dark:text-red-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-6 h-6 text-red-600 dark:text-red-400 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
           </svg>
-          <p class="text-red-600 dark:text-red-400">{{ error }}</p>
+          <p class="text-red-600 dark:text-red-400 break-words">{{ error }}</p>
         </div>
       </div>
 
@@ -97,22 +97,22 @@
           </div>
 
           <!-- Empty State -->
-          <div v-if="submissions.length === 0" class="p-12 text-center">
-            <svg class="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div v-if="submissions.length === 0" class="p-6 sm:p-12 text-center">
+            <svg class="w-12 h-12 sm:w-16 sm:h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
             </svg>
-            <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">No submissions yet</h3>
-            <p class="text-gray-600 dark:text-gray-400">Students haven't submitted this assignment yet.</p>
+            <h3 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-2">No submissions yet</h3>
+            <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">Students haven't submitted this assignment yet.</p>
           </div>
         </div>
       </div>
 
       <!-- Marking View -->
-      <div v-else class="grid grid-cols-1 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+      <div v-else class="grid grid-cols-1 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6">
         <!-- Questions -->
-        <div class="lg:col-span-3 xl:col-span-4 space-y-6">
-          <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">{{ markingData.submission.student_name }}</h3>
+        <div class="lg:col-span-3 xl:col-span-4 space-y-4 sm:space-y-6">
+          <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+            <h3 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-1 break-words">{{ markingData.submission.student_name }}</h3>
             <p class="text-sm text-gray-500 dark:text-gray-400">
               Submitted {{ formatDate(markingData.submission.submitted_at) }} • {{ markingData.submission.admission_number }}
             </p>
@@ -121,21 +121,21 @@
           <div
             v-for="(question, index) in markingData.questions"
             :key="question.id"
-            class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6"
+            class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6"
           >
-            <div class="flex items-start space-x-3 mb-4">
-              <span class="font-medium text-gray-900 dark:text-white">Q{{ index + 1 }}.</span>
-              <div class="flex-1">
-                <p v-if="question.question_text" class="text-gray-900 dark:text-white mb-2" v-html="question.question_text"></p>
-                <p v-else-if="question.scenario_text" class="text-gray-700 dark:text-gray-300 mb-2" v-html="question.scenario_text"></p>
+            <div class="flex items-start gap-2 sm:gap-3 mb-4">
+              <span class="font-medium text-gray-900 dark:text-white flex-shrink-0">Q{{ index + 1 }}.</span>
+              <div class="flex-1 min-w-0 overflow-x-auto">
+                <p v-if="question.question_text" class="text-gray-900 dark:text-white mb-2 break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.question_text"></p>
+                <p v-else-if="question.scenario_text" class="text-gray-700 dark:text-gray-300 mb-2 break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.scenario_text"></p>
                 <span class="text-sm text-gray-600 dark:text-gray-400">{{ question.marks }} marks</span>
               </div>
             </div>
 
             <!-- Objective (MCQ/true-false) questions: raw stored answer only -->
-            <div v-if="isObjective(question)" class="ml-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+            <div v-if="isObjective(question)" class="ml-3 sm:ml-6 p-3 sm:p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
               <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Student's answer</p>
-              <p class="text-gray-900 dark:text-white whitespace-pre-line">{{ question.answer?.answer_text || '(No answer provided)' }}</p>
+              <p class="text-gray-900 dark:text-white whitespace-pre-line break-words">{{ question.answer?.answer_text || '(No answer provided)' }}</p>
             </div>
 
             <!-- Free-response question: typed answer (annotatable), drawing layer, and PDF/image

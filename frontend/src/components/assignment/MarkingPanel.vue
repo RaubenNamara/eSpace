@@ -14,6 +14,7 @@
 
     <div class="marking-panel__questions">
       <div v-for="(question, index) in questions" :key="question.id" class="marking-panel__question">
+        <p v-if="curriculumLabel(question)" class="marking-panel__curriculum-label">{{ curriculumLabel(question) }}</p>
         <div class="marking-panel__question-header">
           <span>Q{{ index + 1 }} <span class="marking-panel__max">/ {{ questionMax(question) }}</span></span>
           <input
@@ -85,6 +86,11 @@ import { computeGradeSummary } from '@/utils/grading'
 
 interface MarkableQuestion extends AssignmentQuestion {
   question_mark?: { marks_awarded: number | null; feedback?: string } | null
+  // Read-only curriculum context (see Teacher\MarkingController::getSubmissionForMarking()) -
+  // absent for any question not linked to LOA/AOI/EOC curriculum data.
+  curriculum_theme_branch?: string | null
+  curriculum_topic_name?: string | null
+  curriculum_learning_outcome_text?: string | null
 }
 
 interface Props {
@@ -117,6 +123,15 @@ props.questions.forEach(q => {
   marksInput.value[q.id] = q.question_mark?.marks_awarded ?? null
   feedbackInput.value[q.id] = q.question_mark?.feedback || ''
 })
+
+// Purely informational, never read by the grading/marking logic itself (section 24: labels only).
+function curriculumLabel(question: MarkableQuestion): string {
+  const parts: string[] = []
+  if (question.curriculum_theme_branch) parts.push(`Theme: ${question.curriculum_theme_branch}`)
+  if (question.curriculum_topic_name) parts.push(`Topic: ${question.curriculum_topic_name}`)
+  if (question.curriculum_learning_outcome_text) parts.push(`LO: ${question.curriculum_learning_outcome_text}`)
+  return parts.join(' · ')
+}
 
 function questionMax(question: MarkableQuestion): number {
   if (question.question_type === 'scenario' && (question as any).sub_questions?.length) {
@@ -317,6 +332,17 @@ watch(() => props.initialFeedback, (val) => {
   border-color: #374151;
 }
 
+.marking-panel__curriculum-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6366f1;
+  margin: 0 0 4px;
+}
+
+:global(.dark) .marking-panel__curriculum-label {
+  color: #a5b4fc;
+}
+
 .marking-panel__question-header {
   display: flex;
   align-items: center;
@@ -335,8 +361,10 @@ watch(() => props.initialFeedback, (val) => {
 }
 
 .marking-panel__marks-input {
-  width: 60px;
-  padding: 4px 6px;
+  width: 64px;
+  min-height: 36px;
+  padding: 6px 8px;
+  font-size: 14px;
   border: 1px solid #e5e7eb;
   border-radius: 6px;
   text-align: right;
@@ -416,8 +444,10 @@ watch(() => props.initialFeedback, (val) => {
 }
 
 .marking-panel__btn {
-  padding: 8px 12px;
-  font-size: 13px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  font-size: 14px;
   border-radius: 8px;
   border: 1px solid #e5e7eb;
   cursor: pointer;

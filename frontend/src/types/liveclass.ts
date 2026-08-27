@@ -1,6 +1,7 @@
 /**
  * Live Classes (BigBlueButton) TypeScript Interfaces
  */
+import type { ClassTarget } from '@/components/teacher/TeacherClassSelector.vue'
 
 export type LiveClassStatus = 'scheduled' | 'started' | 'ended' | 'cancelled'
 
@@ -8,6 +9,7 @@ export interface LiveClass {
   id: number
   subject_id: number | null
   class_id: number | null
+  class_group_name?: string | null
   department_id?: number | null
   department_name?: string
   title: string
@@ -35,7 +37,7 @@ export interface LiveClassForm {
   title: string
   description: string
   subject_id: string
-  class_id: string
+  classTarget: ClassTarget
   scheduled_start: string
   scheduled_end: string
   is_recorded: boolean

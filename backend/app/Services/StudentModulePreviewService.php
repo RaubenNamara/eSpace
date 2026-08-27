@@ -21,21 +21,36 @@ class StudentModulePreviewService
         return \eSpace\Config\Database::getInstance();
     }
 
+    /**
+     * Shared "does this resource's class targeting match the class being previewed" clause -
+     * matches an exact single-stream class_id, an "All Streams" class_group_name (resolved by
+     * name against the previewed class_id), or both columns NULL (whole department). $alias is
+     * the resource table's SQL alias (e.g. "lb", "q", "et").
+     */
+    private function classTargetMatchClause(string $alias): string
+    {
+        return "(
+            ({$alias}.class_id IS NULL AND {$alias}.class_group_name IS NULL)
+            OR {$alias}.class_id = :class_id
+            OR ({$alias}.class_group_name IS NOT NULL AND {$alias}.class_group_name = (SELECT name FROM classes WHERE id = :class_id_for_name))
+        )";
+    }
+
     public function getLibraryBooks(int $departmentId, int $classId): array
     {
         $stmt = $this->getDb()->prepare(
-            "SELECT lb.id, lb.title, lb.description, lb.subject_id, lb.class_id, lb.file_path,
-                    lb.file_type, lb.file_size, lb.total_pages, lb.published_at, lb.created_at,
+            "SELECT lb.id, lb.title, lb.description, lb.subject_id, lb.class_id, lb.class_group_name, lb.file_path,
+                    lb.file_type, lb.file_size, lb.allow_download, lb.total_pages, lb.published_at, lb.created_at,
                     s.name as subject_name, s.code as subject_code,
                     t.first_name as teacher_first_name, t.last_name as teacher_last_name
              FROM library_books lb
              LEFT JOIN subjects s ON lb.subject_id = s.id
              LEFT JOIN teachers t ON lb.uploaded_by = t.id
              WHERE lb.status = 'published' AND lb.deleted_at IS NULL
-               AND lb.department_id = :department_id AND (lb.class_id IS NULL OR lb.class_id = :class_id)
+               AND lb.department_id = :department_id AND " . $this->classTargetMatchClause('lb') . "
              ORDER BY lb.published_at DESC"
         );
-        $stmt->execute(['department_id' => $departmentId, 'class_id' => $classId]);
+        $stmt->execute(['department_id' => $departmentId, 'class_id' => $classId, 'class_id_for_name' => $classId]);
         return $stmt->fetchAll();
     }
 
@@ -50,10 +65,10 @@ class StudentModulePreviewService
              LEFT JOIN subjects s ON q.subject_id = s.id
              LEFT JOIN teachers t ON q.created_by = t.id
              WHERE q.status = 'published' AND q.deleted_at IS NULL
-               AND q.department_id = :department_id AND (q.class_id IS NULL OR q.class_id = :class_id)
+               AND q.department_id = :department_id AND " . $this->classTargetMatchClause('q') . "
              ORDER BY q.published_at DESC"
         );
-        $stmt->execute(['department_id' => $departmentId, 'class_id' => $classId]);
+        $stmt->execute(['department_id' => $departmentId, 'class_id' => $classId, 'class_id_for_name' => $classId]);
         return $stmt->fetchAll();
     }
 
@@ -68,10 +83,10 @@ class StudentModulePreviewService
              LEFT JOIN subjects s ON v.subject_id = s.id
              LEFT JOIN teachers t ON v.teacher_id = t.id
              WHERE v.status = 'published' AND v.deleted_at IS NULL
-               AND v.department_id = :department_id AND (v.class_id IS NULL OR v.class_id = :class_id)
+               AND v.department_id = :department_id AND " . $this->classTargetMatchClause('v') . "
              ORDER BY v.published_at DESC"
         );
-        $stmt->execute(['department_id' => $departmentId, 'class_id' => $classId]);
+        $stmt->execute(['department_id' => $departmentId, 'class_id' => $classId, 'class_id_for_name' => $classId]);
         return $stmt->fetchAll();
     }
 
@@ -86,10 +101,10 @@ class StudentModulePreviewService
              LEFT JOIN subjects s ON et.subject_id = s.id
              LEFT JOIN teachers t ON et.teacher_id = t.id
              WHERE et.status = 'published' AND et.deleted_at IS NULL
-               AND et.department_id = :department_id AND (et.class_id IS NULL OR et.class_id = :class_id)
+               AND et.department_id = :department_id AND " . $this->classTargetMatchClause('et') . "
              ORDER BY et.published_at DESC"
         );
-        $stmt->execute(['department_id' => $departmentId, 'class_id' => $classId]);
+        $stmt->execute(['department_id' => $departmentId, 'class_id' => $classId, 'class_id_for_name' => $classId]);
 
         return array_map(function ($topic) {
             $topic['learning_outcomes'] = !empty($topic['learning_outcomes'])
@@ -113,9 +128,9 @@ class StudentModulePreviewService
              LEFT JOIN subjects s ON et.subject_id = s.id
              LEFT JOIN classes c ON et.class_id = c.id
              WHERE et.id = :id AND et.status = 'published' AND et.deleted_at IS NULL
-               AND et.department_id = :department_id AND (et.class_id IS NULL OR et.class_id = :class_id)"
+               AND et.department_id = :department_id AND " . $this->classTargetMatchClause('et')
         );
-        $stmt->execute(['id' => $topicId, 'department_id' => $departmentId, 'class_id' => $classId]);
+        $stmt->execute(['id' => $topicId, 'department_id' => $departmentId, 'class_id' => $classId, 'class_id_for_name' => $classId]);
         $topic = $stmt->fetch();
 
         if (!$topic) {
@@ -185,10 +200,10 @@ class StudentModulePreviewService
              LEFT JOIN classes c ON lc.class_id = c.id
              LEFT JOIN teachers t ON lc.created_by = t.id
              WHERE lc.deleted_at IS NULL
-               AND lc.department_id = :department_id AND (lc.class_id IS NULL OR lc.class_id = :class_id)
+               AND lc.department_id = :department_id AND " . $this->classTargetMatchClause('lc') . "
              ORDER BY lc.scheduled_start DESC"
         );
-        $stmt->execute(['department_id' => $departmentId, 'class_id' => $classId]);
+        $stmt->execute(['department_id' => $departmentId, 'class_id' => $classId, 'class_id_for_name' => $classId]);
         return $stmt->fetchAll();
     }
 }

@@ -712,6 +712,14 @@ class StudentController extends Controller
                 }
             }
 
+            // Capture which (student, department) pairs are about to be closed, for the audit
+            // trail - the UPDATE below doesn't tell us which rows it actually touched.
+            $selectSql = "SELECT student_id, department_id FROM student_department_enrollments
+                          WHERE student_id IN ({$placeholders}) AND status = 'active'{$whereExtra}";
+            $selectStmt = $this->db->prepare($selectSql);
+            $selectStmt->execute($params);
+            $affected = $selectStmt->fetchAll();
+
             $sql = "UPDATE student_department_enrollments
                     SET status = 'withdrawn', end_date = CURDATE(), updated_at = NOW()
                     WHERE student_id IN ({$placeholders}) AND status = 'active'{$whereExtra}";
@@ -719,6 +727,11 @@ class StudentController extends Controller
             $stmt->execute($params);
 
             $affectedRows = $stmt->rowCount();
+
+            $performedBy = $this->getCurrentUserId();
+            foreach ($affected as $row) {
+                $this->logEnrollmentAudit((int) $row['student_id'], 'department_de_enroll', null, (int) $row['department_id'], (int) $performedBy, 'admin', $data['reason'] ?? null);
+            }
 
             $this->success([
                 'deenrolled_count' => $affectedRows
@@ -755,6 +768,10 @@ class StudentController extends Controller
         $enrollmentId = $data['enrollment_id'];
 
         try {
+            $lookupStmt = $this->db->prepare("SELECT student_id, department_id FROM student_department_enrollments WHERE id = ? AND status = 'active'");
+            $lookupStmt->execute([$enrollmentId]);
+            $enrollment = $lookupStmt->fetch();
+
             $sql = "UPDATE student_department_enrollments
                     SET status = 'withdrawn', end_date = CURDATE(), updated_at = NOW()
                     WHERE id = ? AND status = 'active'";
@@ -764,6 +781,9 @@ class StudentController extends Controller
             $affectedRows = $stmt->rowCount();
 
             if ($affectedRows > 0) {
+                if ($enrollment) {
+                    $this->logEnrollmentAudit((int) $enrollment['student_id'], 'department_de_enroll', null, (int) $enrollment['department_id'], (int) $this->getCurrentUserId(), 'admin', $data['reason'] ?? null);
+                }
                 $this->success([], 'Student de-enrolled successfully');
             } else {
                 $this->error('Enrollment not found', 404);
@@ -814,14 +834,16 @@ class StudentController extends Controller
             $stmt->execute();
             $enrollmentsByYear = $stmt->fetchAll();
 
-            // Enrollments by class
+            // Enrollments by class-stream (one bar per actual class-stream, e.g. "S.1 A"/"S.1 B",
+            // not collapsed to just the class name - ordered so streams of the same class group
+            // together in the chart instead of being scattered by count).
             $stmt = $this->db->prepare("
                 SELECT c.name as class_name, c.level, c.stream_name, COUNT(se.id) as count
                 FROM student_department_enrollments se
                 INNER JOIN classes c ON se.class_id = c.id
                 WHERE se.deleted_at IS NULL AND se.status = 'active'
                 GROUP BY c.id, c.name, c.level, c.stream_name
-                ORDER BY count DESC
+                ORDER BY c.name ASC, c.stream_name ASC
             ");
             $stmt->execute();
             $enrollmentsByClass = $stmt->fetchAll();

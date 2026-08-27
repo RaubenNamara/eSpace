@@ -19,7 +19,7 @@ use eSpace\App\Services\NotificationService;
  */
 class LiveClassController extends Controller
 {
-    private const SELECT_COLUMNS = "lc.id, lc.subject_id, lc.class_id, lc.department_id, lc.title, lc.description,
+    private const SELECT_COLUMNS = "lc.id, lc.subject_id, lc.class_id, lc.class_group_name, lc.department_id, lc.title, lc.description,
                        lc.scheduled_start, lc.scheduled_end, lc.actual_start, lc.actual_end,
                        lc.is_recorded, lc.recording_url, lc.status, lc.created_at, lc.updated_at,
                        s.name as subject_name, s.code as subject_code,
@@ -200,7 +200,7 @@ class LiveClassController extends Controller
 
         $data = $this->input();
 
-        $errors = $this->validateRequired(['title', 'subject_id', 'class_id', 'scheduled_start', 'scheduled_end']);
+        $errors = $this->validateRequired(['title', 'subject_id', 'scheduled_start', 'scheduled_end']);
         if (!empty($errors)) {
             $this->validationError($errors);
             return;
@@ -232,15 +232,9 @@ class LiveClassController extends Controller
             return;
         }
 
-        $stmt = $db->prepare(
-            "SELECT DISTINCT c.id FROM classes c
-             INNER JOIN student_department_enrollments se ON c.id = se.class_id
-             WHERE c.id = :class_id AND se.department_id = :department_id
-               AND se.deleted_at IS NULL AND c.deleted_at IS NULL"
-        );
-        $stmt->execute(['class_id' => $data['class_id'], 'department_id' => $departmentId]);
-        if (!$stmt->fetch()) {
-            $this->validationError(['class_id' => 'Class not found in your department']);
+        $classTarget = $this->resolveClassTarget($data, $departmentId);
+        if (!$classTarget['ok']) {
+            $this->validationError(['class_id' => $classTarget['message']]);
             return;
         }
 
@@ -250,11 +244,11 @@ class LiveClassController extends Controller
         $isRecorded = !empty($data['is_recorded']) ? 1 : 0;
 
         $sql = "INSERT INTO live_classes
-                    (subject_id, class_id, department_id, title, description, scheduled_start, scheduled_end,
+                    (subject_id, class_id, class_group_name, department_id, title, description, scheduled_start, scheduled_end,
                      meeting_id, moderator_password, attendee_password, is_recorded, status, created_by,
                      created_at, updated_at)
                 VALUES
-                    (:subject_id, :class_id, :department_id, :title, :description, :scheduled_start, :scheduled_end,
+                    (:subject_id, :class_id, :class_group_name, :department_id, :title, :description, :scheduled_start, :scheduled_end,
                      :meeting_id, :moderator_password, :attendee_password, :is_recorded, 'scheduled', :created_by,
                      NOW(), NOW())";
 
@@ -263,7 +257,8 @@ class LiveClassController extends Controller
         try {
             $stmt->execute([
                 'subject_id' => (int) $data['subject_id'],
-                'class_id' => (int) $data['class_id'],
+                'class_id' => $classTarget['class_id'],
+                'class_group_name' => $classTarget['class_group_name'],
                 'department_id' => $departmentId,
                 'title' => htmlspecialchars(trim($data['title']), ENT_QUOTES, 'UTF-8'),
                 'description' => !empty($data['description']) ? htmlspecialchars(trim($data['description']), ENT_QUOTES, 'UTF-8') : null,
@@ -280,11 +275,12 @@ class LiveClassController extends Controller
 
             (new NotificationService())->notifyDepartmentClass(
                 $departmentId,
-                (int) $data['class_id'],
+                $classTarget['class_id'],
                 'new_live_class',
                 'New live class scheduled',
                 "A live class \"" . htmlspecialchars(trim($data['title']), ENT_QUOTES, 'UTF-8') . "\" has been scheduled for " . date('M j, Y g:i A', $start) . ".",
-                ['live_class_id' => $liveClassId]
+                ['live_class_id' => $liveClassId],
+                $classTarget['class_group_name']
             );
 
             $this->success(['id' => $liveClassId], 'Live class scheduled successfully');

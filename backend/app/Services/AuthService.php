@@ -182,7 +182,7 @@ class AuthService extends Service
      * collisions, e.g. a student and an admin sharing id 1). Students get a lower minimum length
      * (5) than staff roles (8).
      */
-    public function changePassword(int $userId, string $currentPassword, string $newPassword, ?string $role = null): array
+    public function changePassword(int $userId, string $currentPassword, string $newPassword, ?string $role = null, ?string $newPasswordConfirmation = null): array
     {
         $user = $role ? $this->userRepository->findByIdAndRole($userId, $role) : $this->userRepository->findById($userId);
 
@@ -201,6 +201,15 @@ class AuthService extends Service
             ];
         }
 
+        // Only checked when the caller actually sends a confirmation field - existing callers
+        // that don't (e.g. the generic Settings page) are unaffected.
+        if ($newPasswordConfirmation !== null && $newPassword !== $newPasswordConfirmation) {
+            return [
+                'success' => false,
+                'message' => 'New password and confirmation do not match'
+            ];
+        }
+
         // Validate new password
         $minLength = $role === 'student' ? 5 : 8;
         $errors = $this->validate(['password' => $newPassword], ['password' => ['required', 'string', "min:{$minLength}"]]);
@@ -210,6 +219,15 @@ class AuthService extends Service
                 'success' => false,
                 'message' => 'Validation failed',
                 'errors' => $errors
+            ];
+        }
+
+        // Must actually be a new password - most relevant for a teacher moving off a temporary
+        // default one, but reasonable to require of everyone.
+        if ($this->verifyPassword($newPassword, $user['password'])) {
+            return [
+                'success' => false,
+                'message' => 'New password must be different from your current password'
             ];
         }
 
@@ -226,6 +244,16 @@ class AuthService extends Service
                 'success' => false,
                 'message' => 'Failed to update password'
             ];
+        }
+
+        // A teacher who just changed their (possibly temporary) password no longer needs to be
+        // forced through the change-password screen - clear both the persisted flag and this
+        // session's mirror of it (see MustChangePasswordMiddleware) so they can use the rest of
+        // the teacher module immediately, without logging out and back in.
+        if ($role === 'teacher') {
+            $db = \eSpace\Config\Database::getInstance();
+            $db->prepare("UPDATE teachers SET must_change_password = 0 WHERE id = :id")->execute(['id' => $userId]);
+            $_SESSION['must_change_password'] = false;
         }
 
         return [
@@ -347,6 +375,12 @@ class AuthService extends Service
         if ($user['role'] === 'hod' && !empty($user['teacher_id'])) {
             $_SESSION['teacher_id'] = $user['teacher_id'];
         }
+
+        // Mirrored into the session so MustChangePasswordMiddleware can gate every /teacher
+        // route without a DB lookup per request - see teachers.must_change_password.
+        if ($user['role'] === 'teacher') {
+            $_SESSION['must_change_password'] = !empty($user['must_change_password']);
+        }
     }
 
     /**
@@ -376,7 +410,13 @@ class AuthService extends Service
         if ($user['role'] === 'hod' && isset($user['teacher_id'])) {
             $userData['teacher_id'] = $user['teacher_id'];
         }
-        
+
+        // Lets the frontend redirect straight to /teacher/change-password on login instead of
+        // waiting for the first blocked API call - see MustChangePasswordMiddleware.
+        if ($user['role'] === 'teacher') {
+            $userData['must_change_password'] = !empty($user['must_change_password']);
+        }
+
         error_log("getUserData returning: " . json_encode($userData));
         return $userData;
     }

@@ -31,20 +31,12 @@ class ENoteImageController extends Controller
 
     public function upload(): void
     {
-        error_log('ENoteImageController: upload() called');
-        error_log('Request method: ' . $_SERVER['REQUEST_METHOD']);
-        error_log('FILES data: ' . print_r($_FILES, true));
-        error_log('Session data: ' . print_r($_SESSION, true));
-        
-        // Temporarily disable auth check for testing
-        // if (!$this->isAuthenticated()) {
-        //     error_log('ENoteImageController: Authentication failed');
-        //     $this->unauthorized();
-        //     return;
-        // }
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            error_log('ENoteImageController: Wrong request method');
             $this->methodNotAllowed();
             return;
         }
@@ -52,10 +44,6 @@ class ENoteImageController extends Controller
         try {
             // Check if file was uploaded
             if (!isset($_FILES['upload']) || $_FILES['upload']['error'] !== UPLOAD_ERR_OK) {
-                error_log('ENoteImageController: No file uploaded or upload error');
-                if (isset($_FILES['upload'])) {
-                    error_log('Upload error code: ' . $_FILES['upload']['error']);
-                }
                 $this->json([
                     'error' => [
                         'message' => 'No file uploaded or upload error occurred'
@@ -65,11 +53,9 @@ class ENoteImageController extends Controller
             }
 
             $file = $_FILES['upload'];
-            error_log('File info: name=' . $file['name'] . ', size=' . $file['size'] . ', type=' . $file['type']);
 
             // Validate file size
             if ($file['size'] > $this->maxFileSize) {
-                error_log('ENoteImageController: File too large');
                 $this->json([
                     'error' => [
                         'message' => 'File size exceeds maximum limit of 5MB'
@@ -82,10 +68,8 @@ class ENoteImageController extends Controller
             $finfo = finfo_open(FILEINFO_MIME_TYPE);
             $mimeType = finfo_file($finfo, $file['tmp_name']);
             finfo_close($finfo);
-            error_log('Detected MIME type: ' . $mimeType);
 
             if (!in_array($mimeType, $this->allowedMimeTypes)) {
-                error_log('ENoteImageController: Invalid MIME type');
                 $this->json([
                     'error' => [
                         'message' => 'Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed'
@@ -97,10 +81,8 @@ class ENoteImageController extends Controller
             // Additional validation: check file extension matches MIME type
             $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
             $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-            error_log('File extension: ' . $extension);
-            
+
             if (!in_array($extension, $allowedExtensions)) {
-                error_log('ENoteImageController: Invalid extension');
                 $this->json([
                     'error' => [
                         'message' => 'Invalid file extension'
@@ -112,14 +94,10 @@ class ENoteImageController extends Controller
             // Generate unique filename
             $filename = $this->generateUniqueFilename($extension);
             $filepath = $this->uploadDir . $filename;
-            error_log('Upload directory: ' . $this->uploadDir);
-            error_log('Target filepath: ' . $filepath);
-            error_log('Directory exists: ' . (file_exists($this->uploadDir) ? 'yes' : 'no'));
-            error_log('Directory writable: ' . (is_writable($this->uploadDir) ? 'yes' : 'no'));
 
-            // Move uploaded file
+            // Move uploaded file (animated GIFs are copied byte-for-byte, never re-encoded, so
+            // their animation is preserved)
             if (!move_uploaded_file($file['tmp_name'], $filepath)) {
-                error_log('ENoteImageController: Failed to move uploaded file');
                 $this->json([
                     'error' => [
                         'message' => 'Failed to save uploaded file'
@@ -128,11 +106,8 @@ class ENoteImageController extends Controller
                 return;
             }
 
-            error_log('File moved successfully');
-
             // Validate that the uploaded file is actually an image
             if (!$this->isValidImage($filepath)) {
-                error_log('ENoteImageController: Invalid image file');
                 unlink($filepath);
                 $this->json([
                     'error' => [
@@ -142,13 +117,12 @@ class ENoteImageController extends Controller
                 return;
             }
 
-            error_log('Image validation passed');
-
-            // Return CKEditor-compatible response
+            // Return CKEditor-compatible response. This is a root-relative path (relative to
+            // backend/public/) - the frontend upload adapter is responsible for prefixing it with
+            // the app's /eSpace/ base path before handing it to CKEditor, the same way every
+            // other uploaded-file reference in this app is resolved (see resolveAssetUrl()).
             $url = '/uploads/enotes/' . $filename;
-            error_log('Returning URL: ' . $url);
-            
-            // Return success response
+
             http_response_code(200);
             header('Content-Type: application/json');
             echo json_encode([
@@ -180,13 +154,6 @@ class ENoteImageController extends Controller
         } catch (\Exception $e) {
             return false;
         }
-    }
-
-    public function isAuthenticated(): bool
-    {
-        // Temporarily disable authentication for testing
-        // TODO: Re-enable proper authentication in production
-        return true;
     }
 
     private function getTeacherId(): ?int

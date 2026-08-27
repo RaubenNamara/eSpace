@@ -49,11 +49,23 @@ class LibraryController extends Controller
     {
         return "lb.status = 'published' AND lb.deleted_at IS NULL AND EXISTS (
             SELECT 1 FROM student_department_enrollments sde
+            LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
             WHERE sde.student_id = :student_id
               AND sde.department_id = lb.department_id
               AND sde.deleted_at IS NULL
-              AND (lb.class_id IS NULL OR sde.class_id = lb.class_id)
+              AND sde.status = 'active'
+              AND (
+                (lb.class_id IS NULL AND lb.class_group_name IS NULL)
+                OR sde.class_id = lb.class_id
+                OR (lb.class_group_name IS NOT NULL AND sde_c.name = lb.class_group_name)
+              )
               AND lb.published_at <= COALESCE(sde.end_date, NOW())
+        ) AND NOT EXISTS (
+            SELECT 1 FROM student_teacher_enrollments ste
+            WHERE ste.student_id = :student_id_te
+              AND ste.teacher_id = lb.uploaded_by
+              AND ste.department_id = lb.department_id
+              AND ste.status = 'withdrawn'
         )";
     }
 
@@ -80,7 +92,7 @@ class LibraryController extends Controller
         $db = $this->getDb();
 
         $where = [$this->visibilityClause()];
-        $params = ['student_id' => $studentId];
+        $params = ['student_id' => $studentId, 'student_id_te' => $studentId];
 
         if (!empty($search)) {
             $where[] = '(lb.title LIKE :search OR lb.description LIKE :search)';
@@ -94,8 +106,8 @@ class LibraryController extends Controller
 
         $whereClause = implode(' AND ', $where);
 
-        $sql = "SELECT lb.id, lb.title, lb.description, lb.subject_id, lb.class_id, lb.file_path,
-                       lb.file_type, lb.file_size, lb.total_pages, lb.published_at, lb.created_at,
+        $sql = "SELECT lb.id, lb.title, lb.description, lb.subject_id, lb.class_id, lb.class_group_name, lb.file_path,
+                       lb.file_type, lb.file_size, lb.allow_download, lb.total_pages, lb.published_at, lb.created_at,
                        s.name as subject_name, s.code as subject_code,
                        t.first_name as teacher_first_name, t.last_name as teacher_last_name
                 FROM library_books lb
@@ -133,8 +145,8 @@ class LibraryController extends Controller
 
         $whereClause = $this->visibilityClause();
 
-        $sql = "SELECT lb.id, lb.title, lb.description, lb.subject_id, lb.class_id, lb.file_path,
-                       lb.file_type, lb.file_size, lb.total_pages, lb.published_at, lb.created_at,
+        $sql = "SELECT lb.id, lb.title, lb.description, lb.subject_id, lb.class_id, lb.class_group_name, lb.file_path,
+                       lb.file_type, lb.file_size, lb.allow_download, lb.total_pages, lb.published_at, lb.created_at,
                        s.name as subject_name, s.code as subject_code,
                        t.first_name as teacher_first_name, t.last_name as teacher_last_name
                 FROM library_books lb
@@ -143,7 +155,7 @@ class LibraryController extends Controller
                 WHERE lb.id = :id AND {$whereClause}";
 
         $stmt = $db->prepare($sql);
-        $stmt->execute(['id' => $id, 'student_id' => $studentId]);
+        $stmt->execute(['id' => $id, 'student_id' => $studentId, 'student_id_te' => $studentId]);
         $book = $stmt->fetch();
 
         if (!$book) {

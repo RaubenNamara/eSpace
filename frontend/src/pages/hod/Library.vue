@@ -147,15 +147,15 @@
       </div>
     </div>
 
-    <!-- PDF Preview -->
-    <LibraryPdfViewer v-if="previewBook" :book="previewBook" @close="previewBook = null" />
+    <!-- Document Preview -->
+    <LibraryDocumentViewer v-if="previewBook" :book="previewBook" @close="previewBook = null" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { apiService } from '@/services/api'
-import LibraryPdfViewer from '@/components/library/LibraryPdfViewer.vue'
+import LibraryDocumentViewer from '@/components/library/LibraryDocumentViewer.vue'
 import type { LibraryBook } from '@/types/library'
 
 const books = ref<LibraryBook[]>([])

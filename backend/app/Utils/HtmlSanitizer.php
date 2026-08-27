@@ -66,25 +66,17 @@ class HtmlSanitizer
             return '';
         }
 
-        error_log('HtmlSanitizer: Input HTML (first 500 chars): ' . substr($html, 0, 500));
-        error_log('HtmlSanitizer: Contains oembed: ' . (strpos($html, 'oembed') !== false ? 'YES' : 'NO'));
-        error_log('HtmlSanitizer: Contains iframe: ' . (strpos($html, 'iframe') !== false ? 'YES' : 'NO'));
-
         // Remove dangerous content
         $html = self::removeScripts($html);
         $html = self::removeInlineStyles($html);
         $html = self::removeDangerousAttributes($html);
-        
+
         // Sanitize HTML using DOMDocument
         $html = self::sanitizeWithDOM($html);
-        
+
         // Final cleanup
         $html = self::cleanEmptyTags($html);
-        
-        error_log('HtmlSanitizer: Output HTML (first 500 chars): ' . substr($html, 0, 500));
-        error_log('HtmlSanitizer: Output contains oembed: ' . (strpos($html, 'oembed') !== false ? 'YES' : 'NO'));
-        error_log('HtmlSanitizer: Output contains iframe: ' . (strpos($html, 'iframe') !== false ? 'YES' : 'NO'));
-        
+
         return $html;
     }
 
@@ -224,7 +216,32 @@ class HtmlSanitizer
                 }
             }
         }
-        
+
+        // Drop <img> elements left with no src (e.g. an upload placeholder CKEditor inserted
+        // that never resolved to a real URL) - an empty img element has nothing to render.
+        $emptyImages = $xpath->query('//img[not(@src) or normalize-space(@src) = ""]');
+        foreach ($emptyImages as $img) {
+            $img->parentNode->removeChild($img);
+        }
+
+        // A <figure> whose only content was the removed <img>/<oembed> is now an empty
+        // shell (e.g. <figure></figure>) with nothing to render - drop it too.
+        $emptyFigures = $xpath->query('//figure[not(*) and normalize-space(text()) = ""]');
+        foreach ($emptyFigures as $figure) {
+            $figure->parentNode->removeChild($figure);
+        }
+
+        // Defensive cleanup: a <figure> should never be nested directly inside another <figure>
+        // (CKEditor never emits this itself, but malformed pasted HTML via Source Editing could).
+        // Unwrap the outer wrapper so the image/media isn't boxed twice.
+        $nestedFigures = $xpath->query('//figure[parent::figure]');
+        foreach ($nestedFigures as $innerFigure) {
+            $outerFigure = $innerFigure->parentNode;
+            if ($outerFigure && $outerFigure->parentNode) {
+                $outerFigure->parentNode->replaceChild($innerFigure, $outerFigure);
+            }
+        }
+
         $html = $dom->saveHTML();
         
         libxml_clear_errors();

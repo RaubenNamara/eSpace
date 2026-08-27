@@ -48,11 +48,23 @@ class ItemBankController extends Controller
     {
         return "q.status = 'published' AND q.deleted_at IS NULL AND EXISTS (
             SELECT 1 FROM student_department_enrollments sde
+            LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
             WHERE sde.student_id = :student_id
               AND sde.department_id = q.department_id
               AND sde.deleted_at IS NULL
-              AND (q.class_id IS NULL OR sde.class_id = q.class_id)
+              AND sde.status = 'active'
+              AND (
+                (q.class_id IS NULL AND q.class_group_name IS NULL)
+                OR sde.class_id = q.class_id
+                OR (q.class_group_name IS NOT NULL AND sde_c.name = q.class_group_name)
+              )
               AND q.published_at <= COALESCE(sde.end_date, NOW())
+        ) AND NOT EXISTS (
+            SELECT 1 FROM student_teacher_enrollments ste
+            WHERE ste.student_id = :student_id_te
+              AND ste.teacher_id = q.created_by
+              AND ste.department_id = q.department_id
+              AND ste.status = 'withdrawn'
         )";
     }
 
@@ -79,7 +91,7 @@ class ItemBankController extends Controller
         $db = $this->getDb();
 
         $where = [$this->visibilityClause()];
-        $params = ['student_id' => $studentId];
+        $params = ['student_id' => $studentId, 'student_id_te' => $studentId];
 
         if (!empty($search)) {
             $where[] = '(q.question_text LIKE :search OR q.explanation LIKE :search)';
@@ -142,7 +154,7 @@ class ItemBankController extends Controller
                 WHERE q.id = :id AND {$whereClause}";
 
         $stmt = $db->prepare($sql);
-        $stmt->execute(['id' => $id, 'student_id' => $studentId]);
+        $stmt->execute(['id' => $id, 'student_id' => $studentId, 'student_id_te' => $studentId]);
         $resource = $stmt->fetch();
 
         if (!$resource) {

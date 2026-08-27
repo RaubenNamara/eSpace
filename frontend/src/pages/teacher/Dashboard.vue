@@ -1,7 +1,14 @@
 <template>
   <div>
-    <div class="flex items-center justify-between mb-6">
-      <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Teacher Dashboard</h1>
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+      <div class="flex items-center gap-3">
+        <div class="hidden sm:flex w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 items-center justify-center shadow-lg shadow-indigo-500/30 flex-shrink-0">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+          </svg>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Teacher Dashboard</h1>
+      </div>
       <div class="flex flex-wrap gap-3">
         <RouterLink
           to="/teacher/preview"
@@ -58,15 +65,15 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
       <div class="card">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-gray-500 dark:text-gray-400 text-sm">Total Enrollments</p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ analytics.total_enrollments }}</p>
+            <p class="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">Total Enrollments</p>
+            <p class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{{ analytics.total_enrollments }}</p>
           </div>
-          <div class="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/20 rounded-lg flex items-center justify-center">
-            <svg class="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="w-10 h-10 sm:w-12 sm:h-12 bg-indigo-100 dark:bg-indigo-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
             </svg>
           </div>
@@ -75,11 +82,11 @@
       <div class="card">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-gray-500 dark:text-gray-400 text-sm">Recent Enrollments (7 days)</p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ analytics.recent_enrollments }}</p>
+            <p class="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">Recent (7 days)</p>
+            <p class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{{ analytics.recent_enrollments }}</p>
           </div>
-          <div class="w-12 h-12 bg-green-100 dark:bg-green-900/20 rounded-lg flex items-center justify-center">
-            <svg class="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 dark:bg-green-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
             </svg>
           </div>
@@ -88,11 +95,11 @@
       <div class="card">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-gray-500 dark:text-gray-400 text-sm">Classes</p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ analytics.by_class.length }}</p>
+            <p class="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">Classes</p>
+            <p class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{{ uniqueClassCount }}</p>
           </div>
-          <div class="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg flex items-center justify-center">
-            <svg class="w-6 h-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="w-10 h-10 sm:w-12 sm:h-12 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
             </svg>
           </div>
@@ -101,11 +108,11 @@
       <div class="card">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-gray-500 dark:text-gray-400 text-sm">Streams</p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ analytics.by_stream.length }}</p>
+            <p class="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">Class-Streams</p>
+            <p class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{{ analytics.by_class.length }}</p>
           </div>
-          <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900/20 rounded-lg flex items-center justify-center">
-            <svg class="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="w-10 h-10 sm:w-12 sm:h-12 bg-purple-100 dark:bg-purple-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
             </svg>
           </div>
@@ -113,47 +120,49 @@
       </div>
     </div>
 
+    <!-- Enrollments by Class-Stream -->
+    <div class="card mb-8">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+        <svg class="w-5 h-5 mr-2 text-indigo-500 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+        </svg>
+        Enrollments by Class-Stream
+      </h3>
+      <div class="h-72">
+        <Bar v-if="!loadingAnalytics && analytics.by_class.length > 0" :data="classChartData" :options="chartOptions" />
+        <div v-else-if="loadingAnalytics" class="flex items-center justify-center h-full text-gray-500">Loading...</div>
+        <div v-else class="flex items-center justify-center h-full text-gray-500">No data available</div>
+      </div>
+    </div>
+
     <!-- Analytics Charts -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-      <!-- Enrollments by Class -->
-      <div class="card">
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Enrollments by Class</h3>
-        <div class="h-64">
-          <Bar v-if="!loadingAnalytics && analytics.by_class.length > 0" :data="classChartData" :options="chartOptions" />
-          <div v-else-if="loadingAnalytics" class="flex items-center justify-center h-full text-gray-500">Loading...</div>
-          <div v-else class="flex items-center justify-center h-full text-gray-500">No data available</div>
-        </div>
-      </div>
-
       <!-- Enrollments by Academic Year -->
       <div class="card">
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Enrollments by Academic Year</h3>
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+          <svg class="w-5 h-5 mr-2 text-green-500 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+          </svg>
+          Enrollments by Academic Year
+        </h3>
         <div class="h-64">
           <Bar v-if="!loadingAnalytics && analytics.by_academic_year.length > 0" :data="yearChartData" :options="chartOptions" />
           <div v-else-if="loadingAnalytics" class="flex items-center justify-center h-full text-gray-500">Loading...</div>
           <div v-else class="flex items-center justify-center h-full text-gray-500">No data available</div>
         </div>
       </div>
-    </div>
 
-    <!-- Gender Distribution & Stream Distribution -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
       <!-- Gender Distribution -->
       <div class="card">
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Gender Distribution</h3>
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+          <svg class="w-5 h-5 mr-2 text-pink-500 dark:text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+          </svg>
+          Gender Distribution
+        </h3>
         <div class="h-64">
           <Doughnut v-if="!loadingAnalytics" :data="genderChartData" :options="doughnutOptions" />
           <div v-else class="flex items-center justify-center h-full text-gray-500">Loading...</div>
-        </div>
-      </div>
-
-      <!-- Enrollments by Stream -->
-      <div class="card">
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Enrollments by Stream</h3>
-        <div class="h-64">
-          <Bar v-if="!loadingAnalytics && analytics.by_stream.length > 0" :data="streamChartData" :options="horizontalChartOptions" />
-          <div v-else-if="loadingAnalytics" class="flex items-center justify-center h-full text-gray-500">Loading...</div>
-          <div v-else class="flex items-center justify-center h-full text-gray-500">No data available</div>
         </div>
       </div>
     </div>
@@ -328,7 +337,7 @@ const viewFilters = ref({
 
 // Chart data
 const classChartData = computed(() => ({
-  labels: analytics.value.by_class.map((c: any) => c.class_name),
+  labels: analytics.value.by_class.map((c: any) => c.stream_name ? `${c.class_name} ${c.stream_name}` : c.class_name),
   datasets: [{
     label: 'Students',
     data: analytics.value.by_class.map((c: any) => c.count),
@@ -337,22 +346,14 @@ const classChartData = computed(() => ({
   }]
 }))
 
+const uniqueClassCount = computed(() => new Set(analytics.value.by_class.map((c: any) => c.class_name)).size)
+
 const yearChartData = computed(() => ({
   labels: analytics.value.by_academic_year.map((y: any) => y.academic_year),
   datasets: [{
     label: 'Students',
     data: analytics.value.by_academic_year.map((y: any) => y.count),
     backgroundColor: '#10B981',
-    borderRadius: 8
-  }]
-}))
-
-const streamChartData = computed(() => ({
-  labels: analytics.value.by_stream.map((s: any) => s.stream_name),
-  datasets: [{
-    label: 'Students',
-    data: analytics.value.by_stream.map((s: any) => s.count),
-    backgroundColor: '#F59E0B',
     borderRadius: 8
   }]
 }))
@@ -383,31 +384,6 @@ const chartOptions = {
       }
     },
     x: {
-      grid: {
-        display: false
-      }
-    }
-  }
-}
-
-const horizontalChartOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  indexAxis: 'y' as const,
-  plugins: {
-    legend: {
-      display: false
-    }
-  },
-  scales: {
-    x: {
-      beginAtZero: true,
-      grid: {
-        display: true,
-        color: 'rgba(0, 0, 0, 0.05)'
-      }
-    },
-    y: {
       grid: {
         display: false
       }
@@ -510,13 +486,15 @@ const openViewEnrolledModal = async () => {
 }
 
 const deEnrollStudent = async (enrollmentId: number, firstName: string, lastName: string) => {
-  if (!confirm(`Are you sure you want to de-enroll ${firstName} ${lastName} from the department?`)) {
+  if (!confirm(`De-enroll ${firstName} ${lastName} from your account?\n\nThey'll lose access to your assignments, eNotes, and other content, but stay fully enrolled with every other teacher in the department.`)) {
     return
   }
 
+  const reason = prompt('Reason (optional):') || undefined
+
   console.log('De-enrolling student:', enrollmentId)
   try {
-    const response = await apiService.delete(`/teacher/students/${enrollmentId}`)
+    const response = await apiService.delete(`/teacher/students/${enrollmentId}`, { data: { reason } })
     console.log('De-enroll response:', response.data)
     
     if (response.data?.success) {

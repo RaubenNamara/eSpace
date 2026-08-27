@@ -2,7 +2,7 @@
   <div class="p-6">
     <div class="mb-6">
       <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">eLibrary</h1>
-      <p class="text-gray-600 dark:text-gray-400">Upload PDF resources for your classes - students preview them in the browser, no downloads.</p>
+      <p class="text-gray-600 dark:text-gray-400">Upload PDF or PowerPoint (PPT/PPTX) resources for your classes - students preview them in the browser.</p>
     </div>
 
     <!-- Stats -->
@@ -74,7 +74,7 @@
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
         </svg>
-        <span>Upload PDF</span>
+        <span>Upload Resource</span>
       </button>
     </div>
 
@@ -88,9 +88,9 @@
       <svg class="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
       </svg>
-      <p class="text-gray-600 dark:text-gray-400 mb-4">{{ books.length === 0 ? 'No PDFs uploaded yet' : 'No books match your filters' }}</p>
+      <p class="text-gray-600 dark:text-gray-400 mb-4">{{ books.length === 0 ? 'No resources uploaded yet' : 'No books match your filters' }}</p>
       <button v-if="books.length === 0" @click="openCreateModal" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-        Upload Your First PDF
+        Upload Your First Resource
       </button>
     </div>
 
@@ -127,7 +127,10 @@
             <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
               {{ book.subject_name || 'Unknown Subject' }}
             </span>
-            <span v-if="book.class_name" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+            <span v-if="book.class_group_name" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+              {{ book.class_group_name }} (All Streams)
+            </span>
+            <span v-else-if="book.class_name" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
               {{ book.class_name }}{{ book.class_stream_name ? ' - ' + book.class_stream_name : '' }}
             </span>
             <span class="ml-auto text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">{{ formatFileSize(book.file_size) }}</span>
@@ -165,7 +168,7 @@
       <div class="bg-white dark:bg-gray-800 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
-            {{ editingBook ? 'Edit Book' : 'Upload PDF' }}
+            {{ editingBook ? 'Edit Book' : 'Upload Resource' }}
           </h3>
           <button @click="closeBookModal" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
             <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -216,49 +219,73 @@
 
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Class *</label>
-                <select
-                  v-model="bookForm.class_id"
-                  required
-                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-                  :disabled="!assignments?.classes || assignments.classes.length === 0"
-                >
-                  <option value="">Select Class</option>
-                  <option v-for="cls in assignments?.classes" :key="cls.id" :value="cls.id">
-                    {{ cls.name }} ({{ cls.level }}{{ cls.stream_name ? ' - ' + cls.stream_name : '' }})
-                  </option>
-                </select>
-                <p v-if="!assignments?.classes || assignments.classes.length === 0" class="text-xs text-red-600 dark:text-red-400 mt-1">
-                  No classes available. Please ensure you are assigned to a department with classes.
-                </p>
+                <TeacherClassSelector v-model="bookForm.classTarget" />
               </div>
             </div>
 
-            <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
-              <select
-                v-model="bookForm.status"
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-              >
-                <option value="draft">Draft</option>
-                <option value="published">Published</option>
-                <option value="archived">Archived</option>
-              </select>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
+                <select
+                  v-model="bookForm.status"
+                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="draft">Draft</option>
+                  <option value="published">Published</option>
+                  <option value="archived">Archived</option>
+                </select>
+              </div>
+              <label class="flex items-center gap-2 mt-7 px-3 py-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer h-fit">
+                <input v-model="bookForm.allow_download" type="checkbox" class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Allow students to download this file</span>
+              </label>
             </div>
 
             <div v-if="!editingBook" class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">PDF File *</label>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">File (PDF, PPT, or PPTX) *</label>
               <input
                 type="file"
-                accept="application/pdf"
+                :accept="LIBRARY_FILE_ACCEPT"
                 required
                 @change="handleFileSelect"
                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
               >
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">PDF only, up to 50MB. Students preview it in-browser - there's no download option.</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">PDF, PPT, or PPTX, up to 50MB. Students preview it in-browser.</p>
+              <p v-if="fileError" class="text-xs text-red-600 dark:text-red-400 mt-1">{{ fileError }}</p>
             </div>
-            <p v-else class="text-xs text-gray-500 dark:text-gray-400 mb-4">
-              The PDF file can't be replaced here - delete this book and upload a new one if you need to change the document.
-            </p>
+            <div v-else class="mb-4 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+              <div class="flex items-center justify-between gap-3">
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                  Current file: <span class="font-medium text-gray-700 dark:text-gray-300 uppercase">{{ editingBook.file_type }}</span>
+                  <span v-if="editingBook.file_size"> &middot; {{ formatFileSize(editingBook.file_size) }}</span>
+                </p>
+                <button
+                  type="button"
+                  @click="showReplaceFile = !showReplaceFile"
+                  class="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline flex-shrink-0"
+                >
+                  {{ showReplaceFile ? 'Cancel' : 'Replace File' }}
+                </button>
+              </div>
+              <div v-if="showReplaceFile" class="mt-3">
+                <input
+                  type="file"
+                  :accept="LIBRARY_FILE_ACCEPT"
+                  @change="handleReplaceFileSelect"
+                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white text-sm"
+                >
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">PDF, PPT, or PPTX, up to 50MB. Replaces the file immediately - metadata below is saved separately via "Update Book".</p>
+                <p v-if="fileError" class="text-xs text-red-600 dark:text-red-400 mt-1">{{ fileError }}</p>
+                <button
+                  type="button"
+                  @click="replaceFile"
+                  :disabled="!replaceFileInput || replacingFile"
+                  class="mt-2 px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {{ replacingFile ? 'Uploading...' : 'Upload Replacement' }}
+                </button>
+              </div>
+            </div>
 
             <div class="flex justify-end space-x-3">
               <button
@@ -281,17 +308,19 @@
       </div>
     </div>
 
-    <!-- PDF Preview -->
-    <LibraryPdfViewer v-if="previewBook" :book="previewBook" @close="previewBook = null" />
+    <!-- Document Preview -->
+    <LibraryDocumentViewer v-if="previewBook" :book="previewBook" @close="previewBook = null" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
-import LibraryPdfViewer from '@/components/library/LibraryPdfViewer.vue'
+import LibraryDocumentViewer from '@/components/library/LibraryDocumentViewer.vue'
+import TeacherClassSelector from '@/components/teacher/TeacherClassSelector.vue'
 import type { LibraryBook, LibraryBookForm } from '@/types/library'
 import type { ENoteAssignments } from '@/types/enotes'
+import { LIBRARY_FILE_ACCEPT, LIBRARY_FILE_ERROR, isAllowedLibraryFile } from '@/utils/libraryFileValidation'
 
 const API_BASE = '/api'
 
@@ -300,6 +329,10 @@ const assignments = ref<ENoteAssignments | null>(null)
 const assignmentsError = ref<string | null>(null)
 const loading = ref(false)
 const saving = ref(false)
+const fileError = ref('')
+const showReplaceFile = ref(false)
+const replaceFileInput = ref<File | null>(null)
+const replacingFile = ref(false)
 
 const statusFilter = ref('')
 const subjectFilter = ref('')
@@ -313,8 +346,9 @@ const bookForm = ref<LibraryBookForm>({
   title: '',
   description: '',
   subject_id: '',
-  class_id: '',
+  classTarget: { scope: 'stream', class_id: null, class_group_name: null },
   status: 'draft',
+  allow_download: false,
   file: null
 })
 
@@ -390,18 +424,27 @@ const loadAssignments = async () => {
 
 const openCreateModal = () => {
   editingBook.value = null
-  bookForm.value = { title: '', description: '', subject_id: '', class_id: '', status: 'draft', file: null }
+  fileError.value = ''
+  showReplaceFile.value = false
+  replaceFileInput.value = null
+  bookForm.value = { title: '', description: '', subject_id: '', classTarget: { scope: 'stream', class_id: null, class_group_name: null }, status: 'draft', allow_download: false, file: null }
   showBookModal.value = true
 }
 
 const editBook = (book: LibraryBook) => {
   editingBook.value = book
+  fileError.value = ''
+  showReplaceFile.value = false
+  replaceFileInput.value = null
   bookForm.value = {
     title: book.title,
     description: book.description || '',
     subject_id: book.subject_id?.toString() || '',
-    class_id: book.class_id?.toString() || '',
+    classTarget: book.class_group_name
+      ? { scope: 'all_streams', class_id: null, class_group_name: book.class_group_name }
+      : { scope: 'stream', class_id: book.class_id, class_group_name: null },
     status: book.status,
+    allow_download: !!book.allow_download,
     file: null
   }
   showBookModal.value = true
@@ -414,7 +457,53 @@ const closeBookModal = () => {
 
 const handleFileSelect = (event: Event) => {
   const target = event.target as HTMLInputElement
-  bookForm.value.file = target.files?.[0] || null
+  const file = target.files?.[0] || null
+  if (file && !isAllowedLibraryFile(file)) {
+    fileError.value = LIBRARY_FILE_ERROR
+    bookForm.value.file = null
+    target.value = ''
+    return
+  }
+  fileError.value = ''
+  bookForm.value.file = file
+}
+
+const handleReplaceFileSelect = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0] || null
+  if (file && !isAllowedLibraryFile(file)) {
+    fileError.value = LIBRARY_FILE_ERROR
+    replaceFileInput.value = null
+    target.value = ''
+    return
+  }
+  fileError.value = ''
+  replaceFileInput.value = file
+}
+
+const replaceFile = async () => {
+  if (!editingBook.value || !replaceFileInput.value) return
+  try {
+    replacingFile.value = true
+    const formData = new FormData()
+    formData.append('file', replaceFileInput.value)
+
+    const response = await axios.post(`${API_BASE}/teacher/library/${editingBook.value.id}/replace-file`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+
+    if (response.data.success) {
+      editingBook.value = { ...editingBook.value, ...response.data.data }
+      showReplaceFile.value = false
+      replaceFileInput.value = null
+      await loadBooks()
+    }
+  } catch (error: any) {
+    console.error('Failed to replace file:', error)
+    fileError.value = error.response?.data?.message || 'Failed to replace file'
+  } finally {
+    replacingFile.value = false
+  }
 }
 
 const saveBook = async () => {
@@ -426,20 +515,26 @@ const saveBook = async () => {
         title: bookForm.value.title,
         description: bookForm.value.description,
         subject_id: bookForm.value.subject_id,
-        class_id: bookForm.value.class_id,
-        status: bookForm.value.status
+        scope: bookForm.value.classTarget.scope,
+        class_id: bookForm.value.classTarget.class_id,
+        class_group_name: bookForm.value.classTarget.class_group_name,
+        status: bookForm.value.status,
+        allow_download: bookForm.value.allow_download
       })
     } else {
       if (!bookForm.value.file) {
-        alert('Please select a PDF file')
+        alert('Please select a PDF, PPT, or PPTX file')
         return
       }
       const formData = new FormData()
       formData.append('title', bookForm.value.title)
       formData.append('description', bookForm.value.description)
       formData.append('subject_id', bookForm.value.subject_id)
-      formData.append('class_id', bookForm.value.class_id)
+      formData.append('scope', bookForm.value.classTarget.scope)
+      if (bookForm.value.classTarget.class_id !== null) formData.append('class_id', String(bookForm.value.classTarget.class_id))
+      if (bookForm.value.classTarget.class_group_name !== null) formData.append('class_group_name', bookForm.value.classTarget.class_group_name)
       formData.append('status', bookForm.value.status)
+      formData.append('allow_download', bookForm.value.allow_download ? '1' : '0')
       formData.append('file', bookForm.value.file)
 
       await axios.post(`${API_BASE}/teacher/library`, formData, {

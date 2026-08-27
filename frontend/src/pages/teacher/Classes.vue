@@ -2,8 +2,8 @@
   <div>
     <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-6">My Classes</h1>
     
-    <!-- Classes List -->
-    <template v-if="!selectedClass">
+    <!-- Class Groups List (e.g. "S.1", "S.2") -->
+    <template v-if="!selectedGroup && !selectedClass">
       <!-- Filter Section -->
       <div class="card mb-6">
         <div class="flex items-center gap-4">
@@ -11,7 +11,7 @@
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Academic Year
             </label>
-            <select 
+            <select
               v-model="selectedAcademicYear"
               @change="loadClasses"
               class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
@@ -28,17 +28,17 @@
         <div v-if="loadingClasses" class="col-span-full text-center py-12">
           <div class="text-gray-500">Loading classes...</div>
         </div>
-        <div v-else-if="classes.length === 0" class="col-span-full text-center py-12">
+        <div v-else-if="classGroups.length === 0" class="col-span-full text-center py-12">
           <div class="text-gray-500">No classes found in your department</div>
         </div>
-        <div v-else v-for="cls in classes" :key="cls.id" 
-             @click="selectClass(cls)"
+        <div v-else v-for="group in classGroups" :key="group.name + group.level"
+             @click="selectGroup(group)"
              class="card cursor-pointer hover:shadow-lg transition-shadow">
           <div class="p-6">
             <div class="flex items-start justify-between mb-4">
               <div>
-                <h3 class="text-xl font-semibold text-gray-900 dark:text-white">{{ cls.name }}</h3>
-                <p class="text-sm text-gray-500 dark:text-gray-400">{{ cls.level }}</p>
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-white">{{ group.name }}</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400">{{ group.level }}</p>
               </div>
               <div class="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/20 rounded-lg flex items-center justify-center">
                 <svg class="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -48,13 +48,54 @@
             </div>
             <div class="space-y-2">
               <div class="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                <span class="font-medium">Stream:</span>
-                <span class="ml-2">{{ cls.stream_name || 'N/A' }}</span>
+                <span class="font-medium">Streams:</span>
+                <span class="ml-2">{{ group.streams.length }}</span>
               </div>
               <div class="flex items-center text-sm text-gray-600 dark:text-gray-400">
                 <span class="font-medium">Students:</span>
-                <span class="ml-2">{{ cls.student_count }}</span>
+                <span class="ml-2">{{ group.totalStudents }}</span>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- Streams inside a class (e.g. S.1 -> A, B, C) -->
+    <template v-else-if="selectedGroup && !selectedClass">
+      <div class="mb-6">
+        <button @click="selectedGroup = null" class="text-indigo-600 hover:text-indigo-700 font-medium flex items-center">
+          <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+          </svg>
+          Back to Classes
+        </button>
+      </div>
+
+      <div class="card mb-6">
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedGroup.name }}</h2>
+        <p class="text-gray-500 dark:text-gray-400">{{ selectedGroup.level }} &middot; {{ selectedGroup.streams.length }} stream(s)</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div v-for="stream in selectedGroup.streams" :key="stream.id"
+             @click="selectClass(stream)"
+             class="card cursor-pointer hover:shadow-lg transition-shadow">
+          <div class="p-6">
+            <div class="flex items-start justify-between mb-4">
+              <div>
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-white">{{ selectedGroup.name }} - {{ stream.stream_name || 'N/A' }}</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Stream {{ stream.stream_name || 'N/A' }}</p>
+              </div>
+              <div class="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/20 rounded-lg flex items-center justify-center">
+                <svg class="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                </svg>
+              </div>
+            </div>
+            <div class="flex items-center text-sm text-gray-600 dark:text-gray-400">
+              <span class="font-medium">Students:</span>
+              <span class="ml-2">{{ stream.student_count }}</span>
             </div>
           </div>
         </div>
@@ -68,7 +109,7 @@
           <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
           </svg>
-          Back to Classes
+          Back to {{ selectedGroup ? selectedGroup.name + ' Streams' : 'Classes' }}
         </button>
       </div>
 
@@ -188,14 +229,36 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import apiService from '@/services/api'
 
 const loadingClasses = ref(false)
 const loadingStudents = ref(false)
 const classes = ref<any[]>([])
 const students = ref<any[]>([])
+const selectedGroup = ref<any>(null)
 const selectedClass = ref<any>(null)
+
+// The backend returns one row per class+stream combination (e.g. "S.1" appears once per
+// stream A, B, C...) rather than a single "S.1" entity - group them here so the UI can show
+// streams nested inside their class instead of one flat card per stream.
+const classGroups = computed(() => {
+  const groups = new Map<string, { name: string; level: string; streams: any[]; totalStudents: number }>()
+  for (const cls of classes.value) {
+    const key = `${cls.name}|${cls.level}`
+    if (!groups.has(key)) {
+      groups.set(key, { name: cls.name, level: cls.level, streams: [], totalStudents: 0 })
+    }
+    const group = groups.get(key)!
+    group.streams.push(cls)
+    group.totalStudents += Number(cls.student_count) || 0
+  }
+  return Array.from(groups.values())
+})
+
+const selectGroup = (group: any) => {
+  selectedGroup.value = group
+}
 const selectedStudents = ref<number[]>([])
 const selectAll = ref(false)
 const academicYears = ref<any[]>([])
@@ -280,13 +343,15 @@ const bulkDeEnroll = async () => {
     return
   }
 
-  if (!confirm(`Are you sure you want to de-enroll ${selectedStudents.value.length} student(s) from the department?`)) {
+  if (!confirm(`De-enroll ${selectedStudents.value.length} student(s) from your account?\n\nThey'll lose access to your assignments, eNotes, and other content, but stay fully enrolled with every other teacher in the department.`)) {
     return
   }
 
+  const reason = prompt('Reason (optional):') || undefined
+
   try {
-    const promises = selectedStudents.value.map(id => 
-      apiService.delete(`/teacher/students/${id}`)
+    const promises = selectedStudents.value.map(id =>
+      apiService.delete(`/teacher/students/${id}`, { data: { reason } })
     )
     
     await Promise.all(promises)

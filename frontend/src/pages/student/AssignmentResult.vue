@@ -1,88 +1,88 @@
 <template>
-  <div class="p-6">
+  <div class="p-3 sm:p-6">
     <div v-if="loading" class="flex items-center justify-center py-12">
       <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
     </div>
 
-    <div v-else-if="error" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
-      <p class="text-red-800 dark:text-red-200">{{ error }}</p>
+    <div v-else-if="error" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 sm:p-6">
+      <p class="text-red-800 dark:text-red-200 break-words">{{ error }}</p>
     </div>
 
-    <div v-else-if="!submission" class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6">
+    <div v-else-if="!submission" class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 sm:p-6">
       <p class="text-yellow-800 dark:text-yellow-200">No submission data was returned for this assignment.</p>
     </div>
 
     <div v-else>
-      <div class="mb-6">
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-1">{{ submission.assignment_title }}</h1>
-        <p class="text-gray-600 dark:text-gray-400 text-sm">
+      <div class="mb-4 sm:mb-6">
+        <h1 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-1 break-words">{{ submission.assignment_title }}</h1>
+        <p class="text-gray-600 dark:text-gray-400 text-sm flex items-center flex-wrap gap-2">
           Submitted {{ formatDate(submission.submitted_at) }}
-          <span class="ml-2 px-2 py-0.5 rounded-full text-xs" :class="statusClass">{{ statusLabel }}</span>
+          <span class="px-2 py-0.5 rounded-full text-xs" :class="statusClass">{{ statusLabel }}</span>
         </p>
       </div>
 
       <!-- Marks / Grade summary (result mode only) -->
-      <div v-if="mode === 'result' && summary" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 text-center">
+      <div v-if="(mode === 'result' || oversightRole) && summary" class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-4 text-center">
           <p class="text-xs text-gray-500 dark:text-gray-400">Marks</p>
-          <p class="text-xl font-bold text-gray-900 dark:text-white">{{ summary.marks_awarded }} / {{ summary.total_marks }}</p>
+          <p class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">{{ summary.marks_awarded }} / {{ summary.total_marks }}</p>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 text-center">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-4 text-center">
           <p class="text-xs text-gray-500 dark:text-gray-400">Percentage</p>
-          <p class="text-xl font-bold text-gray-900 dark:text-white">{{ summary.percentage }}%</p>
+          <p class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">{{ summary.percentage }}%</p>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 text-center">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-4 text-center">
           <p class="text-xs text-gray-500 dark:text-gray-400">Grade</p>
-          <p class="text-xl font-bold text-indigo-600 dark:text-indigo-400">{{ summary.grade }}</p>
+          <p class="text-lg sm:text-xl font-bold text-indigo-600 dark:text-indigo-400">{{ summary.grade }}</p>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 text-center">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-4 text-center">
           <p class="text-xs text-gray-500 dark:text-gray-400">Status</p>
-          <p class="text-xl font-bold" :class="gradeStatus.color">
+          <p class="text-lg sm:text-xl font-bold" :class="gradeStatus.color">
             {{ gradeStatus.label }}
           </p>
         </div>
       </div>
 
       <!-- General feedback -->
-      <div v-if="mode === 'result' && submission.feedback" class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg p-4 mb-6">
+      <div v-if="(mode === 'result' || oversightRole) && submission.feedback" class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
         <h3 class="font-medium text-indigo-900 dark:text-indigo-200 mb-1">Teacher Feedback</h3>
-        <p class="text-indigo-800 dark:text-indigo-300 text-sm whitespace-pre-line">{{ submission.feedback }}</p>
+        <p class="text-indigo-800 dark:text-indigo-300 text-sm whitespace-pre-line break-words">{{ submission.feedback }}</p>
       </div>
 
       <!-- Questions -->
-      <div class="space-y-6">
+      <div class="space-y-4 sm:space-y-6">
         <div
           v-for="(question, index) in questions"
           :key="question.id"
-          class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6"
+          class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6"
         >
-          <div class="flex items-start justify-between mb-4">
-            <div class="flex items-start space-x-3">
-              <span class="font-medium text-gray-900 dark:text-white">Q{{ index + 1 }}.</span>
-              <div>
-                <p v-if="question.question_text" class="text-gray-900 dark:text-white mb-1" v-html="question.question_text"></p>
-                <p v-else-if="question.scenario_text" class="text-gray-700 dark:text-gray-300 mb-1" v-html="question.scenario_text"></p>
+          <div class="flex flex-wrap items-start justify-between gap-2 mb-4">
+            <div class="flex items-start gap-3 min-w-0">
+              <span class="font-medium text-gray-900 dark:text-white flex-shrink-0">Q{{ index + 1 }}.</span>
+              <div class="min-w-0 overflow-x-auto">
+                <p v-if="question.question_text" class="text-gray-900 dark:text-white mb-1 break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.question_text"></p>
+                <p v-else-if="question.scenario_text" class="text-gray-700 dark:text-gray-300 mb-1 break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.scenario_text"></p>
               </div>
             </div>
-            <span v-if="mode === 'result' && question.question_mark" class="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap ml-4">
+            <span v-if="(mode === 'result' || oversightRole) && question.question_mark" class="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
               {{ question.question_mark.marks_awarded ?? '—' }} / {{ question.marks }}
             </span>
           </div>
 
-          <div v-if="question.scenario_text" class="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg mb-4">
-            <p class="text-gray-700 dark:text-gray-300 whitespace-pre-line" v-html="question.scenario_text"></p>
+          <div v-if="question.scenario_text" class="bg-gray-50 dark:bg-gray-700/50 p-3 sm:p-4 rounded-lg mb-4 overflow-x-auto">
+            <p class="text-gray-700 dark:text-gray-300 whitespace-pre-line break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.scenario_text"></p>
           </div>
 
           <!-- Objective (MCQ/true-false) questions: raw stored answer only -->
-          <div v-if="isObjective(question)" class="ml-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+          <div v-if="isObjective(question)" class="ml-3 sm:ml-6 p-3 sm:p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
             <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Your answer</p>
-            <p class="text-gray-900 dark:text-white whitespace-pre-line">{{ answerFor(question.id) || '(No answer provided)' }}</p>
+            <p class="text-gray-900 dark:text-white whitespace-pre-line break-words">{{ answerFor(question.id) || '(No answer provided)' }}</p>
           </div>
 
           <!-- Free-response question: typed answer (rendered on a canvas so any teacher marks
                made directly over it are visible), plus its drawing/PDF layer(s) -->
           <template v-else>
-            <div v-if="typedAnswerLayers[question.id]" class="ml-6 mb-4">
+            <div v-if="typedAnswerLayers[question.id]" class="ml-3 sm:ml-6 mb-4">
               <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Your typed answer</p>
               <AnnotationCanvas
                 :width="800"
@@ -110,7 +110,7 @@
             />
           </template>
 
-          <p v-if="mode === 'result' && question.question_mark?.feedback" class="mt-3 text-sm text-gray-600 dark:text-gray-400 italic">
+          <p v-if="(mode === 'result' || oversightRole) && question.question_mark?.feedback" class="mt-3 text-sm text-gray-600 dark:text-gray-400 italic">
             "{{ question.question_mark.feedback }}"
           </p>
         </div>
@@ -135,6 +135,11 @@ const route = useRoute()
 const API_BASE = '/api'
 
 const mode = computed<'submission' | 'result'>(() => (route.meta.viewMode as 'submission' | 'result') || 'submission')
+
+// Staff (HOD/admin) oversight mode: set via route meta, same pattern as the "preview as
+// student" routes - hits a role-scoped read-only submission endpoint instead of the student's
+// own, and always shows marking progress regardless of whether it's been released to the student.
+const oversightRole = computed(() => route.meta.previewRole as string | undefined)
 
 const loading = ref(false)
 const error = ref<string | null>(null)
@@ -271,9 +276,11 @@ const load = async () => {
   error.value = null
 
   try {
-    const endpoint = mode.value === 'result'
-      ? `${API_BASE}/student/assignments/${route.params.id}/result/${route.params.submissionId}`
-      : `${API_BASE}/student/assignments/${route.params.id}/submission/${route.params.submissionId}`
+    const endpoint = oversightRole.value
+      ? `${API_BASE}/${oversightRole.value}/assignments/${route.params.id}/submissions/${route.params.submissionId}`
+      : mode.value === 'result'
+        ? `${API_BASE}/student/assignments/${route.params.id}/result/${route.params.submissionId}`
+        : `${API_BASE}/student/assignments/${route.params.id}/submission/${route.params.submissionId}`
 
     const response = await axios.get(endpoint)
     if (response.data.success) {

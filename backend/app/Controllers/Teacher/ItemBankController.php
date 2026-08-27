@@ -212,7 +212,7 @@ class ItemBankController extends Controller
 
         $data = $this->input();
 
-        $errors = $this->validateRequired(['title', 'subject_id', 'class_id']);
+        $errors = $this->validateRequired(['title', 'subject_id']);
         if (!empty($errors)) {
             $this->validationError($errors);
             return;
@@ -234,16 +234,11 @@ class ItemBankController extends Controller
             return;
         }
 
-        // Verify class is one of the department's enrolled classes
-        $stmt = $db->prepare(
-            "SELECT DISTINCT c.id FROM classes c
-             INNER JOIN student_department_enrollments se ON c.id = se.class_id
-             WHERE c.id = :class_id AND se.department_id = :department_id
-               AND se.deleted_at IS NULL AND c.deleted_at IS NULL"
-        );
-        $stmt->execute(['class_id' => $data['class_id'], 'department_id' => $departmentId]);
-        if (!$stmt->fetch()) {
-            $this->validationError(['class_id' => 'Class not found in your department']);
+        // Verify class/class-level is real and present in the department (individual stream or
+        // "All Streams" for a class level)
+        $classTarget = $this->resolveClassTarget($data, $departmentId);
+        if (!$classTarget['ok']) {
+            $this->validationError(['class_id' => $classTarget['message']]);
             return;
         }
 
@@ -258,17 +253,18 @@ class ItemBankController extends Controller
             'title' => htmlspecialchars(trim($data['title']), ENT_QUOTES, 'UTF-8'),
             'description' => !empty($data['description']) ? htmlspecialchars(trim($data['description']), ENT_QUOTES, 'UTF-8') : null,
             'subject_id' => (int) $data['subject_id'],
-            'class_id' => (int) $data['class_id'],
+            'class_id' => $classTarget['class_id'],
+            'class_group_name' => $classTarget['class_group_name'],
             'department_id' => $departmentId,
             'status' => $status
         ];
 
         $sql = "INSERT INTO item_bank_questions
-                    (subject_id, class_id, department_id, question_text, question_type, difficulty,
+                    (subject_id, class_id, class_group_name, department_id, question_text, question_type, difficulty,
                      file_path, file_type, file_size, explanation, correct_answer, created_by,
                      is_approved, status, published_at, created_at, updated_at)
                 VALUES
-                    (:subject_id, :class_id, :department_id, :title, 'pdf', 'medium',
+                    (:subject_id, :class_id, :class_group_name, :department_id, :title, 'pdf', 'medium',
                      :file_path, :file_type, :file_size, :description, NULL, :created_by,
                      1, :status, :published_at, NOW(), NOW())";
 
@@ -278,6 +274,7 @@ class ItemBankController extends Controller
             $stmt->execute([
                 'subject_id' => $sanitizedData['subject_id'],
                 'class_id' => $sanitizedData['class_id'],
+                'class_group_name' => $sanitizedData['class_group_name'],
                 'department_id' => $sanitizedData['department_id'],
                 'title' => $sanitizedData['title'],
                 'file_path' => $upload['url'],
@@ -298,7 +295,8 @@ class ItemBankController extends Controller
                     'new_item_bank_resource',
                     'New item bank resource',
                     "A new item bank resource \"{$sanitizedData['title']}\" is now available.",
-                    ['resource_id' => $resourceId]
+                    ['resource_id' => $resourceId],
+                    $sanitizedData['class_group_name']
                 );
             }
 
@@ -337,7 +335,7 @@ class ItemBankController extends Controller
 
         $db = $this->getDb();
 
-        $stmt = $db->prepare("SELECT id, status, question_text AS title, department_id, class_id FROM item_bank_questions WHERE id = :id AND created_by = :teacher_id AND deleted_at IS NULL");
+        $stmt = $db->prepare("SELECT id, status, question_text AS title, department_id, class_id, class_group_name FROM item_bank_questions WHERE id = :id AND created_by = :teacher_id AND deleted_at IS NULL");
         $stmt->execute(['id' => $id, 'teacher_id' => $teacherId]);
         $resource = $stmt->fetch();
 
@@ -368,9 +366,21 @@ class ItemBankController extends Controller
             $params['subject_id'] = (int) $data['subject_id'];
         }
 
-        if (!empty($data['class_id'])) {
+        if (array_key_exists('class_id', $data) || array_key_exists('class_group_name', $data) || array_key_exists('scope', $data)) {
+            $departmentId = $this->getTeacherDepartmentId();
+            if (!$departmentId) {
+                $this->error('Teacher must be assigned to a department', 403);
+                return;
+            }
+            $classTarget = $this->resolveClassTarget($data, $departmentId);
+            if (!$classTarget['ok']) {
+                $this->validationError(['class_id' => $classTarget['message']]);
+                return;
+            }
             $updates[] = 'class_id = :class_id';
-            $params['class_id'] = (int) $data['class_id'];
+            $params['class_id'] = $classTarget['class_id'];
+            $updates[] = 'class_group_name = :class_group_name';
+            $params['class_group_name'] = $classTarget['class_group_name'];
         }
 
         if (!empty($data['status']) && in_array($data['status'], ['draft', 'published', 'archived'], true)) {
@@ -396,14 +406,16 @@ class ItemBankController extends Controller
                 $updateStmt->execute(['id' => $id]);
 
                 $title = !empty($data['title']) ? trim($data['title']) : $resource['title'];
-                $classId = !empty($data['class_id']) ? (int) $data['class_id'] : (int) $resource['class_id'];
+                $classId = $params['class_id'] ?? (int) $resource['class_id'];
+                $classGroupName = $params['class_group_name'] ?? $resource['class_group_name'];
                 (new NotificationService())->notifyDepartmentClass(
                     (int) $resource['department_id'],
                     $classId,
                     'new_item_bank_resource',
                     'New item bank resource',
                     "A new item bank resource \"{$title}\" is now available.",
-                    ['resource_id' => $id]
+                    ['resource_id' => $id],
+                    $classGroupName
                 );
             }
 

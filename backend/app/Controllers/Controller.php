@@ -419,6 +419,164 @@ abstract class Controller
     }
 
     /**
+     * True if the given class (one specific stream row) has at least one actively-enrolled
+     * student in the given department - the same check every content module (Live Class, eNotes,
+     * eLibrary, Videos, Item Bank) already ran inline at create-time, extracted so "All Streams"
+     * validation and the individual-stream path share one rule.
+     */
+    protected function classBelongsToDepartment(int $classId, int $departmentId): bool
+    {
+        $db = \eSpace\Config\Database::getInstance();
+        $stmt = $db->prepare(
+            "SELECT 1 FROM classes c
+             INNER JOIN student_department_enrollments se ON c.id = se.class_id
+             WHERE c.id = :class_id AND se.department_id = :department_id
+               AND se.deleted_at IS NULL AND c.deleted_at IS NULL
+             LIMIT 1"
+        );
+        $stmt->execute(['class_id' => $classId, 'department_id' => $departmentId]);
+        return (bool) $stmt->fetchColumn();
+    }
+
+    /**
+     * True if class_group_name (e.g. "S.1") names a real class level with at least one stream
+     * actively enrolled in the given department - the "All Streams" equivalent of
+     * classBelongsToDepartment(), so a teacher can't target a class level that doesn't exist or
+     * has no presence in their department.
+     */
+    protected function classGroupBelongsToDepartment(string $classGroupName, int $departmentId): bool
+    {
+        $db = \eSpace\Config\Database::getInstance();
+        $stmt = $db->prepare(
+            "SELECT 1 FROM classes c
+             INNER JOIN student_department_enrollments se ON c.id = se.class_id
+             WHERE c.name = :class_group_name AND se.department_id = :department_id
+               AND se.deleted_at IS NULL AND c.deleted_at IS NULL
+             LIMIT 1"
+        );
+        $stmt->execute(['class_group_name' => $classGroupName, 'department_id' => $departmentId]);
+        return (bool) $stmt->fetchColumn();
+    }
+
+    /**
+     * Resolve and validate a content module's class target from raw request input, covering both
+     * an individual stream (`class_id`) and "All Streams" for a class level (`class_group_name`,
+     * e.g. "S.1" - never a fabricated class_id, matched at read time by classes.name). Exactly one
+     * of the two ends up set in the returned array; never both. Every one of the seven content
+     * modules (Live Class, eNotes, eLibrary, Videos, Item Bank, Assignments, Virtual Lab) should
+     * call this rather than trusting $data['class_id'] directly - it's what actually enforces "a
+     * teacher cannot target another department" and "the class/class-level must be real and
+     * present in that department" for both scopes.
+     *
+     * @return array{ok: bool, class_id: ?int, class_group_name: ?string, message: ?string}
+     */
+    protected function resolveClassTarget(array $data, int $departmentId, bool $required = true): array
+    {
+        $scope = $data['scope'] ?? ($data['class_group_name'] ?? '' !== '' ? 'all_streams' : 'stream');
+        $classGroupName = trim((string) ($data['class_group_name'] ?? ''));
+        $classId = $data['class_id'] ?? null;
+        $classId = ($classId === '' || $classId === null) ? null : (int) $classId;
+
+        if ($scope === 'all_streams' || ($classGroupName !== '' && $classId === null)) {
+            if ($classGroupName === '') {
+                return ['ok' => false, 'class_id' => null, 'class_group_name' => null, 'message' => 'class_group_name is required for scope=all_streams'];
+            }
+            if (!$this->classGroupBelongsToDepartment($classGroupName, $departmentId)) {
+                return ['ok' => false, 'class_id' => null, 'class_group_name' => null, 'message' => 'That class level has no students in your department'];
+            }
+            return ['ok' => true, 'class_id' => null, 'class_group_name' => $classGroupName, 'message' => null];
+        }
+
+        if ($classId === null) {
+            if ($required) {
+                return ['ok' => false, 'class_id' => null, 'class_group_name' => null, 'message' => 'A class or "All Streams" selection is required'];
+            }
+            return ['ok' => true, 'class_id' => null, 'class_group_name' => null, 'message' => null];
+        }
+
+        if (!$this->classBelongsToDepartment($classId, $departmentId)) {
+            return ['ok' => false, 'class_id' => null, 'class_group_name' => null, 'message' => 'Class not found in your department'];
+        }
+
+        return ['ok' => true, 'class_id' => $classId, 'class_group_name' => null, 'message' => null];
+    }
+
+    /**
+     * Every actively-enrolled student in $departmentId across every stream of $classLevel (e.g.
+     * "S.1" matches classes named "S.1" regardless of stream) - the read-side counterpart to
+     * resolveClassTarget()'s "all_streams" scope, and what a resource stored with
+     * class_id=NULL, class_group_name=$classLevel actually resolves to for visibility/notification
+     * purposes. Naturally deduplicated (DISTINCT on student_id, not one row per stream).
+     */
+    protected function getStudentIdsByDepartmentAndClassLevel(int $departmentId, string $classLevel): array
+    {
+        $db = \eSpace\Config\Database::getInstance();
+        $stmt = $db->prepare(
+            "SELECT DISTINCT sde.student_id
+             FROM student_department_enrollments sde
+             INNER JOIN classes c ON c.id = sde.class_id
+             WHERE c.name = :class_level AND c.deleted_at IS NULL
+               AND sde.department_id = :department_id
+               AND sde.status = 'active' AND sde.deleted_at IS NULL"
+        );
+        $stmt->execute(['class_level' => $classLevel, 'department_id' => $departmentId]);
+        return array_map('intval', array_column($stmt->fetchAll(), 'student_id'));
+    }
+
+    /**
+     * Convenience wrapper matching the shape used outside a per-request session context (e.g. a
+     * notification/dispatch step that only has a teacher id on hand): resolves that teacher's
+     * (primary) department, then defers to getStudentIdsByDepartmentAndClassLevel(). Prefer the
+     * department-first version above when $departmentId is already known (e.g. inside a
+     * controller that already called getActiveDepartmentId()) - it's what stays correct for a
+     * teacher who switched their active department away from their primary one this session.
+     */
+    protected function getDepartmentStudentsByClassLevel(int $teacherId, string $classLevel): array
+    {
+        $db = \eSpace\Config\Database::getInstance();
+        $stmt = $db->prepare("SELECT department_id FROM teachers WHERE id = :teacher_id AND deleted_at IS NULL");
+        $stmt->execute(['teacher_id' => $teacherId]);
+        $teacher = $stmt->fetch();
+
+        if (!$teacher || $teacher['department_id'] === null) {
+            return [];
+        }
+
+        return $this->getStudentIdsByDepartmentAndClassLevel((int) $teacher['department_id'], $classLevel);
+    }
+
+    /**
+     * Record a de-enroll/re-enroll event to enrollment_audit_log. See that migration's comment
+     * for why this doesn't use the AuditLog model (its columns don't match the real audit_logs
+     * table, and every existing caller is unreachable dead code since it always runs after a
+     * success()/error() call, which already exits).
+     */
+    protected function logEnrollmentAudit(
+        int $studentId,
+        string $action,
+        ?int $teacherId,
+        int $departmentId,
+        int $performedById,
+        string $performedByRole,
+        ?string $reason = null
+    ): void {
+        $db = \eSpace\Config\Database::getInstance();
+        $stmt = $db->prepare(
+            "INSERT INTO enrollment_audit_log (student_id, action, teacher_id, department_id, performed_by_id, performed_by_role, reason, created_at)
+             VALUES (:student_id, :action, :teacher_id, :department_id, :performed_by_id, :performed_by_role, :reason, NOW())"
+        );
+        $stmt->execute([
+            'student_id' => $studentId,
+            'action' => $action,
+            'teacher_id' => $teacherId,
+            'department_id' => $departmentId,
+            'performed_by_id' => $performedById,
+            'performed_by_role' => $performedByRole,
+            'reason' => $reason !== '' ? $reason : null,
+        ]);
+    }
+
+    /**
      * Get client IP address
      */
     protected function getClientIp(): string

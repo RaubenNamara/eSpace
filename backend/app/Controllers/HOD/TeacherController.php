@@ -211,15 +211,17 @@ class TeacherController extends Controller
             $stmt = $this->db->prepare("SELECT COUNT(*) as count FROM teachers WHERE department_id = ?");
             $stmt->execute([$departmentId]);
             $count = $stmt->fetch()['count'];
-            $data['employee_number'] = 'TS' . str_pad($count + 1, 3, '0', STR_PAD_LEFT);
+            $data['employee_number'] = 'TS' . str_pad((string) ($count + 1), 3, '0', STR_PAD_LEFT);
         }
 
         // Hash password
         $hashedPassword = password_hash($data['password'], PASSWORD_BCRYPT);
 
         // Create teacher record
-        $teacherSql = "INSERT INTO teachers (username, email, password, role, employee_number, first_name, last_name, gender, phone, department_id, is_active, created_at, updated_at) 
-                       VALUES (:username, :email, :password, 'teacher', :employee_number, :first_name, :last_name, :gender, :phone, :department_id, 1, NOW(), NOW())";
+        // must_change_password = 1 since the HOD is the one choosing this password, not the
+        // teacher - see MustChangePasswordMiddleware.
+        $teacherSql = "INSERT INTO teachers (username, email, password, must_change_password, role, employee_number, first_name, last_name, gender, phone, department_id, is_active, created_at, updated_at)
+                       VALUES (:username, :email, :password, 1, 'teacher', :employee_number, :first_name, :last_name, :gender, :phone, :department_id, 1, NOW(), NOW())";
         
         try {
             $stmt = $this->db->prepare($teacherSql);

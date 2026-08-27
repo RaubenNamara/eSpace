@@ -72,6 +72,14 @@ api.interceptors.response.use(
       if (status === 429) {
         console.error('Rate limit exceeded')
       }
+
+      // Handle 428 Precondition Required - a teacher is still on a temporary password
+      // (MustChangePasswordMiddleware blocks every /teacher/* endpoint until they change it).
+      // The router guard normally catches this before a request is even made, but this covers
+      // any request already in flight, or state that's gone stale since the last page load.
+      if (status === 428 && !window.location.pathname.endsWith('/teacher/change-password')) {
+        window.location.href = `${import.meta.env.BASE_URL}teacher/change-password`
+      }
     }
 
     return Promise.reject(error)
@@ -99,8 +107,8 @@ export const apiService = {
   updateProfile: (data: any) =>
     api.put<ApiResponse>('/auth/profile', data),
   
-  changePassword: (currentPassword: string, newPassword: string) =>
-    api.put<ApiResponse>('/auth/password', { current_password: currentPassword, new_password: newPassword }),
+  changePassword: (currentPassword: string, newPassword: string, newPasswordConfirmation?: string) =>
+    api.put<ApiResponse>('/auth/password', { current_password: currentPassword, new_password: newPassword, new_password_confirmation: newPasswordConfirmation }),
   
   forgotPassword: (email: string) =>
     api.post<ApiResponse>('/auth/forgot-password', { email }),

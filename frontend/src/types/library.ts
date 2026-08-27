@@ -3,6 +3,7 @@
  *
  * Type definitions for the PDF library module.
  */
+import type { ClassTarget } from '@/components/teacher/TeacherClassSelector.vue'
 
 export interface LibraryBook {
   id: number
@@ -10,10 +11,12 @@ export interface LibraryBook {
   description: string | null
   subject_id: number | null
   class_id: number | null
+  class_group_name?: string | null
   department_id?: number | null
   file_path: string
   file_type: string
   file_size: number | null
+  allow_download?: boolean | number
   total_pages: number | null
   uploaded_by?: number
   status: 'draft' | 'published' | 'archived'
@@ -34,7 +37,8 @@ export interface LibraryBookForm {
   title: string
   description: string
   subject_id: string
-  class_id: string
+  classTarget: ClassTarget
   status: 'draft' | 'published' | 'archived'
+  allow_download: boolean
   file: File | null
 }

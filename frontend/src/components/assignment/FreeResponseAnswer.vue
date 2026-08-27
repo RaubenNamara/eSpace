@@ -1,5 +1,15 @@
 <template>
   <div class="space-y-6">
+    <!-- The question itself, when the teacher uploaded a PDF instead of typing it out - shown
+         plainly (not as an editable canvas) so the student reads it like a normal PDF, separate
+         from their own answer/drawing workspace further down. -->
+    <div v-if="questionPdfUrl">
+      <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Question (PDF)</label>
+      <div class="w-full aspect-[210/297] border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+        <PdfAnnotationViewer :pdf-url="questionPdfUrl" mode="readonly" readonly />
+      </div>
+    </div>
+
     <!-- Typed answer + before-submitting sidebar -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
       <div class="lg:col-span-2">
@@ -182,6 +192,17 @@ const isImageAttachment = computed(() => {
   return IMAGE_EXTENSIONS.some(ext => path.toLowerCase().endsWith(ext))
 })
 
+// Every free-response question gets this blank sheet by default unless the teacher uploads
+// their own - it isn't a real question document, so it's never shown as "the question" here.
+const DEFAULT_ANSWER_DOCUMENT_PATH = '/uploads/defaults/default_answer_sheet.pdf'
+
+const questionPdfUrl = computed(() => {
+  const path = props.question.attachment_path
+  if (!path || path === DEFAULT_ANSWER_DOCUMENT_PATH) return null
+  if ((props.question as any).attachment_type !== 'pdf') return null
+  return resolveAssetUrl(path)
+})
+
 function measureAttachmentImage() {
   if (!isImageAttachment.value || !attachment.value) return
   const img = new Image()
@@ -233,16 +254,32 @@ async function uploadFile(file: File) {
 // teacher sees and can mark it exactly like any other uploaded evidence - no separate handling
 // needed on the marking side.
 async function autoCreateBlankCanvas() {
-  if (props.readonly || attachment.value) {
+  // The question itself (questionPdfUrl) is shown separately above when the teacher uploaded
+  // one - this workspace always starts from the plain default answer sheet instead, never a
+  // copy of the question PDF, so the two don't show the same document twice.
+  const startingDocPath = questionPdfUrl.value ? DEFAULT_ANSWER_DOCUMENT_PATH : props.question.attachment_path
+
+  if (props.readonly) {
+    // Preview/oversight mode (teacher previewing before publish, HOD/admin reviewing) has no
+    // real submission to upload into - just point straight at the starting document (if any) so
+    // it's actually visible here, instead of silently showing "No file uploaded."
+    if (!attachment.value && startingDocPath) {
+      attachment.value = { path: startingDocPath }
+    }
+    autoCreating.value = false
+    return
+  }
+
+  if (attachment.value) {
     autoCreating.value = false
     return
   }
 
   try {
-    if (props.question.attachment_path) {
-      const response = await fetch(resolveAssetUrl(props.question.attachment_path))
+    if (startingDocPath) {
+      const response = await fetch(resolveAssetUrl(startingDocPath))
       const blob = await response.blob()
-      const ext = props.question.attachment_path.split('.').pop()?.split(/[?#]/)[0] || 'pdf'
+      const ext = startingDocPath.split('.').pop()?.split(/[?#]/)[0] || 'pdf'
       const mime = blob.type || (ext === 'pdf' ? 'application/pdf' : `image/${ext}`)
       const file = new File([blob], `Assignment file.${ext}`, { type: mime })
       await uploadFile(file)

@@ -3,6 +3,7 @@
  *
  * Type definitions for the video resource module.
  */
+import type { ClassTarget } from '@/components/teacher/TeacherClassSelector.vue'
 
 export interface VideoResource {
   id: number
@@ -10,6 +11,7 @@ export interface VideoResource {
   description: string | null
   subject_id: number | null
   class_id: number | null
+  class_group_name?: string | null
   department_id?: number | null
   file_path: string
   file_name?: string
@@ -34,7 +36,7 @@ export interface VideoForm {
   title: string
   description: string
   subject_id: string
-  class_id: string
+  classTarget: ClassTarget
   status: 'draft' | 'published' | 'archived'
   file: File | null
 }

@@ -111,7 +111,8 @@ export const useAuthStore = defineStore('auth', () => {
           phone: payload.user.phone,
           is_active: payload.user.is_active,
           email_verified_at: payload.user.email_verified_at,
-          teacher_id: payload.user.teacher_id // For HODs who are also teachers
+          teacher_id: payload.user.teacher_id, // For HODs who are also teachers
+          must_change_password: payload.user.must_change_password // Teachers only
         }
         
         // Add student-specific fields if present
@@ -272,16 +273,23 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function changePassword(currentPassword: string, newPassword: string) {
+  async function changePassword(currentPassword: string, newPassword: string, newPasswordConfirmation?: string) {
     isLoading.value = true
     error.value = null
 
     try {
-      const response = await apiService.changePassword(currentPassword, newPassword)
+      const response = await apiService.changePassword(currentPassword, newPassword, newPasswordConfirmation)
       const responseData = response.data as AuthApiResponse
       const payload = getAuthPayload(responseData)
-      
+
       if (responseData.success) {
+        // Clear the flag locally (and in localStorage) so the router guard stops redirecting
+        // to /teacher/change-password immediately, without needing a fresh login.
+        if (user.value && (user.value as any).must_change_password) {
+          const updatedUser = { ...user.value, must_change_password: false }
+          user.value = updatedUser as User
+          localStorage.setItem('user', JSON.stringify(updatedUser))
+        }
         return { success: true, message: payload.message || 'Password changed successfully' }
       } else {
         error.value = payload.message || 'Password change failed'

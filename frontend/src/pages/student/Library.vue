@@ -185,15 +185,15 @@
       </div>
     </template>
 
-    <!-- PDF Preview -->
-    <LibraryPdfViewer v-if="previewBook" :book="previewBook" @close="previewBook = null" />
+    <!-- Document Preview -->
+    <LibraryDocumentViewer v-if="previewBook" :book="previewBook" @close="previewBook = null" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
-import LibraryPdfViewer from '@/components/library/LibraryPdfViewer.vue'
+import LibraryDocumentViewer from '@/components/library/LibraryDocumentViewer.vue'
 import BookCover from '@/components/library/BookCover.vue'
 import type { LibraryBook } from '@/types/library'
 

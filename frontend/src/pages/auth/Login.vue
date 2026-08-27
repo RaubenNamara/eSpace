@@ -784,7 +784,7 @@ function redirectUserByRole(userData: any): void {
 
   const roleRoutes: Record<string, string> = {
     student: '/student/dashboard',
-    teacher: '/teacher/dashboard',
+    teacher: userData?.must_change_password ? '/teacher/change-password' : '/teacher/dashboard',
     hod: '/hod/dashboard',
     admin: '/admin/dashboard',
     super_admin: '/admin/dashboard',

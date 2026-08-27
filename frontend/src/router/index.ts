@@ -35,6 +35,7 @@ const StudentVirtualLabPlayground = () => import('../pages/student/VirtualLabPla
 
 // Teacher Pages
 const TeacherDashboard = () => import('../pages/teacher/Dashboard.vue')
+const TeacherChangePassword = () => import('../pages/teacher/ChangePassword.vue')
 const TeacherClasses = () => import('../pages/teacher/Classes.vue')
 const TeacherLiveClasses = () => import('../pages/teacher/LiveClasses.vue')
 const TeacherAssignments = () => import('../pages/teacher/Assignments.vue')
@@ -72,9 +73,11 @@ const HODReports = () => import('../pages/hod/Reports.vue')
 const HODMarksheet = () => import('../pages/hod/Marksheet.vue')
 const HODApprovals = () => import('../pages/hod/Approvals.vue')
 const HODLibrary = () => import('../pages/hod/Library.vue')
+const HODENotes = () => import('../pages/hod/ENotes.vue')
 const HODVideos = () => import('../pages/hod/Videos.vue')
 const HODItemBank = () => import('../pages/hod/ItemBank.vue')
 const HODAssessments = () => import('../pages/hod/Assessments.vue')
+const HODAssignmentSubmissions = () => import('../pages/hod/AssignmentSubmissions.vue')
 const HODCharts = () => import('../pages/hod/Charts.vue')
 const HODLiveClasses = () => import('../pages/hod/LiveClasses.vue')
 const HODChat = () => import('../pages/hod/Chat.vue')
@@ -90,6 +93,7 @@ const AdminSubjects = () => import('../pages/admin/Subjects.vue')
 const AdminClasses = () => import('../pages/admin/Classes.vue')
 const AdminAcademicYears = () => import('../pages/admin/AcademicYears.vue')
 const AdminTerms = () => import('../pages/admin/Terms.vue')
+const AdminENoteCurriculum = () => import('../pages/admin/ENoteCurriculum.vue')
 const AdminPromotion = () => import('../pages/admin/Promotion.vue')
 const AdminReports = () => import('../pages/admin/Reports.vue')
 const AdminMarksheet = () => import('../pages/admin/Marksheet.vue')
@@ -184,6 +188,18 @@ const routes: RouteRecordRaw[] = [
     ]
   },
   {
+    // Standalone (AuthLayout, not the full MainLayout sidebar) - deliberately outside the
+    // /teacher route record below so it's never itself subject to the must-change-password
+    // redirect it exists to satisfy. A teacher on a temporary password can only reach this
+    // page and logout - see the router guard's mustChangePassword check.
+    path: '/teacher/change-password',
+    component: AuthLayout,
+    meta: { requiresAuth: true, role: 'teacher' },
+    children: [
+      { path: '', name: 'TeacherChangePassword', component: TeacherChangePassword }
+    ]
+  },
+  {
     path: '/teacher',
     component: MainLayout,
     meta: { requiresAuth: true, role: 'teacher' },
@@ -235,10 +251,14 @@ const routes: RouteRecordRaw[] = [
       { path: 'reports', name: 'HODReports', component: HODReports },
       { path: 'approvals', name: 'HODApprovals', component: HODApprovals },
       { path: 'library', name: 'HODLibrary', component: HODLibrary },
+      { path: 'enotes', name: 'HODENotes', component: HODENotes },
+      { path: 'enotes/:id', name: 'HODENoteTopic', component: ENotePreview, meta: { previewRole: 'hod' } },
       { path: 'videos', name: 'HODVideos', component: HODVideos },
       { path: 'itembank', name: 'HODItemBank', component: HODItemBank },
       { path: 'assessments', name: 'HODAssessments', component: HODAssessments },
       { path: 'assessments/:id/preview', name: 'HODAssignmentPreview', component: StudentAssignmentAnswer, meta: { previewRole: 'hod' } },
+      { path: 'assessments/:id/submissions', name: 'HODAssignmentSubmissions', component: HODAssignmentSubmissions },
+      { path: 'assessments/:id/submissions/:submissionId', name: 'HODSubmissionDetail', component: StudentAssignmentResult, meta: { previewRole: 'hod' } },
       { path: 'charts', name: 'HODCharts', component: HODCharts },
       { path: 'live-classes', name: 'HODLiveClasses', component: HODLiveClasses },
       { path: 'chat', name: 'HODChat', component: HODChat },
@@ -261,6 +281,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'classes', name: 'AdminClasses', component: AdminClasses },
       { path: 'academic-years', name: 'AdminAcademicYears', component: AdminAcademicYears },
       { path: 'terms', name: 'AdminTerms', component: AdminTerms },
+      { path: 'enotes-curriculum', name: 'AdminENoteCurriculum', component: AdminENoteCurriculum },
       { path: 'promotion', name: 'AdminPromotion', component: AdminPromotion },
       { path: 'reports', name: 'AdminReports', component: AdminReports },
       { path: 'audit-logs', name: 'AdminAuditLogs', component: AdminAuditLogs },
@@ -357,6 +378,22 @@ router.beforeEach((to, from, next) => {
     }
   }
   
+  // A teacher still on a temporary/admin-set password can only reach the change-password page
+  // (and logout, which just flips isAuthenticated to false and lands on /login, bypassing this
+  // check entirely) - see MustChangePasswordMiddleware for the matching backend enforcement.
+  // Re-entrant: if the role check above already redirected elsewhere (e.g. away from a /hod
+  // route back to /teacher/dashboard), that next() call re-triggers this guard on the new
+  // target, so this still catches it.
+  if (
+    authStore.isAuthenticated &&
+    authStore.userRole === 'teacher' &&
+    (authStore.user as any)?.must_change_password &&
+    to.name !== 'TeacherChangePassword'
+  ) {
+    next('/teacher/change-password')
+    return
+  }
+
   // If authenticated and trying to access the landing/auth pages, redirect to dashboard
   if (authStore.isAuthenticated && (to.path === '/' || to.path === '/login' || to.path === '/register')) {
     const role = authStore.userRole

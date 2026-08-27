@@ -24,6 +24,19 @@ class LibraryController extends Controller
         return \eSpace\Config\Database::getInstance();
     }
 
+    /**
+     * create()/replaceFile() receive multipart/form-data (they carry a file), where every field
+     * - including a checkbox's value - arrives as a plain string ("true"/"1"/"false"/"0"), unlike
+     * update()'s JSON body where it could already be a real boolean. Handles both.
+     */
+    private function toBool(mixed $value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+        return in_array(strtolower((string) $value), ['1', 'true', 'on', 'yes'], true);
+    }
+
     private function getTeacherId(): ?int
     {
         if (($_SESSION['role'] ?? null) === 'hod') {
@@ -207,7 +220,7 @@ class LibraryController extends Controller
 
         $data = $this->input();
 
-        $errors = $this->validateRequired(['title', 'subject_id', 'class_id']);
+        $errors = $this->validateRequired(['title', 'subject_id']);
         if (!empty($errors)) {
             $this->validationError($errors);
             return;
@@ -229,16 +242,11 @@ class LibraryController extends Controller
             return;
         }
 
-        // Verify class is one of the department's enrolled classes
-        $stmt = $db->prepare(
-            "SELECT DISTINCT c.id FROM classes c
-             INNER JOIN student_department_enrollments se ON c.id = se.class_id
-             WHERE c.id = :class_id AND se.department_id = :department_id
-               AND se.deleted_at IS NULL AND c.deleted_at IS NULL"
-        );
-        $stmt->execute(['class_id' => $data['class_id'], 'department_id' => $departmentId]);
-        if (!$stmt->fetch()) {
-            $this->validationError(['class_id' => 'Class not found in your department']);
+        // Verify class/class-level is real and present in the department (individual stream or
+        // "All Streams" for a class level)
+        $classTarget = $this->resolveClassTarget($data, $departmentId);
+        if (!$classTarget['ok']) {
+            $this->validationError(['class_id' => $classTarget['message']]);
             return;
         }
 
@@ -248,22 +256,24 @@ class LibraryController extends Controller
         }
 
         $status = in_array($data['status'] ?? 'draft', ['draft', 'published', 'archived'], true) ? $data['status'] : 'draft';
+        $allowDownload = $this->toBool($data['allow_download'] ?? false) ? 1 : 0;
 
         $sanitizedData = [
             'title' => htmlspecialchars(trim($data['title']), ENT_QUOTES, 'UTF-8'),
             'description' => !empty($data['description']) ? htmlspecialchars(trim($data['description']), ENT_QUOTES, 'UTF-8') : null,
             'subject_id' => (int) $data['subject_id'],
-            'class_id' => (int) $data['class_id'],
+            'class_id' => $classTarget['class_id'],
+            'class_group_name' => $classTarget['class_group_name'],
             'department_id' => $departmentId,
             'status' => $status
         ];
 
         $sql = "INSERT INTO library_books
-                    (title, description, subject_id, class_id, department_id, file_path, file_type, file_size,
-                     uploaded_by, is_approved, status, published_at, created_at, updated_at)
+                    (title, description, subject_id, class_id, class_group_name, department_id, file_path, file_type, file_size,
+                     allow_download, uploaded_by, is_approved, status, published_at, created_at, updated_at)
                 VALUES
-                    (:title, :description, :subject_id, :class_id, :department_id, :file_path, :file_type, :file_size,
-                     :uploaded_by, 1, :status, :published_at, NOW(), NOW())";
+                    (:title, :description, :subject_id, :class_id, :class_group_name, :department_id, :file_path, :file_type, :file_size,
+                     :allow_download, :uploaded_by, 1, :status, :published_at, NOW(), NOW())";
 
         $stmt = $db->prepare($sql);
 
@@ -272,6 +282,7 @@ class LibraryController extends Controller
                 'file_path' => $upload['url'],
                 'file_type' => $upload['type'],
                 'file_size' => $upload['size'],
+                'allow_download' => $allowDownload,
                 'uploaded_by' => $teacherId,
                 'published_at' => $status === 'published' ? date('Y-m-d H:i:s') : null
             ]));
@@ -285,7 +296,8 @@ class LibraryController extends Controller
                     'new_library_resource',
                     'New eLibrary resource',
                     "A new library resource \"{$sanitizedData['title']}\" is now available.",
-                    ['book_id' => $bookId]
+                    ['book_id' => $bookId],
+                    $sanitizedData['class_group_name']
                 );
             }
 
@@ -302,8 +314,8 @@ class LibraryController extends Controller
     }
 
     /**
-     * Update book metadata (title/description/subject/class/status). The PDF itself is
-     * immutable once uploaded - delete and re-upload to replace it.
+     * Update book metadata (title/description/subject/class/status/allow_download). Does not
+     * touch the file itself - see replaceFile() for swapping the underlying document.
      * PUT /teacher/library/{id}
      */
     public function update($id): void
@@ -324,7 +336,7 @@ class LibraryController extends Controller
 
         $db = $this->getDb();
 
-        $stmt = $db->prepare("SELECT id, status, title, department_id, class_id FROM library_books WHERE id = :id AND uploaded_by = :teacher_id AND deleted_at IS NULL");
+        $stmt = $db->prepare("SELECT id, status, title, department_id, class_id, class_group_name FROM library_books WHERE id = :id AND uploaded_by = :teacher_id AND deleted_at IS NULL");
         $stmt->execute(['id' => $id, 'teacher_id' => $teacherId]);
         $book = $stmt->fetch();
 
@@ -355,14 +367,31 @@ class LibraryController extends Controller
             $params['subject_id'] = (int) $data['subject_id'];
         }
 
-        if (!empty($data['class_id'])) {
+        if (array_key_exists('class_id', $data) || array_key_exists('class_group_name', $data) || array_key_exists('scope', $data)) {
+            $departmentId = $this->getTeacherDepartmentId();
+            if (!$departmentId) {
+                $this->error('Teacher must be assigned to a department', 403);
+                return;
+            }
+            $classTarget = $this->resolveClassTarget($data, $departmentId);
+            if (!$classTarget['ok']) {
+                $this->validationError(['class_id' => $classTarget['message']]);
+                return;
+            }
             $updates[] = 'class_id = :class_id';
-            $params['class_id'] = (int) $data['class_id'];
+            $params['class_id'] = $classTarget['class_id'];
+            $updates[] = 'class_group_name = :class_group_name';
+            $params['class_group_name'] = $classTarget['class_group_name'];
         }
 
         if (!empty($data['status']) && in_array($data['status'], ['draft', 'published', 'archived'], true)) {
             $updates[] = 'status = :status';
             $params['status'] = $data['status'];
+        }
+
+        if (array_key_exists('allow_download', $data)) {
+            $updates[] = 'allow_download = :allow_download';
+            $params['allow_download'] = $this->toBool($data['allow_download']) ? 1 : 0;
         }
 
         if (empty($updates)) {
@@ -383,14 +412,16 @@ class LibraryController extends Controller
                 $updateStmt->execute(['id' => $id]);
 
                 $title = !empty($data['title']) ? trim($data['title']) : $book['title'];
-                $classId = !empty($data['class_id']) ? (int) $data['class_id'] : (int) $book['class_id'];
+                $classId = $params['class_id'] ?? (int) $book['class_id'];
+                $classGroupName = $params['class_group_name'] ?? $book['class_group_name'];
                 (new NotificationService())->notifyDepartmentClass(
                     (int) $book['department_id'],
                     $classId,
                     'new_library_resource',
                     'New eLibrary resource',
                     "A new library resource \"{$title}\" is now available.",
-                    ['book_id' => $id]
+                    ['book_id' => $id],
+                    $classGroupName
                 );
             }
 
@@ -398,6 +429,77 @@ class LibraryController extends Controller
         } catch (\PDOException $e) {
             error_log('Failed to update library book: ' . $e->getMessage());
             $this->error('Failed to update library book', 500);
+        }
+    }
+
+    /**
+     * Replace the underlying file (e.g. a corrected PPTX) without touching title/description/
+     * subject/class/status/allow_download or losing the book's id/history. Same validation as a
+     * fresh upload; the old physical file is deleted only after the new one is confirmed valid
+     * and the DB row is updated, so a failed replace never leaves the book without a file.
+     * POST /teacher/library/{id}/replace-file
+     */
+    public function replaceFile($id): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+
+        $teacherId = $this->getTeacherId();
+        if (!$teacherId) {
+            $this->error('Teacher not found', 403);
+            return;
+        }
+
+        $id = (int) $id;
+        $db = $this->getDb();
+
+        $stmt = $db->prepare("SELECT id, file_path FROM library_books WHERE id = :id AND uploaded_by = :teacher_id AND deleted_at IS NULL");
+        $stmt->execute(['id' => $id, 'teacher_id' => $teacherId]);
+        $book = $stmt->fetch();
+
+        if (!$book) {
+            $this->notFound('Book not found');
+            return;
+        }
+
+        $upload = $this->handleUpload();
+        if ($upload === null) {
+            return; // handleUpload() already sent the error response
+        }
+
+        try {
+            $updateStmt = $db->prepare(
+                "UPDATE library_books SET file_path = :file_path, file_type = :file_type, file_size = :file_size, updated_at = NOW() WHERE id = :id"
+            );
+            $updateStmt->execute([
+                'file_path' => $upload['url'],
+                'file_type' => $upload['type'],
+                'file_size' => $upload['size'],
+                'id' => $id
+            ]);
+
+            // Old file's path is root-relative (e.g. '/uploads/library/xyz.pdf') - resolve it back
+            // to a real filesystem path the same way handleUpload() builds new ones, then remove
+            // it now that the new file is safely referenced by the DB row.
+            $oldRelative = ltrim((string) $book['file_path'], '/');
+            if (str_starts_with($oldRelative, 'uploads/' . self::UPLOAD_SUBDIR . '/')) {
+                $oldPath = __DIR__ . '/../../../public/' . $oldRelative;
+                if (is_file($oldPath)) {
+                    @unlink($oldPath);
+                }
+            }
+
+            $this->success([
+                'file_path' => $upload['url'],
+                'file_type' => $upload['type'],
+                'file_size' => $upload['size']
+            ], 'File replaced successfully');
+        } catch (\PDOException $e) {
+            @unlink($upload['path']);
+            error_log('Failed to replace library book file: ' . $e->getMessage());
+            $this->error('Failed to replace file', 500);
         }
     }
 
@@ -440,8 +542,24 @@ class LibraryController extends Controller
     }
 
     /**
-     * Validate and store the uploaded PDF, returning its public URL/type/size, or null (having
-     * already sent an error response) if validation fails.
+     * MIME type -> [our short type label, file extension to store]. PPTX (and DOCX/XLSX) are all
+     * ZIP containers with identical magic bytes, so MIME/extension alone can't tell a renamed
+     * .zip/.docx/.xlsx apart from a real .pptx - verifyFileContent() does the real check by
+     * looking inside the archive for a PowerPoint-only entry.
+     */
+    private const ALLOWED_TYPES = [
+        'application/pdf' => ['pdf', 'pdf'],
+        'application/vnd.ms-powerpoint' => ['ppt', 'ppt'],
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation' => ['pptx', 'pptx'],
+    ];
+
+    private const ALLOWED_EXTENSIONS = ['pdf', 'ppt', 'pptx'];
+
+    private const REJECT_MESSAGE = 'Only PDF and PowerPoint (PPT/PPTX) files are allowed.';
+
+    /**
+     * Validate and store an uploaded PDF/PPT/PPTX, returning its public URL/type/size, or null
+     * (having already sent an error response) if validation fails.
      */
     private function handleUpload(): ?array
     {
@@ -457,14 +575,25 @@ class LibraryController extends Controller
             return null;
         }
 
+        // Extension is only ever used as a friendly early-out (and is never trusted for what
+        // actually gets stored/served) - the real gate is the MIME sniff below plus the
+        // post-move content check in verifyFileContent().
+        $extension = strtolower((string) pathinfo($file['name'], PATHINFO_EXTENSION));
+        if (!in_array($extension, self::ALLOWED_EXTENSIONS, true)) {
+            $this->error(self::REJECT_MESSAGE, 400);
+            return null;
+        }
+
         $finfo = finfo_open(FILEINFO_MIME_TYPE);
         $mimeType = finfo_file($finfo, $file['tmp_name']);
         finfo_close($finfo);
 
-        if ($mimeType !== 'application/pdf') {
-            $this->error('Invalid file type. Only PDF documents are allowed', 400);
+        if (!isset(self::ALLOWED_TYPES[$mimeType])) {
+            $this->error(self::REJECT_MESSAGE, 400);
             return null;
         }
+
+        [$type, $ext] = self::ALLOWED_TYPES[$mimeType];
 
         $uploadDir = __DIR__ . '/../../../public/uploads/' . self::UPLOAD_SUBDIR . '/';
         if (!file_exists($uploadDir)) {
@@ -472,7 +601,7 @@ class LibraryController extends Controller
         }
 
         // Never trust the original filename; generate a unique one from random bytes.
-        $filename = 'library_' . bin2hex(random_bytes(8)) . '_' . time() . '.pdf';
+        $filename = 'library_' . bin2hex(random_bytes(8)) . '_' . time() . '.' . $ext;
         $filepath = $uploadDir . $filename;
 
         if (!move_uploaded_file($file['tmp_name'], $filepath)) {
@@ -481,17 +610,69 @@ class LibraryController extends Controller
         }
 
         // Re-validate actual file content after the move (MIME sniffing can be spoofed pre-upload).
-        if (substr((string) file_get_contents($filepath, false, null, 0, 5), 0, 5) !== '%PDF-') {
+        if (!$this->verifyFileContent($filepath, $type)) {
             unlink($filepath);
-            $this->error('Uploaded file is not a valid PDF', 400);
+            $this->error(self::REJECT_MESSAGE, 400);
             return null;
         }
 
         return [
             'url' => '/uploads/' . self::UPLOAD_SUBDIR . '/' . $filename,
             'path' => $filepath,
-            'type' => 'pdf',
+            'type' => $type,
             'size' => (int) $file['size']
         ];
+    }
+
+    /**
+     * Content-level check that the saved file really is what its MIME type claimed, run after
+     * move_uploaded_file() so it's checking the actual bytes on disk. PDF and legacy .ppt each
+     * have a distinct file-format signature; .pptx is an Office Open XML package, which is a ZIP
+     * file - the ZIP signature alone doesn't distinguish it from a plain .zip or a renamed
+     * .docx/.xlsx (same container format), so for pptx this also opens the archive and looks for
+     * ppt/presentation.xml, an entry that only exists inside a genuine PowerPoint package.
+     */
+    private function verifyFileContent(string $filepath, string $type): bool
+    {
+        if ($type === 'pdf') {
+            return substr((string) file_get_contents($filepath, false, null, 0, 5), 0, 5) === '%PDF-';
+        }
+
+        if ($type === 'ppt') {
+            // Legacy binary PowerPoint files are OLE/CFBF compound documents (same container
+            // format .doc/.xls also use) - the MIME sniff above is what actually distinguishes
+            // them (libmagic reads into the OLE stream to identify the authoring application);
+            // this is just a sanity check that it's a real OLE file at all.
+            $header = (string) file_get_contents($filepath, false, null, 0, 8);
+            return $header === "\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1";
+        }
+
+        if ($type === 'pptx') {
+            $signature = (string) file_get_contents($filepath, false, null, 0, 4);
+            if ($signature !== "PK\x03\x04") {
+                return false;
+            }
+
+            if (class_exists(\ZipArchive::class)) {
+                $zip = new \ZipArchive();
+                if ($zip->open($filepath) !== true) {
+                    return false;
+                }
+                $hasPresentation = $zip->locateName('ppt/presentation.xml') !== false;
+                $zip->close();
+                return $hasPresentation;
+            }
+
+            // ZipArchive isn't compiled in on this server - fall back to a raw-byte scan for the
+            // same entry name. A ZIP's per-entry filename sits in its (uncompressed) local file
+            // header, so "ppt/presentation.xml" appears as literal text in the file regardless of
+            // whether the entry's *content* is compressed - not as airtight as parsing the
+            // central directory, but still rejects a plain .zip or a renamed .docx/.xlsx, which
+            // don't contain that path at all.
+            $contents = (string) file_get_contents($filepath);
+            return str_contains($contents, 'ppt/presentation.xml');
+        }
+
+        return false;
     }
 }

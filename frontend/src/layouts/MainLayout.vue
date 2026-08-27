@@ -301,6 +301,68 @@
                 <p class="text-xs text-gray-500 dark:text-gray-400 capitalize">{{ userRole }}</p>
               </div>
             </button>
+            <div v-else-if="userRole === 'teacher'" ref="profileDropdownRef" class="relative">
+              <button
+                @click="showProfileDropdown = !showProfileDropdown"
+                class="flex items-center space-x-2 hover:opacity-80 transition-opacity"
+                :aria-expanded="showProfileDropdown"
+                aria-haspopup="menu"
+              >
+                <div class="w-10 h-10 rounded-full overflow-hidden bg-indigo-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
+                  <img v-if="userPhotoUrl" :src="resolveAssetUrl(userPhotoUrl)" alt="" class="w-full h-full object-cover">
+                  <span v-else>{{ userInitials }}</span>
+                </div>
+                <div class="hidden md:block text-left">
+                  <p class="text-sm font-medium text-gray-900 dark:text-white">{{ userName }}</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 capitalize">{{ userRole }}</p>
+                </div>
+                <svg class="w-4 h-4 text-gray-400 hidden md:block transition-transform" :class="{ 'rotate-180': showProfileDropdown }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+              </button>
+
+              <div
+                v-if="showProfileDropdown"
+                role="menu"
+                class="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-1.5 z-50"
+              >
+                <div class="px-4 py-2.5 border-b border-gray-100 dark:border-gray-700">
+                  <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ userName }}</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 capitalize">{{ userRole }}</p>
+                </div>
+                <button
+                  role="menuitem"
+                  @click="openProfileSection('photo')"
+                  class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2.5 transition-colors"
+                >
+                  <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                  </svg>
+                  Profile
+                </button>
+                <button
+                  role="menuitem"
+                  @click="openProfileSection('password')"
+                  class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2.5 transition-colors"
+                >
+                  <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 10-8 0v4h8z"></path>
+                  </svg>
+                  Change Password
+                </button>
+                <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
+                <button
+                  role="menuitem"
+                  @click="handleLogout"
+                  class="w-full text-left px-4 py-2 text-sm text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 flex items-center gap-2.5 transition-colors"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                  </svg>
+                  Logout
+                </button>
+              </div>
+            </div>
             <div v-else class="flex items-center space-x-3">
               <div class="w-10 h-10 rounded-full overflow-hidden bg-indigo-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
                 <img v-if="userPhotoUrl" :src="resolveAssetUrl(userPhotoUrl)" alt="" class="w-full h-full object-cover">
@@ -315,7 +377,7 @@
         </div>
       </header>
 
-      <ProfileSettingsModal v-if="showProfileModal" @close="showProfileModal = false" />
+      <ProfileSettingsModal v-if="showProfileModal" :focus-section="profileModalFocusSection" @close="showProfileModal = false" />
 
       <!-- Page Content -->
       <main class="p-6 flex-1">
@@ -418,6 +480,13 @@ const handleOutsideNotificationClick = (event: MouseEvent) => {
   }
 }
 
+const profileDropdownRef = ref<HTMLElement | null>(null)
+const handleOutsideProfileDropdownClick = (event: MouseEvent) => {
+  if (showProfileDropdown.value && profileDropdownRef.value && !profileDropdownRef.value.contains(event.target as Node)) {
+    showProfileDropdown.value = false
+  }
+}
+
 // Messages badge (WhatsApp-style icon): backed by the shared chatBadge store (see
 // stores/chatBadge.ts) rather than local state, so a chat page can force an immediate refresh
 // right after marking a conversation read instead of the badge sitting stale until the next
@@ -436,6 +505,7 @@ onMounted(() => {
   fetchUnreadNotificationCount()
   notificationsTimer = setInterval(fetchUnreadNotificationCount, NOTIFICATIONS_POLL_INTERVAL_MS)
   document.addEventListener('mousedown', handleOutsideNotificationClick)
+  document.addEventListener('mousedown', handleOutsideProfileDropdownClick)
 
   chatBadge.refresh()
   messagesTimer = setInterval(() => chatBadge.refresh(), MESSAGES_POLL_INTERVAL_MS)
@@ -446,6 +516,7 @@ onBeforeUnmount(() => {
   if (presenceTimer) clearInterval(presenceTimer)
   if (notificationsTimer) clearInterval(notificationsTimer)
   document.removeEventListener('mousedown', handleOutsideNotificationClick)
+  document.removeEventListener('mousedown', handleOutsideProfileDropdownClick)
   if (messagesTimer) clearInterval(messagesTimer)
 })
 const isDarkMode = computed(() => themeStore.isDarkMode)
@@ -470,6 +541,13 @@ const userInitials = computed(() => {
 const userPhotoUrl = computed(() => (authStore.user as any)?.profile_photo || null)
 
 const showProfileModal = ref(false)
+const showProfileDropdown = ref(false)
+const profileModalFocusSection = ref<'photo' | 'password'>('photo')
+const openProfileSection = (section: 'photo' | 'password') => {
+  profileModalFocusSection.value = section
+  showProfileModal.value = true
+  showProfileDropdown.value = false
+}
 
 // Academic Management Menu
 const academicMenu = computed(() => {
@@ -505,6 +583,7 @@ const academicMenu = computed(() => {
       { path: '/admin/classes', label: 'Classes', icon: 'BuildingLibraryIcon' },
       { path: '/admin/academic-years', label: 'Academic Years', icon: 'CalendarIcon' },
       { path: '/admin/terms', label: 'Terms', icon: 'CalendarDaysIcon' },
+      { path: '/admin/enotes-curriculum', label: 'eNotes Curriculum Setup', icon: 'NoteIcon' },
       { path: '/admin/promotion', label: 'Student Promotion', icon: 'AcademicCapIcon' },
       { path: '/admin/live-classes', label: 'Live Classes', icon: 'VideoCameraIcon' }
     ]
@@ -531,6 +610,7 @@ const resourcesMenu = computed(() => {
     ]
   } else if (role === 'hod') {
     return [
+      { path: '/hod/enotes', label: 'eNotes', icon: 'NoteIcon' },
       { path: '/hod/library', label: 'eLibrary', icon: 'LibraryIcon' },
       { path: '/hod/videos', label: 'Videos', icon: 'VideoCameraIcon' },
       { path: '/hod/itembank', label: 'Item Bank', icon: 'QuestionMarkCircleIcon' }
@@ -570,6 +650,7 @@ const assessmentMenu = computed(() => {
     ]
   } else if (role === 'hod') {
     return [
+      { path: '/hod/assessments', label: 'Assessments', icon: 'DocumentTextIcon' },
       { path: '/hod/analytics', label: 'Analytics', icon: 'ChartIcon' },
       { path: '/hod/reports', label: 'Reports', icon: 'ChartBarIcon' },
       { path: '/hod/marksheet', label: 'Marksheet', icon: 'TableCellsIcon' },

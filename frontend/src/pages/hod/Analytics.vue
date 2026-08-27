@@ -88,6 +88,49 @@
       </div>
     </div>
 
+    <!-- Per-Teacher Breakdown -->
+    <div class="card mb-6">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Teacher Breakdown</h3>
+      <div v-if="loading.teachers" class="text-gray-500 py-6 text-center">Loading...</div>
+      <div v-else-if="teachers.length === 0" class="text-gray-500 py-6 text-center">No teachers in this department</div>
+      <div v-else class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead>
+            <tr>
+              <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Teacher</th>
+              <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Assignments</th>
+              <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Submissions</th>
+              <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Marked</th>
+              <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Pending</th>
+              <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Students Reached</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Average Score</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+            <tr v-for="t in teachers" :key="t.id">
+              <td class="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white whitespace-nowrap">{{ t.first_name }} {{ t.last_name }}</td>
+              <td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 text-right">{{ t.assignments_count }}</td>
+              <td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 text-right">{{ t.total_submissions }}</td>
+              <td class="px-4 py-2 text-sm text-green-600 dark:text-green-400 text-right font-medium">{{ t.submissions_marked }}</td>
+              <td class="px-4 py-2 text-sm text-right font-medium" :class="t.submissions_pending > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400 dark:text-gray-500'">
+                {{ t.submissions_pending }}
+              </td>
+              <td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 text-right">{{ t.students_reached }}</td>
+              <td class="px-4 py-2 text-sm">
+                <div v-if="t.average_percentage !== null" class="flex items-center gap-2 min-w-[120px]">
+                  <div class="flex-1 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div class="h-full bg-indigo-600 rounded-full" :style="{ width: Math.min(100, t.average_percentage) + '%' }"></div>
+                  </div>
+                  <span class="text-gray-900 dark:text-white font-medium whitespace-nowrap">{{ t.average_percentage }}%</span>
+                </div>
+                <span v-else class="text-gray-400 dark:text-gray-500">No graded work</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- Reading Engagement -->
     <div class="card">
       <div class="flex items-center justify-between mb-4">
@@ -133,7 +176,17 @@ import apiService from '@/services/api'
 ChartJS.register(Title, Tooltip, Legend, BarElement, LineElement, PointElement, CategoryScale, LinearScale, ArcElement)
 
 interface StatusCount { status: string; count: number }
-interface TeacherStat { id: number; first_name: string; last_name: string; assignments_count: number; submissions_marked: number; average_percentage: number | null }
+interface TeacherStat {
+  id: number
+  first_name: string
+  last_name: string
+  assignments_count: number
+  total_submissions: number
+  submissions_marked: number
+  submissions_pending: number
+  students_reached: number
+  average_percentage: number | null
+}
 interface SubjectStat { id: number; name: string; assignment_count: number; submission_count: number; average_percentage: number | null }
 interface TrendPoint { month: string; average_percentage: number; submission_count: number }
 interface TopBook { id: number; title: string; author: string | null; readers_count: number }

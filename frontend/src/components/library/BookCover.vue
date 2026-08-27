@@ -34,7 +34,7 @@
           class="px-1.5 py-0.5 rounded text-white bg-white/20 backdrop-blur-sm font-bold tracking-wide flex-shrink-0"
           :class="size === 'sm' ? 'text-[8px]' : 'text-[9px]'"
         >
-          PDF
+          {{ formatLabel }}
         </span>
       </div>
 
@@ -77,6 +77,8 @@ const subjectLabel = computed(() => {
   if (props.book.subject_code) return props.book.subject_code.slice(0, 6).toUpperCase()
   return (props.book.subject_name || '').slice(0, 8).toUpperCase()
 })
+
+const formatLabel = computed(() => (props.book.file_type || 'pdf').toUpperCase())
 </script>
 
 <style scoped>

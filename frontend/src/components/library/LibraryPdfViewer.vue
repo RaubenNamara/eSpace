@@ -11,14 +11,27 @@
               <span v-if="teacherName" class="truncate">By {{ teacherName }}</span>
             </div>
           </div>
-          <button
-            @click="$emit('close')"
-            class="p-2 rounded-lg bg-white/10 hover:bg-white/25 transition-colors flex-shrink-0"
-          >
-            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
-          </button>
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <a
+              v-if="allowDownload"
+              :href="pdfUrl"
+              download
+              class="p-2 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
+              title="Download"
+            >
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"></path>
+              </svg>
+            </a>
+            <button
+              @click="$emit('close')"
+              class="p-2 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
+            >
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -69,6 +82,7 @@ const wrapperRef = ref<HTMLElement | null>(null)
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 
 const pdfUrl = computed(() => resolveAssetUrl(props.book.file_path))
+const allowDownload = computed(() => !!props.book.allow_download)
 
 const {
   loading, error, currentPage, totalPages, scale, pageWidth, pageHeight,

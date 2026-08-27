@@ -127,7 +127,10 @@
             <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
               {{ resource.subject_name || 'Unknown Subject' }}
             </span>
-            <span v-if="resource.class_name" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+            <span v-if="resource.class_group_name" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+              {{ resource.class_group_name }} (All Streams)
+            </span>
+            <span v-else-if="resource.class_name" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
               {{ resource.class_name }}{{ resource.class_stream_name ? ' - ' + resource.class_stream_name : '' }}
             </span>
             <span class="ml-auto text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">{{ formatFileSize(resource.file_size) }}</span>
@@ -216,20 +219,7 @@
 
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Class *</label>
-                <select
-                  v-model="resourceForm.class_id"
-                  required
-                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-                  :disabled="!assignments?.classes || assignments.classes.length === 0"
-                >
-                  <option value="">Select Class</option>
-                  <option v-for="cls in assignments?.classes" :key="cls.id" :value="cls.id">
-                    {{ cls.name }} ({{ cls.level }}{{ cls.stream_name ? ' - ' + cls.stream_name : '' }})
-                  </option>
-                </select>
-                <p v-if="!assignments?.classes || assignments.classes.length === 0" class="text-xs text-red-600 dark:text-red-400 mt-1">
-                  No classes available. Please ensure you are assigned to a department with classes.
-                </p>
+                <TeacherClassSelector v-model="resourceForm.classTarget" />
               </div>
             </div>
 
@@ -290,6 +280,7 @@
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import ItemBankPdfViewer from '@/components/itembank/ItemBankPdfViewer.vue'
+import TeacherClassSelector from '@/components/teacher/TeacherClassSelector.vue'
 import type { ItemBankResource, ItemBankResourceForm } from '@/types/itembank'
 import type { ENoteAssignments } from '@/types/enotes'
 
@@ -313,7 +304,7 @@ const resourceForm = ref<ItemBankResourceForm>({
   title: '',
   description: '',
   subject_id: '',
-  class_id: '',
+  classTarget: { scope: 'stream', class_id: null, class_group_name: null },
   status: 'draft',
   file: null
 })
@@ -390,7 +381,7 @@ const loadAssignments = async () => {
 
 const openCreateModal = () => {
   editingResource.value = null
-  resourceForm.value = { title: '', description: '', subject_id: '', class_id: '', status: 'draft', file: null }
+  resourceForm.value = { title: '', description: '', subject_id: '', classTarget: { scope: 'stream', class_id: null, class_group_name: null }, status: 'draft', file: null }
   showResourceModal.value = true
 }
 
@@ -400,7 +391,9 @@ const editResource = (resource: ItemBankResource) => {
     title: resource.title,
     description: resource.description || '',
     subject_id: resource.subject_id?.toString() || '',
-    class_id: resource.class_id?.toString() || '',
+    classTarget: resource.class_group_name
+      ? { scope: 'all_streams', class_id: null, class_group_name: resource.class_group_name }
+      : { scope: 'stream', class_id: resource.class_id, class_group_name: null },
     status: resource.status,
     file: null
   }
@@ -426,7 +419,9 @@ const saveResource = async () => {
         title: resourceForm.value.title,
         description: resourceForm.value.description,
         subject_id: resourceForm.value.subject_id,
-        class_id: resourceForm.value.class_id,
+        scope: resourceForm.value.classTarget.scope,
+        class_id: resourceForm.value.classTarget.class_id,
+        class_group_name: resourceForm.value.classTarget.class_group_name,
         status: resourceForm.value.status
       })
     } else {
@@ -438,7 +433,9 @@ const saveResource = async () => {
       formData.append('title', resourceForm.value.title)
       formData.append('description', resourceForm.value.description)
       formData.append('subject_id', resourceForm.value.subject_id)
-      formData.append('class_id', resourceForm.value.class_id)
+      formData.append('scope', resourceForm.value.classTarget.scope)
+      if (resourceForm.value.classTarget.class_id !== null) formData.append('class_id', String(resourceForm.value.classTarget.class_id))
+      if (resourceForm.value.classTarget.class_group_name !== null) formData.append('class_group_name', resourceForm.value.classTarget.class_group_name)
       formData.append('status', resourceForm.value.status)
       formData.append('file', resourceForm.value.file)
 

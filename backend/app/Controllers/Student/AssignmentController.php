@@ -39,6 +39,7 @@ class AssignmentController extends Controller
                 a.allow_late_submission,
                 a.attempts_allowed,
                 a.status as assignment_status,
+                a.assessment_category,
                 a.subject_id,
                 s.name as subject_name,
                 CONCAT(t.first_name, ' ', t.last_name) as teacher_name,
@@ -58,15 +59,29 @@ class AssignmentController extends Controller
                 AND a.deleted_at IS NULL
                 AND EXISTS (
                     SELECT 1 FROM student_department_enrollments sde
+                    LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
                     WHERE sde.student_id = :student_id_enroll
-                      AND sde.class_id = a.class_id
+                      AND (
+                        sde.class_id = a.class_id
+                        OR (a.class_group_name IS NOT NULL AND sde_c.name = a.class_group_name)
+                        OR EXISTS (SELECT 1 FROM assignment_classes ac WHERE ac.assignment_id = a.id AND ac.class_id = sde.class_id)
+                      )
+                      AND sde.department_id = s.department_id
                       AND sde.deleted_at IS NULL
+                      AND sde.status = 'active'
                       AND COALESCE(a.published_at, a.created_at) BETWEEN sde.start_date AND COALESCE(sde.end_date, NOW())
+                )
+                AND NOT EXISTS (
+                    SELECT 1 FROM student_teacher_enrollments ste
+                    WHERE ste.student_id = :student_id_te
+                      AND ste.teacher_id = a.teacher_id
+                      AND ste.department_id = s.department_id
+                      AND ste.status = 'withdrawn'
                 )
                 ORDER BY a.due_date DESC";
 
             $stmt = $this->pdo->prepare($sql);
-            $stmt->execute(['student_id_sub' => $studentId, 'student_id_enroll' => $studentId]);
+            $stmt->execute(['student_id_sub' => $studentId, 'student_id_enroll' => $studentId, 'student_id_te' => $studentId]);
             $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
             // submission_status carries in_progress/submitted/marking/graded/returned (or 'new' when
@@ -141,16 +156,31 @@ class AssignmentController extends Controller
                 AND a.deleted_at IS NULL
                 AND EXISTS (
                     SELECT 1 FROM student_department_enrollments sde
+                    LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
                     WHERE sde.student_id = :student_id
-                      AND sde.class_id = a.class_id
+                      AND (
+                        sde.class_id = a.class_id
+                        OR (a.class_group_name IS NOT NULL AND sde_c.name = a.class_group_name)
+                        OR EXISTS (SELECT 1 FROM assignment_classes ac WHERE ac.assignment_id = a.id AND ac.class_id = sde.class_id)
+                      )
+                      AND sde.department_id = s.department_id
                       AND sde.deleted_at IS NULL
+                      AND sde.status = 'active'
                       AND COALESCE(a.published_at, a.created_at) BETWEEN sde.start_date AND COALESCE(sde.end_date, NOW())
+                )
+                AND NOT EXISTS (
+                    SELECT 1 FROM student_teacher_enrollments ste
+                    WHERE ste.student_id = :student_id_te
+                      AND ste.teacher_id = a.teacher_id
+                      AND ste.department_id = s.department_id
+                      AND ste.status = 'withdrawn'
                 )";
 
             $stmt = $this->pdo->prepare($checkSql);
             $stmt->execute([
                 'assignment_id' => $assignmentId,
-                'student_id' => $studentId
+                'student_id' => $studentId,
+                'student_id_te' => $studentId
             ]);
             $assignment = $stmt->fetch();
 
@@ -242,6 +272,7 @@ class AssignmentController extends Controller
             $this->success([
                 'assignment' => $assignment,
                 'questions' => $questions,
+                'curriculum' => $this->getCurriculumStructure((int) $assignmentId, $assignment['assessment_category']),
                 'submission_id' => $submissionId,
                 'submission_status' => $submission['status'] ?? null,
                 'answers' => $existingAnswers,
@@ -250,6 +281,62 @@ class AssignmentController extends Controller
         } catch (\Exception $e) {
             $this->serverError('Failed to load assignment: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Read-only curriculum context for the student's assessment view - null for any assignment
+     * without an assessment_category (every assignment created before this feature). For LOA:
+     * the single Topic's theme/competence plus the specific Learning Outcomes being assessed. For
+     * AOI/EOC: the list of linked Topics (with theme_branch, so EOC can group by Theme -> Topic).
+     * Questions already carry their own curriculum_topic_id/learning_outcome_id (see the `questions`
+     * array above) - this is purely the human-readable structure to group them by.
+     */
+    private function getCurriculumStructure(int $assignmentId, ?string $category): ?array
+    {
+        if ($category === null) {
+            return null;
+        }
+
+        if ($category === 'LOA') {
+            $stmt = $this->pdo->prepare(
+                'SELECT ct.id, ct.theme_branch, ct.topic, ct.competence
+                 FROM assignment_curriculum_topics act
+                 INNER JOIN enote_curriculum_topics ct ON act.curriculum_topic_id = ct.id
+                 WHERE act.assignment_id = :id
+                 LIMIT 1'
+            );
+            $stmt->execute(['id' => $assignmentId]);
+            $topic = $stmt->fetch();
+
+            $outcomesStmt = $this->pdo->prepare(
+                'SELECT lo.id, lo.learning_outcome, lo.order_number
+                 FROM assignment_learning_outcomes alo
+                 INNER JOIN enote_learning_outcomes lo ON alo.learning_outcome_id = lo.id
+                 WHERE alo.assignment_id = :id
+                 ORDER BY lo.order_number ASC'
+            );
+            $outcomesStmt->execute(['id' => $assignmentId]);
+
+            return [
+                'category' => 'LOA',
+                'topic' => $topic ?: null,
+                'learning_outcomes' => $outcomesStmt->fetchAll()
+            ];
+        }
+
+        $stmt = $this->pdo->prepare(
+            'SELECT ct.id, ct.theme_branch, ct.topic
+             FROM assignment_curriculum_topics act
+             INNER JOIN enote_curriculum_topics ct ON act.curriculum_topic_id = ct.id
+             WHERE act.assignment_id = :id
+             ORDER BY ct.theme_branch ASC, ct.topic ASC'
+        );
+        $stmt->execute(['id' => $assignmentId]);
+
+        return [
+            'category' => $category,
+            'topics' => $stmt->fetchAll()
+        ];
     }
 
     /**
@@ -666,13 +753,27 @@ class AssignmentController extends Controller
                 "SELECT id FROM assignments a WHERE a.id = :assignment_id AND a.status = 'published'
                  AND EXISTS (
                      SELECT 1 FROM student_department_enrollments sde
+                     LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
                      WHERE sde.student_id = :student_id
-                       AND sde.class_id = a.class_id
+                       AND (
+                         sde.class_id = a.class_id
+                         OR (a.class_group_name IS NOT NULL AND sde_c.name = a.class_group_name)
+                         OR EXISTS (SELECT 1 FROM assignment_classes ac WHERE ac.assignment_id = a.id AND ac.class_id = sde.class_id)
+                       )
+                       AND sde.department_id = (SELECT department_id FROM subjects WHERE id = a.subject_id)
                        AND sde.deleted_at IS NULL
+                       AND sde.status = 'active'
                        AND COALESCE(a.published_at, a.created_at) BETWEEN sde.start_date AND COALESCE(sde.end_date, NOW())
+                 )
+                 AND NOT EXISTS (
+                     SELECT 1 FROM student_teacher_enrollments ste
+                     WHERE ste.student_id = :student_id_te
+                       AND ste.teacher_id = a.teacher_id
+                       AND ste.department_id = (SELECT department_id FROM subjects WHERE id = a.subject_id)
+                       AND ste.status = 'withdrawn'
                  )"
             );
-            $stmt->execute(['assignment_id' => $assignmentId, 'student_id' => $studentId]);
+            $stmt->execute(['assignment_id' => $assignmentId, 'student_id' => $studentId, 'student_id_te' => $studentId]);
             if (!$stmt->fetch()) {
                 $this->pdo->rollBack();
                 $this->notFound('Assignment not found or access denied');
@@ -862,13 +963,27 @@ class AssignmentController extends Controller
                 "SELECT id FROM assignments a WHERE a.id = :assignment_id AND a.status = 'published'
                  AND EXISTS (
                      SELECT 1 FROM student_department_enrollments sde
+                     LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
                      WHERE sde.student_id = :student_id
-                       AND sde.class_id = a.class_id
+                       AND (
+                         sde.class_id = a.class_id
+                         OR (a.class_group_name IS NOT NULL AND sde_c.name = a.class_group_name)
+                         OR EXISTS (SELECT 1 FROM assignment_classes ac WHERE ac.assignment_id = a.id AND ac.class_id = sde.class_id)
+                       )
+                       AND sde.department_id = (SELECT department_id FROM subjects WHERE id = a.subject_id)
                        AND sde.deleted_at IS NULL
+                       AND sde.status = 'active'
                        AND COALESCE(a.published_at, a.created_at) BETWEEN sde.start_date AND COALESCE(sde.end_date, NOW())
+                 )
+                 AND NOT EXISTS (
+                     SELECT 1 FROM student_teacher_enrollments ste
+                     WHERE ste.student_id = :student_id_te
+                       AND ste.teacher_id = a.teacher_id
+                       AND ste.department_id = (SELECT department_id FROM subjects WHERE id = a.subject_id)
+                       AND ste.status = 'withdrawn'
                  )"
             );
-            $stmt->execute(['assignment_id' => $assignmentId, 'student_id' => $studentId]);
+            $stmt->execute(['assignment_id' => $assignmentId, 'student_id' => $studentId, 'student_id_te' => $studentId]);
             if (!$stmt->fetch()) {
                 $this->pdo->rollBack();
                 $this->notFound('Assignment not found or access denied');

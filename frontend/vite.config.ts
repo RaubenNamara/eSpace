@@ -15,6 +15,14 @@ export default defineConfig(() => ({
     vue(),
     VitePWA({
       registerType: 'autoUpdate',
+      // Registered explicitly in main.ts instead (with a periodic update check + forced
+      // reload on update) - the default auto-injected script only ever calls
+      // navigator.serviceWorker.register() once on load, with no logic to actively check for
+      // a new deployment, so a tab left open (or a browser that only checks on its own
+      // schedule) could stay on a stale cached build indefinitely. That matters here because
+      // security-relevant changes (e.g. the mandatory teacher password-change screen) need
+      // the app shell to actually be current, not just eventually.
+      injectRegister: false,
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
         name: 'eSpace - eLearning Management System',

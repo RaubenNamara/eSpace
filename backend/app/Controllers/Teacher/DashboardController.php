@@ -65,14 +65,16 @@ class DashboardController extends Controller
             $stmt->execute(['department_id' => $departmentId]);
             $totalEnrollments = $stmt->fetch()['total'];
 
-            // Enrollments by class in teacher's department
+            // Enrollments by class-stream in teacher's department - one row per actual
+            // class-stream (e.g. "S.1 A"/"S.1 B"), ordered so streams of the same class group
+            // together in the chart instead of being scattered by count.
             $stmt = $db->prepare("
                 SELECT c.name as class_name, c.level, c.stream_name, COUNT(se.id) as count
                 FROM student_department_enrollments se
                 INNER JOIN classes c ON se.class_id = c.id
                 WHERE se.department_id = :department_id AND se.deleted_at IS NULL
                 GROUP BY c.id, c.name, c.level, c.stream_name
-                ORDER BY count DESC
+                ORDER BY c.name ASC, c.stream_name ASC
             ");
             $stmt->execute(['department_id' => $departmentId]);
             $enrollmentsByClass = $stmt->fetchAll();

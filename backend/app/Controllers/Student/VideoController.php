@@ -44,11 +44,23 @@ class VideoController extends Controller
     {
         return "v.status = 'published' AND v.deleted_at IS NULL AND EXISTS (
             SELECT 1 FROM student_department_enrollments sde
+            LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
             WHERE sde.student_id = :student_id
               AND sde.department_id = v.department_id
               AND sde.deleted_at IS NULL
-              AND (v.class_id IS NULL OR sde.class_id = v.class_id)
+              AND sde.status = 'active'
+              AND (
+                (v.class_id IS NULL AND v.class_group_name IS NULL)
+                OR sde.class_id = v.class_id
+                OR (v.class_group_name IS NOT NULL AND sde_c.name = v.class_group_name)
+              )
               AND v.published_at <= COALESCE(sde.end_date, NOW())
+        ) AND NOT EXISTS (
+            SELECT 1 FROM student_teacher_enrollments ste
+            WHERE ste.student_id = :student_id_te
+              AND ste.teacher_id = v.teacher_id
+              AND ste.department_id = v.department_id
+              AND ste.status = 'withdrawn'
         )";
     }
 
@@ -75,7 +87,7 @@ class VideoController extends Controller
         $db = $this->getDb();
 
         $where = [$this->visibilityClause()];
-        $params = ['student_id' => $studentId];
+        $params = ['student_id' => $studentId, 'student_id_te' => $studentId];
 
         if (!empty($search)) {
             $where[] = '(v.title LIKE :search OR v.description LIKE :search)';
@@ -138,7 +150,7 @@ class VideoController extends Controller
                 WHERE v.id = :id AND {$whereClause}";
 
         $stmt = $db->prepare($sql);
-        $stmt->execute(['id' => $id, 'student_id' => $studentId]);
+        $stmt->execute(['id' => $id, 'student_id' => $studentId, 'student_id_te' => $studentId]);
         $video = $stmt->fetch();
 
         if (!$video) {

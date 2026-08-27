@@ -74,11 +74,23 @@ class ENoteController extends Controller
     {
         return "et.status = 'published' AND et.deleted_at IS NULL AND EXISTS (
             SELECT 1 FROM student_department_enrollments sde
+            LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
             WHERE sde.student_id = :student_id
               AND sde.department_id = et.department_id
               AND sde.deleted_at IS NULL
-              AND (et.class_id IS NULL OR sde.class_id = et.class_id)
+              AND sde.status = 'active'
+              AND (
+                (et.class_id IS NULL AND et.class_group_name IS NULL)
+                OR sde.class_id = et.class_id
+                OR (et.class_group_name IS NOT NULL AND sde_c.name = et.class_group_name)
+              )
               AND et.published_at <= COALESCE(sde.end_date, NOW())
+        ) AND NOT EXISTS (
+            SELECT 1 FROM student_teacher_enrollments ste
+            WHERE ste.student_id = :student_id_te
+              AND ste.teacher_id = et.teacher_id
+              AND ste.department_id = et.department_id
+              AND ste.status = 'withdrawn'
         )";
     }
 
@@ -105,7 +117,7 @@ class ENoteController extends Controller
         $db = $this->getDb();
 
         $where = [$this->visibilityClause()];
-        $params = ['student_id' => $studentId];
+        $params = ['student_id' => $studentId, 'student_id_te' => $studentId];
 
         if (!empty($search)) {
             $where[] = '(et.title LIKE :search OR et.description LIKE :search)';
@@ -168,7 +180,7 @@ class ENoteController extends Controller
                 WHERE et.id = :id AND {$whereClause}";
 
         $stmt = $db->prepare($sql);
-        $stmt->execute(['id' => $id, 'student_id' => $studentId]);
+        $stmt->execute(['id' => $id, 'student_id' => $studentId, 'student_id_te' => $studentId]);
         $topic = $stmt->fetch();
 
         if (!$topic) {

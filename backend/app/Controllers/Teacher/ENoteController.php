@@ -80,6 +80,27 @@ class ENoteController extends Controller
     }
 
     /**
+     * All other topic ids sharing this topic's content_group_id - the linked copies created by
+     * duplicateTopic() (across other class streams) that must mirror any edit made to this
+     * topic's title/competency/learning outcomes or its pages. Empty when the topic was never
+     * duplicated (content_group_id is NULL) or has no siblings left.
+     */
+    private function getLinkedTopicIds(int $topicId, ?int $contentGroupId, int $teacherId): array
+    {
+        if (!$contentGroupId) {
+            return [];
+        }
+
+        $db = $this->getDb();
+        $stmt = $db->prepare(
+            "SELECT id FROM enote_topics
+             WHERE content_group_id = :gid AND id != :id AND teacher_id = :teacher_id AND deleted_at IS NULL"
+        );
+        $stmt->execute(['gid' => $contentGroupId, 'id' => $topicId, 'teacher_id' => $teacherId]);
+        return array_map('intval', array_column($stmt->fetchAll(), 'id'));
+    }
+
+    /**
      * Get dashboard statistics
      * GET /teacher/enotes/dashboard
      */
@@ -573,7 +594,7 @@ class ENoteController extends Controller
         $data = $this->input();
 
         // Validate required fields
-        $errors = $this->validateRequired(['title', 'subject_id', 'class_id']);
+        $errors = $this->validateRequired(['title', 'subject_id']);
         if (!empty($errors)) {
             $this->validationError($errors);
             return;
@@ -596,17 +617,11 @@ class ENoteController extends Controller
             return;
         }
 
-        // Verify class is one of the department's enrolled classes (same scope the
-        // assignments() endpoint offers in the dropdown, streams included)
-        $stmt = $db->prepare(
-            "SELECT DISTINCT c.id FROM classes c
-             INNER JOIN student_department_enrollments se ON c.id = se.class_id
-             WHERE c.id = :class_id AND se.department_id = :department_id
-               AND se.deleted_at IS NULL AND c.deleted_at IS NULL"
-        );
-        $stmt->execute(['class_id' => $data['class_id'], 'department_id' => $departmentId]);
-        if (!$stmt->fetch()) {
-            $this->validationError(['class_id' => 'Class not found in your department']);
+        // Verify class/class-level is real and present in the department (individual stream or
+        // "All Streams" for a class level - see Controller::resolveClassTarget()).
+        $classTarget = $this->resolveClassTarget($data, $departmentId);
+        if (!$classTarget['ok']) {
+            $this->validationError(['class_id' => $classTarget['message']]);
             return;
         }
 
@@ -615,19 +630,20 @@ class ENoteController extends Controller
             'title' => htmlspecialchars(trim($data['title']), ENT_QUOTES, 'UTF-8'),
             'subject_id' => (int) $data['subject_id'],
             'department_id' => $departmentId,
-            'class_id' => (int) $data['class_id'],
+            'class_id' => $classTarget['class_id'],
+            'class_group_name' => $classTarget['class_group_name'],
             'description' => !empty($data['description']) ? htmlspecialchars(trim($data['description']), ENT_QUOTES, 'UTF-8') : null,
             'learning_outcomes' => $this->sanitizeLearningOutcomes($data['learning_outcomes'] ?? null),
             'status' => $data['status'] ?? 'draft'
         ];
 
         // Insert topic
-        $sql = "INSERT INTO enote_topics (teacher_id, class_id, subject_id, department_id, title, description, learning_outcomes, status, created_at, updated_at)
-                VALUES (:teacher_id, :class_id, :subject_id, :department_id, :title, :description, :learning_outcomes, :status, NOW(), NOW())";
-        
+        $sql = "INSERT INTO enote_topics (teacher_id, class_id, class_group_name, subject_id, department_id, title, description, learning_outcomes, status, created_at, updated_at)
+                VALUES (:teacher_id, :class_id, :class_group_name, :subject_id, :department_id, :title, :description, :learning_outcomes, :status, NOW(), NOW())";
+
         $stmt = $db->prepare($sql);
         $params = array_merge($sanitizedData, ['teacher_id' => $teacherId]);
-        
+
         try {
             $stmt->execute($params);
             $topicId = (int) $db->lastInsertId();
@@ -644,7 +660,8 @@ class ENoteController extends Controller
                     'new_enote',
                     'New eNote',
                     "A new eNote topic \"{$sanitizedData['title']}\" is now available.",
-                    ['topic_id' => $topicId]
+                    ['topic_id' => $topicId],
+                    $sanitizedData['class_group_name']
                 );
             }
 
@@ -682,7 +699,7 @@ class ENoteController extends Controller
         $db = $this->getDb();
 
         // Verify topic belongs to teacher
-        $stmt = $db->prepare("SELECT id, status FROM enote_topics WHERE id = :id AND teacher_id = :teacher_id AND deleted_at IS NULL");
+        $stmt = $db->prepare("SELECT id, status, content_group_id FROM enote_topics WHERE id = :id AND teacher_id = :teacher_id AND deleted_at IS NULL");
         $stmt->execute(['id' => $id, 'teacher_id' => $teacherId]);
         $topic = $stmt->fetch();
 
@@ -713,9 +730,23 @@ class ENoteController extends Controller
             $params['learning_outcomes'] = $this->sanitizeLearningOutcomes($data['learning_outcomes']);
         }
 
-        if (!empty($data['class_id'])) {
+        // A class/class-level change is only ever validated against the teacher's OWN
+        // department - a raw, unverified class_id from the client must never reach this UPDATE.
+        if (array_key_exists('class_id', $data) || array_key_exists('class_group_name', $data) || array_key_exists('scope', $data)) {
+            $departmentId = $this->getTeacherDepartmentId();
+            if (!$departmentId) {
+                $this->error('Teacher must be assigned to a department', 403);
+                return;
+            }
+            $classTarget = $this->resolveClassTarget($data, $departmentId);
+            if (!$classTarget['ok']) {
+                $this->validationError(['class_id' => $classTarget['message']]);
+                return;
+            }
             $updates[] = 'class_id = :class_id';
-            $params['class_id'] = (int) $data['class_id'];
+            $params['class_id'] = $classTarget['class_id'];
+            $updates[] = 'class_group_name = :class_group_name';
+            $params['class_group_name'] = $classTarget['class_group_name'];
         }
 
         if (!empty($data['status'])) {
@@ -744,6 +775,26 @@ class ENoteController extends Controller
                 $updateSql = "UPDATE enote_topics SET archived_at = NOW() WHERE id = :id";
                 $updateStmt = $db->prepare($updateSql);
                 $updateStmt->execute(['id' => $id]);
+            }
+
+            // Mirror a title/competency/learning-outcomes edit onto every topic linked to this one
+            // (see duplicateTopic()) - class assignment and publish status stay independent per
+            // stream, but the content itself is meant to be the same lesson everywhere.
+            $syncFields = array_intersect_key($params, array_flip(['title', 'description', 'learning_outcomes']));
+            if (!empty($syncFields)) {
+                $linkedIds = $this->getLinkedTopicIds($id, $topic['content_group_id'] !== null ? (int) $topic['content_group_id'] : null, $teacherId);
+                if (!empty($linkedIds)) {
+                    $setClauses = array_map(fn($field) => "$field = :$field", array_keys($syncFields));
+                    $inParams = [];
+                    $inPlaceholders = [];
+                    foreach ($linkedIds as $i => $linkedId) {
+                        $key = "lid$i";
+                        $inPlaceholders[] = ":$key";
+                        $inParams[$key] = $linkedId;
+                    }
+                    $syncSql = "UPDATE enote_topics SET " . implode(', ', $setClauses) . ", updated_at = NOW() WHERE id IN (" . implode(',', $inPlaceholders) . ")";
+                    $db->prepare($syncSql)->execute(array_merge($syncFields, $inParams));
+                }
             }
 
             $this->success([], 'Topic updated successfully');
@@ -819,7 +870,7 @@ class ENoteController extends Controller
         $db = $this->getDb();
 
         // Verify topic belongs to teacher
-        $stmt = $db->prepare("SELECT id, title, department_id, class_id FROM enote_topics WHERE id = :id AND teacher_id = :teacher_id AND deleted_at IS NULL");
+        $stmt = $db->prepare("SELECT id, title, department_id, class_id, class_group_name FROM enote_topics WHERE id = :id AND teacher_id = :teacher_id AND deleted_at IS NULL");
         $stmt->execute(['id' => $id, 'teacher_id' => $teacherId]);
         $topic = $stmt->fetch();
         if (!$topic) {
@@ -838,7 +889,8 @@ class ENoteController extends Controller
                 'new_enote',
                 'New eNote',
                 "A new eNote topic \"{$topic['title']}\" is now available.",
-                ['topic_id' => $id]
+                ['topic_id' => $id],
+                $topic['class_group_name']
             );
 
             $this->success([], 'Topic published successfully');
@@ -958,9 +1010,10 @@ class ENoteController extends Controller
         $db = $this->getDb();
 
         // Verify topic belongs to teacher
-        $stmt = $db->prepare("SELECT id FROM enote_topics WHERE id = :topic_id AND teacher_id = :teacher_id AND deleted_at IS NULL");
+        $stmt = $db->prepare("SELECT id, content_group_id FROM enote_topics WHERE id = :topic_id AND teacher_id = :teacher_id AND deleted_at IS NULL");
         $stmt->execute(['topic_id' => $topicId, 'teacher_id' => $teacherId]);
-        if (!$stmt->fetch()) {
+        $topicRow = $stmt->fetch();
+        if (!$topicRow) {
             $this->notFound('Topic not found');
             return;
         }
@@ -999,6 +1052,15 @@ class ENoteController extends Controller
             $updateStmt = $db->prepare($updateSql);
             $updateStmt->execute(['topic_id' => $topicId]);
 
+            // Mirror the new page onto every linked topic (see duplicateTopic()) at the same
+            // order_number, so the page sets stay structurally identical across the group.
+            $linkedIds = $this->getLinkedTopicIds($topicId, $topicRow['content_group_id'] !== null ? (int) $topicRow['content_group_id'] : null, $teacherId);
+            foreach ($linkedIds as $linkedId) {
+                $db->prepare($sql)->execute(array_merge($sanitizedData, ['topic_id' => $linkedId]));
+                $db->prepare("UPDATE enote_topics SET total_pages = total_pages + 1, updated_at = NOW() WHERE id = :topic_id")
+                    ->execute(['topic_id' => $linkedId]);
+            }
+
             $this->success([
                 'id' => $pageId,
                 'title' => $sanitizedData['title'],
@@ -1033,11 +1095,11 @@ class ENoteController extends Controller
         $db = $this->getDb();
 
         // Verify page belongs to teacher's topic
-        $sql = "SELECT ep.id, ep.topic_id 
+        $sql = "SELECT ep.id, ep.topic_id, ep.order_number, et.content_group_id
                 FROM enote_pages ep
                 INNER JOIN enote_topics et ON ep.topic_id = et.id
                 WHERE ep.id = :id AND et.teacher_id = :teacher_id AND ep.deleted_at IS NULL AND et.deleted_at IS NULL";
-        
+
         $stmt = $db->prepare($sql);
         $stmt->execute(['id' => $id, 'teacher_id' => $teacherId]);
         $page = $stmt->fetch();
@@ -1090,6 +1152,21 @@ class ENoteController extends Controller
             $updateStmt = $db->prepare($updateSql);
             $updateStmt->execute(['topic_id' => $topicId]);
 
+            // Mirror this edit onto the corresponding page (same order_number) in every topic
+            // linked to this one (see duplicateTopic()).
+            $linkedIds = $this->getLinkedTopicIds($topicId, $page['content_group_id'] !== null ? (int) $page['content_group_id'] : null, $teacherId);
+            if (!empty($linkedIds)) {
+                $syncFields = array_intersect_key($params, array_flip(['title', 'content', 'is_active']));
+                $syncSql = "UPDATE enote_pages SET " . implode(', ', $updates) . " WHERE topic_id = :topic_id AND order_number = :order_number AND deleted_at IS NULL";
+                foreach ($linkedIds as $linkedId) {
+                    $db->prepare($syncSql)->execute(array_merge($syncFields, [
+                        'topic_id' => $linkedId,
+                        'order_number' => $page['order_number']
+                    ]));
+                    $db->prepare("UPDATE enote_topics SET updated_at = NOW() WHERE id = :topic_id")->execute(['topic_id' => $linkedId]);
+                }
+            }
+
             $this->success([], 'Page updated successfully');
         } catch (\PDOException $e) {
             error_log("Failed to update page: " . $e->getMessage());
@@ -1118,11 +1195,11 @@ class ENoteController extends Controller
         $db = $this->getDb();
 
         // Verify page belongs to teacher's topic
-        $sql = "SELECT ep.id, ep.topic_id, ep.order_number 
+        $sql = "SELECT ep.id, ep.topic_id, ep.order_number, et.content_group_id
                 FROM enote_pages ep
                 INNER JOIN enote_topics et ON ep.topic_id = et.id
                 WHERE ep.id = :id AND et.teacher_id = :teacher_id AND ep.deleted_at IS NULL AND et.deleted_at IS NULL";
-        
+
         $stmt = $db->prepare($sql);
         $stmt->execute(['id' => $id, 'teacher_id' => $teacherId]);
         $page = $stmt->fetch();
@@ -1142,7 +1219,7 @@ class ENoteController extends Controller
             $stmt->execute(['id' => $id]);
 
             // Reorder remaining pages
-            $sql = "UPDATE enote_pages SET order_number = order_number - 1 
+            $sql = "UPDATE enote_pages SET order_number = order_number - 1
                     WHERE topic_id = :topic_id AND order_number > :deleted_order AND deleted_at IS NULL";
             $stmt = $db->prepare($sql);
             $stmt->execute(['topic_id' => $topicId, 'deleted_order' => $deletedOrder]);
@@ -1151,6 +1228,23 @@ class ENoteController extends Controller
             $updateSql = "UPDATE enote_topics SET total_pages = total_pages - 1, updated_at = NOW() WHERE id = :topic_id";
             $updateStmt = $db->prepare($updateSql);
             $updateStmt->execute(['topic_id' => $topicId]);
+
+            // Mirror the deletion onto the corresponding page (same order_number) in every topic
+            // linked to this one (see duplicateTopic()), keeping the groups' page sets aligned.
+            $linkedIds = $this->getLinkedTopicIds($topicId, $page['content_group_id'] !== null ? (int) $page['content_group_id'] : null, $teacherId);
+            foreach ($linkedIds as $linkedId) {
+                $db->prepare(
+                    "UPDATE enote_pages SET deleted_at = NOW() WHERE topic_id = :topic_id AND order_number = :order_number AND deleted_at IS NULL"
+                )->execute(['topic_id' => $linkedId, 'order_number' => $deletedOrder]);
+
+                $db->prepare(
+                    "UPDATE enote_pages SET order_number = order_number - 1 WHERE topic_id = :topic_id AND order_number > :deleted_order AND deleted_at IS NULL"
+                )->execute(['topic_id' => $linkedId, 'deleted_order' => $deletedOrder]);
+
+                $db->prepare(
+                    "UPDATE enote_topics SET total_pages = total_pages - 1, updated_at = NOW() WHERE id = :topic_id"
+                )->execute(['topic_id' => $linkedId]);
+            }
 
             $this->success([], 'Page deleted successfully');
         } catch (\PDOException $e) {
@@ -1180,11 +1274,11 @@ class ENoteController extends Controller
         $db = $this->getDb();
 
         // Verify page belongs to teacher's topic
-        $sql = "SELECT ep.*, et.teacher_id 
+        $sql = "SELECT ep.*, et.teacher_id, et.content_group_id
                 FROM enote_pages ep
                 INNER JOIN enote_topics et ON ep.topic_id = et.id
                 WHERE ep.id = :id AND et.teacher_id = :teacher_id AND ep.deleted_at IS NULL AND et.deleted_at IS NULL";
-        
+
         $stmt = $db->prepare($sql);
         $stmt->execute(['id' => $id, 'teacher_id' => $teacherId]);
         $page = $stmt->fetch();
@@ -1206,7 +1300,7 @@ class ENoteController extends Controller
             // Duplicate page
             $sql = "INSERT INTO enote_pages (topic_id, order_number, title, content, is_active, created_at, updated_at)
                     VALUES (:topic_id, :order_number, :title, :content, :is_active, NOW(), NOW())";
-            
+
             $stmt = $db->prepare($sql);
             $stmt->execute([
                 'topic_id' => $topicId,
@@ -1222,6 +1316,21 @@ class ENoteController extends Controller
             $updateSql = "UPDATE enote_topics SET total_pages = total_pages + 1, updated_at = NOW() WHERE id = :topic_id";
             $updateStmt = $db->prepare($updateSql);
             $updateStmt->execute(['topic_id' => $topicId]);
+
+            // Mirror the same new page onto every topic linked to this one (see
+            // duplicateTopic()), at the same order_number, so the page sets stay aligned.
+            $linkedIds = $this->getLinkedTopicIds($topicId, $page['content_group_id'] !== null ? (int) $page['content_group_id'] : null, $teacherId);
+            foreach ($linkedIds as $linkedId) {
+                $db->prepare($sql)->execute([
+                    'topic_id' => $linkedId,
+                    'order_number' => $nextOrder,
+                    'title' => $page['title'] . ' (Copy)',
+                    'content' => $page['content'],
+                    'is_active' => $page['is_active']
+                ]);
+                $db->prepare("UPDATE enote_topics SET total_pages = total_pages + 1, updated_at = NOW() WHERE id = :topic_id")
+                    ->execute(['topic_id' => $linkedId]);
+            }
 
             $this->success([
                 'id' => $newPageId,
@@ -1262,11 +1371,25 @@ class ENoteController extends Controller
         $db = $this->getDb();
 
         // Verify topic belongs to teacher
-        $stmt = $db->prepare("SELECT id FROM enote_topics WHERE id = :topic_id AND teacher_id = :teacher_id AND deleted_at IS NULL");
+        $stmt = $db->prepare("SELECT id, content_group_id FROM enote_topics WHERE id = :topic_id AND teacher_id = :teacher_id AND deleted_at IS NULL");
         $stmt->execute(['topic_id' => $topicId, 'teacher_id' => $teacherId]);
-        if (!$stmt->fetch()) {
+        $topicRow = $stmt->fetch();
+        if (!$topicRow) {
             $this->notFound('Topic not found');
             return;
+        }
+
+        $linkedIds = $this->getLinkedTopicIds($topicId, $topicRow['content_group_id'] !== null ? (int) $topicRow['content_group_id'] : null, $teacherId);
+
+        // Capture each page's order_number as it stands *before* this reorder, so a linked
+        // topic's page currently at that same old position can be moved to the same new one.
+        $oldOrderByPageId = [];
+        if (!empty($linkedIds)) {
+            $stmt = $db->prepare("SELECT id, order_number FROM enote_pages WHERE topic_id = :topic_id AND deleted_at IS NULL");
+            $stmt->execute(['topic_id' => $topicId]);
+            foreach ($stmt->fetchAll() as $row) {
+                $oldOrderByPageId[(int) $row['id']] = (int) $row['order_number'];
+            }
         }
 
         try {
@@ -1276,10 +1399,22 @@ class ENoteController extends Controller
                 $pageId = (int) $pageOrder['id'];
                 $newOrder = (int) $pageOrder['order_number'];
 
-                $sql = "UPDATE enote_pages SET order_number = :order_number, updated_at = NOW() 
+                $sql = "UPDATE enote_pages SET order_number = :order_number, updated_at = NOW()
                         WHERE id = :id AND topic_id = :topic_id AND deleted_at IS NULL";
                 $stmt = $db->prepare($sql);
                 $stmt->execute(['id' => $pageId, 'order_number' => $newOrder, 'topic_id' => $topicId]);
+
+                // Mirror this page's new position onto every linked topic's page that was at the
+                // same old position (see duplicateTopic()).
+                if (!empty($linkedIds) && isset($oldOrderByPageId[$pageId])) {
+                    $oldOrder = $oldOrderByPageId[$pageId];
+                    foreach ($linkedIds as $linkedId) {
+                        $db->prepare(
+                            "UPDATE enote_pages SET order_number = :order_number, updated_at = NOW()
+                             WHERE topic_id = :topic_id AND order_number = :old_order AND deleted_at IS NULL"
+                        )->execute(['order_number' => $newOrder, 'topic_id' => $linkedId, 'old_order' => $oldOrder]);
+                    }
+                }
             }
 
             $db->commit();
@@ -1289,12 +1424,171 @@ class ENoteController extends Controller
             $updateStmt = $db->prepare($updateSql);
             $updateStmt->execute(['topic_id' => $topicId]);
 
+            foreach ($linkedIds as $linkedId) {
+                $db->prepare("UPDATE enote_topics SET updated_at = NOW() WHERE id = :topic_id")->execute(['topic_id' => $linkedId]);
+            }
+
             $this->success([], 'Pages reordered successfully');
         } catch (\PDOException $e) {
             $db->rollBack();
             error_log("Failed to reorder pages: " . $e->getMessage());
             $this->error('Failed to reorder pages', 500);
         }
+    }
+
+    /**
+     * Duplicate a topic (title, competency, learning outcomes, and every page's content) into
+     * one new topic per selected target class/stream in the teacher's department - e.g. reusing
+     * the same lesson across S.1 A and S.1 B without re-authoring it. Each duplicate always
+     * starts as 'draft' regardless of the source topic's status, so the teacher reviews/publishes
+     * each one for its own class before students see it. Narration audio is deliberately not
+     * copied (mirrors duplicatePage()) since it's cheap to regenerate and tying cloned audio
+     * files to a new topic/page id isn't worth the complexity.
+     * POST /teacher/enotes/topics/{id}/duplicate
+     */
+    public function duplicateTopic($id): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+
+        $teacherId = $this->getTeacherId();
+        if (!$teacherId) {
+            $this->error('Teacher not found', 403);
+            return;
+        }
+
+        $id = (int) $id;
+        $db = $this->getDb();
+
+        $stmt = $db->prepare("SELECT * FROM enote_topics WHERE id = :id AND teacher_id = :teacher_id AND deleted_at IS NULL");
+        $stmt->execute(['id' => $id, 'teacher_id' => $teacherId]);
+        $topic = $stmt->fetch();
+
+        if (!$topic) {
+            $this->notFound('Topic not found');
+            return;
+        }
+
+        $data = $this->input();
+        $targets = $data['targets'] ?? null;
+        if (!is_array($targets) || count($targets) === 0) {
+            $this->validationError(['targets' => 'Select at least one class/stream to duplicate to']);
+            return;
+        }
+
+        $departmentId = (int) $topic['department_id'];
+
+        // The group id every duplicate (and the source topic itself) will share, so a later edit
+        // to any one of them can find and mirror onto the rest (see getLinkedTopicIds()) - a
+        // teacher editing a topic's title/competency/learning outcomes or any page content wants
+        // that change reflected across every class/stream copy of the same lesson. Each copy still
+        // keeps its own id, its own class/stream assignment, and its own independent publish
+        // status - duplicating never publishes anything, and publishing/unpublishing one copy
+        // never affects the others. Reuse an existing group if this topic is already linked (e.g.
+        // duplicating a topic that was itself a duplicate) instead of starting a disconnected
+        // second group.
+        $groupId = $topic['content_group_id'] !== null ? (int) $topic['content_group_id'] : $id;
+        $sourceGroupAssigned = $topic['content_group_id'] !== null;
+
+        $pagesStmt = $db->prepare("SELECT * FROM enote_pages WHERE topic_id = :topic_id AND deleted_at IS NULL ORDER BY order_number ASC");
+        $pagesStmt->execute(['topic_id' => $id]);
+        $pages = $pagesStmt->fetchAll();
+
+        $created = [];
+        $skipped = [];
+
+        foreach ($targets as $target) {
+            if (!is_array($target)) {
+                $skipped[] = ['message' => 'Invalid target'];
+                continue;
+            }
+
+            $classTarget = $this->resolveClassTarget($target, $departmentId);
+            if (!$classTarget['ok']) {
+                $skipped[] = ['message' => $classTarget['message']];
+                continue;
+            }
+
+            // Duplicating onto the topic's own current class/stream isn't a meaningful "different
+            // stream" copy - the teacher already has that one.
+            if ($classTarget['class_id'] === $topic['class_id'] && $classTarget['class_group_name'] === $topic['class_group_name']) {
+                $skipped[] = [
+                    'message' => 'Already targets that class/stream',
+                    'class_id' => $classTarget['class_id'],
+                    'class_group_name' => $classTarget['class_group_name']
+                ];
+                continue;
+            }
+
+            try {
+                $db->beginTransaction();
+
+                // Mark the source topic as the group's root the first time it actually produces a
+                // duplicate - not upfront, so a request that ends up creating zero copies (every
+                // target skipped) never mutates the source topic at all.
+                if (!$sourceGroupAssigned) {
+                    $db->prepare("UPDATE enote_topics SET content_group_id = :gid WHERE id = :id")
+                        ->execute(['gid' => $groupId, 'id' => $id]);
+                    $sourceGroupAssigned = true;
+                }
+
+                $insertTopic = $db->prepare(
+                    "INSERT INTO enote_topics (teacher_id, content_group_id, class_id, class_group_name, subject_id, department_id, title, description, learning_outcomes, status, total_pages, created_at, updated_at)
+                     VALUES (:teacher_id, :content_group_id, :class_id, :class_group_name, :subject_id, :department_id, :title, :description, :learning_outcomes, 'draft', :total_pages, NOW(), NOW())"
+                );
+                $insertTopic->execute([
+                    'teacher_id' => $teacherId,
+                    'content_group_id' => $groupId,
+                    'class_id' => $classTarget['class_id'],
+                    'class_group_name' => $classTarget['class_group_name'],
+                    'subject_id' => $topic['subject_id'],
+                    'department_id' => $departmentId,
+                    'title' => $topic['title'],
+                    'description' => $topic['description'],
+                    'learning_outcomes' => $topic['learning_outcomes'],
+                    'total_pages' => count($pages)
+                ]);
+                $newTopicId = (int) $db->lastInsertId();
+
+                $insertPage = $db->prepare(
+                    "INSERT INTO enote_pages (topic_id, order_number, title, content, is_active, created_at, updated_at)
+                     VALUES (:topic_id, :order_number, :title, :content, :is_active, NOW(), NOW())"
+                );
+                foreach ($pages as $page) {
+                    $insertPage->execute([
+                        'topic_id' => $newTopicId,
+                        'order_number' => $page['order_number'],
+                        'title' => $page['title'],
+                        'content' => $page['content'],
+                        'is_active' => $page['is_active']
+                    ]);
+                }
+
+                $db->commit();
+
+                $created[] = [
+                    'id' => $newTopicId,
+                    'class_id' => $classTarget['class_id'],
+                    'class_group_name' => $classTarget['class_group_name']
+                ];
+            } catch (\PDOException $e) {
+                $db->rollBack();
+                error_log('Failed to duplicate topic to target: ' . $e->getMessage());
+                $skipped[] = ['message' => 'Failed to duplicate to this class/stream'];
+            }
+        }
+
+        if (empty($created)) {
+            $this->error('Could not duplicate to any of the selected classes/streams', 422, ['skipped' => $skipped]);
+            return;
+        }
+
+        $this->success(
+            ['created' => $created, 'skipped' => $skipped],
+            count($created) . ' duplicate(s) created successfully' . (count($skipped) ? ' (' . count($skipped) . ' skipped)' : '')
+        );
     }
 
     /**

@@ -274,9 +274,10 @@ class TeacherController extends Controller
         // Hash password
         $hashedPassword = password_hash($data['password'], PASSWORD_BCRYPT);
 
-        // Insert directly into teachers table
-        $teacherSql = "INSERT INTO teachers (username, email, password, role, is_active, employee_number, first_name, last_name, gender, phone, department_id, created_at, updated_at) 
-                       VALUES (:username, :email, :password, 'teacher', 1, :employee_number, :first_name, :last_name, :gender, :phone, :department_id, NOW(), NOW())";
+        // Insert directly into teachers table. must_change_password = 1 since the admin is the
+        // one choosing this password, not the teacher - see MustChangePasswordMiddleware.
+        $teacherSql = "INSERT INTO teachers (username, email, password, must_change_password, role, is_active, employee_number, first_name, last_name, gender, phone, department_id, created_at, updated_at)
+                       VALUES (:username, :email, :password, 1, 'teacher', 1, :employee_number, :first_name, :last_name, :gender, :phone, :department_id, NOW(), NOW())";
         
         $stmt = $db->prepare($teacherSql);
         $stmt->execute([
@@ -491,6 +492,9 @@ class TeacherController extends Controller
                     'username' => $username,
                     'email' => $email !== '' ? $email : null,
                     'password' => $hashedPassword,
+                    // The generated password (their first name) is temporary by design here -
+                    // force a change on first login, same as create().
+                    'must_change_password' => 1,
                     'role' => 'teacher',
                     'is_active' => 1,
                     'employee_number' => $employeeNumber,
@@ -974,7 +978,9 @@ class TeacherController extends Controller
         }
 
         $hashedPassword = password_hash($data['password'], PASSWORD_BCRYPT);
-        $sql = "UPDATE teachers SET password = :password WHERE id = :id";
+        // An admin-chosen password is a new temporary one from the teacher's perspective -
+        // force them through the change-password screen again on next login.
+        $sql = "UPDATE teachers SET password = :password, must_change_password = 1 WHERE id = :id";
         $stmt = $db->prepare($sql);
         $result = $stmt->execute(['password' => $hashedPassword, 'id' => $id]);
 

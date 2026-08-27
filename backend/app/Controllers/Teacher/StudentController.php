@@ -66,10 +66,19 @@ class StudentController extends Controller
         $limit = (int) $this->query('limit', 20);
 
         $db = $this->getDb();
+        $teacherId = $this->resolveActiveTeacherId();
 
-        // Build WHERE conditions
-        $where = ['se.deleted_at IS NULL', 'se.department_id = :department_id'];
-        $params = ['department_id' => $departmentId];
+        // Build WHERE conditions - status='active' (not just deleted_at) so a department-level
+        // withdrawal (HOD/admin de-enroll) also drops the student here, and the NOT EXISTS
+        // clause hides a student this specific teacher has personally de-enrolled (see
+        // student_teacher_enrollments) without affecting other teachers in the department.
+        $where = [
+            'se.deleted_at IS NULL',
+            "se.status = 'active'",
+            'se.department_id = :department_id',
+            'NOT EXISTS (SELECT 1 FROM student_teacher_enrollments ste WHERE ste.student_id = se.student_id AND ste.teacher_id = :teacher_id AND ste.department_id = se.department_id AND ste.status = \'withdrawn\')',
+        ];
+        $params = ['department_id' => $departmentId, 'teacher_id' => $teacherId];
 
         if (!empty($search)) {
             $where[] = '(s.admission_number LIKE :search OR s.first_name LIKE :search OR s.last_name LIKE :search)';
@@ -191,12 +200,18 @@ class StudentController extends Controller
                 INNER JOIN students s ON se.student_id = s.id
                 LEFT JOIN departments d ON se.department_id = d.id
                 LEFT JOIN classes c ON se.class_id = c.id
-                WHERE se.id = :enrollment_id 
-                AND se.department_id = :department_id 
-                AND se.deleted_at IS NULL";
-        
+                WHERE se.id = :enrollment_id
+                AND se.department_id = :department_id
+                AND se.deleted_at IS NULL
+                AND se.status = 'active'
+                AND NOT EXISTS (
+                    SELECT 1 FROM student_teacher_enrollments ste
+                    WHERE ste.student_id = se.student_id AND ste.teacher_id = :teacher_id
+                      AND ste.department_id = se.department_id AND ste.status = 'withdrawn'
+                )";
+
         $stmt = $db->prepare($sql);
-        $stmt->execute(['enrollment_id' => $enrollmentId, 'department_id' => $departmentId]);
+        $stmt->execute(['enrollment_id' => $enrollmentId, 'department_id' => $departmentId, 'teacher_id' => $this->resolveActiveTeacherId()]);
         $student = $stmt->fetch();
 
         if (!$student) {
@@ -208,63 +223,114 @@ class StudentController extends Controller
     }
 
     /**
-     * De-enroll a student from department
+     * De-enroll a student from THIS teacher only (not the department - see
+     * student_teacher_enrollments). The student stays fully visible to every other teacher in
+     * the department, the HOD, and admin; they just lose access to this teacher's own content
+     * (assignments, eNotes, eLibrary, item bank, videos, live classes, virtual lab).
      * DELETE /teacher/students/{id}
+     * Body (optional): { reason: string }
      */
     public function delete(): void
     {
         $id = $this->routeParam('id');
-        error_log("Teacher delete: Starting de-enroll request");
-        error_log("Teacher delete: ID: " . $id);
-        error_log("Teacher delete: Session data: " . json_encode($_SESSION));
-        
+
         if (!$this->isAuthenticated()) {
-            error_log("Teacher delete: Not authenticated");
             $this->unauthorized();
             return;
         }
 
         $departmentId = $this->getTeacherDepartmentId();
-        error_log("Teacher delete: Department ID: " . ($departmentId ?? 'NULL'));
-        
+
         if (!$departmentId) {
-            error_log("Teacher delete: No department assigned");
             $this->error('Teacher not assigned to a department', 403);
             return;
         }
 
+        $teacherId = $this->resolveActiveTeacherId();
         $enrollmentId = (int) $id;
-        error_log("Teacher delete: Enrollment ID: " . $enrollmentId);
         $db = $this->getDb();
 
-        // Check if enrollment exists and belongs to teacher's department
-        $stmt = $db->prepare("SELECT id, student_id FROM student_department_enrollments 
-                             WHERE id = :enrollment_id 
-                             AND department_id = :department_id 
-                             AND deleted_at IS NULL");
-        $stmt->execute(['enrollment_id' => $enrollmentId, 'department_id' => $departmentId]);
+        // Confirm this student is actually in the teacher's own department roster (and not
+        // already de-enrolled from this teacher specifically) before allowing the action.
+        $stmt = $db->prepare(
+            "SELECT se.student_id FROM student_department_enrollments se
+             WHERE se.id = :enrollment_id AND se.department_id = :department_id
+               AND se.deleted_at IS NULL AND se.status = 'active'
+               AND NOT EXISTS (
+                   SELECT 1 FROM student_teacher_enrollments ste
+                   WHERE ste.student_id = se.student_id AND ste.teacher_id = :teacher_id
+                     AND ste.department_id = se.department_id AND ste.status = 'withdrawn'
+               )"
+        );
+        $stmt->execute(['enrollment_id' => $enrollmentId, 'department_id' => $departmentId, 'teacher_id' => $teacherId]);
         $enrollment = $stmt->fetch();
 
-        error_log("Teacher delete: Enrollment found: " . ($enrollment ? 'yes' : 'no'));
-
         if (!$enrollment) {
-            error_log("Teacher delete: Enrollment not found in department");
             $this->notFound('Student enrollment not found in your department');
             return;
         }
 
-        // Soft delete the enrollment
-        $sql = "UPDATE student_department_enrollments SET deleted_at = NOW() WHERE id = :id";
-        error_log("Teacher delete: Executing delete SQL");
-        $stmt = $db->prepare($sql);
-        $result = $stmt->execute(['id' => $enrollmentId]);
+        $studentId = (int) $enrollment['student_id'];
+        $data = $this->input();
+        $reason = !empty($data['reason']) ? (string) $data['reason'] : null;
 
-        error_log("Teacher delete: Delete result: " . ($result ? 'success' : 'failed'));
+        $upsert = $db->prepare(
+            "INSERT INTO student_teacher_enrollments (student_id, teacher_id, department_id, status, de_enrolled_at, de_enrolled_by, de_enrolled_by_role, reason, created_at, updated_at)
+             VALUES (:student_id, :teacher_id, :department_id, 'withdrawn', NOW(), :performed_by, 'teacher', :reason, NOW(), NOW())
+             ON DUPLICATE KEY UPDATE status = 'withdrawn', de_enrolled_at = NOW(), de_enrolled_by = :performed_by2, de_enrolled_by_role = 'teacher', reason = :reason2, updated_at = NOW()"
+        );
+        $result = $upsert->execute([
+            'student_id' => $studentId,
+            'teacher_id' => $teacherId,
+            'department_id' => $departmentId,
+            'performed_by' => $teacherId,
+            'reason' => $reason,
+            'performed_by2' => $teacherId,
+            'reason2' => $reason,
+        ]);
 
         if ($result) {
-            $this->success([], 'Student de-enrolled successfully from department');
+            $this->logEnrollmentAudit($studentId, 'teacher_de_enroll', $teacherId, $departmentId, $teacherId, 'teacher', $reason);
+            $this->success([], 'Student de-enrolled successfully from your account');
         } else {
             $this->error('Failed to de-enroll student', 500);
+        }
+    }
+
+    /**
+     * Re-enroll a student who was previously de-enrolled from this teacher specifically.
+     * PUT /teacher/students/{id}/re-enroll
+     */
+    public function reEnroll(): void
+    {
+        $id = $this->routeParam('id');
+
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+
+        $departmentId = $this->getTeacherDepartmentId();
+        if (!$departmentId) {
+            $this->error('Teacher not assigned to a department', 403);
+            return;
+        }
+
+        $teacherId = $this->resolveActiveTeacherId();
+        $studentId = (int) $id;
+        $db = $this->getDb();
+
+        $stmt = $db->prepare(
+            "UPDATE student_teacher_enrollments SET status = 'active', enrolled_at = NOW(), updated_at = NOW()
+             WHERE student_id = :student_id AND teacher_id = :teacher_id AND department_id = :department_id AND status = 'withdrawn'"
+        );
+        $result = $stmt->execute(['student_id' => $studentId, 'teacher_id' => $teacherId, 'department_id' => $departmentId]);
+
+        if ($result && $stmt->rowCount() > 0) {
+            $this->logEnrollmentAudit($studentId, 'teacher_re_enroll', $teacherId, $departmentId, $teacherId, 'teacher', null);
+            $this->success([], 'Student re-enrolled successfully');
+        } else {
+            $this->notFound('No de-enrollment found for this student with you');
         }
     }
 
@@ -295,11 +361,17 @@ class StudentController extends Controller
         $academicYear = $this->query('academic_year');
         $className = $this->query('class_name');
         $streamName = $this->query('stream_name');
+        $teacherId = $this->resolveActiveTeacherId();
 
         error_log("Teacher enrolled: Filters - academic_year: " . ($academicYear ?? 'none') . ", class_name: " . ($className ?? 'none') . ", stream_name: " . ($streamName ?? 'none'));
 
-        $whereClause = "se.deleted_at IS NULL AND se.department_id = :department_id";
-        $params = ['department_id' => $departmentId];
+        $whereClause = "se.deleted_at IS NULL AND se.status = 'active' AND se.department_id = :department_id
+            AND NOT EXISTS (
+                SELECT 1 FROM student_teacher_enrollments ste
+                WHERE ste.student_id = se.student_id AND ste.teacher_id = :teacher_id
+                  AND ste.department_id = se.department_id AND ste.status = 'withdrawn'
+            )";
+        $params = ['department_id' => $departmentId, 'teacher_id' => $teacherId];
 
         if ($academicYear) {
             $whereClause .= " AND se.academic_year = :academic_year";
@@ -366,8 +438,9 @@ class StudentController extends Controller
         $classesSql = "SELECT DISTINCT c.id, c.name, c.level
                       FROM classes c
                       INNER JOIN student_department_enrollments se ON c.id = se.class_id
-                      WHERE se.department_id = :department_id 
+                      WHERE se.department_id = :department_id
                       AND se.deleted_at IS NULL
+                      AND se.status = 'active'
                       AND c.deleted_at IS NULL
                       ORDER BY c.level, c.name";
         $classesStmt = $db->prepare($classesSql);
@@ -380,6 +453,7 @@ class StudentController extends Controller
                        INNER JOIN student_department_enrollments se ON c.id = se.class_id
                        WHERE se.department_id = :department_id
                        AND se.deleted_at IS NULL
+                       AND se.status = 'active'
                        AND c.deleted_at IS NULL
                        AND c.stream_name IS NOT NULL AND c.stream_name != ''
                        ORDER BY c.stream_name";
@@ -392,6 +466,7 @@ class StudentController extends Controller
                             FROM student_department_enrollments
                             WHERE department_id = :department_id
                             AND deleted_at IS NULL
+                            AND status = 'active'
                             ORDER BY academic_year DESC";
         $academicYearsStmt = $db->prepare($academicYearsSql);
         $academicYearsStmt->execute(['department_id' => $departmentId]);

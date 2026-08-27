@@ -165,7 +165,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
     });
 
     // Teacher routes
-    Router::group(['prefix' => '/teacher', 'middleware' => ['role:teacher']], function () {
+    Router::group(['prefix' => '/teacher', 'middleware' => ['role:teacher', 'must_change_password']], function () {
         // Dashboard
         Router::get('/dashboard', 'eSpace\App\Controllers\Teacher\DashboardController@index');
 
@@ -182,6 +182,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         // Students
         Router::get('/students/enrolled', 'eSpace\App\Controllers\Teacher\StudentController@enrolled');
         Router::delete('/students/{id}', 'eSpace\App\Controllers\Teacher\StudentController@delete');
+        Router::put('/students/{id}/re-enroll', 'eSpace\App\Controllers\Teacher\StudentController@reEnroll');
         
         // Live Classes (BigBlueButton)
         Router::get('/live-classes', 'eSpace\App\Controllers\Teacher\LiveClassController@index');
@@ -205,6 +206,10 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::delete('/assignments/{id}', 'eSpace\App\Controllers\Teacher\AssignmentController@delete');
         Router::post('/assignments/{id}/publish', 'eSpace\App\Controllers\Teacher\AssignmentController@publish');
         Router::post('/assignments/{id}/duplicate', 'eSpace\App\Controllers\Teacher\AssignmentController@duplicate');
+        Router::get('/assignments/{id}/curriculum', 'eSpace\App\Controllers\Teacher\AssignmentController@getCurriculum');
+        Router::put('/assignments/{id}/curriculum', 'eSpace\App\Controllers\Teacher\AssignmentController@updateCurriculum');
+        Router::get('/assignments/{id}/classes', 'eSpace\App\Controllers\Teacher\AssignmentController@getClasses');
+        Router::put('/assignments/{id}/classes', 'eSpace\App\Controllers\Teacher\AssignmentController@updateClasses');
         
         // Assignment Questions
         Router::post('/assignments/{id}/questions', 'eSpace\App\Controllers\Teacher\AssignmentController@addQuestion');
@@ -241,6 +246,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/library/preview', 'eSpace\App\Controllers\Teacher\LibraryController@previewIndex');
         Router::get('/library/{id}', 'eSpace\App\Controllers\Teacher\LibraryController@show');
         Router::put('/library/{id}', 'eSpace\App\Controllers\Teacher\LibraryController@update');
+        Router::post('/library/{id}/replace-file', 'eSpace\App\Controllers\Teacher\LibraryController@replaceFile');
         Router::delete('/library/{id}', 'eSpace\App\Controllers\Teacher\LibraryController@delete');
 
         // Videos
@@ -275,6 +281,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::post('/enotes/topics/{id}/publish', 'eSpace\App\Controllers\Teacher\ENoteController@publish');
         Router::post('/enotes/topics/{id}/unpublish', 'eSpace\App\Controllers\Teacher\ENoteController@unpublish');
         Router::post('/enotes/topics/{id}/archive', 'eSpace\App\Controllers\Teacher\ENoteController@archive');
+        Router::post('/enotes/topics/{id}/duplicate', 'eSpace\App\Controllers\Teacher\ENoteController@duplicateTopic');
         Router::put('/enotes/topics/{id}/narration-voice', 'eSpace\App\Controllers\Teacher\ENoteController@updateNarrationVoice');
         Router::post('/enotes/pages/{pageId}/narration', 'eSpace\App\Controllers\Teacher\ENoteController@generatePageNarration');
         Router::post('/enotes/topics/{topic_id}/pages', 'eSpace\App\Controllers\Teacher\ENoteController@createPage');
@@ -282,7 +289,11 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::delete('/enotes/pages/{id}', 'eSpace\App\Controllers\Teacher\ENoteController@deletePage');
         Router::post('/enotes/pages/{id}/duplicate', 'eSpace\App\Controllers\Teacher\ENoteController@duplicatePage');
         Router::post('/enotes/topics/{topic_id}/reorder', 'eSpace\App\Controllers\Teacher\ENoteController@reorderPages');
-        
+
+        // eNotes Curriculum browsing (admin-authored, read-only here)
+        Router::get('/enotes/curriculum/meta', 'eSpace\App\Controllers\Teacher\ENoteCurriculumController@meta');
+        Router::get('/enotes/curriculum/topics/{id}', 'eSpace\App\Controllers\Teacher\ENoteCurriculumController@showTopic');
+
         // eNotes Image Upload
         Router::post('/enotes/upload-image', 'eSpace\App\Controllers\Teacher\ENoteImageController@upload');
         // Item Bank
@@ -384,6 +395,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         // Students
         Router::get('/students', 'eSpace\App\Controllers\HOD\StudentController@index');
         Router::post('/students', 'eSpace\App\Controllers\HOD\StudentController@create');
+        Router::post('/students/deenroll', 'eSpace\App\Controllers\HOD\StudentController@deenroll');
         Router::get('/students/{id}', 'eSpace\App\Controllers\HOD\StudentController@show');
         Router::put('/students/{id}', 'eSpace\App\Controllers\HOD\StudentController@update');
         Router::delete('/students/{id}', 'eSpace\App\Controllers\HOD\StudentController@delete');
@@ -420,6 +432,12 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         // Assignments - read-only oversight + "Preview as Student"
         Router::get('/assignments', 'eSpace\App\Controllers\HOD\AssignmentController@index');
         Router::get('/assignments/{id}/preview', 'eSpace\App\Controllers\HOD\AssignmentController@preview');
+        Router::get('/assignments/{id}/submissions', 'eSpace\App\Controllers\HOD\AssignmentController@submissions');
+        Router::get('/assignments/{id}/submissions/{submissionId}', 'eSpace\App\Controllers\HOD\AssignmentController@submissionDetail');
+
+        // eNotes - read-only oversight, browsable by teacher
+        Router::get('/enotes', 'eSpace\App\Controllers\HOD\ENoteController@index');
+        Router::get('/enotes/{id}', 'eSpace\App\Controllers\HOD\ENoteController@show');
 
         // Reports
         Router::get('/reports/department', 'eSpace\App\Controllers\HOD\ReportController@department');
@@ -583,6 +601,14 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::post('/terms', 'eSpace\App\Controllers\Admin\TermController@store');
         Router::put('/terms/{id}', 'eSpace\App\Controllers\Admin\TermController@update');
         Router::delete('/terms/{id}', 'eSpace\App\Controllers\Admin\TermController@destroy');
+
+        // eNotes Curriculum Setup
+        Router::get('/enotes-curriculum/meta', 'eSpace\App\Controllers\Admin\ENoteCurriculumController@meta');
+        Router::get('/enotes-curriculum', 'eSpace\App\Controllers\Admin\ENoteCurriculumController@index');
+        Router::post('/enotes-curriculum', 'eSpace\App\Controllers\Admin\ENoteCurriculumController@store');
+        Router::get('/enotes-curriculum/{id}', 'eSpace\App\Controllers\Admin\ENoteCurriculumController@show');
+        Router::put('/enotes-curriculum/{id}', 'eSpace\App\Controllers\Admin\ENoteCurriculumController@update');
+        Router::delete('/enotes-curriculum/{id}', 'eSpace\App\Controllers\Admin\ENoteCurriculumController@destroy');
         
         // Reports
         Router::get('/reports/system', 'eSpace\App\Controllers\Admin\ReportController@system');

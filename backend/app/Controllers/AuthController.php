@@ -318,6 +318,7 @@ class AuthController extends Controller
         $userId = $this->getCurrentUserId();
         $currentPassword = $this->input('current_password');
         $newPassword = $this->input('new_password');
+        $newPasswordConfirmation = $this->input('new_password_confirmation');
 
         // Validate
         $errors = $this->validateRequired(['current_password', 'new_password']);
@@ -328,7 +329,7 @@ class AuthController extends Controller
         }
 
         // Change password
-        $result = $this->authService->changePassword($userId, $currentPassword, $newPassword, $this->getCurrentUserRole());
+        $result = $this->authService->changePassword($userId, $currentPassword, $newPassword, $this->getCurrentUserRole(), $newPasswordConfirmation);
 
         if ($result['success']) {
             $this->success([], $result['message']);

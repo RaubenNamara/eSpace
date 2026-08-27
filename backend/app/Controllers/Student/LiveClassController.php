@@ -18,7 +18,7 @@ use eSpace\App\Services\LiveClassService;
  */
 class LiveClassController extends Controller
 {
-    private const SELECT_COLUMNS = "lc.id, lc.subject_id, lc.class_id, lc.title, lc.description,
+    private const SELECT_COLUMNS = "lc.id, lc.subject_id, lc.class_id, lc.class_group_name, lc.title, lc.description,
                        lc.scheduled_start, lc.scheduled_end, lc.actual_start, lc.actual_end,
                        lc.is_recorded, lc.recording_url, lc.status, lc.created_at,
                        s.name as subject_name, s.code as subject_code,
@@ -60,12 +60,29 @@ class LiveClassController extends Controller
 
     private function visibilityClause(): string
     {
+        // Three ways a live class's class_id/class_group_name can match a student's own
+        // enrollment: an exact single-stream match, an "All Streams" class-level match (the
+        // student's enrolled class shares lc.class_group_name's name, regardless of which stream),
+        // or both columns NULL (a whole-department broadcast - the pre-existing meaning of a NULL
+        // class_id, kept as-is for anything not associated with either targeting mode).
         return "lc.deleted_at IS NULL AND EXISTS (
             SELECT 1 FROM student_department_enrollments sde
+            LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
             WHERE sde.student_id = :student_id
               AND sde.department_id = lc.department_id
               AND sde.deleted_at IS NULL
-              AND (lc.class_id IS NULL OR sde.class_id = lc.class_id)
+              AND sde.status = 'active'
+              AND (
+                (lc.class_id IS NULL AND lc.class_group_name IS NULL)
+                OR sde.class_id = lc.class_id
+                OR (lc.class_group_name IS NOT NULL AND sde_c.name = lc.class_group_name)
+              )
+        ) AND NOT EXISTS (
+            SELECT 1 FROM student_teacher_enrollments ste
+            WHERE ste.student_id = :student_id_te
+              AND ste.teacher_id = lc.created_by
+              AND ste.department_id = lc.department_id
+              AND ste.status = 'withdrawn'
         )";
     }
 
@@ -90,7 +107,7 @@ class LiveClassController extends Controller
 
         $db = $this->getDb();
         $where = [$this->visibilityClause()];
-        $params = ['student_id' => $studentId, 'attendance_student_id' => $studentId];
+        $params = ['student_id' => $studentId, 'attendance_student_id' => $studentId, 'student_id_te' => $studentId];
 
         if (!empty($status)) {
             $where[] = 'lc.status = :status';
@@ -136,7 +153,7 @@ class LiveClassController extends Controller
 
         $whereClause = $this->visibilityClause();
         $stmt = $db->prepare("SELECT * FROM live_classes lc WHERE lc.id = :id AND {$whereClause}");
-        $stmt->execute(['id' => $id, 'student_id' => $studentId]);
+        $stmt->execute(['id' => $id, 'student_id' => $studentId, 'student_id_te' => $studentId]);
         $class = $stmt->fetch();
 
         if (!$class) {
@@ -201,7 +218,7 @@ class LiveClassController extends Controller
 
         $whereClause = $this->visibilityClause();
         $stmt = $db->prepare("SELECT lc.id FROM live_classes lc WHERE lc.id = :id AND {$whereClause}");
-        $stmt->execute(['id' => $id, 'student_id' => $studentId]);
+        $stmt->execute(['id' => $id, 'student_id' => $studentId, 'student_id_te' => $studentId]);
         if (!$stmt->fetch()) {
             $this->notFound('Live class not found or not accessible');
             return;
@@ -234,7 +251,7 @@ class LiveClassController extends Controller
 
         $whereClause = $this->visibilityClause();
         $stmt = $db->prepare("SELECT * FROM live_classes lc WHERE lc.id = :id AND {$whereClause}");
-        $stmt->execute(['id' => $id, 'student_id' => $studentId]);
+        $stmt->execute(['id' => $id, 'student_id' => $studentId, 'student_id_te' => $studentId]);
         $class = $stmt->fetch();
 
         if (!$class) {

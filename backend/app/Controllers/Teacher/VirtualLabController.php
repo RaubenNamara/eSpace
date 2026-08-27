@@ -182,28 +182,39 @@ class VirtualLabController extends Controller
             return;
         }
 
-        $errors = $this->validateRequired(['class_id', 'term_id']);
+        $errors = $this->validateRequired(['term_id']);
         if (!empty($errors)) {
             $this->validationError($errors);
             return;
         }
 
-        $classId = (int) $this->input('class_id');
         $experiment = $this->service()->getExperimentDetail((int) $id);
         if (!$experiment) {
             $this->notFound('Experiment not found');
             return;
         }
 
-        if (!$this->service()->teacherCanAccessClassSubject($teacherId, $classId, $experiment['subject_id'])) {
-            $this->forbidden();
+        // Class/class-level re-validated against the teacher's own *active* department (not the
+        // admin-set primary teacherCanAccessClassSubject() used to check) - matching every other
+        // content module, and what actually reflects a teacher who's switched active department
+        // this session (see Controller::getActiveDepartmentId()).
+        $departmentId = $this->getActiveDepartmentId();
+        if (!$departmentId) {
+            $this->error('Teacher must be assigned to a department to publish experiments', 403);
+            return;
+        }
+
+        $classTarget = $this->resolveClassTarget($this->input(), $departmentId);
+        if (!$classTarget['ok']) {
+            $this->validationError(['class_id' => $classTarget['message']]);
             return;
         }
 
         try {
             $assignmentId = $this->service()->publishExperiment(
                 (int) $id,
-                $classId,
+                $classTarget['class_id'],
+                $classTarget['class_group_name'],
                 $teacherId,
                 (int) $this->input('term_id'),
                 $this->input('due_date'),
