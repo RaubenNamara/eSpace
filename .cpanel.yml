@@ -8,7 +8,7 @@ deployment:
     - /bin/cp -rf backend/public/. $DEPLOYPATH/backend/public/
     - /bin/cp -f frontend/dist/index.html $DEPLOYPATH/index.html
     - /bin/cp -f frontend/dist/manifest.webmanifest $DEPLOYPATH/manifest.webmanifest
-    - /bin/cp -f frontend/dist/registerSW.js $DEPLOYPATH/registerSW.js
+    - /bin/rm -f $DEPLOYPATH/registerSW.js
     - /bin/cp -f frontend/dist/sw.js $DEPLOYPATH/sw.js
     - /bin/cp -f frontend/dist/workbox-8553a241.js $DEPLOYPATH/workbox-8553a241.js
     - /bin/cp -rf frontend/dist/assets/. $DEPLOYPATH/assets/
