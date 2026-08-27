@@ -331,45 +331,6 @@ class StudentController extends Controller
     }
 
     /**
-     * Delete student (soft delete, only if in HOD's department)
-     * DELETE /hod/students/{id}
-     */
-    public function delete(): void
-    {
-        if (!$this->isHOD()) {
-            $this->forbidden();
-            return;
-        }
-
-        $departmentId = $this->getHODDepartmentId();
-        if (!$departmentId) {
-            $this->error('Department not found for HOD', 404);
-            return;
-        }
-
-        $id = (int) $this->routeParam('id');
-
-        // Check if student exists in HOD's department
-        $stmt = $this->db->prepare("SELECT id FROM students WHERE id = ? AND department_id = ? AND deleted_at IS NULL");
-        $stmt->execute([$id, $departmentId]);
-        if (!$stmt->fetch()) {
-            $this->notFound('Student not found in your department');
-            return;
-        }
-
-        // Soft delete student
-        $sql = "UPDATE students SET deleted_at = NOW() WHERE id = :id";
-        $stmt = $this->db->prepare($sql);
-        $result = $stmt->execute(['id' => $id]);
-
-        if ($result) {
-            $this->success([], 'Student deleted successfully');
-        } else {
-            $this->error('Failed to delete student', 500);
-        }
-    }
-
-    /**
      * De-enroll students from the HOD's own department - closes their
      * student_department_enrollments row(s) for this department (status='withdrawn'), which
      * hides them from every teacher in the department (see the NOT EXISTS/status='active'

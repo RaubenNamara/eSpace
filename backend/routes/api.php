@@ -399,8 +399,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::post('/students/deenroll', 'eSpace\App\Controllers\HOD\StudentController@deenroll');
         Router::get('/students/{id}', 'eSpace\App\Controllers\HOD\StudentController@show');
         Router::put('/students/{id}', 'eSpace\App\Controllers\HOD\StudentController@update');
-        Router::delete('/students/{id}', 'eSpace\App\Controllers\HOD\StudentController@delete');
-        
+
         // Subjects
         Router::get('/subjects', 'eSpace\App\Controllers\HOD\SubjectController@index');
         Router::get('/subjects/{id}', 'eSpace\App\Controllers\HOD\SubjectController@show');
