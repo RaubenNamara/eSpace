@@ -117,6 +117,53 @@
         </div>
       </div>
 
+      <!-- Competency Report (LOA / AOI / EOC) -->
+      <template v-if="subjectsWithCompetencies.length > 0">
+        <p class="text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mt-6 mb-1.5">
+          Competency Report &mdash; Learning Outcomes (LOA) &middot; Areas of Integration (AOI) &middot; End of Cycle (EOC)
+        </p>
+        <div class="rounded-xl border-2 border-gray-400 dark:border-gray-700 overflow-hidden shadow-sm">
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs sm:text-sm border-collapse">
+              <thead>
+                <tr class="bg-indigo-600 text-white print-color-exact">
+                  <th class="border border-indigo-700 px-3 py-2 text-left whitespace-nowrap">Subject / Report</th>
+                  <th class="border border-indigo-700 px-2 py-2 text-center whitespace-nowrap">Average %</th>
+                  <th class="border border-indigo-700 px-2 py-2 text-center">Status</th>
+                  <th class="border border-indigo-700 px-3 py-2 text-left min-w-[260px]">Descriptor</th>
+                  <th class="border border-indigo-700 px-2 py-2 text-center whitespace-nowrap">Weight (/{{ report.max_weight }})</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template v-for="subject in subjectsWithCompetencies" :key="subject.subject_id">
+                  <tr v-for="(c, ci) in subject.competencies" :key="subject.subject_id + '-' + c.category" :class="ci % 2 === 1 ? 'bg-gray-50 dark:bg-gray-900/30' : ''">
+                    <td class="border border-gray-400 dark:border-gray-700 px-3 py-2 font-medium text-gray-900 dark:text-white whitespace-nowrap">
+                      <template v-if="ci === 0">{{ subject.subject_name }}</template>
+                      <span class="block text-[11px] font-normal text-gray-500 dark:text-gray-400">{{ categoryLabel(c.category) }}</span>
+                    </td>
+                    <td class="border border-gray-400 dark:border-gray-700 px-2 py-2 text-center font-semibold text-gray-900 dark:text-white">
+                      {{ c.percentage }}%
+                    </td>
+                    <td class="border border-gray-400 dark:border-gray-700 px-2 py-2 text-center">
+                      <span class="grade-badge font-bold text-white shadow-sm print-color-exact" :class="gradeColor(c.status)">
+                        {{ c.status }}
+                      </span>
+                      <div class="text-[10px] text-gray-500 dark:text-gray-500 mt-0.5">{{ c.performance_descriptor }}</div>
+                    </td>
+                    <td class="border border-gray-400 dark:border-gray-700 px-3 py-2 text-gray-600 dark:text-gray-300">
+                      {{ c.descriptor_text }}
+                    </td>
+                    <td class="border border-gray-400 dark:border-gray-700 px-2 py-2 text-center font-semibold text-gray-900 dark:text-white">
+                      {{ c.weight }}
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </template>
+
       <!-- Totals bar -->
       <div class="totals-bar mt-4 print-color-exact text-white text-xs sm:text-sm rounded-xl px-5 py-3 flex flex-wrap items-center gap-x-8 gap-y-2 shadow-sm">
         <div v-if="report.class_level !== 'O Level'"><span class="block text-[10px] uppercase tracking-wide text-blue-200">Total Points</span><span class="font-bold text-base">{{ report.total_points }}</span></div>
@@ -326,6 +373,19 @@ const gradeColor = (grade: string | null) => {
     A: 'bg-emerald-600', B: 'bg-blue-600', C: 'bg-amber-500', D: 'bg-orange-500', E: 'bg-red-600',
   }
   return grade ? colors[grade] || 'bg-gray-400' : 'bg-gray-300'
+}
+
+// Only subjects with at least one LOA/AOI/EOC-tagged assessment get a competency row - subjects
+// with only legacy/untagged assignments keep showing solely in the constructs table above.
+const subjectsWithCompetencies = computed(() => props.report.subjects.filter(s => s.competencies.length > 0))
+
+const categoryLabel = (category: string) => {
+  const labels: Record<string, string> = {
+    LOA: 'LOA — Learning Outcome',
+    AOI: 'AOI — Area of Integration',
+    EOC: 'EOC — End of Cycle',
+  }
+  return labels[category] || category
 }
 
 const awardColor = (badgeType: string) => {

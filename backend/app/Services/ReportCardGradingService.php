@@ -69,6 +69,63 @@ class ReportCardGradingService
         ],
     ];
 
+    /**
+     * Percentage -> A-E status + performance descriptor, direct (never weight-mediated) - the
+     * LOA/AOI/EOC competency scale, independent of the O-Level/A-Level weight conversion below.
+     * Descending order, first `>=` match wins, so a percentage exactly on a boundary takes the
+     * higher band (80.0 -> A, not B).
+     */
+    private const STATUS_BANDS = [
+        ['min' => 80.0, 'status' => 'A', 'descriptor' => 'Exceptional'],
+        ['min' => 70.0, 'status' => 'B', 'descriptor' => 'Outstanding'],
+        ['min' => 60.0, 'status' => 'C', 'descriptor' => 'Satisfactory'],
+        ['min' => 50.0, 'status' => 'D', 'descriptor' => 'Basic'],
+        ['min' => 0.0, 'status' => 'E', 'descriptor' => 'Elementary'],
+    ];
+
+    /** @return array{status: string, descriptor: string} */
+    public static function getPerformanceLevel(float $percentage): array
+    {
+        foreach (self::STATUS_BANDS as $band) {
+            if ($percentage >= $band['min']) {
+                return ['status' => $band['status'], 'descriptor' => $band['descriptor']];
+            }
+        }
+
+        $last = self::STATUS_BANDS[array_key_last(self::STATUS_BANDS)];
+        return ['status' => $last['status'], 'descriptor' => $last['descriptor']];
+    }
+
+    public static function getPerformanceStatus(float $percentage): string
+    {
+        return self::getPerformanceLevel($percentage)['status'];
+    }
+
+    public static function getPerformanceDescriptor(float $percentage): string
+    {
+        return self::getPerformanceLevel($percentage)['descriptor'];
+    }
+
+    /** (marksObtained / maximumMark) * 100, rounded to 2 decimals. 0 if maximumMark <= 0. */
+    public static function normalizeAssessmentScore(float $marksObtained, float $maximumMark): float
+    {
+        if ($maximumMark <= 0) {
+            return 0.0;
+        }
+
+        return round(($marksObtained / $maximumMark) * 100, 2);
+    }
+
+    /**
+     * Percentage -> O-Level(/3)/A-Level(/5) weight, as an explicit additional representation of
+     * competency alongside (never instead of) the percentage/status pair - just
+     * percentageToWeight() under the name/signature the LOA/AOI/EOC spec calls for.
+     */
+    public static function convertToWeight(float $percentage, ?string $classLevel): int
+    {
+        return self::percentageToWeight($percentage, self::maxWeightForClassLevel($classLevel));
+    }
+
     private static function bands(int $maxWeight): array
     {
         return self::WEIGHT_BANDS[$maxWeight] ?? self::WEIGHT_BANDS[self::DEFAULT_MAX_WEIGHT];

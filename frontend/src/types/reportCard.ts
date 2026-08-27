@@ -5,6 +5,16 @@ export interface ReportCardConstruct {
   weight: number
 }
 
+export interface ReportCardCompetency {
+  category: 'LOA' | 'AOI' | 'EOC'
+  percentage: number
+  status: string
+  performance_descriptor: string
+  weight: number
+  descriptor_text: string
+  source_count: number
+}
+
 export interface ReportCardSubject {
   subject_id: number
   subject_name: string
@@ -16,6 +26,7 @@ export interface ReportCardSubject {
   assignments_included_count: number
   assignments_total_count: number
   constructs: ReportCardConstruct[]
+  competencies: ReportCardCompetency[]
 }
 
 export interface SchoolSettings {
@@ -81,6 +92,115 @@ export interface ReportCard {
   school: SchoolSettings | null
   subjects: ReportCardSubject[]
   virtual_lab: ReportCardVirtualLabResult[]
+}
+
+// --- Class-wide LOA/AOI/EOC summary (Phase F) ------------------------------------------------
+
+export type CompetencyCategoryState = 'assessed' | 'awaiting_marking' | 'awaiting_submission' | 'not_assessed'
+export type ClassSummaryReportStatus = 'published' | 'ready' | 'awaiting_marking' | 'awaiting_submission' | 'not_assessed'
+
+export interface ClassSummaryCategoryResult {
+  state: CompetencyCategoryState
+  percentage: number | null
+  status: string | null
+  performance_descriptor: string | null
+  weight: number | null
+  assessment_count: number
+}
+
+export interface ClassSummaryStudent {
+  student_id: number
+  first_name: string
+  last_name: string
+  admission_number: string
+  categories: {
+    LOA: ClassSummaryCategoryResult
+    AOI: ClassSummaryCategoryResult
+    EOC: ClassSummaryCategoryResult
+  }
+  report_status: ClassSummaryReportStatus
+}
+
+export interface ClassSummarySubjectOption {
+  id: number
+  name: string
+}
+
+// --- Admin cross-subject LOA/AOI/EOC reports ------------------------------------------------
+
+export type CompetencyCategory = 'LOA' | 'AOI' | 'EOC'
+
+export interface CompetencyListCategoryFlag {
+  available: boolean
+  percentage: number | null
+  status: string | null
+}
+
+export interface CompetencyListStudent {
+  student_id: number
+  first_name: string
+  last_name: string
+  admission_number: string
+  categories: Record<CompetencyCategory, CompetencyListCategoryFlag>
+}
+
+export interface CompetencyOverviewCategory {
+  available: boolean
+  assessment_count: number
+  percentage: number | null
+  status: string | null
+  performance_descriptor: string | null
+  weight: number | null
+  total_marks_sum: number
+  total_score_sum: number
+}
+
+export interface CompetencyStudentInfo {
+  id: number
+  first_name: string
+  last_name: string
+  admission_number: string
+  class_name: string | null
+  stream_name: string | null
+}
+
+export interface CompetencyTermInfo {
+  id: number
+  name: string
+  academic_year: string | null
+}
+
+export interface CompetencyOverview {
+  student: CompetencyStudentInfo
+  term: CompetencyTermInfo
+  max_weight: number
+  categories: Record<CompetencyCategory, CompetencyOverviewCategory>
+}
+
+export interface CompetencyDetailRow {
+  subject_id: number
+  subject_name: string
+  topic_id: number
+  topic_name: string
+  detail_text?: string
+  learning_outcomes?: string[]
+  percentage: number
+  status: string
+  descriptor: string
+  descriptor_text: string
+}
+
+export interface CompetencyDetailReport {
+  student: CompetencyStudentInfo
+  term: CompetencyTermInfo
+  category: CompetencyCategory
+  class_level: string | null
+  max_weight: number
+  available: boolean
+  summary: CompetencyOverviewCategory
+  rows: CompetencyDetailRow[]
+  school: SchoolSettings | null
+  generated_at: string
 }
 
 export interface ReportCardListEntry {

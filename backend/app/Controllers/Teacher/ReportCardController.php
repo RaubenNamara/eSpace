@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace eSpace\App\Controllers\Teacher;
 
 use eSpace\App\Controllers\Controller;
+use eSpace\App\Services\CompetencyReportService;
+use eSpace\App\Services\PerformanceReportService;
 use eSpace\App\Services\ReportCardService;
 use RuntimeException;
 
@@ -323,5 +325,79 @@ class ReportCardController extends Controller
         $stmt->execute(['comment' => $comment, 'id' => $report['id']]);
 
         $this->success(['class_teacher_comment' => $comment], 'Comment updated');
+    }
+
+    /**
+     * GET /teacher/report-cards/class-summary/subjects?class_id=&term_id=
+     * Subjects with LOA/AOI/EOC-tagged assignments for a class/term - sourced from `assignments`
+     * directly (see CompetencyReportService::listSubjectsWithCompetencyData()) since
+     * `class_subjects`, the table listMySubjects() above reads from, is confirmed empty in this
+     * database. Deliberately a separate endpoint rather than changing listMySubjects() itself -
+     * that one backs the existing per-subject report generation flow and is left untouched.
+     */
+    public function classSummarySubjects(): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+
+        $classId = (int) $this->query('class_id', 0);
+        $termId = (int) $this->query('term_id', 0);
+
+        if (!$classId || !$termId) {
+            $this->validationError(['class_id' => 'class_id and term_id are required']);
+            return;
+        }
+
+        $this->success(['subjects' => (new CompetencyReportService())->listSubjectsWithCompetencyData($classId, $termId)]);
+    }
+
+    /**
+     * GET /teacher/report-cards/class-summary?class_id=&term_id=&subject_id=
+     * Every learner in the class with their LOA/AOI/EOC competency summary for the selected
+     * term/subject, in one batched pass (CompetencyReportService::calculateClassSummary()) -
+     * never one API call per learner. Entitlement reuses
+     * PerformanceReportService::teacherCanAccessClassSubject() (class teacher, class_subjects, or
+     * an assignments.teacher_id match), the same fallback already relied on elsewhere since
+     * class_subjects itself is empty.
+     */
+    public function classSummary(): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+
+        $teacherId = $this->getTeacherId();
+        if (!$teacherId) {
+            $this->error('Teacher not found', 403);
+            return;
+        }
+
+        $classId = (int) $this->query('class_id', 0);
+        $termId = (int) $this->query('term_id', 0);
+        $subjectId = (int) $this->query('subject_id', 0);
+
+        if (!$classId || !$termId || !$subjectId) {
+            $this->validationError(['class_id' => 'class_id, term_id and subject_id are required']);
+            return;
+        }
+
+        if (!(new PerformanceReportService())->teacherCanAccessClassSubject($teacherId, $classId, $subjectId)) {
+            $this->forbidden('You do not teach this subject for this class');
+            return;
+        }
+
+        $stmt = $this->getDb()->prepare('SELECT level FROM classes WHERE id = :id AND deleted_at IS NULL');
+        $stmt->execute(['id' => $classId]);
+        $classLevel = $stmt->fetch()['level'] ?? null;
+
+        $summary = (new CompetencyReportService())->calculateClassSummary($classId, $termId, $subjectId, $classLevel);
+
+        $this->success([
+            'students' => $summary,
+            'max_weight' => \eSpace\App\Services\ReportCardGradingService::maxWeightForClassLevel($classLevel),
+        ]);
     }
 }

@@ -326,6 +326,8 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/report-cards/terms', 'eSpace\App\Controllers\Teacher\ReportCardController@listTerms');
         Router::get('/report-cards/students', 'eSpace\App\Controllers\Teacher\ReportCardController@listStudents');
         Router::get('/report-cards/my-subjects', 'eSpace\App\Controllers\Teacher\ReportCardController@listMySubjects');
+        Router::get('/report-cards/class-summary/subjects', 'eSpace\App\Controllers\Teacher\ReportCardController@classSummarySubjects');
+        Router::get('/report-cards/class-summary', 'eSpace\App\Controllers\Teacher\ReportCardController@classSummary');
         Router::post('/report-cards/{studentId}/{termId}/subjects/{subjectId}/generate', 'eSpace\App\Controllers\Teacher\ReportCardController@generateSubject');
         Router::post('/report-cards/{studentId}/{termId}/generate', 'eSpace\App\Controllers\Teacher\ReportCardController@generateFull');
         Router::put('/report-cards/{studentId}/{termId}/class-teacher-comment', 'eSpace\App\Controllers\Teacher\ReportCardController@updateClassTeacherComment');
@@ -634,6 +636,11 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::post('/report-cards/{studentId}/{termId}/generate', 'eSpace\App\Controllers\Admin\ReportCardController@generate');
         Router::get('/report-cards/{studentId}/{termId}', 'eSpace\App\Controllers\Admin\ReportCardController@show');
         Router::put('/report-cards/{studentId}/{termId}/head-teacher-comment', 'eSpace\App\Controllers\Admin\ReportCardController@updateHeadTeacherComment');
+
+        // Competency Reports (LOA/AOI/EOC) - one student, one term, three reports
+        Router::get('/reports/students', 'eSpace\App\Controllers\Admin\ReportCardController@listCompetencyStudents');
+        Router::get('/reports/students/{studentId}/terms/{termId}/categories/{category}', 'eSpace\App\Controllers\Admin\ReportCardController@competencyDetail');
+        Router::get('/reports/students/{studentId}/terms/{termId}', 'eSpace\App\Controllers\Admin\ReportCardController@competencyOverview');
 
         // Performance reports & marksheets (unrestricted - admin can see every subject/class)
         Router::get('/performance/marksheet/download', 'eSpace\App\Controllers\Admin\PerformanceController@downloadMarksheet');

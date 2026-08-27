@@ -94,7 +94,7 @@ class ReportCardService
         }
 
         $stmt = $db->prepare(
-            'SELECT s.id, s.class_id, c.level AS class_level
+            'SELECT s.id, s.class_id, s.first_name, c.level AS class_level
              FROM students s
              LEFT JOIN classes c ON s.class_id = c.id
              WHERE s.id = :id AND s.deleted_at IS NULL'
@@ -150,6 +150,9 @@ class ReportCardService
                 'grade' => $grade,
                 'performance_level' => ReportCardGradingService::weightToPerformanceLevel($avgWeight, $maxWeight),
                 'constructs' => $constructs,
+                'competencies' => $student['class_id']
+                    ? $this->buildCompetencies($studentId, $subjectId, $termId, (int) $student['class_id'], $student['class_level'], $student['first_name'], $subjectNames[$subjectId] ?? 'Subject')
+                    : [],
                 'teacher_id' => $lastTeacherId,
                 'assignments_included_count' => count($items),
                 'assignments_total_count' => $totalsBySubject[$subjectId] ?? count($items),
@@ -195,7 +198,8 @@ class ReportCardService
         $reportCardId = $this->ensureReportShell($studentId, $termId, $student['class_id'] !== null ? (int) $student['class_id'] : null);
 
         foreach ($subjectIds as $i => $subjectId) {
-            $this->upsertReportCardSubject($reportCardId, $computed[$subjectId], $sourceHashes[$subjectId], $descriptors[$i] ?? null);
+            $subjectRowId = $this->upsertReportCardSubject($reportCardId, $computed[$subjectId], $sourceHashes[$subjectId], $descriptors[$i] ?? null);
+            $this->upsertReportCardCompetencies($subjectRowId, $computed[$subjectId]['competencies']);
         }
 
         $this->recomputeReportAggregates($reportCardId, $actorId, $actorRole);
@@ -359,8 +363,8 @@ class ReportCardService
                     s.total_score, s.percentage
              FROM assignment_submissions s
              INNER JOIN assignments a ON s.assignment_id = a.id
-             WHERE s.student_id = :student_id AND s.status = 'returned'
-               AND a.subject_id IS NOT NULL AND a.deleted_at IS NULL
+             WHERE s.student_id = :student_id AND s.status IN ('graded', 'returned')
+               AND a.status = 'published' AND a.subject_id IS NOT NULL AND a.deleted_at IS NULL
                AND a.due_date BETWEEN :start_date AND :end_date{$subjectFilter}
              ORDER BY a.subject_id, a.due_date ASC"
         );
@@ -478,6 +482,85 @@ class ReportCardService
         return true;
     }
 
+    /**
+     * LOA/AOI/EOC competency breakdown for one subject - only populated for categories that have
+     * at least one eligible, tagged assessment; a subject with none returns an empty array so the
+     * frontend's hybrid fallback (legacy constructs table only) kicks in naturally.
+     *
+     * @return array<int, array{category: string, percentage: float, status: string, performance_descriptor: string, weight: int, descriptor_text: string, source_count: int}>
+     */
+    private function buildCompetencies(int $studentId, int $subjectId, int $termId, int $classId, ?string $classLevel, string $studentFirstName, string $subjectName): array
+    {
+        $service = new CompetencyReportService();
+        $competencies = [];
+
+        foreach (['LOA', 'AOI', 'EOC'] as $category) {
+            $average = $service->calculateAssessmentAverage($studentId, $subjectId, $termId, $classId, $category);
+            if ($average['count'] === 0 || $average['percentage'] === null) {
+                continue;
+            }
+
+            $percentage = $average['percentage'];
+            $level = ReportCardGradingService::getPerformanceLevel($percentage);
+            $weight = ReportCardGradingService::convertToWeight($percentage, $classLevel);
+
+            if ($category === 'LOA') {
+                $learningOutcomes = $service->getLearningOutcomesForAssignments($average['assignment_ids']);
+                $descriptor = $service->generateLOADescriptor($studentFirstName, $learningOutcomes, $percentage);
+            } elseif ($category === 'AOI') {
+                $competenceTexts = $service->getCompetenciesForAssignments($average['assignment_ids']);
+                $descriptor = $service->generateAOIDescriptor($studentFirstName, $competenceTexts[0] ?? '', $percentage);
+            } else {
+                $topicBreakdown = $service->calculateTopicBreakdown($studentId, $subjectId, $termId, $classId);
+                $descriptor = $service->generateEOCDescriptor($studentFirstName, $subjectName, $topicBreakdown);
+            }
+
+            $competencies[] = [
+                'category' => $category,
+                'percentage' => $percentage,
+                'status' => $level['status'],
+                'performance_descriptor' => $level['descriptor'],
+                'weight' => $weight,
+                'descriptor_text' => $descriptor,
+                'source_count' => $average['count'],
+            ];
+        }
+
+        return $competencies;
+    }
+
+    private function upsertReportCardCompetencies(int $reportCardSubjectId, array $competencies): void
+    {
+        $db = $this->getDb();
+
+        // Replace wholesale, same approach as constructs - simplest correct behavior for a
+        // regenerate (a category that no longer has eligible marks should disappear, not linger).
+        $stmt = $db->prepare('DELETE FROM report_card_competencies WHERE report_card_subject_id = :id');
+        $stmt->execute(['id' => $reportCardSubjectId]);
+
+        if (empty($competencies)) {
+            return;
+        }
+
+        $insert = $db->prepare(
+            "INSERT INTO report_card_competencies
+                (report_card_subject_id, assessment_category, percentage, status, performance_descriptor, weight, descriptor_text, source_count, created_at, updated_at)
+             VALUES (:report_card_subject_id, :category, :percentage, :status, :descriptor, :weight, :descriptor_text, :source_count, NOW(), NOW())"
+        );
+        foreach ($competencies as $c) {
+            $insert->execute([
+                'report_card_subject_id' => $reportCardSubjectId,
+                'category' => $c['category'],
+                'percentage' => $c['percentage'],
+                'status' => $c['status'],
+                'descriptor' => $c['performance_descriptor'],
+                'weight' => $c['weight'],
+                'descriptor_text' => $c['descriptor_text'],
+                'source_count' => $c['source_count'],
+            ]);
+        }
+    }
+
     private function upsertReportCardSubject(int $reportCardId, array $subject, string $sourceHash, ?string $descriptorText): int
     {
         $db = $this->getDb();
@@ -576,6 +659,12 @@ class ReportCardService
             $stmt2 = $db->prepare('SELECT * FROM report_card_constructs WHERE report_card_subject_id = :id ORDER BY id ASC');
             $stmt2->execute(['id' => $row['id']]);
 
+            $stmt3 = $db->prepare(
+                "SELECT * FROM report_card_competencies WHERE report_card_subject_id = :id
+                 ORDER BY FIELD(assessment_category, 'LOA', 'AOI', 'EOC')"
+            );
+            $stmt3->execute(['id' => $row['id']]);
+
             $subjects[] = [
                 'subject_id' => (int) $row['subject_id'],
                 'subject_name' => $row['subject_name'],
@@ -592,6 +681,15 @@ class ReportCardService
                     'score_total' => (float) $c['score_total'],
                     'weight' => (int) $c['weight'],
                 ], $stmt2->fetchAll()),
+                'competencies' => array_map(fn($c) => [
+                    'category' => $c['assessment_category'],
+                    'percentage' => (float) $c['percentage'],
+                    'status' => $c['status'],
+                    'performance_descriptor' => $c['performance_descriptor'],
+                    'weight' => (int) $c['weight'],
+                    'descriptor_text' => $c['descriptor_text'],
+                    'source_count' => (int) $c['source_count'],
+                ], $stmt3->fetchAll()),
             ];
         }
 
