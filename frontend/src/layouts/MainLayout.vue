@@ -301,7 +301,7 @@
                 <p class="text-xs text-gray-500 dark:text-gray-400 capitalize">{{ userRole }}</p>
               </div>
             </button>
-            <div v-else-if="userRole === 'teacher'" ref="profileDropdownRef" class="relative">
+            <div v-else-if="userRole === 'teacher' || userRole === 'hod'" ref="profileDropdownRef" class="relative">
               <button
                 @click="showProfileDropdown = !showProfileDropdown"
                 class="flex items-center space-x-2 hover:opacity-80 transition-opacity"
