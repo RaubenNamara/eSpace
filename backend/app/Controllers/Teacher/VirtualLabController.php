@@ -253,6 +253,30 @@ class VirtualLabController extends Controller
     }
 
     /**
+     * GET /teacher/virtual-lab/assignments/{id}/preview
+     * Read-only "preview as student" view of one of the teacher's own published assignments -
+     * same experiment detail shape a student attempt loads, minus any attempt state.
+     */
+    public function previewAssignment($assignmentId): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+        $teacherId = $this->getTeacherId();
+        if (!$teacherId) {
+            $this->error('Teacher not found', 403);
+            return;
+        }
+        $detail = $this->service()->getAssignmentExperimentDetailForTeacher($teacherId, (int) $assignmentId);
+        if (!$detail) {
+            $this->notFound('Assignment not found');
+            return;
+        }
+        $this->success($detail);
+    }
+
+    /**
      * GET /teacher/virtual-lab/assignments/{id}/attempts
      */
     public function attempts($id): void

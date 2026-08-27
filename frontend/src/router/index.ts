@@ -58,6 +58,7 @@ const ItemBankPreview = () => import('../pages/teacher/preview/ItemBankPreview.v
 const LiveClassesPreview = () => import('../pages/teacher/preview/LiveClassesPreview.vue')
 const VideosPreview = () => import('../pages/teacher/preview/VideosPreview.vue')
 const ENotesPreview = () => import('../pages/teacher/preview/ENotesPreview.vue')
+const VirtualLabPreview = () => import('../pages/teacher/preview/VirtualLabPreview.vue')
 const ENotes = () => import('../pages/teacher/ENotes.vue')
 const ENoteBuilder = () => import('../pages/teacher/ENoteBuilder.vue')
 const ENotePreview = () => import('../pages/teacher/ENotePreview.vue')
@@ -222,6 +223,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'preview/videos/:classId', name: 'VideosPreview', component: VideosPreview },
       { path: 'preview/enotes/:classId', name: 'ENotesPreview', component: ENotesPreview },
       { path: 'preview/enotes/:classId/topics/:id', name: 'ENotesTopicPreview', component: ENotePreview, meta: { previewRole: 'teacher' } },
+      { path: 'preview/virtual-lab/:classId', name: 'VirtualLabPreview', component: VirtualLabPreview },
       { path: 'library', name: 'TeacherLibrary', component: TeacherLibrary },
       { path: 'videos', name: 'TeacherVideos', component: TeacherVideos },
       { path: 'notes', name: 'TeacherNotes', component: TeacherNotes },

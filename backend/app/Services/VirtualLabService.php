@@ -759,6 +759,22 @@ class VirtualLabService
         return $this->getExperimentDetail((int) $row['experiment_id']);
     }
 
+    /**
+     * Same shape as getAssignmentExperimentDetail(), for a teacher previewing their own
+     * assignment ("preview as student") instead of a student accessing theirs - authorized by
+     * ownership (the assignment's teacher_id) rather than class enrollment.
+     */
+    public function getAssignmentExperimentDetailForTeacher(int $teacherId, int $assignmentId): ?array
+    {
+        $stmt = $this->getDb()->prepare('SELECT experiment_id FROM virtual_lab_assignments WHERE id = :id AND teacher_id = :teacher_id');
+        $stmt->execute(['id' => $assignmentId, 'teacher_id' => $teacherId]);
+        $row = $stmt->fetch();
+        if (!$row) {
+            return null;
+        }
+        return $this->getExperimentDetail((int) $row['experiment_id']);
+    }
+
     public function studentCanAccessAssignment(int $studentId, int $assignmentId): bool
     {
         $stmt = $this->getDb()->prepare(

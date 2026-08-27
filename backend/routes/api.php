@@ -348,6 +348,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::delete('/virtual-lab/experiments/{id}', 'eSpace\App\Controllers\Teacher\VirtualLabController@destroy');
         Router::get('/virtual-lab/experiments/{id}', 'eSpace\App\Controllers\Teacher\VirtualLabController@show');
         Router::get('/virtual-lab/assignments/{id}/attempts', 'eSpace\App\Controllers\Teacher\VirtualLabController@attempts');
+        Router::get('/virtual-lab/assignments/{id}/preview', 'eSpace\App\Controllers\Teacher\VirtualLabController@previewAssignment');
         Router::get('/virtual-lab/assignments', 'eSpace\App\Controllers\Teacher\VirtualLabController@assignments');
         Router::put('/virtual-lab/attempts/{id}/grade', 'eSpace\App\Controllers\Teacher\VirtualLabController@grade');
         Router::put('/virtual-lab/attempts/{id}/answers/{questionId}/grade', 'eSpace\App\Controllers\Teacher\VirtualLabController@gradeAnswer');
