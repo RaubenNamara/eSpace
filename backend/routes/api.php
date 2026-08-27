@@ -282,7 +282,11 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::delete('/enotes/pages/{id}', 'eSpace\App\Controllers\Teacher\ENoteController@deletePage');
         Router::post('/enotes/pages/{id}/duplicate', 'eSpace\App\Controllers\Teacher\ENoteController@duplicatePage');
         Router::post('/enotes/topics/{topic_id}/reorder', 'eSpace\App\Controllers\Teacher\ENoteController@reorderPages');
-        
+
+        // eNotes Curriculum browsing (admin-authored, read-only here)
+        Router::get('/enotes/curriculum/meta', 'eSpace\App\Controllers\Teacher\ENoteCurriculumController@meta');
+        Router::get('/enotes/curriculum/topics/{id}', 'eSpace\App\Controllers\Teacher\ENoteCurriculumController@showTopic');
+
         // eNotes Image Upload
         Router::post('/enotes/upload-image', 'eSpace\App\Controllers\Teacher\ENoteImageController@upload');
         // Item Bank
@@ -583,7 +587,15 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::post('/terms', 'eSpace\App\Controllers\Admin\TermController@store');
         Router::put('/terms/{id}', 'eSpace\App\Controllers\Admin\TermController@update');
         Router::delete('/terms/{id}', 'eSpace\App\Controllers\Admin\TermController@destroy');
-        
+
+        // eNotes Curriculum Setup
+        Router::get('/enotes-curriculum/meta', 'eSpace\App\Controllers\Admin\ENoteCurriculumController@meta');
+        Router::get('/enotes-curriculum', 'eSpace\App\Controllers\Admin\ENoteCurriculumController@index');
+        Router::post('/enotes-curriculum', 'eSpace\App\Controllers\Admin\ENoteCurriculumController@store');
+        Router::get('/enotes-curriculum/{id}', 'eSpace\App\Controllers\Admin\ENoteCurriculumController@show');
+        Router::put('/enotes-curriculum/{id}', 'eSpace\App\Controllers\Admin\ENoteCurriculumController@update');
+        Router::delete('/enotes-curriculum/{id}', 'eSpace\App\Controllers\Admin\ENoteCurriculumController@destroy');
+
         // Reports
         Router::get('/reports/system', 'eSpace\App\Controllers\Admin\ReportController@system');
         Router::get('/reports/users', 'eSpace\App\Controllers\Admin\ReportController@users');

@@ -90,6 +90,7 @@ const AdminSubjects = () => import('../pages/admin/Subjects.vue')
 const AdminClasses = () => import('../pages/admin/Classes.vue')
 const AdminAcademicYears = () => import('../pages/admin/AcademicYears.vue')
 const AdminTerms = () => import('../pages/admin/Terms.vue')
+const AdminENoteCurriculum = () => import('../pages/admin/ENoteCurriculum.vue')
 const AdminPromotion = () => import('../pages/admin/Promotion.vue')
 const AdminReports = () => import('../pages/admin/Reports.vue')
 const AdminMarksheet = () => import('../pages/admin/Marksheet.vue')
@@ -261,6 +262,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'classes', name: 'AdminClasses', component: AdminClasses },
       { path: 'academic-years', name: 'AdminAcademicYears', component: AdminAcademicYears },
       { path: 'terms', name: 'AdminTerms', component: AdminTerms },
+      { path: 'enotes-curriculum', name: 'AdminENoteCurriculum', component: AdminENoteCurriculum },
       { path: 'promotion', name: 'AdminPromotion', component: AdminPromotion },
       { path: 'reports', name: 'AdminReports', component: AdminReports },
       { path: 'audit-logs', name: 'AdminAuditLogs', component: AdminAuditLogs },

@@ -505,6 +505,7 @@ const academicMenu = computed(() => {
       { path: '/admin/classes', label: 'Classes', icon: 'BuildingLibraryIcon' },
       { path: '/admin/academic-years', label: 'Academic Years', icon: 'CalendarIcon' },
       { path: '/admin/terms', label: 'Terms', icon: 'CalendarDaysIcon' },
+      { path: '/admin/enotes-curriculum', label: 'eNotes Curriculum Setup', icon: 'NoteIcon' },
       { path: '/admin/promotion', label: 'Student Promotion', icon: 'AcademicCapIcon' },
       { path: '/admin/live-classes', label: 'Live Classes', icon: 'VideoCameraIcon' }
     ]
