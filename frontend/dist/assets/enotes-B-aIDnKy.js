@@ -1,0 +1,1 @@
+const e=[{value:"sarah",label:"Sarah",gender:"Female",description:"Mature, reassuring"},{value:"bella",label:"Bella",gender:"Female",description:"Professional, bright"},{value:"george",label:"George",gender:"Male",description:"Warm, storyteller"},{value:"daniel",label:"Daniel",gender:"Male",description:"Steady, broadcaster"}];export{e as A};

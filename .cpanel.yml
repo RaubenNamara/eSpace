@@ -1,0 +1,12 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/smacon/public_html/eSpace
+    - /bin/cp -f backend/app/Controllers/Admin/ENoteCurriculumController.php $DEPLOYPATH/backend/app/Controllers/Admin/ENoteCurriculumController.php
+    - /bin/cp -f backend/app/Controllers/Teacher/ENoteCurriculumController.php $DEPLOYPATH/backend/app/Controllers/Teacher/ENoteCurriculumController.php
+    - /bin/cp -f frontend/dist/index.html $DEPLOYPATH/index.html
+    - /bin/cp -f frontend/dist/manifest.webmanifest $DEPLOYPATH/manifest.webmanifest
+    - /bin/cp -f frontend/dist/registerSW.js $DEPLOYPATH/registerSW.js
+    - /bin/cp -f frontend/dist/sw.js $DEPLOYPATH/sw.js
+    - /bin/cp -f frontend/dist/workbox-f641ca17.js $DEPLOYPATH/workbox-f641ca17.js
+    - /bin/cp -rf frontend/dist/assets $DEPLOYPATH/
