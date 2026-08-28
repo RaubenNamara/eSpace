@@ -349,7 +349,7 @@
                 class="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed text-sm"
               >
                 <option value="">Select Department</option>
-                <option value="__all__">ðŸ« Enroll in All Compulsory Departments</option>
+                <option value="__all__">Enroll in All Compulsory Departments</option>
                 <option v-if="loadingDepartments" disabled>Loading departments...</option>
                 <option v-else-if="departments.length === 0" disabled>No departments available</option>
                 <option v-for="dept in departments" :key="dept.id" :value="dept.id">
