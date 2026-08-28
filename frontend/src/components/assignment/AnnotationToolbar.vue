@@ -2,16 +2,18 @@
   <!-- Student answer toolbar: grouped layout (Pencil alias, Shapes dropdown, Add media, tool-name readout) -->
   <div v-if="variant === 'answer'" class="answer-toolbar">
     <div class="answer-toolbar__row">
-      <button type="button" :class="['tool-btn', 'answer-toolbar__btn', { active: tool === 'select' }]" title="Select" :disabled="disabled" @click="selectTool('select')">
-        <span class="tool-btn__icon">↖</span><span class="answer-toolbar__label">Select</span>
-      </button>
-      <button type="button" :class="['tool-btn', 'answer-toolbar__btn', { active: tool === 'pan' }]" title="Pan" :disabled="disabled" @click="selectTool('pan')">
-        <span class="tool-btn__icon">✋</span><span class="answer-toolbar__label">Pan</span>
-      </button>
+      <template v-if="!simplified || moreToolsOpen">
+        <button type="button" :class="['tool-btn', 'answer-toolbar__btn', { active: tool === 'select' }]" title="Select" :disabled="disabled" @click="selectTool('select')">
+          <span class="tool-btn__icon">↖</span><span class="answer-toolbar__label">Select</span>
+        </button>
+        <button type="button" :class="['tool-btn', 'answer-toolbar__btn', { active: tool === 'pan' }]" title="Pan" :disabled="disabled" @click="selectTool('pan')">
+          <span class="tool-btn__icon">✋</span><span class="answer-toolbar__label">Pan</span>
+        </button>
+      </template>
       <button type="button" :class="['tool-btn', 'answer-toolbar__btn', { active: tool === 'pen' && !pencilActive }]" title="Pen" :disabled="disabled" @click="selectPen">
         <span class="tool-btn__icon">✏️</span><span class="answer-toolbar__label">Pen</span>
       </button>
-      <button type="button" :class="['tool-btn', 'answer-toolbar__btn', { active: tool === 'pen' && pencilActive }]" title="Pencil" :disabled="disabled" @click="selectPencil">
+      <button v-if="!simplified || moreToolsOpen" type="button" :class="['tool-btn', 'answer-toolbar__btn', { active: tool === 'pen' && pencilActive }]" title="Pencil" :disabled="disabled" @click="selectPencil">
         <span class="tool-btn__icon">✎</span><span class="answer-toolbar__label">Pencil</span>
       </button>
       <button type="button" :class="['tool-btn', 'answer-toolbar__btn', { active: tool === 'highlighter' }]" title="Highlighter" :disabled="disabled" @click="selectTool('highlighter')">
@@ -20,45 +22,59 @@
       <button type="button" :class="['tool-btn', 'answer-toolbar__btn', { active: tool === 'eraser' }]" title="Eraser" :disabled="disabled" @click="selectTool('eraser')">
         <span class="tool-btn__icon">🧽</span><span class="answer-toolbar__label">Eraser</span>
       </button>
-      <button type="button" :class="['tool-btn', 'answer-toolbar__btn', { active: tool === 'text' }]" title="Text" :disabled="disabled" @click="selectTool('text')">
-        <span class="tool-btn__icon">T</span><span class="answer-toolbar__label">Text</span>
+
+      <button
+        v-if="simplified"
+        type="button"
+        class="tool-btn answer-toolbar__btn answer-toolbar__btn--text"
+        title="More tools"
+        :disabled="disabled"
+        @click="moreToolsOpen = !moreToolsOpen"
+      >
+        ⋯ More Tools
       </button>
 
-      <div class="answer-toolbar__dropdown">
-        <button
-          type="button"
-          :class="['tool-btn', 'answer-toolbar__btn', { active: SHAPE_TOOLS.includes(tool) }]"
-          title="Shapes"
-          :disabled="disabled"
-          @click="shapesOpen = !shapesOpen"
-        >
-          <span class="tool-btn__icon">{{ activeShapeIcon }}</span><span class="answer-toolbar__label">Shapes ▾</span>
+      <template v-if="!simplified || moreToolsOpen">
+        <button type="button" :class="['tool-btn', 'answer-toolbar__btn', { active: tool === 'text' }]" title="Text" :disabled="disabled" @click="selectTool('text')">
+          <span class="tool-btn__icon">T</span><span class="answer-toolbar__label">Text</span>
         </button>
-        <div v-if="shapesOpen" class="answer-toolbar__menu">
-          <button
-            v-for="s in SHAPE_OPTIONS"
-            :key="s.value"
-            type="button"
-            :class="['answer-toolbar__menu-item', { active: tool === s.value }]"
-            @click="selectTool(s.value); shapesOpen = false"
-          >
-            <span class="tool-btn__icon">{{ s.icon }}</span> {{ s.label }}
-          </button>
-        </div>
-      </div>
 
-      <button type="button" :class="['tool-btn', 'answer-toolbar__btn', { active: tool === 'image' }]" title="Add media" :disabled="disabled" @click="selectTool('image')">
-        <span class="tool-btn__icon">🖼️</span><span class="answer-toolbar__label">Add media</span>
-      </button>
-      <button type="button" :class="['tool-btn', 'answer-toolbar__btn', { active: tool === 'equation' }]" title="Equation" :disabled="disabled" @click="selectTool('equation')">
-        <span class="tool-btn__icon">∑</span><span class="answer-toolbar__label">Equation</span>
-      </button>
-      <button type="button" :class="['tool-btn', 'answer-toolbar__btn', { active: tool === 'signature' }]" title="Signature" :disabled="disabled" @click="selectTool('signature')">
-        <span class="tool-btn__icon">✒️</span><span class="answer-toolbar__label">Signature</span>
-      </button>
-      <button type="button" :class="['tool-btn', 'answer-toolbar__btn', { active: tool === 'comment' }]" title="Comment" :disabled="disabled" @click="selectTool('comment')">
-        <span class="tool-btn__icon">💬</span><span class="answer-toolbar__label">Comment</span>
-      </button>
+        <div class="answer-toolbar__dropdown">
+          <button
+            type="button"
+            :class="['tool-btn', 'answer-toolbar__btn', { active: SHAPE_TOOLS.includes(tool) }]"
+            title="Shapes"
+            :disabled="disabled"
+            @click="shapesOpen = !shapesOpen"
+          >
+            <span class="tool-btn__icon">{{ activeShapeIcon }}</span><span class="answer-toolbar__label">Shapes ▾</span>
+          </button>
+          <div v-if="shapesOpen" class="answer-toolbar__menu">
+            <button
+              v-for="s in SHAPE_OPTIONS"
+              :key="s.value"
+              type="button"
+              :class="['answer-toolbar__menu-item', { active: tool === s.value }]"
+              @click="selectTool(s.value); shapesOpen = false"
+            >
+              <span class="tool-btn__icon">{{ s.icon }}</span> {{ s.label }}
+            </button>
+          </div>
+        </div>
+
+        <button type="button" :class="['tool-btn', 'answer-toolbar__btn', { active: tool === 'image' }]" title="Add media" :disabled="disabled" @click="selectTool('image')">
+          <span class="tool-btn__icon">🖼️</span><span class="answer-toolbar__label">Add media</span>
+        </button>
+        <button type="button" :class="['tool-btn', 'answer-toolbar__btn', { active: tool === 'equation' }]" title="Equation" :disabled="disabled" @click="selectTool('equation')">
+          <span class="tool-btn__icon">∑</span><span class="answer-toolbar__label">Equation</span>
+        </button>
+        <button type="button" :class="['tool-btn', 'answer-toolbar__btn', { active: tool === 'signature' }]" title="Signature" :disabled="disabled" @click="selectTool('signature')">
+          <span class="tool-btn__icon">✒️</span><span class="answer-toolbar__label">Signature</span>
+        </button>
+        <button type="button" :class="['tool-btn', 'answer-toolbar__btn', { active: tool === 'comment' }]" title="Comment" :disabled="disabled" @click="selectTool('comment')">
+          <span class="tool-btn__icon">💬</span><span class="answer-toolbar__label">Comment</span>
+        </button>
+      </template>
 
       <div class="toolbar-section answer-toolbar__colors">
         <button
@@ -162,14 +178,21 @@ interface Props {
   // 'answer' variant only: replaces the trailing "Tool: X" readout with a save-status message
   // (e.g. "Ready to save" / "Saving…" / "Saved") when provided.
   statusLabel?: string
+  // 'answer' variant only: collapses the less-common tools (Select/Pan/Pencil/Text/Shapes/Add
+  // media/Equation/Signature/Comment) behind a "More Tools" toggle, leaving only Pen/Highlighter/
+  // Eraser visible by default - default false keeps every existing caller's behavior unchanged.
+  simplified?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   variant: 'answer',
   disabled: false,
   vertical: false,
-  statusLabel: ''
+  statusLabel: '',
+  simplified: false
 })
+
+const moreToolsOpen = ref(false)
 
 const emit = defineEmits<{
   (e: 'update:tool', tool: AnnotationTool): void

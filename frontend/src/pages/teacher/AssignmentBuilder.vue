@@ -78,7 +78,7 @@
     </div>
 
     <!-- Warning Banner -->
-    <div v-if="marksMismatch" class="bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800">
+    <div v-if="marksMismatch && questions.length > 0" class="bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800">
       <div class="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-16 py-3">
         <div class="flex items-center">
           <svg class="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -201,18 +201,15 @@
                 Select a Subject and a specific Class-Stream above to align this assessment with the curriculum Admin has configured (LOA/AOI/EOC).
               </div>
               <template v-else>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Curriculum Academic Year</label>
-                    <select
-                      v-model="curriculumSelection.academic_year_id"
-                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-                      @change="onCurriculumStepChange('academic_year_id')"
-                    >
-                      <option value="">Select academic year</option>
-                      <option v-for="y in curriculumMeta?.academic_years" :key="y.id" :value="y.id">{{ y.name }}</option>
-                    </select>
-                  </div>
+                <!-- Academic Year is already chosen once, above in Target Audience - reused here
+                     automatically instead of asking again. -->
+                <div v-if="curriculumMissingYear" class="text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                  No curriculum has been configured for Academic Year {{ form.academic_year || '—' }} yet. Choose a different Academic Year above, or contact the administrator.
+                </div>
+                <template v-else>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">
+                    Aligning to Academic Year <span class="font-medium text-gray-700 dark:text-gray-300">{{ form.academic_year }}</span>
+                  </p>
                   <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Term</label>
                     <select
@@ -225,7 +222,7 @@
                       <option v-for="t in curriculumMeta?.terms" :key="t.id" :value="t.id">{{ t.name }}</option>
                     </select>
                   </div>
-                </div>
+                </template>
 
                 <!-- Assessment Category -->
                 <div v-if="curriculumSelection.term_id">
@@ -387,38 +384,38 @@
 
           <!-- Schedule -->
           <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-            <div class="px-4 sm:px-5 py-2.5 sm:py-3 border-b border-gray-200 dark:border-gray-700">
-              <h2 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 flex items-center">
-                <svg class="w-4 h-4 mr-1.5 text-indigo-500 dark:text-indigo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700">
+              <h2 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+                <svg class="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                 </svg>
                 Schedule
               </h2>
             </div>
-            <div class="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div class="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
-                <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Opens</label>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Opens</label>
                 <input
                   v-model="form.open_at"
                   type="datetime-local"
-                  class="w-full min-w-0 px-2.5 py-2 sm:py-1.5 text-sm sm:text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white transition-colors"
+                  class="w-full min-w-0 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white transition-colors"
                 >
               </div>
               <div>
-                <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Deadline *</label>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Deadline *</label>
                 <input
                   v-model="form.due_date"
                   type="datetime-local"
-                  class="w-full min-w-0 px-2.5 py-2 sm:py-1.5 text-sm sm:text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white transition-colors"
+                  class="w-full min-w-0 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white transition-colors"
                 >
               </div>
               <div>
-                <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Duration (min)</label>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Duration (min)</label>
                 <input
                   v-model.number="form.duration_minutes"
                   type="number"
                   min="1"
-                  class="w-full min-w-0 px-2.5 py-2 sm:py-1.5 text-sm sm:text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white transition-colors"
+                  class="w-full min-w-0 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white transition-colors"
                   placeholder="60"
                 >
               </div>
@@ -427,25 +424,25 @@
 
           <!-- Settings -->
           <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-            <div class="px-4 sm:px-5 py-2.5 sm:py-3 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <h2 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 flex items-center">
-                <svg class="w-4 h-4 mr-1.5 text-indigo-500 dark:text-indigo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <h2 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+                <svg class="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                 </svg>
                 Settings
               </h2>
-              <label class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+              <label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                 Attempts
                 <input
                   v-model.number="form.attempts_allowed"
                   type="number"
                   min="1"
-                  class="w-16 px-1.5 py-1.5 sm:py-0.5 text-sm sm:text-xs border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white transition-colors"
+                  class="w-16 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white transition-colors"
                 >
               </label>
             </div>
-            <div class="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            <div class="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
               <label class="flex items-center gap-2 px-3 py-2.5 sm:px-2.5 sm:py-1.5 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                 <input v-model="form.allow_late_submission" type="checkbox" class="w-4 h-4 sm:w-3.5 sm:h-3.5 flex-shrink-0 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-0">
                 <span class="text-sm sm:text-xs text-gray-700 dark:text-gray-300 leading-tight">Late submission</span>
@@ -1539,12 +1536,39 @@ watch(() => [form.value.subject_id, form.value.classTarget.class_id], () => {
   loadCurriculumMeta()
 })
 
-const onCurriculumStepChange = async (changedField: 'academic_year_id' | 'term_id' | 'theme_branch') => {
-  if (changedField === 'academic_year_id') {
+// Curriculum Alignment used to ask for Academic Year a second time (its own dropdown, separate
+// from the one already answered in Target Audience) - confusing duplicate data entry for the
+// exact same concept, and it didn't even pre-fill from the first answer. Instead of showing a
+// second control, resolve curriculumSelection.academic_year_id automatically by matching the
+// admin-configured curriculum year (id+name) against the plain year string already chosen above.
+// If no curriculum record exists for that year, leave it unset - curriculumMissingYear below
+// then shows an explanatory message rather than silently picking a different year.
+const curriculumMissingYear = ref(false)
+
+function syncCurriculumAcademicYear() {
+  const years = curriculumMeta.value?.academic_years
+  if (!years || years.length === 0) return
+  const match = years.find(y => String(y.name) === String(form.value.academic_year))
+  curriculumMissingYear.value = !match
+  if (match && curriculumSelection.value.academic_year_id !== match.id) {
+    curriculumSelection.value.academic_year_id = match.id
     curriculumSelection.value.term_id = ''
     curriculumSelection.value.theme_branch = ''
     curriculumSelection.value.curriculum_topic_id = ''
-  } else if (changedField === 'term_id') {
+    selectedTopicIds.value = {}
+    loaTopicDetail.value = null
+    selectedLearningOutcomeIds.value = {}
+    loadCurriculumMeta()
+  }
+}
+
+watch(() => curriculumMeta.value?.academic_years, syncCurriculumAcademicYear)
+watch(() => form.value.academic_year, syncCurriculumAcademicYear)
+
+// Academic year is now resolved automatically (see syncCurriculumAcademicYear above) - only Term
+// and Theme/Branch are still picked directly by the teacher.
+const onCurriculumStepChange = async (changedField: 'term_id' | 'theme_branch') => {
+  if (changedField === 'term_id') {
     curriculumSelection.value.theme_branch = ''
     curriculumSelection.value.curriculum_topic_id = ''
     // Changing the term invalidates any AOI/EOC topic selections made under the old term.

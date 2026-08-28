@@ -17,14 +17,16 @@ export function createInteractiveCanvas(el: HTMLCanvasElement, width: number, he
     height,
     selection: true,
     preserveObjectStacking: true,
-    // Fabric enables retina/HiDPI scaling by default, which multiplies the canvas's internal
-    // pixel buffer by devicePixelRatio and scales the context to compensate. Combined with our
-    // percentage-based CSS sizing (width/height:100%, scaling the element to fit its container
-    // rather than a fixed pixel size), the two scaling systems fight each other and can leave
-    // freshly-drawn/added objects rendered outside the visible area - looking like they vanish
-    // the instant a stroke or object is committed. Disabled to keep pixel math simple and 1:1,
-    // matching the plain-Canvas2D engine this replaced (which never did any DPR scaling either).
-    enableRetinaScaling: false,
+    // Retina/HiDPI scaling multiplies the canvas's internal pixel buffer by devicePixelRatio and
+    // pre-scales the context to compensate, so text/strokes rasterize at full display resolution
+    // instead of being upscaled/blurred by the browser (this is what made typed text look soft
+    // compared to native DOM text). Fabric applies this scaling purely to the backing-store pixel
+    // count (canvas.width/height HTML attributes via setCanvasDimensions) - it never touches the
+    // element's CSS width/height, which our own layerStyle override below controls independently,
+    // so it doesn't fight the percentage-based CSS sizing the way an earlier version of this code
+    // apparently once did. Fabric's own upper/lower canvas pair are kept in sync automatically
+    // (CanvasDOMManager.setDimensions applies the same retinaScaling to both).
+    enableRetinaScaling: true,
     renderOnAddRemove: true
   })
   canvas.freeDrawingBrush = new PencilBrush(canvas)
@@ -47,7 +49,7 @@ export function createInteractiveCanvas(el: HTMLCanvasElement, width: number, he
 }
 
 export function createStaticCanvas(el: HTMLCanvasElement, width: number, height: number): StaticCanvas {
-  const canvas = new StaticCanvas(el, { width, height, enableRetinaScaling: false })
+  const canvas = new StaticCanvas(el, { width, height, enableRetinaScaling: true })
   canvas.lowerCanvasEl.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; display:block;'
   return canvas
 }
@@ -184,15 +186,50 @@ export function createShapeObject(
   return obj
 }
 
-export function createTextObject(point: { x: number; y: number }, color: string, fontSize: number): Textbox {
+// Default font size is a fixed, readable value rather than derived from the pen's strokeWidth -
+// strokeWidth is a pen/highlighter concept and produced odd tiny/huge starting sizes for text.
+export const DEFAULT_TEXT_FONT_SIZE = 16
+export const DEFAULT_TEXT_FONT_FAMILY = 'Arial, Helvetica, sans-serif'
+
+// Default typing-space width - callers pass a canvas-relative value where possible (see
+// AnnotationCanvas.vue's textBoxWidth()); this is only the fallback when none is given.
+export const DEFAULT_TEXT_BOX_WIDTH = 380
+
+export function createTextObject(point: { x: number; y: number }, color: string, fontSize: number = DEFAULT_TEXT_FONT_SIZE, width: number = DEFAULT_TEXT_BOX_WIDTH): Textbox {
   const obj = new Textbox('', {
     left: point.x,
     top: point.y,
-    width: 200,
+    width,
     fontSize,
+    fontFamily: DEFAULT_TEXT_FONT_FAMILY,
+    fontWeight: 'bold',
+    fontStyle: 'normal',
+    underline: false,
+    textAlign: 'left',
+    lineHeight: 1.3,
     fill: color,
-    editable: true
+    editable: true,
+    // A visible outline only while this object is the active/selected one (Fabric only draws
+    // these controls for the active object) - deselected it renders as plain text with no box,
+    // so the final answer looks like natural writing rather than a permanent form field. Black
+    // (normal weight, not bold) so the active typing area reads clearly against any background/
+    // page colour without the border overpowering it. Fabric swaps in editingBorderColor (default
+    // a faint translucent blue) the instant the object is actually being typed into - which is
+    // the state you're in almost the whole time you're using this tool - so both need to be set
+    // or only the rarer "selected but not editing" state gets the black border.
+    borderColor: '#000000',
+    editingBorderColor: '#000000',
+    cornerColor: '#000000',
+    cornerStyle: 'circle',
+    transparentCorners: false,
+    cornerSize: 9,
+    padding: 6
   })
+  // Rotating a typed answer isn't a meaningful action here, and Fabric's rotate handle sits
+  // ~40px above the object's own bounding box by default - for a box created near the top of the
+  // page (the common case) that handle pokes out above the page/canvas entirely, looking broken.
+  // Hiding just that one control (keeping the resize corners) avoids it regardless of position.
+  obj.setControlsVisibility({ mtr: false })
   tagObject(obj, 'text')
   return obj
 }
@@ -203,9 +240,40 @@ export function createTextObject(point: { x: number; y: number }, color: string,
 // HTML with no annotation surface at all. Returns both the normalized layer (for persistence-shape
 // consistency with every other layer in the system) and the pixel height the text actually needs,
 // so the caller can size its canvas to fit the answer instead of guessing a fixed height.
+// Typed answers are now authored as rich-text HTML (TypedAnswerEditor.vue, Tiptap-based) rather
+// than a plain string - readers of this file's output (TeacherMarkingCanvas.vue's marking overlay,
+// AssignmentResult.vue's read-only view) still expect a flat Fabric Textbox, so HTML is flattened
+// to readable plain text first. Legacy plain-text answers saved before this change pass through
+// untouched (no '<' content to match).
+function htmlToPlainText(html: string): string {
+  if (!/<[a-z][\s\S]*>/i.test(html)) return html
+
+  const container = document.createElement('div')
+  container.innerHTML = html
+
+  // Insert explicit line breaks / bullet-numbering prefixes for block-level and list elements
+  // before reading textContent, since textContent alone collapses all element boundaries with no
+  // separator at all (e.g. "<p>A</p><p>B</p>" -> "AB" instead of "A\nB").
+  container.querySelectorAll('li').forEach((li) => {
+    const ordered = li.parentElement?.tagName === 'OL'
+    const index = ordered ? Array.from(li.parentElement!.children).indexOf(li) + 1 : null
+    li.prepend(document.createTextNode(ordered ? `${index}. ` : '• '))
+    li.append(document.createElement('br'))
+  })
+  container.querySelectorAll('p, div, h1, h2, h3, h4, h5, h6').forEach((block) => {
+    block.append(document.createElement('br'))
+  })
+  container.querySelectorAll('br').forEach((br) => {
+    br.replaceWith(document.createTextNode('\n'))
+  })
+
+  return (container.textContent || '').replace(/\n{3,}/g, '\n\n').trim()
+}
+
 export function createTypedAnswerLayer(text: string, width: number): { layer: AnnotationLayerJSON; height: number } {
   const padding = 24
-  const textbox = new Textbox(text || '', {
+  const plainText = htmlToPlainText(text || '')
+  const textbox = new Textbox(plainText, {
     left: padding,
     top: padding,
     originX: 'left',

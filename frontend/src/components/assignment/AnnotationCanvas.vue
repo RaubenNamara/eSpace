@@ -59,12 +59,24 @@
       @insert="onSignatureInsert"
       @close="activeSignatureDialog = null"
     />
+
+    <TextFormatToolbar
+      v-if="textStyleSnapshot"
+      :style-snapshot="textStyleSnapshot"
+      @toggle="toggleTextFormat"
+      @set-font-family="(v: string) => applyTextFormat({ fontFamily: v })"
+      @set-font-size="(v: number) => applyTextFormat({ fontSize: v })"
+      @set-color="(v: string) => applyTextFormat({ fill: v })"
+      @set-align="setTextAlign"
+      @set-line-height="setLineHeight"
+      @set-width="setTextWidth"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick, type ComponentPublicInstance } from 'vue'
-import { Canvas, StaticCanvas, Point } from 'fabric'
+import { ref, shallowRef, computed, watch, onMounted, onBeforeUnmount, nextTick, type ComponentPublicInstance } from 'vue'
+import { Canvas, StaticCanvas, Point, Textbox } from 'fabric'
 import type { FabricObject } from 'fabric'
 import type { AnnotationLayerJSON, AnnotationLayerMode, AnnotationTool } from '@/types'
 import { EMPTY_ANNOTATION_LAYER, EMPTY_ANNOTATION_LAYERS } from '@/types'
@@ -72,6 +84,7 @@ import CommentPopup from './CommentPopup.vue'
 import ScoreBoxDialog from './ScoreBoxDialog.vue'
 import EquationDialog from './EquationDialog.vue'
 import SignaturePad from './SignaturePad.vue'
+import TextFormatToolbar, { type TextStyleSnapshot } from './TextFormatToolbar.vue'
 import { useAnnotationHistory } from '@/composables/useAnnotationHistory'
 import {
   createInteractiveCanvas,
@@ -84,7 +97,9 @@ import {
   createCommentMarker,
   createImageObject,
   createScoreBoxObject,
-  configureFreeDrawingBrush
+  configureFreeDrawingBrush,
+  DEFAULT_TEXT_FONT_SIZE,
+  DEFAULT_TEXT_BOX_WIDTH
 } from '@/composables/useAnnotationCanvas'
 import { ANNOTATION_CUSTOM_PROPS } from '@/types'
 
@@ -280,7 +295,10 @@ function applyToolMode(canvas: Canvas) {
   canvas.selection = t === 'select'
   canvas.getObjects().forEach(o => {
     o.selectable = t === 'select'
-    o.evented = t === 'select'
+    // Objects must stay evented (hit-testable) for the eraser too, or mouse:down's
+    // `if (e.target) canvas.remove(e.target)` never has a target to remove - Fabric simply can't
+    // detect what's under the cursor for a non-evented object, so nothing was ever erasable.
+    o.evented = t === 'select' || t === 'eraser'
   })
   if (isFreehand) {
     configureFreeDrawingBrush(canvas, t, props.color, props.strokeWidth)
@@ -316,9 +334,37 @@ function wireInteractiveEvents(canvas: Canvas) {
     canvas.requestRenderAll()
     onHistoryEvent()
   })
-  canvas.on('selection:created', (e: any) => { selectedCount.value = e.selected?.length || 0 })
-  canvas.on('selection:updated', (e: any) => { selectedCount.value = e.selected?.length || 0 })
-  canvas.on('selection:cleared', () => { selectedCount.value = 0 })
+  canvas.on('selection:created', (e: any) => { selectedCount.value = e.selected?.length || 0; refreshActiveTextObject() })
+  canvas.on('selection:updated', (e: any) => { selectedCount.value = e.selected?.length || 0; refreshActiveTextObject() })
+  canvas.on('selection:cleared', () => { selectedCount.value = 0; activeTextObject.value = null })
+
+  // Rich-text formatting toolbar visibility/state - kept in sync with whichever text annotation
+  // is currently active/being edited, independent of the generic selection tracking above (which
+  // only fires on canvas-level selection changes, not on cursor movement or in-progress typing).
+  canvas.on('text:editing:entered', () => refreshActiveTextObject())
+  canvas.on('text:editing:exited', () => refreshActiveTextObject())
+  canvas.on('text:selection:changed', () => { textStyleVersion.value++ })
+  // Typing itself never fires object:added/removed/modified (those only cover whole-object
+  // add/remove/drag/resize/rotate gestures) - without also hooking text:changed here, a typed
+  // answer was never actually reaching the undo stack or the debounced autosave unless the
+  // student happened to click away from the box afterwards. Every keystroke queues through the
+  // same onHistoryEvent() microtask used everywhere else, so the parent's own save-debounce still
+  // collapses rapid typing into one network request.
+  canvas.on('text:changed', () => {
+    textStyleVersion.value++
+    onHistoryEvent()
+  })
+
+  // Keep a text annotation's box within the visible page bounds while being dragged, "where
+  // possible" (spec section 5) - only applied to text so it never changes how other tools behave.
+  canvas.on('object:moving', (e: any) => {
+    const obj = e.target
+    if (!obj || obj.annotationType !== 'text') return
+    const w = obj.getScaledWidth ? obj.getScaledWidth() : (obj.width ?? 0)
+    const h = obj.getScaledHeight ? obj.getScaledHeight() : (obj.height ?? 0)
+    obj.left = Math.min(Math.max(obj.left ?? 0, 0), Math.max(0, props.width - w))
+    obj.top = Math.min(Math.max(obj.top ?? 0, 0), Math.max(0, props.height - h))
+  })
 
   canvas.on('mouse:down', (e: any) => {
     const point = { x: e.scenePoint.x, y: e.scenePoint.y }
@@ -344,7 +390,7 @@ function wireInteractiveEvents(canvas: Canvas) {
     }
 
     if (t === 'text') {
-      const obj = createTextObject(point, props.color, Math.max(14, props.strokeWidth * 5))
+      const obj = createTextObject(point, props.color, DEFAULT_TEXT_FONT_SIZE, textBoxWidth())
       canvas.add(obj)
       canvas.setActiveObject(obj)
       obj.enterEditing()
@@ -429,6 +475,136 @@ function wireInteractiveEvents(canvas: Canvas) {
       }
     }
   })
+}
+
+// --- Rich-text formatting (Textbox annotations only) -----------------------------------------
+// The formatting toolbar is a plain HTML overlay, not part of the Fabric canvas, so clicking its
+// buttons never fires Fabric's own mouse:down/selection handlers - it drives the active text
+// object directly through Fabric's IText selection-style API instead.
+// shallowRef, not ref: a plain ref() would deep-wrap the Fabric object itself in a reactive
+// Proxy. Fabric's own canvas holds the RAW (un-proxied) object in its internal objects array and
+// keys some internal state off that raw reference's identity - mutating the Vue-proxied copy via
+// obj.set(...)/setSelectionStyles(...) would silently diverge from what the canvas actually
+// tracks/renders, making every formatting button appear to do nothing. Every other Fabric
+// reference in this file (interactiveCanvas, previewObject, clipboardObject, etc.) is a plain
+// non-reactive variable for the same reason - this one needs to be reactive (the template reads
+// it) but must stay shallow.
+const activeTextObject = shallowRef<InstanceType<typeof Textbox> | null>(null)
+// Bumped on every style-relevant change (selection move, typing) so textStyleSnapshot recomputes
+// even when the identity of activeTextObject itself hasn't changed.
+const textStyleVersion = ref(0)
+
+function refreshActiveTextObject() {
+  const obj = interactiveCanvas?.getActiveObject() as any
+  activeTextObject.value = obj && obj.annotationType === 'text' ? obj : null
+  textStyleVersion.value++
+}
+
+// Fabric stores rich-text overrides per character range; reading "the current style" means
+// reading the style at the cursor (or the start of the current selection), falling back to the
+// object's own top-level property for any character position with no per-character override.
+function getCursorCharStyle(obj: any): Record<string, any> {
+  try {
+    const idx = obj.isEditing ? (obj.selectionStart ?? 0) : 0
+    const len = obj.text?.length ?? 0
+    if (len === 0) return {}
+    const probeStart = Math.min(idx, Math.max(0, len - 1))
+    const styles = obj.getSelectionStyles ? obj.getSelectionStyles(probeStart, probeStart + 1, true) : []
+    return styles?.[0] || {}
+  } catch {
+    return {}
+  }
+}
+
+const textStyleSnapshot = computed<TextStyleSnapshot | null>(() => {
+  void textStyleVersion.value
+  const obj = activeTextObject.value as any
+  if (!obj) return null
+  const charStyle = getCursorCharStyle(obj)
+  return {
+    bold: (charStyle.fontWeight ?? obj.fontWeight) === 'bold',
+    italic: (charStyle.fontStyle ?? obj.fontStyle) === 'italic',
+    underline: !!(charStyle.underline ?? obj.underline),
+    fontFamily: charStyle.fontFamily ?? obj.fontFamily ?? 'Arial, Helvetica, sans-serif',
+    fontSize: Math.round(charStyle.fontSize ?? obj.fontSize ?? DEFAULT_TEXT_FONT_SIZE),
+    color: charStyle.fill ?? obj.fill ?? '#000000',
+    align: obj.textAlign ?? 'left',
+    lineHeight: obj.lineHeight ?? 1.3,
+    width: Math.round(obj.width ?? DEFAULT_TEXT_BOX_WIDTH)
+  }
+})
+
+// Applies to the current text selection (a real, non-empty highlighted range while editing) if
+// one exists, otherwise to the whole object - matches section 4's "apply to selected text, or the
+// whole object if the whole object is selected" rule. Re-focuses the hidden textarea Fabric uses
+// to capture keystrokes afterwards, since clicking an HTML toolbar button steals DOM focus away
+// from it (Fabric keeps the object "in editing" regardless, but the user couldn't otherwise keep
+// typing without clicking back into the text box first).
+function applyTextFormat(patch: Record<string, any>, wholeObjectOnly = false) {
+  const obj = activeTextObject.value as any
+  if (!obj || !interactiveCanvas) return
+  const start = obj.selectionStart ?? 0
+  const end = obj.selectionEnd ?? 0
+  const hasRealSelection = obj.isEditing && end > start
+  if (hasRealSelection && !wholeObjectOnly) {
+    obj.setSelectionStyles(patch, start, end)
+  } else {
+    obj.set(patch)
+  }
+  obj.dirty = true
+  interactiveCanvas.requestRenderAll()
+  textStyleVersion.value++
+  onHistoryEvent()
+  if (obj.isEditing) obj.hiddenTextarea?.focus()
+}
+
+function toggleTextFormat(key: 'bold' | 'italic' | 'underline') {
+  const snap = textStyleSnapshot.value
+  if (!snap) return
+  if (key === 'bold') applyTextFormat({ fontWeight: snap.bold ? 'normal' : 'bold' })
+  else if (key === 'italic') applyTextFormat({ fontStyle: snap.italic ? 'normal' : 'italic' })
+  else applyTextFormat({ underline: !snap.underline })
+}
+
+// Alignment/line-height/width are paragraph-level Fabric properties (not per-character), so these
+// always apply to the whole text object even mid-selection.
+function setTextAlign(align: string) {
+  applyTextFormat({ textAlign: align }, true)
+}
+function setLineHeight(lineHeight: number) {
+  applyTextFormat({ lineHeight }, true)
+}
+function setTextWidth(width: number) {
+  const obj = activeTextObject.value as any
+  if (!obj || !interactiveCanvas) return
+  obj.set({ width: Math.max(60, width) })
+  obj.initDimensions?.()
+  obj.setCoords()
+  interactiveCanvas.requestRenderAll()
+  textStyleVersion.value++
+  onHistoryEvent()
+}
+
+// A generously-sized typing area ("big enough" to actually write in), but capped to the page's
+// own width minus margins so it can never overflow off either edge of the canvas.
+function textBoxWidth(): number {
+  return Math.min(420, Math.max(220, props.width - 80))
+}
+
+// --- "Click T -> a text box immediately appears, cursor immediately active" (spec section 3) ---
+// Click-to-place (the mouse:down 'text' branch above) still works for adding a second/third box
+// once already in Text mode - this only fires on the transition INTO the text tool itself.
+let textCascadeStep = 0
+function createTextAtDefault() {
+  if (!interactiveCanvas) return
+  const offset = (textCascadeStep % 6) * 24
+  textCascadeStep++
+  const obj = createTextObject({ x: 40 + offset, y: 60 + offset }, props.color, DEFAULT_TEXT_FONT_SIZE, textBoxWidth())
+  interactiveCanvas.add(obj)
+  interactiveCanvas.setActiveObject(obj)
+  obj.enterEditing()
+  obj.selectAll()
+  interactiveCanvas.requestRenderAll()
 }
 
 // --- Pan tool: scrolls the nearest scrollable ancestor instead of drawing ---
@@ -640,6 +816,12 @@ defineExpose({ undo, redo, clearAll, clearSelected })
 // --- Reactive wiring ---
 watch(() => props.tool, () => {
   if (interactiveCanvas) applyToolMode(interactiveCanvas)
+})
+
+watch(() => props.tool, (newTool, oldTool) => {
+  if (newTool === 'text' && oldTool !== 'text') {
+    createTextAtDefault()
+  }
 })
 
 watch(() => [props.color, props.strokeWidth], () => {

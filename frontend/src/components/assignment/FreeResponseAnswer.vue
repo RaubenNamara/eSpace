@@ -10,76 +10,40 @@
       </div>
     </div>
 
-    <!-- Typed answer + before-submitting sidebar -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      <div class="lg:col-span-2">
-        <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Typed answer</label>
-        <textarea
-          :value="modelValue"
-          :disabled="readonly"
-          class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white disabled:opacity-60"
-          :rows="rows"
-          :placeholder="placeholder"
-          @input="$emit('update:modelValue', ($event.target as HTMLTextAreaElement).value)"
-        ></textarea>
-      </div>
-      <div class="bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-        <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-1">Before submitting</h4>
-        <p class="text-xs text-gray-600 dark:text-gray-400 mb-3">
-          Check that your typed answer, drawing, and uploads are complete. Submitted work cannot be edited.
-        </p>
-        <span
-          class="inline-block px-2.5 py-1 rounded-full text-xs font-medium border"
-          :class="readonly
-            ? 'border-green-300 text-green-700 bg-green-50 dark:border-green-700 dark:text-green-300 dark:bg-green-900/20'
-            : 'border-rose-300 text-rose-700 bg-rose-50 dark:border-rose-700 dark:text-rose-300 dark:bg-rose-900/20'"
-        >
-          {{ readonly ? 'Submitted' : 'Editable draft' }}
-        </span>
-      </div>
+    <!-- Answer method selector -->
+    <div>
+      <p class="text-sm font-semibold text-gray-900 dark:text-white mb-1 flex items-center gap-1.5">
+        <span aria-hidden="true">✏️</span> Answer the Question
+      </p>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Choose how you want to answer:</p>
+      <AnswerModeSelector v-model="answerMode" :readonly="readonly" />
     </div>
 
-    <!-- Add a PDF or image file -->
+    <!-- Unified answer workspace - only the selected mode is shown at a time, but nothing in the
+         other two modes' data is ever cleared, so switching modes never loses work. -->
     <div>
-      <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Your Answer Space</label>
-      <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">Select the Pen or Pencil tool below, then write or draw your answer directly on the page.</p>
+      <template v-if="answerMode === 'type'">
+        <p class="text-sm font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-1.5">
+          <span aria-hidden="true">⌨️</span> Type your Answer
+        </p>
+        <TypedAnswerEditor
+          :model-value="modelValue"
+          :readonly="readonly"
+          :placeholder="placeholder"
+          @update:model-value="$emit('update:modelValue', $event)"
+        />
+      </template>
 
-      <p v-if="autoCreating" class="text-sm text-gray-500 dark:text-gray-400">Preparing your workspace…</p>
-
-      <div
-        v-else-if="!attachment && !readonly"
-        class="free-response-answer__dropzone"
-        :class="{ 'free-response-answer__dropzone--active': isDragging }"
-        @click="fileInputRef?.click()"
-        @dragover.prevent="isDragging = true"
-        @dragleave.prevent="isDragging = false"
-        @drop.prevent="onDrop"
-      >
-        <input ref="fileInputRef" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" class="hidden" :disabled="uploading" @change="onFileSelected">
-        <span class="free-response-answer__dropzone-icon">⬆</span>
-        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Add files</span>
-        <span class="text-xs text-gray-500 dark:text-gray-400">PDF, JPG, PNG, or WEBP files are supported.</span>
-      </div>
-      <p v-else-if="!attachment" class="text-sm text-gray-500 dark:text-gray-400">No file uploaded.</p>
-
-      <p v-if="uploading && !autoCreating" class="text-sm text-gray-500 dark:text-gray-400 mt-2">Uploading…</p>
-      <p v-if="uploadError" class="text-sm text-red-600 dark:text-red-400 mt-2">{{ uploadError }}</p>
-
-      <template v-if="attachment">
-        <div class="free-response-answer__replace">
-          <div>
-            <p class="text-sm font-semibold text-gray-900 dark:text-white">✏️ Write your answer below</p>
-            <p class="text-xs text-gray-500 dark:text-gray-400">Select Pen or Pencil, then write or draw directly on the page.</p>
-          </div>
-          <label v-if="!readonly" class="free-response-answer__replace-btn">
-            Replace file
-            <input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" class="hidden" :disabled="uploading" @change="onFileSelected">
-          </label>
-        </div>
-        <div class="free-response-answer__panel">
+      <template v-else-if="answerMode === 'write'">
+        <p class="text-sm font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-1.5">
+          <span aria-hidden="true">✍️</span> Write
+        </p>
+        <p v-if="autoCreating" class="text-sm text-gray-500 dark:text-gray-400">Preparing your workspace…</p>
+        <div v-else-if="attachment" class="free-response-answer__panel">
           <AnnotationToolbar
             v-if="!readonly"
             variant="answer"
+            simplified
             :tool="pdfTool"
             :color="pdfColor"
             :stroke-width="pdfStrokeWidth"
@@ -127,6 +91,41 @@
             />
           </div>
         </div>
+        <p v-else-if="readonly" class="text-sm text-gray-500 dark:text-gray-400">No answer provided.</p>
+        <p v-else class="text-sm text-gray-500 dark:text-gray-400">Use the tools above to write or draw your answer.</p>
+      </template>
+
+      <template v-else>
+        <p class="text-sm font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-1.5">
+          <span aria-hidden="true">📎</span> Upload your completed work
+        </p>
+
+        <p v-if="uploading" class="text-sm text-gray-500 dark:text-gray-400 mb-2">Uploading…</p>
+        <p v-if="uploadError" class="text-sm text-red-600 dark:text-red-400 mb-2">{{ uploadError }}</p>
+
+        <div v-if="attachment && attachment.originalName" class="free-response-answer__replace mb-3">
+          <p class="text-sm text-gray-900 dark:text-white">📄 {{ attachment.originalName }}</p>
+          <label v-if="!readonly" class="free-response-answer__replace-btn">
+            Replace File
+            <input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" class="hidden" :disabled="uploading" @change="onFileSelected">
+          </label>
+        </div>
+        <p v-else class="text-sm text-gray-500 dark:text-gray-400 mb-2">No file uploaded yet.</p>
+
+        <div
+          v-if="!readonly"
+          class="free-response-answer__dropzone"
+          :class="{ 'free-response-answer__dropzone--active': isDragging }"
+          @click="fileInputRef?.click()"
+          @dragover.prevent="isDragging = true"
+          @dragleave.prevent="isDragging = false"
+          @drop.prevent="onDrop"
+        >
+          <input ref="fileInputRef" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" class="hidden" :disabled="uploading" @change="onFileSelected">
+          <span class="free-response-answer__dropzone-icon">⬆</span>
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Choose File</span>
+          <span class="text-xs text-gray-500 dark:text-gray-400">PDF, JPG, PNG, or WEBP files are supported.</span>
+        </div>
       </template>
     </div>
   </div>
@@ -139,6 +138,8 @@ import type { AnnotationLayerJSON, AnnotationTool, AssignmentQuestion } from '@/
 import AnnotationToolbar from './AnnotationToolbar.vue'
 import StudentAnswerCanvas from './StudentAnswerCanvas.vue'
 import PdfAnnotationViewer from './PdfAnnotationViewer.vue'
+import AnswerModeSelector, { type AnswerMode } from './AnswerModeSelector.vue'
+import TypedAnswerEditor from './TypedAnswerEditor.vue'
 import { resolveAssetUrl } from '@/utils/url'
 
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp']
@@ -186,6 +187,20 @@ const pdfLayers = ref<Record<number, AnnotationLayerJSON>>({ ...props.initialAnn
 const pdfSaveStatus = ref('Ready to save')
 const pdfPageCount = ref(0)
 const imageDims = ref({ width: 800, height: 1000 })
+
+// Which of the three answer channels is shown - purely a client-side UI preference, recomputed
+// fresh on every load (not persisted), inferred from whichever channel already has real content
+// so a returning student lands back on the view that matches their existing work.
+function inferInitialMode(): AnswerMode {
+  if ((props.question as any).response_type === 'pdf_annotation') return 'write'
+  const plainText = (props.modelValue || '').replace(/<[^>]*>/g, '').trim()
+  if (plainText.length > 0) return 'type'
+  const hasDrawnContent = Object.values(props.initialAnnotations || {}).some(layer => (layer?.objects?.length || 0) > 0)
+  if (hasDrawnContent) return 'write'
+  return 'type'
+}
+
+const answerMode = ref<AnswerMode>(inferInitialMode())
 
 const isImageAttachment = computed(() => {
   const path = attachment.value?.path || ''
@@ -356,8 +371,9 @@ function onPdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
 <style scoped>
 .free-response-answer__panel {
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 :global(.dark) .free-response-answer__panel {

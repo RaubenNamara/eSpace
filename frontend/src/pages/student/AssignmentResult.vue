@@ -64,7 +64,7 @@
                 <p v-else-if="question.scenario_text" class="text-gray-700 dark:text-gray-300 mb-1 break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.scenario_text"></p>
               </div>
             </div>
-            <span v-if="(mode === 'result' || oversightRole) && question.question_mark" class="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+            <span v-if="(mode === 'result' || oversightRole) && question.question_mark" class="text-sm font-bold text-red-600 dark:text-red-400 whitespace-nowrap">
               {{ question.question_mark.marks_awarded ?? '—' }} / {{ question.marks }}
             </span>
           </div>
