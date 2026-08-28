@@ -123,16 +123,16 @@
       </div>
     </div>
     <!-- View Enrolled Students Modal -->
-    <div v-if="showViewEnrolledModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+    <div v-if="showViewEnrolledModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-2 sm:p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[95vh] sm:max-h-[90vh] flex flex-col">
         <!-- Header -->
-        <div class="bg-gradient-to-r from-green-600 to-teal-600 px-6 py-5 flex-shrink-0">
-          <div class="flex items-center justify-between">
-            <div>
-              <h2 class="text-2xl font-bold text-white">View Enrolled Students</h2>
-              <p class="text-green-100 text-sm mt-1">View students enrolled by department and academic year</p>
+        <div class="bg-gradient-to-r from-green-600 to-teal-600 px-4 sm:px-6 py-4 sm:py-5 flex-shrink-0 rounded-t-2xl">
+          <div class="flex items-center justify-between gap-3">
+            <div class="min-w-0">
+              <h2 class="text-lg sm:text-2xl font-bold text-white truncate">View Enrolled Students</h2>
+              <p class="text-green-100 text-xs sm:text-sm mt-1 hidden sm:block">View students enrolled by department and academic year</p>
             </div>
-            <button @click="showViewEnrolledModal = false" class="text-white/80 hover:text-white transition-colors">
+            <button @click="showViewEnrolledModal = false" class="text-white/80 hover:text-white transition-colors flex-shrink-0 p-1 -m-1">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
@@ -141,15 +141,15 @@
         </div>
 
         <!-- Filters -->
-        <div class="p-6 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="p-4 sm:p-6 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-900 space-y-3 flex-shrink-0">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Department</label>
               <select
                 v-model="viewFilters.department_id"
                 @change="fetchEnrolledStudents"
                 :disabled="loadingDepartments"
-                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-white dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
+                class="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-white dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed text-sm"
               >
                 <option value="">All Departments</option>
                 <option v-if="loadingDepartments" disabled>Loading departments...</option>
@@ -165,7 +165,7 @@
                 v-model="viewFilters.academic_year_id"
                 @change="fetchEnrolledStudents"
                 :disabled="loadingAcademicYears"
-                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-white dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
+                class="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-white dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed text-sm"
               >
                 <option value="">All Academic Years</option>
                 <option v-if="loadingAcademicYears" disabled>Loading academic years...</option>
@@ -181,7 +181,7 @@
                 v-model="viewFilters.class_id"
                 @change="fetchEnrolledStudents"
                 :disabled="loadingClasses"
-                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-white dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
+                class="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-white dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed text-sm"
               >
                 <option value="">All Classes</option>
                 <option v-if="loadingClasses" disabled>Loading classes...</option>
@@ -192,65 +192,122 @@
               </select>
             </div>
           </div>
+
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="relative flex-1 min-w-[200px]">
+              <svg class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 10.5A6.5 6.5 0 114 10.5a6.5 6.5 0 0113 0z"></path>
+              </svg>
+              <input
+                v-model="viewSearch"
+                type="text"
+                placeholder="Search by name or admission number..."
+                class="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white dark:bg-gray-700 dark:text-white"
+              >
+            </div>
+            <span v-if="!loadingEnrolled" class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+              {{ visibleEnrolledStudentsList.length }} of {{ enrolledStudentsList.length }} shown
+            </span>
+          </div>
         </div>
 
-        <!-- Enrolled Students Table -->
+        <!-- Enrolled Students List -->
         <div class="flex-1 overflow-y-auto">
           <div v-if="loadingEnrolled" class="flex items-center justify-center h-64">
-            <div class="text-gray-500 dark:text-gray-400">Loading enrolled students...</div>
+            <div class="text-gray-500 dark:text-gray-400 text-sm">Loading enrolled students...</div>
           </div>
-          <div v-else-if="enrolledStudentsList.length === 0" class="flex items-center justify-center h-64">
-            <div class="text-gray-500 dark:text-gray-400">No enrolled students found</div>
+          <div v-else-if="enrolledStudentsList.length === 0" class="flex items-center justify-center h-64 px-6 text-center">
+            <div class="text-gray-500 dark:text-gray-400 text-sm">No enrolled students found for these filters</div>
           </div>
-          <div v-else class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead class="bg-gray-50 dark:bg-gray-900">
-              <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Student</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Admission No</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Department</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Class</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Academic Year</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              <tr v-for="student in enrolledStudentsList" :key="student.enrollment_id">
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                  {{ student.first_name }} {{ student.last_name }}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                  {{ student.admission_number }}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                  {{ student.department_name || 'N/A' }}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                  {{ student.class_name ? `${student.class_name} (${student.level} - ${student.stream_name || 'N/A'})` : 'N/A' }}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                  {{ student.academic_year || 'N/A' }}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+          <div v-else-if="visibleEnrolledStudentsList.length === 0" class="flex items-center justify-center h-64 px-6 text-center">
+            <div class="text-gray-500 dark:text-gray-400 text-sm">No students match "{{ viewSearch }}"</div>
+          </div>
+          <template v-else>
+            <!-- Desktop table -->
+            <div class="hidden sm:block overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead class="bg-gray-50 dark:bg-gray-900 sticky top-0 z-10">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Student</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Admission No</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Department</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Class</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Academic Year</th>
+                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  <tr v-for="student in visibleEnrolledStudentsList" :key="student.enrollment_id" class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                    <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                      {{ student.first_name }} {{ student.last_name }}
+                    </td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      {{ student.admission_number }}
+                    </td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      {{ student.department_name || 'N/A' }}
+                    </td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      {{ student.class_name ? `${student.class_name} (${student.level} - ${student.stream_name || 'N/A'})` : 'N/A' }}
+                    </td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      {{ student.academic_year || 'N/A' }}
+                    </td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-right">
+                      <button
+                        v-if="student.enrollment_id"
+                        @click="deenrollSingleStudent(student.enrollment_id)"
+                        class="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                      >
+                        De-enroll
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Mobile cards -->
+            <div class="sm:hidden p-3 space-y-2">
+              <div
+                v-for="student in visibleEnrolledStudentsList"
+                :key="student.enrollment_id"
+                class="border border-gray-200 dark:border-gray-700 rounded-lg p-3 bg-white dark:bg-gray-800"
+              >
+                <div class="flex items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ student.first_name }} {{ student.last_name }}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ student.admission_number }}</p>
+                  </div>
                   <button
                     v-if="student.enrollment_id"
                     @click="deenrollSingleStudent(student.enrollment_id)"
-                    class="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                    class="flex-shrink-0 text-xs font-medium text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 border border-red-200 dark:border-red-900/50 rounded-full px-2.5 py-1"
                   >
                     De-enroll
                   </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          </div>
+                </div>
+                <div class="mt-2 flex flex-wrap gap-1.5">
+                  <span class="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400">
+                    {{ student.department_name || 'N/A' }}
+                  </span>
+                  <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                    {{ student.class_name ? `${student.class_name} (${student.stream_name || 'N/A'})` : 'N/A' }}
+                  </span>
+                  <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                    {{ student.academic_year || 'N/A' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </template>
         </div>
 
         <!-- Footer -->
-        <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-end flex-shrink-0">
+        <div class="px-4 sm:px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-end flex-shrink-0 rounded-b-2xl">
           <button
             @click="showViewEnrolledModal = false"
-            class="px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 font-medium"
+            class="w-full sm:w-auto px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 font-medium"
           >
             Close
           </button>
@@ -259,16 +316,16 @@
     </div>
 
     <!-- Enroll Students Modal -->
-    <div v-if="showEnrollModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+    <div v-if="showEnrollModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-2 sm:p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[95vh] sm:max-h-[90vh] flex flex-col">
         <!-- Header -->
-        <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-5 flex-shrink-0">
-          <div class="flex items-center justify-between">
-            <div>
-              <h2 class="text-2xl font-bold text-white">Enroll Students in Departments</h2>
-              <p class="text-indigo-100 text-sm mt-1">Assign students to their respective departments</p>
+        <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-4 sm:px-6 py-4 sm:py-5 flex-shrink-0 rounded-t-2xl">
+          <div class="flex items-center justify-between gap-3">
+            <div class="min-w-0">
+              <h2 class="text-lg sm:text-2xl font-bold text-white truncate">Enroll Students in Departments</h2>
+              <p class="text-indigo-100 text-xs sm:text-sm mt-1 hidden sm:block">Assign students to their respective departments</p>
             </div>
-            <button @click="showEnrollModal = false" class="text-white/80 hover:text-white transition-colors">
+            <button @click="showEnrollModal = false" class="text-white/80 hover:text-white transition-colors flex-shrink-0 p-1 -m-1">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
@@ -279,7 +336,9 @@
         <!-- Form -->
         <form @submit.prevent="enrollStudents" class="flex-1 flex flex-col min-h-0">
           <!-- Form Content -->
-          <div class="flex-1 overflow-y-auto p-6 space-y-6 min-h-0">
+          <div class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 sm:space-y-6 min-h-0">
+            <!-- Department / Academic Year / Class Selection -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <!-- Department Selection -->
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Department <span class="text-red-500">*</span></label>
@@ -287,7 +346,7 @@
                 v-model="enrollData.department_id"
                 @change="filterStudentsByDepartment"
                 :disabled="loadingDepartments"
-                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
+                class="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed text-sm"
               >
                 <option value="">Select Department</option>
                 <option value="__all__">ðŸ« Enroll in All Compulsory Departments</option>
@@ -297,10 +356,6 @@
                   {{ dept.name }}
                 </option>
               </select>
-              <p v-if="enrollData.department_id === '__all__'" class="mt-2 text-xs text-indigo-600 dark:text-indigo-400">
-                {{ selectedClassLevel === 'A Level' ? 'A Level: enrolls in GP.' : 'O Level: enrolls in MTC, BIO, CHEM, PHY, HIST, GEOG, and ENG.' }}
-                <span v-if="!selectedClassLevel">Select a class below to see which departments apply.</span>
-              </p>
             </div>
 
             <!-- Academic Year Selection -->
@@ -310,7 +365,7 @@
                 v-model="enrollData.academic_year_id"
                 @change="filterStudentsByDepartment"
                 :disabled="loadingAcademicYears"
-                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
+                class="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed text-sm"
               >
                 <option value="">Select Academic Year</option>
                 <option v-if="loadingAcademicYears" disabled>Loading academic years...</option>
@@ -328,7 +383,7 @@
                 v-model="enrollData.class_id"
                 @change="filterStudentsByDepartment"
                 :disabled="loadingClasses"
-                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
+                class="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed text-sm"
               >
                 <option value="">Select Class</option>
                 <option v-if="loadingClasses" disabled>Loading classes...</option>
@@ -338,18 +393,45 @@
                 </option>
               </select>
             </div>
+            </div>
+            <p v-if="enrollData.department_id === '__all__'" class="text-xs text-indigo-600 dark:text-indigo-400 -mt-2">
+              {{ selectedClassLevel === 'A Level' ? 'A Level: enrolls in GP.' : 'O Level: enrolls in MTC, BIO, CHEM, PHY, HIST, GEOG, and ENG.' }}
+              <span v-if="!selectedClassLevel">Select a class below to see which departments apply.</span>
+            </p>
 
             <!-- Student Selection -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Select Students <span class="text-red-500">*</span>
-                <span v-if="enrollData.student_ids.length > 0" class="ml-1 text-indigo-600 dark:text-indigo-400 font-semibold">
-                  ({{ enrollData.student_ids.length }} selected)
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Select Students <span class="text-red-500">*</span>
+                  <span v-if="enrollData.student_ids.length > 0" class="ml-1 text-indigo-600 dark:text-indigo-400 font-semibold">
+                    ({{ enrollData.student_ids.length }} selected)
+                  </span>
+                </label>
+                <span v-if="filteredStudents.length > 0" class="text-xs text-gray-500 dark:text-gray-400">
+                  {{ visibleStudents.length }} of {{ filteredStudents.length }} shown
                 </span>
-              </label>
-              <div class="border border-gray-300 dark:border-gray-600 rounded-lg max-h-64 overflow-y-auto">
-                <div class="p-2 space-y-2">
-                  <label class="flex items-center p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded cursor-pointer border-b dark:border-gray-600">
+              </div>
+
+              <!-- Search -->
+              <div v-if="filteredStudents.length > 0" class="relative mb-2">
+                <svg class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 10.5A6.5 6.5 0 114 10.5a6.5 6.5 0 0113 0z"></path>
+                </svg>
+                <input
+                  v-model="studentSearch"
+                  type="text"
+                  placeholder="Search by name or admission number..."
+                  class="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 dark:text-white"
+                >
+              </div>
+
+              <div class="border border-gray-300 dark:border-gray-600 rounded-lg max-h-56 sm:max-h-64 overflow-y-auto">
+                <div v-if="loadingStudentsForClass" class="p-4 text-sm text-gray-500 dark:text-gray-400 text-center">
+                  Loading students...
+                </div>
+                <div v-else class="p-2 space-y-1">
+                  <label v-if="visibleStudents.length > 0" class="flex items-center p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded cursor-pointer border-b dark:border-gray-600">
                     <input
                       type="checkbox"
                       @change="toggleSelectAll"
@@ -358,29 +440,45 @@
                     >
                     <span class="ml-3 text-sm font-medium text-gray-700 dark:text-gray-300">Select All</span>
                   </label>
-                  <label v-for="student in filteredStudents" :key="student.id" class="flex items-center justify-between p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded cursor-pointer">
-                    <div class="flex items-center">
+                  <label
+                    v-for="student in visibleStudents"
+                    :key="student.id"
+                    class="flex items-center justify-between gap-2 p-2 rounded cursor-pointer"
+                    :class="enrolledStudentIds.includes(student.id) ? 'opacity-70' : 'hover:bg-gray-50 dark:hover:bg-gray-700'"
+                  >
+                    <div class="flex items-center min-w-0">
                       <input
                         type="checkbox"
                         :value="student.id"
                         v-model="enrollData.student_ids"
                         :disabled="enrolledStudentIds.includes(student.id)"
-                        class="w-4 h-4 text-indigo-600 border-gray-300 dark:border-gray-600 rounded focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        class="w-4 h-4 flex-shrink-0 text-indigo-600 border-gray-300 dark:border-gray-600 rounded focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                      <span class="ml-3 text-sm text-gray-700 dark:text-gray-300" :class="{'text-gray-400 dark:text-gray-500': enrolledStudentIds.includes(student.id)}">{{ student.first_name }} {{ student.last_name }} ({{ student.admission_number }})</span>
+                      <span class="ml-3 text-sm text-gray-700 dark:text-gray-300 truncate" :class="{'text-gray-400 dark:text-gray-500': enrolledStudentIds.includes(student.id)}">{{ student.first_name }} {{ student.last_name }} ({{ student.admission_number }})</span>
                     </div>
-                    <span v-if="enrolledStudentIds.includes(student.id)" class="text-xs text-green-600 dark:text-green-400 font-medium">Enrolled</span>
+                    <span
+                      v-if="enrolledStudentIds.includes(student.id)"
+                      class="flex-shrink-0 text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap"
+                      :class="isEnrolledInSelectedClass(student.id)
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
+                        : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400'"
+                    >
+                      {{ enrollmentBadgeText(student.id) }}
+                    </span>
                   </label>
+                  <p v-if="!loadingStudentsForClass && filteredStudents.length > 0 && visibleStudents.length === 0" class="text-sm text-gray-500 dark:text-gray-400 text-center py-3">
+                    No students match "{{ studentSearch }}"
+                  </p>
                 </div>
               </div>
-              <p v-if="filteredStudents.length === 0" class="text-sm text-gray-500 dark:text-gray-400 mt-2">No students available for this department and academic year</p>
+              <p v-if="!loadingStudentsForClass && filteredStudents.length === 0" class="text-sm text-gray-500 dark:text-gray-400 mt-2">No students available for this class</p>
             </div>
 
             <!-- De-enroll Section -->
             <div v-if="enrolledStudents.length > 0" class="border-t dark:border-gray-700 pt-4">
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">De-enroll Students</label>
-              <div class="border border-gray-300 dark:border-gray-600 rounded-lg max-h-48 overflow-y-auto">
-                <div class="p-2 space-y-2">
+              <div class="border border-gray-300 dark:border-gray-600 rounded-lg max-h-40 sm:max-h-48 overflow-y-auto">
+                <div class="p-2 space-y-1">
                   <label class="flex items-center p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded cursor-pointer border-b dark:border-gray-600">
                     <input
                       type="checkbox"
@@ -390,17 +488,19 @@
                     >
                     <span class="ml-3 text-sm font-medium text-gray-700 dark:text-gray-300">Select All</span>
                   </label>
-                  <label v-for="student in enrolledStudents" :key="student.id" class="flex items-center justify-between p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded cursor-pointer">
-                    <div class="flex items-center">
+                  <label v-for="student in enrolledStudents" :key="student.id" class="flex items-center justify-between gap-2 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded cursor-pointer">
+                    <div class="flex items-center min-w-0">
                       <input
                         type="checkbox"
                         :value="student.id"
                         v-model="deenrollData.student_ids"
-                        class="w-4 h-4 text-red-600 border-gray-300 dark:border-gray-600 rounded focus:ring-red-500"
+                        class="w-4 h-4 flex-shrink-0 text-red-600 border-gray-300 dark:border-gray-600 rounded focus:ring-red-500"
                       >
-                      <span class="ml-3 text-sm text-gray-700 dark:text-gray-300">{{ student.first_name }} {{ student.last_name }} ({{ student.admission_number }})</span>
+                      <span class="ml-3 text-sm text-gray-700 dark:text-gray-300 truncate">{{ student.first_name }} {{ student.last_name }} ({{ student.admission_number }})</span>
                     </div>
-                    <span class="text-xs text-gray-500 dark:text-gray-400">{{ student.academic_year }}</span>
+                    <span class="flex-shrink-0 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                      {{ [student.class_name, student.stream_name].filter(Boolean).join(' - ') || student.academic_year }}
+                    </span>
                   </label>
                 </div>
               </div>
@@ -408,7 +508,7 @@
                 type="button"
                 @click="deenrollStudents"
                 :disabled="deenrollData.student_ids.length === 0"
-                class="mt-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed text-sm"
+                class="mt-2 w-full sm:w-auto px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed text-sm font-medium"
               >
                 De-enroll Selected ({{ deenrollData.student_ids.length }})
               </button>
@@ -416,7 +516,7 @@
           </div>
 
           <!-- Footer -->
-          <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3 flex-shrink-0">
+          <div class="px-4 sm:px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-end gap-3 flex-shrink-0 rounded-b-2xl">
             <button
               type="button"
               @click="showEnrollModal = false"
@@ -426,7 +526,8 @@
             </button>
             <button
               type="submit"
-              class="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 font-medium shadow-lg shadow-indigo-500/30"
+              :disabled="enrollData.student_ids.length === 0"
+              class="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 font-medium shadow-lg shadow-indigo-500/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
             >
               Enroll Students{{ enrollData.student_ids.length > 0 ? ` (${enrollData.student_ids.length})` : '' }}
             </button>
@@ -486,6 +587,7 @@ const loadingDepartments = ref(false)
 const loadingAcademicYears = ref(false)
 const loadingClasses = ref(false)
 const loadingEnrolled = ref(false)
+const loadingStudentsForClass = ref(false)
 const loadingAnalytics = ref(false)
 const departments = ref<Department[]>([])
 const academicYears = ref<AcademicYear[]>([])
@@ -505,6 +607,11 @@ const filteredStudents = ref<Student[]>([])
 const enrolledStudents = ref<Student[]>([])
 const enrolledStudentsList = ref<Student[]>([])
 const enrolledStudentIds = ref<number[]>([])
+// Keyed by student_id, holds the class/stream that student is currently enrolled under for the
+// selected department + academic year - lets the modal tell "already in this exact stream" apart
+// from "enrolled in the department, but under a different stream" (a real case after promotions).
+const enrolledStudentDetails = ref<Record<number, { class_id: number | null; class_name: string | null; stream_name: string | null }>>({})
+const studentSearch = ref('')
 
 // Analytics data
 const analytics = ref({
@@ -535,6 +642,16 @@ const viewFilters = ref({
   department_id: '',
   academic_year_id: '',
   class_id: ''
+})
+const viewSearch = ref('')
+
+const visibleEnrolledStudentsList = computed(() => {
+  const q = viewSearch.value.trim().toLowerCase()
+  if (!q) return enrolledStudentsList.value
+  return enrolledStudentsList.value.filter(s =>
+    `${s.first_name} ${s.last_name}`.toLowerCase().includes(q) ||
+    s.admission_number.toLowerCase().includes(q)
+  )
 })
 
 const fetchDepartments = async () => {
@@ -615,15 +732,19 @@ const filterStudentsByDepartment = async () => {
     students.value = []
     filteredStudents.value = []
     enrolledStudentIds.value = []
+    enrolledStudentDetails.value = {}
     enrolledStudents.value = []
     return
   }
 
+  loadingStudentsForClass.value = true
   await fetchStudentsForClass(Number(enrollData.value.class_id))
+  loadingStudentsForClass.value = false
 
   if (!enrollData.value.department_id || !enrollData.value.academic_year_id) {
     filteredStudents.value = students.value
     enrolledStudentIds.value = []
+    enrolledStudentDetails.value = {}
     enrolledStudents.value = []
     return
   }
@@ -633,6 +754,7 @@ const filterStudentsByDepartment = async () => {
   if (enrollData.value.department_id === '__all__') {
     filteredStudents.value = students.value
     enrolledStudentIds.value = []
+    enrolledStudentDetails.value = {}
     enrolledStudents.value = []
     return
   }
@@ -653,22 +775,55 @@ const filterStudentsByDepartment = async () => {
     if (response.data?.success && response.data?.data) {
       enrolledStudentIds.value = response.data.data.map((s: any) => s.student_id)
 
+      const details: Record<number, { class_id: number | null; class_name: string | null; stream_name: string | null }> = {}
+      for (const s of response.data.data) {
+        details[s.student_id] = { class_id: s.class_id ?? null, class_name: s.class_name ?? null, stream_name: s.stream_name ?? null }
+      }
+      enrolledStudentDetails.value = details
+
       // Show this class's students, but track which are already enrolled in this department
       filteredStudents.value = students.value
-      
+
       enrolledStudents.value = response.data.data
     }
   } catch (error) {
     console.error('Failed to fetch enrolled students:', error)
     filteredStudents.value = students.value
     enrolledStudentIds.value = []
+    enrolledStudentDetails.value = {}
   }
 }
 
+// True only when the enrolled record's own class_id matches the class currently selected in the
+// modal - distinguishes "already in this exact stream" from "enrolled under a different stream".
+const isEnrolledInSelectedClass = (studentId: number): boolean => {
+  const detail = enrolledStudentDetails.value[studentId]
+  if (!detail) return false
+  return detail.class_id === Number(enrollData.value.class_id)
+}
+
+const enrollmentBadgeText = (studentId: number): string => {
+  const detail = enrolledStudentDetails.value[studentId]
+  if (!detail) return 'Enrolled'
+  if (isEnrolledInSelectedClass(studentId)) return 'Enrolled'
+  const label = [detail.class_name, detail.stream_name].filter(Boolean).join(' - ')
+  return label ? `Enrolled in ${label}` : 'Enrolled elsewhere'
+}
+
+const visibleStudents = computed(() => {
+  const q = studentSearch.value.trim().toLowerCase()
+  if (!q) return filteredStudents.value
+  return filteredStudents.value.filter(s =>
+    `${s.first_name} ${s.last_name}`.toLowerCase().includes(q) ||
+    s.admission_number.toLowerCase().includes(q)
+  )
+})
+
 // Students that can actually be enrolled right now - excludes anyone already enrolled in the
 // selected department for this academic year, so "Select All" and the count never include them.
+// Scoped to the current search text too, so "Select All" only selects what's visible.
 const selectableStudents = computed(() => {
-  return filteredStudents.value.filter(s => !enrolledStudentIds.value.includes(s.id))
+  return visibleStudents.value.filter(s => !enrolledStudentIds.value.includes(s.id))
 })
 
 const allStudentsSelected = computed(() => {
@@ -706,7 +861,9 @@ const openEnrollModal = async () => {
   students.value = []
   filteredStudents.value = []
   enrolledStudentIds.value = []
+  enrolledStudentDetails.value = {}
   enrolledStudents.value = []
+  studentSearch.value = ''
 
   await fetchDepartments()
   await fetchAcademicYears()
@@ -715,6 +872,8 @@ const openEnrollModal = async () => {
 }
 
 const openViewEnrolledModal = async () => {
+  viewFilters.value = { department_id: '', academic_year_id: '', class_id: '' }
+  viewSearch.value = ''
   await fetchDepartments()
   await fetchAcademicYears()
   await fetchClasses()

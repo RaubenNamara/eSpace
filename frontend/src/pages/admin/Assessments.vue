@@ -13,17 +13,33 @@
     </div>
 
     <div class="flex flex-wrap items-center gap-3 mb-6">
-      <select v-model="statusFilter" @change="loadAssignments" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white">
+      <div class="relative flex-1 min-w-[200px] max-w-sm">
+        <svg class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 10.5A6.5 6.5 0 114 10.5a6.5 6.5 0 0113 0z"></path>
+        </svg>
+        <input
+          v-model="search"
+          type="text"
+          placeholder="Search by title or teacher..."
+          class="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 dark:text-white"
+        >
+      </div>
+
+      <select v-model="statusFilter" @change="loadAssignments" class="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white">
         <option value="">All Status</option>
         <option value="draft">Draft</option>
         <option value="published">Published</option>
         <option value="archived">Archived</option>
       </select>
 
-      <select v-model="departmentFilter" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white">
+      <select v-model="departmentFilter" class="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white">
         <option value="">All Departments</option>
         <option v-for="dept in departmentOptions" :key="dept" :value="dept">{{ dept }}</option>
       </select>
+
+      <span v-if="!loading && assignments.length > 0" class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+        {{ filteredAssignments.length }} of {{ assignments.length }} shown
+      </span>
     </div>
 
     <div v-if="loading" class="text-center py-16">
@@ -31,53 +47,103 @@
       <p class="mt-4 text-gray-600 dark:text-gray-400">Loading assessments...</p>
     </div>
 
-    <div v-else-if="filteredAssignments.length === 0" class="text-center py-16 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-      <p class="text-gray-500 dark:text-gray-400">{{ assignments.length === 0 ? 'No assessments found' : 'No assessments match this filter' }}</p>
+    <div v-else-if="assignments.length === 0" class="text-center py-16 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+      <p class="text-gray-500 dark:text-gray-400">No assessments found</p>
     </div>
 
-    <div v-else class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden overflow-x-auto">
-      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-        <thead class="bg-gray-50 dark:bg-gray-900/40">
-          <tr>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Assignment</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Teacher</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Department</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Subject / Class</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Due</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Submissions</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Action</th>
-          </tr>
-        </thead>
-        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-          <tr v-for="a in filteredAssignments" :key="a.id" class="hover:bg-gray-50 dark:hover:bg-gray-900/30">
-            <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white max-w-xs truncate">{{ a.title }}</td>
-            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ a.teacher_name }}</td>
-            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ a.department_name || 'N/A' }}</td>
-            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
-              {{ a.subject_name || 'N/A' }}<span v-if="a.class_name" class="text-gray-400 dark:text-gray-500"> · {{ a.class_name }}</span>
-            </td>
-            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{{ formatDate(a.due_date) }}</td>
-            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ a.submissions_count }}</td>
-            <td class="px-6 py-4">
-              <span class="px-2 py-1 rounded-full text-xs font-medium" :class="statusBadge(a.status)">{{ capitalize(a.status) }}</span>
-            </td>
-            <td class="px-6 py-4 text-right">
-              <RouterLink
-                :to="`/admin/assessments/${a.id}/preview`"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 transition-colors"
-              >
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                </svg>
-                Preview
-              </RouterLink>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <div v-else-if="filteredAssignments.length === 0" class="text-center py-16 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+      <p class="text-gray-500 dark:text-gray-400">No assessments match this filter</p>
     </div>
+
+    <template v-else>
+      <!-- Desktop table -->
+      <div class="hidden lg:block bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead class="bg-gray-50 dark:bg-gray-900/40">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Assignment</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Teacher</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Dept</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Subject / Class</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Due</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Subs</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+              <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Action</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            <tr v-for="a in filteredAssignments" :key="a.id" class="hover:bg-gray-50 dark:hover:bg-gray-900/30">
+              <td class="px-4 py-4 text-sm font-medium text-gray-900 dark:text-white max-w-[220px] truncate" :title="a.title">{{ a.title }}</td>
+              <td class="px-4 py-4 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{{ a.teacher_name }}</td>
+              <td class="px-4 py-4 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{{ a.department_name || 'N/A' }}</td>
+              <td class="px-4 py-4 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                {{ a.subject_name || 'N/A' }}<span v-if="a.class_name" class="text-gray-400 dark:text-gray-500"> · {{ a.class_name }}</span>
+              </td>
+              <td class="px-4 py-4 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{{ formatDate(a.due_date) }}</td>
+              <td class="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">{{ a.submissions_count }}</td>
+              <td class="px-4 py-4">
+                <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap" :class="statusBadge(a.status)">{{ capitalize(a.status) }}</span>
+              </td>
+              <td class="px-4 py-4 text-right">
+                <RouterLink
+                  :to="`/admin/assessments/${a.id}/preview`"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 transition-colors whitespace-nowrap"
+                >
+                  <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                  </svg>
+                  Preview
+                </RouterLink>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Compact cards for tablet & mobile -->
+      <div class="lg:hidden space-y-3">
+        <div
+          v-for="a in filteredAssignments"
+          :key="a.id"
+          class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4"
+        >
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ a.title }}</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ a.teacher_name }}</p>
+            </div>
+            <span class="flex-shrink-0 px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap" :class="statusBadge(a.status)">{{ capitalize(a.status) }}</span>
+          </div>
+
+          <div class="mt-3 flex flex-wrap gap-1.5">
+            <span class="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-400">
+              {{ a.department_name || 'N/A' }}
+            </span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+              {{ a.subject_name || 'N/A' }}<template v-if="a.class_name"> · {{ a.class_name }}</template>
+            </span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+              Due {{ formatDate(a.due_date) }}
+            </span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+              {{ a.submissions_count }} submission{{ a.submissions_count === 1 ? '' : 's' }}
+            </span>
+          </div>
+
+          <RouterLink
+            :to="`/admin/assessments/${a.id}/preview`"
+            class="mt-3 inline-flex items-center justify-center gap-1.5 w-full px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+            </svg>
+            Preview as Student
+          </RouterLink>
+        </div>
+      </div>
+    </template>
   </div>
 </template>
 
@@ -105,14 +171,22 @@ const assignments = ref<AssignmentRow[]>([])
 const loading = ref(false)
 const statusFilter = ref('')
 const departmentFilter = ref('')
+const search = ref('')
 
 const departmentOptions = computed(() => {
   return Array.from(new Set(assignments.value.map(a => a.department_name).filter((d): d is string => !!d))).sort()
 })
 
 const filteredAssignments = computed(() => {
-  if (!departmentFilter.value) return assignments.value
-  return assignments.value.filter(a => a.department_name === departmentFilter.value)
+  let list = assignments.value
+  if (departmentFilter.value) {
+    list = list.filter(a => a.department_name === departmentFilter.value)
+  }
+  const q = search.value.trim().toLowerCase()
+  if (q) {
+    list = list.filter(a => a.title.toLowerCase().includes(q) || a.teacher_name.toLowerCase().includes(q))
+  }
+  return list
 })
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
