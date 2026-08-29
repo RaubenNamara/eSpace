@@ -140,13 +140,45 @@ class MarkingController extends Controller
                     }
                     $question['answer_annotations'] = $answerPages;
 
-                    $maStmt = $db->prepare("SELECT page_number, annotation_data FROM assignment_annotations WHERE submission_id = :submission_id AND question_id = :question_id ORDER BY page_number ASC");
+                    // attachment_id IS NULL scopes this to the primary evidence file only - each
+                    // supplementary file below gets its own marking_annotations, keyed separately
+                    // by attachment_id, so page 1 of one file never collides with page 1 of another.
+                    $maStmt = $db->prepare("SELECT page_number, annotation_data FROM assignment_annotations WHERE submission_id = :submission_id AND question_id = :question_id AND attachment_id IS NULL ORDER BY page_number ASC");
                     $maStmt->execute(['submission_id' => $submissionId, 'question_id' => $questionId]);
                     $markingPages = [];
                     foreach ($maStmt->fetchAll() as $row) {
                         $markingPages[(int) $row['page_number']] = json_decode($row['annotation_data'] ?? '[]', true) ?: [];
                     }
                     $question['marking_annotations'] = $markingPages;
+
+                    // Supplementary "additional files" - each independently annotatable by the
+                    // teacher via its own attachment_id-scoped marking_annotations, distinct from
+                    // the primary student_attachment_path/marking_annotations above.
+                    $afStmt = $db->prepare(
+                        "SELECT id, file_path, original_name, file_type FROM assignment_answer_attachments
+                         WHERE submission_id = :submission_id AND question_id = :question_id ORDER BY display_order ASC, id ASC"
+                    );
+                    $afStmt->execute(['submission_id' => $submissionId, 'question_id' => $questionId]);
+                    $question['answer_attachments'] = array_map(function ($row) use ($db, $submissionId, $questionId) {
+                        $fileMaStmt = $db->prepare(
+                            "SELECT page_number, annotation_data FROM assignment_annotations
+                             WHERE submission_id = :submission_id AND question_id = :question_id AND attachment_id = :attachment_id
+                             ORDER BY page_number ASC"
+                        );
+                        $fileMaStmt->execute(['submission_id' => $submissionId, 'question_id' => $questionId, 'attachment_id' => $row['id']]);
+                        $filePages = [];
+                        foreach ($fileMaStmt->fetchAll() as $faRow) {
+                            $filePages[(int) $faRow['page_number']] = json_decode($faRow['annotation_data'] ?? '[]', true) ?: [];
+                        }
+
+                        return [
+                            'id' => (int) $row['id'],
+                            'path' => $row['file_path'],
+                            'original_name' => $row['original_name'],
+                            'file_type' => $row['file_type'],
+                            'marking_annotations' => $filePages,
+                        ];
+                    }, $afStmt->fetchAll());
                 }
 
                 $question['answer'] = $answersByQuestion[$questionId] ?? null;
@@ -201,14 +233,19 @@ class MarkingController extends Controller
         $questionId = (int) ($data['question_id'] ?? 0);
         $pageNumber = (int) ($data['page_number'] ?? 1);
         $annotationData = is_array($data['annotation_data'] ?? null) ? $data['annotation_data'] : [];
+        // Which file these marks belong to - null (the default, and the only value every row
+        // saved before migration 085 has) means the single primary evidence file; a real id
+        // targets one of the supplementary files in assignment_answer_attachments instead, since
+        // page_number alone can't disambiguate between multiple files' own page 1s.
+        $attachmentId = !empty($data['attachment_id']) ? (int) $data['attachment_id'] : null;
 
         try {
             $db = $this->getDb();
 
             $stmt = $db->prepare(
-                "SELECT id FROM assignment_annotations WHERE submission_id = :submission_id AND question_id = :question_id AND page_number = :page_number"
+                "SELECT id FROM assignment_annotations WHERE submission_id = :submission_id AND question_id = :question_id AND page_number = :page_number AND attachment_id <=> :attachment_id"
             );
-            $stmt->execute(['submission_id' => $submissionId, 'question_id' => $questionId, 'page_number' => $pageNumber]);
+            $stmt->execute(['submission_id' => $submissionId, 'question_id' => $questionId, 'page_number' => $pageNumber, 'attachment_id' => $attachmentId]);
             $existing = $stmt->fetch();
 
             if ($existing) {
@@ -216,12 +253,13 @@ class MarkingController extends Controller
                 $stmt->execute(['data' => json_encode($annotationData), 'id' => $existing['id']]);
             } else {
                 $stmt = $db->prepare(
-                    "INSERT INTO assignment_annotations (submission_id, question_id, teacher_id, type, page_number, x, y, annotation_data, created_at, updated_at)
-                     VALUES (:submission_id, :question_id, :teacher_id, 'shape', :page_number, 0, 0, :data, NOW(), NOW())"
+                    "INSERT INTO assignment_annotations (submission_id, question_id, attachment_id, teacher_id, type, page_number, x, y, annotation_data, created_at, updated_at)
+                     VALUES (:submission_id, :question_id, :attachment_id, :teacher_id, 'shape', :page_number, 0, 0, :data, NOW(), NOW())"
                 );
                 $stmt->execute([
                     'submission_id' => $submissionId,
                     'question_id' => $questionId,
+                    'attachment_id' => $attachmentId,
                     'teacher_id' => $teacherId,
                     'page_number' => $pageNumber,
                     'data' => json_encode($annotationData),

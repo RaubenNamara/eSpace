@@ -35,51 +35,74 @@
       </div>
     </template>
 
-    <!-- PDF layer: teacher-locked pdf_annotation question, or the student's own uploaded PDF -->
-    <template v-if="showPdf">
+    <!-- Submitted evidence: every file the student provided (the primary upload plus any
+         additional files) shown as one thumbnail strip, all viewed/marked in the same single
+         canvas below - only the selected file's canvas is ever mounted at a time. -->
+    <template v-if="allFiles.length">
       <p class="teacher-marking-canvas__section-label" :class="{ 'teacher-marking-canvas__section-label--spaced': typedAnswerLayerInfo }">Submitted evidence</p>
-      <AnnotationToolbar
-        variant="marking"
-        :tool="pdfTool"
-        :color="pdfColor"
-        :stroke-width="pdfStrokeWidth"
-        @update:tool="pdfTool = $event"
-        @update:color="pdfColor = $event"
-        @update:stroke-width="pdfStrokeWidth = $event"
-        @undo="pdfRef?.undo()"
-        @redo="pdfRef?.redo()"
-        @clear-all="pdfRef?.clearAll()"
-        @clear-selected="pdfRef?.clearSelected()"
-      />
-      <div v-if="pdfSaveStatus" class="teacher-marking-canvas__status">{{ pdfSaveStatus }}</div>
-      <div class="teacher-marking-canvas__workspace">
-        <AnnotationCanvas
-          v-if="isEvidenceImage"
-          ref="pdfRef"
-          :background="pdfUrl"
-          :width="evidenceImageDims.width"
-          :height="evidenceImageDims.height"
-          :readonly-layers="evidenceReadonlyLayers"
-          :editable-layer="markingLayer[1] || { objects: [] }"
-          mode="teacher-marking"
-          :tool="pdfTool"
-          :color="pdfColor"
-          :stroke-width="pdfStrokeWidth"
-          @update:editable-layer="onEvidenceImageLayerChange"
-        />
-        <PdfAnnotationViewer
-          v-else
-          ref="pdfRef"
-          :pdf-url="pdfUrl"
-          :readonly-layers-by-page="pdfReadonlyLayersByPage"
-          :editable-layer-by-page="markingLayer"
-          mode="teacher-marking"
-          :tool="pdfTool"
-          :color="pdfColor"
-          :stroke-width="pdfStrokeWidth"
-          @update:editable-layer-by-page="onPdfLayersChange"
-        />
+
+      <div v-if="allFiles.length > 1" class="teacher-marking-canvas__gallery">
+        <button
+          v-for="file in allFiles"
+          :key="file.key"
+          type="button"
+          class="teacher-marking-canvas__gallery-thumb"
+          :class="{ 'teacher-marking-canvas__gallery-thumb--active': file.key === selectedKey }"
+          :title="`View ${file.label}`"
+          @click="selectedKey = file.key"
+        >
+          <img v-if="file.fileType === 'image'" :src="file.url" alt="" class="teacher-marking-canvas__gallery-thumb-img">
+          <span v-else class="teacher-marking-canvas__gallery-thumb-icon" aria-hidden="true">📄</span>
+          <span class="teacher-marking-canvas__gallery-thumb-name">{{ file.label }}</span>
+        </button>
       </div>
+
+      <template v-if="selectedFile">
+        <AnnotationToolbar
+          variant="marking"
+          :tool="evidenceTool"
+          :color="evidenceColor"
+          :stroke-width="evidenceStrokeWidth"
+          @update:tool="evidenceTool = $event"
+          @update:color="evidenceColor = $event"
+          @update:stroke-width="evidenceStrokeWidth = $event"
+          @undo="evidenceRef?.undo()"
+          @redo="evidenceRef?.redo()"
+          @clear-all="evidenceRef?.clearAll()"
+          @clear-selected="evidenceRef?.clearSelected()"
+        />
+        <div v-if="evidenceSaveStatus" class="teacher-marking-canvas__status">{{ evidenceSaveStatus }}</div>
+        <div class="teacher-marking-canvas__workspace">
+          <AnnotationCanvas
+            v-if="selectedFile.fileType === 'image'"
+            :key="selectedFile.key"
+            ref="evidenceRef"
+            :background="selectedFile.url"
+            :width="evidenceImageDims.width"
+            :height="evidenceImageDims.height"
+            :readonly-layers="selectedFile.isPrimary ? combinedReadonlyLayer(1) : []"
+            :editable-layer="markingLayersByKey[selectedFile.key]?.[1] || { objects: [] }"
+            mode="teacher-marking"
+            :tool="evidenceTool"
+            :color="evidenceColor"
+            :stroke-width="evidenceStrokeWidth"
+            @update:editable-layer="onEvidenceImageLayerChange"
+          />
+          <PdfAnnotationViewer
+            v-else
+            :key="selectedFile.key"
+            ref="evidenceRef"
+            :pdf-url="selectedFile.url"
+            :readonly-layers-by-page="selectedFile.isPrimary ? pdfReadonlyLayersByPage : {}"
+            :editable-layer-by-page="markingLayersByKey[selectedFile.key] || {}"
+            mode="teacher-marking"
+            :tool="evidenceTool"
+            :color="evidenceColor"
+            :stroke-width="evidenceStrokeWidth"
+            @update:editable-layer-by-page="onEvidencePdfLayersChange"
+          />
+        </div>
+      </template>
     </template>
   </div>
 </template>
@@ -102,19 +125,14 @@ interface Props {
     question_annotations?: Record<number, AnnotationLayerJSON>
     answer_annotations?: Record<number, AnnotationLayerJSON>
     marking_annotations?: Record<number, AnnotationLayerJSON>
-    answer?: { answer_mode?: 'typed' | 'canvas' | 'pdf_upload' | 'image_upload'; student_attachment_path?: string; answer_text?: string } | null
+    answer?: { answer_mode?: 'typed' | 'canvas' | 'pdf_upload' | 'image_upload'; student_attachment_path?: string; student_attachment_original_name?: string; answer_text?: string } | null
+    answer_attachments?: { id: number; path: string; original_name: string; file_type: 'pdf' | 'image'; marking_annotations?: Record<number, AnnotationLayerJSON> }[]
   }
   assignmentId: number
   submissionId: number
 }
 
 const props = defineProps<Props>()
-
-// A free-response question always offers typed and PDF-upload input together (not a single
-// locked mode) - show the PDF viewer for a teacher-locked 'pdf_annotation' question OR whenever
-// the student uploaded their own PDF/image. (AssignmentSubmissions.vue only renders this
-// component for non-objective questions in the first place.)
-const showPdf = computed(() => props.question.response_type === 'pdf_annotation' || !!props.question.answer?.student_attachment_path)
 
 // Rasterized as a read-only Fabric layer (not shown as plain HTML) so the marking canvas stacked
 // on top of it gives the teacher a real annotation surface directly over the student's own words.
@@ -132,30 +150,12 @@ const typedAnswerLayerInfo = computed(() => {
 // on this exact layer during development that the text never actually finished loading.
 const typedAnswerReadonlyLayers = computed(() => (typedAnswerLayerInfo.value ? [typedAnswerLayerInfo.value.layer] : []))
 
-// Teacher-locked pdf_annotation questions use the teacher's attachment; a student's own
-// uploaded PDF (from a free-response question) uses the file the student uploaded.
-const pdfUrl = computed(() =>
-  resolveAssetUrl(props.question.response_type === 'pdf_annotation' ? props.question.attachment_path : props.question.answer?.student_attachment_path)
-)
-
-// The student's own uploaded "evidence" file can be a PDF or a single image - an image can't be
-// rendered by the pdf.js-based viewer, so it's drawn on with a plain AnnotationCanvas instead,
-// at the same page-1 slot a single-page PDF would use.
-const isEvidenceImage = computed(() => IMAGE_EXTENSIONS.some(ext => pdfUrl.value.toLowerCase().endsWith(ext)))
-const evidenceImageDims = ref({ width: 800, height: 1000 })
-const evidenceReadonlyLayers = computed(() => combinedReadonlyLayer(1))
-
 const API_BASE = '/api'
 
-const pdfRef = ref<any>(null)
 const typedRef = ref<any>(null)
-const pdfTool = ref<AnnotationTool>('pen')
-const pdfColor = ref('#dc2626')
-const pdfStrokeWidth = ref(3)
 const typedTool = ref<AnnotationTool>('pen')
 const typedColor = ref('#dc2626')
 const typedStrokeWidth = ref(3)
-const pdfSaveStatus = ref('')
 const typedSaveStatus = ref('')
 
 const markingLayer = ref<Record<number, AnnotationLayerJSON>>({ ...(props.question.marking_annotations || {}) })
@@ -182,59 +182,133 @@ const pdfReadonlyLayersByPage = computed(() => {
   return result
 })
 
-let pdfSaveTimeout: number | null = null
 let typedSaveTimeout: number | null = null
-
-function persist(pageNumber: number, layer: AnnotationLayerJSON, statusRef: typeof pdfSaveStatus, timeoutHolder: 'pdf' | 'typed') {
-  statusRef.value = 'Unsaved changes'
-  const timeouts = { pdf: pdfSaveTimeout, typed: typedSaveTimeout }
-  const existing = timeouts[timeoutHolder]
-  if (existing) clearTimeout(existing)
-  const timeout = window.setTimeout(async () => {
-    statusRef.value = 'Saving…'
-    try {
-      await axios.put(`${API_BASE}/teacher/assignments/${props.assignmentId}/submissions/${props.submissionId}/marking-annotations`, {
-        question_id: props.question.id,
-        page_number: pageNumber,
-        annotation_data: layer
-      })
-      statusRef.value = 'Saved'
-    } catch {
-      statusRef.value = 'Save failed'
-    }
-  }, 1500)
-  if (timeoutHolder === 'pdf') pdfSaveTimeout = timeout
-  else typedSaveTimeout = timeout
-}
 
 function onTypedAnswerLayerChange(layer: AnnotationLayerJSON) {
   markingLayer.value = { ...markingLayer.value, [TYPED_ANSWER_PAGE]: layer }
-  persist(TYPED_ANSWER_PAGE, layer, typedSaveStatus, 'typed')
+  typedSaveStatus.value = 'Unsaved changes'
+  if (typedSaveTimeout) clearTimeout(typedSaveTimeout)
+  typedSaveTimeout = window.setTimeout(async () => {
+    typedSaveStatus.value = 'Saving…'
+    try {
+      await axios.put(`${API_BASE}/teacher/assignments/${props.assignmentId}/submissions/${props.submissionId}/marking-annotations`, {
+        question_id: props.question.id,
+        page_number: TYPED_ANSWER_PAGE,
+        annotation_data: layer
+      })
+      typedSaveStatus.value = 'Saved'
+    } catch {
+      typedSaveStatus.value = 'Save failed'
+    }
+  }, 1500)
 }
 
-function onEvidenceImageLayerChange(layer: AnnotationLayerJSON) {
-  markingLayer.value = { ...markingLayer.value, 1: layer }
-  persist(1, layer, pdfSaveStatus, 'pdf')
+// Submitted evidence: every file the student provided - the single primary upload (the one Write
+// mode bootstraps from, "attachmentId: null" server-side) plus any supplementary files from
+// migration 084 - merged into one selectable list so the teacher marks them all in one canvas
+// instead of two separate sections. Only one Fabric canvas is ever mounted here at once.
+interface EvidenceFile {
+  key: string
+  attachmentId: number | null
+  url: string
+  fileType: 'pdf' | 'image'
+  label: string
+  isPrimary: boolean
 }
 
-function onPdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
-  const changedPage = Number(
-    Object.keys(pages).find(p => pages[Number(p)] !== markingLayer.value[Number(p)]) || 1
-  )
-  markingLayer.value = { ...markingLayer.value, ...pages }
-  persist(changedPage, pages[changedPage] || { objects: [] }, pdfSaveStatus, 'pdf')
-}
+// Teacher-locked pdf_annotation questions use the teacher's own attachment; a student's own
+// uploaded PDF/image (from a free-response question) uses the file the student uploaded.
+const primaryUrl = computed(() =>
+  resolveAssetUrl(props.question.response_type === 'pdf_annotation' ? props.question.attachment_path : props.question.answer?.student_attachment_path)
+)
+const hasPrimary = computed(() => props.question.response_type === 'pdf_annotation' || !!props.question.answer?.student_attachment_path)
+const isPrimaryImage = computed(() => IMAGE_EXTENSIONS.some(ext => primaryUrl.value.toLowerCase().endsWith(ext)))
+
+const allFiles = computed<EvidenceFile[]>(() => {
+  const files: EvidenceFile[] = []
+  if (hasPrimary.value) {
+    files.push({
+      key: 'primary',
+      attachmentId: null,
+      url: primaryUrl.value,
+      fileType: isPrimaryImage.value ? 'image' : 'pdf',
+      label: props.question.answer?.student_attachment_original_name || 'Submitted file',
+      isPrimary: true
+    })
+  }
+  for (const f of props.question.answer_attachments || []) {
+    files.push({ key: `af-${f.id}`, attachmentId: f.id, url: resolveAssetUrl(f.path), fileType: f.file_type, label: f.original_name, isPrimary: false })
+  }
+  return files
+})
+
+const selectedKey = ref<string | null>(allFiles.value[0]?.key ?? null)
+const selectedFile = computed(() => allFiles.value.find(f => f.key === selectedKey.value) || null)
+
+const evidenceRef = ref<any>(null)
+const evidenceTool = ref<AnnotationTool>('pen')
+const evidenceColor = ref('#dc2626')
+const evidenceStrokeWidth = ref(3)
+const evidenceSaveStatus = ref('')
+const evidenceImageDims = ref({ width: 800, height: 1000 })
+
+// Keyed the same way as `allFiles` above - 'primary' holds the legacy page-numbered layer
+// (unchanged shape/meaning), each 'af-<id>' holds that one supplementary file's own pages.
+const markingLayersByKey = ref<Record<string, Record<number, AnnotationLayerJSON>>>({
+  primary: { ...(props.question.marking_annotations || {}) },
+  ...Object.fromEntries((props.question.answer_attachments || []).map(f => [`af-${f.id}`, { ...(f.marking_annotations || {}) }]))
+})
 
 function measureEvidenceImage() {
-  if (!isEvidenceImage.value || !pdfUrl.value) return
+  if (!selectedFile.value || selectedFile.value.fileType !== 'image' || !selectedFile.value.url) return
   const img = new Image()
   img.onload = () => {
     evidenceImageDims.value = { width: img.naturalWidth, height: img.naturalHeight }
   }
-  img.src = pdfUrl.value
+  img.src = selectedFile.value.url
 }
 
-watch(pdfUrl, measureEvidenceImage, { immediate: true })
+watch(() => selectedFile.value?.url, measureEvidenceImage, { immediate: true })
+
+let evidenceSaveTimeout: number | null = null
+
+function persistEvidence(attachmentId: number | null, pageNumber: number, layer: AnnotationLayerJSON) {
+  evidenceSaveStatus.value = 'Unsaved changes'
+  if (evidenceSaveTimeout) clearTimeout(evidenceSaveTimeout)
+  evidenceSaveTimeout = window.setTimeout(async () => {
+    evidenceSaveStatus.value = 'Saving…'
+    try {
+      await axios.put(`${API_BASE}/teacher/assignments/${props.assignmentId}/submissions/${props.submissionId}/marking-annotations`, {
+        question_id: props.question.id,
+        page_number: pageNumber,
+        attachment_id: attachmentId,
+        annotation_data: layer
+      })
+      evidenceSaveStatus.value = 'Saved'
+    } catch {
+      evidenceSaveStatus.value = 'Save failed'
+    }
+  }, 1500)
+}
+
+function onEvidenceImageLayerChange(layer: AnnotationLayerJSON) {
+  const file = selectedFile.value
+  if (!file) return
+  markingLayersByKey.value = {
+    ...markingLayersByKey.value,
+    [file.key]: { ...(markingLayersByKey.value[file.key] || {}), 1: layer }
+  }
+  persistEvidence(file.attachmentId, 1, layer)
+}
+
+function onEvidencePdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
+  const file = selectedFile.value
+  if (!file) return
+  const prev = markingLayersByKey.value[file.key] || {}
+  const changedPage = Number(Object.keys(pages).find(p => pages[Number(p)] !== prev[Number(p)]) || 1)
+  markingLayersByKey.value = { ...markingLayersByKey.value, [file.key]: { ...prev, ...pages } }
+  persistEvidence(file.attachmentId, changedPage, pages[changedPage] || { objects: [] })
+}
 </script>
 
 <style scoped>
@@ -293,5 +367,68 @@ watch(pdfUrl, measureEvidenceImage, { immediate: true })
   height: auto;
   min-height: 0;
   overflow: visible;
+}
+
+.teacher-marking-canvas__gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 10px;
+}
+
+.teacher-marking-canvas__gallery-thumb {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+:global(.dark) .teacher-marking-canvas__gallery-thumb {
+  border-color: #4b5563;
+  background: #1f2937;
+}
+
+.teacher-marking-canvas__gallery-thumb--active {
+  border-color: #dc2626;
+  background: #fef2f2;
+}
+
+:global(.dark) .teacher-marking-canvas__gallery-thumb--active {
+  background: rgba(220, 38, 38, 0.12);
+}
+
+.teacher-marking-canvas__gallery-thumb-img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.teacher-marking-canvas__gallery-thumb-icon {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+.teacher-marking-canvas__gallery-thumb-name {
+  font-size: 11px;
+  color: #6b7280;
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+
+:global(.dark) .teacher-marking-canvas__gallery-thumb-name {
+  color: #9ca3af;
 }
 </style>

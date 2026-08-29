@@ -99,26 +99,44 @@
         <p class="text-sm font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-1.5">
           <span aria-hidden="true">📎</span> Upload your completed work
         </p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Upload one or more files - photos, scans, or documents.</p>
 
         <p v-if="uploading" class="text-sm text-gray-500 dark:text-gray-400 mb-2">Uploading…</p>
         <p v-if="uploadError" class="text-sm text-red-600 dark:text-red-400 mb-2">{{ uploadError }}</p>
 
-        <div v-if="attachment && attachment.originalName && !isPlaceholderAttachmentName(attachment.originalName)" class="free-response-answer__replace mb-3">
-          <p class="text-sm text-gray-900 dark:text-white break-all">📄 {{ attachment.originalName }}</p>
-          <div v-if="!readonly" class="flex items-center gap-3 shrink-0">
-            <label class="free-response-answer__replace-btn">
-              Replace File
-              <input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" class="hidden" :disabled="uploading" @change="onFileSelected">
-            </label>
-            <button type="button" class="free-response-answer__remove-btn" :disabled="uploading" @click="removeUpload">
-              Remove File
+        <div v-if="galleryFiles.length" class="grid grid-cols-3 sm:grid-cols-4 gap-3 mb-3">
+          <div v-for="file in galleryFiles" :key="file.key" class="relative">
+            <button
+              type="button"
+              class="free-response-answer__thumb free-response-answer__thumb--tile"
+              :title="`Preview ${file.originalName}`"
+              @click="openPreview(file)"
+            >
+              <img v-if="file.fileType === 'image'" :src="resolveAssetUrl(file.path)" alt="" class="free-response-answer__thumb-img">
+              <span v-else class="free-response-answer__thumb-icon" aria-hidden="true">📄</span>
+            </button>
+            <p class="mt-1 text-xs text-gray-600 dark:text-gray-400 truncate" :title="file.originalName">{{ file.originalName }}</p>
+            <button
+              v-if="!readonly"
+              type="button"
+              class="free-response-answer__thumb-remove"
+              :title="`Remove ${file.originalName}`"
+              :disabled="removingFileKey === file.key"
+              @click="removeGalleryFile(file)"
+            >
+              ✕
             </button>
           </div>
+
+          <label v-if="!readonly" class="free-response-answer__add-tile">
+            <span class="free-response-answer__add-tile-icon" aria-hidden="true">＋</span>
+            <span class="free-response-answer__add-tile-label">Add files</span>
+            <input type="file" multiple accept="application/pdf,image/jpeg,image/png,image/webp" class="hidden" :disabled="uploading" @change="onFilesSelected">
+          </label>
         </div>
-        <p v-else class="text-sm text-gray-500 dark:text-gray-400 mb-2">No file uploaded yet.</p>
 
         <div
-          v-if="!readonly"
+          v-else-if="!readonly"
           class="free-response-answer__dropzone"
           :class="{ 'free-response-answer__dropzone--active': isDragging }"
           @click="fileInputRef?.click()"
@@ -126,13 +144,22 @@
           @dragleave.prevent="isDragging = false"
           @drop.prevent="onDrop"
         >
-          <input ref="fileInputRef" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" class="hidden" :disabled="uploading" @change="onFileSelected">
+          <input ref="fileInputRef" type="file" multiple accept="application/pdf,image/jpeg,image/png,image/webp" class="hidden" :disabled="uploading" @change="onFilesSelected">
           <span class="free-response-answer__dropzone-icon">⬆</span>
-          <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Choose File</span>
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Choose Files</span>
           <span class="text-xs text-gray-500 dark:text-gray-400">PDF, JPG, PNG, or WEBP files are supported.</span>
         </div>
+        <p v-else class="text-sm text-gray-500 dark:text-gray-400 mb-2">No file uploaded yet.</p>
       </template>
     </div>
+
+    <FilePreviewModal
+      v-if="previewFile"
+      :url="resolveAssetUrl(previewFile.path)"
+      :file-type="previewFile.fileType"
+      :title="previewFile.originalName"
+      @close="previewFile = null"
+    />
   </div>
 </template>
 
@@ -145,10 +172,18 @@ import StudentAnswerCanvas from './StudentAnswerCanvas.vue'
 import PdfAnnotationViewer from './PdfAnnotationViewer.vue'
 import AnswerModeSelector, { type AnswerMode } from './AnswerModeSelector.vue'
 import TypedAnswerEditor from './TypedAnswerEditor.vue'
+import FilePreviewModal from './FilePreviewModal.vue'
 import { resolveAssetUrl } from '@/utils/url'
 import { isPlaceholderAttachmentName } from '@/utils/answerAttachment'
 
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp']
+
+export interface AdditionalAnswerFile {
+  id: number
+  path: string
+  originalName: string
+  fileType: 'pdf' | 'image'
+}
 
 interface Props {
   question: AssignmentQuestion
@@ -156,6 +191,7 @@ interface Props {
   modelValue: string
   initialAnnotations?: Record<number, AnnotationLayerJSON>
   initialAttachment?: { path: string; originalName?: string } | null
+  initialAdditionalFiles?: AdditionalAnswerFile[]
   readonly?: boolean
   rows?: number
   placeholder?: string
@@ -164,6 +200,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   initialAnnotations: () => ({}),
   initialAttachment: null,
+  initialAdditionalFiles: () => [],
   readonly: false,
   rows: 6,
   placeholder: 'Type your answer here...'
@@ -177,6 +214,7 @@ const emit = defineEmits<{
   // confirmation) react to an Upload-mode file the moment it's chosen, instead of only after
   // the next full page load re-fetches answerAttachmentByQuestion from the server.
   (e: 'update:attachment', value: { path: string; originalName?: string } | null): void
+  (e: 'update:additional-files', value: AdditionalAnswerFile[]): void
 }>()
 
 const API_BASE = '/api'
@@ -186,6 +224,45 @@ const uploading = ref(false)
 const uploadError = ref('')
 const isDragging = ref(false)
 const autoCreating = ref(!props.readonly && !attachment.value)
+
+// Supplementary "additional files" - stored separately from the single primary `attachment`
+// below (a different backend table entirely, since the primary slot is also what Write mode
+// bootstraps its canvas from and the only file the teacher can fully annotate) - but the two are
+// merged into one unified gallery for display, so the student never sees "two upload areas".
+const additionalFiles = ref<AdditionalAnswerFile[]>([...props.initialAdditionalFiles])
+const removingFileKey = ref<string | null>(null)
+const previewFile = ref<{ path: string; originalName: string; fileType: 'pdf' | 'image' } | null>(null)
+
+interface GalleryFile {
+  key: string
+  path: string
+  originalName: string
+  fileType: 'pdf' | 'image'
+  isPrimary: boolean
+}
+
+// The primary file (if a real one has been chosen, not the silent auto-created placeholder)
+// always shows first, followed by every additional file in upload order.
+const galleryFiles = computed<GalleryFile[]>(() => {
+  const files: GalleryFile[] = []
+  if (attachment.value?.originalName && !isPlaceholderAttachmentName(attachment.value.originalName)) {
+    files.push({
+      key: 'primary',
+      path: attachment.value.path,
+      originalName: attachment.value.originalName,
+      fileType: isImageAttachment.value ? 'image' : 'pdf',
+      isPrimary: true
+    })
+  }
+  for (const f of additionalFiles.value) {
+    files.push({ key: `af-${f.id}`, path: f.path, originalName: f.originalName, fileType: f.fileType, isPrimary: false })
+  }
+  return files
+})
+
+function openPreview(file: { path: string; originalName: string; fileType: 'pdf' | 'image' }) {
+  previewFile.value = file
+}
 
 const pdfTool = ref<AnnotationTool>('pen')
 const pdfColor = ref('#000000')
@@ -340,23 +417,99 @@ async function autoCreateBlankCanvas() {
 
 onMounted(autoCreateBlankCanvas)
 
-function onFileSelected(e: Event) {
-  const input = e.target as HTMLInputElement
-  const file = input.files?.[0]
-  input.value = ''
-  if (file) uploadFile(file)
-}
-
 async function removeUpload() {
   if (props.readonly || uploading.value) return
-  if (!window.confirm('Remove this file? This cannot be undone.')) return
   await uploadStartingDocument()
+}
+
+async function uploadAdditionalFile(file: File) {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('assignment_id', String(props.assignmentId))
+
+  const response = await axios.post(
+    `${API_BASE}/student/assignments/questions/${props.question.id}/answer-attachments`,
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } }
+  )
+  const added: AdditionalAnswerFile = {
+    id: response.data.data.id,
+    path: response.data.data.path,
+    originalName: response.data.data.original_name,
+    fileType: response.data.data.kind
+  }
+  additionalFiles.value = [...additionalFiles.value, added]
+  emit('update:additional-files', additionalFiles.value)
+  if (response.data.data.submission_id) {
+    emit('submission-id', response.data.data.submission_id)
+  }
+}
+
+// Unified "add files" entry point for the merged gallery - as long as there's no real primary
+// file yet, the first file added fills that slot (so there's always exactly one annotatable
+// primary file once at least one real file exists, and Write mode always has something to draw
+// on); every file after that goes into the additional-files table. Removing the primary file
+// later naturally "reopens" the slot for the next upload to fill.
+async function addFiles(files: File[]) {
+  if (!files.length) return
+  uploading.value = true
+  uploadError.value = ''
+
+  try {
+    for (const file of files) {
+      const hasRealPrimary = attachment.value?.originalName && !isPlaceholderAttachmentName(attachment.value.originalName)
+      if (!hasRealPrimary) {
+        await uploadFile(file)
+      } else {
+        await uploadAdditionalFile(file)
+      }
+    }
+  } catch (err: any) {
+    if (err.response?.status === 403) {
+      emit('locked')
+    }
+    uploadError.value = err.response?.data?.message || 'Failed to upload file'
+  } finally {
+    uploading.value = false
+  }
+}
+
+function onFilesSelected(e: Event) {
+  const input = e.target as HTMLInputElement
+  const files = input.files ? Array.from(input.files) : []
+  input.value = ''
+  addFiles(files)
 }
 
 function onDrop(e: DragEvent) {
   isDragging.value = false
-  const file = e.dataTransfer?.files?.[0]
-  if (file) uploadFile(file)
+  const files = e.dataTransfer?.files ? Array.from(e.dataTransfer.files) : []
+  addFiles(files)
+}
+
+async function removeAdditionalFile(fileId: number) {
+  await axios.delete(`${API_BASE}/student/assignments/questions/${props.question.id}/answer-attachments/${fileId}`)
+  additionalFiles.value = additionalFiles.value.filter(f => f.id !== fileId)
+  emit('update:additional-files', additionalFiles.value)
+}
+
+async function removeGalleryFile(file: GalleryFile) {
+  if (props.readonly || removingFileKey.value) return
+  if (!window.confirm(`Remove ${file.originalName}? This cannot be undone.`)) return
+
+  removingFileKey.value = file.key
+  try {
+    if (file.isPrimary) {
+      await removeUpload()
+    } else {
+      const id = Number(file.key.replace('af-', ''))
+      await removeAdditionalFile(id)
+    }
+  } catch (err: any) {
+    uploadError.value = err.response?.data?.message || 'Failed to remove file'
+  } finally {
+    removingFileKey.value = null
+  }
 }
 
 let saveTimeout: number | null = null
@@ -460,41 +613,99 @@ function onPdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
   color: #a5b4fc;
 }
 
-.free-response-answer__replace {
+.free-response-answer__thumb {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 6px 2px;
-}
-
-.free-response-answer__replace-btn {
-  font-size: 12px;
-  color: #4f46e5;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-:global(.dark) .free-response-answer__replace-btn {
-  color: #a5b4fc;
-}
-
-.free-response-answer__remove-btn {
-  font-size: 12px;
-  color: #dc2626;
-  cursor: pointer;
-  white-space: nowrap;
-  background: none;
-  border: none;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: zoom-in;
   padding: 0;
 }
 
-.free-response-answer__remove-btn:disabled {
+:global(.dark) .free-response-answer__thumb {
+  border-color: #4b5563;
+  background: #1f2937;
+}
+
+.free-response-answer__thumb--tile {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  height: auto;
+}
+
+.free-response-answer__thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.free-response-answer__thumb-icon {
+  font-size: 20px;
+}
+
+.free-response-answer__thumb-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #dc2626;
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fff;
+  cursor: pointer;
+}
+
+:global(.dark) .free-response-answer__thumb-remove {
+  border-color: #1f2937;
+}
+
+.free-response-answer__thumb-remove:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-:global(.dark) .free-response-answer__remove-btn {
-  color: #f87171;
+.free-response-answer__add-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border: 1px dashed #c7d2fe;
+  border-radius: 8px;
+  background-color: #eef2ff;
+  color: #4f46e5;
+  cursor: pointer;
+  text-align: center;
+}
+
+:global(.dark) .free-response-answer__add-tile {
+  border-color: #4338ca;
+  background-color: rgba(99, 102, 241, 0.08);
+  color: #a5b4fc;
+}
+
+.free-response-answer__add-tile-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.free-response-answer__add-tile-label {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 0 4px;
 }
 </style>

@@ -157,6 +157,9 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::post('/assignments/questions/{questionId}/answer-annotations', 'eSpace\App\Controllers\Student\AssignmentController@saveAnswerAnnotations');
         Router::get('/assignments/questions/{questionId}/answer-annotations/{submissionId}', 'eSpace\App\Controllers\Student\AssignmentController@getAnswerAnnotations');
         Router::post('/assignments/questions/{questionId}/upload-answer-pdf', 'eSpace\App\Controllers\Student\AssignmentController@uploadAnswerAttachment');
+        Router::post('/assignments/questions/{questionId}/answer-attachments', 'eSpace\App\Controllers\Student\AssignmentController@uploadAnswerAttachmentFile');
+        Router::get('/assignments/questions/{questionId}/answer-attachments/{submissionId}', 'eSpace\App\Controllers\Student\AssignmentController@listAnswerAttachments');
+        Router::delete('/assignments/questions/{questionId}/answer-attachments/{attachmentId}', 'eSpace\App\Controllers\Student\AssignmentController@deleteAnswerAttachment');
 
         // Settings
         Router::get('/settings', 'eSpace\App\Controllers\Student\SettingsController@index');

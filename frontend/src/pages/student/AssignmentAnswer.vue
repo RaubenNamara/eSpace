@@ -199,9 +199,11 @@
                     :model-value="answers[subQ.id] || ''"
                     :initial-annotations="answerAnnotationsByQuestion[subQ.id] || {}"
                     :initial-attachment="answerAttachmentByQuestion[subQ.id] || null"
+                    :initial-additional-files="answerAdditionalFilesByQuestion[subQ.id] || []"
                     :readonly="isLocked"
                     @update:model-value="answers[subQ.id] = $event; triggerAutoSave()"
                     @update:attachment="answerAttachmentByQuestion[subQ.id] = $event"
+                    @update:additional-files="answerAdditionalFilesByQuestion[subQ.id] = $event"
                     @submission-id="submissionId = $event"
                     @locked="submissionStatus = 'submitted'"
                   />
@@ -217,9 +219,11 @@
                 :model-value="answers[currentEntry.question.id] || ''"
                 :initial-annotations="answerAnnotationsByQuestion[currentEntry.question.id] || {}"
                 :initial-attachment="answerAttachmentByQuestion[currentEntry.question.id] || null"
+                :initial-additional-files="answerAdditionalFilesByQuestion[currentEntry.question.id] || []"
                 :readonly="isLocked"
                 @update:model-value="answers[currentEntry.question.id] = $event; triggerAutoSave()"
                 @update:attachment="answerAttachmentByQuestion[currentEntry.question.id] = $event"
+                @update:additional-files="answerAdditionalFilesByQuestion[currentEntry.question.id] = $event"
                 @submission-id="submissionId = $event"
                 @locked="submissionStatus = 'submitted'"
               />
@@ -313,10 +317,12 @@
                 :model-value="answers[currentEntry.question.id] || ''"
                 :initial-annotations="answerAnnotationsByQuestion[currentEntry.question.id] || {}"
                 :initial-attachment="answerAttachmentByQuestion[currentEntry.question.id] || null"
+                :initial-additional-files="answerAdditionalFilesByQuestion[currentEntry.question.id] || []"
                 :readonly="isLocked"
                 :placeholder="getPlaceholder(currentEntry.question.question_type)"
                 @update:model-value="answers[currentEntry.question.id] = $event; triggerAutoSave()"
                 @update:attachment="answerAttachmentByQuestion[currentEntry.question.id] = $event"
+                @update:additional-files="answerAdditionalFilesByQuestion[currentEntry.question.id] = $event"
                 @submission-id="submissionId = $event"
                 @locked="submissionStatus = 'submitted'"
               />
@@ -388,7 +394,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
 import type { AssignmentQuestion, AnnotationLayerJSON } from '@/types'
-import FreeResponseAnswer from '@/components/assignment/FreeResponseAnswer.vue'
+import FreeResponseAnswer, { type AdditionalAnswerFile } from '@/components/assignment/FreeResponseAnswer.vue'
 import QuestionProgress from '@/components/assignment/QuestionProgress.vue'
 import SubmitConfirmDialog from '@/components/assignment/SubmitConfirmDialog.vue'
 import NeedHelpPanel from '@/components/assignment/NeedHelpPanel.vue'
@@ -490,6 +496,7 @@ function isFreeResponseAnswered(question: any): boolean {
   if (text.length > 0) return true
   const attachment = answerAttachmentByQuestion.value[question.id]
   if (attachment && !isPlaceholderAttachmentName(attachment.originalName)) return true
+  if ((answerAdditionalFilesByQuestion.value[question.id] || []).length > 0) return true
   const pages = answerAnnotationsByQuestion.value[question.id] || {}
   return Object.values(pages).some(layer => (layer?.objects?.length || 0) > 0)
 }
@@ -530,6 +537,7 @@ const answers = ref<Record<number, string>>({})
 const multipleChoiceAnswers = ref<Record<number, number[]>>({})
 const answerAnnotationsByQuestion = ref<Record<number, Record<number, AnnotationLayerJSON>>>({})
 const answerAttachmentByQuestion = ref<Record<number, { path: string; originalName?: string } | null>>({})
+const answerAdditionalFilesByQuestion = ref<Record<number, AdditionalAnswerFile[]>>({})
 
 const submissionId = ref<number | null>(null)
 const submissionStatus = ref<string | null>(null)
@@ -618,6 +626,14 @@ const loadAssignment = async () => {
       submissionId.value = response.data.data.submission_id || null
       submissionStatus.value = response.data.data.submission_status || null
       answerAnnotationsByQuestion.value = response.data.data.answer_annotations || {}
+
+      const rawAdditionalFiles: Record<string, any[]> = response.data.data.answer_attachments || {}
+      answerAdditionalFilesByQuestion.value = Object.fromEntries(
+        Object.entries(rawAdditionalFiles).map(([qId, files]) => [
+          qId,
+          files.map(f => ({ id: f.id, path: f.path, originalName: f.original_name, fileType: f.file_type }))
+        ])
+      )
 
       // Load existing answers if submission exists
       if (response.data.data.answers) {

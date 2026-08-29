@@ -250,6 +250,7 @@ class AssignmentController extends Controller
             $submissionId = $submission ? $submission['id'] : null;
             $existingAnswers = [];
             $answerAnnotationsByQuestion = [];
+            $answerAttachmentsByQuestion = [];
 
             if ($submission) {
                 $answersSql = "SELECT * FROM assignment_answers
@@ -267,6 +268,26 @@ class AssignmentController extends Controller
                     }
                     $answerAnnotationsByQuestion[$qId][(int) $aaRow['page_number']] = json_decode($aaRow['annotation_data'] ?? '[]', true) ?: [];
                 }
+
+                // Supplementary "additional files" gallery (independent of the single primary
+                // attachment already included per-row in $existingAnswers above).
+                $afStmt = $this->pdo->prepare(
+                    "SELECT id, question_id, file_path, original_name, file_type FROM assignment_answer_attachments
+                     WHERE submission_id = :submission_id ORDER BY display_order ASC, id ASC"
+                );
+                $afStmt->execute(['submission_id' => $submission['id']]);
+                foreach ($afStmt->fetchAll() as $afRow) {
+                    $qId = (int) $afRow['question_id'];
+                    if (!isset($answerAttachmentsByQuestion[$qId])) {
+                        $answerAttachmentsByQuestion[$qId] = [];
+                    }
+                    $answerAttachmentsByQuestion[$qId][] = [
+                        'id' => (int) $afRow['id'],
+                        'path' => $afRow['file_path'],
+                        'original_name' => $afRow['original_name'],
+                        'file_type' => $afRow['file_type'],
+                    ];
+                }
             }
 
             $this->success([
@@ -276,7 +297,8 @@ class AssignmentController extends Controller
                 'submission_id' => $submissionId,
                 'submission_status' => $submission['status'] ?? null,
                 'answers' => $existingAnswers,
-                'answer_annotations' => $answerAnnotationsByQuestion
+                'answer_annotations' => $answerAnnotationsByQuestion,
+                'answer_attachments' => $answerAttachmentsByQuestion
             ]);
         } catch (\Exception $e) {
             $this->serverError('Failed to load assignment: ' . $e->getMessage());
@@ -915,6 +937,152 @@ class AssignmentController extends Controller
     }
 
     /**
+     * Shared validation, enrollment/submission lookup, and on-disk file save for a student's
+     * free-response file upload - used by both the single "primary" upload slot
+     * (uploadAnswerAttachment) and the multi-file "additional files" gallery
+     * (uploadAnswerAttachmentFile). Must be called inside an already-open transaction; on any
+     * failure this sends the error response itself, rolls back, and returns null so callers can
+     * just `if (!$ctx) return;`. On success the transaction is left open for the caller to do its
+     * own table-specific write (upsert vs insert) before committing.
+     */
+    private function prepareAnswerFileUpload(int $questionId, int $assignmentId, int $studentId): ?array
+    {
+        if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+            $this->error('No file uploaded or upload error occurred', 400);
+            return null;
+        }
+
+        $file = $_FILES['file'];
+        $maxSize = 20 * 1024 * 1024; // 20MB
+
+        if ($file['size'] > $maxSize) {
+            $this->error('File exceeds maximum size of 20MB', 400);
+            return null;
+        }
+
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = finfo_file($finfo, $file['tmp_name']);
+        finfo_close($finfo);
+
+        $imageExtensions = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
+        $isPdf = $mimeType === 'application/pdf';
+        $isImage = isset($imageExtensions[$mimeType]);
+
+        if (!$isPdf && !$isImage) {
+            $this->error('Only PDF, JPG, PNG, or WEBP files are allowed', 400);
+            return null;
+        }
+
+        // Verify the assignment is published and the student is enrolled in its class
+        $stmt = $this->pdo->prepare(
+            "SELECT id FROM assignments a WHERE a.id = :assignment_id AND a.status = 'published'
+             AND EXISTS (
+                 SELECT 1 FROM student_department_enrollments sde
+                 LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
+                 WHERE sde.student_id = :student_id
+                   AND (
+                     sde.class_id = a.class_id
+                     OR (a.class_group_name IS NOT NULL AND sde_c.name = a.class_group_name)
+                     OR EXISTS (SELECT 1 FROM assignment_classes ac WHERE ac.assignment_id = a.id AND ac.class_id = sde.class_id)
+                   )
+                   AND sde.department_id = (SELECT department_id FROM subjects WHERE id = a.subject_id)
+                   AND sde.deleted_at IS NULL
+                   AND sde.status = 'active'
+                   AND COALESCE(a.published_at, a.created_at) BETWEEN sde.start_date AND COALESCE(sde.end_date, NOW())
+             )
+             AND NOT EXISTS (
+                 SELECT 1 FROM student_teacher_enrollments ste
+                 WHERE ste.student_id = :student_id_te
+                   AND ste.teacher_id = a.teacher_id
+                   AND ste.department_id = (SELECT department_id FROM subjects WHERE id = a.subject_id)
+                   AND ste.status = 'withdrawn'
+             )"
+        );
+        $stmt->execute(['assignment_id' => $assignmentId, 'student_id' => $studentId, 'student_id_te' => $studentId]);
+        if (!$stmt->fetch()) {
+            $this->pdo->rollBack();
+            $this->notFound('Assignment not found or access denied');
+            return null;
+        }
+
+        // Verify the question actually belongs to this assignment
+        $stmt = $this->pdo->prepare("SELECT id FROM assignment_questions WHERE id = :question_id AND assignment_id = :assignment_id AND deleted_at IS NULL");
+        $stmt->execute(['question_id' => $questionId, 'assignment_id' => $assignmentId]);
+        if (!$stmt->fetch()) {
+            $this->pdo->rollBack();
+            $this->notFound('Question not found');
+            return null;
+        }
+
+        // Get or create the in-progress submission
+        $stmt = $this->pdo->prepare(
+            "SELECT id, status FROM assignment_submissions WHERE assignment_id = :assignment_id AND student_id = :student_id ORDER BY attempt_number DESC LIMIT 1"
+        );
+        $stmt->execute(['assignment_id' => $assignmentId, 'student_id' => $studentId]);
+        $submission = $stmt->fetch();
+
+        if ($submission && $submission['status'] !== 'in_progress') {
+            $this->pdo->rollBack();
+            $this->error('This attempt is no longer editable', 403);
+            return null;
+        }
+
+        if ($submission) {
+            $submissionId = $submission['id'];
+        } else {
+            $stmt = $this->pdo->prepare(
+                "SELECT COALESCE(MAX(attempt_number), 0) + 1 as next_attempt FROM assignment_submissions WHERE assignment_id = :assignment_id AND student_id = :student_id"
+            );
+            $stmt->execute(['assignment_id' => $assignmentId, 'student_id' => $studentId]);
+            $attemptNumber = $stmt->fetch()['next_attempt'];
+
+            $stmt = $this->pdo->prepare(
+                "INSERT INTO assignment_submissions (assignment_id, student_id, attempt_number, started_at, status, created_at, updated_at)
+                 VALUES (:assignment_id, :student_id, :attempt_number, NOW(), 'in_progress', NOW(), NOW())"
+            );
+            $stmt->execute(['assignment_id' => $assignmentId, 'student_id' => $studentId, 'attempt_number' => $attemptNumber]);
+            $submissionId = $this->pdo->lastInsertId();
+        }
+
+        $uploadDir = __DIR__ . '/../../../public/uploads/assignment_submissions/';
+        if (!file_exists($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        // Never trust the original filename; generate a unique one from random bytes.
+        $extension = $isPdf ? 'pdf' : $imageExtensions[$mimeType];
+        $filename = 'answer_' . $questionId . '_' . $studentId . '_' . bin2hex(random_bytes(8)) . '_' . time() . '.' . $extension;
+        $filepath = $uploadDir . $filename;
+
+        if (!move_uploaded_file($file['tmp_name'], $filepath)) {
+            $this->pdo->rollBack();
+            $this->serverError('Failed to save uploaded file');
+            return null;
+        }
+
+        // Re-validate actual file content after the move (MIME sniffing can be spoofed pre-upload).
+        if ($isPdf) {
+            $isValid = substr((string) file_get_contents($filepath, false, null, 0, 5), 0, 5) === '%PDF-';
+        } else {
+            $isValid = @getimagesize($filepath) !== false;
+        }
+
+        if (!$isValid) {
+            unlink($filepath);
+            $this->pdo->rollBack();
+            $this->error('Uploaded file is not a valid ' . ($isPdf ? 'PDF' : 'image'), 400);
+            return null;
+        }
+
+        return [
+            'submission_id' => (int) $submissionId,
+            'url' => '/uploads/assignment_submissions/' . $filename,
+            'original_name' => basename((string) $file['name']),
+            'is_pdf' => $isPdf,
+        ];
+    }
+
+    /**
      * Upload the student's own PDF or image as their answer to a free-response question, so
      * they can then write/draw on top of it via saveAnswerAnnotations(). Creates the in-progress
      * submission on first save, same as submit()/saveAnswerAnnotations() do.
@@ -929,152 +1097,28 @@ class AssignmentController extends Controller
         $questionId = (int) $this->routeParam('questionId');
         $assignmentId = (int) $this->input('assignment_id', 0);
 
-        if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
-            $this->error('No file uploaded or upload error occurred', 400);
-            return;
-        }
-
-        $file = $_FILES['file'];
-        $maxSize = 20 * 1024 * 1024; // 20MB
-
-        if ($file['size'] > $maxSize) {
-            $this->error('File exceeds maximum size of 20MB', 400);
-            return;
-        }
-
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mimeType = finfo_file($finfo, $file['tmp_name']);
-        finfo_close($finfo);
-
-        $imageExtensions = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
-        $isPdf = $mimeType === 'application/pdf';
-        $isImage = isset($imageExtensions[$mimeType]);
-
-        if (!$isPdf && !$isImage) {
-            $this->error('Only PDF, JPG, PNG, or WEBP files are allowed', 400);
-            return;
-        }
-
         try {
             $this->pdo->beginTransaction();
 
-            // Verify the assignment is published and the student is enrolled in its class
-            $stmt = $this->pdo->prepare(
-                "SELECT id FROM assignments a WHERE a.id = :assignment_id AND a.status = 'published'
-                 AND EXISTS (
-                     SELECT 1 FROM student_department_enrollments sde
-                     LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
-                     WHERE sde.student_id = :student_id
-                       AND (
-                         sde.class_id = a.class_id
-                         OR (a.class_group_name IS NOT NULL AND sde_c.name = a.class_group_name)
-                         OR EXISTS (SELECT 1 FROM assignment_classes ac WHERE ac.assignment_id = a.id AND ac.class_id = sde.class_id)
-                       )
-                       AND sde.department_id = (SELECT department_id FROM subjects WHERE id = a.subject_id)
-                       AND sde.deleted_at IS NULL
-                       AND sde.status = 'active'
-                       AND COALESCE(a.published_at, a.created_at) BETWEEN sde.start_date AND COALESCE(sde.end_date, NOW())
-                 )
-                 AND NOT EXISTS (
-                     SELECT 1 FROM student_teacher_enrollments ste
-                     WHERE ste.student_id = :student_id_te
-                       AND ste.teacher_id = a.teacher_id
-                       AND ste.department_id = (SELECT department_id FROM subjects WHERE id = a.subject_id)
-                       AND ste.status = 'withdrawn'
-                 )"
-            );
-            $stmt->execute(['assignment_id' => $assignmentId, 'student_id' => $studentId, 'student_id_te' => $studentId]);
-            if (!$stmt->fetch()) {
-                $this->pdo->rollBack();
-                $this->notFound('Assignment not found or access denied');
+            $ctx = $this->prepareAnswerFileUpload($questionId, $assignmentId, $studentId);
+            if (!$ctx) {
                 return;
             }
 
-            // Verify the question actually belongs to this assignment
-            $stmt = $this->pdo->prepare("SELECT id FROM assignment_questions WHERE id = :question_id AND assignment_id = :assignment_id AND deleted_at IS NULL");
-            $stmt->execute(['question_id' => $questionId, 'assignment_id' => $assignmentId]);
-            if (!$stmt->fetch()) {
-                $this->pdo->rollBack();
-                $this->notFound('Question not found');
-                return;
-            }
-
-            // Get or create the in-progress submission
-            $stmt = $this->pdo->prepare(
-                "SELECT id, status FROM assignment_submissions WHERE assignment_id = :assignment_id AND student_id = :student_id ORDER BY attempt_number DESC LIMIT 1"
-            );
-            $stmt->execute(['assignment_id' => $assignmentId, 'student_id' => $studentId]);
-            $submission = $stmt->fetch();
-
-            if ($submission && $submission['status'] !== 'in_progress') {
-                $this->pdo->rollBack();
-                $this->error('This attempt is no longer editable', 403);
-                return;
-            }
-
-            if ($submission) {
-                $submissionId = $submission['id'];
-            } else {
-                $stmt = $this->pdo->prepare(
-                    "SELECT COALESCE(MAX(attempt_number), 0) + 1 as next_attempt FROM assignment_submissions WHERE assignment_id = :assignment_id AND student_id = :student_id"
-                );
-                $stmt->execute(['assignment_id' => $assignmentId, 'student_id' => $studentId]);
-                $attemptNumber = $stmt->fetch()['next_attempt'];
-
-                $stmt = $this->pdo->prepare(
-                    "INSERT INTO assignment_submissions (assignment_id, student_id, attempt_number, started_at, status, created_at, updated_at)
-                     VALUES (:assignment_id, :student_id, :attempt_number, NOW(), 'in_progress', NOW(), NOW())"
-                );
-                $stmt->execute(['assignment_id' => $assignmentId, 'student_id' => $studentId, 'attempt_number' => $attemptNumber]);
-                $submissionId = $this->pdo->lastInsertId();
-            }
-
-            $uploadDir = __DIR__ . '/../../../public/uploads/assignment_submissions/';
-            if (!file_exists($uploadDir)) {
-                mkdir($uploadDir, 0755, true);
-            }
-
-            // Never trust the original filename; generate a unique one from random bytes.
-            $extension = $isPdf ? 'pdf' : $imageExtensions[$mimeType];
-            $filename = 'answer_' . $questionId . '_' . $studentId . '_' . bin2hex(random_bytes(8)) . '_' . time() . '.' . $extension;
-            $filepath = $uploadDir . $filename;
-
-            if (!move_uploaded_file($file['tmp_name'], $filepath)) {
-                $this->pdo->rollBack();
-                $this->serverError('Failed to save uploaded file');
-                return;
-            }
-
-            // Re-validate actual file content after the move (MIME sniffing can be spoofed pre-upload).
-            if ($isPdf) {
-                $isValid = substr((string) file_get_contents($filepath, false, null, 0, 5), 0, 5) === '%PDF-';
-            } else {
-                $isValid = @getimagesize($filepath) !== false;
-            }
-
-            if (!$isValid) {
-                unlink($filepath);
-                $this->pdo->rollBack();
-                $this->error('Uploaded file is not a valid ' . ($isPdf ? 'PDF' : 'image'), 400);
-                return;
-            }
-
-            $url = '/uploads/assignment_submissions/' . $filename;
-            $originalName = basename((string) $file['name']);
-            $answerMode = $isPdf ? 'pdf_upload' : 'image_upload';
+            $answerMode = $ctx['is_pdf'] ? 'pdf_upload' : 'image_upload';
 
             $stmt = $this->pdo->prepare("SELECT id, student_attachment_path FROM assignment_answers WHERE submission_id = :submission_id AND question_id = :question_id");
-            $stmt->execute(['submission_id' => $submissionId, 'question_id' => $questionId]);
+            $stmt->execute(['submission_id' => $ctx['submission_id'], 'question_id' => $questionId]);
             $existingAnswer = $stmt->fetch();
 
             if ($existingAnswer) {
                 $stmt = $this->pdo->prepare(
                     "UPDATE assignment_answers SET answer_mode = :answer_mode, student_attachment_path = :path, student_attachment_original_name = :name, updated_at = NOW() WHERE id = :id"
                 );
-                $stmt->execute(['answer_mode' => $answerMode, 'path' => $url, 'name' => $originalName, 'id' => $existingAnswer['id']]);
+                $stmt->execute(['answer_mode' => $answerMode, 'path' => $ctx['url'], 'name' => $ctx['original_name'], 'id' => $existingAnswer['id']]);
 
                 // Replacing a previous upload for the same question - remove the old file.
-                if (!empty($existingAnswer['student_attachment_path']) && $existingAnswer['student_attachment_path'] !== $url) {
+                if (!empty($existingAnswer['student_attachment_path']) && $existingAnswer['student_attachment_path'] !== $ctx['url']) {
                     $oldPath = __DIR__ . '/../../../public' . $existingAnswer['student_attachment_path'];
                     if (is_file($oldPath)) {
                         unlink($oldPath);
@@ -1085,22 +1129,148 @@ class AssignmentController extends Controller
                     "INSERT INTO assignment_answers (submission_id, question_id, answer_mode, student_attachment_path, student_attachment_original_name, created_at, updated_at)
                      VALUES (:submission_id, :question_id, :answer_mode, :path, :name, NOW(), NOW())"
                 );
-                $stmt->execute(['submission_id' => $submissionId, 'question_id' => $questionId, 'answer_mode' => $answerMode, 'path' => $url, 'name' => $originalName]);
+                $stmt->execute(['submission_id' => $ctx['submission_id'], 'question_id' => $questionId, 'answer_mode' => $answerMode, 'path' => $ctx['url'], 'name' => $ctx['original_name']]);
             }
 
             $this->pdo->commit();
 
             $this->success([
-                'submission_id' => (int) $submissionId,
-                'path' => $url,
-                'original_name' => $originalName,
-                'kind' => $isPdf ? 'pdf' : 'image',
-            ], ($isPdf ? 'PDF' : 'Image') . ' uploaded successfully');
+                'submission_id' => $ctx['submission_id'],
+                'path' => $ctx['url'],
+                'original_name' => $ctx['original_name'],
+                'kind' => $ctx['is_pdf'] ? 'pdf' : 'image',
+            ], ($ctx['is_pdf'] ? 'PDF' : 'Image') . ' uploaded successfully');
         } catch (\Exception $e) {
             if ($this->pdo->inTransaction()) {
                 $this->pdo->rollBack();
             }
             $this->serverError('Failed to upload file: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Add one supplementary file to a question's answer, independent of the single "primary"
+     * upload slot above (never touches assignment_answers.student_attachment_path) - the student
+     * can attach any number of these, e.g. several photos of handwritten work. One file per
+     * request; the frontend loops a multi-select FileList, calling this once per file.
+     * POST /student/assignments/questions/{questionId}/answer-attachments
+     */
+    public function uploadAnswerAttachmentFile(): void
+    {
+        $this->requireAuth();
+        $this->requireRole('student');
+
+        $studentId = $this->getCurrentUserId();
+        $questionId = (int) $this->routeParam('questionId');
+        $assignmentId = (int) $this->input('assignment_id', 0);
+
+        try {
+            $this->pdo->beginTransaction();
+
+            $ctx = $this->prepareAnswerFileUpload($questionId, $assignmentId, $studentId);
+            if (!$ctx) {
+                return;
+            }
+
+            $stmt = $this->pdo->prepare(
+                "INSERT INTO assignment_answer_attachments (submission_id, question_id, file_path, original_name, file_type, created_at)
+                 VALUES (:submission_id, :question_id, :path, :name, :file_type, NOW())"
+            );
+            $stmt->execute([
+                'submission_id' => $ctx['submission_id'],
+                'question_id' => $questionId,
+                'path' => $ctx['url'],
+                'name' => $ctx['original_name'],
+                'file_type' => $ctx['is_pdf'] ? 'pdf' : 'image',
+            ]);
+            $attachmentId = (int) $this->pdo->lastInsertId();
+
+            $this->pdo->commit();
+
+            $this->success([
+                'id' => $attachmentId,
+                'submission_id' => $ctx['submission_id'],
+                'path' => $ctx['url'],
+                'original_name' => $ctx['original_name'],
+                'kind' => $ctx['is_pdf'] ? 'pdf' : 'image',
+            ], 'File uploaded successfully');
+        } catch (\Exception $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            $this->serverError('Failed to upload file: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * List a question's supplementary files for a submission - used to restore state after a
+     * page reload (the main assignment-load response also inlines this per-question, this
+     * endpoint exists as the direct read counterpart to uploadAnswerAttachmentFile).
+     * GET /student/assignments/questions/{questionId}/answer-attachments/{submissionId}
+     */
+    public function listAnswerAttachments(): void
+    {
+        $this->requireAuth();
+        $this->requireRole('student');
+
+        $studentId = $this->getCurrentUserId();
+        $questionId = (int) $this->routeParam('questionId');
+        $submissionId = (int) $this->routeParam('submissionId');
+
+        try {
+            $stmt = $this->pdo->prepare(
+                "SELECT aa.id, aa.file_path, aa.original_name, aa.file_type
+                 FROM assignment_answer_attachments aa
+                 INNER JOIN assignment_submissions s ON s.id = aa.submission_id
+                 WHERE aa.submission_id = :submission_id AND aa.question_id = :question_id AND s.student_id = :student_id
+                 ORDER BY aa.display_order ASC, aa.id ASC"
+            );
+            $stmt->execute(['submission_id' => $submissionId, 'question_id' => $questionId, 'student_id' => $studentId]);
+
+            $this->success(['files' => $stmt->fetchAll()]);
+        } catch (\Exception $e) {
+            $this->serverError('Failed to load files');
+        }
+    }
+
+    /**
+     * Remove one supplementary file. Verifies the attachment's submission belongs to the current
+     * student and is still editable before deleting the DB row and the file on disk.
+     * DELETE /student/assignments/questions/{questionId}/answer-attachments/{attachmentId}
+     */
+    public function deleteAnswerAttachment(): void
+    {
+        $this->requireAuth();
+        $this->requireRole('student');
+
+        $studentId = $this->getCurrentUserId();
+        $attachmentId = (int) $this->routeParam('attachmentId');
+
+        try {
+            $stmt = $this->pdo->prepare(
+                "SELECT aa.id, aa.file_path FROM assignment_answer_attachments aa
+                 INNER JOIN assignment_submissions s ON s.id = aa.submission_id
+                 WHERE aa.id = :id AND s.student_id = :student_id AND s.status = 'in_progress'"
+            );
+            $stmt->execute(['id' => $attachmentId, 'student_id' => $studentId]);
+            $attachment = $stmt->fetch();
+
+            if (!$attachment) {
+                $this->notFound('File not found or this attempt is no longer editable');
+                return;
+            }
+
+            $stmt = $this->pdo->prepare("DELETE FROM assignment_answer_attachments WHERE id = :id");
+            $stmt->execute(['id' => $attachmentId]);
+
+            $filepath = __DIR__ . '/../../../public' . $attachment['file_path'];
+            if (is_file($filepath)) {
+                unlink($filepath);
+            }
+
+            $this->success([], 'File removed');
+        } catch (\Exception $e) {
+            $this->serverError('Failed to remove file');
         }
     }
 }
