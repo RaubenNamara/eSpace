@@ -92,7 +92,7 @@ import { TYPED_ANSWER_PAGE } from '@/types'
 import AnnotationToolbar from './AnnotationToolbar.vue'
 import AnnotationCanvas from './AnnotationCanvas.vue'
 import PdfAnnotationViewer from './PdfAnnotationViewer.vue'
-import { createTypedAnswerLayer } from '@/composables/useAnnotationCanvas'
+import { createTypedAnswerLayer, htmlToPlainText } from '@/composables/useAnnotationCanvas'
 import { resolveAssetUrl } from '@/utils/url'
 
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp']
@@ -120,7 +120,11 @@ const showPdf = computed(() => props.question.response_type === 'pdf_annotation'
 // on top of it gives the teacher a real annotation surface directly over the student's own words.
 const typedAnswerLayerInfo = computed(() => {
   const text = props.question.answer?.answer_text
-  return text ? createTypedAnswerLayer(text, 800) : null
+  // Typed answers are now Tiptap-authored HTML - an "empty" editor still serializes to a
+  // non-empty string like "<p></p>", so a plain truthy check would show this section for a
+  // student who never typed anything. Strip tags before deciding whether there's real content.
+  if (!text || !htmlToPlainText(text).trim()) return null
+  return createTypedAnswerLayer(text, 800)
 })
 
 // Stable array reference (not a fresh array literal in the template) - AnnotationCanvas re-runs

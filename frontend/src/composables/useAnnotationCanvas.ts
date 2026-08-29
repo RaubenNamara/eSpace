@@ -245,7 +245,7 @@ export function createTextObject(point: { x: number; y: number }, color: string,
 // AssignmentResult.vue's read-only view) still expect a flat Fabric Textbox, so HTML is flattened
 // to readable plain text first. Legacy plain-text answers saved before this change pass through
 // untouched (no '<' content to match).
-function htmlToPlainText(html: string): string {
+export function htmlToPlainText(html: string): string {
   if (!/<[a-z][\s\S]*>/i.test(html)) return html
 
   const container = document.createElement('div')

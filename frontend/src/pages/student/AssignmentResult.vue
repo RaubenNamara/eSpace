@@ -127,7 +127,7 @@ import type { AnnotationLayerJSON } from '@/types'
 import { TYPED_ANSWER_PAGE } from '@/types'
 import AnnotationCanvas from '@/components/assignment/AnnotationCanvas.vue'
 import PdfAnnotationViewer from '@/components/assignment/PdfAnnotationViewer.vue'
-import { createTypedAnswerLayer } from '@/composables/useAnnotationCanvas'
+import { createTypedAnswerLayer, htmlToPlainText } from '@/composables/useAnnotationCanvas'
 import { resolveAssetUrl } from '@/utils/url'
 
 const route = useRoute()
@@ -186,7 +186,9 @@ const typedAnswerLayers = computed(() => {
   for (const question of questions.value) {
     if (isObjective(question)) continue
     const text = answerFor(question.id)
-    if (text) map[question.id] = createTypedAnswerLayer(text, 800)
+    // Tiptap's "empty" editor still serializes to a non-empty string like "<p></p>" - strip tags
+    // before deciding whether there's real content (see TeacherMarkingCanvas.vue for the same fix).
+    if (text && htmlToPlainText(text).trim()) map[question.id] = createTypedAnswerLayer(text, 800)
   }
   return map
 })
