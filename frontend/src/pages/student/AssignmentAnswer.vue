@@ -201,6 +201,7 @@
                     :initial-attachment="answerAttachmentByQuestion[subQ.id] || null"
                     :readonly="isLocked"
                     @update:model-value="answers[subQ.id] = $event; triggerAutoSave()"
+                    @update:attachment="answerAttachmentByQuestion[subQ.id] = $event"
                     @submission-id="submissionId = $event"
                     @locked="submissionStatus = 'submitted'"
                   />
@@ -218,6 +219,7 @@
                 :initial-attachment="answerAttachmentByQuestion[currentEntry.question.id] || null"
                 :readonly="isLocked"
                 @update:model-value="answers[currentEntry.question.id] = $event; triggerAutoSave()"
+                @update:attachment="answerAttachmentByQuestion[currentEntry.question.id] = $event"
                 @submission-id="submissionId = $event"
                 @locked="submissionStatus = 'submitted'"
               />
@@ -314,6 +316,7 @@
                 :readonly="isLocked"
                 :placeholder="getPlaceholder(currentEntry.question.question_type)"
                 @update:model-value="answers[currentEntry.question.id] = $event; triggerAutoSave()"
+                @update:attachment="answerAttachmentByQuestion[currentEntry.question.id] = $event"
                 @submission-id="submissionId = $event"
                 @locked="submissionStatus = 'submitted'"
               />
@@ -389,6 +392,7 @@ import FreeResponseAnswer from '@/components/assignment/FreeResponseAnswer.vue'
 import QuestionProgress from '@/components/assignment/QuestionProgress.vue'
 import SubmitConfirmDialog from '@/components/assignment/SubmitConfirmDialog.vue'
 import NeedHelpPanel from '@/components/assignment/NeedHelpPanel.vue'
+import { isPlaceholderAttachmentName } from '@/utils/answerAttachment'
 
 const router = useRouter()
 const route = useRoute()
@@ -479,8 +483,13 @@ function isObjectiveQuestion(question: any): boolean {
 // wording, not a hard gate (matches canSubmit's existing loose philosophy - the spec's own
 // "Submit Anyway" escape hatch confirms this is meant as a nudge, not a blocker).
 function isFreeResponseAnswered(question: any): boolean {
+  // Type, Write, and Upload are independent - completing any one of them is enough, regardless
+  // of whether the other two are empty (Upload in particular never populates `answers`/typed
+  // text, so it needs its own check here rather than falling through to "unanswered").
   const text = (answers.value[question.id] || '').replace(/<[^>]*>/g, '').trim()
   if (text.length > 0) return true
+  const attachment = answerAttachmentByQuestion.value[question.id]
+  if (attachment && !isPlaceholderAttachmentName(attachment.originalName)) return true
   const pages = answerAnnotationsByQuestion.value[question.id] || {}
   return Object.values(pages).some(layer => (layer?.objects?.length || 0) > 0)
 }
@@ -520,7 +529,6 @@ const submissionTiming = ref<'early' | 'on_time' | 'late' | null>(null)
 const answers = ref<Record<number, string>>({})
 const multipleChoiceAnswers = ref<Record<number, number[]>>({})
 const answerAnnotationsByQuestion = ref<Record<number, Record<number, AnnotationLayerJSON>>>({})
-const answerModeByQuestion = ref<Record<number, 'typed' | 'canvas' | 'pdf_upload'>>({})
 const answerAttachmentByQuestion = ref<Record<number, { path: string; originalName?: string } | null>>({})
 
 const submissionId = ref<number | null>(null)
@@ -556,15 +564,13 @@ const questionStatusBadgeClass = computed(() => {
   return 'border-green-300 text-green-700 bg-green-50 dark:border-green-700 dark:text-green-300 dark:bg-green-900/20'
 })
 
-const canSubmit = computed(() => {
-  if (isLocked.value) return false
-  const hasTextAnswer = Object.keys(answers.value).length > 0
-  const hasCanvasQuestion = questions.value.some(q => q.response_type === 'canvas' || q.response_type === 'pdf_annotation')
-  const hasDrawnOrUploadedAnswer = Object.keys(answerModeByQuestion.value).some(
-    qId => answerModeByQuestion.value[Number(qId)] !== 'typed'
-  )
-  return hasTextAnswer || hasCanvasQuestion || hasDrawnOrUploadedAnswer
-})
+// Reuses the same live `answeredFlags` the progress dots and submit-confirmation dialog already
+// read (derived straight from `answers`/`answerAttachmentByQuestion`/`answerAnnotationsByQuestion`,
+// updated the moment the student types, draws, or uploads - not just after a page reload). This
+// used to be a separate, looser check keyed off `answerModeByQuestion`, which is only populated
+// once at initial load, so a same-session Upload never flipped it and the Submit button stayed
+// disabled until a refresh.
+const canSubmit = computed(() => !isLocked.value && answeredCount.value > 0)
 
 const formatDate = (dateString: string) => {
   if (!dateString) return 'N/A'
@@ -619,7 +625,6 @@ const loadAssignment = async () => {
           if (answer.answer_text !== null && answer.answer_text !== undefined) {
             answers.value[answer.question_id] = answer.answer_text
           }
-          answerModeByQuestion.value[answer.question_id] = answer.answer_mode || 'typed'
           answerAttachmentByQuestion.value[answer.question_id] = answer.student_attachment_path
             ? { path: answer.student_attachment_path, originalName: answer.student_attachment_original_name }
             : null

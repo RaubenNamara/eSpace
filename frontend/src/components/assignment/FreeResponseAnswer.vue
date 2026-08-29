@@ -103,12 +103,17 @@
         <p v-if="uploading" class="text-sm text-gray-500 dark:text-gray-400 mb-2">Uploading…</p>
         <p v-if="uploadError" class="text-sm text-red-600 dark:text-red-400 mb-2">{{ uploadError }}</p>
 
-        <div v-if="attachment && attachment.originalName" class="free-response-answer__replace mb-3">
-          <p class="text-sm text-gray-900 dark:text-white">📄 {{ attachment.originalName }}</p>
-          <label v-if="!readonly" class="free-response-answer__replace-btn">
-            Replace File
-            <input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" class="hidden" :disabled="uploading" @change="onFileSelected">
-          </label>
+        <div v-if="attachment && attachment.originalName && !isPlaceholderAttachmentName(attachment.originalName)" class="free-response-answer__replace mb-3">
+          <p class="text-sm text-gray-900 dark:text-white break-all">📄 {{ attachment.originalName }}</p>
+          <div v-if="!readonly" class="flex items-center gap-3 shrink-0">
+            <label class="free-response-answer__replace-btn">
+              Replace File
+              <input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" class="hidden" :disabled="uploading" @change="onFileSelected">
+            </label>
+            <button type="button" class="free-response-answer__remove-btn" :disabled="uploading" @click="removeUpload">
+              Remove File
+            </button>
+          </div>
         </div>
         <p v-else class="text-sm text-gray-500 dark:text-gray-400 mb-2">No file uploaded yet.</p>
 
@@ -141,6 +146,7 @@ import PdfAnnotationViewer from './PdfAnnotationViewer.vue'
 import AnswerModeSelector, { type AnswerMode } from './AnswerModeSelector.vue'
 import TypedAnswerEditor from './TypedAnswerEditor.vue'
 import { resolveAssetUrl } from '@/utils/url'
+import { isPlaceholderAttachmentName } from '@/utils/answerAttachment'
 
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp']
 
@@ -167,6 +173,10 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
   (e: 'submission-id', id: number): void
   (e: 'locked'): void
+  // Lets the parent's own "is this question answered" tracking (progress dots, submit
+  // confirmation) react to an Upload-mode file the moment it's chosen, instead of only after
+  // the next full page load re-fetches answerAttachmentByQuestion from the server.
+  (e: 'update:attachment', value: { path: string; originalName?: string } | null): void
 }>()
 
 const API_BASE = '/api'
@@ -192,6 +202,9 @@ const imageDims = ref({ width: 800, height: 1000 })
 // fresh on every load (not persisted), inferred from whichever channel already has real content
 // so a returning student lands back on the view that matches their existing work.
 function inferInitialMode(): AnswerMode {
+  // A real (non-placeholder) upload is the most explicit, unambiguous signal - a student can
+  // only end up with one by deliberately choosing a file, so it wins over the other channels.
+  if (props.initialAttachment && !isPlaceholderAttachmentName(props.initialAttachment.originalName)) return 'upload'
   if ((props.question as any).response_type === 'pdf_annotation') return 'write'
   const plainText = (props.modelValue || '').replace(/<[^>]*>/g, '').trim()
   if (plainText.length > 0) return 'type'
@@ -244,6 +257,7 @@ async function uploadFile(file: File) {
       { headers: { 'Content-Type': 'multipart/form-data' } }
     )
     attachment.value = { path: response.data.data.path, originalName: response.data.data.original_name }
+    emit('update:attachment', attachment.value)
     pdfLayers.value = {}
     if (response.data.data.submission_id) {
       emit('submission-id', response.data.data.submission_id)
@@ -258,28 +272,55 @@ async function uploadFile(file: File) {
   }
 }
 
+// The question itself (questionPdfUrl) is shown separately above when the teacher uploaded one -
+// this workspace always starts from the plain default answer sheet instead, never a copy of the
+// question PDF, so the two don't show the same document twice.
+const startingDocPath = computed(() => questionPdfUrl.value ? DEFAULT_ANSWER_DOCUMENT_PATH : props.question.attachment_path)
+
+// Builds and uploads the placeholder starting document - either a copy of the teacher's own
+// starting doc (question.attachment_path), or a blank white page if the teacher didn't set one.
+// Used both to seed a brand-new question (autoCreateBlankCanvas) and to restore a clean slate
+// when the student removes their own upload (removeUpload).
+async function uploadStartingDocument() {
+  if (startingDocPath.value) {
+    const response = await fetch(resolveAssetUrl(startingDocPath.value))
+    const blob = await response.blob()
+    const ext = startingDocPath.value.split('.').pop()?.split(/[?#]/)[0] || 'pdf'
+    const mime = blob.type || (ext === 'pdf' ? 'application/pdf' : `image/${ext}`)
+    const file = new File([blob], `Assignment file.${ext}`, { type: mime })
+    await uploadFile(file)
+    return
+  }
+
+  const canvas = document.createElement('canvas')
+  canvas.width = 800
+  canvas.height = 1000
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+  const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'))
+  if (!blob) return
+
+  const file = new File([blob], 'Blank canvas.png', { type: 'image/png' })
+  await uploadFile(file)
+}
+
 // A question offers a drawing surface even before the student uploads their own file - rather
 // than a separate always-blank canvas section (removed per an earlier request), a starting file
 // is auto-uploaded into this same "PDF or image" slot the first time the student opens a question
-// with nothing here yet, so the toolbar/canvas are ready to write or draw on immediately. If the
-// teacher set a default source document on the question (question.attachment_path - e.g. a
-// worksheet or answer sheet every student should start from), that's copied in as the student's
-// own starting attachment; otherwise a blank white page is generated. Either way the student can
-// still replace it via "Replace file", and since it becomes a real uploaded attachment, the
-// teacher sees and can mark it exactly like any other uploaded evidence - no separate handling
-// needed on the marking side.
+// with nothing here yet, so the toolbar/canvas are ready to write or draw on immediately. Either
+// way the student can still replace it via "Replace file", and since it becomes a real uploaded
+// attachment, the teacher sees and can mark it exactly like any other uploaded evidence - no
+// separate handling needed on the marking side.
 async function autoCreateBlankCanvas() {
-  // The question itself (questionPdfUrl) is shown separately above when the teacher uploaded
-  // one - this workspace always starts from the plain default answer sheet instead, never a
-  // copy of the question PDF, so the two don't show the same document twice.
-  const startingDocPath = questionPdfUrl.value ? DEFAULT_ANSWER_DOCUMENT_PATH : props.question.attachment_path
-
   if (props.readonly) {
     // Preview/oversight mode (teacher previewing before publish, HOD/admin reviewing) has no
     // real submission to upload into - just point straight at the starting document (if any) so
     // it's actually visible here, instead of silently showing "No file uploaded."
-    if (!attachment.value && startingDocPath) {
-      attachment.value = { path: startingDocPath }
+    if (!attachment.value && startingDocPath.value) {
+      attachment.value = { path: startingDocPath.value }
     }
     autoCreating.value = false
     return
@@ -291,29 +332,7 @@ async function autoCreateBlankCanvas() {
   }
 
   try {
-    if (startingDocPath) {
-      const response = await fetch(resolveAssetUrl(startingDocPath))
-      const blob = await response.blob()
-      const ext = startingDocPath.split('.').pop()?.split(/[?#]/)[0] || 'pdf'
-      const mime = blob.type || (ext === 'pdf' ? 'application/pdf' : `image/${ext}`)
-      const file = new File([blob], `Assignment file.${ext}`, { type: mime })
-      await uploadFile(file)
-      return
-    }
-
-    const canvas = document.createElement('canvas')
-    canvas.width = 800
-    canvas.height = 1000
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-    ctx.fillStyle = '#ffffff'
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-    const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'))
-    if (!blob) return
-
-    const file = new File([blob], 'Blank canvas.png', { type: 'image/png' })
-    await uploadFile(file)
+    await uploadStartingDocument()
   } finally {
     autoCreating.value = false
   }
@@ -326,6 +345,12 @@ function onFileSelected(e: Event) {
   const file = input.files?.[0]
   input.value = ''
   if (file) uploadFile(file)
+}
+
+async function removeUpload() {
+  if (props.readonly || uploading.value) return
+  if (!window.confirm('Remove this file? This cannot be undone.')) return
+  await uploadStartingDocument()
 }
 
 function onDrop(e: DragEvent) {
@@ -437,8 +462,9 @@ function onPdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
 
 .free-response-answer__replace {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 12px;
   padding: 6px 2px;
 }
 
@@ -446,9 +472,29 @@ function onPdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
   font-size: 12px;
   color: #4f46e5;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 :global(.dark) .free-response-answer__replace-btn {
   color: #a5b4fc;
+}
+
+.free-response-answer__remove-btn {
+  font-size: 12px;
+  color: #dc2626;
+  cursor: pointer;
+  white-space: nowrap;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.free-response-answer__remove-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+:global(.dark) .free-response-answer__remove-btn {
+  color: #f87171;
 }
 </style>
