@@ -111,26 +111,28 @@
 
             <!-- Additional files - every extra file the student attached beyond the primary
                  upload above, each shown with any marks the teacher made on it. -->
-            <div v-if="question.answer_attachments?.length" class="ml-3 sm:ml-6 mt-4 space-y-4">
-              <p class="text-sm text-gray-500 dark:text-gray-400">Additional files</p>
-              <div v-for="file in question.answer_attachments" :key="file.id">
-                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">{{ file.original_name }}</p>
-                <AnnotationCanvas
-                  v-if="file.file_type === 'image'"
-                  :background="resolveAssetUrl(file.path)"
-                  :width="additionalFileImageDims[file.id]?.width || 800"
-                  :height="additionalFileImageDims[file.id]?.height || 1000"
-                  :readonly-layers="[file.marking_annotations?.[1] || { objects: [] }]"
-                  mode="readonly"
-                  readonly
-                />
-                <PdfAnnotationViewer
-                  v-else
-                  :pdf-url="resolveAssetUrl(file.path)"
-                  :readonly-layers-by-page="additionalFilePdfLayers(file)"
-                  mode="readonly"
-                  readonly
-                />
+            <div v-if="question.answer_attachments?.length" class="ml-3 sm:ml-6 mt-4">
+              <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">Additional files</p>
+              <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                <div v-for="file in question.answer_attachments" :key="file.id" class="min-w-0">
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mb-1 truncate">{{ file.original_name }}</p>
+                  <AnnotationCanvas
+                    v-if="file.file_type === 'image'"
+                    :background="resolveAssetUrl(file.path)"
+                    :width="additionalFileImageDims[file.id]?.width || 800"
+                    :height="additionalFileImageDims[file.id]?.height || 1000"
+                    :readonly-layers="[file.marking_annotations?.[1] || { objects: [] }]"
+                    mode="readonly"
+                    readonly
+                  />
+                  <PdfAnnotationViewer
+                    v-else
+                    :pdf-url="resolveAssetUrl(file.path)"
+                    :readonly-layers-by-page="additionalFilePdfLayers(file)"
+                    mode="readonly"
+                    readonly
+                  />
+                </div>
               </div>
             </div>
           </template>
