@@ -336,13 +336,40 @@ class AssignmentController extends Controller
                 }
                 $question['answer_annotations'] = $answerPages;
 
-                $maStmt = $db->prepare("SELECT page_number, annotation_data FROM assignment_annotations WHERE submission_id = :submission_id AND question_id = :question_id ORDER BY page_number ASC");
+                $maStmt = $db->prepare("SELECT page_number, annotation_data FROM assignment_annotations WHERE submission_id = :submission_id AND question_id = :question_id AND attachment_id IS NULL ORDER BY page_number ASC");
                 $maStmt->execute(['submission_id' => $submissionId, 'question_id' => $questionId]);
                 $markingPages = [];
                 foreach ($maStmt->fetchAll() as $row) {
                     $markingPages[(int) $row['page_number']] = json_decode($row['annotation_data'] ?? '[]', true) ?: [];
                 }
                 $question['marking_annotations'] = $markingPages;
+
+                // Supplementary "additional files" - every extra file the student attached,
+                // each with any marks the teacher has made on it (view-only here).
+                $afStmt = $db->prepare(
+                    "SELECT id, file_path, original_name, file_type FROM assignment_answer_attachments
+                     WHERE submission_id = :submission_id AND question_id = :question_id ORDER BY display_order ASC, id ASC"
+                );
+                $afStmt->execute(['submission_id' => $submissionId, 'question_id' => $questionId]);
+                $question['answer_attachments'] = array_map(function ($row) use ($db, $submissionId, $questionId) {
+                    $fileMaStmt = $db->prepare(
+                        "SELECT page_number, annotation_data FROM assignment_annotations
+                         WHERE submission_id = :submission_id AND question_id = :question_id AND attachment_id = :attachment_id
+                         ORDER BY page_number ASC"
+                    );
+                    $fileMaStmt->execute(['submission_id' => $submissionId, 'question_id' => $questionId, 'attachment_id' => $row['id']]);
+                    $filePages = [];
+                    foreach ($fileMaStmt->fetchAll() as $faRow) {
+                        $filePages[(int) $faRow['page_number']] = json_decode($faRow['annotation_data'] ?? '[]', true) ?: [];
+                    }
+                    return [
+                        'id' => (int) $row['id'],
+                        'path' => $row['file_path'],
+                        'original_name' => $row['original_name'],
+                        'file_type' => $row['file_type'],
+                        'marking_annotations' => $filePages,
+                    ];
+                }, $afStmt->fetchAll());
             }
 
             $qmStmt = $db->prepare("SELECT marks_awarded, feedback FROM question_marks WHERE submission_id = :submission_id AND question_id = :question_id");

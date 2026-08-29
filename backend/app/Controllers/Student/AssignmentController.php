@@ -613,7 +613,10 @@ class AssignmentController extends Controller
                 $question['answer_annotations'] = $answerPages;
 
                 if ($includeMarking) {
-                    $maStmt = $this->pdo->prepare("SELECT page_number, annotation_data FROM assignment_annotations WHERE submission_id = :submission_id AND question_id = :question_id ORDER BY page_number ASC");
+                    // attachment_id IS NULL scopes this to the primary evidence file only - each
+                    // supplementary file below gets its own marking_annotations, keyed separately,
+                    // matching Teacher\MarkingController::getSubmissionForMarking().
+                    $maStmt = $this->pdo->prepare("SELECT page_number, annotation_data FROM assignment_annotations WHERE submission_id = :submission_id AND question_id = :question_id AND attachment_id IS NULL ORDER BY page_number ASC");
                     $maStmt->execute(['submission_id' => $submissionId, 'question_id' => $questionId]);
                     $markingPages = [];
                     foreach ($maStmt->fetchAll() as $row) {
@@ -621,6 +624,37 @@ class AssignmentController extends Controller
                     }
                     $question['marking_annotations'] = $markingPages;
                 }
+
+                // Supplementary "additional files" - every extra file the student attached,
+                // independent of the single primary attachment above, each with any marks the
+                // teacher has made on it (view-only here, matching the rest of this page).
+                $afStmt = $this->pdo->prepare(
+                    "SELECT id, file_path, original_name, file_type FROM assignment_answer_attachments
+                     WHERE submission_id = :submission_id AND question_id = :question_id ORDER BY display_order ASC, id ASC"
+                );
+                $afStmt->execute(['submission_id' => $submissionId, 'question_id' => $questionId]);
+                $question['answer_attachments'] = array_map(function ($row) use ($includeMarking, $submissionId, $questionId) {
+                    $file = [
+                        'id' => (int) $row['id'],
+                        'path' => $row['file_path'],
+                        'original_name' => $row['original_name'],
+                        'file_type' => $row['file_type'],
+                    ];
+                    if ($includeMarking) {
+                        $fileMaStmt = $this->pdo->prepare(
+                            "SELECT page_number, annotation_data FROM assignment_annotations
+                             WHERE submission_id = :submission_id AND question_id = :question_id AND attachment_id = :attachment_id
+                             ORDER BY page_number ASC"
+                        );
+                        $fileMaStmt->execute(['submission_id' => $submissionId, 'question_id' => $questionId, 'attachment_id' => $row['id']]);
+                        $filePages = [];
+                        foreach ($fileMaStmt->fetchAll() as $faRow) {
+                            $filePages[(int) $faRow['page_number']] = json_decode($faRow['annotation_data'] ?? '[]', true) ?: [];
+                        }
+                        $file['marking_annotations'] = $filePages;
+                    }
+                    return $file;
+                }, $afStmt->fetchAll());
             }
 
             if ($includeMarking) {

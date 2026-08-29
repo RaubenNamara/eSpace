@@ -108,6 +108,31 @@
               mode="readonly"
               readonly
             />
+
+            <!-- Additional files - every extra file the student attached beyond the primary
+                 upload above, each shown with any marks the teacher made on it. -->
+            <div v-if="question.answer_attachments?.length" class="ml-3 sm:ml-6 mt-4 space-y-4">
+              <p class="text-sm text-gray-500 dark:text-gray-400">Additional files</p>
+              <div v-for="file in question.answer_attachments" :key="file.id">
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">{{ file.original_name }}</p>
+                <AnnotationCanvas
+                  v-if="file.file_type === 'image'"
+                  :background="resolveAssetUrl(file.path)"
+                  :width="additionalFileImageDims[file.id]?.width || 800"
+                  :height="additionalFileImageDims[file.id]?.height || 1000"
+                  :readonly-layers="[file.marking_annotations?.[1] || { objects: [] }]"
+                  mode="readonly"
+                  readonly
+                />
+                <PdfAnnotationViewer
+                  v-else
+                  :pdf-url="resolveAssetUrl(file.path)"
+                  :readonly-layers-by-page="additionalFilePdfLayers(file)"
+                  mode="readonly"
+                  readonly
+                />
+              </div>
+            </div>
           </template>
 
           <p v-if="(mode === 'result' || oversightRole) && question.question_mark?.feedback" class="mt-3 text-sm text-gray-600 dark:text-gray-400 italic">
@@ -148,6 +173,7 @@ const answers = ref<any[]>([])
 const questions = ref<any[]>([])
 const summary = ref<{ marks_awarded: number; total_marks: number; percentage: number; grade: string } | null>(null)
 const evidenceImageDims = ref<Record<number, { width: number; height: number }>>({})
+const additionalFileImageDims = ref<Record<number, { width: number; height: number }>>({})
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp']
 
 const gradingScale = [
@@ -255,14 +281,36 @@ function combinedLayersByPage(question: any): Record<number, AnnotationLayerJSON
   return result
 }
 
+// Additional files have no question/answer stacking (students never draw on them, only upload
+// them - see FreeResponseAnswer.vue) so the only readonly layer is whatever the teacher marked.
+function additionalFilePdfLayers(file: any): Record<number, AnnotationLayerJSON[]> {
+  const pages = file.marking_annotations || {}
+  const result: Record<number, AnnotationLayerJSON[]> = {}
+  for (const page of Object.keys(pages).map(Number)) {
+    result[page] = [pages[page] || { objects: [] }]
+  }
+  if (Object.keys(result).length === 0) result[1] = [{ objects: [] }]
+  return result
+}
+
 function measureImages() {
   for (const question of questions.value) {
-    if (!showPdf(question) || !isEvidenceImage(question)) continue
-    const img = new Image()
-    img.onload = () => {
-      evidenceImageDims.value[question.id] = { width: img.naturalWidth, height: img.naturalHeight }
+    if (showPdf(question) && isEvidenceImage(question)) {
+      const img = new Image()
+      img.onload = () => {
+        evidenceImageDims.value[question.id] = { width: img.naturalWidth, height: img.naturalHeight }
+      }
+      img.src = pdfUrlFor(question)
     }
-    img.src = pdfUrlFor(question)
+
+    for (const file of question.answer_attachments || []) {
+      if (file.file_type !== 'image') continue
+      const img = new Image()
+      img.onload = () => {
+        additionalFileImageDims.value[file.id] = { width: img.naturalWidth, height: img.naturalHeight }
+      }
+      img.src = resolveAssetUrl(file.path)
+    }
   }
 }
 
