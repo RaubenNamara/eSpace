@@ -46,7 +46,7 @@
       <!-- General feedback -->
       <div v-if="(mode === 'result' || oversightRole) && submission.feedback" class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
         <h3 class="font-medium text-indigo-900 dark:text-indigo-200 mb-1">Teacher Feedback</h3>
-        <p class="text-indigo-800 dark:text-indigo-300 text-sm whitespace-pre-line break-words">{{ submission.feedback }}</p>
+        <p class="text-indigo-800 dark:text-indigo-300 text-sm whitespace-pre-line break-words text-justify">{{ submission.feedback }}</p>
       </div>
 
       <!-- Questions -->
@@ -60,8 +60,8 @@
             <div class="flex items-start gap-3 min-w-0">
               <span class="font-medium text-gray-900 dark:text-white flex-shrink-0">Q{{ index + 1 }}.</span>
               <div class="min-w-0 overflow-x-auto">
-                <p v-if="question.question_text" class="text-gray-900 dark:text-white mb-1 break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.question_text"></p>
-                <p v-else-if="question.scenario_text" class="text-gray-700 dark:text-gray-300 mb-1 break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.scenario_text"></p>
+                <p v-if="question.question_text" class="text-gray-900 dark:text-white mb-1 break-words text-justify [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.question_text"></p>
+                <p v-else-if="question.scenario_text" class="text-gray-700 dark:text-gray-300 mb-1 break-words text-justify [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.scenario_text"></p>
               </div>
             </div>
             <span v-if="(mode === 'result' || oversightRole) && question.question_mark" class="text-sm font-bold text-red-600 dark:text-red-400 whitespace-nowrap">
@@ -70,13 +70,13 @@
           </div>
 
           <div v-if="question.scenario_text" class="bg-gray-50 dark:bg-gray-700/50 p-3 sm:p-4 rounded-lg mb-4 overflow-x-auto">
-            <p class="text-gray-700 dark:text-gray-300 whitespace-pre-line break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.scenario_text"></p>
+            <p class="text-gray-700 dark:text-gray-300 whitespace-pre-line break-words text-justify [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.scenario_text"></p>
           </div>
 
           <!-- Objective (MCQ/true-false) questions: raw stored answer only -->
           <div v-if="isObjective(question)" class="ml-3 sm:ml-6 p-3 sm:p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
             <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Your answer</p>
-            <p class="text-gray-900 dark:text-white whitespace-pre-line break-words">{{ answerFor(question.id) || '(No answer provided)' }}</p>
+            <p class="text-gray-900 dark:text-white whitespace-pre-line break-words text-justify">{{ answerFor(question.id) || '(No answer provided)' }}</p>
           </div>
 
           <!-- Free-response question: typed answer (rendered on a canvas so any teacher marks
@@ -120,7 +120,7 @@
             </div>
           </template>
 
-          <p v-if="(mode === 'result' || oversightRole) && question.question_mark?.feedback" class="mt-3 text-sm text-gray-600 dark:text-gray-400 italic">
+          <p v-if="(mode === 'result' || oversightRole) && question.question_mark?.feedback" class="mt-3 text-sm text-gray-600 dark:text-gray-400 italic text-justify">
             "{{ question.question_mark.feedback }}"
           </p>
         </div>
