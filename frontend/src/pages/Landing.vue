@@ -43,6 +43,20 @@
         }"
       ></div>
 
+      <!-- Ambient floating icon motion graphics - purely decorative, sit behind the content -->
+      <svg class="ambient-icon pointer-events-none absolute left-[8%] top-[18%] hidden h-9 w-9 text-cyan-300/20 animate-drift sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+      </svg>
+      <svg class="ambient-icon pointer-events-none absolute right-[14%] top-[12%] hidden h-6 w-6 text-blue-300/20 animate-drift-fast lg:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 13l4 4L19 7"/>
+      </svg>
+      <svg class="ambient-icon pointer-events-none absolute left-[42%] top-[8%] hidden h-5 w-5 text-indigo-300/20 animate-drift-slow xl:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 10l-5.714 2.143L13 19l-2.286-6.857L5 10l5.714-2.143L13 1z"/>
+      </svg>
+      <svg class="ambient-icon pointer-events-none absolute right-[8%] bottom-[16%] hidden h-8 w-8 text-purple-300/20 animate-drift lg:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+      </svg>
+
       <div class="relative mx-auto grid max-w-7xl grid-cols-1 items-center gap-16 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
         <div class="animate-fade-up">
           <div class="mb-7 inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-400/10 px-4 py-2 text-sm font-medium text-blue-100 backdrop-blur-md">
@@ -150,12 +164,120 @@
     </section>
 
     <!-- About -->
-    <section id="about" class="relative bg-white">
-      <img
-        src="/images/stmark-home.png"
-        alt="St Mark's College Namagoma E-Learning Digital Space — About Smacon e-Space"
-        class="block w-full"
-      >
+    <section id="about" class="relative overflow-hidden bg-gradient-to-br from-blue-700 via-indigo-700 to-purple-800 py-20 sm:py-28">
+      <div class="pointer-events-none absolute -left-32 -top-32 h-[420px] w-[420px] rounded-full bg-cyan-400/20 blur-[120px]"></div>
+      <div class="pointer-events-none absolute -bottom-40 -right-20 h-[460px] w-[460px] rounded-full bg-purple-400/20 blur-[130px]"></div>
+      <div
+        class="pointer-events-none absolute inset-0 opacity-[0.04]"
+        :style="{
+          backgroundImage: 'linear-gradient(rgba(255,255,255,0.8) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.8) 1px, transparent 1px)',
+          backgroundSize: '48px 48px'
+        }"
+      ></div>
+
+      <!-- Ambient floating icon motion graphics - purely decorative, sit behind the content -->
+      <svg class="ambient-icon pointer-events-none absolute left-[10%] bottom-[14%] hidden h-7 w-7 text-cyan-200/20 animate-drift-slow sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-6l-4 4v-4z"/>
+      </svg>
+      <svg class="ambient-icon pointer-events-none absolute left-[38%] top-[10%] hidden h-6 w-6 text-white/15 animate-drift-fast lg:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 10l-5.714 2.143L13 19l-2.286-6.857L5 10l5.714-2.143L13 1z"/>
+      </svg>
+      <svg class="ambient-icon pointer-events-none absolute right-[6%] top-[10%] hidden h-9 w-9 text-purple-200/20 animate-drift xl:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422A12.083 12.083 0 0121 15.5c0 1.5-.5 3-1 4M12 14l-6.16-3.422A12.083 12.083 0 003 15.5c0 1.5.5 3 1 4"/>
+      </svg>
+
+      <div class="relative mx-auto grid max-w-7xl grid-cols-1 items-center gap-16 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
+        <div class="text-center lg:text-left">
+          <div class="mx-auto mb-6 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/20 backdrop-blur-md lg:mx-0">
+            <svg class="h-7 w-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+            </svg>
+          </div>
+
+          <h2 class="text-3xl font-bold leading-tight tracking-tight text-white sm:text-4xl lg:text-5xl">
+            St. Mark's College Namagoma<br class="hidden lg:block">
+            E-Learning Digital Space
+          </h2>
+          <p class="mx-auto mt-5 max-w-lg text-base leading-7 text-blue-100 sm:text-lg lg:mx-0">
+            Empowering students and teachers with interactive, browser-based access to notes and textbooks,
+            with nothing to download or install.
+          </p>
+
+          <div class="mt-8 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
+            <span class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white backdrop-blur-md">
+              <svg class="h-4 w-4 text-cyan-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+              Interactive notes &amp; textbooks
+            </span>
+            <span class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white backdrop-blur-md">
+              <svg class="h-4 w-4 text-cyan-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              Works in any browser
+            </span>
+            <span class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white backdrop-blur-md">
+              <svg class="h-4 w-4 text-cyan-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4M9 9v.01M9 12v.01M9 15v.01M9 18v.01"/></svg>
+              Built for St Mark's College
+            </span>
+          </div>
+        </div>
+
+        <!-- Visual: browser-window mockup of a notes page, echoing the hero's device preview -->
+        <div class="relative hidden animate-fade-up-slow lg:block">
+          <div class="relative mx-auto max-w-md">
+            <div class="rounded-3xl border border-white/10 bg-white/[0.06] p-5 shadow-2xl shadow-black/40 backdrop-blur-xl">
+              <div class="mb-4 flex items-center gap-2">
+                <span class="h-2.5 w-2.5 rounded-full bg-rose-400/70"></span>
+                <span class="h-2.5 w-2.5 rounded-full bg-amber-400/70"></span>
+                <span class="h-2.5 w-2.5 rounded-full bg-emerald-400/70"></span>
+                <span class="ml-3 flex h-6 flex-1 items-center rounded-full bg-white/10 px-3">
+                  <svg class="mr-1.5 h-3 w-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                  <span class="text-[10px] text-slate-300">e-space.stmarks.ac.ug/enotes</span>
+                </span>
+              </div>
+
+              <div class="mb-3 flex items-center justify-between">
+                <span class="rounded-md bg-gradient-to-br from-orange-400 to-pink-500 px-2.5 py-1 text-[10px] font-semibold text-white">Chapter 4</span>
+                <span class="text-[10px] text-slate-400">Page 3 of 12</span>
+              </div>
+
+              <div class="space-y-2 rounded-xl bg-white/[0.06] p-4 ring-1 ring-white/10">
+                <p class="text-xs font-bold text-white">Data Communication</p>
+                <div class="h-1.5 w-full rounded-full bg-white/10"></div>
+                <div class="h-1.5 w-11/12 rounded-full bg-white/10"></div>
+                <div class="h-1.5 w-full rounded-full bg-white/10"></div>
+                <div class="h-1.5 w-4/5 rounded-full bg-white/10"></div>
+                <div class="mt-3 h-16 rounded-lg bg-gradient-to-br from-blue-500/20 to-cyan-400/20 ring-1 ring-white/10"></div>
+                <div class="h-1.5 w-full rounded-full bg-white/10"></div>
+                <div class="h-1.5 w-3/5 rounded-full bg-white/10"></div>
+              </div>
+
+              <div class="mt-3 flex items-center justify-between rounded-xl bg-white/[0.06] p-3 ring-1 ring-white/10">
+                <div class="flex items-center gap-2">
+                  <div class="h-7 w-7 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600"></div>
+                  <div class="h-1.5 w-16 rounded-full bg-white/10"></div>
+                </div>
+                <svg class="h-4 w-4 text-cyan-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+              </div>
+            </div>
+
+            <!-- Floating "no install" badge -->
+            <div class="absolute -bottom-6 -left-8 rounded-2xl border border-white/10 bg-slate-900/90 px-4 py-2.5 shadow-xl shadow-black/40 backdrop-blur-xl animate-float">
+              <div class="flex items-center gap-2">
+                <svg class="h-4 w-4 text-cyan-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.6 9h16.8M3.6 15h16.8M11.5 3a17 17 0 000 18M12.5 3a17 17 0 010 18"/></svg>
+                <span class="text-xs font-semibold text-white">Read from any device</span>
+              </div>
+            </div>
+
+            <!-- Floating badge -->
+            <div class="absolute -top-5 -right-4 rounded-2xl border border-white/10 bg-slate-900/90 px-4 py-2.5 shadow-xl shadow-black/40 backdrop-blur-xl animate-float-slow">
+              <div class="flex items-center gap-2">
+                <svg class="h-4 w-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span class="text-xs font-semibold text-white">Progress saved</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- Features -->
@@ -378,11 +500,32 @@ const roles = [
   animation: float 6.5s 0.5s ease-in-out infinite;
 }
 
+/* Ambient background icon motion graphics - a slow side-to-side sway (horizontal motion is the
+   dominant, clearly visible axis here, unlike the foreground float badges' vertical bob) with a
+   touch of rotation and vertical drift for an organic, non-mechanical feel. */
+@keyframes drift {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  50% { transform: translate(30px, -6px) rotate(-6deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+.animate-drift {
+  animation: drift 8s ease-in-out infinite;
+}
+.animate-drift-slow {
+  animation: drift 10s 1s ease-in-out infinite;
+}
+.animate-drift-fast {
+  animation: drift 6s 0.4s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-up,
   .animate-fade-up-slow,
   .animate-float,
-  .animate-float-slow {
+  .animate-float-slow,
+  .animate-drift,
+  .animate-drift-slow,
+  .animate-drift-fast {
     animation: none;
   }
 }
