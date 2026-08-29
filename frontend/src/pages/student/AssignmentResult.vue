@@ -92,43 +92,26 @@
                 readonly
               />
             </div>
-            <AnnotationCanvas
-              v-if="showPdf(question) && isEvidenceImage(question)"
-              :background="pdfUrlFor(question)"
-              :width="evidenceImageDims[question.id]?.width || 800"
-              :height="evidenceImageDims[question.id]?.height || 1000"
-              :readonly-layers="combinedLayersByPage(question)[1] || []"
-              mode="readonly"
-              readonly
-            />
-            <PdfAnnotationViewer
-              v-else-if="showPdf(question)"
-              :pdf-url="pdfUrlFor(question)"
-              :readonly-layers-by-page="pdfLayersByPage(question)"
-              mode="readonly"
-              readonly
-            />
-
-            <!-- Additional files - every extra file the student attached beyond the primary
-                 upload above, each shown with any marks the teacher made on it. -->
-            <div v-if="question.answer_attachments?.length" class="ml-3 sm:ml-6 mt-4">
-              <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">Additional files</p>
+            <!-- Uploaded evidence gallery - the first file the student uploaded and every extra
+                 file are shown side by side with no distinction, each with any marks the
+                 teacher made on it. -->
+            <div v-if="galleryFilesFor(question).length" class="ml-3 sm:ml-6 mt-4">
               <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                <div v-for="file in question.answer_attachments" :key="file.id" class="min-w-0">
-                  <p class="text-xs text-gray-500 dark:text-gray-400 mb-1 truncate">{{ file.original_name }}</p>
+                <div v-for="item in galleryFilesFor(question)" :key="item.key" class="min-w-0">
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mb-1 truncate">{{ item.originalName }}</p>
                   <AnnotationCanvas
-                    v-if="file.file_type === 'image'"
-                    :background="resolveAssetUrl(file.path)"
-                    :width="additionalFileImageDims[file.id]?.width || 800"
-                    :height="additionalFileImageDims[file.id]?.height || 1000"
-                    :readonly-layers="[file.marking_annotations?.[1] || { objects: [] }]"
+                    v-if="item.fileType === 'image'"
+                    :background="item.path"
+                    :width="(item.isPrimary ? evidenceImageDims[question.id] : additionalFileImageDims[item.file.id])?.width || 800"
+                    :height="(item.isPrimary ? evidenceImageDims[question.id] : additionalFileImageDims[item.file.id])?.height || 1000"
+                    :readonly-layers="item.isPrimary ? (combinedLayersByPage(question)[1] || []) : [item.file.marking_annotations?.[1] || { objects: [] }]"
                     mode="readonly"
                     readonly
                   />
                   <PdfAnnotationViewer
                     v-else
-                    :pdf-url="resolveAssetUrl(file.path)"
-                    :readonly-layers-by-page="additionalFilePdfLayers(file)"
+                    :pdf-url="item.path"
+                    :readonly-layers-by-page="item.isPrimary ? pdfLayersByPage(question) : additionalFilePdfLayers(item.file)"
                     mode="readonly"
                     readonly
                   />
@@ -293,6 +276,42 @@ function additionalFilePdfLayers(file: any): Record<number, AnnotationLayerJSON[
   }
   if (Object.keys(result).length === 0) result[1] = [{ objects: [] }]
   return result
+}
+
+interface ResultGalleryItem {
+  key: string
+  path: string
+  originalName: string
+  fileType: 'image' | 'pdf'
+  isPrimary: boolean
+  file?: any
+}
+
+// Unifies the single primary evidence upload with every "additional file" into one gallery,
+// with no visual distinction between them - matches the merged upload gallery in
+// FreeResponseAnswer.vue.
+function galleryFilesFor(question: any): ResultGalleryItem[] {
+  const items: ResultGalleryItem[] = []
+  if (showPdf(question)) {
+    items.push({
+      key: 'primary',
+      path: pdfUrlFor(question),
+      originalName: question.answer?.student_attachment_original_name || 'Uploaded file',
+      fileType: isEvidenceImage(question) ? 'image' : 'pdf',
+      isPrimary: true
+    })
+  }
+  for (const file of question.answer_attachments || []) {
+    items.push({
+      key: `file-${file.id}`,
+      path: resolveAssetUrl(file.path),
+      originalName: file.original_name,
+      fileType: file.file_type,
+      isPrimary: false,
+      file
+    })
+  }
+  return items
 }
 
 function measureImages() {
