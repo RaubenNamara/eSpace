@@ -47,7 +47,7 @@ function addCanvasAsPage(pdf: jsPDF, canvas: HTMLCanvasElement, isFirstPage: boo
 // before capturing makes its content reflow taller (table columns and comment boxes compress
 // instead of sprawling sideways), so the captured aspect ratio lands close to A4's own and the
 // page ends up filled top to bottom instead of letterboxed.
-const PRINT_WIDTH_PX = 794
+const PRINT_WIDTH_PX = 730
 
 export async function captureElement(el: HTMLElement): Promise<HTMLCanvasElement> {
   if ('fonts' in document) {
@@ -58,6 +58,10 @@ export async function captureElement(el: HTMLElement): Promise<HTMLCanvasElement
   const originalMaxWidth = el.style.maxWidth
   el.style.width = `${PRINT_WIDTH_PX}px`
   el.style.maxWidth = `${PRINT_WIDTH_PX}px`
+  // Opt-in hook for capture-only style corrections (see CompetencyDetailReport.vue's grade-badge
+  // rule) where html2canvas's rendering diverges from a real browser's and needs a nudge that
+  // must never apply to the on-screen view.
+  el.classList.add('is-capturing-pdf')
   await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
 
   try {
@@ -77,6 +81,7 @@ export async function captureElement(el: HTMLElement): Promise<HTMLCanvasElement
   } finally {
     el.style.width = originalWidth
     el.style.maxWidth = originalMaxWidth
+    el.classList.remove('is-capturing-pdf')
   }
 }
 

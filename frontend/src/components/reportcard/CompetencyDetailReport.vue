@@ -244,13 +244,22 @@ onMounted(async () => {
 }
 
 .grade-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: inline-block;
   width: 24px;
   height: 24px;
-  line-height: 1;
+  line-height: 24px;
+  text-align: center;
   border-radius: 9999px;
+}
+
+/* html2canvas's text layout approximation renders this letter sitting visibly low in the circle
+   regardless of centering technique (flex and line-height both measured identically off-center in
+   the captured canvas - pixel-checked against the live capture, not just eyeballed). Real browsers
+   center it correctly via line-height above, so this nudge is scoped to .is-capturing-pdf, a class
+   captureElement() (reportCardPdf.ts) toggles on the root only for the duration of the html2canvas
+   call - it never affects on-screen rendering. */
+.is-capturing-pdf .grade-badge {
+  line-height: 17px;
 }
 
 @media print {
