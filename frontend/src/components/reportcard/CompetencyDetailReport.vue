@@ -14,7 +14,7 @@
         <div class="flex items-center gap-3 sm:gap-4 min-w-0">
           <img v-if="report.school?.logo_path" :src="resolveAssetUrl(report.school.logo_path)" alt="School logo" class="w-14 h-14 sm:w-20 sm:h-20 object-contain flex-shrink-0 rounded-lg bg-white ring-2 ring-gray-200 dark:ring-gray-600 p-1">
           <div class="min-w-0 leading-normal">
-            <h1 class="text-base sm:text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white uppercase tracking-wide break-words" style="line-height: 1.35; padding-top: 2px; padding-bottom: 2px;">
+            <h1 class="text-sm sm:text-lg md:text-2xl font-extrabold text-gray-900 dark:text-white uppercase tracking-wide break-words" style="line-height: 1.35; padding-top: 2px; padding-bottom: 2px;">
               {{ report.school?.school_name || 'School' }}
             </h1>
             <p v-if="report.school?.address" class="text-[10px] sm:text-sm text-gray-500 dark:text-gray-400" style="line-height: 1.6;">{{ report.school.address }}</p>
