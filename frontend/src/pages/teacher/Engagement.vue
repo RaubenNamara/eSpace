@@ -38,8 +38,25 @@
 
       <!-- Per-student breakdown -->
       <div class="card overflow-x-auto">
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">By Student</h3>
-        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">By Student</h3>
+          <div class="flex flex-wrap gap-2">
+            <input
+              v-model="nameFilter"
+              type="text"
+              placeholder="Search by name..."
+              class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white min-w-[200px]"
+            />
+            <select v-model="classFilter" class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+              <option value="">All classes</option>
+              <option v-for="c in classOptions" :key="c" :value="c">{{ c }}</option>
+            </select>
+          </div>
+        </div>
+        <p v-if="filteredStudents.length === 0" class="text-center text-gray-500 dark:text-gray-400 py-8">
+          No students match this filter.
+        </p>
+        <table v-else class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead>
             <tr>
               <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Student</th>
@@ -48,7 +65,7 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-            <tr v-for="s in students" :key="s.student_id">
+            <tr v-for="s in filteredStudents" :key="s.student_id">
               <td class="px-4 py-3">
                 <p class="font-medium text-gray-900 dark:text-white">{{ s.first_name }} {{ s.last_name }}</p>
                 <p class="text-xs text-gray-400">{{ s.admission_number }}</p>
@@ -76,7 +93,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import apiService from '@/services/api'
 
 interface ModuleStat { engaged: number; total: number; percentage: number | null }
@@ -106,6 +123,26 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 const modules = ref<Record<string, ModuleStat>>({})
 const students = ref<StudentRow[]>([])
+const nameFilter = ref('')
+const classFilter = ref('')
+
+const classOptions = computed(() => {
+  const names = new Set<string>()
+  for (const s of students.value) {
+    if (s.class_name) names.add(s.class_name)
+  }
+  return Array.from(names).sort()
+})
+
+const filteredStudents = computed(() => {
+  const query = nameFilter.value.trim().toLowerCase()
+  return students.value.filter(s => {
+    if (classFilter.value && s.class_name !== classFilter.value) return false
+    if (!query) return true
+    const haystack = `${s.first_name} ${s.last_name} ${s.admission_number}`.toLowerCase()
+    return haystack.includes(query)
+  })
+})
 
 function barColor(pct: number | null): string {
   if (pct === null) return 'bg-gray-300 dark:bg-gray-600'
