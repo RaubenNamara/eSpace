@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace eSpace\App\Controllers\HOD;
 
 use eSpace\App\Controllers\Controller;
+use eSpace\App\Services\EngagementAnalyticsService;
 
 /**
  * HOD Analytics Controller
@@ -290,6 +291,63 @@ class AnalyticsController extends Controller
             'books_count' => (int) $totals['books_count'],
             'readers_count' => (int) $totals['readers_count'],
             'top_books' => $topBooks,
+        ]);
+    }
+
+    /**
+     * GET /hod/analytics/engagement
+     * Reading/watching/attendance engagement across the whole department - eNotes, eLibrary,
+     * Item Bank, Videos and Live Classes. Department-wide like every other method on this
+     * controller (see class docblock), not restricted to any one class.
+     */
+    public function engagement(): void
+    {
+        if (!$this->isHOD()) {
+            $this->forbidden();
+            return;
+        }
+
+        $departmentId = $this->getDepartmentId();
+        if (!$departmentId) {
+            $this->error('Department not found', 404);
+            return;
+        }
+
+        $service = new EngagementAnalyticsService();
+        $roster = $service->departmentRoster($departmentId);
+
+        $enotes = $service->enotesBreakdown($roster, $departmentId);
+        $library = $service->libraryBreakdown($roster, $departmentId);
+        $itembank = $service->itemBankBreakdown($roster, $departmentId);
+        $videos = $service->videoBreakdown($roster, $departmentId);
+        $liveClasses = $service->liveClassBreakdown($roster, $departmentId);
+
+        $students = [];
+        foreach ($roster as $row) {
+            $studentId = (int) $row['student_id'];
+            $students[] = [
+                'student_id' => $studentId,
+                'first_name' => $row['first_name'],
+                'last_name' => $row['last_name'],
+                'admission_number' => $row['admission_number'],
+                'class_name' => $row['class_name'],
+                'enotes' => $enotes[$studentId] ?? ['engaged' => 0, 'total' => 0, 'percentage' => null],
+                'library' => $library[$studentId] ?? ['engaged' => 0, 'total' => 0, 'percentage' => null],
+                'itembank' => $itembank[$studentId] ?? ['engaged' => 0, 'total' => 0, 'percentage' => null],
+                'videos' => $videos[$studentId] ?? ['engaged' => 0, 'total' => 0, 'percentage' => null],
+                'live_classes' => $liveClasses[$studentId] ?? ['engaged' => 0, 'total' => 0, 'percentage' => null],
+            ];
+        }
+
+        $this->success([
+            'modules' => [
+                'enotes' => $service->summarize($enotes),
+                'library' => $service->summarize($library),
+                'itembank' => $service->summarize($itembank),
+                'videos' => $service->summarize($videos),
+                'live_classes' => $service->summarize($liveClasses),
+            ],
+            'students' => $students,
         ]);
     }
 }

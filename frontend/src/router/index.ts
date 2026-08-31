@@ -48,6 +48,7 @@ const TeacherItemBank = () => import('../pages/teacher/ItemBank.vue')
 const TeacherChat = () => import('../pages/teacher/Chat.vue')
 const TeacherSearch = () => import('../pages/teacher/Search.vue')
 const TeacherReports = () => import('../pages/teacher/Reports.vue')
+const TeacherEngagement = () => import('../pages/teacher/Engagement.vue')
 const TeacherMarksheet = () => import('../pages/teacher/Marksheet.vue')
 const TeacherVirtualLab = () => import('../pages/teacher/VirtualLab.vue')
 const TeacherSettings = () => import('../pages/teacher/Settings.vue')
@@ -230,6 +231,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'itembank', name: 'TeacherItemBank', component: TeacherItemBank },
       { path: 'chat', name: 'TeacherChat', component: TeacherChat },
       { path: 'reports', name: 'TeacherReports', component: TeacherReports },
+      { path: 'engagement', name: 'TeacherEngagement', component: TeacherEngagement },
       { path: 'settings', name: 'TeacherSettings', component: TeacherSettings },
       { path: 'enotes', name: 'ENotes', component: ENotes },
       { path: 'enotes/builder/:id', name: 'ENoteBuilder', component: ENoteBuilder },

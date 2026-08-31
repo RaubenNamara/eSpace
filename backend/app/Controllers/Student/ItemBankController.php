@@ -162,6 +162,33 @@ class ItemBankController extends Controller
             return;
         }
 
+        $this->recordOpen($db, $id, $studentId);
+
         $this->success($resource);
+    }
+
+    /**
+     * Marks a resource as opened for engagement analytics (Teacher/HOD/Admin engagement
+     * dashboards). item_bank_attempts has no unique key (it's an attempt log, not a progress
+     * table), so this is a check-then-insert rather than an upsert - one "opened" row per
+     * (question_id, student_id), simple "opened at least once" tracking per the scope decision in
+     * the engagement-analytics plan (this item bank is document resources, not interactive
+     * questions with a real answer/is_correct to record).
+     */
+    private function recordOpen($db, int $questionId, int $studentId): void
+    {
+        $exists = $db->prepare(
+            "SELECT 1 FROM item_bank_attempts WHERE question_id = :question_id AND student_id = :student_id LIMIT 1"
+        );
+        $exists->execute(['question_id' => $questionId, 'student_id' => $studentId]);
+        if ($exists->fetch()) {
+            return;
+        }
+
+        $stmt = $db->prepare(
+            "INSERT INTO item_bank_attempts (question_id, student_id, mode, attempted_at)
+             VALUES (:question_id, :student_id, 'practice', NOW())"
+        );
+        $stmt->execute(['question_id' => $questionId, 'student_id' => $studentId]);
     }
 }

@@ -186,7 +186,7 @@
     </template>
 
     <!-- Player -->
-    <VideoPlayerModal v-if="playVideo" :video="playVideo" @close="playVideo = null" />
+    <VideoPlayerModal v-if="playVideo" :video="playVideo" track-progress @close="playVideo = null" />
   </div>
 </template>
 

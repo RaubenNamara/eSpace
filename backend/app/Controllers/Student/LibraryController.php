@@ -163,6 +163,24 @@ class LibraryController extends Controller
             return;
         }
 
+        $this->recordRead($db, $id, $studentId);
+
         $this->success($book);
+    }
+
+    /**
+     * Marks a book as read for engagement analytics (Teacher/HOD/Admin engagement dashboards) -
+     * simple "opened at least once" tracking, not a real reading-position tracker, per the scope
+     * decision in the engagement-analytics plan. percentage_completed is set to 100 on first open
+     * and never revisited; a second open just refreshes last_read_at.
+     */
+    private function recordRead($db, int $bookId, int $studentId): void
+    {
+        $stmt = $db->prepare(
+            "INSERT INTO library_progress (book_id, student_id, percentage_completed, last_read_at)
+             VALUES (:book_id, :student_id, 100, NOW())
+             ON DUPLICATE KEY UPDATE last_read_at = NOW()"
+        );
+        $stmt->execute(['book_id' => $bookId, 'student_id' => $studentId]);
     }
 }

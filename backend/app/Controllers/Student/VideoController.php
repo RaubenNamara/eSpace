@@ -160,4 +160,62 @@ class VideoController extends Controller
 
         $this->success($video);
     }
+
+    /**
+     * Records watch progress for engagement analytics (Teacher/HOD/Admin engagement dashboards).
+     * The player calls this throttled (see Videos.vue), never on every timeupdate tick. Percentage
+     * only ever moves forward (GREATEST()) - scrubbing back doesn't undo progress already reached.
+     * completed_at is set once, the first time 90% is crossed - see the engagement-analytics plan's
+     * "watched" threshold.
+     * POST /student/videos/{id}/watch-progress
+     */
+    public function recordWatchProgress($id): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+
+        $studentId = $this->getStudentId();
+        if (!$studentId) {
+            $this->error('Student not found', 403);
+            return;
+        }
+
+        $id = (int) $id;
+        $db = $this->getDb();
+
+        $whereClause = $this->visibilityClause();
+        $visible = $db->prepare("SELECT v.id, v.duration FROM videos v WHERE v.id = :id AND {$whereClause}");
+        $visible->execute(['id' => $id, 'student_id' => $studentId, 'student_id_te' => $studentId]);
+        $video = $visible->fetch();
+        if (!$video) {
+            $this->notFound('Video not found or not accessible');
+            return;
+        }
+
+        $percentage = (float) $this->input('percentage_watched', 0);
+        $percentage = max(0.0, min(100.0, $percentage));
+        $watchedSeconds = $video['duration'] ? (int) round($percentage / 100 * (int) $video['duration']) : 0;
+        $completedNow = $percentage >= 90;
+
+        $stmt = $db->prepare(
+            "INSERT INTO video_views (video_id, student_id, percentage_watched, watched_seconds, last_watched_at, completed_at)
+             VALUES (:video_id, :student_id, :percentage, :watched_seconds, NOW(), :completed_at)
+             ON DUPLICATE KEY UPDATE
+                percentage_watched = GREATEST(percentage_watched, VALUES(percentage_watched)),
+                watched_seconds = GREATEST(watched_seconds, VALUES(watched_seconds)),
+                last_watched_at = NOW(),
+                completed_at = COALESCE(completed_at, VALUES(completed_at))"
+        );
+        $stmt->execute([
+            'video_id' => $id,
+            'student_id' => $studentId,
+            'percentage' => $percentage,
+            'watched_seconds' => $watchedSeconds,
+            'completed_at' => $completedNow ? date('Y-m-d H:i:s') : null,
+        ]);
+
+        $this->success(['recorded' => true]);
+    }
 }

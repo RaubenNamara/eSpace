@@ -24,7 +24,15 @@
 
       <!-- Player -->
       <div class="flex-1 bg-black flex items-center justify-center">
-        <video :src="resolveAssetUrl(video.file_path)" controls autoplay class="w-full max-h-[75vh]"></video>
+        <video
+          :src="resolveAssetUrl(video.file_path)"
+          controls
+          autoplay
+          class="w-full max-h-[75vh]"
+          @timeupdate="onTimeUpdate"
+          @pause="sendProgress"
+          @ended="sendProgress"
+        ></video>
       </div>
 
       <!-- Description -->
@@ -39,12 +47,36 @@
 import { computed } from 'vue'
 import type { VideoResource } from '@/types/video'
 import { resolveAssetUrl } from '@/utils/url'
+import apiService from '@/services/api'
 
-const props = defineProps<{ video: VideoResource }>()
+const props = withDefaults(defineProps<{ video: VideoResource; trackProgress?: boolean }>(), {
+  trackProgress: false,
+})
 defineEmits(['close'])
 
 const teacherName = computed(() => {
   if (!props.video.teacher_first_name) return ''
   return `${props.video.teacher_first_name} ${props.video.teacher_last_name || ''}`.trim()
 })
+
+// Engagement analytics (Teacher/HOD/Admin dashboards) - only sent when a student is actually
+// watching (trackProgress), not when a teacher/HOD/admin previews the same modal. Throttled to
+// once per 15s of playback plus on pause/end, rather than every timeupdate tick (several per
+// second) - see Student\VideoController::recordWatchProgress for the write side.
+let lastSent = 0
+function onTimeUpdate(e: Event) {
+  if (!props.trackProgress) return
+  const el = e.target as HTMLVideoElement
+  if (!el.duration || Date.now() - lastSent < 15000) return
+  sendProgress(e)
+}
+
+function sendProgress(e: Event) {
+  if (!props.trackProgress) return
+  const el = e.target as HTMLVideoElement
+  if (!el.duration) return
+  lastSent = Date.now()
+  const percentage = Math.min(100, (el.currentTime / el.duration) * 100)
+  apiService.post(`/student/videos/${props.video.id}/watch-progress`, { percentage_watched: percentage }).catch(() => {})
+}
 </script>

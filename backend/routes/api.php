@@ -81,6 +81,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         // Videos
         Router::get('/videos', 'eSpace\App\Controllers\Student\VideoController@index');
         Router::get('/videos/{id}', 'eSpace\App\Controllers\Student\VideoController@show');
+        Router::post('/videos/{id}/watch-progress', 'eSpace\App\Controllers\Student\VideoController@recordWatchProgress');
 
         // eNotes
         Router::get('/notes', 'eSpace\App\Controllers\Student\NoteController@index');
@@ -325,6 +326,9 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/reports/assignment-performance', 'eSpace\App\Controllers\Teacher\ReportController@assignmentPerformance');
         Router::get('/reports/student-performance', 'eSpace\App\Controllers\Teacher\ReportController@studentPerformance');
 
+        // Engagement analytics (eNotes/library/item-bank read, video watched, live-class attendance)
+        Router::get('/analytics/engagement', 'eSpace\App\Controllers\Teacher\AnalyticsController@engagement');
+
         // Report Cards (CBC assessment report)
         Router::get('/report-cards/terms', 'eSpace\App\Controllers\Teacher\ReportCardController@listTerms');
         Router::get('/report-cards/students', 'eSpace\App\Controllers\Teacher\ReportCardController@listStudents');
@@ -390,7 +394,8 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/analytics/assignments', 'eSpace\App\Controllers\HOD\AnalyticsController@assignments');
         Router::get('/analytics/reading', 'eSpace\App\Controllers\HOD\AnalyticsController@reading');
         Router::get('/analytics/performance', 'eSpace\App\Controllers\HOD\AnalyticsController@performance');
-        
+        Router::get('/analytics/engagement', 'eSpace\App\Controllers\HOD\AnalyticsController@engagement');
+
         // Teachers
         Router::get('/teachers', 'eSpace\App\Controllers\HOD\TeacherController@index');
         Router::post('/teachers', 'eSpace\App\Controllers\HOD\TeacherController@create');
@@ -650,6 +655,10 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/performance/marksheet', 'eSpace\App\Controllers\Admin\PerformanceController@marksheet');
         Router::get('/performance/students/{studentId}/subjects/{subjectId}', 'eSpace\App\Controllers\Admin\PerformanceController@studentSubject');
         Router::get('/performance/students/{studentId}', 'eSpace\App\Controllers\Admin\PerformanceController@studentGeneral');
+
+        // Engagement analytics (eNotes/library/item-bank read, video watched, live-class attendance)
+        // - unrestricted, school-wide, with an optional ?department_id= filter
+        Router::get('/analytics/engagement', 'eSpace\App\Controllers\Admin\AnalyticsController@engagement');
 
         // Rewards & Badges - configurable rules (Admin settings area)
         Router::get('/reward-rules', 'eSpace\App\Controllers\Admin\RewardRuleController@index');

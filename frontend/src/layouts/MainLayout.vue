@@ -644,6 +644,7 @@ const assessmentMenu = computed(() => {
       { path: '/teacher/assignments', label: 'Assessments', icon: 'DocumentTextIcon' },
       { path: '/teacher/virtual-lab', label: 'Virtual Lab', icon: 'FlaskIcon' },
       { path: '/teacher/reports', label: 'Reports', icon: 'ChartBarIcon' },
+      { path: '/teacher/engagement', label: 'Engagement', icon: 'ChartIcon' },
       { path: '/teacher/marksheet', label: 'Marksheet', icon: 'TableCellsIcon' },
       { path: '/teacher/chat', label: 'Chats', icon: 'ChatIcon' }
     ]
@@ -652,6 +653,7 @@ const assessmentMenu = computed(() => {
       { path: '/hod/assessments', label: 'Assessments', icon: 'DocumentTextIcon' },
       { path: '/hod/analytics', label: 'Analytics', icon: 'ChartIcon' },
       { path: '/hod/reports', label: 'Reports', icon: 'ChartBarIcon' },
+      { path: '/hod/charts', label: 'Engagement', icon: 'ChartIcon' },
       { path: '/hod/marksheet', label: 'Marksheet', icon: 'TableCellsIcon' },
       { path: '/hod/chat', label: 'Chats', icon: 'ChatIcon' }
     ]
@@ -660,6 +662,7 @@ const assessmentMenu = computed(() => {
       { path: '/admin/assessments', label: 'Assessments', icon: 'DocumentTextIcon' },
       { path: '/admin/virtual-lab', label: 'Virtual Lab', icon: 'FlaskIcon' },
       { path: '/admin/reports', label: 'Reports', icon: 'ChartBarIcon' },
+      { path: '/admin/charts', label: 'Engagement', icon: 'ChartIcon' },
       { path: '/admin/marksheet', label: 'Marksheet', icon: 'TableCellsIcon' },
       { path: '/admin/rewards', label: 'Rewards & Badges', icon: 'TrophyIcon' },
       { path: '/admin/chat', label: 'Chats', icon: 'ChatIcon' }

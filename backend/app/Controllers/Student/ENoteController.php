@@ -41,6 +41,22 @@ class ENoteController extends Controller
     }
 
     /**
+     * Marks a topic as read for engagement analytics (Teacher/HOD/Admin engagement dashboards) -
+     * simple "opened at least once" tracking, not a real reading-position tracker, per the scope
+     * decision in the engagement-analytics plan. percentage_completed is set to 100 on first open
+     * and never revisited; a second open just refreshes last_read_at.
+     */
+    private function recordRead($db, int $topicId, int $studentId): void
+    {
+        $stmt = $db->prepare(
+            "INSERT INTO enote_progress (topic_id, student_id, percentage_completed, last_read_at, completed_at)
+             VALUES (:topic_id, :student_id, 100, NOW(), NOW())
+             ON DUPLICATE KEY UPDATE last_read_at = NOW()"
+        );
+        $stmt->execute(['topic_id' => $topicId, 'student_id' => $studentId]);
+    }
+
+    /**
      * TEMPORARY diagnostic logging for verifying AI Tutor's shared cache actually skips
      * Gemini/ElevenLabs on a cache hit - remove once confirmed in production.
      */
@@ -189,6 +205,7 @@ class ENoteController extends Controller
         }
 
         $topic = $this->decodeLearningOutcomes($topic);
+        $this->recordRead($db, $id, $studentId);
 
         $stmt = $db->prepare(
             "SELECT id, title, content, order_number FROM enote_pages
