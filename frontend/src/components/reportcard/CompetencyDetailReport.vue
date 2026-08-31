@@ -244,11 +244,12 @@ onMounted(async () => {
 }
 
 .grade-badge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 24px;
   height: 24px;
-  line-height: 24px;
-  text-align: center;
+  line-height: 1;
   border-radius: 9999px;
 }
 
