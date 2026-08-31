@@ -10,7 +10,7 @@
 
     <div class="relative z-10 p-3 sm:p-8">
       <!-- Header -->
-      <div class="flex flex-wrap items-start justify-between gap-4 pb-5 mb-1 border-b-4 border-indigo-600 dark:border-indigo-500">
+      <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 pb-5 mb-1 border-b-4 border-indigo-600 dark:border-indigo-500">
         <div class="flex items-center gap-3 sm:gap-4 min-w-0">
           <img v-if="report.school?.logo_path" :src="resolveAssetUrl(report.school.logo_path)" alt="School logo" class="w-14 h-14 sm:w-20 sm:h-20 object-contain flex-shrink-0 rounded-lg bg-white ring-2 ring-gray-200 dark:ring-gray-600 p-1">
           <div class="min-w-0 leading-normal">
