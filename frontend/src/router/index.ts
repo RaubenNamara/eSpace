@@ -32,6 +32,7 @@ const StudentAcademicHistory = () => import('../pages/student/AcademicHistory.vu
 const StudentVirtualLab = () => import('../pages/student/VirtualLab.vue')
 const StudentVirtualLabExperiment = () => import('../pages/student/VirtualLabExperiment.vue')
 const StudentVirtualLabPlayground = () => import('../pages/student/VirtualLabPlayground.vue')
+const StudentConstructs = () => import('../pages/student/Constructs.vue')
 
 // Teacher Pages
 const TeacherDashboard = () => import('../pages/teacher/Dashboard.vue')
@@ -49,6 +50,7 @@ const TeacherChat = () => import('../pages/teacher/Chat.vue')
 const TeacherSearch = () => import('../pages/teacher/Search.vue')
 const TeacherReports = () => import('../pages/teacher/Reports.vue')
 const TeacherEngagement = () => import('../pages/teacher/Engagement.vue')
+const TeacherConstructs = () => import('../pages/teacher/Constructs.vue')
 const TeacherMarksheet = () => import('../pages/teacher/Marksheet.vue')
 const TeacherVirtualLab = () => import('../pages/teacher/VirtualLab.vue')
 const TeacherSettings = () => import('../pages/teacher/Settings.vue')
@@ -96,6 +98,7 @@ const AdminClasses = () => import('../pages/admin/Classes.vue')
 const AdminAcademicYears = () => import('../pages/admin/AcademicYears.vue')
 const AdminTerms = () => import('../pages/admin/Terms.vue')
 const AdminENoteCurriculum = () => import('../pages/admin/ENoteCurriculum.vue')
+const AdminConstructs = () => import('../pages/admin/Constructs.vue')
 const AdminPromotion = () => import('../pages/admin/Promotion.vue')
 const AdminReports = () => import('../pages/admin/Reports.vue')
 const AdminMarksheet = () => import('../pages/admin/Marksheet.vue')
@@ -186,6 +189,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'academic-history', name: 'StudentAcademicHistory', component: StudentAcademicHistory },
       { path: 'virtual-lab', name: 'StudentVirtualLab', component: StudentVirtualLab },
       { path: 'virtual-lab/playground', name: 'StudentVirtualLabPlayground', component: StudentVirtualLabPlayground },
+      { path: 'constructs', name: 'StudentConstructs', component: StudentConstructs },
       { path: 'virtual-lab/:assignmentId', name: 'StudentVirtualLabExperiment', component: StudentVirtualLabExperiment }
     ]
   },
@@ -232,6 +236,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'chat', name: 'TeacherChat', component: TeacherChat },
       { path: 'reports', name: 'TeacherReports', component: TeacherReports },
       { path: 'engagement', name: 'TeacherEngagement', component: TeacherEngagement },
+      { path: 'constructs', name: 'TeacherConstructs', component: TeacherConstructs },
       { path: 'settings', name: 'TeacherSettings', component: TeacherSettings },
       { path: 'enotes', name: 'ENotes', component: ENotes },
       { path: 'enotes/builder/:id', name: 'ENoteBuilder', component: ENoteBuilder },
@@ -286,6 +291,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'academic-years', name: 'AdminAcademicYears', component: AdminAcademicYears },
       { path: 'terms', name: 'AdminTerms', component: AdminTerms },
       { path: 'enotes-curriculum', name: 'AdminENoteCurriculum', component: AdminENoteCurriculum },
+      { path: 'constructs', name: 'AdminConstructs', component: AdminConstructs },
       { path: 'promotion', name: 'AdminPromotion', component: AdminPromotion },
       { path: 'reports', name: 'AdminReports', component: AdminReports },
       { path: 'audit-logs', name: 'AdminAuditLogs', component: AdminAuditLogs },

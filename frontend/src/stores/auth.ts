@@ -51,8 +51,6 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = userData
     isAuthenticated.value = true
 
-    activeRole.value = userData.role
-
     if (userData.role === 'hod' && (userData as any).teacher_id) {
       secondaryRole.value = 'teacher'
       teacherId.value = (userData as any).teacher_id
@@ -60,6 +58,15 @@ export const useAuthStore = defineStore('auth', () => {
       secondaryRole.value = null
       teacherId.value = null
     }
+
+    // A dual-role user's chosen mode (switchRole()) is persisted separately from the canonical
+    // backend role so a page refresh stays in whichever mode they were in instead of always
+    // reverting to userData.role - only honor it if it's still a valid role for THIS user (e.g.
+    // not a leftover from a previously logged-in different account).
+    const storedActiveRole = localStorage.getItem('active_role')
+    activeRole.value = (storedActiveRole === userData.role || storedActiveRole === secondaryRole.value)
+      ? storedActiveRole
+      : userData.role
   }
 
   // Restores auth state from localStorage on a fresh page load (e.g. after a hard refresh, before
@@ -200,7 +207,8 @@ export const useAuthStore = defineStore('auth', () => {
       // Clear storage
       localStorage.removeItem('csrf_token')
       localStorage.removeItem('user')
-      
+      localStorage.removeItem('active_role')
+
       isLoading.value = false
     }
   }
@@ -241,6 +249,7 @@ export const useAuthStore = defineStore('auth', () => {
       } catch (err) {
         // Invalid stored user, clear it
         localStorage.removeItem('user')
+        localStorage.removeItem('active_role')
         user.value = null
         isAuthenticated.value = false
       }
@@ -371,7 +380,12 @@ export const useAuthStore = defineStore('auth', () => {
       activeRole.value = user.value?.role
     } else if (role === secondaryRole.value) {
       activeRole.value = role
+    } else {
+      return
     }
+    // Persisted so a page refresh stays in this mode instead of reverting to the canonical
+    // backend role - see applyUserData().
+    if (activeRole.value) localStorage.setItem('active_role', activeRole.value)
   }
 
   function getCurrentRole(): string {

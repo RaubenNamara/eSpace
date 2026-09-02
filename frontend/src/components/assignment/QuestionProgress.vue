@@ -1,6 +1,6 @@
 <template>
   <div v-if="total > 1" class="flex flex-col items-end gap-2">
-    <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Question {{ current + 1 }} of {{ total }}</p>
+    <p class="text-sm font-medium text-gray-600 dark:text-gray-400">{{ answeredCount }} of {{ total }} answered</p>
     <div class="flex items-center gap-1" role="list" aria-label="Question progress">
       <template v-for="(isAnswered, index) in answered" :key="index">
         <button
@@ -22,6 +22,8 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+
 const props = defineProps<{
   total: number
   current: number
@@ -31,6 +33,8 @@ const props = defineProps<{
 defineEmits<{
   (e: 'select', index: number): void
 }>()
+
+const answeredCount = computed(() => props.answered.filter(Boolean).length)
 
 function dotClass(index: number, isAnswered: boolean): string {
   if (index === props.current) {

@@ -158,196 +158,185 @@
         </template>
       </div>
 
-      <!-- Current question -->
-      <div v-if="currentEntry" class="space-y-4 sm:space-y-6">
-        <div v-if="currentEntry.groupHeader" class="pt-2">
-          <p v-if="currentEntry.groupHeader.theme" class="text-xs font-semibold text-indigo-500 dark:text-indigo-400 uppercase tracking-wide">{{ currentEntry.groupHeader.theme }}</p>
-          <h2 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white">{{ currentEntry.groupHeader.label }}</h2>
-        </div>
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
-          <!-- Scenario Question -->
-          <div v-if="currentEntry.question.question_type === 'scenario'">
-            <div class="mb-4">
-              <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                <span aria-hidden="true">📖</span> Scenario
-              </h3>
-              <div v-if="currentEntry.question.scenario_text" class="bg-indigo-50/50 dark:bg-indigo-900/10 border-l-4 border-indigo-300 dark:border-indigo-700 p-3 sm:p-4 rounded-lg mb-4 overflow-x-auto">
-                <p class="text-gray-700 dark:text-gray-300 whitespace-pre-line break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="currentEntry.question.scenario_text"></p>
+      <!-- All questions, one page - no Prev/Next paging (a "Next" click was confusing students
+           into thinking each question was a separate step/page). -->
+      <div class="space-y-6 sm:space-y-8">
+        <div
+          v-for="(entry, entryIndex) in displayQuestions"
+          :key="entry.question.id"
+          :id="`question-${entry.question.id}`"
+          class="space-y-3 scroll-mt-24"
+        >
+          <div v-if="entry.groupHeader" class="pt-2">
+            <p v-if="entry.groupHeader.theme" class="text-xs font-semibold text-indigo-500 dark:text-indigo-400 uppercase tracking-wide">{{ entry.groupHeader.theme }}</p>
+            <h2 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white">{{ entry.groupHeader.label }}</h2>
+          </div>
+          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+            <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 mb-2">Question {{ entryIndex + 1 }} of {{ totalCount }}</p>
+            <!-- Scenario Question -->
+            <div v-if="entry.question.question_type === 'scenario'">
+              <div class="mb-4">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                  <span aria-hidden="true">📖</span> Scenario
+                </h3>
+                <div v-if="entry.question.scenario_text" class="bg-indigo-50/50 dark:bg-indigo-900/10 border-l-4 border-indigo-300 dark:border-indigo-700 p-3 sm:p-4 rounded-lg mb-4 overflow-x-auto">
+                  <p class="text-gray-700 dark:text-gray-300 whitespace-pre-line break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="entry.question.scenario_text"></p>
+                </div>
               </div>
-            </div>
 
-            <NeedHelpPanel class="mb-4" />
+              <NeedHelpPanel class="mb-4" />
 
-            <!-- Sub-questions -->
-            <div v-if="(currentEntry.question as any).sub_questions && (currentEntry.question as any).sub_questions.length > 0" class="space-y-4">
-              <div
-                v-for="(subQ, subIndex) in (currentEntry.question as any).sub_questions"
-                :key="subQ.id"
-                class="border-l-4 border-indigo-500 pl-4"
-              >
-                <div class="flex items-start space-x-3 mb-3">
-                  <span class="font-medium text-gray-900 dark:text-white">{{ String.fromCharCode(97 + (subIndex as number)) }})</span>
-                  <div class="flex-1">
-                    <p class="text-gray-900 dark:text-white mb-2">{{ subQ.question_text }}</p>
-                    <span class="text-sm text-gray-600 dark:text-gray-400">{{ subQ.marks }} marks</span>
+              <!-- Sub-questions -->
+              <div v-if="(entry.question as any).sub_questions && (entry.question as any).sub_questions.length > 0" class="space-y-4">
+                <div
+                  v-for="(subQ, subIndex) in (entry.question as any).sub_questions"
+                  :key="subQ.id"
+                  class="border-l-4 border-indigo-500 pl-4"
+                >
+                  <div class="flex items-start space-x-3 mb-3">
+                    <span class="font-medium text-gray-900 dark:text-white">{{ String.fromCharCode(97 + (subIndex as number)) }})</span>
+                    <div class="flex-1">
+                      <p class="text-gray-900 dark:text-white mb-2">{{ subQ.question_text }}</p>
+                      <span class="text-sm text-gray-600 dark:text-gray-400">{{ subQ.marks }} marks</span>
+                    </div>
+                  </div>
+                  <div class="ml-3 sm:ml-6">
+                    <FreeResponseAnswer
+                      :question="subQ"
+                      :assignment-id="Number(route.params.id)"
+                      :model-value="answers[subQ.id] || ''"
+                      :initial-annotations="answerAnnotationsByQuestion[subQ.id] || {}"
+                      :initial-attachment="answerAttachmentByQuestion[subQ.id] || null"
+                      :initial-additional-files="answerAdditionalFilesByQuestion[subQ.id] || []"
+                      :readonly="isLocked"
+                      @update:model-value="answers[subQ.id] = $event; triggerAutoSave()"
+                      @update:attachment="answerAttachmentByQuestion[subQ.id] = $event"
+                      @update:additional-files="answerAdditionalFilesByQuestion[subQ.id] = $event"
+                      @submission-id="submissionId = $event"
+                      @locked="submissionStatus = 'submitted'"
+                    />
                   </div>
                 </div>
-                <div class="ml-3 sm:ml-6">
-                  <FreeResponseAnswer
-                    :question="subQ"
-                    :assignment-id="Number(route.params.id)"
-                    :model-value="answers[subQ.id] || ''"
-                    :initial-annotations="answerAnnotationsByQuestion[subQ.id] || {}"
-                    :initial-attachment="answerAttachmentByQuestion[subQ.id] || null"
-                    :initial-additional-files="answerAdditionalFilesByQuestion[subQ.id] || []"
-                    :readonly="isLocked"
-                    @update:model-value="answers[subQ.id] = $event; triggerAutoSave()"
-                    @update:attachment="answerAttachmentByQuestion[subQ.id] = $event"
-                    @update:additional-files="answerAdditionalFilesByQuestion[subQ.id] = $event"
-                    @submission-id="submissionId = $event"
-                    @locked="submissionStatus = 'submitted'"
-                  />
-                </div>
+              </div>
+
+              <!-- Fallback: scenario has no structured sub-questions, answer the scenario directly -->
+              <div v-else class="ml-0">
+                <FreeResponseAnswer
+                  :question="entry.question"
+                  :assignment-id="Number(route.params.id)"
+                  :model-value="answers[entry.question.id] || ''"
+                  :initial-annotations="answerAnnotationsByQuestion[entry.question.id] || {}"
+                  :initial-attachment="answerAttachmentByQuestion[entry.question.id] || null"
+                  :initial-additional-files="answerAdditionalFilesByQuestion[entry.question.id] || []"
+                  :readonly="isLocked"
+                  @update:model-value="answers[entry.question.id] = $event; triggerAutoSave()"
+                  @update:attachment="answerAttachmentByQuestion[entry.question.id] = $event"
+                  @update:additional-files="answerAdditionalFilesByQuestion[entry.question.id] = $event"
+                  @submission-id="submissionId = $event"
+                  @locked="submissionStatus = 'submitted'"
+                />
               </div>
             </div>
 
-            <!-- Fallback: scenario has no structured sub-questions, answer the scenario directly -->
-            <div v-else class="ml-0">
-              <FreeResponseAnswer
-                :question="currentEntry.question"
-                :assignment-id="Number(route.params.id)"
-                :model-value="answers[currentEntry.question.id] || ''"
-                :initial-annotations="answerAnnotationsByQuestion[currentEntry.question.id] || {}"
-                :initial-attachment="answerAttachmentByQuestion[currentEntry.question.id] || null"
-                :initial-additional-files="answerAdditionalFilesByQuestion[currentEntry.question.id] || []"
-                :readonly="isLocked"
-                @update:model-value="answers[currentEntry.question.id] = $event; triggerAutoSave()"
-                @update:attachment="answerAttachmentByQuestion[currentEntry.question.id] = $event"
-                @update:additional-files="answerAdditionalFilesByQuestion[currentEntry.question.id] = $event"
-                @submission-id="submissionId = $event"
-                @locked="submissionStatus = 'submitted'"
-              />
-            </div>
-          </div>
-
-          <!-- Regular Question -->
-          <div v-else>
-            <div class="flex flex-wrap items-start justify-between gap-2 mb-2">
-              <p class="text-xs font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">{{ Number(currentEntry.question.marks).toFixed(2) }} Marks</p>
-              <span class="shrink-0 px-2.5 py-1 rounded-full text-xs font-medium border" :class="questionStatusBadgeClass">{{ questionStatusLabel }}</span>
-            </div>
-            <div class="mb-4">
-              <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                <span aria-hidden="true">🎯</span> Your Task
-              </h3>
-              <p class="text-gray-900 dark:text-white break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="currentEntry.question.question_text"></p>
-            </div>
-
-            <NeedHelpPanel v-if="!isObjectiveQuestion(currentEntry.question)" class="mb-4" />
-
-            <!-- Multiple Choice Single -->
-            <div v-if="currentEntry.question.question_type === 'multiple_choice_single'" class="space-y-2">
-              <label
-                v-for="(option, optIndex) in currentEntry.question.options"
-                :key="optIndex"
-                class="flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
-              >
-                <input
-                  v-model="answers[currentEntry.question.id]"
-                  type="radio"
-                  :value="option.id"
-                  :disabled="isLocked"
-                  class="mr-3"
-                  @change="triggerAutoSave"
-                >
-                <span class="text-gray-700 dark:text-gray-300">{{ option.option_text }}</span>
-              </label>
-            </div>
-
-            <!-- Multiple Choice Multiple -->
-            <div v-else-if="currentEntry.question.question_type === 'multiple_choice_multiple'" class="space-y-2">
-              <label
-                v-for="(option, optIndex) in currentEntry.question.options"
-                :key="optIndex"
-                class="flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
-              >
-                <input
-                  v-model="multipleChoiceAnswers[currentEntry.question.id]"
-                  type="checkbox"
-                  :value="option.id"
-                  :disabled="isLocked"
-                  class="mr-3"
-                  @change="triggerAutoSave"
-                >
-                <span class="text-gray-700 dark:text-gray-300">{{ option.option_text }}</span>
-              </label>
-            </div>
-
-            <!-- True/False -->
-            <div v-else-if="currentEntry.question.question_type === 'true_false'" class="space-y-2">
-              <label class="flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer">
-                <input
-                  v-model="answers[currentEntry.question.id]"
-                  type="radio"
-                  value="true"
-                  :disabled="isLocked"
-                  class="mr-3"
-                  @change="triggerAutoSave"
-                >
-                <span class="text-gray-700 dark:text-gray-300">True</span>
-              </label>
-              <label class="flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer">
-                <input
-                  v-model="answers[currentEntry.question.id]"
-                  type="radio"
-                  value="false"
-                  :disabled="isLocked"
-                  class="mr-3"
-                  @change="triggerAutoSave"
-                >
-                <span class="text-gray-700 dark:text-gray-300">False</span>
-              </label>
-            </div>
-
-            <!-- Fill in Blank, Short Answer, Essay, Structured -->
+            <!-- Regular Question -->
             <div v-else>
-              <FreeResponseAnswer
-                :question="currentEntry.question"
-                :assignment-id="Number(route.params.id)"
-                :model-value="answers[currentEntry.question.id] || ''"
-                :initial-annotations="answerAnnotationsByQuestion[currentEntry.question.id] || {}"
-                :initial-attachment="answerAttachmentByQuestion[currentEntry.question.id] || null"
-                :initial-additional-files="answerAdditionalFilesByQuestion[currentEntry.question.id] || []"
-                :readonly="isLocked"
-                :placeholder="getPlaceholder(currentEntry.question.question_type)"
-                @update:model-value="answers[currentEntry.question.id] = $event; triggerAutoSave()"
-                @update:attachment="answerAttachmentByQuestion[currentEntry.question.id] = $event"
-                @update:additional-files="answerAdditionalFilesByQuestion[currentEntry.question.id] = $event"
-                @submission-id="submissionId = $event"
-                @locked="submissionStatus = 'submitted'"
-              />
+              <div class="flex flex-wrap items-start justify-between gap-2 mb-2">
+                <p class="text-xs font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">{{ Number(entry.question.marks).toFixed(2) }} Marks</p>
+                <span class="shrink-0 px-2.5 py-1 rounded-full text-xs font-medium border" :class="questionStatusBadgeClass">{{ questionStatusLabel }}</span>
+              </div>
+              <div class="mb-4">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                  <span aria-hidden="true">🎯</span> Your Task
+                </h3>
+                <p class="text-gray-900 dark:text-white break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="entry.question.question_text"></p>
+              </div>
+
+              <NeedHelpPanel v-if="!isObjectiveQuestion(entry.question)" class="mb-4" />
+
+              <!-- Multiple Choice Single -->
+              <div v-if="entry.question.question_type === 'multiple_choice_single'" class="space-y-2">
+                <label
+                  v-for="(option, optIndex) in entry.question.options"
+                  :key="optIndex"
+                  class="flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
+                >
+                  <input
+                    v-model="answers[entry.question.id]"
+                    type="radio"
+                    :value="option.id"
+                    :disabled="isLocked"
+                    class="mr-3"
+                    @change="triggerAutoSave"
+                  >
+                  <span class="text-gray-700 dark:text-gray-300">{{ option.option_text }}</span>
+                </label>
+              </div>
+
+              <!-- Multiple Choice Multiple -->
+              <div v-else-if="entry.question.question_type === 'multiple_choice_multiple'" class="space-y-2">
+                <label
+                  v-for="(option, optIndex) in entry.question.options"
+                  :key="optIndex"
+                  class="flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
+                >
+                  <input
+                    v-model="multipleChoiceAnswers[entry.question.id]"
+                    type="checkbox"
+                    :value="option.id"
+                    :disabled="isLocked"
+                    class="mr-3"
+                    @change="triggerAutoSave"
+                  >
+                  <span class="text-gray-700 dark:text-gray-300">{{ option.option_text }}</span>
+                </label>
+              </div>
+
+              <!-- True/False -->
+              <div v-else-if="entry.question.question_type === 'true_false'" class="space-y-2">
+                <label class="flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer">
+                  <input
+                    v-model="answers[entry.question.id]"
+                    type="radio"
+                    value="true"
+                    :disabled="isLocked"
+                    class="mr-3"
+                    @change="triggerAutoSave"
+                  >
+                  <span class="text-gray-700 dark:text-gray-300">True</span>
+                </label>
+                <label class="flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer">
+                  <input
+                    v-model="answers[entry.question.id]"
+                    type="radio"
+                    value="false"
+                    :disabled="isLocked"
+                    class="mr-3"
+                    @change="triggerAutoSave"
+                  >
+                  <span class="text-gray-700 dark:text-gray-300">False</span>
+                </label>
+              </div>
+
+              <!-- Fill in Blank, Short Answer, Essay, Structured -->
+              <div v-else>
+                <FreeResponseAnswer
+                  :question="entry.question"
+                  :assignment-id="Number(route.params.id)"
+                  :model-value="answers[entry.question.id] || ''"
+                  :initial-annotations="answerAnnotationsByQuestion[entry.question.id] || {}"
+                  :initial-attachment="answerAttachmentByQuestion[entry.question.id] || null"
+                  :initial-additional-files="answerAdditionalFilesByQuestion[entry.question.id] || []"
+                  :readonly="isLocked"
+                  :placeholder="getPlaceholder(entry.question.question_type)"
+                  @update:model-value="answers[entry.question.id] = $event; triggerAutoSave()"
+                  @update:attachment="answerAttachmentByQuestion[entry.question.id] = $event"
+                  @update:additional-files="answerAdditionalFilesByQuestion[entry.question.id] = $event"
+                  @submission-id="submissionId = $event"
+                  @locked="submissionStatus = 'submitted'"
+                />
+              </div>
             </div>
           </div>
-        </div>
-
-        <!-- Prev / Next -->
-        <div v-if="totalCount > 1" class="flex items-center justify-between gap-3">
-          <button
-            type="button"
-            :disabled="currentQuestionIndex === 0"
-            class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            @click="goPrev"
-          >
-            ← Previous
-          </button>
-          <button
-            type="button"
-            :disabled="currentQuestionIndex >= totalCount - 1"
-            class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            @click="goNext"
-          >
-            Next →
-          </button>
         </div>
       </div>
 
@@ -416,6 +405,8 @@ interface CurriculumStructure {
   topic?: { id: number; theme_branch: string; topic: string; competence: string } | null
   learning_outcomes?: { id: number; learning_outcome: string; order_number: number }[]
   topics?: { id: number; theme_branch: string; topic: string }[]
+  assessment_objective?: string
+  construct_name?: string
 }
 
 const assignment = ref<any>(null)
@@ -444,6 +435,9 @@ const displayQuestions = computed(() => {
 
   const groupKeyFor = (q: any): string => {
     if (curriculum.value!.category === 'LOA') return `lo-${q.learning_outcome_id ?? 'none'}`
+    // EOC always groups as one, regardless of which underlying curriculum_topic_id a question
+    // carries - it's assessed against the Construct's Assessment Objective as a whole.
+    if (curriculum.value!.category === 'EOC') return 'eoc-construct'
     return `topic-${q.curriculum_topic_id ?? 'none'}`
   }
 
@@ -458,27 +452,37 @@ const displayQuestions = computed(() => {
       if (curriculum.value!.category === 'LOA') {
         const outcome = outcomeById.get(q.learning_outcome_id)
         groupHeader = outcome ? { theme: null, label: `Learning Outcome ${outcome.order_number}: ${outcome.learning_outcome}` } : null
+      } else if (curriculum.value!.category === 'EOC') {
+        // EOC is assessed against the Construct's Assessment Objective as a whole - every EOC
+        // question shares the same group in the builder now, so this shows once rather than
+        // switching per raw Theme/Topic text.
+        groupHeader = curriculum.value!.assessment_objective
+          ? { theme: null, label: `Assessment Objective (${curriculum.value!.assessment_objective})` }
+          : null
       } else {
         const topic = topicById.get(q.curriculum_topic_id)
-        groupHeader = topic ? { theme: curriculum.value!.category === 'EOC' ? topic.theme_branch : null, label: topic.topic } : null
+        groupHeader = topic ? { theme: null, label: topic.topic } : null
       }
     }
 
     return { question, groupHeader }
   })
 })
-// One-question-at-a-time navigation - a pure display-windowing layer over `displayQuestions`,
-// which already holds every question's full data (nothing is re-fetched on Prev/Next).
+// Every question renders on one page at once now (no Prev/Next paging - that confused students
+// into treating each question as a separate step). `currentQuestionIndex` just tracks which
+// question QuestionProgress's dots last jumped to, for its highlight ring; goToQuestion() scrolls
+// that question into view instead of swapping which one is displayed.
 const currentQuestionIndex = ref(0)
 const totalCount = computed(() => displayQuestions.value.length)
-const currentEntry = computed(() => displayQuestions.value[currentQuestionIndex.value] || null)
 
 function goToQuestion(index: number) {
   if (index < 0 || index >= displayQuestions.value.length) return
   currentQuestionIndex.value = index
+  const entry = displayQuestions.value[index]
+  if (entry) {
+    document.getElementById(`question-${entry.question.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
 }
-function goPrev() { goToQuestion(currentQuestionIndex.value - 1) }
-function goNext() { goToQuestion(currentQuestionIndex.value + 1) }
 
 const OBJECTIVE_TYPES = ['multiple_choice_single', 'multiple_choice_multiple', 'true_false']
 function isObjectiveQuestion(question: any): boolean {

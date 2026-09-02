@@ -14,15 +14,26 @@
           </p>
         </div>
       </div>
-      <button
-        @click="openCreateModal"
-        class="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 font-medium shadow-lg shadow-indigo-500/30 flex items-center justify-center gap-2 flex-shrink-0"
-      >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-        </svg>
-        <span>Add Curriculum Topic</span>
-      </button>
+      <div class="flex flex-col sm:flex-row gap-2 flex-shrink-0">
+        <button
+          @click="router.push('/admin/constructs')"
+          class="w-full sm:w-auto px-5 py-2.5 bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all duration-200 font-medium flex items-center justify-center gap-2"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+          </svg>
+          <span>Construct</span>
+        </button>
+        <button
+          @click="openCreateModal"
+          class="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 font-medium shadow-lg shadow-indigo-500/30 flex items-center justify-center gap-2"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+          </svg>
+          <span>Add Curriculum Topic</span>
+        </button>
+      </div>
     </div>
 
     <!-- Filters -->
@@ -508,9 +519,11 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import apiService from '@/services/api'
 import type { CurriculumMeta, CurriculumTopic, CurriculumTopicForm, CurriculumClassStreamOption } from '@/types/curriculum'
 
+const router = useRouter()
 const meta = ref<CurriculumMeta | null>(null)
 const topics = ref<CurriculumTopic[]>([])
 const loading = ref(false)

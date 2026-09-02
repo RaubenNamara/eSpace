@@ -110,6 +110,22 @@ class AssignmentController extends Controller
     }
 
     /**
+     * A Construct is only linkable to an assignment if it was authored for that assignment's own
+     * subject - same boundary rule as curriculumTopicMatchesSubject().
+     */
+    private function constructBelongsToSubject(int $constructId, $subjectId): bool
+    {
+        if (empty($subjectId)) {
+            return false;
+        }
+        $stmt = $this->getDb()->prepare(
+            'SELECT id FROM constructs WHERE id = :id AND subject_id = :subject_id AND deleted_at IS NULL'
+        );
+        $stmt->execute(['id' => $constructId, 'subject_id' => (int) $subjectId]);
+        return (bool) $stmt->fetch();
+    }
+
+    /**
      * @param int[] $outcomeIds
      */
     private function learningOutcomesBelongToTopic(array $outcomeIds, int $curriculumTopicId): bool
@@ -181,17 +197,27 @@ class AssignmentController extends Controller
                 return $errors;
             }
 
-            $missing = [];
-            foreach ($rows as $row) {
-                if ((int) $row['question_count'] === 0) {
-                    $missing[] = $row['topic_name'];
+            if ($category === 'EOC') {
+                // EOC is assessed against the Construct/Assessment Objective as a whole (the
+                // builder shows one "Add Question" card, not one per topic) - just needs >=1
+                // question across any of the construct's topics, not full per-topic coverage.
+                $totalQuestions = array_sum(array_map(fn($row) => (int) $row['question_count'], $rows));
+                if ($totalQuestions === 0) {
+                    $errors['topics'] = 'Add at least one question before publishing.';
                 }
-            }
-            if (!empty($missing)) {
-                $errors['topics'] = implode(' ', array_map(
-                    fn($name) => "\"{$name}\" requires at least one question before this {$category} assessment can be published.",
-                    $missing
-                ));
+            } else {
+                $missing = [];
+                foreach ($rows as $row) {
+                    if ((int) $row['question_count'] === 0) {
+                        $missing[] = $row['topic_name'];
+                    }
+                }
+                if (!empty($missing)) {
+                    $errors['topics'] = implode(' ', array_map(
+                        fn($name) => "\"{$name}\" requires at least one question before this {$category} assessment can be published.",
+                        $missing
+                    ));
+                }
             }
         }
 
@@ -244,9 +270,20 @@ class AssignmentController extends Controller
         $outcomesStmt->execute(['id' => $assignmentId]);
         $learningOutcomes = $outcomesStmt->fetchAll();
 
+        $constructStmt = $db->prepare(
+            'SELECT a.construct_id, c.name AS construct_name
+             FROM assignments a
+             LEFT JOIN constructs c ON c.id = a.construct_id
+             WHERE a.id = :id'
+        );
+        $constructStmt->execute(['id' => $assignmentId]);
+        $constructRow = $constructStmt->fetch();
+
         $this->success([
             'topics' => $topics,
-            'learning_outcomes' => $learningOutcomes
+            'learning_outcomes' => $learningOutcomes,
+            'construct_id' => $constructRow ? ($constructRow['construct_id'] !== null ? (int) $constructRow['construct_id'] : null) : null,
+            'construct_name' => $constructRow['construct_name'] ?? null
         ]);
     }
 
@@ -363,6 +400,22 @@ class AssignmentController extends Controller
                     $insertTopic->execute(['assignment_id' => $assignmentId, 'topic_id' => $topicId]);
                 }
             }
+
+            // EOC records which admin-defined Construct it was built from - the teacher picks
+            // exactly one. LOA/AOI (and an EOC payload sent with no construct_id) clear any stale
+            // value, so switching an existing draft's category away from EOC never leaves a
+            // dangling reference.
+            $constructId = null;
+            if ($category === 'EOC' && !empty($data['construct_id'])) {
+                $constructId = (int) $data['construct_id'];
+                if (!$this->constructBelongsToSubject($constructId, $subjectId)) {
+                    Database::rollback();
+                    $this->validationError(['construct_id' => 'That Construct does not belong to this assignment\'s Subject']);
+                    return;
+                }
+            }
+            $db->prepare('UPDATE assignments SET construct_id = :construct_id WHERE id = :id')
+                ->execute(['construct_id' => $constructId, 'id' => $assignmentId]);
 
             Database::commit();
             $this->success([], 'Curriculum linkage updated successfully');

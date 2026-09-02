@@ -92,7 +92,8 @@
     </div>
 
     <!-- Main Content -->
-    <div class="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
+    <div class="w-full max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12 py-4 sm:py-6 xl:grid xl:grid-cols-[1fr_300px] xl:gap-6 xl:items-start">
+      <div class="space-y-4 sm:space-y-6">
 
         <!-- Assessment Details (hidden in preview mode) -->
         <div v-if="!isPreview" class="space-y-4 sm:space-y-6">
@@ -101,9 +102,11 @@
           <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
             <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700">
               <h2 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white flex items-center">
-                <svg class="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
-                </svg>
+                <span class="w-8 h-8 mr-2.5 rounded-lg bg-sky-50 dark:bg-sky-900/30 flex items-center justify-center flex-shrink-0">
+                  <svg class="w-4 h-4 text-sky-600 dark:text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                  </svg>
+                </span>
                 Target Audience
               </h2>
             </div>
@@ -158,7 +161,7 @@
                     v-if="classDropdownOpen"
                     class="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1"
                   >
-                    <div v-for="group in classGroups" :key="group.name + group.level">
+                    <div v-for="group in visibleClassGroups" :key="group.name + group.level">
                       <label class="flex items-center gap-2.5 px-3 py-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer text-sm font-medium text-gray-800 dark:text-gray-200">
                         <input
                           type="checkbox"
@@ -181,6 +184,9 @@
                 </template>
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   Checked streams will all see this assignment once published.
+                  <template v-if="selectedClassIds.length && visibleClassGroups.length === 1 && classGroups.length > 1">
+                    Uncheck all to pick a different class.
+                  </template>
                 </p>
               </div>
             </div>
@@ -190,9 +196,11 @@
           <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
             <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700">
               <h2 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white flex items-center">
-                <svg class="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-                </svg>
+                <span class="w-8 h-8 mr-2.5 rounded-lg bg-violet-50 dark:bg-violet-900/30 flex items-center justify-center flex-shrink-0">
+                  <svg class="w-4 h-4 text-violet-600 dark:text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                  </svg>
+                </span>
                 Curriculum Alignment *
               </h2>
             </div>
@@ -235,10 +243,12 @@
                       @click="selectAssessmentCategory(opt.value)"
                       class="text-left p-3 sm:p-4 rounded-xl border-2 transition-colors"
                       :class="form.assessment_category === opt.value
-                        ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20'
-                        : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-700'"
+                        ? CATEGORY_ACTIVE_CLASSES[opt.value]
+                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'"
                     >
-                      <p class="font-semibold text-gray-900 dark:text-white">{{ opt.value }} &ndash; {{ opt.label }}</p>
+                      <p class="font-semibold text-gray-900 dark:text-white">
+                        <span :class="CATEGORY_TEXT_CLASSES[opt.value]">{{ opt.value }}</span> &ndash; {{ opt.label }}
+                      </p>
                       <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ opt.description }}</p>
                     </button>
                   </div>
@@ -308,7 +318,7 @@
                       <input
                         type="checkbox"
                         :checked="!!selectedTopicIds[t.id]"
-                        @change="toggleAoiEocTopic(t.id, ($event.target as HTMLInputElement).checked)"
+                        @change="toggleAoiTopic(t.id, ($event.target as HTMLInputElement).checked)"
                         class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                       >
                       {{ t.topic }}
@@ -316,29 +326,68 @@
                   </div>
                 </div>
 
-                <!-- EOC scope: Theme/Branch grouped Topics -->
-                <div v-if="form.assessment_category === 'EOC'" class="pt-2 border-t border-gray-100 dark:border-gray-700">
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Topic(s) by Theme/Branch *</label>
-                  <div v-if="!curriculumMeta?.topics?.length" class="text-sm text-gray-500 dark:text-gray-400">
-                    No curriculum topics have been configured for this Subject/Class-Stream/Term. Contact the administrator.
+                <!-- EOC scope: pick one admin-defined Construct (department + Subject + Level scoped) -->
+                <div v-if="form.assessment_category === 'EOC'" class="pt-2 border-t border-gray-100 dark:border-gray-700 space-y-3">
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Construct *</label>
+                  <div v-if="!selectedClassLevel" class="text-sm text-gray-500 dark:text-gray-400">
+                    Select a Class-Stream above to determine the Level (O Level / A Level) before choosing a Construct.
                   </div>
-                  <div v-else class="space-y-3 border border-gray-200 dark:border-gray-700 rounded-lg p-3 max-h-72 overflow-y-auto">
-                    <div v-for="group in eocTopicsByTheme" :key="group.theme_branch">
-                      <p class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide mb-1">{{ group.theme_branch }}</p>
-                      <label
-                        v-for="t in group.topics"
-                        :key="t.id"
-                        class="flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer text-sm text-gray-700 dark:text-gray-300"
-                      >
-                        <input
-                          type="checkbox"
-                          :checked="!!selectedTopicIds[t.id]"
-                          @change="toggleAoiEocTopic(t.id, ($event.target as HTMLInputElement).checked)"
-                          class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                        >
-                        {{ t.topic }}
-                      </label>
-                    </div>
+                  <div v-else-if="loadingEocConstructs" class="text-sm text-gray-400">Loading constructs...</div>
+                  <div v-else-if="eocConstructs.length === 0" class="text-sm text-gray-500 dark:text-gray-400">
+                    No constructs found for this Subject/{{ selectedClassLevel }} in your department. Contact the administrator.
+                  </div>
+                  <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button
+                      v-for="c in eocConstructs"
+                      :key="c.id"
+                      type="button"
+                      @click="selectEocConstruct(c.id)"
+                      class="text-left p-3 rounded-xl border-2 transition-colors"
+                      :class="selectedConstructId === c.id
+                        ? 'border-fuchsia-600 bg-fuchsia-50 dark:bg-fuchsia-900/20'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-fuchsia-300 dark:hover:border-fuchsia-700'"
+                    >
+                      <p class="font-semibold text-sm text-gray-900 dark:text-white">{{ c.name }}</p>
+                      <div class="flex flex-wrap gap-1.5 mt-1.5">
+                        <span class="tag-pill bg-fuchsia-50 text-fuchsia-700 dark:bg-fuchsia-900/30 dark:text-fuchsia-300">{{ c.assessment_objective }}</span>
+                        <span class="tag-pill bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ c.topic_count ?? 0 }} topic{{ (c.topic_count ?? 0) === 1 ? '' : 's' }}</span>
+                      </div>
+                    </button>
+                  </div>
+
+                  <div v-if="selectedConstructId">
+                    <p v-if="loadingEocConstructTopics" class="text-sm text-gray-400">Loading topics...</p>
+                    <template v-else>
+                      <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                        All {{ eocConstructTopics.length }} topic{{ eocConstructTopics.length === 1 ? '' : 's' }} from this Construct will be included.
+                      </p>
+                      <div class="space-y-2 border border-gray-200 dark:border-gray-700 rounded-lg p-3 max-h-72 overflow-y-auto">
+                        <div v-for="topic in eocConstructTopics" :key="topic.id" class="px-2 py-1.5">
+                          <div class="flex items-start gap-2.5">
+                            <div class="min-w-0 flex-1">
+                              <p class="text-sm font-medium text-gray-800 dark:text-gray-200">{{ topic.topic }}</p>
+                              <p class="text-xs text-gray-400">{{ topic.theme_branch }}</p>
+                            </div>
+                            <button
+                              type="button"
+                              @click="toggleEocOutcomesReveal(topic.id)"
+                              title="Show/hide learning outcomes"
+                              class="p-1 flex-shrink-0 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                            >
+                              <svg class="w-4 h-4 text-gray-400 transition-transform" :class="{ 'rotate-180': isEocOutcomesRevealed(topic.id) }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                              </svg>
+                            </button>
+                          </div>
+                          <div v-if="isEocOutcomesRevealed(topic.id)" class="mt-2 ml-0 pl-2 border-l-2 border-indigo-100 dark:border-indigo-900">
+                            <p v-if="topic.learning_outcomes.length === 0" class="text-xs text-gray-400">No learning outcomes recorded for this topic.</p>
+                            <ol v-else class="text-xs text-gray-600 dark:text-gray-300 list-decimal list-inside space-y-0.5">
+                              <li v-for="(lo, i) in topic.learning_outcomes" :key="i">{{ lo }}</li>
+                            </ol>
+                          </div>
+                        </div>
+                      </div>
+                    </template>
                   </div>
                 </div>
               </template>
@@ -349,9 +398,11 @@
           <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
             <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700">
               <h2 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white flex items-center">
-                <svg class="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-                </svg>
+                <span class="w-8 h-8 mr-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0">
+                  <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                  </svg>
+                </span>
                 Marks
               </h2>
             </div>
@@ -386,9 +437,11 @@
           <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
             <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700">
               <h2 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white flex items-center">
-                <svg class="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                </svg>
+                <span class="w-8 h-8 mr-2.5 rounded-lg bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
+                  <svg class="w-4 h-4 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                  </svg>
+                </span>
                 Schedule
               </h2>
             </div>
@@ -426,10 +479,12 @@
           <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
             <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <h2 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white flex items-center">
-                <svg class="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                </svg>
+                <span class="w-8 h-8 mr-2.5 rounded-lg bg-slate-100 dark:bg-slate-700/50 flex items-center justify-center flex-shrink-0">
+                  <svg class="w-4 h-4 text-slate-600 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                  </svg>
+                </span>
                 Settings
               </h2>
               <label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
@@ -475,9 +530,11 @@
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
             <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-2">
               <h2 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white flex items-center">
-                <svg class="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
+                <span class="w-8 h-8 mr-2.5 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center flex-shrink-0">
+                  <svg class="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                </span>
                 Questions
               </h2>
               <button
@@ -676,6 +733,65 @@
               <span>{{ publishing ? 'Publishing...' : 'Publish' }}</span>
             </button>
           </div>
+      </div>
+
+      <!-- Assessment Snapshot sidebar - sticky at xl+, purely a read-only recap of what's below
+           so a teacher scrolling a long form never loses track of what they've set. -->
+      <div class="mt-4 sm:mt-6 xl:mt-0">
+        <div class="xl:sticky xl:top-6 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-indigo-50 to-white dark:from-indigo-900/20 dark:to-gray-800 flex items-center gap-2.5">
+            <span class="w-7 h-7 rounded-md bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center flex-shrink-0">
+              <svg class="w-4 h-4 text-indigo-600 dark:text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+              </svg>
+            </span>
+            <h2 class="text-base font-semibold text-indigo-900 dark:text-white">Assessment Snapshot</h2>
+          </div>
+          <div class="px-4 py-2.5 divide-y divide-gray-100 dark:divide-gray-700 text-sm">
+            <div class="flex items-center justify-between gap-3 py-2">
+              <span class="text-slate-500 dark:text-slate-400 font-medium">Category</span>
+              <span v-if="form.assessment_category" class="px-2 py-0.5 rounded text-xs font-bold"
+                :class="{
+                  'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300': form.assessment_category === 'LOA',
+                  'bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300': form.assessment_category === 'AOI',
+                  'bg-fuchsia-50 text-fuchsia-700 dark:bg-fuchsia-900/30 dark:text-fuchsia-300': form.assessment_category === 'EOC'
+                }"
+                :title="ASSESSMENT_CATEGORY_LABELS[form.assessment_category]"
+              >{{ form.assessment_category }}</span>
+              <span v-else class="text-gray-400">Not set</span>
+            </div>
+            <div v-if="form.assessment_category === 'EOC' && selectedConstructName" class="flex items-center justify-between gap-3 py-2">
+              <span class="text-slate-500 dark:text-slate-400 font-medium">Construct</span>
+              <span class="font-semibold text-fuchsia-700 dark:text-fuchsia-300 text-right truncate max-w-[65%]">{{ selectedConstructName }}</span>
+            </div>
+            <div class="flex items-center justify-between gap-3 py-2">
+              <span class="text-slate-500 dark:text-slate-400 font-medium">Subject</span>
+              <span class="font-semibold text-gray-900 dark:text-white text-right truncate max-w-[65%]">{{ selectedSubjectName || 'Not set' }}</span>
+            </div>
+            <div class="flex items-center justify-between gap-3 py-2">
+              <span class="text-slate-500 dark:text-slate-400 font-medium">Class-Stream</span>
+              <span class="font-semibold text-gray-900 dark:text-white text-right truncate max-w-[65%]">{{ classDropdownLabel }}</span>
+            </div>
+            <div class="flex items-center justify-between gap-3 py-2">
+              <span class="text-slate-500 dark:text-slate-400 font-medium">Due Date</span>
+              <span class="font-semibold text-gray-900 dark:text-white text-right">{{ form.due_date ? new Date(form.due_date).toLocaleDateString() : 'Not set' }}</span>
+            </div>
+            <div class="flex items-center justify-between gap-3 py-2">
+              <span class="text-slate-500 dark:text-slate-400 font-medium">Questions</span>
+              <span class="font-semibold text-emerald-600 dark:text-emerald-400">{{ questions.length }}</span>
+            </div>
+            <div class="flex items-center justify-between gap-3 py-2">
+              <span class="text-slate-500 dark:text-slate-400 font-medium">Marks</span>
+              <span class="font-semibold" :class="marksMismatch && questions.length > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'">
+                {{ calculatedMarks }} / {{ form.total_marks || 0 }}
+              </span>
+            </div>
+          </div>
+          <p v-if="marksMismatch && questions.length > 0" class="px-4 pb-3 text-xs font-medium text-amber-600 dark:text-amber-400">
+            Question marks don't add up to the total yet.
+          </p>
+        </div>
+      </div>
     </div>
 
     <!-- Add/Edit Question Modal -->
@@ -686,9 +802,14 @@
         <h2 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white px-4 sm:px-6 pt-4 sm:pt-6 pb-2 flex-shrink-0">
           {{ editingQuestion ? 'Edit Question' : 'Add Question' }}
         </h2>
-        <p v-if="questionModalContextLabel" class="text-sm text-indigo-600 dark:text-indigo-400 px-4 sm:px-6 pb-2 flex-shrink-0">
-          {{ questionModalContextLabel }}
-        </p>
+        <div v-if="questionModalContextLabel || selectedConstructAO" class="flex flex-wrap items-center gap-2 px-4 sm:px-6 pb-2 flex-shrink-0">
+          <p v-if="questionModalContextLabel" class="text-sm text-indigo-600 dark:text-indigo-400">
+            {{ questionModalContextLabel }}
+          </p>
+          <span v-if="form.assessment_category === 'EOC' && selectedConstructAO" class="px-2 py-0.5 rounded text-xs font-bold bg-fuchsia-50 text-fuchsia-700 dark:bg-fuchsia-900/30 dark:text-fuchsia-300">
+            Assessment Objective: {{ selectedConstructAO }}
+          </span>
+        </div>
 
         <div class="space-y-4 px-4 sm:px-6 pb-4 sm:pb-6 overflow-y-auto flex-1">
           <div>
@@ -1060,6 +1181,7 @@ import CKEditor from '@/components/teacher/CKEditor.vue'
 import PdfAnnotationViewer from '@/components/assignment/PdfAnnotationViewer.vue'
 import type { AssignmentQuestion, QuestionType, Subject, ResponseType, AttachmentType } from '@/types'
 import type { ClassTarget } from '@/components/teacher/TeacherClassSelector.vue'
+import type { Construct, ConstructTopicOption } from '@/types/construct'
 import { resolveAssetUrl } from '@/utils/url'
 
 interface QuestionOption {
@@ -1177,6 +1299,16 @@ const classGroups = computed(() => {
 
 const selectedClassIds = computed(() => Object.entries(classChecked.value).filter(([, v]) => v).map(([id]) => Number(id)))
 
+// Curriculum alignment (LOA/AOI/EOC) only ever scopes to ONE class (the first checked stream -
+// see the classTarget watcher below), so letting a teacher check streams across different classes
+// would silently misalign the curriculum data from the visibility list. Once any stream in a class
+// is checked, the other classes disappear from the dropdown until it's cleared - streams WITHIN
+// the same class stay multi-selectable.
+const visibleClassGroups = computed(() => {
+  const activeGroup = classGroups.value.find(g => g.streams.some(s => classChecked.value[s.id]))
+  return activeGroup ? [activeGroup] : classGroups.value
+})
+
 // Dropdown UI: a closed button showing a summary, opening into the checkbox list on click -
 // same interaction pattern as TeacherClassSelector, just multi-select instead of single.
 const classDropdownOpen = ref(false)
@@ -1215,6 +1347,11 @@ const toggleAllStreamsInGroup = (group: { streams: ClassStreamOption[] }, checke
     if (checked) classChecked.value[s.id] = true
     else delete classChecked.value[s.id]
   }
+  // Checking "All Streams" selects everything in this group at once - there's nothing left to
+  // pick, so close the dropdown automatically instead of making the teacher click away. Unchecking
+  // it (going back to none/partial) leaves the dropdown open since they're likely about to pick
+  // individual streams instead.
+  if (checked) classDropdownOpen.value = false
 }
 
 const loadClasses = async () => {
@@ -1321,6 +1458,29 @@ const calculatedMarks = computed(() => {
 const marksMismatch = computed(() => {
   return calculatedMarks.value !== Number(form.value.total_marks)
 })
+
+// Read-only fields for the "Assessment Snapshot" sidebar - reuses state/computeds already
+// defined above, no new data fetching.
+const selectedSubjectName = computed(() => subjects.value.find(s => s.id === form.value.subject_id)?.name || '')
+const selectedConstructName = computed(() => eocConstructs.value.find(c => c.id === selectedConstructId.value)?.name || '')
+const selectedConstructAO = computed(() => eocConstructs.value.find(c => c.id === selectedConstructId.value)?.assessment_objective || '')
+const ASSESSMENT_CATEGORY_LABELS: Record<string, string> = {
+  LOA: 'Learning Outcome Assessment',
+  AOI: 'Activity of Integration',
+  EOC: 'Elements of Construct'
+}
+// Each category gets its own accent (blue/violet/fuchsia) instead of one uniform indigo, so a
+// teacher can tell LOA/AOI/EOC apart at a glance wherever they show up (category picker, snapshot).
+const CATEGORY_ACTIVE_CLASSES: Record<string, string> = {
+  LOA: 'border-blue-600 bg-blue-50 dark:bg-blue-900/20',
+  AOI: 'border-violet-600 bg-violet-50 dark:bg-violet-900/20',
+  EOC: 'border-fuchsia-600 bg-fuchsia-50 dark:bg-fuchsia-900/20'
+}
+const CATEGORY_TEXT_CLASSES: Record<string, string> = {
+  LOA: 'text-blue-600 dark:text-blue-400',
+  AOI: 'text-violet-600 dark:text-violet-400',
+  EOC: 'text-fuchsia-600 dark:text-fuchsia-400'
+}
 
 const isObjectiveQuestion = computed(() => {
   return ['multiple_choice_single', 'multiple_choice_multiple', 'true_false'].includes(questionForm.value.question_type)
@@ -1459,7 +1619,7 @@ const loadAssignment = async () => {
         try {
           const curriculumResponse = await axios.get(`${API_BASE}/teacher/assignments/${route.params.id}/curriculum`)
           if (curriculumResponse.data.success) {
-            const { topics, learning_outcomes } = curriculumResponse.data.data
+            const { topics, learning_outcomes, construct_id } = curriculumResponse.data.data
             if (assignment.assessment_category === 'LOA' && topics.length > 0) {
               curriculumSelection.value.theme_branch = topics[0].theme_branch
               curriculumSelection.value.curriculum_topic_id = topics[0].id
@@ -1468,6 +1628,11 @@ const loadAssignment = async () => {
               for (const lo of learning_outcomes) {
                 selectedLearningOutcomeIds.value[lo.learning_outcome_id] = true
               }
+            } else if (assignment.assessment_category === 'EOC' && construct_id) {
+              // selectEocConstruct() fetches the construct's topics (re-scoped to this
+              // assignment's own class_id) and repopulates eocConstructTopics/selectedTopicIds
+              // itself - the raw `topics` list from this endpoint isn't needed for EOC's restore.
+              await selectEocConstruct(construct_id)
             } else {
               selectedTopicIds.value = {}
               for (const t of topics) {
@@ -1589,6 +1754,8 @@ const selectAssessmentCategory = (category: 'LOA' | 'AOI' | 'EOC') => {
   loaTopicDetail.value = null
   selectedLearningOutcomeIds.value = {}
   selectedTopicIds.value = {}
+  selectedConstructId.value = ''
+  eocConstructTopics.value = []
 }
 
 const onLoaTopicChosen = async () => {
@@ -1613,7 +1780,7 @@ const onLoaTopicChosen = async () => {
   }
 }
 
-const toggleAoiEocTopic = (topicId: number, checked: boolean) => {
+const toggleAoiTopic = (topicId: number, checked: boolean) => {
   if (checked) {
     selectedTopicIds.value[topicId] = true
     return
@@ -1628,35 +1795,71 @@ const toggleAoiEocTopic = (topicId: number, checked: boolean) => {
   delete selectedTopicIds.value[topicId]
 }
 
-// EOC groups its Topic checkboxes by Theme/Branch - curriculumMeta.topics doesn't carry
-// theme_branch itself, so this cross-references the theme-filtered topic list against every
-// theme in curriculumMeta.themes to build the grouping without an extra request per theme.
-const eocTopicsByTheme = ref<{ theme_branch: string; topics: CurriculumTopicMetaOption[] }[]>([])
-watch(() => [form.value.assessment_category, curriculumMeta.value?.themes, curriculumSelection.value.term_id], async () => {
-  if (form.value.assessment_category !== 'EOC' || !curriculumMeta.value?.themes?.length || !form.value.subject_id || !form.value.classTarget.class_id) {
-    eocTopicsByTheme.value = []
-    return
+// EOC picks exactly one admin-defined Construct - scoped to the teacher's own department
+// (enforced server-side), the chosen Subject, and the Level implied by the chosen class-stream -
+// instead of raw theme/topic checkboxes. See Admin\ConstructController / Teacher\ConstructController.
+const selectedClassLevel = computed(() => availableClasses.value.find(c => c.id === form.value.classTarget.class_id)?.level || '')
+
+const eocConstructs = ref<Construct[]>([])
+const loadingEocConstructs = ref(false)
+const selectedConstructId = ref<number | ''>('')
+const eocConstructTopics = ref<ConstructTopicOption[]>([])
+const loadingEocConstructTopics = ref(false)
+const eocRevealedOutcomes = ref<Set<number>>(new Set())
+const isEocOutcomesRevealed = (topicId: number) => eocRevealedOutcomes.value.has(topicId)
+const toggleEocOutcomesReveal = (topicId: number) => {
+  const next = new Set(eocRevealedOutcomes.value)
+  if (next.has(topicId)) next.delete(topicId)
+  else next.add(topicId)
+  eocRevealedOutcomes.value = next
+}
+
+watch(() => [form.value.assessment_category, form.value.subject_id, form.value.classTarget.class_id, selectedClassLevel.value], async () => {
+  eocConstructs.value = []
+  selectedConstructId.value = ''
+  eocConstructTopics.value = []
+  if (form.value.assessment_category !== 'EOC' || !form.value.subject_id || !form.value.classTarget.class_id || !selectedClassLevel.value) return
+
+  loadingEocConstructs.value = true
+  try {
+    const response = await axios.get(`${API_BASE}/teacher/constructs`, {
+      params: { subject_id: form.value.subject_id, level: selectedClassLevel.value }
+    })
+    if (response.data.success) eocConstructs.value = response.data.data.constructs || []
+  } catch (err) {
+    console.error('Failed to load constructs for EOC:', err)
+  } finally {
+    loadingEocConstructs.value = false
   }
-  const groups: { theme_branch: string; topics: CurriculumTopicMetaOption[] }[] = []
-  for (const theme of curriculumMeta.value.themes) {
-    try {
-      const params: Record<string, string> = {
-        subject_id: String(form.value.subject_id),
-        class_id: String(form.value.classTarget.class_id),
-        theme_branch: theme
-      }
-      if (curriculumSelection.value.academic_year_id) params.academic_year_id = String(curriculumSelection.value.academic_year_id)
-      if (curriculumSelection.value.term_id) params.term_id = String(curriculumSelection.value.term_id)
-      const response = await axios.get(`${API_BASE}/teacher/enotes/curriculum/meta`, { params })
-      if (response.data.success && response.data.data.topics?.length) {
-        groups.push({ theme_branch: theme, topics: response.data.data.topics })
-      }
-    } catch (err) {
-      console.error('Failed to load EOC theme topics:', err)
-    }
-  }
-  eocTopicsByTheme.value = groups
 }, { deep: false })
+
+// Selecting a Construct auto-includes ALL of its topics (no manual per-topic picking) - each
+// topic is re-resolved to the exact curriculum_topic_id for this assignment's own class-stream
+// (Teacher\ConstructController::show()'s class_id filter), not every stream the Construct spans.
+async function selectEocConstruct(constructId: number) {
+  selectedConstructId.value = constructId
+  eocConstructTopics.value = []
+  eocRevealedOutcomes.value = new Set()
+  selectedTopicIds.value = {}
+  if (!form.value.classTarget.class_id) return
+
+  loadingEocConstructTopics.value = true
+  try {
+    const response = await axios.get(`${API_BASE}/teacher/constructs/${constructId}`, {
+      params: { class_id: form.value.classTarget.class_id }
+    })
+    if (response.data.success) {
+      eocConstructTopics.value = response.data.data.topics || []
+      const next: Record<number, boolean> = {}
+      for (const t of eocConstructTopics.value) next[t.id] = true
+      selectedTopicIds.value = next
+    }
+  } catch (err) {
+    console.error('Failed to load construct topics for EOC:', err)
+  } finally {
+    loadingEocConstructTopics.value = false
+  }
+}
 
 // Question groups shown above the flat Questions list, one per selected Learning Outcome (LOA)
 // or Topic (AOI/EOC) - the count reflects the flat `questions` array, and "Add Question" carries
@@ -1690,28 +1893,30 @@ const curriculumQuestionGroups = computed(() => {
   }
 
   if (form.value.assessment_category === 'EOC') {
-    const groups: any[] = []
-    for (const themeGroup of eocTopicsByTheme.value) {
-      for (const t of themeGroup.topics) {
-        if (!selectedTopicIds.value[t.id]) continue
-        groups.push({
-          key: `topic-${t.id}`,
-          label: t.topic,
-          theme: themeGroup.theme_branch,
-          curriculum_topic_id: t.id,
-          learning_outcome_id: null,
-          count: questions.value.filter(q => (q as any).curriculum_topic_id === t.id).length
-        })
-      }
-    }
-    return groups
+    // One card for the whole Construct (not one per topic) - a teacher adds questions against the
+    // Assessment Objective as a whole; which specific underlying topic a question lands on doesn't
+    // matter for EOC since the Construct is what's being assessed. New questions default onto the
+    // construct's first topic (openAddQuestionForGroup still needs a valid curriculum_topic_id).
+    const topics = eocConstructTopics.value.filter(t => selectedTopicIds.value[t.id])
+    if (topics.length === 0) return []
+    const topicIdSet = new Set(topics.map(t => t.id))
+    return [{
+      key: `construct-${selectedConstructId.value}`,
+      label: `Assessment Objective (${selectedConstructAO.value})`,
+      theme: null as string | null,
+      curriculum_topic_id: topics[0].id,
+      learning_outcome_id: null,
+      count: questions.value.filter(q => topicIdSet.has((q as any).curriculum_topic_id)).length
+    }]
   }
 
   return []
 })
 
 // Basic Information (Title/Category/Description) was removed - the title is derived from the
-// curriculum selection instead: the Topic name for LOA, or the joined Topic names for AOI/EOC.
+// curriculum selection instead: the Topic name for LOA, the joined Topic names for AOI, or the
+// Construct name for EOC (its question group label is now the generic "Assessment Objective
+// (AO#)", not a topic name, so it wouldn't make a useful title).
 // Returns null (not '') for a legacy/no-category assignment so the watcher below leaves whatever
 // title was already loaded (e.g. an existing pre-this-feature assignment) untouched.
 const derivedTitle = computed<string | null>(() => {
@@ -1719,8 +1924,11 @@ const derivedTitle = computed<string | null>(() => {
     const topic = curriculumMeta.value?.topics.find(t => t.id === Number(curriculumSelection.value.curriculum_topic_id))
     return topic?.topic || ''
   }
-  if (form.value.assessment_category === 'AOI' || form.value.assessment_category === 'EOC') {
+  if (form.value.assessment_category === 'AOI') {
     return curriculumQuestionGroups.value.map(g => g.label).join(', ')
+  }
+  if (form.value.assessment_category === 'EOC') {
+    return selectedConstructName.value || ''
   }
   return null
 })
@@ -1773,6 +1981,12 @@ const questionModalContextLabel = computed(() => {
 const questionCurriculumLabel = (question: AssignmentQuestion): string => {
   const q = question as any
   if (!form.value.assessment_category) return ''
+  // EOC's one group only carries the construct's FIRST topic's id (see curriculumQuestionGroups),
+  // so a question saved against any other of the construct's topics wouldn't otherwise match it -
+  // resolve straight from the construct's AO instead of the group lookup below.
+  if (form.value.assessment_category === 'EOC' && q.curriculum_topic_id) {
+    return selectedConstructAO.value ? `Assessment Objective (${selectedConstructAO.value})` : ''
+  }
   if (q.learning_outcome_id) {
     const group = curriculumQuestionGroups.value.find((g: any) => g.learning_outcome_id === q.learning_outcome_id)
     if (group) return group.label
@@ -2152,7 +2366,9 @@ const syncCurriculumLinkage = async (assignmentId: number | string) => {
   } else {
     const topicIds = Object.entries(selectedTopicIds.value).filter(([, v]) => v).map(([id]) => Number(id))
     if (topicIds.length === 0) return
-    await axios.put(`${API_BASE}/teacher/assignments/${assignmentId}/curriculum`, { topic_ids: topicIds })
+    const payload: Record<string, any> = { topic_ids: topicIds }
+    if (form.value.assessment_category === 'EOC') payload.construct_id = selectedConstructId.value || null
+    await axios.put(`${API_BASE}/teacher/assignments/${assignmentId}/curriculum`, payload)
   }
 }
 
@@ -2226,6 +2442,10 @@ const publishAssignment = async () => {
   }
   if (!form.value.assessment_category) {
     showToast('error', 'Please select an assessment category (LOA/AOI/EOC) before publishing')
+    return
+  }
+  if (form.value.assessment_category === 'EOC' && !selectedConstructId.value) {
+    showToast('error', 'Please select a Construct before publishing')
     return
   }
   if (questions.value.length === 0) {
@@ -2340,6 +2560,10 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.tag-pill {
+  @apply inline-flex items-center px-2 py-1 rounded-md text-xs font-medium;
+}
+
 .toast-enter-active,
 .toast-leave-active {
   transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);

@@ -94,6 +94,10 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/enotes/topics/{id}', 'eSpace\App\Controllers\Student\ENoteController@show');
         Router::post('/enotes/pages/{pageId}/tutor-explain', 'eSpace\App\Controllers\Student\ENoteController@tutorExplain');
 
+        // Constructs (read-only)
+        Router::get('/constructs', 'eSpace\App\Controllers\Student\ConstructController@index');
+        Router::get('/constructs/{id}', 'eSpace\App\Controllers\Student\ConstructController@show');
+
         // Item Bank
         Router::get('/itembank', 'eSpace\App\Controllers\Student\ItemBankController@index');
         Router::get('/itembank/{id}', 'eSpace\App\Controllers\Student\ItemBankController@show');
@@ -297,6 +301,10 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         // eNotes Curriculum browsing (admin-authored, read-only here)
         Router::get('/enotes/curriculum/meta', 'eSpace\App\Controllers\Teacher\ENoteCurriculumController@meta');
         Router::get('/enotes/curriculum/topics/{id}', 'eSpace\App\Controllers\Teacher\ENoteCurriculumController@showTopic');
+
+        // Constructs (read-only - "pick from what admin saved")
+        Router::get('/constructs', 'eSpace\App\Controllers\Teacher\ConstructController@index');
+        Router::get('/constructs/{id}', 'eSpace\App\Controllers\Teacher\ConstructController@show');
 
         // eNotes Image Upload
         Router::post('/enotes/upload-image', 'eSpace\App\Controllers\Teacher\ENoteImageController@upload');
@@ -619,6 +627,15 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/enotes-curriculum/{id}', 'eSpace\App\Controllers\Admin\ENoteCurriculumController@show');
         Router::put('/enotes-curriculum/{id}', 'eSpace\App\Controllers\Admin\ENoteCurriculumController@update');
         Router::delete('/enotes-curriculum/{id}', 'eSpace\App\Controllers\Admin\ENoteCurriculumController@destroy');
+
+        // Constructs (EOC definition layer - department + subject + level + AO, grouping curriculum topics)
+        Router::get('/constructs/meta', 'eSpace\App\Controllers\Admin\ConstructController@meta');
+        Router::get('/constructs/topics', 'eSpace\App\Controllers\Admin\ConstructController@topicsFor');
+        Router::get('/constructs', 'eSpace\App\Controllers\Admin\ConstructController@index');
+        Router::post('/constructs', 'eSpace\App\Controllers\Admin\ConstructController@store');
+        Router::get('/constructs/{id}', 'eSpace\App\Controllers\Admin\ConstructController@show');
+        Router::put('/constructs/{id}', 'eSpace\App\Controllers\Admin\ConstructController@update');
+        Router::delete('/constructs/{id}', 'eSpace\App\Controllers\Admin\ConstructController@destroy');
 
         // Reports
         Router::get('/reports/system', 'eSpace\App\Controllers\Admin\ReportController@system');

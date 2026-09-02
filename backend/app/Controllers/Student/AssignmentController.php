@@ -293,7 +293,7 @@ class AssignmentController extends Controller
             $this->success([
                 'assignment' => $assignment,
                 'questions' => $questions,
-                'curriculum' => $this->getCurriculumStructure((int) $assignmentId, $assignment['assessment_category']),
+                'curriculum' => $this->getCurriculumStructure((int) $assignmentId, $assignment['assessment_category'], $assignment['construct_id'] ?? null),
                 'submission_id' => $submissionId,
                 'submission_status' => $submission['status'] ?? null,
                 'answers' => $existingAnswers,
@@ -313,7 +313,7 @@ class AssignmentController extends Controller
      * Questions already carry their own curriculum_topic_id/learning_outcome_id (see the `questions`
      * array above) - this is purely the human-readable structure to group them by.
      */
-    private function getCurriculumStructure(int $assignmentId, ?string $category): ?array
+    private function getCurriculumStructure(int $assignmentId, ?string $category, $constructId = null): ?array
     {
         if ($category === null) {
             return null;
@@ -355,10 +355,25 @@ class AssignmentController extends Controller
         );
         $stmt->execute(['id' => $assignmentId]);
 
-        return [
+        $result = [
             'category' => $category,
             'topics' => $stmt->fetchAll()
         ];
+
+        // EOC is assessed against the Construct's Assessment Objective as a whole (the builder
+        // adds every question under one "Assessment Objective (AO#)" group) - the student view
+        // groups by that instead of the raw Theme/Topic text.
+        if ($category === 'EOC' && $constructId) {
+            $constructStmt = $this->pdo->prepare('SELECT assessment_objective, name FROM constructs WHERE id = :id');
+            $constructStmt->execute(['id' => (int) $constructId]);
+            $construct = $constructStmt->fetch();
+            if ($construct) {
+                $result['assessment_objective'] = $construct['assessment_objective'];
+                $result['construct_name'] = $construct['name'];
+            }
+        }
+
+        return $result;
     }
 
     /**

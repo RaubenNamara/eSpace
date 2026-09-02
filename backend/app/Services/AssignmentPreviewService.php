@@ -99,7 +99,7 @@ class AssignmentPreviewService
         return [
             'assignment' => $assignment,
             'questions' => $questions,
-            'curriculum' => $this->getCurriculumStructure((int) $assignment['id'], $assignment['assessment_category'] ?? null),
+            'curriculum' => $this->getCurriculumStructure((int) $assignment['id'], $assignment['assessment_category'] ?? null, $assignment['construct_id'] ?? null),
             'submission_id' => null,
             'submission_status' => 'preview',
             'answers' => [],
@@ -112,7 +112,7 @@ class AssignmentPreviewService
      * Student" shows the identical LOA/AOI/EOC grouping a real student would see. Null for any
      * assignment without an assessment_category (every assignment created before this feature).
      */
-    private function getCurriculumStructure(int $assignmentId, ?string $category): ?array
+    private function getCurriculumStructure(int $assignmentId, ?string $category, $constructId = null): ?array
     {
         if ($category === null) {
             return null;
@@ -156,9 +156,23 @@ class AssignmentPreviewService
         );
         $stmt->execute(['id' => $assignmentId]);
 
-        return [
+        $result = [
             'category' => $category,
             'topics' => $stmt->fetchAll()
         ];
+
+        // EOC is assessed against the Construct's Assessment Objective as a whole - group by that
+        // instead of the raw Theme/Topic text, matching Student\AssignmentController's real view.
+        if ($category === 'EOC' && $constructId) {
+            $constructStmt = $db->prepare('SELECT assessment_objective, name FROM constructs WHERE id = :id');
+            $constructStmt->execute(['id' => (int) $constructId]);
+            $construct = $constructStmt->fetch();
+            if ($construct) {
+                $result['assessment_objective'] = $construct['assessment_objective'];
+                $result['construct_name'] = $construct['name'];
+            }
+        }
+
+        return $result;
     }
 }
