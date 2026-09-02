@@ -388,7 +388,7 @@
         <div class="h-1 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600"></div>
         <div class="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
           <div class="px-4 sm:px-6 py-5 sm:py-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
-            <div class="flex items-center gap-3">
+            <div class="hidden sm:flex items-center gap-3">
               <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-md shadow-indigo-500/20 flex-shrink-0">
                 <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
@@ -401,7 +401,7 @@
             </div>
 
             <div class="flex flex-wrap items-center justify-center gap-3 text-xs">
-              <span class="px-2.5 py-1 rounded-full bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 text-indigo-600 dark:text-indigo-400 font-semibold capitalize">
+              <span class="hidden sm:inline-block px-2.5 py-1 rounded-full bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 text-indigo-600 dark:text-indigo-400 font-semibold capitalize">
                 {{ userRole }} Portal
               </span>
               <span class="text-gray-400 dark:text-gray-500">&copy; {{ currentYear }} eSpace. All rights reserved.</span>
