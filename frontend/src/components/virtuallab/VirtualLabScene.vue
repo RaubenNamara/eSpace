@@ -1,6 +1,11 @@
 <template>
   <div class="relative w-full h-full rounded-xl overflow-hidden bg-gradient-to-b from-slate-200 to-slate-300 dark:from-slate-800 dark:to-slate-900">
-    <div ref="canvasHost" class="w-full h-full"></div>
+    <div v-if="renderError" class="w-full h-full flex flex-col items-center justify-center gap-2 text-center px-6">
+      <span class="text-3xl">🔬</span>
+      <p class="text-sm text-gray-600 dark:text-gray-300">The 3D view couldn't start on this device.</p>
+      <button @click="retryBuildScene" class="mt-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">Try Again</button>
+    </div>
+    <div v-else ref="canvasHost" class="w-full h-full"></div>
 
     <!-- Apparatus tray - apparatus this experiment needs that hasn't been placed on the bench
          yet. Left-docked so it never collides with the top-center armed-mode banner on desktop;
@@ -189,7 +194,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { createObjectMesh, createConnectionLine, voltageSpriteTexture, digitalDisplayTexture } from './labObjectFactory'
@@ -207,6 +212,7 @@ const emit = defineEmits<{
 }>()
 
 const canvasHost = ref<HTMLDivElement | null>(null)
+const renderError = ref(false)
 let renderer: THREE.WebGLRenderer
 let scene: THREE.Scene
 let camera: THREE.PerspectiveCamera
@@ -1336,14 +1342,25 @@ function cancelPouring() {
 }
 
 function buildScene() {
-  const host = canvasHost.value!
+  const host = canvasHost.value
+  if (!host) return
   scene = new THREE.Scene()
   scene.background = null
 
   camera = new THREE.PerspectiveCamera(45, host.clientWidth / host.clientHeight, 0.1, 100)
   camera.position.set(2.5, 2.2, 3.2)
 
-  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' })
+  // WebGLRenderer throws (rather than returning a null/broken instance) when the browser can't
+  // grant a WebGL context - common on mobile after several experiments have been opened in one
+  // session without their prior context ever being released (see the forceContextLoss() call in
+  // onBeforeUnmount below). Without this guard that throw left the canvas silently blank forever.
+  try {
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' })
+  } catch (err) {
+    console.error('Virtual Lab: failed to create a WebGL context', err)
+    renderError.value = true
+    return
+  }
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   renderer.setSize(host.clientWidth, host.clientHeight)
   renderer.shadowMap.enabled = true
@@ -1459,6 +1476,11 @@ function setObjectState(key: string, patch: Record<string, any>) {
 
 defineExpose({ setObjectState })
 
+function retryBuildScene() {
+  renderError.value = false
+  nextTick(buildScene)
+}
+
 onMounted(buildScene)
 
 onBeforeUnmount(() => {
@@ -1467,6 +1489,7 @@ onBeforeUnmount(() => {
   renderer?.domElement.removeEventListener('pointerdown', onPointerDown)
   renderer?.domElement.removeEventListener('pointermove', onPointerMove)
   renderer?.domElement.removeEventListener('pointerup', onPointerUp)
+  controls?.dispose()
   scene?.traverse((obj) => {
     if (obj instanceof THREE.Mesh) {
       obj.geometry.dispose()
@@ -1475,5 +1498,12 @@ onBeforeUnmount(() => {
     }
   })
   renderer?.dispose()
+  // renderer.dispose() alone frees Three.js-side resources but does NOT release the underlying
+  // WebGL context - mobile browsers cap concurrent live contexts far lower than desktop, so a
+  // student browsing several experiments in one session (each mount creates a new renderer)
+  // eventually has new contexts silently fail to acquire, leaving that experiment's canvas blank
+  // and unresponsive. forceContextLoss() is Three.js's documented way to actually free the context.
+  renderer?.forceContextLoss()
+  renderer?.domElement.remove()
 })
 </script>
