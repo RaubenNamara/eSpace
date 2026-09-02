@@ -205,30 +205,38 @@
               </h2>
             </div>
             <div class="p-4 sm:p-6 space-y-4">
-              <div v-if="!form.subject_id || !form.classTarget.class_id" class="text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3">
-                Select a Subject and a specific Class-Stream above to align this assessment with the curriculum Admin has configured (LOA/AOI/EOC).
+              <div v-if="!form.subject_id || !form.classTarget.class_id" class="flex items-start gap-3 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3.5">
+                <svg class="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span>Select a Subject and a specific Class-Stream above to align this assessment with the curriculum Admin has configured (LOA/AOI/EOC).</span>
               </div>
               <template v-else>
                 <!-- Academic Year is already chosen once, above in Target Audience - reused here
                      automatically instead of asking again. -->
-                <div v-if="curriculumMissingYear" class="text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
-                  No curriculum has been configured for Academic Year {{ form.academic_year || '—' }} yet. Choose a different Academic Year above, or contact the administrator.
+                <div v-if="curriculumMissingYear" class="flex items-start gap-3 text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3.5">
+                  <svg class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                  </svg>
+                  <span>No curriculum has been configured for Academic Year {{ form.academic_year || '—' }} yet. Choose a different Academic Year above, or contact the administrator.</span>
                 </div>
                 <template v-else>
-                  <p class="text-xs text-gray-500 dark:text-gray-400">
-                    Aligning to Academic Year <span class="font-medium text-gray-700 dark:text-gray-300">{{ form.academic_year }}</span>
-                  </p>
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Term</label>
-                    <select
-                      v-model="curriculumSelection.term_id"
-                      :disabled="!curriculumSelection.academic_year_id"
-                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white disabled:opacity-50"
-                      @change="onCurriculumStepChange('term_id')"
-                    >
-                      <option value="">Select term</option>
-                      <option v-for="t in curriculumMeta?.terms" :key="t.id" :value="t.id">{{ t.name }}</option>
-                    </select>
+                  <div class="flex flex-wrap items-center justify-between gap-3">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                      Academic Year {{ form.academic_year }}
+                    </span>
+                    <div class="flex-1 min-w-[160px] sm:max-w-[220px]">
+                      <select
+                        v-model="curriculumSelection.term_id"
+                        :disabled="!curriculumSelection.academic_year_id"
+                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white disabled:opacity-50 text-sm"
+                        @change="onCurriculumStepChange('term_id')"
+                      >
+                        <option value="">Select term</option>
+                        <option v-for="t in curriculumMeta?.terms" :key="t.id" :value="t.id">{{ t.name }}</option>
+                      </select>
+                    </div>
                   </div>
                 </template>
 
@@ -241,11 +249,19 @@
                       :key="opt.value"
                       type="button"
                       @click="selectAssessmentCategory(opt.value)"
-                      class="text-left p-3 sm:p-4 rounded-xl border-2 transition-colors"
+                      class="relative text-left p-3 sm:p-4 rounded-xl border-2 transition-colors"
                       :class="form.assessment_category === opt.value
                         ? CATEGORY_ACTIVE_CLASSES[opt.value]
                         : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'"
                     >
+                      <svg v-if="form.assessment_category === opt.value" class="w-4 h-4 absolute top-3 right-3" :class="CATEGORY_TEXT_CLASSES[opt.value]" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path>
+                      </svg>
+                      <span class="w-8 h-8 mb-2 rounded-lg flex items-center justify-center" :class="CATEGORY_ICON_BG[opt.value]">
+                        <svg class="w-4 h-4" :class="CATEGORY_TEXT_CLASSES[opt.value]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="CATEGORY_ICON_PATH[opt.value]"></path>
+                        </svg>
+                      </span>
                       <p class="font-semibold text-gray-900 dark:text-white">
                         <span :class="CATEGORY_TEXT_CLASSES[opt.value]">{{ opt.value }}</span> &ndash; {{ opt.label }}
                       </p>
@@ -255,7 +271,7 @@
                 </div>
 
                 <!-- LOA scope: Theme/Branch -> Topic -> Competence -> Learning Outcomes -->
-                <div v-if="form.assessment_category === 'LOA'" class="space-y-4 pt-2 border-t border-gray-100 dark:border-gray-700">
+                <div v-if="form.assessment_category === 'LOA'" class="space-y-4 pt-4 mt-2 border-t-2 border-blue-100 dark:border-blue-900/40">
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Theme / Branch</label>
@@ -304,9 +320,9 @@
                 </div>
 
                 <!-- AOI scope: Topic checkboxes -->
-                <div v-if="form.assessment_category === 'AOI'" class="pt-2 border-t border-gray-100 dark:border-gray-700">
+                <div v-if="form.assessment_category === 'AOI'" class="pt-4 mt-2 border-t-2 border-violet-100 dark:border-violet-900/40">
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Topic(s) *</label>
-                  <div v-if="!curriculumMeta?.topics?.length" class="text-sm text-gray-500 dark:text-gray-400">
+                  <div v-if="!curriculumMeta?.topics?.length" class="text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3">
                     No curriculum topics have been configured for this Subject/Class-Stream/Term. Contact the administrator.
                   </div>
                   <div v-else class="space-y-1.5 border border-gray-200 dark:border-gray-700 rounded-lg p-2 max-h-56 overflow-y-auto">
@@ -327,13 +343,16 @@
                 </div>
 
                 <!-- EOC scope: pick one admin-defined Construct (department + Subject + Level scoped) -->
-                <div v-if="form.assessment_category === 'EOC'" class="pt-2 border-t border-gray-100 dark:border-gray-700 space-y-3">
+                <div v-if="form.assessment_category === 'EOC'" class="pt-4 mt-2 border-t-2 border-fuchsia-100 dark:border-fuchsia-900/40 space-y-3">
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Construct *</label>
-                  <div v-if="!selectedClassLevel" class="text-sm text-gray-500 dark:text-gray-400">
+                  <div v-if="!selectedClassLevel" class="text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3">
                     Select a Class-Stream above to determine the Level (O Level / A Level) before choosing a Construct.
                   </div>
-                  <div v-else-if="loadingEocConstructs" class="text-sm text-gray-400">Loading constructs...</div>
-                  <div v-else-if="eocConstructs.length === 0" class="text-sm text-gray-500 dark:text-gray-400">
+                  <div v-else-if="loadingEocConstructs" class="flex items-center gap-2 text-sm text-gray-400 py-2">
+                    <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                    Loading constructs...
+                  </div>
+                  <div v-else-if="eocConstructs.length === 0" class="text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3">
                     No constructs found for this Subject/{{ selectedClassLevel }} in your department. Contact the administrator.
                   </div>
                   <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -342,12 +361,15 @@
                       :key="c.id"
                       type="button"
                       @click="selectEocConstruct(c.id)"
-                      class="text-left p-3 rounded-xl border-2 transition-colors"
+                      class="relative text-left p-3 rounded-xl border-2 transition-colors"
                       :class="selectedConstructId === c.id
                         ? 'border-fuchsia-600 bg-fuchsia-50 dark:bg-fuchsia-900/20'
                         : 'border-gray-200 dark:border-gray-700 hover:border-fuchsia-300 dark:hover:border-fuchsia-700'"
                     >
-                      <p class="font-semibold text-sm text-gray-900 dark:text-white">{{ c.name }}</p>
+                      <svg v-if="selectedConstructId === c.id" class="w-4 h-4 absolute top-3 right-3 text-fuchsia-600 dark:text-fuchsia-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path>
+                      </svg>
+                      <p class="font-semibold text-sm text-gray-900 dark:text-white pr-5">{{ c.name }}</p>
                       <div class="flex flex-wrap gap-1.5 mt-1.5">
                         <span class="tag-pill bg-fuchsia-50 text-fuchsia-700 dark:bg-fuchsia-900/30 dark:text-fuchsia-300">{{ c.assessment_objective }}</span>
                         <span class="tag-pill bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ c.topic_count ?? 0 }} topic{{ (c.topic_count ?? 0) === 1 ? '' : 's' }}</span>
@@ -1481,6 +1503,18 @@ const CATEGORY_TEXT_CLASSES: Record<string, string> = {
   AOI: 'text-violet-600 dark:text-violet-400',
   EOC: 'text-fuchsia-600 dark:text-fuchsia-400'
 }
+const CATEGORY_ICON_BG: Record<string, string> = {
+  LOA: 'bg-blue-50 dark:bg-blue-900/30',
+  AOI: 'bg-violet-50 dark:bg-violet-900/30',
+  EOC: 'bg-fuchsia-50 dark:bg-fuchsia-900/30'
+}
+// One glance icon per category on the picker cards - a graduation cap for a single Learning
+// Outcome, stacked layers for combining several Topics, a verified-shield for a Construct.
+const CATEGORY_ICON_PATH: Record<string, string> = {
+  LOA: 'M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222',
+  AOI: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10',
+  EOC: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z'
+}
 
 const isObjectiveQuestion = computed(() => {
   return ['multiple_choice_single', 'multiple_choice_multiple', 'true_false'].includes(questionForm.value.question_type)
@@ -1833,21 +1867,20 @@ watch(() => [form.value.assessment_category, form.value.subject_id, form.value.c
   }
 }, { deep: false })
 
-// Selecting a Construct auto-includes ALL of its topics (no manual per-topic picking) - each
-// topic is re-resolved to the exact curriculum_topic_id for this assignment's own class-stream
-// (Teacher\ConstructController::show()'s class_id filter), not every stream the Construct spans.
+// Selecting a Construct auto-includes ALL of its topics (no manual per-topic picking) - every
+// topic admin attached to the construct, cross-stream deduped (same shape the admin picker
+// shows), not narrowed to whichever happen to have a row for this assignment's specific
+// class-stream (a topic is often only authored for some streams, and narrowing under-reported
+// the construct's real topic count - see Teacher\ConstructController::show()).
 async function selectEocConstruct(constructId: number) {
   selectedConstructId.value = constructId
   eocConstructTopics.value = []
   eocRevealedOutcomes.value = new Set()
   selectedTopicIds.value = {}
-  if (!form.value.classTarget.class_id) return
 
   loadingEocConstructTopics.value = true
   try {
-    const response = await axios.get(`${API_BASE}/teacher/constructs/${constructId}`, {
-      params: { class_id: form.value.classTarget.class_id }
-    })
+    const response = await axios.get(`${API_BASE}/teacher/constructs/${constructId}`)
     if (response.data.success) {
       eocConstructTopics.value = response.data.data.topics || []
       const next: Record<number, boolean> = {}

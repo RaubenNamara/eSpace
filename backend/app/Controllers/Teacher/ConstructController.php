@@ -91,11 +91,12 @@ class ConstructController extends Controller
 
     /**
      * Full detail for one construct - re-checks the department match server-side rather than
-     * trusting the list filter. An optional `class_id` narrows the topics to that one specific
-     * class-stream (used by the Assignment Builder's EOC flow, which needs the real
-     * curriculum_topic_id for the exact stream it's assessing, not every stream a Construct's
-     * topics span) - without it, topics are grouped cross-stream same as the admin picker.
-     * GET /teacher/constructs/{id}?class_id=
+     * trusting the list filter. Topics are grouped cross-stream (same as the admin picker) so the
+     * Assignment Builder's EOC flow shows every topic admin attached to the construct, not just
+     * whichever happen to have a row for the assignment's specific class-stream - a construct
+     * topic is often only authored for some streams, and filtering to one stream under-reported
+     * the construct's real topic count.
+     * GET /teacher/constructs/{id}
      */
     public function show($id): void
     {
@@ -111,7 +112,6 @@ class ConstructController extends Controller
         }
 
         $id = (int) $id;
-        $classId = (int) $this->query('class_id', 0);
         $db = $this->getDb();
 
         $stmt = $db->prepare(
@@ -131,8 +131,6 @@ class ConstructController extends Controller
 
         // Grouped by (topic, theme, competence, class level, year, term) - a topic linked once per
         // stream (S.1-A, S.1-B...) shows once per class level instead, matching the admin picker.
-        // When class_id is given, every group collapses to at most one row (that exact stream),
-        // which is harmless to the same GROUP BY/MIN(ct.id) shape.
         $topicsSql = "SELECT MIN(ct.id) AS id, ct.topic, ct.theme_branch, ct.competence,
                     c.name AS class_stream_name,
                     ay.name AS academic_year_name, t.name AS term_name
@@ -143,10 +141,6 @@ class ConstructController extends Controller
              LEFT JOIN terms t ON ct.term_id = t.id
              WHERE cpt.construct_id = :id";
         $topicsParams = ['id' => $id];
-        if ($classId) {
-            $topicsSql .= " AND ct.class_id = :class_id";
-            $topicsParams['class_id'] = $classId;
-        }
         $topicsSql .= " GROUP BY ct.topic, ct.theme_branch, ct.competence, c.name, ct.academic_year_id, ct.term_id
              ORDER BY ct.topic ASC";
 
