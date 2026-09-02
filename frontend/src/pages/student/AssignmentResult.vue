@@ -96,7 +96,7 @@
                  file are shown side by side with no distinction, each with any marks the
                  teacher made on it. -->
             <div v-if="galleryFilesFor(question).length" class="ml-3 sm:ml-6 mt-4">
-              <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
+              <div class="grid gap-4" :class="galleryFilesFor(question).length === 1 ? 'grid-cols-1 max-w-2xl' : 'grid-cols-1 sm:grid-cols-2'">
                 <div v-for="item in galleryFilesFor(question)" :key="item.key" class="min-w-0">
                   <p class="text-xs text-gray-500 dark:text-gray-400 mb-1 truncate">{{ item.originalName }}</p>
                   <AnnotationCanvas

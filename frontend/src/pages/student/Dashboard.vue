@@ -68,7 +68,7 @@
           :graded-count="data.performance.graded_count"
           :trend="data.performance.trend"
           :trend-delta="data.performance.trend_delta"
-          :recent-scores="data.performance.recent_scores"
+          :scores="data.performance.scores"
         />
       </div>
 
@@ -148,7 +148,7 @@ interface DashboardData {
     library_resources: number
     itembank_resources: number
   }
-  performance: { graded_count: number; trend: 'improving' | 'declining' | 'steady' | null; trend_delta: number | null; recent_scores: number[] }
+  performance: { graded_count: number; trend: 'improving' | 'declining' | 'steady' | null; trend_delta: number | null; scores: number[] }
   live_now: { id: number; title: string; status: string; scheduled_start: string; subject_name: string; teacher_name: string }[]
   upcoming_live_classes: { id: number; title: string; status: string; scheduled_start: string; subject_name: string; teacher_name: string }[]
   upcoming_assignments: { id: number; title: string; subject_name: string; due_date: string; status: string }[]

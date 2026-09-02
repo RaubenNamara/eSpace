@@ -43,7 +43,7 @@ const props = defineProps<{
   gradedCount: number
   trend: 'improving' | 'declining' | 'steady' | null
   trendDelta: number | null
-  recentScores: number[]
+  scores: number[]
 }>()
 
 const badgeLabel = computed(() => {
@@ -63,10 +63,10 @@ const badgeClass = computed(() => {
 const lineColor = computed(() => (props.trend === 'declining' ? '#dc2626' : '#4f46e5'))
 
 const chartData = computed(() => ({
-  labels: props.recentScores.map((_, i) => `#${i + 1}`),
+  labels: props.scores.map((_, i) => `#${i + 1}`),
   datasets: [
     {
-      data: props.recentScores,
+      data: props.scores,
       borderColor: lineColor.value,
       backgroundColor: lineColor.value,
       borderWidth: 2,

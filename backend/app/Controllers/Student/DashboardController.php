@@ -121,6 +121,7 @@ class DashboardController extends Controller
              FROM assignment_submissions sub
              INNER JOIN assignments a ON a.id = sub.assignment_id
              WHERE sub.student_id = :student_id AND sub.percentage IS NOT NULL AND sub.deleted_at IS NULL
+               AND a.status = 'published' AND a.deleted_at IS NULL
                AND a.class_id IN (SELECT class_id FROM student_department_enrollments WHERE student_id = :student_id_enroll AND deleted_at IS NULL)
              ORDER BY COALESCE(sub.graded_at, sub.marked_at, sub.submitted_at) ASC"
         );
@@ -237,7 +238,10 @@ class DashboardController extends Controller
                 'graded_count' => $gradedCount,
                 'trend' => $trend,
                 'trend_delta' => $trendDelta,
-                'recent_scores' => array_slice($gradedScores, -8),
+                // Full chronological history, not just the tail end - the line should start at
+                // the student's very first graded assessment, not wherever a fixed-length window
+                // happens to cut in.
+                'scores' => $gradedScores,
             ],
             'live_now' => array_map(fn($c) => $this->formatLiveClass($c), $liveNow),
             'upcoming_live_classes' => array_map(fn($c) => $this->formatLiveClass($c), $upcomingLive),
