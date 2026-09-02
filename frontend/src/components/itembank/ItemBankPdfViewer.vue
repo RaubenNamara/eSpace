@@ -1,6 +1,6 @@
 <template>
   <div class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
-    <div class="bg-white dark:bg-gray-800 w-full h-full sm:h-[92vh] sm:max-w-4xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+    <div class="bg-white dark:bg-gray-800 w-full h-full sm:h-[92vh] lg:h-[95vh] sm:max-w-4xl lg:max-w-5xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col">
       <!-- Header -->
       <div class="relative flex-shrink-0 bg-gradient-to-r from-indigo-600 to-purple-600 px-4 sm:px-8 py-4 sm:py-5">
         <div class="flex items-start justify-between gap-3">
@@ -46,15 +46,15 @@
            everything bunched in the middle. -->
       <div class="flex items-center justify-center sm:justify-between gap-3 sm:gap-6 px-3 sm:px-6 py-2.5 sm:py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 flex-wrap flex-shrink-0">
         <div class="flex items-center gap-2">
-          <button type="button" class="nav-btn" :disabled="currentPage <= 1" @click="prevPage">‹ Prev</button>
-          <span class="text-xs sm:text-sm text-gray-600 dark:text-gray-300 min-w-[100px] text-center">Page {{ currentPage }} of {{ totalPages || '…' }}</span>
-          <button type="button" class="nav-btn" :disabled="currentPage >= totalPages" @click="nextPage">Next ›</button>
-        </div>
-        <div class="flex items-center gap-2">
           <button type="button" class="nav-btn" @click="zoomOut" title="Zoom out">−</button>
           <span class="text-xs text-gray-500 dark:text-gray-400 min-w-[48px] text-center">{{ Math.round(scale * 100) }}%</span>
           <button type="button" class="nav-btn" @click="zoomIn" title="Zoom in">+</button>
           <button type="button" class="nav-btn" @click="fitWidth">Fit Width</button>
+        </div>
+        <div class="flex items-center gap-2">
+          <button type="button" class="nav-btn" :disabled="currentPage <= 1" @click="prevPage">‹ Prev</button>
+          <span class="text-xs sm:text-sm text-gray-600 dark:text-gray-300 min-w-[100px] text-center">Page {{ currentPage }} of {{ totalPages || '…' }}</span>
+          <button type="button" class="nav-btn" :disabled="currentPage >= totalPages" @click="nextPage">Next ›</button>
         </div>
       </div>
     </div>

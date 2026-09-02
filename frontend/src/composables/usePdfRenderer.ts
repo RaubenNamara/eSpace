@@ -65,7 +65,14 @@ export function usePdfRenderer(pdfUrl: Ref<string>, options: UsePdfRendererOptio
     const page = await pdfDoc.value.getPage(currentPage.value)
     const baseViewport = page.getViewport({ scale: 1 })
     const availableWidth = wrapper.clientWidth - 32
-    scale.value = Math.max(MIN_READABLE_SCALE, availableWidth / baseViewport.width)
+    const availableHeight = wrapper.clientHeight - 32
+    const widthScale = availableWidth / baseViewport.width
+    // On a wide/short viewer (a large monitor, a MacBook's shallow window height) fitting purely
+    // to width can render a portrait page far taller than what's visible, forcing heavy scrolling
+    // just to read one page. Cap by the height fit too - but never below the readable floor, so
+    // a genuinely tall-and-narrow viewer (mobile) still fits to width as before.
+    const heightScale = availableHeight / baseViewport.height
+    scale.value = Math.max(MIN_READABLE_SCALE, Math.min(widthScale, Math.max(heightScale, MIN_READABLE_SCALE)))
     await renderPage(currentPage.value)
   }
 
