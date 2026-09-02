@@ -1,6 +1,6 @@
 <template>
   <div class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
-    <div class="bg-white dark:bg-gray-800 w-full h-full sm:h-[92vh] sm:max-w-4xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+    <div class="bg-white dark:bg-gray-800 w-full h-full sm:h-[92vh] sm:max-w-4xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col">
       <!-- Header -->
       <div class="relative flex-shrink-0 bg-gradient-to-r from-emerald-600 to-teal-600 px-4 sm:px-8 py-4 sm:py-5">
         <div class="flex items-start justify-between gap-3">
@@ -35,18 +35,6 @@
         </div>
       </div>
 
-      <!-- Controls (no download action here by design - preview only) -->
-      <div class="flex items-center gap-2 px-3 sm:px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 flex-wrap flex-shrink-0">
-        <button type="button" class="nav-btn" :disabled="currentPage <= 1" @click="prevPage">‹ Prev</button>
-        <span class="text-xs sm:text-sm text-gray-600 dark:text-gray-300 min-w-[100px] text-center">Page {{ currentPage }} of {{ totalPages || '…' }}</span>
-        <button type="button" class="nav-btn" :disabled="currentPage >= totalPages" @click="nextPage">Next ›</button>
-        <span class="w-px h-5 bg-gray-300 dark:bg-gray-600"></span>
-        <button type="button" class="nav-btn" @click="zoomOut" title="Zoom out">−</button>
-        <span class="text-xs text-gray-500 dark:text-gray-400 min-w-[48px] text-center">{{ Math.round(scale * 100) }}%</span>
-        <button type="button" class="nav-btn" @click="zoomIn" title="Zoom in">+</button>
-        <button type="button" class="nav-btn hidden sm:inline-flex" @click="fitWidth">Fit Width</button>
-      </div>
-
       <!-- Canvas (pdf.js renders to pixels here - no native browser download affordance) -->
       <div
         ref="wrapperRef"
@@ -64,6 +52,23 @@
           class="shadow-lg bg-white"
           style="max-width: 100%; height: auto;"
         ></canvas>
+      </div>
+
+      <!-- Controls - bottom bar. Centered as one wrapped row on mobile; on sm+ the page-nav and
+           zoom groups split to either side so the extra width is put to use instead of leaving
+           everything bunched in the middle. -->
+      <div class="flex items-center justify-center sm:justify-between gap-3 sm:gap-6 px-3 sm:px-6 py-2.5 sm:py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 flex-wrap flex-shrink-0">
+        <div class="flex items-center gap-2">
+          <button type="button" class="nav-btn" :disabled="currentPage <= 1" @click="prevPage">‹ Prev</button>
+          <span class="text-xs sm:text-sm text-gray-600 dark:text-gray-300 min-w-[100px] text-center">Page {{ currentPage }} of {{ totalPages || '…' }}</span>
+          <button type="button" class="nav-btn" :disabled="currentPage >= totalPages" @click="nextPage">Next ›</button>
+        </div>
+        <div class="flex items-center gap-2">
+          <button type="button" class="nav-btn" @click="zoomOut" title="Zoom out">−</button>
+          <span class="text-xs text-gray-500 dark:text-gray-400 min-w-[48px] text-center">{{ Math.round(scale * 100) }}%</span>
+          <button type="button" class="nav-btn" @click="zoomIn" title="Zoom in">+</button>
+          <button type="button" class="nav-btn" @click="fitWidth">Fit Width</button>
+        </div>
       </div>
     </div>
   </div>

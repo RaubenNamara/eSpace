@@ -4,3 +4,24 @@ php_flag engine off
 <FilesMatch "\.(php|php\d|phtml|phar|pl|py|cgi|sh)$">
     Require all denied
 </FilesMatch>
+
+# Every uploaded file's name already encodes a content hash + timestamp (see the upload
+# controllers - a re-upload/replacement always gets a brand new filename), so a URL here never
+# changes its content. Cache aggressively: reopening a document (eLibrary/Item Bank preview,
+# recently-added shelf, etc.) then loads instantly from the browser's disk cache instead of
+# re-downloading the whole file over the network every time.
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType application/pdf "access plus 1 year"
+    ExpiresByType application/vnd.openxmlformats-officedocument.presentationml.presentation "access plus 1 year"
+    ExpiresByType application/vnd.ms-powerpoint "access plus 1 year"
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/webp "access plus 1 year"
+</IfModule>
+
+<IfModule mod_headers.c>
+    <FilesMatch "\.(pdf|ppt|pptx|jpg|jpeg|png|webp)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+</IfModule>
