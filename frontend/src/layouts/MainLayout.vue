@@ -1,153 +1,183 @@
 <template>
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
     <!-- Sidebar -->
-    <aside 
-      class="fixed left-0 top-0 h-full w-64 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 shadow-2xl transform transition-transform duration-300 z-50 flex flex-col border-r border-slate-700/50"
+    <aside
+      class="fixed left-0 top-0 h-full w-64 bg-gradient-to-b from-slate-900 to-slate-950 shadow-2xl transform transition-transform duration-300 z-50 flex flex-col border-r border-white/5"
       :class="{ '-translate-x-full': !sidebarOpen, 'translate-x-0': sidebarOpen }"
     >
-      <div class="p-6 border-b border-slate-700/50 flex-shrink-0 bg-gradient-to-r from-indigo-600/20 to-purple-600/20 backdrop-blur-sm">
-        <div class="flex items-center space-x-3">
-          <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
-            <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div class="px-5 py-5 border-b border-white/5 flex-shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="relative w-10 h-10 flex-shrink-0 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/25">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
             </svg>
           </div>
-          <div>
-            <h1 class="text-xl font-bold text-white tracking-tight">eSpace</h1>
-            <p class="text-xs text-indigo-300/80 capitalize font-medium">{{ userRole }}</p>
+          <div class="min-w-0">
+            <h1 class="text-base font-bold text-white tracking-tight leading-tight">eSpace</h1>
+            <p class="text-[11px] text-slate-400 capitalize font-medium tracking-wide leading-tight mt-0.5">{{ userRole }} Console</p>
           </div>
         </div>
       </div>
-      
-      <nav class="flex-1 overflow-y-auto p-4 space-y-1">
+
+      <nav class="sidebar-nav flex-1 overflow-y-auto px-3 py-4">
         <!-- System Administration -->
-        <div v-if="isAdmin" class="mb-4">
-          <div class="px-4 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center space-x-2">
-            <div class="w-2 h-2 rounded-full bg-gradient-to-r from-rose-500 to-pink-500"></div>
-            <span>System Administration</span>
+        <div v-if="isAdmin" class="mb-5">
+          <div class="px-3 mb-1.5 flex items-center gap-2">
+            <span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
+            <span class="text-[10.5px] font-semibold text-slate-500 uppercase tracking-widest">System Administration</span>
           </div>
-          <div class="mt-1 space-y-1">
+          <div class="space-y-0.5">
             <router-link
               v-for="item in adminMenu"
               :key="item.path"
               :to="item.path"
-              class="flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-sm font-medium group"
-              :class="isActive(item.path) ? 'bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-lg shadow-rose-500/30' : 'text-slate-300 hover:bg-gradient-to-r hover:from-rose-500/10 hover:to-pink-500/10 hover:text-white'"
+              class="relative flex items-center gap-3 pl-4 pr-3 py-2 rounded-xl transition-all duration-150 text-sm font-medium group hover:translate-x-0.5"
+              :class="isActive(item.path) ? 'bg-rose-500/10 text-white ring-1 ring-inset ring-rose-500/15' : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-100'"
             >
-              <div class="w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-200"
-                :class="isActive(item.path) ? 'bg-white/20' : 'bg-gradient-to-br from-rose-500/20 to-pink-500/20 group-hover:from-rose-500/30 group-hover:to-pink-500/30'"
+              <span
+                class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-full bg-rose-400 transition-opacity duration-150"
+                :class="isActive(item.path) ? 'opacity-100' : 'opacity-0'"
+              ></span>
+              <div class="w-7 h-7 rounded-lg flex items-center justify-center transition-colors duration-150 flex-shrink-0"
+                :class="isActive(item.path) ? 'bg-rose-500/15 text-rose-300' : 'text-slate-500 group-hover:text-slate-300'"
               >
-                <component :is="iconMap[item.icon]" class="w-5 h-5" />
+                <component :is="iconMap[item.icon]" class="w-[18px] h-[18px]" />
               </div>
-              <span>{{ item.label }}</span>
+              <span class="truncate">{{ item.label }}</span>
             </router-link>
           </div>
         </div>
 
         <!-- Dashboard -->
-        <div v-if="dashboardMenu.length > 0" class="mb-4">
-          <div class="mt-1 space-y-1">
+        <div v-if="dashboardMenu.length > 0" class="mb-5">
+          <div class="space-y-0.5">
             <router-link
               v-for="item in dashboardMenu"
               :key="item.path"
               :to="item.path"
-              class="flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-sm font-medium group"
-              :class="isActive(item.path) ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg shadow-blue-500/30' : 'text-slate-300 hover:bg-gradient-to-r hover:from-blue-500/10 hover:to-cyan-500/10 hover:text-white'"
+              class="relative flex items-center gap-3 pl-4 pr-3 py-2 rounded-xl transition-all duration-150 text-sm font-medium group hover:translate-x-0.5"
+              :class="isActive(item.path) ? 'bg-sky-500/10 text-white ring-1 ring-inset ring-sky-500/15' : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-100'"
             >
-              <div class="w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-200"
-                :class="isActive(item.path) ? 'bg-white/20' : 'bg-gradient-to-br from-blue-500/20 to-cyan-500/20 group-hover:from-blue-500/30 group-hover:to-cyan-500/30'"
+              <span
+                class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-full bg-sky-400 transition-opacity duration-150"
+                :class="isActive(item.path) ? 'opacity-100' : 'opacity-0'"
+              ></span>
+              <div class="w-7 h-7 rounded-lg flex items-center justify-center transition-colors duration-150 flex-shrink-0"
+                :class="isActive(item.path) ? 'bg-sky-500/15 text-sky-300' : 'text-slate-500 group-hover:text-slate-300'"
               >
-                <component :is="iconMap[item.icon]" class="w-5 h-5" />
+                <component :is="iconMap[item.icon]" class="w-[18px] h-[18px]" />
               </div>
-              <span>{{ item.label }}</span>
+              <span class="truncate">{{ item.label }}</span>
             </router-link>
           </div>
         </div>
 
         <!-- Academic Management -->
-        <div class="mb-4">
-          <div class="px-4 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center space-x-2">
-            <div class="w-2 h-2 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500"></div>
-            <span>Academic Management</span>
+        <div class="mb-5">
+          <div class="px-3 mb-1.5 flex items-center gap-2">
+            <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+            <span class="text-[10.5px] font-semibold text-slate-500 uppercase tracking-widest">Academic Management</span>
           </div>
-          <div class="mt-1 space-y-1">
+          <div class="space-y-0.5">
             <router-link
               v-for="item in academicMenu"
               :key="item.path"
               :to="item.path"
-              class="flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-sm font-medium group"
-              :class="isActive(item.path) ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30' : 'text-slate-300 hover:bg-gradient-to-r hover:from-indigo-500/10 hover:to-purple-500/10 hover:text-white'"
+              class="relative flex items-center gap-3 pl-4 pr-3 py-2 rounded-xl transition-all duration-150 text-sm font-medium group hover:translate-x-0.5"
+              :class="isActive(item.path) ? 'bg-indigo-500/10 text-white ring-1 ring-inset ring-indigo-500/15' : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-100'"
             >
-              <div class="w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-200"
-                :class="isActive(item.path) ? 'bg-white/20' : 'bg-gradient-to-br from-indigo-500/20 to-purple-500/20 group-hover:from-indigo-500/30 group-hover:to-purple-500/30'"
+              <span
+                class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-full bg-indigo-400 transition-opacity duration-150"
+                :class="isActive(item.path) ? 'opacity-100' : 'opacity-0'"
+              ></span>
+              <div class="w-7 h-7 rounded-lg flex items-center justify-center transition-colors duration-150 flex-shrink-0"
+                :class="isActive(item.path) ? 'bg-indigo-500/15 text-indigo-300' : 'text-slate-500 group-hover:text-slate-300'"
               >
-                <component :is="iconMap[item.icon]" class="w-5 h-5" />
+                <component :is="iconMap[item.icon]" class="w-[18px] h-[18px]" />
               </div>
-              <span>{{ item.label }}</span>
+              <span class="truncate">{{ item.label }}</span>
             </router-link>
           </div>
         </div>
 
         <!-- Learning Resources -->
-        <div class="mb-4">
-          <div class="px-4 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center space-x-2">
-            <div class="w-2 h-2 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500"></div>
-            <span>Learning Resources</span>
+        <div class="mb-5">
+          <div class="px-3 mb-1.5 flex items-center gap-2">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+            <span class="text-[10.5px] font-semibold text-slate-500 uppercase tracking-widest">Learning Resources</span>
           </div>
-          <div class="mt-1 space-y-1">
+          <div class="space-y-0.5">
             <router-link
               v-for="item in resourcesMenu"
               :key="item.path"
               :to="item.path"
-              class="flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-sm font-medium group"
-              :class="isActive(item.path) ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/30' : 'text-slate-300 hover:bg-gradient-to-r hover:from-emerald-500/10 hover:to-teal-500/10 hover:text-white'"
+              class="relative flex items-center gap-3 pl-4 pr-3 py-2 rounded-xl transition-all duration-150 text-sm font-medium group hover:translate-x-0.5"
+              :class="isActive(item.path) ? 'bg-emerald-500/10 text-white ring-1 ring-inset ring-emerald-500/15' : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-100'"
             >
-              <div class="w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-200"
-                :class="isActive(item.path) ? 'bg-white/20' : 'bg-gradient-to-br from-emerald-500/20 to-teal-500/20 group-hover:from-emerald-500/30 group-hover:to-teal-500/30'"
+              <span
+                class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-full bg-emerald-400 transition-opacity duration-150"
+                :class="isActive(item.path) ? 'opacity-100' : 'opacity-0'"
+              ></span>
+              <div class="w-7 h-7 rounded-lg flex items-center justify-center transition-colors duration-150 flex-shrink-0"
+                :class="isActive(item.path) ? 'bg-emerald-500/15 text-emerald-300' : 'text-slate-500 group-hover:text-slate-300'"
               >
-                <component :is="iconMap[item.icon]" class="w-5 h-5" />
+                <component :is="iconMap[item.icon]" class="w-[18px] h-[18px]" />
               </div>
-              <span>{{ item.label }}</span>
+              <span class="truncate">{{ item.label }}</span>
             </router-link>
           </div>
         </div>
 
         <!-- Assessment & Analytics -->
-        <div class="mb-4">
-          <div class="px-4 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center space-x-2">
-            <div class="w-2 h-2 rounded-full bg-gradient-to-r from-orange-500 to-amber-500"></div>
-            <span>Assessment & Analytics</span>
+        <div class="mb-5">
+          <div class="px-3 mb-1.5 flex items-center gap-2">
+            <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+            <span class="text-[10.5px] font-semibold text-slate-500 uppercase tracking-widest">Assessment & Analytics</span>
           </div>
-          <div class="mt-1 space-y-1">
+          <div class="space-y-0.5">
             <router-link
               v-for="item in assessmentMenu"
               :key="item.path"
               :to="item.path"
-              class="flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-sm font-medium group"
-              :class="isActive(item.path) ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/30' : 'text-slate-300 hover:bg-gradient-to-r hover:from-orange-500/10 hover:to-amber-500/10 hover:text-white'"
+              class="relative flex items-center gap-3 pl-4 pr-3 py-2 rounded-xl transition-all duration-150 text-sm font-medium group hover:translate-x-0.5"
+              :class="isActive(item.path) ? 'bg-amber-500/10 text-white ring-1 ring-inset ring-amber-500/15' : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-100'"
             >
-              <div class="w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-200"
-                :class="isActive(item.path) ? 'bg-white/20' : 'bg-gradient-to-br from-orange-500/20 to-amber-500/20 group-hover:from-orange-500/30 group-hover:to-amber-500/30'"
+              <span
+                class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-full bg-amber-400 transition-opacity duration-150"
+                :class="isActive(item.path) ? 'opacity-100' : 'opacity-0'"
+              ></span>
+              <div class="w-7 h-7 rounded-lg flex items-center justify-center transition-colors duration-150 flex-shrink-0"
+                :class="isActive(item.path) ? 'bg-amber-500/15 text-amber-300' : 'text-slate-500 group-hover:text-slate-300'"
               >
-                <component :is="iconMap[item.icon]" class="w-5 h-5" />
+                <component :is="iconMap[item.icon]" class="w-[18px] h-[18px]" />
               </div>
-              <span>{{ item.label }}</span>
+              <span class="truncate">{{ item.label }}</span>
             </router-link>
           </div>
         </div>
       </nav>
-      
-      <div class="p-4 border-t border-slate-700/50 flex-shrink-0 space-y-2">
+
+      <div class="p-3 border-t border-white/5 flex-shrink-0 space-y-1">
+        <div class="flex items-center gap-2.5 px-2 py-2">
+          <div class="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0 ring-1 ring-white/10">
+            <img v-if="userPhotoUrl" :src="resolveAssetUrl(userPhotoUrl)" alt="" class="w-full h-full object-cover">
+            <span v-else>{{ userInitials }}</span>
+          </div>
+          <div class="min-w-0">
+            <p class="text-sm font-medium text-white truncate leading-tight">{{ userName }}</p>
+            <p class="text-[11px] text-slate-500 capitalize truncate leading-tight mt-0.5">{{ userRole }}</p>
+          </div>
+        </div>
         <button
           @click="handleLogout"
-          class="flex items-center space-x-3 px-4 py-3 rounded-xl text-rose-400 hover:bg-rose-500/10 w-full transition-all duration-200 group"
+          class="flex items-center gap-3 pl-4 pr-3 py-2 rounded-lg text-slate-400 hover:bg-rose-500/10 hover:text-rose-300 w-full transition-colors duration-150 group"
         >
-          <div class="w-9 h-9 rounded-lg flex items-center justify-center bg-gradient-to-br from-rose-500/20 to-pink-500/20 group-hover:from-rose-500/30 group-hover:to-pink-500/30 transition-all duration-200">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 group-hover:text-rose-300 transition-colors duration-150 flex-shrink-0">
+            <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
             </svg>
           </div>
-          <span>Logout</span>
+          <span class="text-sm font-medium">Logout</span>
         </button>
       </div>
     </aside>
@@ -526,12 +556,7 @@ const activeRole = computed(() => authStore.activeRole || authStore.userRole || 
 const hasDualRoles = computed(() => authStore.hasDualRoles)
 const userName = computed(() => {
   const user = authStore.user as any
-  console.log('MainLayout userName - user object:', user)
-  console.log('MainLayout userName - first_name:', user?.first_name)
-  console.log('MainLayout userName - username:', user?.username)
-  const name = user?.first_name || user?.username || 'User'
-  console.log('MainLayout userName - final:', name)
-  return name
+  return user?.first_name || user?.username || 'User'
 })
 const userInitials = computed(() => {
   const name = userName.value
@@ -837,3 +862,23 @@ const iconMap: Record<string, any> = {
   TableCellsIcon
 }
 </script>
+
+<style scoped>
+.sidebar-nav {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+.sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+}
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+</style>
