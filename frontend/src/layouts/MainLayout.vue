@@ -554,7 +554,6 @@ const academicMenu = computed(() => {
   
   if (role === 'student') {
     return [
-      { path: '/student/classes', label: 'My Classes', icon: 'BookOpenIcon' },
       { path: '/student/live-classes', label: 'Live Classes', icon: 'VideoCameraIcon' },
       { path: '/student/enotes', label: 'eNotes', icon: 'NoteIcon' }
     ]
@@ -693,7 +692,7 @@ const dashboardMenu = computed(() => {
   
   if (role === 'student') {
     return [
-      { path: '/student/dashboard', label: 'Dashboard', icon: 'DashboardIcon' }
+      { path: '/student/dashboard', label: 'eClass', icon: 'DashboardIcon' }
     ]
   } else if (role === 'teacher') {
     return [

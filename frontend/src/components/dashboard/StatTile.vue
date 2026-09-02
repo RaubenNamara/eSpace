@@ -1,5 +1,9 @@
 <template>
-  <div class="group relative bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-5 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md hover:-translate-y-0.5 transition-all overflow-hidden">
+  <component
+    :is="to ? 'router-link' : 'div'"
+    :to="to"
+    class="group relative bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-5 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md hover:-translate-y-0.5 transition-all overflow-hidden block"
+  >
     <div class="absolute -right-4 -top-4 w-20 h-20 rounded-full bg-gradient-to-br opacity-[0.07] group-hover:opacity-[0.12] transition-opacity" :class="palette.grad"></div>
     <div class="relative flex items-center justify-between gap-2">
       <div class="min-w-0">
@@ -12,14 +16,14 @@
         </svg>
       </div>
     </div>
-  </div>
+  </component>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import { dashboardIcons, dashboardColors } from './icons'
 
-const props = defineProps<{ label: string; value: string | number; icon: string; color: string }>()
+const props = defineProps<{ label: string; value: string | number; icon: string; color: string; to?: string }>()
 
 const iconPath = computed(() => dashboardIcons[props.icon] || dashboardIcons.reports)
 const palette = computed(() => dashboardColors[props.color] || dashboardColors.indigo)

@@ -36,6 +36,84 @@ class ENoteController extends Controller
     }
 
     /**
+     * A class belongs to the teacher's department either because a student is actively enrolled
+     * there, OR because admin has authored curriculum for some subject in this department
+     * targeting that class - curriculum and enrollment are entered independently and can
+     * legitimately be out of sync (see Teacher\ENoteCurriculumController's class docblock), so a
+     * teacher must be able to create an eNote topic for a class the moment its curriculum exists,
+     * not only once enrollment has caught up. Broader than (a superset of)
+     * Controller::classBelongsToDepartment() - never narrower - so nothing that worked before
+     * stops working.
+     */
+    private function classBelongsToDepartmentOrCurriculum(int $classId, int $departmentId): bool
+    {
+        $stmt = $this->getDb()->prepare(
+            "SELECT 1 FROM classes c
+             WHERE c.id = :class_id AND c.deleted_at IS NULL
+               AND (
+                 EXISTS (SELECT 1 FROM student_department_enrollments se WHERE se.class_id = c.id AND se.department_id = :dept1 AND se.deleted_at IS NULL)
+                 OR EXISTS (SELECT 1 FROM enote_curriculum_topics ct INNER JOIN subjects s ON s.id = ct.subject_id WHERE ct.class_id = c.id AND s.department_id = :dept2 AND ct.deleted_at IS NULL)
+               )
+             LIMIT 1"
+        );
+        $stmt->execute(['class_id' => $classId, 'dept1' => $departmentId, 'dept2' => $departmentId]);
+        return (bool) $stmt->fetchColumn();
+    }
+
+    /** The "All Streams" (class_group_name) equivalent of classBelongsToDepartmentOrCurriculum(). */
+    private function classGroupBelongsToDepartmentOrCurriculum(string $classGroupName, int $departmentId): bool
+    {
+        $stmt = $this->getDb()->prepare(
+            "SELECT 1 FROM classes c
+             WHERE c.name = :class_group_name AND c.deleted_at IS NULL
+               AND (
+                 EXISTS (SELECT 1 FROM student_department_enrollments se WHERE se.class_id = c.id AND se.department_id = :dept1 AND se.deleted_at IS NULL)
+                 OR EXISTS (SELECT 1 FROM enote_curriculum_topics ct INNER JOIN subjects s ON s.id = ct.subject_id WHERE ct.class_id = c.id AND s.department_id = :dept2 AND ct.deleted_at IS NULL)
+               )
+             LIMIT 1"
+        );
+        $stmt->execute(['class_group_name' => $classGroupName, 'dept1' => $departmentId, 'dept2' => $departmentId]);
+        return (bool) $stmt->fetchColumn();
+    }
+
+    /**
+     * Mirrors Controller::resolveClassTarget() exactly, but checks department-ownership of the
+     * class via classBelongsToDepartmentOrCurriculum()/classGroupBelongsToDepartmentOrCurriculum()
+     * instead of requiring live student enrollment - see those methods' docblocks for why.
+     * @return array{ok: bool, class_id: ?int, class_group_name: ?string, message: ?string}
+     */
+    private function resolveClassTargetForNotes(array $data, int $departmentId, bool $required = true): array
+    {
+        $scope = $data['scope'] ?? (($data['class_group_name'] ?? '') !== '' ? 'all_streams' : 'stream');
+        $classGroupName = trim((string) ($data['class_group_name'] ?? ''));
+        $classId = $data['class_id'] ?? null;
+        $classId = ($classId === '' || $classId === null) ? null : (int) $classId;
+
+        if ($scope === 'all_streams' || ($classGroupName !== '' && $classId === null)) {
+            if ($classGroupName === '') {
+                return ['ok' => false, 'class_id' => null, 'class_group_name' => null, 'message' => 'class_group_name is required for scope=all_streams'];
+            }
+            if (!$this->classGroupBelongsToDepartmentOrCurriculum($classGroupName, $departmentId)) {
+                return ['ok' => false, 'class_id' => null, 'class_group_name' => null, 'message' => 'That class level has no presence in your department'];
+            }
+            return ['ok' => true, 'class_id' => null, 'class_group_name' => $classGroupName, 'message' => null];
+        }
+
+        if ($classId === null) {
+            if ($required) {
+                return ['ok' => false, 'class_id' => null, 'class_group_name' => null, 'message' => 'A class or "All Streams" selection is required'];
+            }
+            return ['ok' => true, 'class_id' => null, 'class_group_name' => null, 'message' => null];
+        }
+
+        if (!$this->classBelongsToDepartmentOrCurriculum($classId, $departmentId)) {
+            return ['ok' => false, 'class_id' => null, 'class_group_name' => null, 'message' => 'Class not found in your department'];
+        }
+
+        return ['ok' => true, 'class_id' => $classId, 'class_group_name' => null, 'message' => null];
+    }
+
+    /**
      * Decode the stored learning_outcomes JSON column back into a plain array for the API
      * response (single topic row, e.g. from show()/create()).
      */
@@ -618,8 +696,9 @@ class ENoteController extends Controller
         }
 
         // Verify class/class-level is real and present in the department (individual stream or
-        // "All Streams" for a class level - see Controller::resolveClassTarget()).
-        $classTarget = $this->resolveClassTarget($data, $departmentId);
+        // "All Streams" for a class level) - see resolveClassTargetForNotes()'s docblock for why
+        // this doesn't require live student enrollment the way Controller::resolveClassTarget() does.
+        $classTarget = $this->resolveClassTargetForNotes($data, $departmentId);
         if (!$classTarget['ok']) {
             $this->validationError(['class_id' => $classTarget['message']]);
             return;
@@ -738,7 +817,7 @@ class ENoteController extends Controller
                 $this->error('Teacher must be assigned to a department', 403);
                 return;
             }
-            $classTarget = $this->resolveClassTarget($data, $departmentId);
+            $classTarget = $this->resolveClassTargetForNotes($data, $departmentId);
             if (!$classTarget['ok']) {
                 $this->validationError(['class_id' => $classTarget['message']]);
                 return;
@@ -1505,7 +1584,7 @@ class ENoteController extends Controller
                 continue;
             }
 
-            $classTarget = $this->resolveClassTarget($target, $departmentId);
+            $classTarget = $this->resolveClassTargetForNotes($target, $departmentId);
             if (!$classTarget['ok']) {
                 $skipped[] = ['message' => $classTarget['message']];
                 continue;

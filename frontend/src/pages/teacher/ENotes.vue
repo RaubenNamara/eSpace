@@ -493,6 +493,9 @@
             </div>
           </div>
 
+          <div class="px-5 sm:px-6 pt-4 flex-shrink-0" v-if="topicSaveError">
+            <p class="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-4 py-2.5">{{ topicSaveError }}</p>
+          </div>
           <div class="px-5 sm:px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-end gap-3 flex-shrink-0 rounded-b-2xl">
             <button
               type="button"
@@ -616,6 +619,9 @@
             </div>
           </div>
 
+          <div class="px-5 sm:px-6 pt-4 flex-shrink-0" v-if="topicSaveError">
+            <p class="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-4 py-2.5">{{ topicSaveError }}</p>
+          </div>
           <div class="px-5 sm:px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-end gap-3 flex-shrink-0 rounded-b-2xl">
             <button
               type="button"
@@ -762,6 +768,7 @@ const assignments = ref<ENoteAssignments | null>(null)
 const assignmentsError = ref<string | null>(null)
 const loading = ref(false)
 const saving = ref(false)
+const topicSaveError = ref<string | null>(null)
 
 const statusFilter = ref('')
 const subjectFilter = ref('')
@@ -1033,6 +1040,7 @@ const openCreateModal = () => {
   curriculumSelection.value = emptyCurriculumSelection()
   selectedCurriculumTopic.value = null
   curriculumMeta.value = null
+  topicSaveError.value = null
   showTopicModal.value = true
   loadCurriculumMeta()
 }
@@ -1050,6 +1058,7 @@ const editTopic = (topic: ENoteTopic) => {
       : { scope: 'stream', class_id: topic.class_id, class_group_name: null },
     status: topic.status
   }
+  topicSaveError.value = null
   showTopicModal.value = true
 }
 
@@ -1057,9 +1066,11 @@ const closeTopicModal = () => {
   showTopicModal.value = false
   editingTopic.value = null
   learningOutcomeDraft.value = ''
+  topicSaveError.value = null
 }
 
 const saveTopic = async () => {
+  topicSaveError.value = null
   try {
     saving.value = true
 
@@ -1083,8 +1094,14 @@ const saveTopic = async () => {
     closeTopicModal()
     await loadTopics()
     await loadDashboard()
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to save topic:', error)
+    // Previously silent on failure - the button looked "broken" because a rejected save (e.g. a
+    // validation error) never told the teacher anything went wrong.
+    const errors = error.response?.data?.errors
+    topicSaveError.value = errors
+      ? Object.values(errors).join(' ')
+      : (error.response?.data?.message || 'Failed to save topic. Please try again.')
   } finally {
     saving.value = false
   }

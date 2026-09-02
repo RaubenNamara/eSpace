@@ -1,13 +1,16 @@
 <template>
-  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+  <router-link
+    to="/student/achievements"
+    class="block bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md hover:-translate-y-0.5 transition-all p-6"
+  >
     <div class="flex items-center justify-between mb-4">
       <div>
         <h2 class="text-lg font-bold text-gray-900 dark:text-white">🏆 My Achievements</h2>
         <p class="text-xs text-gray-400 dark:text-gray-500">Automatically awarded based on your performance</p>
       </div>
-      <router-link to="/student/achievements" class="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline whitespace-nowrap">
+      <span class="text-xs font-medium text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
         View All &rarr;
-      </router-link>
+      </span>
     </div>
 
     <div v-if="loading" class="flex justify-center py-8">
@@ -51,7 +54,7 @@
         </div>
       </div>
     </template>
-  </div>
+  </router-link>
 </template>
 
 <script setup lang="ts">

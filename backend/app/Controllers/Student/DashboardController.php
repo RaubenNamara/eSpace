@@ -113,6 +113,35 @@ class DashboardController extends Controller
         }
         $averageScore = !empty($scores) ? round(array_sum($scores) / count($scores), 1) : null;
 
+        // Performance trend: the student's own graded scores in chronological (completion) order,
+        // scoped to their current class - split in half and compare averages so the dashboard can
+        // say whether they're improving or declining lately, not just their overall average.
+        $stmt = $db->prepare(
+            "SELECT sub.percentage
+             FROM assignment_submissions sub
+             INNER JOIN assignments a ON a.id = sub.assignment_id
+             WHERE sub.student_id = :student_id AND sub.percentage IS NOT NULL AND sub.deleted_at IS NULL
+               AND a.class_id IN (SELECT class_id FROM student_department_enrollments WHERE student_id = :student_id_enroll AND deleted_at IS NULL)
+             ORDER BY COALESCE(sub.graded_at, sub.marked_at, sub.submitted_at) ASC"
+        );
+        $stmt->execute(['student_id' => $studentId, 'student_id_enroll' => $studentId]);
+        // Clamped to a valid percentage range - a bad row (e.g. a stored value like 335%) would
+        // otherwise wildly skew the trend into a nonsensical "declining by 263 points".
+        $gradedScores = array_map(fn($r) => max(0.0, min(100.0, (float) $r['percentage'])), $stmt->fetchAll());
+        $gradedCount = count($gradedScores);
+
+        $trend = null;
+        $trendDelta = null;
+        if ($gradedCount >= 2) {
+            $half = intdiv($gradedCount, 2);
+            $earlier = array_slice($gradedScores, 0, $half);
+            $recent = array_slice($gradedScores, $half);
+            $earlierAvg = array_sum($earlier) / count($earlier);
+            $recentAvg = array_sum($recent) / count($recent);
+            $trendDelta = round($recentAvg - $earlierAvg, 1);
+            $trend = $trendDelta > 1 ? 'improving' : ($trendDelta < -1 ? 'declining' : 'steady');
+        }
+
         // Live classes
         $where = $departmentIds
             ? "lc.deleted_at IS NULL AND lc.department_id IN (" . implode(',', array_fill(0, count($departmentIds), '?')) . ")"
@@ -203,6 +232,12 @@ class DashboardController extends Controller
                 'unread_messages' => $unreadMessages,
                 'library_resources' => $libraryCount,
                 'itembank_resources' => $itemBankCount,
+            ],
+            'performance' => [
+                'graded_count' => $gradedCount,
+                'trend' => $trend,
+                'trend_delta' => $trendDelta,
+                'recent_scores' => array_slice($gradedScores, -8),
             ],
             'live_now' => array_map(fn($c) => $this->formatLiveClass($c), $liveNow),
             'upcoming_live_classes' => array_map(fn($c) => $this->formatLiveClass($c), $upcomingLive),
