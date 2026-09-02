@@ -157,17 +157,7 @@
         </div>
       </nav>
 
-      <div class="p-3 border-t border-white/5 flex-shrink-0 space-y-1">
-        <div class="flex items-center gap-2.5 px-2 py-2">
-          <div class="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0 ring-1 ring-white/10">
-            <img v-if="userPhotoUrl" :src="resolveAssetUrl(userPhotoUrl)" alt="" class="w-full h-full object-cover">
-            <span v-else>{{ userInitials }}</span>
-          </div>
-          <div class="min-w-0">
-            <p class="text-sm font-medium text-white truncate leading-tight">{{ userName }}</p>
-            <p class="text-[11px] text-slate-500 capitalize truncate leading-tight mt-0.5">{{ userRole }}</p>
-          </div>
-        </div>
+      <div class="p-3 border-t border-white/5 flex-shrink-0">
         <button
           @click="handleLogout"
           class="flex items-center gap-3 pl-4 pr-3 py-2 rounded-lg text-slate-400 hover:bg-rose-500/10 hover:text-rose-300 w-full transition-colors duration-150 group"
@@ -315,22 +305,7 @@
             </div>
 
             <!-- User Profile -->
-            <button
-              v-if="userRole === 'student'"
-              @click="showProfileModal = true"
-              class="flex items-center space-x-3 hover:opacity-80 transition-opacity"
-              title="Update photo & password"
-            >
-              <div class="w-10 h-10 rounded-full overflow-hidden bg-indigo-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
-                <img v-if="userPhotoUrl" :src="resolveAssetUrl(userPhotoUrl)" alt="" class="w-full h-full object-cover">
-                <span v-else>{{ userInitials }}</span>
-              </div>
-              <div class="hidden md:block text-left">
-                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ userName }}</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400 capitalize">{{ userRole }}</p>
-              </div>
-            </button>
-            <div v-else-if="userRole === 'teacher' || userRole === 'hod'" ref="profileDropdownRef" class="relative">
+            <div v-if="userRole === 'student' || userRole === 'teacher' || userRole === 'hod'" ref="profileDropdownRef" class="relative">
               <button
                 @click="showProfileDropdown = !showProfileDropdown"
                 class="flex items-center space-x-2 hover:opacity-80 transition-opacity"
