@@ -1,5 +1,10 @@
 <template>
-  <div class="absolute right-0 mt-2 w-96 max-w-[90vw] bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-50 overflow-hidden">
+  <!-- On mobile, "absolute right-0" positions relative to the small bell icon itself - which
+       sits close to the screen's right edge in a cramped header - so a wide dropdown anchored to
+       it can overflow off the left edge instead of ever getting a scrollbar. Below sm:, switch to
+       fixed positioning anchored to the viewport (not the icon) so it always fits with even
+       margins, regardless of exactly where the bell sits in the header. -->
+  <div class="fixed sm:absolute inset-x-3 sm:inset-x-auto top-[72px] sm:top-auto sm:right-0 sm:mt-2 w-auto sm:w-96 max-w-full sm:max-w-[90vw] bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-50 overflow-hidden">
     <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
       <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Notifications</h3>
       <button
