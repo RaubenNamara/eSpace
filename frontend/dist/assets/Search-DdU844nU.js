@@ -1,0 +1,1 @@
+import{_ as e}from"./SearchResultsPage.vue_vue_type_script_setup_true_lang-BsDa8M4Z.js";import{d as o,x as r,i as a}from"./index-HV3Mrrkw.js";import"./search-CPC2yEN8.js";const p=o({__name:"Search",setup(t){return(_,c)=>(a(),r(e))}});export{p as default};

@@ -252,6 +252,15 @@
               >
               <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">PDF, PPT, or PPTX, up to 50MB. Students preview it in-browser.</p>
               <p v-if="fileError" class="text-xs text-red-600 dark:text-red-400 mt-1">{{ fileError }}</p>
+              <div v-if="saving && uploadProgress > 0" class="mt-2">
+                <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  <span>Uploading&hellip;</span>
+                  <span>{{ uploadProgress }}%</span>
+                </div>
+                <div class="h-2 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+                  <div class="h-full rounded-full bg-indigo-600 transition-all duration-150" :style="{ width: uploadProgress + '%' }"></div>
+                </div>
+              </div>
             </div>
             <div v-else class="mb-4 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
               <div class="flex items-center justify-between gap-3">
@@ -282,8 +291,13 @@
                   :disabled="!replaceFileInput || replacingFile"
                   class="mt-2 px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {{ replacingFile ? 'Uploading...' : 'Upload Replacement' }}
+                  {{ replacingFile ? (replaceProgress > 0 ? `Uploading... ${replaceProgress}%` : 'Uploading...') : 'Upload Replacement' }}
                 </button>
+                <div v-if="replacingFile && replaceProgress > 0" class="mt-2">
+                  <div class="h-2 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+                    <div class="h-full rounded-full bg-indigo-600 transition-all duration-150" :style="{ width: replaceProgress + '%' }"></div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -300,7 +314,7 @@
                 :disabled="saving"
                 class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {{ saving ? 'Saving...' : (editingBook ? 'Update Book' : 'Upload') }}
+                {{ saving ? (uploadProgress > 0 ? `Uploading... ${uploadProgress}%` : 'Saving...') : (editingBook ? 'Update Book' : 'Upload') }}
               </button>
             </div>
           </form>
@@ -329,10 +343,12 @@ const assignments = ref<ENoteAssignments | null>(null)
 const assignmentsError = ref<string | null>(null)
 const loading = ref(false)
 const saving = ref(false)
+const uploadProgress = ref(0)
 const fileError = ref('')
 const showReplaceFile = ref(false)
 const replaceFileInput = ref<File | null>(null)
 const replacingFile = ref(false)
+const replaceProgress = ref(0)
 
 const statusFilter = ref('')
 const subjectFilter = ref('')
@@ -485,11 +501,15 @@ const replaceFile = async () => {
   if (!editingBook.value || !replaceFileInput.value) return
   try {
     replacingFile.value = true
+    replaceProgress.value = 0
     const formData = new FormData()
     formData.append('file', replaceFileInput.value)
 
     const response = await axios.post(`${API_BASE}/teacher/library/${editingBook.value.id}/replace-file`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: (e) => {
+        if (e.total) replaceProgress.value = Math.round((e.loaded * 100) / e.total)
+      }
     })
 
     if (response.data.success) {
@@ -503,12 +523,14 @@ const replaceFile = async () => {
     fileError.value = error.response?.data?.message || 'Failed to replace file'
   } finally {
     replacingFile.value = false
+    replaceProgress.value = 0
   }
 }
 
 const saveBook = async () => {
   try {
     saving.value = true
+    uploadProgress.value = 0
 
     if (editingBook.value) {
       await axios.put(`${API_BASE}/teacher/library/${editingBook.value.id}`, {
@@ -538,7 +560,10 @@ const saveBook = async () => {
       formData.append('file', bookForm.value.file)
 
       await axios.post(`${API_BASE}/teacher/library`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (e) => {
+          if (e.total) uploadProgress.value = Math.round((e.loaded * 100) / e.total)
+        }
       })
     }
 
@@ -549,6 +574,7 @@ const saveBook = async () => {
     alert(error.response?.data?.message || 'Failed to save book')
   } finally {
     saving.value = false
+    uploadProgress.value = 0
   }
 }
 

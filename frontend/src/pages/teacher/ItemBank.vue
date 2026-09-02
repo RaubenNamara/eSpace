@@ -245,6 +245,15 @@
                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
               >
               <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">PDF only, up to 50MB. Students preview it in-browser - there's no download option.</p>
+              <div v-if="saving && uploadProgress > 0" class="mt-2">
+                <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  <span>Uploading&hellip;</span>
+                  <span>{{ uploadProgress }}%</span>
+                </div>
+                <div class="h-2 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+                  <div class="h-full rounded-full bg-indigo-600 transition-all duration-150" :style="{ width: uploadProgress + '%' }"></div>
+                </div>
+              </div>
             </div>
             <p v-else class="text-xs text-gray-500 dark:text-gray-400 mb-4">
               The PDF file can't be replaced here - delete this resource and upload a new one if you need to change the document.
@@ -263,7 +272,7 @@
                 :disabled="saving"
                 class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {{ saving ? 'Saving...' : (editingResource ? 'Update Resource' : 'Upload') }}
+                {{ saving ? (uploadProgress > 0 ? `Uploading... ${uploadProgress}%` : 'Saving...') : (editingResource ? 'Update Resource' : 'Upload') }}
               </button>
             </div>
           </form>
@@ -291,6 +300,7 @@ const assignments = ref<ENoteAssignments | null>(null)
 const assignmentsError = ref<string | null>(null)
 const loading = ref(false)
 const saving = ref(false)
+const uploadProgress = ref(0)
 
 const statusFilter = ref('')
 const subjectFilter = ref('')
@@ -413,6 +423,7 @@ const handleFileSelect = (event: Event) => {
 const saveResource = async () => {
   try {
     saving.value = true
+    uploadProgress.value = 0
 
     if (editingResource.value) {
       await axios.put(`${API_BASE}/teacher/itembank/${editingResource.value.id}`, {
@@ -440,7 +451,10 @@ const saveResource = async () => {
       formData.append('file', resourceForm.value.file)
 
       await axios.post(`${API_BASE}/teacher/itembank`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (e) => {
+          if (e.total) uploadProgress.value = Math.round((e.loaded * 100) / e.total)
+        }
       })
     }
 
@@ -451,6 +465,7 @@ const saveResource = async () => {
     alert(error.response?.data?.message || 'Failed to save resource')
   } finally {
     saving.value = false
+    uploadProgress.value = 0
   }
 }
 
