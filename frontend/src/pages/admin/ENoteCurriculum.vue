@@ -606,6 +606,10 @@ const toggleAllStreamsInGroup = (group: { streams: CurriculumClassStreamOption[]
     if (checked) classStreamChecked.value[s.id] = true
     else delete classStreamChecked.value[s.id]
   }
+  // Checking "All Streams" selects everything in this group at once - close the dropdown so the
+  // button's summary label ("S.1 (All Streams)") is immediately visible instead of staying hidden
+  // behind the open panel, which looked like the selection hadn't registered.
+  if (checked) classDropdownOpen.value = false
 }
 
 const onClassDropdownClickOutside = (event: MouseEvent) => {

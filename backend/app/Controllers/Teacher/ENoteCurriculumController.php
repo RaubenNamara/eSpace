@@ -10,9 +10,11 @@ use eSpace\App\Controllers\Controller;
  * Read-only curriculum browsing for the teacher's "Create New Topic" flow: cascading
  * Subject -> Academic Year -> Class-Stream -> Term -> Theme/Branch -> Topic, backed by
  * admin-authored enote_curriculum_topics/enote_learning_outcomes rows. A teacher only ever sees
- * curriculum for their own active department, and - within that - only for a class-stream that
- * actually has active students enrolled in that department (the same scoping rule used
- * everywhere else a teacher picks a class for eNotes, see Controller::resolveClassTarget()).
+ * curriculum for their own active department. Deliberately NOT gated on live student enrollment
+ * (curriculum data and enrollment data are authored/entered independently and can legitimately
+ * be out of sync - e.g. curriculum prepared ahead of enrollment being finalized) - a teacher
+ * should be able to see and attach content to every academic year/class/term admin has actually
+ * set up curriculum for in their department, full stop.
  */
 class ENoteCurriculumController extends Controller
 {
@@ -35,10 +37,10 @@ class ENoteCurriculumController extends Controller
     }
 
     /**
-     * Every curriculum-topic query is gated behind this: the topic's class-stream must have at
-     * least one actively-enrolled student in the teacher's department. Only the equality filters
-     * named in $applyKeys are added, so callers can compute "what are the valid options for
-     * dimension X" by asking for every filter *except* X.
+     * Every curriculum-topic query is gated behind this: the topic's subject must belong to the
+     * teacher's own department (never gated on live student enrollment - see class docblock).
+     * Only the equality filters named in $applyKeys are added, so callers can compute "what are
+     * the valid options for dimension X" by asking for every filter *except* X.
      *
      * @param array<string, int|string> $filters
      * @param string[] $applyKeys
@@ -49,9 +51,8 @@ class ENoteCurriculumController extends Controller
         $where = [
             'ct.deleted_at IS NULL',
             "EXISTS (
-                SELECT 1 FROM student_department_enrollments sde
-                WHERE sde.class_id = ct.class_id AND sde.department_id = :dept_scope
-                  AND sde.status = 'active' AND sde.deleted_at IS NULL
+                SELECT 1 FROM subjects sub
+                WHERE sub.id = ct.subject_id AND sub.department_id = :dept_scope AND sub.deleted_at IS NULL
             )"
         ];
         $params = ['dept_scope' => $departmentId];
@@ -175,8 +176,9 @@ class ENoteCurriculumController extends Controller
     /**
      * Full detail for one curriculum topic - theme/branch, topic, competence, ordered learning
      * outcomes, plus subject_id and class_id so the frontend can submit the real eNote topic
-     * (POST /teacher/enotes/topics) with matching values. Re-checks the department/enrollment
-     * scope directly (not just trusting that the cascading dropdowns were followed correctly).
+     * (POST /teacher/enotes/topics) with matching values. Re-checks the department scope
+     * directly (not just trusting that the cascading dropdowns were followed correctly) - not
+     * gated on live student enrollment, see class docblock.
      * GET /teacher/enotes/curriculum/topics/{id}
      */
     public function showTopic($id): void
@@ -210,9 +212,8 @@ class ENoteCurriculumController extends Controller
              LEFT JOIN subjects s ON ct.subject_id = s.id
              WHERE ct.id = :id AND ct.deleted_at IS NULL
                AND EXISTS (
-                 SELECT 1 FROM student_department_enrollments sde
-                 WHERE sde.class_id = ct.class_id AND sde.department_id = :dept
-                   AND sde.status = 'active' AND sde.deleted_at IS NULL
+                 SELECT 1 FROM subjects sub
+                 WHERE sub.id = ct.subject_id AND sub.department_id = :dept AND sub.deleted_at IS NULL
                )"
         );
         $stmt->execute(['id' => $id, 'dept' => $departmentId]);
