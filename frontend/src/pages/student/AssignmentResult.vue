@@ -139,6 +139,7 @@ import AnnotationCanvas from '@/components/assignment/AnnotationCanvas.vue'
 import PdfAnnotationViewer from '@/components/assignment/PdfAnnotationViewer.vue'
 import { createTypedAnswerLayer, htmlToPlainText } from '@/composables/useAnnotationCanvas'
 import { resolveAssetUrl } from '@/utils/url'
+import { isPlaceholderAttachmentName } from '@/utils/answerAttachment'
 
 const route = useRoute()
 
@@ -221,8 +222,23 @@ function isObjective(question: any): boolean {
   return OBJECTIVE_TYPES.includes(question.question_type)
 }
 
+// FreeResponseAnswer.vue silently auto-uploads a blank placeholder (named "Assignment file.*" or
+// "Blank canvas.png") for every free-response question on mount, purely so its Write-mode canvas
+// is ready immediately - a student who only typed their answer still ends up with this attachment
+// on record. Showing it here as if it were real evidence is exactly the "blank page I never
+// chose" confusion - only show a placeholder-named attachment if the student actually drew/wrote
+// on it (real annotation objects), matching the same signal used for the answered/progress
+// checks in AssignmentAnswer.vue.
+function hasAnswerAnnotations(question: any): boolean {
+  const pages = question.answer_annotations || {}
+  return Object.values(pages).some((layer: any) => (layer?.objects?.length || 0) > 0)
+}
+
 function showPdf(question: any): boolean {
-  return question.response_type === 'pdf_annotation' || !!question.answer?.student_attachment_path
+  if (question.response_type === 'pdf_annotation') return true
+  if (!question.answer?.student_attachment_path) return false
+  if (!isPlaceholderAttachmentName(question.answer?.student_attachment_original_name)) return true
+  return hasAnswerAnnotations(question)
 }
 
 function pdfUrlFor(question: any): string {

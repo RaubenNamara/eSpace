@@ -117,6 +117,7 @@ import AnnotationCanvas from './AnnotationCanvas.vue'
 import PdfAnnotationViewer from './PdfAnnotationViewer.vue'
 import { createTypedAnswerLayer, htmlToPlainText } from '@/composables/useAnnotationCanvas'
 import { resolveAssetUrl } from '@/utils/url'
+import { isPlaceholderAttachmentName } from '@/utils/answerAttachment'
 
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp']
 
@@ -221,7 +222,23 @@ interface EvidenceFile {
 const primaryUrl = computed(() =>
   resolveAssetUrl(props.question.response_type === 'pdf_annotation' ? props.question.attachment_path : props.question.answer?.student_attachment_path)
 )
-const hasPrimary = computed(() => props.question.response_type === 'pdf_annotation' || !!props.question.answer?.student_attachment_path)
+// FreeResponseAnswer.vue silently auto-uploads a blank placeholder (named "Assignment file.*" or
+// "Blank canvas.png") for every free-response question on mount, purely so the student's Write-
+// mode canvas is ready immediately - a student who only typed their answer still ends up with
+// this attachment on record. Showing it here as "Submitted evidence" makes it look like the
+// student uploaded something they never touched - only treat a placeholder-named attachment as
+// real evidence if the student actually drew/wrote on it (real annotation objects), matching the
+// same signal used on the student's own result page.
+const hasAnswerAnnotations = computed(() => {
+  const pages = props.question.answer_annotations || {}
+  return Object.values(pages).some(layer => (layer?.objects?.length || 0) > 0)
+})
+const hasPrimary = computed(() => {
+  if (props.question.response_type === 'pdf_annotation') return true
+  if (!props.question.answer?.student_attachment_path) return false
+  if (!isPlaceholderAttachmentName(props.question.answer?.student_attachment_original_name)) return true
+  return hasAnswerAnnotations.value
+})
 const isPrimaryImage = computed(() => IMAGE_EXTENSIONS.some(ext => primaryUrl.value.toLowerCase().endsWith(ext)))
 
 const allFiles = computed<EvidenceFile[]>(() => {
