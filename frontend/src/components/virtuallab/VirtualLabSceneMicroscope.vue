@@ -53,7 +53,7 @@
     </svg>
 
     <!-- Apparatus tray -->
-    <div v-if="trayItems.length > 0" class="absolute left-2 top-2 sm:left-3 sm:top-3 max-w-[9rem] bg-white/95 dark:bg-gray-800/95 backdrop-blur rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-2.5">
+    <div v-if="trayItems.length > 0" class="absolute left-2 top-2 sm:left-3 sm:top-3 max-w-[9rem] bg-white/95 dark:bg-gray-800/95 backdrop-blur rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-2.5 max-h-[calc(100%-1rem)] sm:max-h-[calc(100%-1.5rem)] overflow-y-auto">
       <p class="text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1.5">Apparatus Tray</p>
       <div class="space-y-1">
         <button v-for="item in trayItems" :key="item.key" @click="pickFromTray(item.key)" class="w-full flex items-center gap-1.5 px-2 py-1.5 text-xs font-medium rounded-lg bg-gray-50 dark:bg-gray-900/40 text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors text-left">
@@ -64,7 +64,7 @@
     </div>
 
     <!-- Microscope controls -->
-    <div v-if="isPlaced('microscope1')" class="absolute left-2 bottom-2 right-2 sm:left-3 sm:bottom-3 sm:right-auto sm:w-64 bg-white/95 dark:bg-gray-800/95 backdrop-blur rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2.5">
+    <div v-if="isPlaced('microscope1')" class="absolute left-2 bottom-2 right-2 sm:left-3 sm:bottom-3 sm:right-auto sm:w-64 bg-white/95 dark:bg-gray-800/95 backdrop-blur rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2.5 max-h-[calc(100%-1rem)] sm:max-h-[calc(100%-1.5rem)] overflow-y-auto">
       <div class="flex items-center justify-between">
         <p class="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Illumination</p>
         <LabToggle :model-value="lightOn" :disabled="props.readOnly" @update:model-value="toggleLight" />

@@ -31,7 +31,7 @@
     </svg>
 
     <!-- Apparatus tray -->
-    <div v-if="trayItems.length > 0" class="absolute left-2 top-2 sm:left-3 sm:top-3 max-w-[9rem] bg-white/95 dark:bg-gray-800/95 backdrop-blur rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-2.5">
+    <div v-if="trayItems.length > 0" class="absolute left-2 top-2 sm:left-3 sm:top-3 max-w-[9rem] bg-white/95 dark:bg-gray-800/95 backdrop-blur rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-2.5 max-h-[calc(100%-1rem)] sm:max-h-[calc(100%-1.5rem)] overflow-y-auto">
       <p class="text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1.5">Apparatus Tray</p>
       <div class="space-y-1">
         <button v-for="item in trayItems" :key="item.key" @click="pickFromTray(item.key)" class="w-full flex items-center gap-1.5 px-2 py-1.5 text-xs font-medium rounded-lg bg-gray-50 dark:bg-gray-900/40 text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors text-left">
@@ -43,7 +43,7 @@
 
     <!-- Launcher controls - always visible once placed, matching the "free realism control" status
          velocity/mass sliders already have elsewhere (Pendulum length/mass, Circuit battery voltage). -->
-    <div v-if="isPlaced(launcherCfg?.key ?? '')" class="absolute right-2 top-2 sm:right-3 sm:top-3 bg-white/95 dark:bg-gray-800/95 backdrop-blur rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 w-48">
+    <div v-if="isPlaced(launcherCfg?.key ?? '')" class="absolute right-2 top-2 sm:right-3 sm:top-3 bg-white/95 dark:bg-gray-800/95 backdrop-blur rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 w-48 max-h-[calc(100%-1rem)] sm:max-h-[calc(100%-1.5rem)] overflow-y-auto">
       <LabScale label="Launch Velocity" :model-value="velocity" :min="6" :max="16" unit=" m/s" :disabled="props.readOnly || flightState === 'flying'" @update:model-value="v => velocity = v" />
       <button
         :disabled="props.readOnly || flightState === 'flying'"
@@ -54,7 +54,7 @@
     </div>
 
     <!-- Measure panel -->
-    <div v-if="selectedKey === (rulerCfg?.key ?? null)" class="absolute right-2 bottom-2 sm:right-3 sm:bottom-3 bg-white/95 dark:bg-gray-800/95 backdrop-blur rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 w-44">
+    <div v-if="selectedKey === (rulerCfg?.key ?? null)" class="absolute right-2 bottom-2 sm:right-3 sm:bottom-3 bg-white/95 dark:bg-gray-800/95 backdrop-blur rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 w-44 max-h-[calc(100%-1rem)] sm:max-h-[calc(100%-1.5rem)] overflow-y-auto">
       <div class="flex items-center justify-between gap-2 mb-2">
         <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Ruler</p>
         <button @click="selectedKey = null" class="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs leading-none">&times;</button>

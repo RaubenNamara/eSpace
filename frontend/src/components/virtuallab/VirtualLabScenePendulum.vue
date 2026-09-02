@@ -50,7 +50,7 @@
 
     <!-- Apparatus name + available actions - shown only for the current selection, matching the
          rest of the app's "select then choose an action" convention rather than always-on clutter. -->
-    <div v-if="selectedKey" class="absolute left-2 top-2 sm:left-3 sm:top-3 bg-white/95 dark:bg-gray-800/95 backdrop-blur rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 max-w-[13rem]">
+    <div v-if="selectedKey" class="absolute left-2 top-2 sm:left-3 sm:top-3 bg-white/95 dark:bg-gray-800/95 backdrop-blur rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 max-w-[13rem] max-h-[calc(100%-1rem)] sm:max-h-[calc(100%-1.5rem)] overflow-y-auto">
       <div class="flex items-center justify-between gap-2 mb-2">
         <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide truncate">{{ selectedDisplayName }}</p>
         <button @click="deselect" class="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs leading-none">&times;</button>
@@ -75,7 +75,7 @@
 
     <!-- Stopwatch - a real, always-visible widget with direct handles rather than hidden behind
          select-then-toolbar, matching the brief's "interactive handles built into apparatus". -->
-    <div class="absolute right-2 top-2 sm:right-3 sm:top-3 bg-white/95 dark:bg-gray-800/95 backdrop-blur rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 w-40">
+    <div class="absolute right-2 top-2 sm:right-3 sm:top-3 bg-white/95 dark:bg-gray-800/95 backdrop-blur rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 w-40 max-h-[calc(100%-1rem)] sm:max-h-[calc(100%-1.5rem)] overflow-y-auto">
       <p class="text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1">Stopwatch</p>
       <div class="bg-gray-900 rounded-lg px-2 py-1.5 text-center mb-2">
         <span class="font-mono text-lg text-emerald-400 tabular-nums">{{ stopwatchText }}</span>
