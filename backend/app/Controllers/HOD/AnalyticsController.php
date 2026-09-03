@@ -270,7 +270,7 @@ class AnalyticsController extends Controller
                     COUNT(DISTINCT bm.student_id) as readers_count
              FROM library_books b
              LEFT JOIN library_bookmarks bm ON bm.book_id = b.id
-             WHERE b.department_id = :department_id AND b.is_approved = 1"
+             WHERE b.department_id = :department_id AND b.is_approved = 1 AND b.deleted_at IS NULL"
         );
         $totals->execute(['department_id' => $departmentId]);
         $totals = $totals->fetch();
@@ -279,7 +279,7 @@ class AnalyticsController extends Controller
             "SELECT b.id, b.title, b.author, COUNT(DISTINCT bm.student_id) as readers_count
              FROM library_books b
              INNER JOIN library_bookmarks bm ON bm.book_id = b.id
-             WHERE b.department_id = :department_id AND b.is_approved = 1
+             WHERE b.department_id = :department_id AND b.is_approved = 1 AND b.deleted_at IS NULL
              GROUP BY b.id, b.title, b.author
              ORDER BY readers_count DESC
              LIMIT 5"

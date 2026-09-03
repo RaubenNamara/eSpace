@@ -134,19 +134,19 @@ class DepartmentController extends Controller
         $studentCount = $studentStmt->fetch()['count'];
 
         // Get pending approvals (library books, notes, item bank questions)
-        $pendingLibraryStmt = $db->prepare("SELECT COUNT(*) as count FROM library_books WHERE department_id = :department_id AND is_approved = 0");
+        $pendingLibraryStmt = $db->prepare("SELECT COUNT(*) as count FROM library_books WHERE department_id = :department_id AND is_approved = 0 AND deleted_at IS NULL");
         $pendingLibraryStmt->execute(['department_id' => $departmentId]);
         $pendingLibrary = $pendingLibraryStmt->fetch()['count'];
 
         // notes has no department_id column - it's scoped via subject_id instead
         $pendingNotesStmt = $db->prepare(
             "SELECT COUNT(*) as count FROM notes
-             WHERE is_approved = 0 AND subject_id IN (SELECT id FROM subjects WHERE department_id = :department_id)"
+             WHERE is_approved = 0 AND deleted_at IS NULL AND subject_id IN (SELECT id FROM subjects WHERE department_id = :department_id)"
         );
         $pendingNotesStmt->execute(['department_id' => $departmentId]);
         $pendingNotes = $pendingNotesStmt->fetch()['count'];
 
-        $pendingItemBankStmt = $db->prepare("SELECT COUNT(*) as count FROM item_bank_questions WHERE department_id = :department_id AND is_approved = 0");
+        $pendingItemBankStmt = $db->prepare("SELECT COUNT(*) as count FROM item_bank_questions WHERE department_id = :department_id AND is_approved = 0 AND deleted_at IS NULL");
         $pendingItemBankStmt->execute(['department_id' => $departmentId]);
         $pendingItemBank = $pendingItemBankStmt->fetch()['count'];
 
@@ -284,7 +284,7 @@ class DepartmentController extends Controller
         if ($type === 'all' || $type === 'library') {
             $librarySql = "SELECT id, title, author, file_type, uploaded_by as created_by, created_at, 'library' as type
                           FROM library_books
-                          WHERE department_id = :department_id AND is_approved = 0
+                          WHERE department_id = :department_id AND is_approved = 0 AND deleted_at IS NULL
                           ORDER BY created_at DESC";
             $stmt = $db->prepare($librarySql);
             $stmt->execute(['department_id' => $departmentId]);
@@ -295,7 +295,7 @@ class DepartmentController extends Controller
             // notes has no department_id column - it's scoped via subject_id instead
             $notesSql = "SELECT id, title, subject_id, created_by, created_at, 'notes' as type
                         FROM notes
-                        WHERE is_approved = 0 AND subject_id IN (SELECT id FROM subjects WHERE department_id = :department_id)
+                        WHERE is_approved = 0 AND deleted_at IS NULL AND subject_id IN (SELECT id FROM subjects WHERE department_id = :department_id)
                         ORDER BY created_at DESC";
             $stmt = $db->prepare($notesSql);
             $stmt->execute(['department_id' => $departmentId]);
@@ -305,7 +305,7 @@ class DepartmentController extends Controller
         if ($type === 'all' || $type === 'item_bank') {
             $itemBankSql = "SELECT id, question_text, question_type, difficulty, subject_id, created_by, created_at, 'item_bank' as type
                            FROM item_bank_questions
-                           WHERE department_id = :department_id AND is_approved = 0
+                           WHERE department_id = :department_id AND is_approved = 0 AND deleted_at IS NULL
                            ORDER BY created_at DESC";
             $stmt = $db->prepare($itemBankSql);
             $stmt->execute(['department_id' => $departmentId]);
