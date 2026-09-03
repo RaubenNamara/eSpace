@@ -1,20 +1,32 @@
 <template>
-  <div class="ckeditor-wrapper">
+  <div class="ckeditor-wrapper" :class="{ 'toolbar-hidden': editorConfig && !showToolbar }">
     <div v-if="!editorConfig" class="flex items-center justify-center p-8 text-gray-500">
       <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mr-3"></div>
       <span>Loading editor...</span>
     </div>
-    <Ckeditor
-      v-else
-      :editor="editor"
-      :config="editorConfig"
-      :model-value="sanitizedModelValue"
-      @update:model-value="emitUpdate"
-      @ready="onReady"
-      @focus="onFocus"
-      @blur="onBlur"
-      @error="onError"
-    ></Ckeditor>
+    <template v-else>
+      <button
+        type="button"
+        @click="showToolbar = !showToolbar"
+        class="sm:hidden w-full flex items-center justify-center gap-1.5 px-3 py-1.5 mb-1 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700"
+      >
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path v-if="showToolbar" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+          <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+        </svg>
+        {{ showToolbar ? 'Hide formatting tools' : 'Show formatting tools' }}
+      </button>
+      <Ckeditor
+        :editor="editor"
+        :config="editorConfig"
+        :model-value="sanitizedModelValue"
+        @update:model-value="emitUpdate"
+        @ready="onReady"
+        @focus="onFocus"
+        @blur="onBlur"
+        @error="onError"
+      ></Ckeditor>
+    </template>
     <div v-if="wordCount > 0 || characterCount > 0" class="word-count-footer">
       <span class="word-count-item">{{ wordCount }} words</span>
       <span class="word-count-item">{{ characterCount }} characters</span>
@@ -159,6 +171,11 @@ const editor = ClassicEditor
 const editorConfig = ref<any>(null)
 const wordCount = ref(0)
 const characterCount = ref(0)
+// The full formatting toolbar has ~40 buttons and CKEditor's built-in overflow handling turns
+// into a horizontally-scrollable strip on a phone-width screen - offer a way to collapse it
+// entirely instead. The toggle button itself only shows below sm, but the collapsed state works
+// at any width since a teacher on a small tablet may want the same relief.
+const showToolbar = ref(true)
 
 // Sanitize model value to prevent CKEditor parsing errors
 const sanitizedModelValue = computed(() => {
@@ -823,9 +840,17 @@ onBeforeUnmount(() => {
   .ckeditor-wrapper :deep(.ck-toolbar) {
     flex-wrap: wrap;
   }
-  
+
   .ckeditor-wrapper :deep(.ck-toolbar__items) {
     flex-wrap: wrap;
   }
+}
+
+.ckeditor-wrapper.toolbar-hidden :deep(.ck-toolbar) {
+  display: none;
+}
+
+.ckeditor-wrapper.toolbar-hidden :deep(.ck-editor__main .ck-editor__editable) {
+  border-radius: 0.5rem;
 }
 </style>
