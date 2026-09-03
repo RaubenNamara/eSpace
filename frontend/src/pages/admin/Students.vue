@@ -80,7 +80,7 @@
           >
             <option value="">All Classes</option>
             <option v-for="cls in classes" :key="cls.id" :value="cls.id">
-              {{ cls.name }} ({{ cls.level }})
+              {{ cls.name }} ({{ cls.level }}){{ cls.stream_name ? ' - ' + cls.stream_name : '' }}
             </option>
           </select>
         </div>

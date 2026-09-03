@@ -1138,9 +1138,15 @@ interface DuplicateClassGroup {
   streams: Array<{ id: number; stream_name?: string }>
 }
 
+// Only offer classes at the same level as the topic being duplicated - the full assignments
+// list spans every level a teacher has curriculum access to in this department (e.g. O-Level
+// S.1-S.4 and A-Level S.5-S.6 for the same subject), so without this an O-Level topic's
+// duplicate targets would include A-Level streams the note could never actually apply to.
 const duplicateGroups = computed<DuplicateClassGroup[]>(() => {
+  const sourceLevel = duplicatingTopic.value?.class_level
   const map = new Map<string, DuplicateClassGroup>()
   for (const cls of assignments.value?.classes || []) {
+    if (sourceLevel && cls.level !== sourceLevel) continue
     const key = `${cls.name}|${cls.level}`
     if (!map.has(key)) map.set(key, { name: cls.name, level: cls.level, streams: [] })
     map.get(key)!.streams.push(cls)
