@@ -2,13 +2,13 @@
   <div>
     <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-6">Interactive eNotes</h1>
     
-    <div class="flex justify-between items-center mb-6">
-      <div class="flex items-center space-x-4">
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
+      <div class="flex flex-wrap items-center gap-3">
         <input
           v-model="searchQuery"
           type="text"
           placeholder="Search notes..."
-          class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+          class="flex-1 min-w-[10rem] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
         >
         <select
           v-model="selectedSubjectId"
@@ -28,7 +28,7 @@
       </div>
       <button
         @click="openNoteModal()"
-        class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center space-x-2"
+        class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center space-x-2"
       >
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>

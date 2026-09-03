@@ -2,12 +2,12 @@
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
     <div class="px-4 sm:px-6 lg:px-8 py-8">
       <!-- Header -->
-      <div class="flex items-center justify-between mb-8">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Heads of Department</h1>
           <p class="text-gray-600 dark:text-gray-400 mt-1">Manage department heads and their assignments</p>
         </div>
-        <div class="flex space-x-3">
+        <div class="flex flex-wrap gap-3">
           <button
             @click="openAssignTeacherModal"
             class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"

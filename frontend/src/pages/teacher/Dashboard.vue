@@ -238,7 +238,8 @@
           <div v-else-if="enrolledStudentsList.length === 0" class="flex items-center justify-center h-64">
             <div class="text-gray-500 dark:text-gray-400">No enrolled students found</div>
           </div>
-          <table v-else class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <div v-else class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead class="bg-gray-50 dark:bg-gray-900">
               <tr>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Student</th>
@@ -281,6 +282,7 @@
               </tr>
             </tbody>
           </table>
+          </div>
         </div>
 
         <!-- Footer -->

@@ -31,6 +31,7 @@
     </div>
 
     <div v-else class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div class="overflow-x-auto">
       <table class="w-full">
         <thead class="bg-gray-50 dark:bg-gray-700">
           <tr>
@@ -67,6 +68,7 @@
           </tr>
         </tbody>
       </table>
+      </div>
     </div>
 
     <!-- Report viewer modal -->

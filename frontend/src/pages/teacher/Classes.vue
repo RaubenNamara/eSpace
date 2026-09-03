@@ -153,7 +153,8 @@
         <div v-else-if="students.length === 0" class="text-center py-12">
           <div class="text-gray-500">No students enrolled in this class</div>
         </div>
-        <table v-else class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <div v-else class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead class="bg-gray-50 dark:bg-gray-800">
             <tr>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-12">
@@ -223,6 +224,7 @@
             </tr>
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   </div>

@@ -2,12 +2,12 @@
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
     <div class="px-4 sm:px-6 lg:px-8 py-8">
       <!-- Header -->
-      <div class="flex items-center justify-between mb-8">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Teachers</h1>
           <p class="text-gray-600 dark:text-gray-400 mt-1">Manage teacher accounts, departments, subjects and class assignments.</p>
         </div>
-        <div class="flex gap-3">
+        <div class="flex flex-wrap gap-3">
           <button
             @click="fetchTeachers"
             class="px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
@@ -275,7 +275,7 @@
     </div>
 
     <!-- Create Teacher Modal -->
-    <div v-if="showCreateModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div v-if="showCreateModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div class="p-6 border-b border-gray-200 dark:border-gray-700">
           <h2 class="text-xl font-bold text-gray-900 dark:text-white">Add Teacher</h2>
@@ -367,7 +367,7 @@
     </div>
 
     <!-- Reset Password Modal -->
-    <div v-if="showResetModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div v-if="showResetModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
         <div class="p-6 border-b border-gray-200 dark:border-gray-700">
           <h2 class="text-xl font-bold text-gray-900 dark:text-white">Reset Password</h2>
@@ -402,7 +402,7 @@
     </div>
 
     <!-- Edit Teacher Modal -->
-    <div v-if="showEditModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div v-if="showEditModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div class="p-6 border-b border-gray-200 dark:border-gray-700">
           <h2 class="text-xl font-bold text-gray-900 dark:text-white">Edit Teacher</h2>

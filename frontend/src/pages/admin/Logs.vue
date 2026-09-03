@@ -9,8 +9,8 @@
 
       <!-- Filters -->
       <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6 border border-gray-100 dark:border-gray-700">
-        <div class="flex gap-4">
-          <div class="flex-1">
+        <div class="flex flex-wrap gap-4">
+          <div class="flex-1 min-w-[12rem]">
             <input
               v-model="search"
               type="text"
