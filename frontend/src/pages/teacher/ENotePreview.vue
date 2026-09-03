@@ -405,12 +405,7 @@
       class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
     >
       <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg md:max-w-xl lg:max-w-2xl max-h-[90vh] sm:max-h-[85vh] overflow-hidden flex flex-col">
-        <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-5 sm:px-6 py-5 sm:py-6 text-center flex-shrink-0">
-          <div class="w-12 h-12 sm:w-14 sm:h-14 mx-auto mb-2.5 sm:mb-3 rounded-2xl bg-white/15 flex items-center justify-center">
-            <svg class="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-            </svg>
-          </div>
+        <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-5 sm:px-6 py-3 sm:py-4 text-center flex-shrink-0">
           <p v-if="topic.subject_name" class="text-indigo-100 text-xs font-semibold uppercase tracking-wide mb-1">{{ topic.subject_name }}</p>
           <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-white leading-snug">{{ topic.title }}</h2>
         </div>
