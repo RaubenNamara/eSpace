@@ -2,17 +2,16 @@
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
     <!-- Sidebar -->
     <aside
-      class="overflow-hidden fixed left-0 top-0 h-full w-64 bg-gradient-to-b from-sky-50/85 via-blue-50/70 to-white/80 dark:bg-gradient-to-b dark:from-slate-900 dark:to-slate-950 backdrop-blur-2xl shadow-2xl transform transition-transform duration-300 z-50 flex flex-col border-r border-sky-200/60 dark:border-white/5"
+      class="overflow-hidden fixed left-0 top-0 h-full w-64 bg-gradient-to-b from-blue-900 via-blue-950 to-slate-950 dark:bg-gradient-to-b dark:from-slate-900 dark:to-slate-950 backdrop-blur-2xl shadow-2xl transform transition-transform duration-300 z-50 flex flex-col border-r border-blue-800/50 dark:border-white/5"
       :class="{ '-translate-x-full': !sidebarOpen, 'translate-x-0': sidebarOpen }"
     >
-      <!-- Light-mode-only "aurora glass" glow - two soft blurred color blobs behind the frosted
-           panel so it reads as translucent and catching light, not a flat pastel fill. Dark mode
-           keeps its own opaque slate gradient and skips this entirely. -->
-      <div class="pointer-events-none absolute -top-16 -left-10 w-56 h-56 rounded-full bg-sky-300/40 blur-3xl dark:hidden"></div>
-      <div class="pointer-events-none absolute top-1/3 -right-16 w-56 h-56 rounded-full bg-indigo-300/30 blur-3xl dark:hidden"></div>
-      <div class="pointer-events-none absolute bottom-0 left-1/4 w-48 h-48 rounded-full bg-cyan-200/30 blur-3xl dark:hidden"></div>
+      <!-- Soft blurred glow blobs behind the frosted panel so it reads as translucent and
+           catching light, not a flat fill - shown in both themes now that both are dark panels. -->
+      <div class="pointer-events-none absolute -top-16 -left-10 w-56 h-56 rounded-full bg-sky-500/20 blur-3xl"></div>
+      <div class="pointer-events-none absolute top-1/3 -right-16 w-56 h-56 rounded-full bg-indigo-500/15 blur-3xl"></div>
+      <div class="pointer-events-none absolute bottom-0 left-1/4 w-48 h-48 rounded-full bg-cyan-400/10 blur-3xl"></div>
 
-      <div class="relative px-5 py-5 border-b border-sky-200/60 dark:border-white/5 flex-shrink-0">
+      <div class="relative px-5 py-5 border-b border-blue-800/50 dark:border-white/5 flex-shrink-0">
         <div class="flex items-center gap-3">
           <div class="relative w-10 h-10 flex-shrink-0 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/25">
             <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -20,8 +19,8 @@
             </svg>
           </div>
           <div class="min-w-0">
-            <h1 class="text-base font-bold text-slate-800 dark:text-white tracking-tight leading-tight">eSpace</h1>
-            <p class="text-[11px] text-slate-500 dark:text-slate-400 capitalize font-medium tracking-wide leading-tight mt-0.5">{{ userRole }} Console</p>
+            <h1 class="text-base font-bold text-white tracking-tight leading-tight">eSpace</h1>
+            <p class="text-[11px] text-slate-300 capitalize font-medium tracking-wide leading-tight mt-0.5">{{ userRole }} Console</p>
           </div>
         </div>
       </div>
@@ -31,7 +30,7 @@
         <div v-if="isAdmin" class="mb-5">
           <div class="px-3 mb-1.5 flex items-center gap-2">
             <span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
-            <span class="text-[10.5px] font-semibold text-slate-500 uppercase tracking-widest">System Administration</span>
+            <span class="text-[10.5px] font-semibold text-slate-300 uppercase tracking-widest">System Administration</span>
           </div>
           <div class="space-y-0.5">
             <router-link
@@ -39,14 +38,14 @@
               :key="item.path"
               :to="item.path"
               class="relative flex items-center gap-3 pl-4 pr-3 py-2 rounded-lg transition-all duration-150 text-sm font-medium group hover:translate-x-0.5"
-              :class="isActive(item.path) ? 'bg-rose-500/10 text-slate-900 dark:text-white ring-1 ring-inset ring-rose-500/15' : 'text-slate-600 hover:bg-sky-900/5 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/[0.04] dark:hover:text-slate-100'"
+              :class="isActive(item.path) ? 'bg-rose-500/10 text-white ring-1 ring-inset ring-rose-500/15' : 'text-slate-100 hover:bg-white/10 hover:text-white'"
             >
               <span
                 class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-sm bg-rose-400 transition-opacity duration-150"
                 :class="isActive(item.path) ? 'opacity-100' : 'opacity-0'"
               ></span>
-              <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 bg-gradient-to-b from-white to-slate-200 dark:from-slate-700 dark:to-slate-800 shadow-sm ring-1 transition-all duration-150"
-                :class="isActive(item.path) ? 'ring-rose-400/60 dark:ring-rose-400/40 text-rose-600 dark:text-rose-300' : 'ring-slate-300/70 dark:ring-white/10 text-slate-500 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-300'"
+              <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 bg-gradient-to-b from-slate-700 to-slate-800 shadow-sm ring-1 transition-all duration-150"
+                :class="isActive(item.path) ? 'ring-rose-400/40 text-rose-300' : 'ring-white/15 text-slate-200 group-hover:text-white'"
               >
                 <component :is="iconMap[item.icon]" class="w-[18px] h-[18px]" />
               </div>
@@ -63,14 +62,14 @@
               :key="item.path"
               :to="item.path"
               class="relative flex items-center gap-3 pl-4 pr-3 py-2 rounded-lg transition-all duration-150 text-sm font-medium group hover:translate-x-0.5"
-              :class="isActive(item.path) ? 'bg-sky-500/10 text-slate-900 dark:text-white ring-1 ring-inset ring-sky-500/15' : 'text-slate-600 hover:bg-sky-900/5 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/[0.04] dark:hover:text-slate-100'"
+              :class="isActive(item.path) ? 'bg-sky-500/10 text-white ring-1 ring-inset ring-sky-500/15' : 'text-slate-100 hover:bg-white/10 hover:text-white'"
             >
               <span
                 class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-sm bg-sky-400 transition-opacity duration-150"
                 :class="isActive(item.path) ? 'opacity-100' : 'opacity-0'"
               ></span>
-              <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 bg-gradient-to-b from-white to-slate-200 dark:from-slate-700 dark:to-slate-800 shadow-sm ring-1 transition-all duration-150"
-                :class="isActive(item.path) ? 'ring-sky-400/60 dark:ring-sky-400/40 text-sky-600 dark:text-sky-300' : 'ring-slate-300/70 dark:ring-white/10 text-slate-500 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-300'"
+              <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 bg-gradient-to-b from-slate-700 to-slate-800 shadow-sm ring-1 transition-all duration-150"
+                :class="isActive(item.path) ? 'ring-sky-400/40 text-sky-300' : 'ring-white/15 text-slate-200 group-hover:text-white'"
               >
                 <component :is="iconMap[item.icon]" class="w-[18px] h-[18px]" />
               </div>
@@ -83,7 +82,7 @@
         <div class="mb-5">
           <div class="px-3 mb-1.5 flex items-center gap-2">
             <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
-            <span class="text-[10.5px] font-semibold text-slate-500 uppercase tracking-widest">Academic Management</span>
+            <span class="text-[10.5px] font-semibold text-slate-300 uppercase tracking-widest">Academic Management</span>
           </div>
           <div class="space-y-0.5">
             <router-link
@@ -91,14 +90,14 @@
               :key="item.path"
               :to="item.path"
               class="relative flex items-center gap-3 pl-4 pr-3 py-2 rounded-lg transition-all duration-150 text-sm font-medium group hover:translate-x-0.5"
-              :class="isActive(item.path) ? 'bg-indigo-500/10 text-slate-900 dark:text-white ring-1 ring-inset ring-indigo-500/15' : 'text-slate-600 hover:bg-sky-900/5 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/[0.04] dark:hover:text-slate-100'"
+              :class="isActive(item.path) ? 'bg-indigo-500/10 text-white ring-1 ring-inset ring-indigo-500/15' : 'text-slate-100 hover:bg-white/10 hover:text-white'"
             >
               <span
                 class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-sm bg-indigo-400 transition-opacity duration-150"
                 :class="isActive(item.path) ? 'opacity-100' : 'opacity-0'"
               ></span>
-              <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 bg-gradient-to-b from-white to-slate-200 dark:from-slate-700 dark:to-slate-800 shadow-sm ring-1 transition-all duration-150"
-                :class="isActive(item.path) ? 'ring-indigo-400/60 dark:ring-indigo-400/40 text-indigo-600 dark:text-indigo-300' : 'ring-slate-300/70 dark:ring-white/10 text-slate-500 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-300'"
+              <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 bg-gradient-to-b from-slate-700 to-slate-800 shadow-sm ring-1 transition-all duration-150"
+                :class="isActive(item.path) ? 'ring-indigo-400/40 text-indigo-300' : 'ring-white/15 text-slate-200 group-hover:text-white'"
               >
                 <component :is="iconMap[item.icon]" class="w-[18px] h-[18px]" />
               </div>
@@ -111,7 +110,7 @@
         <div class="mb-5">
           <div class="px-3 mb-1.5 flex items-center gap-2">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-            <span class="text-[10.5px] font-semibold text-slate-500 uppercase tracking-widest">Learning Resources</span>
+            <span class="text-[10.5px] font-semibold text-slate-300 uppercase tracking-widest">Learning Resources</span>
           </div>
           <div class="space-y-0.5">
             <router-link
@@ -119,14 +118,14 @@
               :key="item.path"
               :to="item.path"
               class="relative flex items-center gap-3 pl-4 pr-3 py-2 rounded-lg transition-all duration-150 text-sm font-medium group hover:translate-x-0.5"
-              :class="isActive(item.path) ? 'bg-emerald-500/10 text-slate-900 dark:text-white ring-1 ring-inset ring-emerald-500/15' : 'text-slate-600 hover:bg-sky-900/5 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/[0.04] dark:hover:text-slate-100'"
+              :class="isActive(item.path) ? 'bg-emerald-500/10 text-white ring-1 ring-inset ring-emerald-500/15' : 'text-slate-100 hover:bg-white/10 hover:text-white'"
             >
               <span
                 class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-sm bg-emerald-400 transition-opacity duration-150"
                 :class="isActive(item.path) ? 'opacity-100' : 'opacity-0'"
               ></span>
-              <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 bg-gradient-to-b from-white to-slate-200 dark:from-slate-700 dark:to-slate-800 shadow-sm ring-1 transition-all duration-150"
-                :class="isActive(item.path) ? 'ring-emerald-400/60 dark:ring-emerald-400/40 text-emerald-600 dark:text-emerald-300' : 'ring-slate-300/70 dark:ring-white/10 text-slate-500 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-300'"
+              <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 bg-gradient-to-b from-slate-700 to-slate-800 shadow-sm ring-1 transition-all duration-150"
+                :class="isActive(item.path) ? 'ring-emerald-400/40 text-emerald-300' : 'ring-white/15 text-slate-200 group-hover:text-white'"
               >
                 <component :is="iconMap[item.icon]" class="w-[18px] h-[18px]" />
               </div>
@@ -139,7 +138,7 @@
         <div class="mb-5">
           <div class="px-3 mb-1.5 flex items-center gap-2">
             <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-            <span class="text-[10.5px] font-semibold text-slate-500 uppercase tracking-widest">Assessment & Analytics</span>
+            <span class="text-[10.5px] font-semibold text-slate-300 uppercase tracking-widest">Assessment & Analytics</span>
           </div>
           <div class="space-y-0.5">
             <router-link
@@ -147,14 +146,14 @@
               :key="item.path"
               :to="item.path"
               class="relative flex items-center gap-3 pl-4 pr-3 py-2 rounded-lg transition-all duration-150 text-sm font-medium group hover:translate-x-0.5"
-              :class="isActive(item.path) ? 'bg-amber-500/10 text-slate-900 dark:text-white ring-1 ring-inset ring-amber-500/15' : 'text-slate-600 hover:bg-sky-900/5 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/[0.04] dark:hover:text-slate-100'"
+              :class="isActive(item.path) ? 'bg-amber-500/10 text-white ring-1 ring-inset ring-amber-500/15' : 'text-slate-100 hover:bg-white/10 hover:text-white'"
             >
               <span
                 class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-sm bg-amber-400 transition-opacity duration-150"
                 :class="isActive(item.path) ? 'opacity-100' : 'opacity-0'"
               ></span>
-              <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 bg-gradient-to-b from-white to-slate-200 dark:from-slate-700 dark:to-slate-800 shadow-sm ring-1 transition-all duration-150"
-                :class="isActive(item.path) ? 'ring-amber-400/60 dark:ring-amber-400/40 text-amber-700 dark:text-amber-300' : 'ring-slate-300/70 dark:ring-white/10 text-slate-500 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-300'"
+              <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 bg-gradient-to-b from-slate-700 to-slate-800 shadow-sm ring-1 transition-all duration-150"
+                :class="isActive(item.path) ? 'ring-amber-400/40 text-amber-300' : 'ring-white/15 text-slate-200 group-hover:text-white'"
               >
                 <component :is="iconMap[item.icon]" class="w-[18px] h-[18px]" />
               </div>
@@ -164,12 +163,12 @@
         </div>
       </nav>
 
-      <div class="relative p-3 border-t border-sky-200/60 dark:border-white/5 flex-shrink-0">
+      <div class="relative p-3 border-t border-blue-800/50 dark:border-white/5 flex-shrink-0">
         <button
           @click="handleLogout"
-          class="flex items-center gap-3 pl-4 pr-3 py-2 rounded-lg text-slate-600 hover:bg-rose-500/10 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-300 w-full transition-colors duration-150 group"
+          class="flex items-center gap-3 pl-4 pr-3 py-2 rounded-lg text-slate-100 hover:bg-rose-500/15 hover:text-rose-300 w-full transition-colors duration-150 group"
         >
-          <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 bg-gradient-to-b from-white to-slate-200 dark:from-slate-700 dark:to-slate-800 shadow-sm ring-1 ring-slate-300/70 dark:ring-white/10 text-slate-400 group-hover:text-rose-600 dark:text-slate-500 dark:group-hover:text-rose-300 transition-all duration-150">
+          <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 bg-gradient-to-b from-slate-700 to-slate-800 shadow-sm ring-1 ring-white/15 text-slate-200 group-hover:text-rose-300 transition-all duration-150">
             <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
             </svg>
@@ -848,9 +847,6 @@ const iconMap: Record<string, any> = {
 <style scoped>
 .sidebar-nav {
   scrollbar-width: thin;
-  scrollbar-color: rgba(30, 64, 175, 0.18) transparent;
-}
-:global(.dark) .sidebar-nav {
   scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
 }
 .sidebar-nav::-webkit-scrollbar {
@@ -860,16 +856,10 @@ const iconMap: Record<string, any> = {
   background: transparent;
 }
 .sidebar-nav::-webkit-scrollbar-thumb {
-  background-color: rgba(30, 64, 175, 0.18);
+  background-color: rgba(255, 255, 255, 0.12);
   border-radius: 999px;
 }
 .sidebar-nav::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(30, 64, 175, 0.3);
-}
-:global(.dark) .sidebar-nav::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.12);
-}
-:global(.dark) .sidebar-nav::-webkit-scrollbar-thumb:hover {
   background-color: rgba(255, 255, 255, 0.2);
 }
 </style>
