@@ -985,7 +985,10 @@ const loadDashboard = async () => {
 const loadTopics = async () => {
   try {
     loading.value = true
-    const params: Record<string, string> = {}
+    // This page has no pagination UI - it groups every loaded topic into "Browse by Class" cards
+    // client-side, so it must fetch the teacher's full topic list, not just the backend's default
+    // first page of 20 (which silently hid classes whose topics fell past that page).
+    const params: Record<string, string> = { limit: '1000' }
     if (statusFilter.value) params.status = statusFilter.value
     if (subjectFilter.value) params.subject_id = subjectFilter.value
 
