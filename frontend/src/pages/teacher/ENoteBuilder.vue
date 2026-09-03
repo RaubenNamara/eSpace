@@ -1,24 +1,24 @@
 <template>
   <div class="h-screen flex flex-col">
     <!-- Header -->
-    <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
-      <div class="flex items-center space-x-4">
+    <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-3 sm:px-6 py-3 sm:py-4 flex flex-wrap items-center justify-between gap-2 sm:gap-3">
+      <div class="flex items-center gap-2 sm:gap-4 min-w-0">
         <button
           @click="goBack"
-          class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          class="flex-shrink-0 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
         >
           <svg class="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
           </svg>
         </button>
-        <div>
-          <h1 class="text-xl font-semibold text-gray-900 dark:text-white">{{ topic?.title }}</h1>
-          <p class="text-sm text-gray-600 dark:text-gray-400">{{ topic?.subject_name }}</p>
+        <div class="min-w-0">
+          <h1 class="text-base sm:text-xl font-semibold text-gray-900 dark:text-white truncate">{{ topic?.title }}</h1>
+          <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">{{ topic?.subject_name }}</p>
         </div>
       </div>
 
-      <div class="flex items-center space-x-3">
-        <div class="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+      <div class="flex items-center gap-1.5 sm:gap-3 flex-wrap">
+        <div class="hidden sm:flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
           <span v-if="autosaveStatus === 'saving'" class="text-yellow-600 dark:text-yellow-400">
             <svg class="animate-spin h-4 w-4 inline" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -35,20 +35,42 @@
         </div>
 
         <button
-          @click="openPreview"
-          class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center space-x-2"
+          @click="showPagesPanel = !showPagesPanel"
+          class="p-2 rounded-lg transition-colors"
+          :class="showPagesPanel ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'"
+          :title="showPagesPanel ? 'Hide Pages panel' : 'Show Pages panel'"
         >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+          </svg>
+        </button>
+        <button
+          @click="showSettingsPanel = !showSettingsPanel"
+          class="p-2 rounded-lg transition-colors"
+          :class="showSettingsPanel ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'"
+          :title="showSettingsPanel ? 'Hide Page Settings panel' : 'Show Page Settings panel'"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+          </svg>
+        </button>
+
+        <button
+          @click="openPreview"
+          class="px-2.5 sm:px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-1.5 sm:gap-2"
+        >
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
           </svg>
-          <span>Preview</span>
+          <span class="hidden sm:inline">Preview</span>
         </button>
 
         <button
           @click="publishTopic"
           :disabled="topic?.status === 'published'"
-          class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          class="px-2.5 sm:px-4 py-2 text-sm sm:text-base bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {{ topic?.status === 'published' ? 'Published' : 'Publish' }}
         </button>
@@ -57,20 +79,32 @@
 
     <!-- Main Content -->
     <div class="flex-1 flex overflow-hidden">
-      <!-- Left Sidebar - Pages -->
-      <div class="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
+      <!-- Left Sidebar - Pages: a full-screen overlay below lg (three fixed-width columns would
+           never fit a phone screen), a static column at lg+ where there's room for all three. -->
+      <div v-if="showPagesPanel" class="fixed inset-0 z-40 lg:static lg:z-auto w-full lg:w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
         <div class="p-4 border-b border-gray-200 dark:border-gray-700">
           <div class="flex items-center justify-between">
             <h2 class="font-semibold text-gray-900 dark:text-white">Pages</h2>
-            <button
-              @click="addPage"
-              class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
-              title="Add Page"
-            >
-              <svg class="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-              </svg>
-            </button>
+            <div class="flex items-center gap-1">
+              <button
+                @click="addPage"
+                class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                title="Add Page"
+              >
+                <svg class="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+              </button>
+              <button
+                @click="showPagesPanel = false"
+                class="lg:hidden p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                title="Close"
+              >
+                <svg class="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -165,7 +199,7 @@
 
       <!-- Main Editor -->
       <div class="flex-1 flex flex-col overflow-hidden">
-        <div class="flex-1 overflow-y-auto p-6">
+        <div class="flex-1 overflow-y-auto p-4 sm:p-6">
           <div v-if="currentPage" class="max-w-4xl mx-auto">
             <div class="mb-4">
               <input
@@ -173,7 +207,7 @@
                 @input="scheduleAutosave"
                 type="text"
                 placeholder="Page Title"
-                class="w-full text-2xl font-bold text-gray-900 dark:text-white bg-transparent border-none focus:ring-0 p-0"
+                class="w-full text-xl sm:text-2xl font-bold text-gray-900 dark:text-white bg-transparent border-none focus:ring-0 p-0"
               >
             </div>
 
@@ -231,9 +265,20 @@
         </div>
       </div>
 
-      <!-- Right Sidebar - Settings -->
-      <div class="w-72 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 p-6 overflow-y-auto">
-        <h2 class="font-semibold text-gray-900 dark:text-white mb-4">Page Settings</h2>
+      <!-- Right Sidebar - Settings: same full-screen-overlay-below-lg treatment as Pages. -->
+      <div v-if="showSettingsPanel" class="fixed inset-0 z-40 lg:static lg:z-auto w-full lg:w-72 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 p-4 sm:p-6 overflow-y-auto">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="font-semibold text-gray-900 dark:text-white">Page Settings</h2>
+          <button
+            @click="showSettingsPanel = false"
+            class="lg:hidden p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+            title="Close"
+          >
+            <svg class="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
 
         <div v-if="currentPage" class="space-y-4">
           <div>
@@ -347,6 +392,26 @@ const autosaveStatus = ref<'idle' | 'saving' | 'saved'>('idle')
 const autosaveTimeout = ref<number | null>(null)
 
 const draggedIndex = ref<number | null>(null)
+
+// Both side panels can be hidden to give the editor more width - state isn't persisted since
+// it's a per-session editing preference, not something that should carry over between topics.
+// Below the lg breakpoint they render as full-screen overlays (see template), so default to
+// closed there - starting with both open would bury the editor under two full-screen panels.
+const LG_BREAKPOINT = 1024
+const isDesktop = ref(typeof window !== 'undefined' ? window.innerWidth >= LG_BREAKPOINT : true)
+const showPagesPanel = ref(isDesktop.value)
+const showSettingsPanel = ref(isDesktop.value)
+
+const applyResponsivePanels = () => {
+  const wasDesktop = isDesktop.value
+  isDesktop.value = window.innerWidth >= LG_BREAKPOINT
+  // Only auto-flip on an actual breakpoint crossing, so resizing within a single screen size
+  // doesn't fight a panel the user just closed/opened by hand.
+  if (isDesktop.value !== wasDesktop) {
+    showPagesPanel.value = isDesktop.value
+    showSettingsPanel.value = isDesktop.value
+  }
+}
 
 const hasPreviousPage = computed(() => {
   if (!currentPage.value) return false
@@ -670,6 +735,7 @@ const movePageDown = async (index: number) => {
 onMounted(() => {
   console.log('ENoteBuilder mounted, topicId:', topicId.value)
   loadTopic()
+  window.addEventListener('resize', applyResponsivePanels)
 })
 
 onBeforeRouteLeave(async () => {
@@ -680,5 +746,6 @@ onUnmounted(() => {
   if (autosaveTimeout.value) {
     clearTimeout(autosaveTimeout.value)
   }
+  window.removeEventListener('resize', applyResponsivePanels)
 })
 </script>
