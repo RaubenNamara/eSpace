@@ -144,16 +144,29 @@
         :class="showToc ? 'translate-x-0' : '-translate-x-full'"
       >
         <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <div class="flex items-center gap-2.5">
-            <div class="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center flex-shrink-0">
-              <svg class="w-4 h-4 text-indigo-600 dark:text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h10M4 18h10"></path>
+          <div class="flex items-center gap-3">
+            <div class="relative w-10 h-10 flex-shrink-0">
+              <svg class="w-10 h-10 -rotate-90" viewBox="0 0 36 36">
+                <circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" stroke-width="3" class="text-gray-200 dark:text-gray-700"></circle>
+                <circle
+                  cx="18" cy="18" r="15.5" fill="none" stroke="url(#tocProgressGradient)" stroke-width="3" stroke-linecap="round"
+                  :stroke-dasharray="`${progressPercentage * 0.974} 200`"
+                  class="transition-all duration-500"
+                ></circle>
+                <defs>
+                  <linearGradient id="tocProgressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#6366f1"></stop>
+                    <stop offset="50%" stop-color="#a855f7"></stop>
+                    <stop offset="100%" stop-color="#ec4899"></stop>
+                  </linearGradient>
+                </defs>
               </svg>
+              <span class="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-indigo-700 dark:text-indigo-300">{{ progressPercentage }}%</span>
             </div>
             <div>
-              <h2 class="font-semibold text-gray-900 dark:text-white leading-tight">Table of Contents</h2>
+              <h2 class="font-semibold text-gray-900 dark:text-white leading-tight">Course Contents</h2>
               <div class="text-xs text-gray-500 dark:text-gray-400">
-                {{ pages.length }} {{ pages.length === 1 ? 'page' : 'pages' }}
+                {{ pages.length }} {{ pages.length === 1 ? 'lesson' : 'lessons' }}
               </div>
             </div>
           </div>
@@ -172,14 +185,23 @@
             :class="[
               'flex items-center gap-2.5 p-2.5 rounded-lg cursor-pointer transition-colors border-l-4',
               currentPage?.id === page.id
-                ? 'bg-indigo-50 dark:bg-indigo-900/40 border-indigo-600'
+                ? 'bg-indigo-50 dark:bg-indigo-900/40 border-indigo-600 shadow-sm'
                 : 'hover:bg-gray-100 dark:hover:bg-gray-700 border-transparent'
             ]"
           >
             <span
+              v-if="isVisited(page.id) && currentPage?.id !== page.id"
+              class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold bg-emerald-500 text-white"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
+              </svg>
+            </span>
+            <span
+              v-else
               class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold"
               :class="currentPage?.id === page.id
-                ? 'bg-indigo-600 text-white'
+                ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white'
                 : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300'"
             >
               {{ page.order_number }}
@@ -197,18 +219,18 @@
         <div class="p-4 border-t border-gray-200 dark:border-gray-700">
           <div class="mb-2">
             <div class="flex justify-between text-sm mb-1">
-              <span class="text-gray-600 dark:text-gray-400">Progress</span>
+              <span class="text-gray-600 dark:text-gray-400">Your progress</span>
               <span class="text-gray-900 dark:text-white font-medium">{{ progressPercentage }}%</span>
             </div>
             <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
               <div
-                class="bg-gradient-to-r from-indigo-500 to-purple-500 h-2 rounded-full transition-all"
+                class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-2 rounded-full transition-all"
                 :style="{ width: `${progressPercentage}%` }"
               ></div>
             </div>
           </div>
           <div class="text-xs text-gray-500 dark:text-gray-400">
-            Page {{ currentPage?.order_number || 0 }} of {{ pages.length }}
+            {{ visitedCount }} of {{ pages.length }} pages read
           </div>
         </div>
       </div>
@@ -218,14 +240,14 @@
         <div class="w-full max-w-4xl xl:max-w-6xl 2xl:max-w-[1600px] mx-auto p-4 sm:p-8 2xl:p-12">
           <!-- Page Content -->
           <div v-if="currentPage" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden mb-6">
-            <div class="h-1.5 bg-gradient-to-r from-indigo-500 to-purple-500"></div>
+            <div class="h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
             <div class="p-5 sm:p-8">
               <div class="mb-6">
                 <h2 v-if="hasMeaningfulTitle(currentPage.title)" class="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-3">
                   {{ currentPage.title }}
                 </h2>
                 <div class="flex flex-wrap items-center gap-3 text-xs sm:text-sm">
-                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-medium">
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold shadow-sm">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                     </svg>
@@ -306,14 +328,70 @@
             </button>
 
             <button
+              v-if="!(isStudentMode && !hasNextPage)"
               @click="nextPage"
               :disabled="!hasNextPage"
-              class="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              class="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2 text-sm sm:text-base font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg shadow-sm hover:shadow-md hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-sm transition-all"
             >
               <span>Next</span>
               <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
               </svg>
+            </button>
+            <button
+              v-else-if="isStudentMode"
+              @click="showCompletion = true"
+              class="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2 text-sm sm:text-base font-semibold bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-lg shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
+            >
+              <span>Finish Topic</span>
+              <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Completion celebration - shown once the student reaches the end of a topic. -->
+    <div
+      v-if="isStudentMode && showCompletion && topic"
+      class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+    >
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden text-center">
+        <div class="bg-gradient-to-br from-emerald-500 via-teal-500 to-indigo-600 px-6 py-8">
+          <div class="w-16 h-16 mx-auto mb-3 rounded-full bg-white/20 flex items-center justify-center">
+            <svg class="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
+            </svg>
+          </div>
+          <h2 class="text-xl font-bold text-white">Topic Complete!</h2>
+          <p class="text-emerald-50 text-sm mt-1">{{ topic.title }}</p>
+        </div>
+        <div class="p-6 space-y-4">
+          <div class="flex items-center justify-center gap-6 text-sm">
+            <div>
+              <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ pages.length }}</div>
+              <div class="text-xs text-gray-500 dark:text-gray-400">{{ pages.length === 1 ? 'page' : 'pages' }} read</div>
+            </div>
+            <div class="w-px h-8 bg-gray-200 dark:bg-gray-700"></div>
+            <div>
+              <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ totalReadingTime }}</div>
+              <div class="text-xs text-gray-500 dark:text-gray-400">min invested</div>
+            </div>
+          </div>
+          <div class="flex gap-3 pt-2">
+            <button
+              @click="showCompletion = false"
+              class="flex-1 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            >
+              Review Again
+            </button>
+            <button
+              @click="goBack"
+              class="flex-1 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl hover:shadow-md transition-all"
+            >
+              Back to eNotes
             </button>
           </div>
         </div>
@@ -428,7 +506,13 @@ const currentPage = ref<ENotePage | null>(null)
 const isFullscreen = ref(false)
 const showToc = ref(false)
 const showIntro = ref(false)
+const showCompletion = ref(false)
 const contentRef = ref<HTMLElement | null>(null)
+
+// Which pages the reader has actually opened this session - drives the ToC checkmarks and a
+// progress bar that reflects real coverage rather than just "how far is the current page."
+const visitedPageIds = ref(new Set<number>())
+const isVisited = (pageId: number) => visitedPageIds.value.has(pageId)
 
 const hasPreviousPage = computed(() => {
   if (!currentPage.value) return false
@@ -442,11 +526,14 @@ const hasNextPage = computed(() => {
   return currentIndex < pages.value.length - 1
 })
 
+const visitedCount = computed(() => pages.value.filter(p => visitedPageIds.value.has(p.id)).length)
+
 const progressPercentage = computed(() => {
-  if (!currentPage.value || pages.value.length === 0) return 0
-  const currentIndex = pages.value.findIndex(p => p.id === currentPage.value!.id)
-  return Math.round(((currentIndex + 1) / pages.value.length) * 100)
+  if (pages.value.length === 0) return 0
+  return Math.round((visitedCount.value / pages.value.length) * 100)
 })
+
+const totalReadingTime = computed(() => pages.value.reduce((sum, p) => sum + getReadingTime(p.content), 0))
 
 // Student/staff-preview responses carry a single resolved narration_audio_path per page (for
 // the topic's currently selected voice); the teacher's own authoring response instead carries
@@ -664,6 +751,10 @@ const hideBrokenImages = (e: Event) => {
     e.target.style.display = 'none'
   }
 }
+
+watch(currentPage, (page) => {
+  if (page) visitedPageIds.value.add(page.id)
+}, { immediate: true })
 
 watch(contentRef, (el, _old, onCleanup) => {
   if (!el) return
