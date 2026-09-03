@@ -2,7 +2,7 @@
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
     <!-- Sidebar -->
     <aside
-      class="overflow-hidden fixed left-0 top-0 h-full w-64 bg-gradient-to-b from-blue-900 via-blue-950 to-slate-950 dark:bg-gradient-to-b dark:from-slate-900 dark:to-slate-950 backdrop-blur-2xl shadow-2xl transform transition-transform duration-300 z-50 flex flex-col border-r border-blue-800/50 dark:border-white/5"
+      class="overflow-hidden fixed left-0 top-2 bottom-0 w-64 rounded-tr-2xl bg-gradient-to-b from-blue-900 via-blue-950 to-slate-950 dark:bg-gradient-to-b dark:from-slate-900 dark:to-slate-950 backdrop-blur-2xl shadow-2xl transform transition-transform duration-300 z-50 flex flex-col border-r border-blue-800/50 dark:border-white/5"
       :class="{ '-translate-x-full': !sidebarOpen, 'translate-x-0': sidebarOpen }"
     >
       <!-- Soft blurred glow blobs behind the frosted panel so it reads as translucent and

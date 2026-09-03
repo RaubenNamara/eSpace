@@ -140,7 +140,7 @@
 
       <!-- Left Sidebar - Navigation -->
       <div
-        class="fixed lg:static inset-y-0 left-0 z-40 w-72 max-w-[85vw] bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col transform transition-transform duration-300 lg:translate-x-0"
+        class="fixed lg:static inset-y-0 left-0 z-40 w-56 max-w-[75vw] mt-2 lg:mt-3 lg:mb-3 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 rounded-tr-2xl overflow-hidden flex flex-col transform transition-transform duration-300 lg:translate-x-0"
         :class="showToc ? 'translate-x-0' : '-translate-x-full'"
       >
         <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
