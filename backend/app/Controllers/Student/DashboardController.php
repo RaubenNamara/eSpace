@@ -162,42 +162,69 @@ class DashboardController extends Controller
         $liveNow = array_values(array_filter($liveClassRows, fn($c) => $c['status'] === 'started'));
         $upcomingLive = array_slice(array_values(array_filter($liveClassRows, fn($c) => $c['status'] === 'scheduled')), 0, 3);
 
-        // Recent library resources
+        // Recent library resources - visibility rule mirrors Student\LibraryController::visibilityClause()
+        // so this dashboard widget never counts/shows a resource the eLibrary page itself would hide.
+        $libraryVisibility = "lb.status = 'published' AND lb.deleted_at IS NULL AND EXISTS (
+                 SELECT 1 FROM student_department_enrollments sde
+                 LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
+                 WHERE sde.student_id = :student_id
+                   AND sde.department_id = lb.department_id
+                   AND sde.deleted_at IS NULL
+                   AND sde.status = 'active'
+                   AND (
+                     (lb.class_id IS NULL AND lb.class_group_name IS NULL)
+                     OR sde.class_id = lb.class_id
+                     OR (lb.class_group_name IS NOT NULL AND sde_c.name = lb.class_group_name)
+                   )
+                   AND lb.published_at <= COALESCE(sde.end_date, NOW())
+             ) AND NOT EXISTS (
+                 SELECT 1 FROM student_teacher_enrollments ste
+                 WHERE ste.student_id = :student_id_te
+                   AND ste.teacher_id = lb.uploaded_by
+                   AND ste.department_id = lb.department_id
+                   AND ste.status = 'withdrawn'
+             )";
+
         $stmt = $db->prepare(
             "SELECT lb.id, lb.title, lb.file_size, lb.published_at, s.name as subject_name
              FROM library_books lb
              LEFT JOIN subjects s ON lb.subject_id = s.id
-             WHERE lb.status = 'published' AND lb.deleted_at IS NULL AND EXISTS (
-                 SELECT 1 FROM student_department_enrollments sde
-                 WHERE sde.student_id = :student_id AND sde.department_id = lb.department_id AND sde.deleted_at IS NULL
-                   AND (lb.class_id IS NULL OR sde.class_id = lb.class_id)
-             )
+             WHERE {$libraryVisibility}
              ORDER BY lb.published_at DESC LIMIT 5"
         );
-        $stmt->execute(['student_id' => $studentId]);
+        $stmt->execute(['student_id' => $studentId, 'student_id_te' => $studentId]);
         $recentLibrary = $stmt->fetchAll();
 
         // Total counts for library/item bank (for stat tiles)
-        $stmt = $db->prepare(
-            "SELECT COUNT(*) as cnt FROM library_books lb
-             WHERE lb.status = 'published' AND lb.deleted_at IS NULL AND EXISTS (
-                 SELECT 1 FROM student_department_enrollments sde
-                 WHERE sde.student_id = :student_id AND sde.department_id = lb.department_id AND sde.deleted_at IS NULL
-                   AND (lb.class_id IS NULL OR sde.class_id = lb.class_id)
-             )"
-        );
-        $stmt->execute(['student_id' => $studentId]);
+        $stmt = $db->prepare("SELECT COUNT(*) as cnt FROM library_books lb WHERE {$libraryVisibility}");
+        $stmt->execute(['student_id' => $studentId, 'student_id_te' => $studentId]);
         $libraryCount = (int) $stmt->fetch()['cnt'];
 
+        // Item bank visibility rule mirrors Student\ItemBankController::visibilityClause()
         $stmt = $db->prepare(
             "SELECT COUNT(*) as cnt FROM item_bank_questions q
              WHERE q.status = 'published' AND q.deleted_at IS NULL AND EXISTS (
                  SELECT 1 FROM student_department_enrollments sde
-                 WHERE sde.student_id = :student_id AND sde.department_id = q.department_id AND sde.deleted_at IS NULL
-                   AND (q.class_id IS NULL OR sde.class_id = q.class_id)
+                 LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
+                 WHERE sde.student_id = :student_id
+                   AND sde.department_id = q.department_id
+                   AND sde.deleted_at IS NULL
+                   AND sde.status = 'active'
+                   AND (
+                     (q.class_id IS NULL AND q.class_group_name IS NULL)
+                     OR sde.class_id = q.class_id
+                     OR (q.class_group_name IS NOT NULL AND sde_c.name = q.class_group_name)
+                   )
+                   AND q.published_at <= COALESCE(sde.end_date, NOW())
+             ) AND NOT EXISTS (
+                 SELECT 1 FROM student_teacher_enrollments ste
+                 WHERE ste.student_id = :student_id_te
+                   AND ste.teacher_id = q.created_by
+                   AND ste.department_id = q.department_id
+                   AND ste.status = 'withdrawn'
              )"
         );
-        $stmt->execute(['student_id' => $studentId]);
+        $stmt->execute(['student_id' => $studentId, 'student_id_te' => $studentId]);
         $itemBankCount = (int) $stmt->fetch()['cnt'];
 
         // Unread chat messages
