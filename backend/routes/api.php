@@ -546,6 +546,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         // Library
         Router::get('/library', 'eSpace\App\Controllers\Admin\LibraryController@index');
         Router::put('/library/{id}', 'eSpace\App\Controllers\Admin\LibraryController@update');
+        Router::put('/library/{id}/class', 'eSpace\App\Controllers\Admin\LibraryController@assignClass');
         Router::delete('/library/{id}', 'eSpace\App\Controllers\Admin\LibraryController@delete');
 
         // Item Bank

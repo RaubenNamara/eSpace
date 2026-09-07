@@ -79,9 +79,9 @@ class LibraryController extends Controller
 
         $sql = "SELECT lb.id, lb.title, lb.description, lb.file_path, lb.file_type, lb.file_size,
                        lb.status, lb.published_at, lb.created_at, lb.updated_at,
-                       lb.subject_id, lb.class_id, lb.department_id, lb.uploaded_by,
+                       lb.subject_id, lb.class_id, lb.class_group_name, lb.department_id, lb.uploaded_by,
                        s.name as subject_name, s.code as subject_code,
-                       c.name as class_name, c.level as class_level, c.stream_name as class_stream_name,
+                       COALESCE(c.name, lb.class_group_name) as class_name, c.level as class_level, c.stream_name as class_stream_name,
                        d.name as department_name,
                        t.first_name as teacher_first_name, t.last_name as teacher_last_name
                 FROM library_books lb
@@ -170,6 +170,71 @@ class LibraryController extends Controller
         } catch (\PDOException $e) {
             error_log('Failed to update library book status: ' . $e->getMessage());
             $this->error('Failed to update library book status', 500);
+        }
+    }
+
+    /**
+     * Assign (or re-assign) which class a book belongs to - moderation action, works across any
+     * uploader. Pass class_id for a single stream (e.g. "S.1 A"), or class_group_name for every
+     * stream of a class level at once (e.g. "S.1" -> all of S.1 A/B/C/...). Exactly one of the
+     * two should be set; pass both empty/null to unassign. Mirrors the class_id/class_group_name
+     * pair every content module (eNotes, Videos, Item Bank, Assignments...) already uses -
+     * see Controller::resolveClassTarget() for the teacher-side equivalent (which is
+     * department-scoped; this admin action deliberately is not).
+     * PUT /admin/library/{id}/class
+     */
+    public function assignClass(): void
+    {
+        if (!$this->isAdmin()) {
+            $this->forbidden();
+            return;
+        }
+
+        $id = (int) $this->routeParam('id');
+        $data = $this->input();
+
+        $stmt = $this->db->prepare("SELECT id FROM library_books WHERE id = :id AND deleted_at IS NULL");
+        $stmt->execute(['id' => $id]);
+        if (!$stmt->fetch()) {
+            $this->notFound('Book not found');
+            return;
+        }
+
+        $classGroupName = trim((string) ($data['class_group_name'] ?? ''));
+        $classId = isset($data['class_id']) && $data['class_id'] !== '' ? (int) $data['class_id'] : null;
+
+        if ($classGroupName !== '') {
+            $stmt = $this->db->prepare("SELECT 1 FROM classes WHERE name = :name AND deleted_at IS NULL LIMIT 1");
+            $stmt->execute(['name' => $classGroupName]);
+            if (!$stmt->fetch()) {
+                $this->validationError(['class_group_name' => 'No such class level']);
+                return;
+            }
+            $classId = null;
+        } elseif ($classId !== null) {
+            $stmt = $this->db->prepare("SELECT id FROM classes WHERE id = :id AND deleted_at IS NULL");
+            $stmt->execute(['id' => $classId]);
+            if (!$stmt->fetch()) {
+                $this->validationError(['class_id' => 'Class not found']);
+                return;
+            }
+            $classGroupName = '';
+        }
+
+        try {
+            $stmt = $this->db->prepare(
+                "UPDATE library_books SET class_id = :class_id, class_group_name = :class_group_name, updated_at = NOW() WHERE id = :id"
+            );
+            $stmt->execute([
+                'class_id' => $classId,
+                'class_group_name' => $classGroupName !== '' ? $classGroupName : null,
+                'id' => $id,
+            ]);
+
+            $this->success(['class_id' => $classId, 'class_group_name' => $classGroupName !== '' ? $classGroupName : null], 'Book class updated successfully');
+        } catch (\PDOException $e) {
+            error_log('Failed to assign library book class: ' . $e->getMessage());
+            $this->error('Failed to assign book class', 500);
         }
     }
 
