@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
-    <div class="px-4 sm:px-6 lg:px-8 py-8">
+    <div class="px-4 sm:px-6 lg:px-8 py-8 2xl:max-w-[110rem] 2xl:mx-auto">
       <!-- Header -->
       <div class="mb-8">
         <h1 class="text-3xl font-bold text-gray-900 dark:text-white">eLibrary</h1>
@@ -143,7 +143,7 @@
                     <span class="ml-1 font-normal text-gray-400 dark:text-gray-500">({{ subject.books.length }})</span>
                   </h3>
 
-                  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
                     <div
                       v-for="book in subject.books"
                       :key="book.id"
