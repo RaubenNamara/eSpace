@@ -562,6 +562,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/enotes', 'eSpace\App\Controllers\Admin\ENoteController@index');
         Router::get('/enotes/{id}', 'eSpace\App\Controllers\Admin\ENoteController@show');
         Router::put('/enotes/{id}', 'eSpace\App\Controllers\Admin\ENoteController@update');
+        Router::put('/enotes/{id}/class', 'eSpace\App\Controllers\Admin\ENoteController@assignClass');
         Router::delete('/enotes/{id}', 'eSpace\App\Controllers\Admin\ENoteController@delete');
         
         // Teachers

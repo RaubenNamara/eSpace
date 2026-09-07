@@ -220,6 +220,18 @@
                         <span class="ml-auto text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">{{ topic.total_pages }} page{{ topic.total_pages === 1 ? '' : 's' }}</span>
                       </div>
 
+                      <div class="mb-4">
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Class</label>
+                        <select
+                          :value="topic.class_id ?? ''"
+                          @change="assignClass(topic, ($event.target as HTMLSelectElement).value)"
+                          class="w-full text-xs px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                        >
+                          <option value="">Unassigned</option>
+                          <option v-for="cls in classOptions" :key="cls.id" :value="cls.id">{{ cls.label }}</option>
+                        </select>
+                      </div>
+
                       <div class="flex items-center justify-between gap-2">
                         <select
                           :value="topic.status"
@@ -286,8 +298,16 @@ interface Department {
   name: string
 }
 
+interface ClassRow {
+  id: number
+  name: string
+  level: string
+  stream_name: string
+}
+
 const topics = ref<ENoteTopic[]>([])
 const departments = ref<Department[]>([])
+const classes = ref<ClassRow[]>([])
 const stats = ref({ total: 0, draft: 0, published: 0, archived: 0 })
 const loading = ref(false)
 const search = ref('')
@@ -295,6 +315,14 @@ const statusFilter = ref('')
 const departmentFilter = ref('')
 const searchTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
 const viewingTopic = ref<ENoteTopic | null>(null)
+
+// Options for the per-topic "assign to class" dropdown, sorted the same way class streams
+// are grouped elsewhere on this page.
+const classOptions = computed(() => {
+  return classes.value
+    .map(c => ({ id: c.id, label: `${c.name} - ${c.stream_name} (${c.level})` }))
+    .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }))
+})
 
 // Who has published the most eNotes, broken down by class - answers "which teacher has put up
 // more topics, and in which class" directly from whatever's currently loaded (respects filters).
@@ -446,6 +474,21 @@ const fetchDepartments = async () => {
   }
 }
 
+const fetchClasses = async () => {
+  try {
+    const response = await apiService.get('/admin/classes')
+    if (response.data.success) {
+      classes.value = response.data.data || []
+    }
+  } catch (error) {
+    console.error('Failed to fetch classes:', error)
+  }
+}
+
+// Classes start collapsed by default (only on the very first load, so a group the admin has
+// deliberately opened doesn't snap shut again after a status/class change refetches the list).
+let collapseInitialized = false
+
 const fetchTopics = async () => {
   loading.value = true
   try {
@@ -459,6 +502,11 @@ const fetchTopics = async () => {
     if (response.data.success) {
       topics.value = response.data.data.topics || []
       stats.value = response.data.data.stats
+
+      if (!collapseInitialized) {
+        collapsedClasses.value = new Set(groupedTopics.value.map(g => g.key))
+        collapseInitialized = true
+      }
     }
   } catch (error) {
     console.error('Failed to fetch eNotes topics:', error)
@@ -481,6 +529,17 @@ const changeStatus = async (topic: ENoteTopic, status: string) => {
   } catch (error: any) {
     console.error('Failed to update topic status:', error)
     alert(error.response?.data?.message || 'Failed to update topic status')
+  }
+}
+
+const assignClass = async (topic: ENoteTopic, value: string) => {
+  try {
+    const classId = value === '' ? null : Number(value)
+    await apiService.put(`/admin/enotes/${topic.id}/class`, { class_id: classId })
+    await fetchTopics()
+  } catch (error: any) {
+    console.error('Failed to assign topic class:', error)
+    alert(error.response?.data?.message || 'Failed to assign topic class')
   }
 }
 
@@ -520,6 +579,7 @@ const deleteTopic = async (topic: ENoteTopic) => {
 
 onMounted(() => {
   fetchDepartments()
+  fetchClasses()
   fetchTopics()
 })
 </script>
