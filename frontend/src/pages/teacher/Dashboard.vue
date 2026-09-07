@@ -2,7 +2,7 @@
   <div>
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
       <div class="flex items-center gap-3">
-        <div class="hidden sm:flex w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 items-center justify-center shadow-lg shadow-indigo-500/30 flex-shrink-0">
+        <div class="hidden sm:flex w-11 h-11 rounded-xl bg-indigo-600 items-center justify-center shadow-lg shadow-indigo-500/30 flex-shrink-0">
           <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
           </svg>
@@ -12,7 +12,7 @@
       <div class="flex flex-wrap gap-3">
         <RouterLink
           to="/teacher/preview"
-          class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center"
+          class="btn-primary flex items-center"
           title="See exactly what your students see across classes, eLibrary, Item Bank, Live Classes and assignments"
         >
           <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -23,7 +23,7 @@
         </RouterLink>
         <button
           @click="openViewEnrolledModal"
-          class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
+          class="btn-success flex items-center"
         >
           <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -35,7 +35,7 @@
     </div>
 
     <!-- Department Info -->
-    <div v-if="analytics.department" class="card mb-6 bg-gradient-to-r from-indigo-500 to-purple-600 text-white">
+    <div v-if="analytics.department" class="card mb-6 bg-indigo-600 text-white">
       <div class="flex items-center justify-between">
         <div>
           <p class="text-indigo-100 text-sm font-medium">Department</p>
@@ -65,57 +65,109 @@
       </div>
     </div>
 
+    <!-- Quick Access - the fast path into a teacher's most-used modules, front and centre so
+         there's no need to hunt through the sidebar for them. -->
+    <div class="max-w-4xl mx-auto mb-10">
+      <h2 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4 text-center">Quick Access</h2>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-5">
+        <QuickLink to="/teacher/classes" label="My Classes" icon="classes" color="indigo" />
+        <QuickLink to="/teacher/live-classes" label="Live Classes" icon="live" color="red" />
+        <QuickLink to="/teacher/enotes" label="eNotes" icon="notes" color="amber" />
+        <QuickLink to="/teacher/library" label="eLibrary" icon="library" color="emerald" />
+        <QuickLink to="/teacher/itembank" label="Item Bank" icon="itembank" color="teal" />
+        <QuickLink to="/teacher/assignments" label="Assessments" icon="check" color="violet" />
+        <QuickLink to="/teacher/reports" label="Reports" icon="reports" color="pink" />
+        <QuickLink to="/teacher/chat" label="Chats" icon="chat" color="sky" />
+      </div>
+    </div>
+
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
-      <div class="card">
+      <div class="group card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 border border-transparent">
         <div class="flex items-center justify-between">
-          <div>
-            <p class="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">Total Enrollments</p>
-            <p class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{{ analytics.total_enrollments }}</p>
-          </div>
-          <div class="w-10 h-10 sm:w-12 sm:h-12 bg-indigo-100 dark:bg-indigo-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
-            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
-            </svg>
-          </div>
+          <template v-if="loadingAnalytics">
+            <div class="flex-1">
+              <div class="h-3.5 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
+              <div class="h-7 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            </div>
+            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse flex-shrink-0"></div>
+          </template>
+          <template v-else>
+            <div>
+              <p class="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">Total Enrollments</p>
+              <p class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{{ analytics.total_enrollments }}</p>
+            </div>
+            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-indigo-100 dark:bg-indigo-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg class="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+              </svg>
+            </div>
+          </template>
         </div>
       </div>
-      <div class="card">
+      <div class="group card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 border border-transparent">
         <div class="flex items-center justify-between">
-          <div>
-            <p class="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">Recent (7 days)</p>
-            <p class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{{ analytics.recent_enrollments }}</p>
-          </div>
-          <div class="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 dark:bg-green-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
-            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
-            </svg>
-          </div>
+          <template v-if="loadingAnalytics">
+            <div class="flex-1">
+              <div class="h-3.5 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
+              <div class="h-7 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            </div>
+            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse flex-shrink-0"></div>
+          </template>
+          <template v-else>
+            <div>
+              <p class="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">Recent (7 days)</p>
+              <p class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{{ analytics.recent_enrollments }}</p>
+            </div>
+            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 dark:bg-green-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg class="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+              </svg>
+            </div>
+          </template>
         </div>
       </div>
-      <div class="card">
+      <div class="group card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 border border-transparent">
         <div class="flex items-center justify-between">
-          <div>
-            <p class="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">Classes</p>
-            <p class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{{ uniqueClassCount }}</p>
-          </div>
-          <div class="w-10 h-10 sm:w-12 sm:h-12 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
-            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-            </svg>
-          </div>
+          <template v-if="loadingAnalytics">
+            <div class="flex-1">
+              <div class="h-3.5 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
+              <div class="h-7 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            </div>
+            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse flex-shrink-0"></div>
+          </template>
+          <template v-else>
+            <div>
+              <p class="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">Classes</p>
+              <p class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{{ uniqueClassCount }}</p>
+            </div>
+            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg class="w-5 h-5 sm:w-6 sm:h-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+              </svg>
+            </div>
+          </template>
         </div>
       </div>
-      <div class="card">
+      <div class="group card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 border border-transparent">
         <div class="flex items-center justify-between">
-          <div>
-            <p class="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">Class-Streams</p>
-            <p class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{{ analytics.by_class.length }}</p>
-          </div>
-          <div class="w-10 h-10 sm:w-12 sm:h-12 bg-purple-100 dark:bg-purple-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
-            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-            </svg>
-          </div>
+          <template v-if="loadingAnalytics">
+            <div class="flex-1">
+              <div class="h-3.5 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
+              <div class="h-7 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            </div>
+            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse flex-shrink-0"></div>
+          </template>
+          <template v-else>
+            <div>
+              <p class="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">Class-Streams</p>
+              <p class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{{ analytics.by_class.length }}</p>
+            </div>
+            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-purple-100 dark:bg-purple-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg class="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+              </svg>
+            </div>
+          </template>
         </div>
       </div>
     </div>
@@ -171,7 +223,7 @@
     <div v-if="showViewEnrolledModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
       <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
         <!-- Header -->
-        <div class="bg-gradient-to-r from-green-600 to-teal-600 px-6 py-5 flex-shrink-0">
+        <div class="bg-green-600 px-6 py-5 flex-shrink-0">
           <div class="flex items-center justify-between">
             <div>
               <h2 class="text-2xl font-bold text-white">Enrolled Students in {{ analytics.department?.name }}</h2>
@@ -289,7 +341,7 @@
         <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-end flex-shrink-0">
           <button
             @click="showViewEnrolledModal = false"
-            class="px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 font-medium"
+            class="btn-secondary"
           >
             Close
           </button>
@@ -304,6 +356,7 @@ import { ref, onMounted, computed } from 'vue'
 import { Bar, Doughnut } from 'vue-chartjs'
 import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ArcElement } from 'chart.js'
 import apiService from '@/services/api'
+import QuickLink from '@/components/dashboard/QuickLink.vue'
 
 ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ArcElement)
 

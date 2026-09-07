@@ -9,7 +9,7 @@
         </div>
         <button
           @click="showCreateModal = true"
-          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors self-start sm:self-auto flex-shrink-0"
+          class="btn-primary self-start sm:self-auto flex-shrink-0"
         >
           Add Student
         </button>
@@ -17,21 +17,45 @@
 
       <!-- Statistics Cards -->
       <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <div class="text-sm text-gray-500 dark:text-gray-400">Total Students</div>
-          <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.total }}</div>
+        <div class="group bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700">
+          <template v-if="loading">
+            <div class="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
+            <div class="h-8 w-14 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+          </template>
+          <template v-else>
+            <div class="text-sm text-gray-500 dark:text-gray-400">Total Students</div>
+            <div class="text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{{ stats.total }}</div>
+          </template>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <div class="text-sm text-gray-500 dark:text-gray-400">Male</div>
-          <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ stats.male }}</div>
+        <div class="group bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700">
+          <template v-if="loading">
+            <div class="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
+            <div class="h-8 w-14 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+          </template>
+          <template v-else>
+            <div class="text-sm text-gray-500 dark:text-gray-400">Male</div>
+            <div class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{{ stats.male }}</div>
+          </template>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <div class="text-sm text-gray-500 dark:text-gray-400">Female</div>
-          <div class="text-2xl font-bold text-pink-600 dark:text-pink-400">{{ stats.female }}</div>
+        <div class="group bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700">
+          <template v-if="loading">
+            <div class="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
+            <div class="h-8 w-14 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+          </template>
+          <template v-else>
+            <div class="text-sm text-gray-500 dark:text-gray-400">Female</div>
+            <div class="text-2xl font-bold text-pink-600 dark:text-pink-400">{{ stats.female }}</div>
+          </template>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <div class="text-sm text-gray-500 dark:text-gray-400">Other</div>
-          <div class="text-2xl font-bold text-gray-500 dark:text-gray-400">{{ stats.other }}</div>
+        <div class="group bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700">
+          <template v-if="loading">
+            <div class="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
+            <div class="h-8 w-14 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+          </template>
+          <template v-else>
+            <div class="text-sm text-gray-500 dark:text-gray-400">Other</div>
+            <div class="text-2xl font-bold text-gray-500 dark:text-gray-400">{{ stats.other }}</div>
+          </template>
         </div>
       </div>
 
@@ -103,7 +127,7 @@
           <p class="mt-2 text-gray-500 dark:text-gray-400">Get started by adding your first student.</p>
           <button
             @click="showCreateModal = true"
-            class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            class="btn-primary mt-4"
           >
             Add Student
           </button>
@@ -112,7 +136,7 @@
         <!-- Students Table -->
         <div v-else class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700">
-          <thead class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+          <thead class="bg-gray-50 dark:bg-gray-900">
             <tr>
               <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Name</th>
               <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Reg No</th>
@@ -273,14 +297,14 @@
               <button
                 type="button"
                 @click="showCreateModal = false"
-                class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                class="btn-secondary flex-1"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 :disabled="loading"
-                class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                class="btn-primary flex-1"
               >
                 {{ loading ? 'Creating...' : 'Add Student' }}
               </button>
@@ -362,14 +386,14 @@
               <button
                 type="button"
                 @click="showEditModal = false"
-                class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                class="btn-secondary flex-1"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 :disabled="loading"
-                class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                class="btn-primary flex-1"
               >
                 {{ loading ? 'Updating...' : 'Update Student' }}
               </button>

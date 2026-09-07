@@ -3,7 +3,7 @@
     <button
       v-if="status === 'idle'"
       @click="fetchWalkthrough(false)"
-      class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white text-sm font-medium hover:from-purple-700 hover:to-fuchsia-700 transition-colors shadow-sm"
+      class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-700 transition-colors shadow-sm"
     >
       <span>🧑‍🏫</span>
       <span>AI Tutor – Explain</span>

@@ -7,7 +7,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
           </svg>
         </button>
-        <div class="hidden sm:flex w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 items-center justify-center shadow-lg shadow-indigo-500/30 flex-shrink-0">
+        <div class="hidden sm:flex w-11 h-11 rounded-xl bg-indigo-600 items-center justify-center shadow-lg shadow-indigo-500/30 flex-shrink-0">
           <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
           </svg>
@@ -21,7 +21,7 @@
       </div>
       <button
         @click="openCreateModal"
-        class="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 font-medium shadow-lg shadow-indigo-500/30 flex items-center justify-center gap-2 flex-shrink-0"
+        class="btn-primary w-full sm:w-auto flex items-center justify-center gap-2 flex-shrink-0"
       >
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
@@ -90,7 +90,7 @@
     <!-- Create/Edit Modal -->
     <div v-if="showFormModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl md:max-w-3xl max-h-[90vh] flex flex-col">
-        <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-5 sm:px-6 py-5 flex-shrink-0 rounded-t-2xl">
+        <div class="bg-indigo-600 px-5 sm:px-6 py-5 flex-shrink-0 rounded-t-2xl">
           <div class="flex items-center justify-between gap-4">
             <div class="min-w-0">
               <h3 class="text-xl sm:text-2xl font-bold text-white truncate">{{ editingConstruct ? 'Edit Construct' : 'New Construct' }}</h3>
@@ -215,7 +215,7 @@
             <button
               type="submit"
               :disabled="saving || form.topic_ids.length === 0"
-              class="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 font-medium shadow-lg shadow-indigo-500/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+              class="btn-primary w-full sm:w-auto"
             >
               {{ saving ? 'Saving...' : (editingConstruct ? 'Update Construct' : 'Save Construct') }}
             </button>
@@ -227,7 +227,7 @@
     <!-- Read-only Detail View -->
     <div v-if="detail" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" @click.self="detail = null">
       <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl md:max-w-3xl max-h-[90vh] flex flex-col">
-        <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-5 sm:px-6 py-5 flex-shrink-0 rounded-t-2xl">
+        <div class="bg-indigo-600 px-5 sm:px-6 py-5 flex-shrink-0 rounded-t-2xl">
           <div class="flex items-center justify-between gap-4">
             <div class="min-w-0">
               <h3 class="text-xl sm:text-2xl font-bold text-white truncate">{{ detail.name }}</h3>

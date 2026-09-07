@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
-    <div class="px-4 sm:px-6 lg:px-8 py-8">
+    <div class="px-4 sm:px-6 lg:px-8 py-8 2xl:max-w-[110rem] 2xl:mx-auto">
       <!-- Header -->
       <div class="mb-8">
         <h1 class="text-3xl font-bold text-gray-900 dark:text-white">eLibrary</h1>
@@ -143,7 +143,7 @@
                     <span class="ml-1 font-normal text-gray-400 dark:text-gray-500">({{ subject.books.length }})</span>
                   </h3>
 
-                  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
                     <div
                       v-for="book in subject.books"
                       :key="book.id"
@@ -152,7 +152,7 @@
                       <div class="p-6">
                         <div class="flex items-start justify-between mb-3 gap-2">
                           <div class="flex items-center gap-2 min-w-0 cursor-pointer" @click="previewBook = book">
-                            <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center flex-shrink-0">
+                            <div class="w-9 h-9 rounded-lg bg-emerald-600 flex items-center justify-center flex-shrink-0">
                               <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                               </svg>
@@ -180,6 +180,23 @@
                             {{ book.department_name }}
                           </span>
                           <span class="ml-auto text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">{{ formatFileSize(book.file_size) }}</span>
+                        </div>
+
+                        <div class="mb-4">
+                          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Class</label>
+                          <select
+                            :value="classFieldValue(book)"
+                            @change="assignClass(book, ($event.target as HTMLSelectElement).value)"
+                            class="w-full text-xs px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                          >
+                            <option value="">No specific class (visible to the whole department)</option>
+                            <optgroup v-for="group in classGroupOptions" :key="group.name" :label="group.name">
+                              <option :value="`group:${group.name}`">{{ group.name }} - All streams</option>
+                              <option v-for="stream in group.streams" :key="stream.id" :value="`stream:${stream.id}`">
+                                {{ group.name }} - {{ stream.stream_name }}
+                              </option>
+                            </optgroup>
+                          </select>
                         </div>
 
                         <div class="flex items-center justify-between gap-2">
@@ -229,8 +246,16 @@ interface Department {
   name: string
 }
 
+interface ClassRow {
+  id: number
+  name: string
+  level: string
+  stream_name: string
+}
+
 const books = ref<LibraryBook[]>([])
 const departments = ref<Department[]>([])
+const classes = ref<ClassRow[]>([])
 const stats = ref({ total: 0, draft: 0, published: 0, archived: 0 })
 const loading = ref(false)
 const search = ref('')
@@ -238,6 +263,29 @@ const statusFilter = ref('')
 const departmentFilter = ref('')
 const searchTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
 const previewBook = ref<LibraryBook | null>(null)
+
+// Options for the per-book "assign to class" dropdown: one "All streams" entry per class level
+// (e.g. "S.1"), plus every individual stream, grouped the same way.
+const classGroupOptions = computed(() => {
+  const groups = new Map<string, { name: string; streams: ClassRow[] }>()
+  for (const cls of classes.value) {
+    if (!groups.has(cls.name)) {
+      groups.set(cls.name, { name: cls.name, streams: [] })
+    }
+    groups.get(cls.name)!.streams.push(cls)
+  }
+  for (const group of groups.values()) {
+    group.streams.sort((a, b) => a.stream_name.localeCompare(b.stream_name, undefined, { numeric: true }))
+  }
+  return Array.from(groups.values()).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
+})
+
+// Maps a book's stored class_id/class_group_name to the dropdown's option value.
+const classFieldValue = (book: LibraryBook): string => {
+  if (book.class_group_name) return `group:${book.class_group_name}`
+  if (book.class_id) return `stream:${book.class_id}`
+  return ''
+}
 
 // Books arranged by class, with each class's streams shown as clickable cards - clicking a
 // stream reveals its books grouped by subject.
@@ -265,16 +313,21 @@ const groupedBooks = computed<ClassGroup[]>(() => {
 
   for (const book of books.value) {
     const classKey = book.class_name || '__unassigned'
-    const classLabel = book.class_name || 'Unassigned class'
+    // No class_id/class_group_name doesn't mean hidden - the visibility rule shared with
+    // students/teachers treats it as visible to every class in the department.
+    const classLabel = book.class_name || 'No specific class (whole department)'
 
     if (!classMap.has(classKey)) {
       classMap.set(classKey, { label: classLabel, streamMap: new Map() })
     }
     const classEntry = classMap.get(classKey)!
 
-    const streamKey = book.class_stream_name || '__none'
+    // A book assigned to "all streams" of a class level (class_group_name set, class_id null)
+    // has no single stream - labeled distinctly from a genuinely unassigned stream.
+    const streamKey = book.class_stream_name || (book.class_group_name ? '__all' : '__none')
+    const streamLabel = book.class_stream_name || (book.class_group_name ? 'All streams' : 'No stream')
     if (!classEntry.streamMap.has(streamKey)) {
-      classEntry.streamMap.set(streamKey, { key: streamKey, label: book.class_stream_name || 'No stream', books: [] })
+      classEntry.streamMap.set(streamKey, { key: streamKey, label: streamLabel, books: [] })
     }
     classEntry.streamMap.get(streamKey)!.books.push(book)
   }
@@ -359,6 +412,17 @@ const fetchDepartments = async () => {
   }
 }
 
+const fetchClasses = async () => {
+  try {
+    const response = await apiService.get('/admin/classes')
+    if (response.data.success) {
+      classes.value = response.data.data || []
+    }
+  } catch (error) {
+    console.error('Failed to fetch classes:', error)
+  }
+}
+
 const fetchBooks = async () => {
   loading.value = true
   try {
@@ -397,6 +461,22 @@ const changeStatus = async (book: LibraryBook, status: string) => {
   }
 }
 
+const assignClass = async (book: LibraryBook, value: string) => {
+  try {
+    const payload = value.startsWith('group:')
+      ? { class_group_name: value.slice('group:'.length), class_id: null }
+      : value.startsWith('stream:')
+        ? { class_id: Number(value.slice('stream:'.length)), class_group_name: null }
+        : { class_id: null, class_group_name: null }
+
+    await apiService.put(`/admin/library/${book.id}/class`, payload)
+    await fetchBooks()
+  } catch (error: any) {
+    console.error('Failed to assign book class:', error)
+    alert(error.response?.data?.message || 'Failed to assign book class')
+  }
+}
+
 const deleteBook = async (book: LibraryBook) => {
   if (!confirm(`Are you sure you want to delete "${book.title}"? This action cannot be undone.`)) return
 
@@ -411,6 +491,7 @@ const deleteBook = async (book: LibraryBook) => {
 
 onMounted(() => {
   fetchDepartments()
+  fetchClasses()
   fetchBooks()
 })
 </script>

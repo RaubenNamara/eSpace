@@ -9,7 +9,7 @@
         </div>
         <button
           @click="showCreateModal = true"
-          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          class="btn-primary"
         >
           Create Subject
         </button>
@@ -58,7 +58,7 @@
           <p class="mt-2 text-gray-500 dark:text-gray-400">Get started by creating your first subject.</p>
           <button
             @click="showCreateModal = true"
-            class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            class="mt-4 btn-primary"
           >
             Create Subject
           </button>
@@ -67,7 +67,7 @@
         <!-- Subjects Table -->
         <div v-else class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700">
-          <thead class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+          <thead class="bg-gray-50 dark:bg-gray-900">
             <tr>
               <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Name</th>
               <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Department</th>
@@ -159,7 +159,7 @@
               <button
                 type="submit"
                 :disabled="loading"
-                class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                class="flex-1 btn-primary"
               >
                 {{ loading ? 'Creating...' : 'Create Subject' }}
               </button>
@@ -209,7 +209,7 @@
               <button
                 type="submit"
                 :disabled="loading"
-                class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                class="flex-1 btn-primary"
               >
                 {{ loading ? 'Updating...' : 'Update Subject' }}
               </button>

@@ -204,7 +204,7 @@
     <!-- ============================ AWARD DETAIL MODAL ============================ -->
     <div v-if="activeAward" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4" @click.self="activeAward = null">
       <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto">
-        <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 flex items-center justify-between sticky top-0">
+        <div class="bg-indigo-600 px-6 py-4 flex items-center justify-between sticky top-0">
           <h2 class="text-lg font-bold text-white">{{ BADGE_ICONS[activeAward.badge_type] }} {{ activeAward.award_title }}</h2>
           <button @click="activeAward = null" class="text-white/80 hover:text-white">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>

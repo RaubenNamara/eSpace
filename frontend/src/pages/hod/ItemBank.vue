@@ -1,7 +1,7 @@
 <template>
   <div>
     <!-- Hero -->
-    <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-fuchsia-600 shadow-lg shadow-indigo-500/20 p-4 sm:p-5 mb-6">
+    <div class="relative overflow-hidden rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-500/20 p-4 sm:p-5 mb-6">
       <div class="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-white/10"></div>
       <div class="absolute -right-3 bottom-0 w-24 h-24 rounded-full bg-white/10"></div>
       <div class="relative flex items-center gap-3 mb-3">
@@ -90,7 +90,7 @@
         <div class="p-5">
           <div class="flex items-start justify-between mb-3 gap-2">
             <div class="flex items-center gap-2 min-w-0 cursor-pointer" @click="previewResource = resource">
-              <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center flex-shrink-0">
+              <div class="w-9 h-9 rounded-lg bg-orange-500 flex items-center justify-center flex-shrink-0">
                 <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                 </svg>

@@ -2,7 +2,7 @@
   <div>
     <!-- Header -->
     <div class="flex items-center gap-4 mb-6 flex-wrap">
-      <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-rose-500 via-red-500 to-orange-500 flex items-center justify-center shadow-sm flex-shrink-0">
+      <div class="w-12 h-12 rounded-xl bg-red-600 flex items-center justify-center shadow-sm flex-shrink-0">
         <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
         </svg>
@@ -24,26 +24,56 @@
 
     <!-- Dashboard summary -->
     <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-      <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 relative overflow-hidden">
+      <div class="group bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 relative overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700">
         <div v-if="summary.live_now > 0" class="absolute top-3 right-3 w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
-        <p class="text-sm text-gray-500 dark:text-gray-400">Live Now</p>
-        <p class="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">{{ summary.live_now }}</p>
+        <template v-if="loading">
+          <div class="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
+          <div class="h-8 w-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+        </template>
+        <template v-else>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Live Now</p>
+          <p class="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">{{ summary.live_now }}</p>
+        </template>
       </div>
-      <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700">
-        <p class="text-sm text-gray-500 dark:text-gray-400">Upcoming Today</p>
-        <p class="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">{{ summary.upcoming_today }}</p>
+      <div class="group bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700">
+        <template v-if="loading">
+          <div class="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
+          <div class="h-8 w-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+        </template>
+        <template v-else>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Upcoming Today</p>
+          <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">{{ summary.upcoming_today }}</p>
+        </template>
       </div>
-      <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700">
-        <p class="text-sm text-gray-500 dark:text-gray-400">Completed Today</p>
-        <p class="text-2xl font-bold text-gray-600 dark:text-gray-400 mt-1">{{ summary.completed_today }}</p>
+      <div class="group bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700">
+        <template v-if="loading">
+          <div class="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
+          <div class="h-8 w-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+        </template>
+        <template v-else>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Completed Today</p>
+          <p class="text-2xl font-bold text-gray-600 dark:text-gray-400 mt-1">{{ summary.completed_today }}</p>
+        </template>
       </div>
-      <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700">
-        <p class="text-sm text-gray-500 dark:text-gray-400">Students Online</p>
-        <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">{{ summary.students_online }}</p>
+      <div class="group bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700">
+        <template v-if="loading">
+          <div class="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
+          <div class="h-8 w-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+        </template>
+        <template v-else>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Students Online</p>
+          <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1 transition-colors">{{ summary.students_online }}</p>
+        </template>
       </div>
-      <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700">
-        <p class="text-sm text-gray-500 dark:text-gray-400">Recorded Sessions</p>
-        <p class="text-2xl font-bold text-purple-600 dark:text-purple-400 mt-1">{{ summary.recorded_sessions }}</p>
+      <div class="group bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700">
+        <template v-if="loading">
+          <div class="h-4 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
+          <div class="h-8 w-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+        </template>
+        <template v-else>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Recorded Sessions</p>
+          <p class="text-2xl font-bold text-purple-600 dark:text-purple-400 mt-1">{{ summary.recorded_sessions }}</p>
+        </template>
       </div>
     </div>
 
@@ -107,7 +137,7 @@
                   v-if="cls.status === 'started'"
                   @click="joinClass(cls)"
                   :disabled="actingId === cls.id"
-                  class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-red-600 to-rose-500 text-white text-xs font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+                  class="px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs font-semibold shadow-sm hover:bg-red-700 hover:shadow-md transition-colors disabled:opacity-50"
                 >
                   {{ actingId === cls.id ? 'Joining...' : 'Observe' }}
                 </button>

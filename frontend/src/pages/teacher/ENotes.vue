@@ -1,7 +1,7 @@
 <template>
   <div class="p-4 sm:p-6">
     <div class="mb-6 flex items-center gap-3">
-      <div class="hidden sm:flex w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 items-center justify-center shadow-lg shadow-indigo-500/30 flex-shrink-0">
+      <div class="hidden sm:flex w-11 h-11 rounded-xl bg-indigo-600 items-center justify-center shadow-lg shadow-indigo-500/30 flex-shrink-0">
         <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
         </svg>
@@ -124,7 +124,7 @@
 
       <button
         @click="openCreateModal"
-        class="w-full lg:w-auto px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 font-medium shadow-lg shadow-indigo-500/30 flex items-center justify-center gap-2 flex-shrink-0"
+        class="btn-primary w-full lg:w-auto shadow-lg shadow-indigo-500/30 flex items-center justify-center gap-2 flex-shrink-0"
       >
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
@@ -161,12 +161,12 @@
             class="text-left bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 p-5 sm:p-6 group overflow-hidden relative"
           >
             <div
-              class="absolute -right-6 -top-6 w-28 h-28 rounded-full opacity-10 bg-gradient-to-br transition-transform duration-300 group-hover:scale-125"
-              :class="classPalette(group.name).vivid"
+              class="absolute -right-6 -top-6 w-28 h-28 rounded-full opacity-10 transition-transform duration-300 group-hover:scale-125"
+              :class="classPalette(group.name).solid"
             ></div>
             <div
-              class="relative w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-white shadow-sm flex-shrink-0 bg-gradient-to-br mb-3 sm:mb-4"
-              :class="classPalette(group.name).vivid"
+              class="relative w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-white shadow-sm flex-shrink-0 mb-3 sm:mb-4"
+              :class="classPalette(group.name).solid"
             >
               <svg class="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"></path>
@@ -209,10 +209,10 @@
           class="group relative bg-white dark:bg-gray-800 rounded-2xl shadow-md hover:shadow-xl border border-gray-100 dark:border-gray-700 hover:-translate-y-1 transition-all duration-200 cursor-pointer overflow-hidden"
           @click="openBuilder(topic.id)"
         >
-          <div class="h-2.5 bg-gradient-to-r" :class="classPalette(activeClassName).vivid"></div>
+          <div class="h-2.5" :class="classPalette(activeClassName).solid"></div>
           <div
-            class="absolute -right-8 top-6 w-24 h-24 rounded-full opacity-[0.07] bg-gradient-to-br transition-transform duration-300 group-hover:scale-125 pointer-events-none"
-            :class="classPalette(activeClassName).vivid"
+            class="absolute -right-8 top-6 w-24 h-24 rounded-full opacity-[0.07] transition-transform duration-300 group-hover:scale-125 pointer-events-none"
+            :class="classPalette(activeClassName).solid"
           ></div>
 
           <div class="relative p-5 sm:p-6">
@@ -307,7 +307,7 @@
     <div v-if="showTopicModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl md:max-w-3xl max-h-[90vh] flex flex-col">
         <!-- Header -->
-        <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-5 sm:px-6 py-5 flex-shrink-0 rounded-t-2xl">
+        <div class="bg-indigo-600 px-5 sm:px-6 py-5 flex-shrink-0 rounded-t-2xl">
           <div class="flex items-center justify-between gap-4">
             <div class="min-w-0">
               <h3 class="text-xl sm:text-2xl font-bold text-white truncate">
@@ -507,7 +507,7 @@
             <button
               type="submit"
               :disabled="saving || !selectedCurriculumTopic"
-              class="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 font-medium shadow-lg shadow-indigo-500/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+              class="btn-primary w-full sm:w-auto shadow-lg shadow-indigo-500/30"
             >
               {{ saving ? 'Saving...' : 'Create Topic' }}
             </button>
@@ -633,7 +633,7 @@
             <button
               type="submit"
               :disabled="saving"
-              class="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 font-medium shadow-lg shadow-indigo-500/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+              class="btn-primary w-full sm:w-auto shadow-lg shadow-indigo-500/30"
             >
               {{ saving ? 'Saving...' : 'Update Topic' }}
             </button>
@@ -943,12 +943,12 @@ const activeClassTopics = computed(() => classGroups.value.find(g => g.name === 
 // Deterministic color per class name (not a fixed lookup - department class names vary), so each
 // class card/topic-card banner gets a distinct but stable palette across reloads.
 const classPalettes = [
-  { vivid: 'from-amber-500 to-orange-600', softText: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' },
-  { vivid: 'from-blue-500 to-cyan-600', softText: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
-  { vivid: 'from-indigo-500 to-purple-600', softText: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' },
-  { vivid: 'from-emerald-500 to-teal-600', softText: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' },
-  { vivid: 'from-rose-500 to-pink-600', softText: 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300' },
-  { vivid: 'from-violet-500 to-fuchsia-600', softText: 'bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300' }
+  { solid: 'bg-amber-600', softText: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' },
+  { solid: 'bg-blue-600', softText: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
+  { solid: 'bg-indigo-600', softText: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' },
+  { solid: 'bg-emerald-600', softText: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' },
+  { solid: 'bg-rose-600', softText: 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300' },
+  { solid: 'bg-violet-600', softText: 'bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300' }
 ]
 const classPalette = (name: string) => {
   let hash = 0

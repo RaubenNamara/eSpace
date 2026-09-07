@@ -99,7 +99,7 @@
             <button
               type="submit"
               :disabled="loading"
-              class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              class="btn-primary"
             >
               {{ loading ? 'Updating...' : 'Update Credentials' }}
             </button>

@@ -1,6 +1,6 @@
 <template>
   <div class="p-6">
-    <div v-if="!activeReport" class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-fuchsia-600 shadow-lg shadow-indigo-500/20 p-4 sm:p-5 mb-6">
+    <div v-if="!activeReport" class="relative overflow-hidden rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-500/20 p-4 sm:p-5 mb-6">
       <div class="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-white/10"></div>
       <div class="absolute -right-3 bottom-0 w-24 h-24 rounded-full bg-white/10"></div>
       <div class="relative flex items-center gap-3">

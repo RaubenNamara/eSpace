@@ -2,7 +2,7 @@
   <div class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 sm:p-4">
     <div class="bg-white dark:bg-gray-800 w-full h-full sm:h-auto sm:max-w-4xl sm:max-h-[90vh] sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col">
       <!-- Header -->
-      <div class="relative flex-shrink-0 bg-gradient-to-r from-purple-600 to-fuchsia-600 px-4 sm:px-8 py-4 sm:py-6">
+      <div class="relative flex-shrink-0 bg-purple-600 px-4 sm:px-8 py-4 sm:py-6">
         <div class="flex items-start justify-between gap-3">
           <div class="flex items-start gap-3 min-w-0">
             <div class="hidden sm:flex w-11 h-11 rounded-xl bg-white/15 items-center justify-center flex-shrink-0">

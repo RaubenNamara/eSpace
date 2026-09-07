@@ -13,14 +13,14 @@
       @loadedmetadata="seekToFrame"
       @error="videoErrored = true"
     ></video>
-    <div v-else class="absolute inset-0 bg-gradient-to-br flex items-center justify-center" :class="palette">
+    <div v-else class="absolute inset-0 flex items-center justify-center" :class="palette">
       <svg class="w-1/4 h-1/4 text-white/20" fill="currentColor" viewBox="0 0 24 24">
         <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
       </svg>
     </div>
 
     <!-- Bottom scrim, so the title/duration read clearly over any frame -->
-    <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent"></div>
+    <div class="absolute inset-0 bg-black/40"></div>
 
     <!-- Play button -->
     <div class="absolute inset-0 flex items-center justify-center">
@@ -82,19 +82,19 @@ const seekToFrame = () => {
   }
 }
 
-const gradients = [
-  'from-rose-500 to-orange-600',
-  'from-blue-500 to-cyan-600',
-  'from-indigo-500 to-purple-600',
-  'from-emerald-500 to-teal-600',
-  'from-amber-500 to-red-600',
-  'from-violet-500 to-fuchsia-600',
-  'from-sky-500 to-blue-600',
-  'from-pink-500 to-rose-600',
-  'from-fuchsia-500 to-pink-600',
-  'from-orange-500 to-amber-600'
+const coverColors = [
+  'bg-rose-600',
+  'bg-blue-600',
+  'bg-indigo-600',
+  'bg-emerald-600',
+  'bg-red-600',
+  'bg-violet-600',
+  'bg-sky-600',
+  'bg-pink-600',
+  'bg-fuchsia-600',
+  'bg-orange-600'
 ]
-const palette = computed(() => gradients[Math.abs(props.video.id) % gradients.length])
+const palette = computed(() => coverColors[Math.abs(props.video.id) % coverColors.length])
 
 const subjectLabel = computed(() => {
   if (props.video.subject_code) return props.video.subject_code.slice(0, 6).toUpperCase()

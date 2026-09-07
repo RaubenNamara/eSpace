@@ -36,7 +36,7 @@
         <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Academic Years</h2>
         <button
           @click="openAcademicYearModal()"
-          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          class="btn-primary"
         >
           Add Academic Year
         </button>
@@ -110,7 +110,7 @@
         <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Terms</h2>
         <button
           @click="openTermModal()"
-          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          class="btn-primary"
         >
           Add Term
         </button>
@@ -234,7 +234,7 @@
             <button
               type="submit"
               :disabled="loading"
-              class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              class="btn-primary"
             >
               {{ loading ? 'Saving...' : 'Save' }}
             </button>
@@ -315,7 +315,7 @@
             <button
               type="submit"
               :disabled="loading"
-              class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              class="btn-primary"
             >
               {{ loading ? 'Saving...' : 'Save' }}
             </button>

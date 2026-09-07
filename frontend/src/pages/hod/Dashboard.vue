@@ -1,7 +1,7 @@
 <template>
   <div>
     <!-- Hero -->
-    <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-fuchsia-600 shadow-lg shadow-indigo-500/20 p-4 sm:p-5 mb-6">
+    <div class="relative overflow-hidden rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-500/20 p-4 sm:p-5 mb-6">
       <div class="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-white/10"></div>
       <div class="absolute -right-3 bottom-0 w-24 h-24 rounded-full bg-white/10"></div>
       <div class="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -59,7 +59,7 @@
             :to="action.to"
             class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-transparent hover:shadow-sm transition-all group"
           >
-            <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 bg-gradient-to-br text-white" :class="action.grad">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 text-white" :class="action.color">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="action.icon"></path>
               </svg>
@@ -164,25 +164,25 @@ const quickActions = [
   {
     label: 'View Teachers',
     to: '/hod/teachers',
-    grad: 'from-sky-500 to-blue-600',
+    color: 'bg-sky-600',
     icon: 'M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-4-4'
   },
   {
     label: 'View Students',
     to: '/hod/students',
-    grad: 'from-emerald-500 to-teal-600',
+    color: 'bg-emerald-600',
     icon: 'M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222'
   },
   {
     label: 'Pending Approvals',
     to: '/hod/approvals',
-    grad: 'from-amber-500 to-orange-600',
+    color: 'bg-amber-600',
     icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'
   },
   {
     label: 'Manage Subjects',
     to: '/hod/subjects',
-    grad: 'from-violet-500 to-fuchsia-600',
+    color: 'bg-violet-600',
     icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253'
   }
 ]

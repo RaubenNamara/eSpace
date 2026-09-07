@@ -10,19 +10,19 @@
         <div class="flex flex-wrap gap-3">
           <button
             @click="fetchTeachers"
-            class="px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            class="btn-secondary"
           >
             Refresh
           </button>
           <button
             @click="showImportModal = true"
-            class="px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            class="btn-secondary"
           >
             Import Teachers
           </button>
           <button
             @click="showCreateModal = true"
-            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            class="btn-primary"
           >
             Add Teacher
           </button>
@@ -30,26 +30,56 @@
       </div>
 
       <!-- Statistics Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8" v-if="statistics">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <div class="text-sm text-gray-500 dark:text-gray-400">Total Teachers</div>
-          <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ statistics.total || 0 }}</div>
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8" v-if="statistics || loading">
+        <div class="group bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700">
+          <template v-if="!statistics">
+            <div class="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
+            <div class="h-8 w-14 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+          </template>
+          <template v-else>
+            <div class="text-sm text-gray-500 dark:text-gray-400">Total Teachers</div>
+            <div class="text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{{ statistics.total || 0 }}</div>
+          </template>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <div class="text-sm text-gray-500 dark:text-gray-400">Active Teachers</div>
-          <div class="text-2xl font-bold text-green-600 dark:text-green-400">{{ statistics.active || 0 }}</div>
+        <div class="group bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700">
+          <template v-if="!statistics">
+            <div class="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
+            <div class="h-8 w-14 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+          </template>
+          <template v-else>
+            <div class="text-sm text-gray-500 dark:text-gray-400">Active Teachers</div>
+            <div class="text-2xl font-bold text-green-600 dark:text-green-400">{{ statistics.active || 0 }}</div>
+          </template>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <div class="text-sm text-gray-500 dark:text-gray-400">Suspended Teachers</div>
-          <div class="text-2xl font-bold text-red-600 dark:text-red-400">{{ statistics.suspended || 0 }}</div>
+        <div class="group bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700">
+          <template v-if="!statistics">
+            <div class="h-4 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
+            <div class="h-8 w-14 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+          </template>
+          <template v-else>
+            <div class="text-sm text-gray-500 dark:text-gray-400">Suspended Teachers</div>
+            <div class="text-2xl font-bold text-red-600 dark:text-red-400">{{ statistics.suspended || 0 }}</div>
+          </template>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <div class="text-sm text-gray-500 dark:text-gray-400">Heads of Department</div>
-          <div class="text-2xl font-bold text-purple-600 dark:text-purple-400">{{ statistics.hods || 0 }}</div>
+        <div class="group bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700">
+          <template v-if="!statistics">
+            <div class="h-4 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
+            <div class="h-8 w-14 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+          </template>
+          <template v-else>
+            <div class="text-sm text-gray-500 dark:text-gray-400">Heads of Department</div>
+            <div class="text-2xl font-bold text-purple-600 dark:text-purple-400">{{ statistics.hods || 0 }}</div>
+          </template>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <div class="text-sm text-gray-500 dark:text-gray-400">Unassigned Teachers</div>
-          <div class="text-2xl font-bold text-orange-600 dark:text-orange-400">{{ statistics.unassigned || 0 }}</div>
+        <div class="group bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700">
+          <template v-if="!statistics">
+            <div class="h-4 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
+            <div class="h-8 w-14 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+          </template>
+          <template v-else>
+            <div class="text-sm text-gray-500 dark:text-gray-400">Unassigned Teachers</div>
+            <div class="text-2xl font-bold text-orange-600 dark:text-orange-400">{{ statistics.unassigned || 0 }}</div>
+          </template>
         </div>
       </div>
 
@@ -94,7 +124,7 @@
           <p class="mt-2 text-gray-500 dark:text-gray-400">Get started by creating your first teacher.</p>
           <button
             @click="showCreateModal = true"
-            class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            class="btn-primary mt-4"
           >
             Add Teacher
           </button>
@@ -103,7 +133,7 @@
         <!-- Teachers Table -->
         <div v-else class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700">
-          <thead class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+          <thead class="bg-gray-50 dark:bg-gray-900">
             <tr>
               <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Teacher</th>
               <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Staff Number</th>
@@ -350,14 +380,14 @@
             <button
               type="button"
               @click="showCreateModal = false"
-              class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+              class="btn-secondary"
             >
               Cancel
             </button>
             <button
               type="submit"
               :disabled="creating"
-              class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+              class="btn-primary"
             >
               {{ creating ? 'Creating...' : 'Create Teacher' }}
             </button>
@@ -385,14 +415,14 @@
             <button
               type="button"
               @click="showResetModal = false"
-              class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+              class="btn-secondary"
             >
               Cancel
             </button>
             <button
               type="submit"
               :disabled="resetting"
-              class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+              class="btn-primary"
             >
               {{ resetting ? 'Resetting...' : 'Reset Password' }}
             </button>
@@ -483,14 +513,14 @@
             <button
               type="button"
               @click="showEditModal = false"
-              class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+              class="btn-secondary"
             >
               Cancel
             </button>
             <button
               type="submit"
               :disabled="editing"
-              class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+              class="btn-primary"
             >
               {{ editing ? 'Updating...' : 'Update Teacher' }}
             </button>
@@ -601,7 +631,7 @@
             <div class="flex gap-3">
               <button
                 @click="editTeacherFromDrawer"
-                class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                class="btn-primary flex-1"
               >
                 Edit Teacher
               </button>

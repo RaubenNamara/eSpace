@@ -1,26 +1,13 @@
 <template>
   <main
-    class="relative min-h-screen overflow-hidden bg-[#0a1638] font-sans text-slate-900"
+    class="relative min-h-screen overflow-hidden bg-white font-sans text-slate-900 dark:bg-slate-950 dark:text-white"
   >
-    <!-- Background decoration -->
-    <div
-      class="pointer-events-none absolute -left-40 -top-40 h-[520px] w-[520px] rounded-full bg-blue-600/20 blur-[130px]"
-    ></div>
-
-    <div
-      class="pointer-events-none absolute -bottom-48 right-0 h-[580px] w-[580px] rounded-full bg-indigo-600/20 blur-[150px]"
-    ></div>
-
-    <div
-      class="pointer-events-none absolute left-1/2 top-1/3 h-[350px] w-[350px] -translate-x-1/2 rounded-full bg-cyan-500/10 blur-[120px]"
-    ></div>
-
     <!-- Decorative grid -->
     <div
-      class="pointer-events-none absolute inset-0 opacity-[0.035]"
+      class="pointer-events-none absolute inset-0 opacity-[0.035] dark:opacity-[0.05]"
       :style="{
         backgroundImage:
-          'linear-gradient(rgba(255,255,255,0.8) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.8) 1px, transparent 1px)',
+          'linear-gradient(currentColor 1px, transparent 1px), linear-gradient(90deg, currentColor 1px, transparent 1px)',
         backgroundSize: '52px 52px'
       }"
     ></div>
@@ -34,16 +21,16 @@
         <div class="animate-fade-down">
           <router-link to="/" class="inline-flex items-center gap-4">
             <div
-              class="flex h-14 w-14 items-center justify-center rounded-2xl bg-white p-1.5 shadow-xl shadow-blue-500/20 ring-1 ring-black/5"
+              class="flex h-14 w-14 items-center justify-center rounded-2xl bg-white p-1.5 shadow-xl ring-1 ring-black/5"
             >
               <img src="/images/stmark-logo.jpg" alt="St Mark's College Namagoma crest" class="h-full w-full rounded-xl object-contain">
             </div>
 
             <div>
-              <h1 class="text-2xl font-bold tracking-tight text-white">
+              <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
                 Smacon e-Space
               </h1>
-              <p class="text-xs font-medium uppercase tracking-[0.2em] text-blue-200/70">
+              <p class="text-xs font-medium uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
                 St Mark's College Namagoma
               </p>
             </div>
@@ -53,14 +40,14 @@
         <!-- Hero content -->
         <div class="my-auto max-w-2xl 2xl:max-w-4xl animate-fade-up">
           <div
-            class="mb-7 inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-400/10 px-4 py-2 text-sm font-medium text-blue-100 backdrop-blur-md 2xl:px-5 2xl:py-2.5 2xl:text-base"
+            class="mb-7 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-medium text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 2xl:px-5 2xl:py-2.5 2xl:text-base"
           >
             <span class="relative flex h-2.5 w-2.5">
               <span
-                class="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-400 opacity-75"
+                class="absolute inline-flex h-full w-full animate-ping rounded-full bg-slate-400 opacity-75 dark:bg-slate-500"
               ></span>
               <span
-                class="relative inline-flex h-2.5 w-2.5 rounded-full bg-cyan-400"
+                class="relative inline-flex h-2.5 w-2.5 rounded-full bg-slate-500 dark:bg-slate-400"
               ></span>
             </span>
 
@@ -68,18 +55,13 @@
           </div>
 
           <h2
-            class="max-w-xl 2xl:max-w-3xl text-4xl font-bold leading-tight tracking-tight text-white xl:text-6xl xl:leading-[1.08] 2xl:text-7xl"
+            class="max-w-xl 2xl:max-w-3xl text-4xl font-bold leading-tight tracking-tight text-slate-900 dark:text-white xl:text-6xl xl:leading-[1.08] 2xl:text-7xl"
           >
-            Learn, teach and
-            <span
-              class="bg-gradient-to-r from-blue-400 via-cyan-300 to-indigo-400 bg-clip-text text-transparent"
-            >
-              grow together.
-            </span>
+            Learn, teach and grow together.
           </h2>
 
           <p
-            class="mt-6 max-w-xl 2xl:max-w-2xl text-base leading-8 text-slate-300 xl:text-lg 2xl:text-xl 2xl:leading-9"
+            class="mt-6 max-w-xl 2xl:max-w-2xl text-base leading-8 text-slate-600 dark:text-slate-300 xl:text-lg 2xl:text-xl 2xl:leading-9"
           >
             Access lessons, live classes, assignments, digital resources and
             performance insights from one secure and connected platform.
@@ -90,11 +72,11 @@
             <div
               v-for="feature in features"
               :key="feature.title"
-              class="group rounded-2xl border border-white/10 bg-white/[0.055] p-4 backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-blue-400/30 hover:bg-white/[0.08]"
+              class="group rounded-2xl border border-slate-200 bg-slate-50 p-4 transition duration-300 hover:-translate-y-1 hover:border-slate-300 hover:bg-slate-100 dark:border-white/10 dark:bg-white/[0.055] dark:hover:border-white/20 dark:hover:bg-white/[0.08]"
             >
               <div class="flex items-start gap-3">
                 <div
-                  class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 text-blue-300 ring-1 ring-blue-400/20 transition group-hover:bg-blue-500/25"
+                  class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-100 transition group-hover:bg-indigo-100 dark:bg-indigo-500/15 dark:text-indigo-300 dark:ring-indigo-400/20 dark:group-hover:bg-indigo-500/25"
                 >
                   <svg
                     v-if="feature.icon === 'classes'"
@@ -158,10 +140,10 @@
                 </div>
 
                 <div>
-                  <h3 class="text-sm font-semibold text-white">
+                  <h3 class="text-sm font-semibold text-slate-900 dark:text-white">
                     {{ feature.title }}
                   </h3>
-                  <p class="mt-1 text-xs leading-5 text-slate-400">
+                  <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
                     {{ feature.description }}
                   </p>
                 </div>
@@ -171,11 +153,11 @@
 
           <!-- Trust row -->
           <div
-            class="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-slate-400"
+            class="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-slate-500 dark:text-slate-400"
           >
             <div class="flex items-center gap-2">
               <svg
-                class="h-4 w-4 text-emerald-400"
+                class="h-4 w-4 text-slate-400 dark:text-slate-500"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -192,7 +174,7 @@
 
             <div class="flex items-center gap-2">
               <svg
-                class="h-4 w-4 text-emerald-400"
+                class="h-4 w-4 text-slate-400 dark:text-slate-500"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -209,7 +191,7 @@
 
             <div class="flex items-center gap-2">
               <svg
-                class="h-4 w-4 text-emerald-400"
+                class="h-4 w-4 text-slate-400 dark:text-slate-500"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -228,7 +210,7 @@
 
         <!-- Left footer -->
         <div
-          class="flex items-center justify-between text-xs text-slate-500"
+          class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400"
         >
           <p>© {{ currentYear }} St Mark's College Namagoma. All rights reserved.</p>
           <p>Empowering learners for lifelong learning.</p>
@@ -237,21 +219,21 @@
 
       <!-- Right section -->
       <section
-        class="flex min-h-screen flex-1 items-center justify-center bg-slate-50 px-4 py-8 sm:px-8 lg:px-10"
+        class="flex min-h-screen flex-1 items-center justify-center bg-slate-50 px-4 py-8 dark:bg-slate-900 sm:px-8 lg:px-10"
       >
         <div class="w-full max-w-[460px] animate-card-in">
           <!-- Mobile logo -->
           <div class="mb-8 flex justify-center lg:hidden">
             <router-link to="/" class="inline-flex items-center gap-3">
               <div
-                class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white p-1.5 shadow-lg shadow-blue-500/20 ring-1 ring-black/5"
+                class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white p-1.5 shadow-lg ring-1 ring-black/5"
               >
                 <img src="/images/stmark-logo.jpg" alt="St Mark's College Namagoma crest" class="h-full w-full rounded-xl object-contain">
               </div>
 
               <div>
-                <h1 class="text-xl font-bold text-slate-900">Smacon e-Space</h1>
-                <p class="text-xs font-medium text-slate-500">
+                <h1 class="text-xl font-bold text-slate-900 dark:text-white">Smacon e-Space</h1>
+                <p class="text-xs font-medium text-slate-500 dark:text-slate-400">
                   St Mark's College Namagoma
                 </p>
               </div>
@@ -260,12 +242,12 @@
 
           <!-- Login card -->
           <div
-            class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_25px_70px_-20px_rgba(15,23,42,0.22)] ring-1 ring-slate-900/[0.03] sm:p-9"
+            class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_25px_70px_-20px_rgba(15,23,42,0.22)] ring-1 ring-slate-900/[0.03] dark:border-slate-700 dark:bg-slate-800 dark:ring-white/[0.03] sm:p-9"
           >
             <!-- Back to home -->
             <router-link
               to="/"
-              class="mb-6 inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 transition hover:text-blue-600"
+              class="mb-6 inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 transition hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400"
             >
               <svg
                 class="h-4 w-4"
@@ -286,7 +268,7 @@
             <!-- Heading -->
             <div class="mb-8">
               <div
-                class="mb-5 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600 ring-1 ring-blue-100"
+                class="mb-5 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-100 dark:bg-indigo-500/15 dark:text-indigo-400 dark:ring-indigo-400/20"
               >
                 <svg
                   class="h-5 w-5"
@@ -304,12 +286,12 @@
               </div>
 
               <h2
-                class="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl"
+                class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl"
               >
                 Welcome back
               </h2>
 
-              <p class="mt-2 text-sm leading-6 text-slate-500">
+              <p class="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
                 Enter your credentials to access your Smacon e-Space account.
               </p>
             </div>
@@ -319,16 +301,16 @@
               <div>
                 <label
                   for="identifier"
-                  class="mb-2 block text-sm font-semibold text-slate-700"
+                  class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300"
                 >
                   Username or email
                 </label>
 
                 <div
-                  class="group relative overflow-hidden rounded-xl border-2 border-slate-200 bg-white shadow-sm transition-all duration-200 hover:border-slate-300 focus-within:border-blue-600 focus-within:shadow-md focus-within:ring-4 focus-within:ring-blue-600/10"
+                  class="group relative overflow-hidden rounded-xl border-2 border-slate-200 bg-white shadow-sm transition-all duration-200 hover:border-slate-300 focus-within:border-indigo-600 focus-within:shadow-md focus-within:ring-4 focus-within:ring-indigo-600/10 dark:border-slate-600 dark:bg-slate-900 dark:hover:border-slate-500 dark:focus-within:border-indigo-500 dark:focus-within:ring-indigo-500/20"
                 >
                   <div
-                    class="pointer-events-none absolute inset-y-0 left-0 z-10 flex w-12 items-center justify-center border-r border-slate-200 bg-slate-50 text-slate-500 transition-colors group-focus-within:border-blue-100 group-focus-within:bg-blue-50 group-focus-within:text-blue-600"
+                    class="pointer-events-none absolute inset-y-0 left-0 z-10 flex w-12 items-center justify-center border-r border-slate-200 bg-slate-50 text-slate-500 transition-colors group-focus-within:border-indigo-100 group-focus-within:bg-indigo-50 group-focus-within:text-indigo-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400 dark:group-focus-within:border-indigo-500/30 dark:group-focus-within:bg-indigo-500/10 dark:group-focus-within:text-indigo-400"
                   >
                     <svg
                       class="h-5 w-5"
@@ -355,7 +337,7 @@
                     placeholder="Enter your username or email"
                     required
                     :disabled="isLoading"
-                    class="block w-full border-0 bg-white py-3.5 pl-14 pr-4 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-0 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-60"
+                    class="block w-full border-0 bg-white py-3.5 pl-14 pr-4 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-0 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-60 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500 dark:disabled:bg-slate-800"
                   />
                 </div>
               </div>
@@ -365,24 +347,24 @@
                 <div class="mb-2 flex items-center justify-between gap-4">
                   <label
                     for="password"
-                    class="block text-sm font-semibold text-slate-700"
+                    class="block text-sm font-semibold text-slate-700 dark:text-slate-300"
                   >
                     Password
                   </label>
 
                   <router-link
                     to="/forgot-password"
-                    class="text-sm font-semibold text-blue-600 transition hover:text-blue-700 hover:underline"
+                    class="text-sm font-semibold text-indigo-600 transition hover:text-indigo-700 hover:underline dark:text-indigo-400 dark:hover:text-indigo-300"
                   >
                     Forgot password?
                   </router-link>
                 </div>
 
                 <div
-                  class="group relative overflow-hidden rounded-xl border-2 border-slate-200 bg-white shadow-sm transition-all duration-200 hover:border-slate-300 focus-within:border-blue-600 focus-within:shadow-md focus-within:ring-4 focus-within:ring-blue-600/10"
+                  class="group relative overflow-hidden rounded-xl border-2 border-slate-200 bg-white shadow-sm transition-all duration-200 hover:border-slate-300 focus-within:border-indigo-600 focus-within:shadow-md focus-within:ring-4 focus-within:ring-indigo-600/10 dark:border-slate-600 dark:bg-slate-900 dark:hover:border-slate-500 dark:focus-within:border-indigo-500 dark:focus-within:ring-indigo-500/20"
                 >
                   <div
-                    class="pointer-events-none absolute inset-y-0 left-0 z-10 flex w-12 items-center justify-center border-r border-slate-200 bg-slate-50 text-slate-500 transition-colors group-focus-within:border-blue-100 group-focus-within:bg-blue-50 group-focus-within:text-blue-600"
+                    class="pointer-events-none absolute inset-y-0 left-0 z-10 flex w-12 items-center justify-center border-r border-slate-200 bg-slate-50 text-slate-500 transition-colors group-focus-within:border-indigo-100 group-focus-within:bg-indigo-50 group-focus-within:text-indigo-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400 dark:group-focus-within:border-indigo-500/30 dark:group-focus-within:bg-indigo-500/10 dark:group-focus-within:text-indigo-400"
                   >
                     <svg
                       class="h-5 w-5"
@@ -408,12 +390,12 @@
                     placeholder="Enter your password"
                     required
                     :disabled="isLoading"
-                    class="block w-full border-0 bg-white py-3.5 pl-14 pr-14 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-0 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-60"
+                    class="block w-full border-0 bg-white py-3.5 pl-14 pr-14 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-0 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-60 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500 dark:disabled:bg-slate-800"
                   />
 
                   <button
                     type="button"
-                    class="absolute inset-y-0 right-0 z-10 flex w-12 items-center justify-center border-l border-slate-200 bg-slate-50 text-slate-500 outline-none transition-colors hover:bg-slate-100 hover:text-slate-800 focus-visible:bg-blue-50 focus-visible:text-blue-600 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 group-focus-within:border-blue-100"
+                    class="absolute inset-y-0 right-0 z-10 flex w-12 items-center justify-center border-l border-slate-200 bg-slate-50 text-slate-500 outline-none transition-colors hover:bg-slate-100 hover:text-slate-800 focus-visible:bg-indigo-50 focus-visible:text-indigo-600 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500 group-focus-within:border-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-100 dark:group-focus-within:border-indigo-500/30"
                     :aria-label="showPassword ? 'Hide password' : 'Show password'"
                     :title="showPassword ? 'Hide password' : 'Show password'"
                     @click="showPassword = !showPassword"
@@ -465,12 +447,12 @@
                   type="checkbox"
                   name="remember"
                   :disabled="isLoading"
-                  class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed"
+                  class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:border-slate-600 dark:bg-slate-800 dark:focus:ring-offset-slate-800 disabled:cursor-not-allowed"
                 />
 
                 <label
                   for="remember"
-                  class="ml-2.5 cursor-pointer text-sm font-medium text-slate-600"
+                  class="ml-2.5 cursor-pointer text-sm font-medium text-slate-600 dark:text-slate-300"
                 >
                   Keep me signed in
                 </label>
@@ -482,10 +464,10 @@
                   v-if="error"
                   role="alert"
                   aria-live="polite"
-                  class="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3.5"
+                  class="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3.5 dark:border-red-500/30 dark:bg-red-500/10"
                 >
                   <div
-                    class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600"
+                    class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400"
                   >
                     <svg
                       class="h-4 w-4"
@@ -503,10 +485,10 @@
                   </div>
 
                   <div>
-                    <p class="text-sm font-semibold text-red-800">
+                    <p class="text-sm font-semibold text-red-800 dark:text-red-300">
                       Unable to sign in
                     </p>
-                    <p class="mt-0.5 text-sm leading-5 text-red-600">
+                    <p class="mt-0.5 text-sm leading-5 text-red-600 dark:text-red-400">
                       {{ error }}
                     </p>
                   </div>
@@ -518,7 +500,7 @@
                 type="button"
                 :disabled="isLoading"
                 @click="handleLogin"
-                class="group relative flex w-full items-center justify-center overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 bg-[length:200%_100%] px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 outline-none transition-all duration-300 hover:-translate-y-0.5 hover:bg-right hover:shadow-xl hover:shadow-blue-600/25 focus-visible:ring-4 focus-visible:ring-blue-500/25 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+                class="group relative flex w-full items-center justify-center overflow-hidden rounded-xl bg-indigo-600 px-5 py-3.5 text-sm font-semibold text-white shadow-sm outline-none transition-all duration-200 hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-md focus-visible:ring-4 focus-visible:ring-indigo-500/25 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
               >
                 <span
                   v-if="!isLoading"
@@ -572,12 +554,12 @@
             </form>
 
             <!-- Support message -->
-            <div class="mt-7 border-t border-slate-100 pt-6 text-center">
-              <p class="text-sm text-slate-500">
+            <div class="mt-7 border-t border-slate-100 pt-6 text-center dark:border-slate-700">
+              <p class="text-sm text-slate-500 dark:text-slate-400">
                 Having trouble accessing your account?
                 <router-link
                   to="/support"
-                  class="font-semibold text-blue-600 transition hover:text-blue-700 hover:underline"
+                  class="font-semibold text-indigo-600 transition hover:text-indigo-700 hover:underline dark:text-indigo-400 dark:hover:text-indigo-300"
                 >
                   Contact support
                 </router-link>
@@ -587,24 +569,24 @@
 
           <!-- Mobile footer -->
           <div
-            class="mt-7 flex flex-col items-center justify-center gap-2 text-center text-xs text-slate-500 sm:flex-row sm:gap-4"
+            class="mt-7 flex flex-col items-center justify-center gap-2 text-center text-xs text-slate-500 dark:text-slate-400 sm:flex-row sm:gap-4"
           >
             <span>© {{ currentYear }} St Mark's College Namagoma</span>
 
-            <span class="hidden h-1 w-1 rounded-full bg-slate-300 sm:block"></span>
+            <span class="hidden h-1 w-1 rounded-full bg-slate-300 dark:bg-slate-600 sm:block"></span>
 
             <router-link
               to="/privacy"
-              class="transition hover:text-slate-800"
+              class="transition hover:text-slate-800 dark:hover:text-slate-200"
             >
               Privacy
             </router-link>
 
-            <span class="hidden h-1 w-1 rounded-full bg-slate-300 sm:block"></span>
+            <span class="hidden h-1 w-1 rounded-full bg-slate-300 dark:bg-slate-600 sm:block"></span>
 
             <router-link
               to="/terms"
-              class="transition hover:text-slate-800"
+              class="transition hover:text-slate-800 dark:hover:text-slate-200"
             >
               Terms
             </router-link>

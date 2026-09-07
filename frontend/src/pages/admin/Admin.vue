@@ -10,7 +10,7 @@
         </div>
         <button
           @click="showCreateModal = true"
-          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors self-start sm:self-auto flex-shrink-0"
+          class="btn-primary self-start sm:self-auto flex-shrink-0"
         >
           Create Admin
         </button>
@@ -73,7 +73,7 @@
           <p class="mt-2 text-gray-500 dark:text-gray-400">Get started by creating your first admin user.</p>
           <button
             @click="showCreateModal = true"
-            class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            class="mt-4 btn-primary"
           >
             Create User
           </button>
@@ -82,7 +82,7 @@
         <!-- Users Table -->
         <div v-else class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700">
-          <thead class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+          <thead class="bg-gray-50 dark:bg-gray-900">
             <tr>
               <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">User</th>
               <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Role</th>
@@ -264,7 +264,7 @@
               <button
                 type="submit"
                 :disabled="loading"
-                class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                class="flex-1 btn-primary"
               >
                 {{ loading ? 'Creating...' : 'Create User' }}
               </button>
@@ -325,7 +325,7 @@
               <button
                 type="submit"
                 :disabled="loading"
-                class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                class="flex-1 btn-primary"
               >
                 {{ loading ? 'Updating...' : 'Update User' }}
               </button>
@@ -607,14 +607,14 @@ const formatRole = (role: string) => {
 
 const getAvatarColor = (username: string) => {
   const colors = [
-    'bg-gradient-to-br from-blue-500 to-blue-600',
-    'bg-gradient-to-br from-purple-500 to-purple-600',
-    'bg-gradient-to-br from-pink-500 to-pink-600',
-    'bg-gradient-to-br from-indigo-500 to-indigo-600',
-    'bg-gradient-to-br from-teal-500 to-teal-600',
-    'bg-gradient-to-br from-orange-500 to-orange-600',
-    'bg-gradient-to-br from-green-500 to-green-600',
-    'bg-gradient-to-br from-red-500 to-red-600'
+    'bg-blue-600',
+    'bg-purple-600',
+    'bg-pink-600',
+    'bg-indigo-600',
+    'bg-teal-600',
+    'bg-orange-600',
+    'bg-green-600',
+    'bg-red-600'
   ]
   const index = username.charCodeAt(0) % colors.length
   return colors[index]

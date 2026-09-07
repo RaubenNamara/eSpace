@@ -1,7 +1,7 @@
 <template>
   <div class="h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
     <!-- Header -->
-    <div class="relative bg-gradient-to-r from-indigo-600 to-purple-600 px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-2 flex-shrink-0 shadow-sm">
+    <div class="relative bg-indigo-600 px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-2 flex-shrink-0 shadow-sm">
       <div class="flex items-center gap-2 sm:gap-3 min-w-0">
         <button
           @click="goBack"
@@ -201,7 +201,7 @@
               v-else
               class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold"
               :class="currentPage?.id === page.id
-                ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white'
+                ? 'bg-indigo-600 text-white'
                 : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300'"
             >
               {{ page.order_number }}
@@ -224,7 +224,7 @@
             </div>
             <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
               <div
-                class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-2 rounded-full transition-all"
+                class="bg-indigo-600 h-2 rounded-full transition-all"
                 :style="{ width: `${progressPercentage}%` }"
               ></div>
             </div>
@@ -240,14 +240,14 @@
         <div class="w-full max-w-4xl xl:max-w-6xl 2xl:max-w-[1600px] mx-auto p-4 sm:p-8 2xl:p-12">
           <!-- Page Content -->
           <div v-if="currentPage" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden mb-6">
-            <div class="h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
+            <div class="h-1.5 bg-indigo-600"></div>
             <div class="p-5 sm:p-8">
               <div class="mb-6">
                 <h2 v-if="hasMeaningfulTitle(currentPage.title)" class="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-3">
                   {{ currentPage.title }}
                 </h2>
                 <div class="flex flex-wrap items-center gap-3 text-xs sm:text-sm">
-                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold shadow-sm">
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-600 text-white font-semibold shadow-sm">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                     </svg>
@@ -331,7 +331,7 @@
               v-if="!(isStudentMode && !hasNextPage)"
               @click="nextPage"
               :disabled="!hasNextPage"
-              class="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2 text-sm sm:text-base font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg shadow-sm hover:shadow-md hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-sm transition-all"
+              class="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2 text-sm sm:text-base font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm hover:shadow-md hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-sm transition-all"
             >
               <span>Next</span>
               <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -341,7 +341,7 @@
             <button
               v-else-if="isStudentMode"
               @click="showCompletion = true"
-              class="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2 text-sm sm:text-base font-semibold bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-lg shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
+              class="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2 text-sm sm:text-base font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
             >
               <span>Finish Topic</span>
               <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -359,7 +359,7 @@
       class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
     >
       <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden text-center">
-        <div class="bg-gradient-to-br from-emerald-500 via-teal-500 to-indigo-600 px-6 py-8">
+        <div class="bg-emerald-600 px-6 py-8">
           <div class="w-16 h-16 mx-auto mb-3 rounded-full bg-white/20 flex items-center justify-center">
             <svg class="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
               <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
@@ -389,7 +389,7 @@
             </button>
             <button
               @click="goBack"
-              class="flex-1 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl hover:shadow-md transition-all"
+              class="flex-1 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl hover:shadow-md transition-all"
             >
               Back to eNotes
             </button>
@@ -405,7 +405,7 @@
       class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
     >
       <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg md:max-w-xl lg:max-w-2xl max-h-[90vh] sm:max-h-[85vh] overflow-hidden flex flex-col">
-        <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-5 sm:px-6 py-3 sm:py-4 text-center flex-shrink-0">
+        <div class="bg-indigo-600 px-5 sm:px-6 py-3 sm:py-4 text-center flex-shrink-0">
           <p v-if="topic.subject_name" class="text-indigo-100 text-xs font-semibold uppercase tracking-wide mb-1">{{ topic.subject_name }}</p>
           <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-white leading-snug">{{ topic.title }}</h2>
         </div>

@@ -6,7 +6,8 @@
       "PowerShell(& \"C:\\\\xampp\\\\php\\\\php.exe\" \"c:\\\\xampp\\\\htdocs\\\\eSpace\\\\backend\\\\database\\\\migrations\\\\add_student_answer_mode.php\")",
       "PowerShell(Test-NetConnection -ComputerName stmark.sc.ug -Port 21 -WarningAction SilentlyContinue)",
       "PowerShell(Test-NetConnection -ComputerName stmark.sc.ug -Port 22 -WarningAction SilentlyContinue)",
-      "PowerShell(Test-NetConnection -ComputerName stmark.sc.ug -Port 443 -WarningAction SilentlyContinue)"
+      "PowerShell(Test-NetConnection -ComputerName stmark.sc.ug -Port 443 -WarningAction SilentlyContinue)",
+      "Bash(python3 -c \"print\\(len\\(open\\('dist/clubs/art-club.html','r',encoding='utf-8'\\).read\\(\\)\\)\\)\")"
     ]
   }
 }

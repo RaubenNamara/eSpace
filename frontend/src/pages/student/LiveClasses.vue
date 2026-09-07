@@ -1,7 +1,7 @@
 <template>
   <div>
     <!-- Header -->
-    <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-fuchsia-600 shadow-lg shadow-indigo-500/20 p-4 sm:p-5 mb-6">
+    <div class="relative overflow-hidden rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-500/20 p-4 sm:p-5 mb-6">
       <div class="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-white/10"></div>
       <div class="absolute -right-3 bottom-0 w-24 h-24 rounded-full bg-white/10"></div>
       <div class="relative flex items-center gap-3 mb-3">
@@ -73,7 +73,7 @@
           <div
             v-for="cls in liveNow"
             :key="cls.id"
-            class="rounded-2xl p-5 bg-gradient-to-br from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/20"
+            class="rounded-2xl p-5 bg-red-600 text-white shadow-lg shadow-red-500/20"
           >
             <div class="flex items-start justify-between gap-2 mb-2">
               <h3 class="text-lg font-bold leading-tight">{{ cls.title }}</h3>

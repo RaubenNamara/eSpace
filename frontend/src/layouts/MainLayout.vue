@@ -2,18 +2,12 @@
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
     <!-- Sidebar -->
     <aside
-      class="overflow-hidden fixed left-0 top-2 bottom-0 w-64 rounded-tr-2xl bg-gradient-to-b from-blue-900 via-blue-950 to-slate-950 dark:bg-gradient-to-b dark:from-slate-900 dark:to-slate-950 backdrop-blur-2xl shadow-2xl transform transition-transform duration-300 z-50 flex flex-col border-r border-blue-800/50 dark:border-white/5"
+      class="overflow-hidden fixed left-0 top-2 bottom-0 w-64 rounded-tr-2xl bg-slate-950 shadow-2xl transform transition-transform duration-300 z-50 flex flex-col border-r border-white/5"
       :class="{ '-translate-x-full': !sidebarOpen, 'translate-x-0': sidebarOpen }"
     >
-      <!-- Soft blurred glow blobs behind the frosted panel so it reads as translucent and
-           catching light, not a flat fill - shown in both themes now that both are dark panels. -->
-      <div class="pointer-events-none absolute -top-16 -left-10 w-56 h-56 rounded-full bg-sky-500/20 blur-3xl"></div>
-      <div class="pointer-events-none absolute top-1/3 -right-16 w-56 h-56 rounded-full bg-indigo-500/15 blur-3xl"></div>
-      <div class="pointer-events-none absolute bottom-0 left-1/4 w-48 h-48 rounded-full bg-cyan-400/10 blur-3xl"></div>
-
-      <div class="relative px-5 py-5 border-b border-blue-800/50 dark:border-white/5 flex-shrink-0">
+      <div class="relative px-5 py-5 border-b border-white/5 flex-shrink-0">
         <div class="flex items-center gap-3">
-          <div class="relative w-10 h-10 flex-shrink-0 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/25">
+          <div class="relative w-10 h-10 flex-shrink-0 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/25">
             <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
             </svg>
@@ -44,7 +38,7 @@
                 class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-sm bg-rose-400 transition-opacity duration-150"
                 :class="isActive(item.path) ? 'opacity-100' : 'opacity-0'"
               ></span>
-              <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 bg-gradient-to-b from-slate-700 to-slate-800 shadow-sm ring-1 transition-all duration-150"
+              <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 bg-slate-800 shadow-sm ring-1 transition-all duration-150"
                 :class="isActive(item.path) ? 'ring-rose-400/40 text-rose-300' : 'ring-white/15 text-slate-200 group-hover:text-white'"
               >
                 <component :is="iconMap[item.icon]" class="w-[18px] h-[18px]" />
@@ -68,7 +62,7 @@
                 class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-sm bg-sky-400 transition-opacity duration-150"
                 :class="isActive(item.path) ? 'opacity-100' : 'opacity-0'"
               ></span>
-              <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 bg-gradient-to-b from-slate-700 to-slate-800 shadow-sm ring-1 transition-all duration-150"
+              <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 bg-slate-800 shadow-sm ring-1 transition-all duration-150"
                 :class="isActive(item.path) ? 'ring-sky-400/40 text-sky-300' : 'ring-white/15 text-slate-200 group-hover:text-white'"
               >
                 <component :is="iconMap[item.icon]" class="w-[18px] h-[18px]" />
@@ -96,7 +90,7 @@
                 class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-sm bg-indigo-400 transition-opacity duration-150"
                 :class="isActive(item.path) ? 'opacity-100' : 'opacity-0'"
               ></span>
-              <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 bg-gradient-to-b from-slate-700 to-slate-800 shadow-sm ring-1 transition-all duration-150"
+              <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 bg-slate-800 shadow-sm ring-1 transition-all duration-150"
                 :class="isActive(item.path) ? 'ring-indigo-400/40 text-indigo-300' : 'ring-white/15 text-slate-200 group-hover:text-white'"
               >
                 <component :is="iconMap[item.icon]" class="w-[18px] h-[18px]" />
@@ -124,7 +118,7 @@
                 class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-sm bg-emerald-400 transition-opacity duration-150"
                 :class="isActive(item.path) ? 'opacity-100' : 'opacity-0'"
               ></span>
-              <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 bg-gradient-to-b from-slate-700 to-slate-800 shadow-sm ring-1 transition-all duration-150"
+              <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 bg-slate-800 shadow-sm ring-1 transition-all duration-150"
                 :class="isActive(item.path) ? 'ring-emerald-400/40 text-emerald-300' : 'ring-white/15 text-slate-200 group-hover:text-white'"
               >
                 <component :is="iconMap[item.icon]" class="w-[18px] h-[18px]" />
@@ -152,7 +146,7 @@
                 class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-sm bg-amber-400 transition-opacity duration-150"
                 :class="isActive(item.path) ? 'opacity-100' : 'opacity-0'"
               ></span>
-              <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 bg-gradient-to-b from-slate-700 to-slate-800 shadow-sm ring-1 transition-all duration-150"
+              <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 bg-slate-800 shadow-sm ring-1 transition-all duration-150"
                 :class="isActive(item.path) ? 'ring-amber-400/40 text-amber-300' : 'ring-white/15 text-slate-200 group-hover:text-white'"
               >
                 <component :is="iconMap[item.icon]" class="w-[18px] h-[18px]" />
@@ -163,12 +157,12 @@
         </div>
       </nav>
 
-      <div class="relative p-3 border-t border-blue-800/50 dark:border-white/5 flex-shrink-0">
+      <div class="relative p-3 border-t border-white/5 flex-shrink-0">
         <button
           @click="handleLogout"
           class="flex items-center gap-3 pl-4 pr-3 py-2 rounded-lg text-slate-100 hover:bg-rose-500/15 hover:text-rose-300 w-full transition-colors duration-150 group"
         >
-          <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 bg-gradient-to-b from-slate-700 to-slate-800 shadow-sm ring-1 ring-white/15 text-slate-200 group-hover:text-rose-300 transition-all duration-150">
+          <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 bg-slate-800 shadow-sm ring-1 ring-white/15 text-slate-200 group-hover:text-rose-300 transition-all duration-150">
             <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
             </svg>
@@ -217,7 +211,7 @@
             <div v-if="hasDualRoles" class="relative">
               <button 
                 @click="showRoleSwitcher = !showRoleSwitcher"
-                class="flex items-center space-x-2 px-3 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 text-white hover:from-indigo-600 hover:to-purple-600 transition-all duration-200"
+                class="flex items-center space-x-2 px-3 py-2 rounded-lg bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 hover:shadow-md transition-colors duration-150"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4-4m-4 4l4 4"></path>
@@ -396,11 +390,11 @@
 
       <!-- Footer -->
       <footer class="mt-8 flex-shrink-0">
-        <div class="h-1 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600"></div>
+        <div class="h-1 bg-indigo-600"></div>
         <div class="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
           <div class="px-4 sm:px-6 py-5 sm:py-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
             <div class="hidden sm:flex items-center gap-3">
-              <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-md shadow-indigo-500/20 flex-shrink-0">
+              <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-md shadow-indigo-500/20 flex-shrink-0">
                 <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                 </svg>
@@ -412,7 +406,7 @@
             </div>
 
             <div class="flex flex-wrap items-center justify-center gap-3 text-xs">
-              <span class="hidden sm:inline-block px-2.5 py-1 rounded-full bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 text-indigo-600 dark:text-indigo-400 font-semibold capitalize">
+              <span class="hidden sm:inline-block px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-semibold capitalize">
                 {{ userRole }} Portal
               </span>
               <span class="text-gray-400 dark:text-gray-500">&copy; {{ currentYear }} eSpace. All rights reserved.</span>

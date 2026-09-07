@@ -5,7 +5,7 @@
       <div class="flex flex-wrap gap-3">
         <RouterLink
           to="/admin/assessments"
-          class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center"
+          class="px-4 py-2.5 bg-purple-600 text-white font-semibold rounded-lg shadow-sm hover:bg-purple-700 hover:shadow-md transition-colors duration-150 flex items-center"
           title="See exactly what students see for any assessment school-wide"
         >
           <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -16,7 +16,7 @@
         </RouterLink>
         <button
           @click="openViewEnrolledModal"
-          class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
+          class="px-4 py-2.5 bg-green-600 text-white font-semibold rounded-lg shadow-sm hover:bg-green-700 hover:shadow-md transition-colors duration-150 flex items-center"
         >
           <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -26,7 +26,7 @@
         </button>
         <button
           @click="openEnrollModal"
-          class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center"
+          class="btn-primary flex items-center"
         >
           <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -35,6 +35,20 @@
         </button>
       </div>
     </div>
+
+    <!-- Quick Access -->
+    <h2 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Quick Access</h2>
+    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4 mb-8">
+      <QuickLink to="/admin/students" label="Students" icon="students" color="sky" />
+      <QuickLink to="/admin/teachers" label="Teachers" icon="teachers" color="emerald" />
+      <QuickLink to="/admin/classes" label="Classes" icon="classes" color="violet" />
+      <QuickLink to="/admin/live-classes" label="Live Classes" icon="live" color="red" />
+      <QuickLink to="/admin/library" label="eLibrary" icon="library" color="amber" />
+      <QuickLink to="/admin/notes" label="eNotes" icon="notes" color="indigo" />
+      <QuickLink to="/admin/itembank" label="Item Bank" icon="itembank" color="teal" />
+      <QuickLink to="/admin/reports" label="Reports" icon="reports" color="pink" />
+    </div>
+
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
       <div class="card">
         <div class="flex items-center justify-between">
@@ -126,7 +140,7 @@
     <div v-if="showViewEnrolledModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-2 sm:p-4">
       <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[95vh] sm:max-h-[90vh] flex flex-col">
         <!-- Header -->
-        <div class="bg-gradient-to-r from-green-600 to-teal-600 px-4 sm:px-6 py-4 sm:py-5 flex-shrink-0 rounded-t-2xl">
+        <div class="bg-green-600 px-4 sm:px-6 py-4 sm:py-5 flex-shrink-0 rounded-t-2xl">
           <div class="flex items-center justify-between gap-3">
             <div class="min-w-0">
               <h2 class="text-lg sm:text-2xl font-bold text-white truncate">View Enrolled Students</h2>
@@ -191,6 +205,14 @@
                 </option>
               </select>
             </div>
+          </div>
+
+          <!-- Total enrolled in whichever class is selected above -->
+          <div v-if="selectedClassBreakdown" class="flex items-center gap-2 pt-1">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800">
+              Total enrolled in {{ selectedClassBreakdown.class_name }}{{ selectedClassBreakdown.stream_name ? '-' + selectedClassBreakdown.stream_name : '' }}:
+              <span class="font-bold">{{ selectedClassBreakdown.count }}</span>
+            </span>
           </div>
 
           <div class="flex flex-wrap items-center gap-3">
@@ -327,7 +349,7 @@
           </div>
           <button
             @click="showViewEnrolledModal = false"
-            class="w-full sm:w-auto order-1 sm:order-2 px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 font-medium"
+            class="btn-secondary w-full sm:w-auto order-1 sm:order-2 !px-6 !py-3"
           >
             Close
           </button>
@@ -339,7 +361,7 @@
     <div v-if="showEnrollModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-2 sm:p-4">
       <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[95vh] sm:max-h-[90vh] flex flex-col">
         <!-- Header -->
-        <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-4 sm:px-6 py-4 sm:py-5 flex-shrink-0 rounded-t-2xl">
+        <div class="bg-indigo-600 px-4 sm:px-6 py-4 sm:py-5 flex-shrink-0 rounded-t-2xl">
           <div class="flex items-center justify-between gap-3">
             <div class="min-w-0">
               <h2 class="text-lg sm:text-2xl font-bold text-white truncate">Enroll Students in Departments</h2>
@@ -528,7 +550,7 @@
                 type="button"
                 @click="deenrollStudents"
                 :disabled="deenrollData.student_ids.length === 0"
-                class="mt-2 w-full sm:w-auto px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed text-sm font-medium"
+                class="btn-danger mt-2 w-full sm:w-auto !px-4 !py-2 text-sm disabled:!bg-gray-300 dark:disabled:!bg-gray-700"
               >
                 De-enroll Selected ({{ deenrollData.student_ids.length }})
               </button>
@@ -540,14 +562,14 @@
             <button
               type="button"
               @click="showEnrollModal = false"
-              class="w-full sm:w-auto px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 font-medium"
+              class="btn-secondary w-full sm:w-auto !px-6 !py-3"
             >
               Cancel
             </button>
             <button
               type="submit"
               :disabled="enrollData.student_ids.length === 0"
-              class="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 font-medium shadow-lg shadow-indigo-500/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+              class="btn-primary w-full sm:w-auto !px-6 !py-3"
             >
               Enroll Students{{ enrollData.student_ids.length > 0 ? ` (${enrollData.student_ids.length})` : '' }}
             </button>
@@ -561,6 +583,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import apiService from '@/services/api'
+import QuickLink from '@/components/dashboard/QuickLink.vue'
 import { Bar } from 'vue-chartjs'
 import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ArcElement } from 'chart.js'
 
@@ -669,6 +692,23 @@ const viewLimit = 50
 const viewTotal = ref(0)
 const viewTotalPages = ref(1)
 let viewSearchDebounce: ReturnType<typeof setTimeout> | null = null
+
+// Per-class enrollment totals (respecting the department/academic-year filters), used only to
+// show "Total enrolled in <class>: N" once a specific class is picked in the dropdown above.
+interface ClassBreakdownRow {
+  class_id: number
+  class_name: string
+  level: string
+  stream_name: string
+  count: number
+}
+
+const classBreakdown = ref<ClassBreakdownRow[]>([])
+
+const selectedClassBreakdown = computed(() => {
+  if (!viewFilters.value.class_id) return null
+  return classBreakdown.value.find(cb => String(cb.class_id) === String(viewFilters.value.class_id)) || null
+})
 
 // Filtering and pagination now happen server-side (see fetchEnrolledStudents) - this just
 // passes through the current page's rows so the template doesn't need to change.
@@ -903,15 +943,36 @@ const openViewEnrolledModal = async () => {
   await fetchDepartments()
   await fetchAcademicYears()
   await fetchClasses()
-  await fetchEnrolledStudents()
+  await Promise.all([fetchEnrolledStudents(), fetchClassBreakdown()])
   showViewEnrolledModal.value = true
+}
+
+const fetchClassBreakdown = async () => {
+  try {
+    const params: any = {}
+    if (viewFilters.value.department_id) {
+      params.department_id = viewFilters.value.department_id
+    }
+    if (viewFilters.value.academic_year_id) {
+      params.academic_year_id = viewFilters.value.academic_year_id
+    }
+
+    const response = await apiService.get('/admin/students/enrolled-by-class', { params })
+    if (response.data?.success && response.data?.data) {
+      classBreakdown.value = response.data.data.by_class || []
+    }
+  } catch (error) {
+    console.error('Failed to fetch class breakdown:', error)
+  }
 }
 
 // Filter dropdowns (@change) go through this so changing a filter always jumps back to page 1
 // - otherwise "page 3" of an old filter could silently become an out-of-range page of the new one.
+// Department/year also affect the class breakdown totals, so refresh those here too.
 const onViewFilterChange = () => {
   viewPage.value = 1
   fetchEnrolledStudents()
+  fetchClassBreakdown()
 }
 
 // Debounced so every keystroke doesn't fire a request - search is server-side (see

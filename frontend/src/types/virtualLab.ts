@@ -336,8 +336,8 @@ export const CATEGORY_LABELS: Record<LabCategory, string> = {
 }
 
 export const CATEGORY_COLORS: Record<LabCategory, string> = {
-  physics: 'from-indigo-500 to-blue-600',
-  chemistry: 'from-emerald-500 to-teal-600',
-  biology: 'from-purple-500 to-fuchsia-600',
-  agriculture: 'from-amber-500 to-orange-600',
+  physics: 'bg-indigo-600',
+  chemistry: 'bg-emerald-600',
+  biology: 'bg-purple-600',
+  agriculture: 'bg-amber-600',
 }

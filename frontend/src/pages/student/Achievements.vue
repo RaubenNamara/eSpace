@@ -9,7 +9,7 @@
       <span
         v-for="type in (['platinum', 'gold', 'silver', 'bronze'] as BadgeType[])"
         :key="type"
-        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r text-white"
+        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-white"
         :class="BADGE_COLORS[type]"
       >
         {{ BADGE_ICONS[type] }} {{ BADGE_LABELS[type] }}: {{ summary?.[type] ?? 0 }}
@@ -45,7 +45,7 @@
       <div
         v-for="a in filteredAwards"
         :key="a.id"
-        class="rounded-xl p-4 text-white bg-gradient-to-br shadow-sm relative"
+        class="rounded-xl p-4 text-white shadow-sm relative"
         :class="[BADGE_COLORS[a.badge_type], a.status === 'revoked' ? 'opacity-50 grayscale' : '']"
       >
         <span v-if="a.status === 'revoked'" class="absolute top-2 right-2 text-[10px] font-semibold bg-black/40 px-2 py-0.5 rounded-full">Revoked</span>

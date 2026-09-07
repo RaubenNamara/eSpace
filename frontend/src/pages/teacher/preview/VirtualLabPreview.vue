@@ -39,7 +39,7 @@
           class="text-left bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 p-6"
         >
           <div
-            class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-sm mb-4 bg-gradient-to-br"
+            class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-sm mb-4"
             :class="CATEGORY_COLORS[group.category]"
           >
             {{ CATEGORY_ICONS[group.category] }}
@@ -61,7 +61,7 @@
           @click="openAssignment(a)"
           class="text-left bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 overflow-hidden"
         >
-          <div class="h-24 flex items-center justify-center text-4xl bg-gradient-to-br" :class="CATEGORY_COLORS[a.category]">
+          <div class="h-24 flex items-center justify-center text-4xl" :class="CATEGORY_COLORS[a.category]">
             {{ CATEGORY_ICONS[a.category] }}
           </div>
           <div class="p-4">
@@ -85,7 +85,7 @@
       <div v-else-if="detail" class="space-y-5">
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 sm:p-6">
           <div class="flex items-start gap-4">
-            <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 bg-gradient-to-br" :class="CATEGORY_COLORS[detail.category]">
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0" :class="CATEGORY_COLORS[detail.category]">
               {{ CATEGORY_ICONS[detail.category] }}
             </div>
             <div class="min-w-0">

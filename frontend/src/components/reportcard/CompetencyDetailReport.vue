@@ -1,7 +1,7 @@
 <template>
   <div ref="rootEl" class="report-card relative bg-white dark:bg-gray-800 rounded-2xl shadow-md border-2 border-gray-300 dark:border-gray-700 overflow-hidden">
     <!-- Accent bar -->
-    <div class="h-2.5 bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-500 print-color-exact"></div>
+    <div class="h-2.5 bg-indigo-600 print-color-exact"></div>
 
     <!-- Watermark -->
     <div v-if="report.school?.logo_path" class="pointer-events-none select-none absolute inset-0 flex items-center justify-center overflow-hidden z-0">

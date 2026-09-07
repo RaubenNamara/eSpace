@@ -23,7 +23,7 @@
         <span
           v-for="type in (['platinum', 'gold', 'silver', 'bronze'] as BadgeType[])"
           :key="type"
-          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r text-white"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-white"
           :class="BADGE_COLORS[type]"
         >
           {{ BADGE_ICONS[type] }} {{ BADGE_LABELS[type] }}: {{ summary?.[type] ?? 0 }}
@@ -38,7 +38,7 @@
         <div
           v-for="a in awards.slice(0, 4)"
           :key="a.id"
-          class="rounded-xl p-4 text-white bg-gradient-to-br shadow-sm"
+          class="rounded-xl p-4 text-white shadow-sm"
           :class="BADGE_COLORS[a.badge_type]"
         >
           <div class="flex items-start justify-between gap-2">

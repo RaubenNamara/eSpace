@@ -1,7 +1,7 @@
 <template>
   <div>
     <!-- Header -->
-    <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-fuchsia-600 shadow-lg shadow-indigo-500/20 p-5 sm:p-7 mb-6">
+    <div class="relative overflow-hidden rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-500/20 p-5 sm:p-7 mb-6">
       <div class="absolute -right-10 -top-10 w-52 h-52 rounded-full bg-white/10"></div>
       <div class="absolute -right-4 bottom-0 w-32 h-32 rounded-full bg-white/10"></div>
       <div class="relative flex items-center gap-4">
@@ -42,7 +42,7 @@
       <RouterLink
         v-if="data.stats.live_now > 0"
         to="/student/live-classes"
-        class="block mb-6 rounded-2xl p-4 sm:p-5 bg-gradient-to-r from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/20 hover:opacity-95 transition-opacity"
+        class="block mb-6 rounded-2xl p-4 sm:p-5 bg-red-600 text-white shadow-lg shadow-red-500/20 hover:opacity-95 transition-opacity"
       >
         <div class="flex items-center gap-3">
           <span class="w-2.5 h-2.5 rounded-full bg-white animate-pulse flex-shrink-0"></span>
@@ -86,7 +86,7 @@
       <div v-if="data.recent_library.length > 0" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden mb-6">
         <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
           <h2 class="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-            <span class="w-6 h-6 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center flex-shrink-0">
+            <span class="w-6 h-6 rounded-lg bg-emerald-600 flex items-center justify-center flex-shrink-0">
               <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
             </span>
             Recently Added to eLibrary
@@ -100,7 +100,7 @@
             to="/student/library"
             class="group flex items-center gap-3 flex-shrink-0 w-64 p-3 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-emerald-200 dark:hover:border-emerald-800 hover:shadow-md hover:-translate-y-0.5 transition-all"
           >
-            <div class="w-11 h-11 flex-shrink-0 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-sm">
+            <div class="w-11 h-11 flex-shrink-0 rounded-lg bg-emerald-600 flex items-center justify-center shadow-sm">
               <svg class="w-5 h-5 text-white/90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
             </div>
             <div class="min-w-0">

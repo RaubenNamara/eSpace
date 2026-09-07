@@ -2,11 +2,11 @@
   <div class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
     <div class="bg-white dark:bg-gray-800 w-full h-full sm:h-auto sm:max-w-4xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col">
       <!-- Header -->
-      <div class="relative flex-shrink-0 bg-gradient-to-r from-rose-600 to-orange-600 px-4 sm:px-8 py-4 sm:py-5">
+      <div class="relative flex-shrink-0 bg-rose-600 px-4 sm:px-8 py-4 sm:py-5">
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
             <h2 class="text-base sm:text-xl font-bold text-white leading-tight truncate">{{ video.title }}</h2>
-            <div class="flex flex-wrap items-center gap-2 mt-1 text-xs sm:text-sm text-orange-100">
+            <div class="flex flex-wrap items-center gap-2 mt-1 text-xs sm:text-sm text-rose-100">
               <span v-if="video.subject_name" class="px-2 py-0.5 rounded-full bg-white/20 font-medium">{{ video.subject_name }}</span>
               <span v-if="teacherName" class="truncate">By {{ teacherName }}</span>
             </div>

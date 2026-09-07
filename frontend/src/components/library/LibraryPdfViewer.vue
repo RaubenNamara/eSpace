@@ -2,7 +2,7 @@
   <div class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
     <div class="bg-white dark:bg-gray-800 w-full h-full sm:h-[92vh] lg:h-[95vh] sm:max-w-4xl lg:max-w-5xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col">
       <!-- Header -->
-      <div class="relative flex-shrink-0 bg-gradient-to-r from-emerald-600 to-teal-600 px-4 sm:px-8 py-4 sm:py-5">
+      <div class="relative flex-shrink-0 bg-emerald-600 px-4 sm:px-8 py-4 sm:py-5">
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
             <h2 class="text-base sm:text-xl font-bold text-white leading-tight truncate">{{ book.title }}</h2>

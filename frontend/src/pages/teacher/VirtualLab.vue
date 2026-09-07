@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-full">
     <!-- Hero -->
-    <div class="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 print-color-exact">
+    <div class="relative overflow-hidden bg-indigo-600 print-color-exact">
       <div class="absolute inset-0 opacity-20" style="background-image: radial-gradient(circle at 20% 20%, white 1px, transparent 1px), radial-gradient(circle at 80% 60%, white 1px, transparent 1px); background-size: 48px 48px;"></div>
       <div class="relative px-4 py-8 sm:px-8 sm:py-10">
         <div class="flex items-center gap-3 mb-2">
@@ -77,7 +77,7 @@
           <div v-else class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
             <div v-for="t in filteredTemplates" :key="t.id" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col">
               <div class="flex items-start gap-2.5">
-                <span class="w-9 h-9 flex-shrink-0 rounded-xl bg-gradient-to-br flex items-center justify-center text-base print-color-exact" :class="CATEGORY_COLORS[t.category]">{{ CATEGORY_ICONS[t.category] }}</span>
+                <span class="w-9 h-9 flex-shrink-0 rounded-xl flex items-center justify-center text-base print-color-exact" :class="CATEGORY_COLORS[t.category]">{{ CATEGORY_ICONS[t.category] }}</span>
                 <div class="min-w-0 flex-1">
                   <p class="font-semibold text-gray-900 dark:text-white text-sm leading-snug truncate">{{ t.title }}</p>
                   <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5 truncate">{{ t.subject_name || CATEGORY_LABELS[t.category] }}<span v-if="t.topic"> · {{ t.topic }}</span></p>
@@ -167,7 +167,7 @@
         </div>
         <div v-else class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           <div v-for="e in experiments" :key="e.id" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col">
-            <div class="h-1.5 bg-gradient-to-r print-color-exact" :class="CATEGORY_COLORS[e.category]"></div>
+            <div class="h-1.5 print-color-exact" :class="CATEGORY_COLORS[e.category]"></div>
             <div class="p-4 flex-1 flex flex-col">
               <div class="flex items-start justify-between gap-2 mb-1.5">
                 <h3 class="font-semibold text-gray-900 dark:text-white text-sm leading-snug">{{ e.title }}</h3>
@@ -202,7 +202,7 @@
           <div v-for="a in assignments" :key="a.id" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
             <button class="w-full flex items-center justify-between gap-3 p-4 text-left" @click="toggleAssignment(a.id)">
               <div class="flex items-center gap-3 min-w-0">
-                <span class="w-9 h-9 flex-shrink-0 rounded-xl bg-gradient-to-br flex items-center justify-center text-base print-color-exact" :class="CATEGORY_COLORS[a.category]">{{ CATEGORY_ICONS[a.category] }}</span>
+                <span class="w-9 h-9 flex-shrink-0 rounded-xl flex items-center justify-center text-base print-color-exact" :class="CATEGORY_COLORS[a.category]">{{ CATEGORY_ICONS[a.category] }}</span>
                 <div class="min-w-0">
                   <p class="font-semibold text-gray-900 dark:text-white text-sm truncate">
                     {{ a.experiment_title }} &middot;

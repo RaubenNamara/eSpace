@@ -6,7 +6,7 @@
     <span v-if="badge" class="absolute top-2 right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center">
       {{ badge > 99 ? '99+' : badge }}
     </span>
-    <div class="w-11 h-11 rounded-xl flex items-center justify-center bg-gradient-to-br" :class="palette.grad">
+    <div class="w-11 h-11 rounded-xl flex items-center justify-center" :class="palette.color">
       <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="iconPath"></path>
       </svg>

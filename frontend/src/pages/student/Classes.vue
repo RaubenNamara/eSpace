@@ -1,7 +1,7 @@
 <template>
   <div>
     <!-- Hero -->
-    <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-fuchsia-600 shadow-lg shadow-indigo-500/20 p-4 sm:p-5 mb-6">
+    <div class="relative overflow-hidden rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-500/20 p-4 sm:p-5 mb-6">
       <div class="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-white/10"></div>
       <div class="absolute -right-3 bottom-0 w-24 h-24 rounded-full bg-white/10"></div>
       <div class="relative flex items-center gap-3">
@@ -58,14 +58,14 @@
           @click="selectClass(cls)"
           class="group text-left rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-indigo-200 dark:hover:border-indigo-800 transition-all overflow-hidden"
         >
-          <div class="h-1.5 bg-gradient-to-r" :class="cardAccent(idx)"></div>
+          <div class="h-1.5" :class="cardAccent(idx)"></div>
           <div class="p-5">
             <div class="flex items-start justify-between gap-3 mb-4">
               <div class="min-w-0">
                 <h3 class="text-lg font-bold text-gray-900 dark:text-white truncate">{{ cls.name }}</h3>
                 <p class="text-xs text-gray-500 dark:text-gray-400">{{ cls.level }}</p>
               </div>
-              <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-gradient-to-br text-white shadow-sm" :class="cardAccent(idx)">
+              <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-white shadow-sm" :class="cardAccent(idx)">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-4-4"></path>
                 </svg>
@@ -105,7 +105,7 @@
       </button>
 
       <div class="rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm p-5 mb-5 flex items-center gap-4">
-        <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-indigo-500 to-fuchsia-600 flex items-center justify-center text-white shadow-sm flex-shrink-0">
+        <div class="w-14 h-14 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-sm flex-shrink-0">
           <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-4-4"></path>
           </svg>
@@ -149,7 +149,7 @@
               >
                 <td class="px-5 py-3 whitespace-nowrap">
                   <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold bg-gradient-to-br flex-shrink-0" :class="avatarPalette(student.student_id)">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0" :class="avatarPalette(student.student_id)">
                       {{ studentInitials(student) }}
                     </div>
                     <span class="text-sm font-medium text-gray-900 dark:text-white">
@@ -257,12 +257,12 @@ const loadStudents = async (cls: StudentClass) => {
 }
 
 const cardPalettes = [
-  'from-indigo-500 to-purple-600',
-  'from-emerald-500 to-teal-600',
-  'from-amber-500 to-orange-600',
-  'from-rose-500 to-pink-600',
-  'from-sky-500 to-blue-600',
-  'from-violet-500 to-fuchsia-600'
+  'bg-indigo-600',
+  'bg-emerald-600',
+  'bg-amber-600',
+  'bg-rose-600',
+  'bg-sky-600',
+  'bg-violet-600'
 ]
 const cardAccent = (idx: number) => cardPalettes[idx % cardPalettes.length]
 const avatarPalette = (id: number) => cardPalettes[Math.abs(id) % cardPalettes.length]

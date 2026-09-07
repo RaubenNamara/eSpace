@@ -3,11 +3,9 @@
     to="/student/virtual-lab"
     class="relative overflow-hidden block bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md hover:-translate-y-0.5 transition-all p-5"
   >
-    <div class="absolute -right-6 -top-6 w-28 h-28 rounded-full bg-gradient-to-br from-indigo-400/10 to-purple-500/10 dark:from-indigo-400/5 dark:to-purple-500/5"></div>
-
     <div class="relative flex items-center justify-between mb-4">
       <h3 class="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-        <span class="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-sm print-color-exact">🧪</span>
+        <span class="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-sm print-color-exact">🧪</span>
         Virtual Lab
       </h3>
       <span class="text-xs font-semibold text-indigo-600 dark:text-indigo-400">Open Lab &rarr;</span>

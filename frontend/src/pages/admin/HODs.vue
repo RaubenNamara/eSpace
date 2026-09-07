@@ -96,7 +96,7 @@
       <div v-if="showCreateModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
           <!-- Header -->
-          <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-5 flex-shrink-0">
+          <div class="bg-indigo-600 px-6 py-5 flex-shrink-0">
             <div class="flex items-center justify-between">
               <div>
                 <h2 class="text-2xl font-bold text-white">Add New Head of Department</h2>
@@ -261,7 +261,7 @@
               </button>
               <button
                 type="submit"
-                class="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 font-medium shadow-lg shadow-indigo-500/30"
+                class="w-full sm:w-auto px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-200 font-medium shadow-lg shadow-indigo-500/30"
               >
                 Create HOD Account
               </button>
@@ -274,7 +274,7 @@
       <div v-if="showAssignTeacherModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
           <!-- Header -->
-          <div class="bg-gradient-to-r from-green-600 to-teal-600 px-6 py-5 flex-shrink-0">
+          <div class="bg-green-600 px-6 py-5 flex-shrink-0">
             <div class="flex items-center justify-between">
               <div>
                 <h2 class="text-2xl font-bold text-white">Assign Teacher as HOD</h2>
@@ -349,7 +349,7 @@
               </button>
               <button
                 type="submit"
-                class="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-green-600 to-teal-600 text-white rounded-lg hover:from-green-700 hover:to-teal-700 transition-all duration-200 font-medium shadow-lg shadow-green-500/30"
+                class="w-full sm:w-auto px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200 font-medium shadow-lg shadow-green-500/30"
               >
                 Assign as HOD
               </button>
@@ -362,7 +362,7 @@
       <div v-if="showEditModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
           <!-- Header -->
-          <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-5 flex-shrink-0">
+          <div class="bg-indigo-600 px-6 py-5 flex-shrink-0">
             <div class="flex items-center justify-between">
               <div>
                 <h2 class="text-2xl font-bold text-white">Edit Head of Department</h2>
@@ -508,7 +508,7 @@
               </button>
               <button
                 type="submit"
-                class="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 font-medium shadow-lg shadow-indigo-500/30"
+                class="w-full sm:w-auto px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-200 font-medium shadow-lg shadow-indigo-500/30"
               >
                 Update HOD
               </button>

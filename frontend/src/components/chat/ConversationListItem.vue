@@ -6,7 +6,7 @@
   >
     <div class="relative flex-shrink-0">
       <div
-        class="w-11 h-11 rounded-full flex items-center justify-center text-white font-semibold text-sm bg-gradient-to-br"
+        class="w-11 h-11 rounded-full flex items-center justify-center text-white font-semibold text-sm"
         :class="avatarPalette"
       >
         <svg v-if="conversation.type === 'class'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -52,8 +52,8 @@ const props = defineProps<{ conversation: Conversation; active?: boolean }>()
 defineEmits(['click'])
 
 const palettes = [
-  'from-emerald-500 to-teal-600', 'from-blue-500 to-cyan-600', 'from-indigo-500 to-purple-600',
-  'from-amber-500 to-orange-600', 'from-rose-500 to-pink-600', 'from-violet-500 to-fuchsia-600'
+  'bg-emerald-600', 'bg-blue-600', 'bg-indigo-600',
+  'bg-amber-600', 'bg-rose-600', 'bg-violet-600'
 ]
 const avatarPalette = computed(() => palettes[Math.abs(props.conversation.id) % palettes.length])
 

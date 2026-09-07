@@ -44,7 +44,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
             </svg>
             <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">Drag and drop your filled .xlsx or .xls file here, or</p>
-            <label class="mt-3 inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition-colors">
+            <label class="mt-3 inline-block cursor-pointer btn-primary">
               Choose File
               <input type="file" accept=".xlsx,.xls" class="hidden" @change="onFileChange">
             </label>
@@ -174,7 +174,7 @@
             type="button"
             :disabled="validCount === 0 || importing"
             @click="confirmImport"
-            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+            class="btn-primary"
           >
             {{ importing ? 'Importing...' : `Confirm Import (${validCount})` }}
           </button>
@@ -184,7 +184,7 @@
           v-if="step === 'results'"
           type="button"
           @click="close"
-          class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          class="btn-primary"
         >
           Done
         </button>

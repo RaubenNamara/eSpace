@@ -51,7 +51,7 @@
 
         <div v-else class="overflow-x-auto">
           <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700">
-            <thead class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+            <thead class="bg-gray-50 dark:bg-gray-900">
               <tr>
                 <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">User</th>
                 <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Role</th>

@@ -2,7 +2,7 @@
   <div class="p-6">
     <!-- Header -->
     <div class="flex items-center gap-4 mb-6">
-      <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-500 via-red-500 to-orange-500 flex items-center justify-center shadow-lg shadow-red-500/20 flex-shrink-0">
+      <div class="w-14 h-14 rounded-2xl bg-red-600 flex items-center justify-center shadow-lg shadow-red-500/20 flex-shrink-0">
         <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
         </svg>
@@ -55,7 +55,7 @@
 
       <button
         @click="openCreateModal"
-        class="px-4 py-2 bg-gradient-to-r from-rose-600 to-orange-500 text-white rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2 shadow-sm shadow-red-500/20"
+        class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 shadow-sm shadow-red-500/20"
       >
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
@@ -241,7 +241,7 @@
               <button
                 type="submit"
                 :disabled="saving"
-                class="px-4 py-2 bg-gradient-to-r from-rose-600 to-orange-500 text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+                class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
               >
                 {{ saving ? 'Saving...' : (editingClass ? 'Update' : 'Schedule') }}
               </button>
@@ -606,6 +606,6 @@ onMounted(async () => {
   @apply px-3 py-1.5 rounded-lg text-red-600 dark:text-red-400 text-xs font-medium hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors;
 }
 .btn-live {
-  @apply px-3 py-1.5 rounded-lg bg-gradient-to-r from-red-600 to-rose-500 text-white text-xs font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 shadow-sm shadow-red-500/30 animate-pulse;
+  @apply px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs font-semibold hover:bg-red-700 transition-colors disabled:opacity-50 shadow-sm shadow-red-500/30 animate-pulse;
 }
 </style>

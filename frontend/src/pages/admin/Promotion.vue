@@ -140,7 +140,7 @@
         <button
           @click="confirmPromotion"
           :disabled="!preview || preview.eligible.length === 0 || promoting"
-          class="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 font-medium shadow-lg shadow-indigo-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+          class="btn-primary"
         >
           {{ promoting ? 'Promoting...' : `Confirm Promotion (${preview?.eligible.length || 0})` }}
         </button>

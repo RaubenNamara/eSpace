@@ -5,7 +5,7 @@
     <div class="flex justify-between items-center mb-6">
       <button
         @click="openTermModal()"
-        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        class="btn-primary"
       >
         Add Term
       </button>
@@ -144,7 +144,7 @@
             <button
               type="submit"
               :disabled="loading"
-              class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              class="btn-primary"
             >
               {{ loading ? 'Saving...' : 'Save' }}
             </button>

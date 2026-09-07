@@ -3,7 +3,7 @@
     <template v-if="!activeSubjectId">
       <!-- Header -->
       <div class="flex items-center gap-4 mb-6">
-        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-sm flex-shrink-0">
+        <div class="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center shadow-sm flex-shrink-0">
           <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
           </svg>
@@ -86,7 +86,7 @@
           >
             <div class="flex items-start justify-between mb-4">
               <div
-                class="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold text-base shadow-sm flex-shrink-0 bg-gradient-to-br"
+                class="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold text-base shadow-sm flex-shrink-0"
                 :class="subjectGradient(group.id)"
               >
                 {{ subjectInitials(group) }}
@@ -176,7 +176,7 @@
         <aside v-if="showSidebar" class="w-full lg:w-80 flex-shrink-0 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] flex flex-col overflow-hidden">
           <div class="p-4 border-b border-gray-100 dark:border-gray-700/60 flex items-center gap-3 flex-shrink-0">
             <div
-              class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm bg-gradient-to-br flex-shrink-0"
+              class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
               :class="activeSubject ? subjectGradient(activeSubject.id) : ''"
             >
               {{ activeSubject ? subjectInitials(activeSubject) : '' }}
@@ -221,8 +221,8 @@
           <template v-if="activeItem">
             <!-- Header -->
             <div
-              class="relative flex-shrink-0 bg-gradient-to-r px-4 sm:px-8 py-4 sm:py-6"
-              :class="activeItem.itemType === 'topic' ? 'from-purple-600 to-fuchsia-600' : 'from-indigo-600 to-blue-600'"
+              class="relative flex-shrink-0 px-4 sm:px-8 py-4 sm:py-6"
+              :class="activeItem.itemType === 'topic' ? 'bg-purple-600' : 'bg-indigo-600'"
             >
               <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0">
@@ -261,7 +261,7 @@
                 <!-- Topic cover: name, competency and learning outcomes always shown as page 1 -->
                 <div v-if="isCoverPage" class="max-w-2xl mx-auto">
                   <div class="text-center mb-8">
-                    <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-purple-500 to-fuchsia-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
+                    <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
                       <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                       </svg>
@@ -470,14 +470,14 @@ const allItems = computed<SubjectItem[]>(() => {
 })
 
 const gradients = [
-  'from-indigo-500 to-purple-600',
-  'from-blue-500 to-cyan-600',
-  'from-emerald-500 to-teal-600',
-  'from-amber-500 to-orange-600',
-  'from-rose-500 to-pink-600',
-  'from-violet-500 to-fuchsia-600',
-  'from-sky-500 to-blue-600',
-  'from-teal-500 to-cyan-600'
+  'bg-indigo-600',
+  'bg-blue-600',
+  'bg-emerald-600',
+  'bg-amber-600',
+  'bg-rose-600',
+  'bg-violet-600',
+  'bg-sky-600',
+  'bg-teal-600'
 ]
 const subjectGradient = (id: number) => gradients[Math.abs(id) % gradients.length]
 const subjectInitials = (subj: { name: string; code?: string }) => {

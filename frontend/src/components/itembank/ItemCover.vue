@@ -7,14 +7,12 @@
 
     <!-- Cover -->
     <div
-      class="book-cover relative aspect-[3/4] rounded-l-md rounded-r-[3px] bg-gradient-to-br shadow-md group-hover:shadow-2xl transition-shadow duration-300 overflow-hidden flex items-center justify-center"
+      class="book-cover relative aspect-[3/4] rounded-l-md rounded-r-[3px] shadow-md group-hover:shadow-2xl transition-shadow duration-300 overflow-hidden flex items-center justify-center"
       :class="palette"
     >
       <!-- Spine: a darker strip down the left edge, like the book's binding -->
-      <div class="absolute inset-y-0 left-0 w-[14%] bg-gradient-to-r from-black/40 via-black/10 to-transparent pointer-events-none"></div>
+      <div class="absolute inset-y-0 left-0 w-[14%] bg-black/25 pointer-events-none"></div>
       <div class="absolute inset-y-0 left-[14%] w-px bg-white/25 pointer-events-none"></div>
-      <!-- Sheen: a soft diagonal highlight across the cover, like light catching a glossy jacket -->
-      <div class="absolute -inset-y-4 -left-1/4 w-1/2 bg-gradient-to-r from-white/0 via-white/20 to-white/0 rotate-12 pointer-events-none"></div>
 
       <!-- Ghost document icon watermark -->
       <svg class="w-1/2 h-1/2 text-white/20" fill="currentColor" viewBox="0 0 24 24">
@@ -39,7 +37,7 @@
       </div>
 
       <!-- Title stamp -->
-      <div class="absolute bottom-0 left-0 right-0 p-2.5 pl-3.5 bg-gradient-to-t from-black/60 via-black/10 to-transparent">
+      <div class="absolute bottom-0 left-0 right-0 p-2.5 pl-3.5 bg-black/40">
         <p
           class="text-white font-semibold leading-snug drop-shadow-sm"
           :class="size === 'sm' ? 'text-[11px] line-clamp-2' : 'text-xs sm:text-sm line-clamp-3'"
@@ -59,19 +57,19 @@ const props = withDefaults(defineProps<{ resource: ItemBankResource; size?: 'sm'
   size: 'md'
 })
 
-const gradients = [
-  'from-indigo-500 to-purple-600',
-  'from-blue-500 to-cyan-600',
-  'from-emerald-500 to-teal-600',
-  'from-amber-500 to-orange-600',
-  'from-rose-500 to-pink-600',
-  'from-violet-500 to-fuchsia-600',
-  'from-sky-500 to-blue-600',
-  'from-teal-500 to-cyan-600',
-  'from-fuchsia-500 to-pink-600',
-  'from-lime-500 to-emerald-600'
+const coverColors = [
+  'bg-indigo-600',
+  'bg-blue-600',
+  'bg-emerald-600',
+  'bg-amber-600',
+  'bg-rose-600',
+  'bg-violet-600',
+  'bg-sky-600',
+  'bg-teal-600',
+  'bg-fuchsia-600',
+  'bg-lime-600'
 ]
-const palette = computed(() => gradients[Math.abs(props.resource.id) % gradients.length])
+const palette = computed(() => coverColors[Math.abs(props.resource.id) % coverColors.length])
 
 const subjectLabel = computed(() => {
   if (props.resource.subject_code) return props.resource.subject_code.slice(0, 6).toUpperCase()

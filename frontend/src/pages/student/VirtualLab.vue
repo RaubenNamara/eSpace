@@ -2,7 +2,7 @@
   <div class="min-h-full">
     <div class="p-4 sm:p-6 lg:p-8">
       <!-- Hero -->
-      <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-fuchsia-600 shadow-lg shadow-indigo-500/20 p-4 sm:p-5 mb-6 print-color-exact">
+      <div class="relative overflow-hidden rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-500/20 p-4 sm:p-5 mb-6 print-color-exact">
         <div class="absolute inset-0 opacity-20" style="background-image: radial-gradient(circle at 20% 20%, white 1px, transparent 1px), radial-gradient(circle at 80% 60%, white 1px, transparent 1px); background-size: 32px 32px;"></div>
         <div class="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-white/10"></div>
         <div class="absolute -right-3 bottom-0 w-24 h-24 rounded-full bg-white/10"></div>
@@ -28,7 +28,7 @@
           class="group flex items-center justify-between gap-3 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-5 mb-6 hover:shadow-md hover:border-emerald-300 dark:hover:border-emerald-700 transition-all"
         >
           <div class="flex items-center gap-3 min-w-0">
-            <span class="w-10 h-10 flex-shrink-0 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-lg print-color-exact">🧰</span>
+            <span class="w-10 h-10 flex-shrink-0 rounded-xl bg-emerald-600 flex items-center justify-center text-lg print-color-exact">🧰</span>
             <div class="min-w-0">
               <p class="font-bold text-gray-900 dark:text-white text-sm">Apparatus Playground</p>
               <p class="text-xs text-gray-500 dark:text-gray-400 truncate">Not graded &mdash; pick any equipment and get familiar with it before your next practical.</p>
@@ -71,7 +71,7 @@
             @click="activeCategory = activeCategory === cat ? null : cat"
             class="inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold rounded-full border shadow-sm transition-all"
             :class="activeCategory === cat
-              ? `bg-gradient-to-r ${CATEGORY_COLORS[cat]} text-white border-transparent shadow-md scale-[1.03]`
+              ? `${CATEGORY_COLORS[cat]} text-white border-transparent shadow-md scale-[1.03]`
               : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'"
           >
             <span>{{ CATEGORY_ICONS[cat] }}</span> {{ CATEGORY_LABELS[cat] }}
@@ -111,11 +111,11 @@
             class="group bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col transition-all duration-200 hover:-translate-y-0.5 cursor-pointer"
             @click="openPreview(a)"
           >
-            <div class="h-2 bg-gradient-to-r print-color-exact" :class="CATEGORY_COLORS[a.category]"></div>
+            <div class="h-2 print-color-exact" :class="CATEGORY_COLORS[a.category]"></div>
             <div class="p-5 flex-1 flex flex-col">
               <div class="flex items-start justify-between gap-2 mb-2">
                 <h3 class="font-bold text-gray-900 dark:text-white leading-snug">{{ a.experiment_title }}</h3>
-                <span class="w-9 h-9 flex-shrink-0 rounded-xl bg-gradient-to-br flex items-center justify-center text-lg print-color-exact" :class="CATEGORY_COLORS[a.category]">{{ CATEGORY_ICONS[a.category] }}</span>
+                <span class="w-9 h-9 flex-shrink-0 rounded-xl flex items-center justify-center text-lg print-color-exact" :class="CATEGORY_COLORS[a.category]">{{ CATEGORY_ICONS[a.category] }}</span>
               </div>
               <p class="text-xs font-medium text-gray-400 dark:text-gray-500 mb-2 uppercase tracking-wide">{{ a.subject_name || CATEGORY_LABELS[a.category] }}<span v-if="a.topic"> · {{ a.topic }}</span></p>
 
@@ -176,7 +176,7 @@
                   </div>
                 </div>
 
-                <button @click="startOrContinue(previewAssignment)" class="w-full px-4 py-3 text-sm font-bold rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-sm hover:shadow-md transition-all">
+                <button @click="startOrContinue(previewAssignment)" class="w-full px-4 py-3 text-sm font-bold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm hover:shadow-md transition-all">
                   {{ previewAssignment.attempt_status === 'not_started' ? 'Start Experiment' : previewAssignment.attempt_status === 'in_progress' ? 'Continue Experiment' : 'View Result' }}
                 </button>
               </template>

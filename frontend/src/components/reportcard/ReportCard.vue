@@ -1,7 +1,7 @@
 <template>
   <div ref="rootEl" class="report-card relative bg-white dark:bg-gray-800 rounded-2xl shadow-md border-2 border-gray-300 dark:border-gray-700 overflow-hidden">
     <!-- Accent bar -->
-    <div class="h-2.5 bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-500 print-color-exact"></div>
+    <div class="h-2.5 bg-indigo-600 print-color-exact"></div>
 
     <!-- Watermark -->
     <div v-if="report.school?.logo_path" class="pointer-events-none select-none absolute inset-0 flex items-center justify-center overflow-hidden z-0">
@@ -179,7 +179,7 @@
           <span
             v-for="award in report.awards"
             :key="award.id"
-            class="award-pill px-3 py-1.5 rounded-full text-xs font-medium text-white bg-gradient-to-r print-color-exact"
+            class="award-pill px-3 py-1.5 rounded-full text-xs font-medium text-white print-color-exact"
             :class="awardColor(award.badge_type)"
           >
             <span class="award-pill-icon">{{ award.badge_type === 'special' ? '⭐' : { platinum: '💎', gold: '🥇', silver: '🥈', bronze: '🥉' }[award.badge_type] }}</span>
@@ -390,13 +390,13 @@ const categoryLabel = (category: string) => {
 
 const awardColor = (badgeType: string) => {
   const colors: Record<string, string> = {
-    platinum: 'from-cyan-400 to-blue-500',
-    gold: 'from-amber-400 to-yellow-500',
-    silver: 'from-gray-400 to-gray-500',
-    bronze: 'from-orange-400 to-orange-600',
-    special: 'from-purple-400 to-indigo-500',
+    platinum: 'bg-cyan-600',
+    gold: 'bg-amber-600',
+    silver: 'bg-gray-500',
+    bronze: 'bg-orange-600',
+    special: 'bg-purple-600',
   }
-  return colors[badgeType] || 'from-gray-400 to-gray-500'
+  return colors[badgeType] || 'bg-gray-500'
 }
 
 const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })

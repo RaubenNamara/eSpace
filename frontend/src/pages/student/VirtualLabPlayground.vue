@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-full">
     <!-- Hero -->
-    <div class="relative overflow-hidden bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 print-color-exact">
+    <div class="relative overflow-hidden bg-emerald-600 print-color-exact">
       <div class="absolute inset-0 opacity-20" style="background-image: radial-gradient(circle at 20% 20%, white 1px, transparent 1px), radial-gradient(circle at 80% 60%, white 1px, transparent 1px); background-size: 48px 48px;"></div>
       <div class="relative px-4 py-8 sm:px-8 sm:py-10">
         <router-link to="/student/virtual-lab" class="inline-flex items-center gap-1 text-xs font-medium text-emerald-100 hover:text-white mb-2">
@@ -53,7 +53,7 @@
 
         <!-- 3D scene -->
         <div class="order-2 lg:order-2 lg:col-span-2 h-[320px] sm:h-[440px] lg:h-[600px] rounded-2xl overflow-hidden shadow-lg ring-1 ring-gray-900/5">
-          <div v-if="sceneObjects.length === 0" class="w-full h-full flex flex-col items-center justify-center gap-2 bg-gradient-to-b from-slate-200 to-slate-300 dark:from-slate-800 dark:to-slate-900 text-center px-6">
+          <div v-if="sceneObjects.length === 0" class="w-full h-full flex flex-col items-center justify-center gap-2 bg-slate-200 dark:bg-slate-800 text-center px-6">
             <span class="text-4xl">🧪</span>
             <p class="text-sm text-gray-500 dark:text-gray-400">Pick a piece of apparatus from the left to add it to your workbench.</p>
           </div>

@@ -122,7 +122,7 @@
       <!-- Student Report Overview modal -->
       <div v-if="overview" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto" @click.self="overview = null">
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl my-8">
-          <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-5 rounded-t-2xl flex items-start justify-between gap-4">
+          <div class="bg-indigo-600 px-6 py-5 rounded-t-2xl flex items-start justify-between gap-4">
             <div>
               <h3 class="text-xl font-bold text-white">{{ overview.student.first_name }} {{ overview.student.last_name }}</h3>
               <p class="text-indigo-100 text-sm mt-1">

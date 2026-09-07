@@ -2,7 +2,7 @@
   <div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4" @click.self="$emit('close')">
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
       <!-- Header -->
-      <div class="bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 px-6 py-5 flex items-center justify-between">
+      <div class="bg-indigo-600 px-6 py-5 flex items-center justify-between">
         <div>
           <h2 class="text-lg font-bold text-white">Account Settings</h2>
           <p class="text-xs text-indigo-100">Update your photo and password</p>

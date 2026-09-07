@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
     <div class="px-4 sm:px-6 lg:px-8 py-8">
-      <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-fuchsia-600 shadow-lg shadow-indigo-500/20 p-4 sm:p-5 mb-6">
+      <div class="relative overflow-hidden rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-500/20 p-4 sm:p-5 mb-6">
         <div class="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-white/10"></div>
         <div class="absolute -right-3 bottom-0 w-24 h-24 rounded-full bg-white/10"></div>
         <div class="relative flex items-center gap-3">
@@ -43,13 +43,13 @@
           class="rounded-2xl bg-white dark:bg-gray-800 shadow-sm border overflow-hidden transition-all hover:shadow-md hover:-translate-y-0.5"
           :class="period.is_current ? 'border-indigo-200 dark:border-indigo-800 ring-1 ring-indigo-100 dark:ring-indigo-900/40' : 'border-gray-100 dark:border-gray-700'"
         >
-          <div class="h-1.5 bg-gradient-to-r" :class="period.is_current ? 'from-indigo-500 to-fuchsia-600' : cardAccent(idx)"></div>
+          <div class="h-1.5" :class="period.is_current ? 'bg-indigo-600' : cardAccent(idx)"></div>
           <div class="p-5">
             <div class="flex items-start justify-between gap-3 mb-3">
               <div class="flex items-center gap-3 min-w-0">
                 <div
                   class="relative w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-                  :class="period.is_current ? 'bg-gradient-to-br from-indigo-500 to-fuchsia-600 shadow-sm shadow-indigo-500/30' : 'bg-gray-100 dark:bg-gray-700'"
+                  :class="period.is_current ? 'bg-indigo-600 shadow-sm shadow-indigo-500/30' : 'bg-gray-100 dark:bg-gray-700'"
                 >
                   <span v-if="period.is_current" class="absolute inset-0 rounded-xl bg-indigo-400 opacity-40 animate-ping"></span>
                   <svg class="relative w-5 h-5" :class="period.is_current ? 'text-white' : 'text-gray-400 dark:text-gray-500'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -112,12 +112,12 @@ const periods = ref<AcademicPeriod[]>([])
 const loading = ref(false)
 
 const cardPalettes = [
-  'from-gray-400 to-gray-500',
-  'from-sky-400 to-blue-500',
-  'from-emerald-400 to-teal-500',
-  'from-amber-400 to-orange-500',
-  'from-rose-400 to-pink-500',
-  'from-violet-400 to-purple-500'
+  'bg-gray-500',
+  'bg-sky-500',
+  'bg-emerald-500',
+  'bg-amber-500',
+  'bg-rose-500',
+  'bg-violet-500'
 ]
 const cardAccent = (idx: number) => cardPalettes[idx % cardPalettes.length]
 

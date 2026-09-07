@@ -20,7 +20,7 @@
           <!-- Progress bar -->
           <div v-if="attempt.status === 'in_progress'" class="mt-3 flex items-center gap-3">
             <div class="flex-1 h-2 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
-              <div class="h-full rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 print-color-exact transition-all duration-500" :style="{ width: progressPct + '%' }"></div>
+              <div class="h-full rounded-full bg-indigo-600 print-color-exact transition-all duration-500" :style="{ width: progressPct + '%' }"></div>
             </div>
             <span class="text-xs font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ attempt.steps_completed }}/{{ attempt.experiment.steps.length }} steps</span>
           </div>
@@ -148,7 +148,7 @@
 
             <template v-else>
               <p class="text-sm text-gray-600 dark:text-gray-300">All steps recorded. This practical has been {{ attempt.status }}.</p>
-              <div v-if="attempt.status === 'graded'" class="mt-3 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-xl p-4">
+              <div v-if="attempt.status === 'graded'" class="mt-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-4">
                 <p class="text-2xl font-extrabold text-indigo-700 dark:text-indigo-300">{{ attempt.score }}<span class="text-sm font-medium text-indigo-400">/{{ attempt.marks }}</span></p>
                 <p v-if="attempt.teacher_feedback" class="text-xs text-gray-600 dark:text-gray-300 mt-2 italic">&ldquo;{{ attempt.teacher_feedback }}&rdquo;</p>
               </div>
@@ -286,7 +286,7 @@
             v-if="attempt.status === 'in_progress'"
             :disabled="!allStepsDone || submitting"
             @click="submitPractical"
-            class="w-full px-4 py-3 text-sm font-bold rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-sm hover:shadow-md hover:brightness-105 disabled:opacity-50 disabled:hover:brightness-100 transition-all print-color-exact"
+            class="w-full px-4 py-3 text-sm font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow-md disabled:opacity-50 transition-all print-color-exact"
           >
             {{ submitting ? 'Submitting...' : allStepsDone ? 'Submit Practical' : 'Complete all steps to submit' }}
           </button>

@@ -18,13 +18,15 @@ export const dashboardIcons: Record<string, string> = {
   students: 'M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222'
 }
 
-export const dashboardColors: Record<string, { bg: string; text: string; grad: string }> = {
-  indigo: { bg: 'bg-indigo-100 dark:bg-indigo-900/30', text: 'text-indigo-600 dark:text-indigo-400', grad: 'from-indigo-500 to-purple-600' },
-  amber: { bg: 'bg-amber-100 dark:bg-amber-900/30', text: 'text-amber-600 dark:text-amber-400', grad: 'from-amber-500 to-orange-600' },
-  emerald: { bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-600 dark:text-emerald-400', grad: 'from-emerald-500 to-teal-600' },
-  violet: { bg: 'bg-violet-100 dark:bg-violet-900/30', text: 'text-violet-600 dark:text-violet-400', grad: 'from-violet-500 to-fuchsia-600' },
-  red: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-600 dark:text-red-400', grad: 'from-red-500 to-rose-600' },
-  teal: { bg: 'bg-teal-100 dark:bg-teal-900/30', text: 'text-teal-600 dark:text-teal-400', grad: 'from-teal-500 to-cyan-600' },
-  pink: { bg: 'bg-pink-100 dark:bg-pink-900/30', text: 'text-pink-600 dark:text-pink-400', grad: 'from-pink-500 to-rose-600' },
-  sky: { bg: 'bg-sky-100 dark:bg-sky-900/30', text: 'text-sky-600 dark:text-sky-400', grad: 'from-sky-500 to-blue-600' }
+// Each tile/quick-link gets one solid color (no gradients) - `color` is the icon badge fill,
+// `bg`/`text` are the softer tint used for the tile's ambient corner glow.
+export const dashboardColors: Record<string, { bg: string; text: string; color: string }> = {
+  indigo: { bg: 'bg-indigo-100 dark:bg-indigo-900/30', text: 'text-indigo-600 dark:text-indigo-400', color: 'bg-indigo-600' },
+  amber: { bg: 'bg-amber-100 dark:bg-amber-900/30', text: 'text-amber-600 dark:text-amber-400', color: 'bg-amber-600' },
+  emerald: { bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-600 dark:text-emerald-400', color: 'bg-emerald-600' },
+  violet: { bg: 'bg-violet-100 dark:bg-violet-900/30', text: 'text-violet-600 dark:text-violet-400', color: 'bg-violet-600' },
+  red: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-600 dark:text-red-400', color: 'bg-red-600' },
+  teal: { bg: 'bg-teal-100 dark:bg-teal-900/30', text: 'text-teal-600 dark:text-teal-400', color: 'bg-teal-600' },
+  pink: { bg: 'bg-pink-100 dark:bg-pink-900/30', text: 'text-pink-600 dark:text-pink-400', color: 'bg-pink-600' },
+  sky: { bg: 'bg-sky-100 dark:bg-sky-900/30', text: 'text-sky-600 dark:text-sky-400', color: 'bg-sky-600' }
 }

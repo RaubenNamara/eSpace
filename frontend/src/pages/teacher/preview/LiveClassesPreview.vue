@@ -23,7 +23,7 @@
           <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span> Live Now
         </h2>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div v-for="cls in liveNow" :key="cls.id" class="rounded-2xl p-5 bg-gradient-to-br from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/20">
+          <div v-for="cls in liveNow" :key="cls.id" class="rounded-2xl p-5 bg-red-600 text-white shadow-lg shadow-red-500/20">
             <h3 class="text-lg font-bold leading-tight mb-1">{{ cls.title }}</h3>
             <p class="text-sm text-white/80">{{ cls.subject_name }} · {{ teacherName(cls) }}</p>
           </div>

@@ -2,7 +2,7 @@
   <div>
     <template v-if="!activeSubjectId">
       <!-- Header -->
-      <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-fuchsia-600 shadow-lg shadow-indigo-500/20 p-4 sm:p-5 mb-6">
+      <div class="relative overflow-hidden rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-500/20 p-4 sm:p-5 mb-6">
         <div class="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-white/10"></div>
         <div class="absolute -right-3 bottom-0 w-24 h-24 rounded-full bg-white/10"></div>
         <div class="relative flex items-center gap-3 mb-3">
@@ -68,13 +68,13 @@
             class="text-left bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 p-6 group overflow-hidden relative"
           >
             <div
-              class="absolute -right-6 -top-6 w-28 h-28 rounded-full opacity-10 bg-gradient-to-br transition-transform duration-300 group-hover:scale-125"
-              :class="subjectPalette(group.id).vivid"
+              class="absolute -right-6 -top-6 w-28 h-28 rounded-full opacity-10 transition-transform duration-300 group-hover:scale-125"
+              :class="subjectPalette(group.id).solid"
             ></div>
             <div class="relative flex items-start justify-between mb-4">
               <div
-                class="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold text-base shadow-sm flex-shrink-0 bg-gradient-to-br"
-                :class="subjectPalette(group.id).vivid"
+                class="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold text-base shadow-sm flex-shrink-0"
+                :class="subjectPalette(group.id).solid"
               >
                 {{ subjectInitials(group) }}
               </div>
@@ -129,8 +129,8 @@
 
       <div class="flex items-center gap-3 mb-6">
         <div
-          class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm bg-gradient-to-br flex-shrink-0"
-          :class="activeSubject ? subjectPalette(activeSubject.id).vivid : ''"
+          class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
+          :class="activeSubject ? subjectPalette(activeSubject.id).solid : ''"
         >
           {{ activeSubject ? subjectInitials(activeSubject) : '' }}
         </div>
@@ -147,10 +147,10 @@
           :to="`/student/enotes/${topic.id}`"
           class="group relative bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:-translate-y-0.5 transition-all overflow-hidden"
         >
-          <div class="h-1.5 bg-gradient-to-r from-amber-500 to-orange-600"></div>
+          <div class="h-1.5 bg-amber-600"></div>
           <div class="p-5">
             <div class="flex items-start justify-between gap-2 mb-3">
-              <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center flex-shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+              <div class="w-10 h-10 rounded-lg bg-amber-600 flex items-center justify-center flex-shrink-0 shadow-sm group-hover:scale-105 transition-transform">
                 <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                 </svg>
@@ -204,14 +204,14 @@ const error = ref<string | null>(null)
 const activeSubjectId = ref<number | null>(null)
 
 const palettes = [
-  { vivid: 'from-amber-500 to-orange-600', softText: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' },
-  { vivid: 'from-blue-500 to-cyan-600', softText: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
-  { vivid: 'from-indigo-500 to-purple-600', softText: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' },
-  { vivid: 'from-emerald-500 to-teal-600', softText: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' },
-  { vivid: 'from-rose-500 to-pink-600', softText: 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300' },
-  { vivid: 'from-violet-500 to-fuchsia-600', softText: 'bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300' },
-  { vivid: 'from-sky-500 to-blue-600', softText: 'bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300' },
-  { vivid: 'from-teal-500 to-cyan-600', softText: 'bg-teal-50 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300' }
+  { solid: 'bg-amber-600', softText: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' },
+  { solid: 'bg-blue-600', softText: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
+  { solid: 'bg-indigo-600', softText: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' },
+  { solid: 'bg-emerald-600', softText: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' },
+  { solid: 'bg-rose-600', softText: 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300' },
+  { solid: 'bg-violet-600', softText: 'bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300' },
+  { solid: 'bg-sky-600', softText: 'bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300' },
+  { solid: 'bg-teal-600', softText: 'bg-teal-50 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300' }
 ]
 const subjectPalette = (id: number) => palettes[Math.abs(id) % palettes.length]
 const subjectInitials = (subj: { name: string; code?: string }) => {

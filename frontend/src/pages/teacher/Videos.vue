@@ -101,7 +101,7 @@
         class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow cursor-pointer overflow-hidden"
         @click="playVideo = video"
       >
-        <div class="aspect-video bg-gradient-to-br from-rose-500 to-orange-500 relative flex items-center justify-center">
+        <div class="aspect-video bg-rose-600 relative flex items-center justify-center">
           <div class="w-14 h-14 rounded-full bg-white/25 backdrop-blur-sm flex items-center justify-center">
             <svg class="w-7 h-7 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
               <path d="M8 5v14l11-7z"></path>

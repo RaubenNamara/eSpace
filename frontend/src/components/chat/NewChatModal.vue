@@ -25,7 +25,7 @@
           @click="chooseGroup(tab.key)"
           class="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border border-gray-200 dark:border-white/10 hover:border-emerald-300 dark:hover:border-emerald-700 hover:bg-gray-50 dark:hover:bg-[#2a3942] transition-colors text-left"
         >
-          <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-gradient-to-br text-white" :class="groupAccent(tab.key)">
+          <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-white" :class="groupAccent(tab.key)">
             <svg v-if="tab.key === 'classes'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-4-4"></path>
             </svg>
@@ -66,7 +66,7 @@
               @click="$emit('select-class', cls)"
               class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-[#2a3942] transition-colors text-left"
             >
-              <div class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white flex-shrink-0">
+              <div class="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white flex-shrink-0">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-4-4"></path>
                 </svg>
@@ -87,7 +87,7 @@
               class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-[#2a3942] transition-colors text-left"
             >
               <div class="relative flex-shrink-0">
-                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-semibold text-sm">
+                <div class="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center text-white font-semibold text-sm">
                   {{ (contact.first_name[0] || '') + (contact.last_name[0] || '') }}
                 </div>
                 <span
@@ -151,11 +151,11 @@ const groupContacts = (key: string) => props.contactTabs.find(t => t.key === key
 const isTeacherLikeTab = (key: string) => key === 'teachers' || key === 'colleagues'
 
 const groupAccentPalette: Record<string, string> = {
-  classes: 'from-indigo-500 to-purple-600',
-  teachers: 'from-amber-500 to-orange-600',
-  colleagues: 'from-amber-500 to-orange-600'
+  classes: 'bg-indigo-600',
+  teachers: 'bg-amber-600',
+  colleagues: 'bg-amber-600'
 }
-const groupAccent = (key: string) => groupAccentPalette[key] || 'from-emerald-500 to-teal-600'
+const groupAccent = (key: string) => groupAccentPalette[key] || 'bg-emerald-600'
 
 const filteredContacts = computed(() => {
   const tab = props.contactTabs.find(t => t.key === activeTab.value)

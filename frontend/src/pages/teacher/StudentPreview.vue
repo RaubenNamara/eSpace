@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="flex items-center gap-4 mb-8">
-      <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20 flex-shrink-0">
+      <div class="w-12 h-12 rounded-xl bg-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/20 flex-shrink-0">
         <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
@@ -32,7 +32,7 @@
             @click="selectedClassId = cls.id"
             class="flex-shrink-0 flex items-center gap-2 pl-3 pr-4 py-2 rounded-full text-sm font-medium border transition-all duration-150 whitespace-nowrap"
             :class="selectedClassId === cls.id
-              ? 'bg-gradient-to-r from-emerald-600 to-teal-600 border-transparent text-white shadow-md shadow-emerald-500/25'
+              ? 'bg-emerald-600 border-transparent text-white shadow-md shadow-emerald-500/25'
               : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-emerald-400 dark:hover:border-emerald-500 hover:shadow-sm'"
           >
             <span
@@ -58,7 +58,7 @@
             class="group bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex flex-col gap-3"
           >
             <div
-              class="w-12 h-12 rounded-xl flex items-center justify-center shadow-sm bg-gradient-to-br transition-transform duration-200 group-hover:scale-105"
+              class="w-12 h-12 rounded-xl flex items-center justify-center shadow-sm transition-transform duration-200 group-hover:scale-105"
               :class="mod.color"
             >
               <component :is="mod.icon" class="w-6 h-6 text-white" />
@@ -113,14 +113,14 @@ const VirtualLabIcon = icon(['M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5
 const AssessmentIcon = icon(['M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'])
 
 const modules = computed(() => selectedClassId.value ? [
-  { label: 'My Classes', description: 'Classmates & class overview', to: `/teacher/preview/classes/${selectedClassId.value}`, icon: ClassesIcon, color: 'from-indigo-500 to-purple-600' },
-  { label: 'eLibrary', description: 'Books available to this class', to: `/teacher/preview/library/${selectedClassId.value}`, icon: LibraryIcon, color: 'from-emerald-500 to-teal-600' },
-  { label: 'Item Bank', description: 'Practice question sets', to: `/teacher/preview/itembank/${selectedClassId.value}`, icon: ItemBankIcon, color: 'from-violet-500 to-fuchsia-600' },
-  { label: 'Live Classes', description: 'Scheduled & past sessions', to: `/teacher/preview/live-classes/${selectedClassId.value}`, icon: LiveClassIcon, color: 'from-red-500 to-rose-600' },
-  { label: 'Videos', description: 'Published video lessons', to: `/teacher/preview/videos/${selectedClassId.value}`, icon: VideoIcon, color: 'from-rose-500 to-orange-600' },
-  { label: 'eNotes', description: 'Topic notes by subject', to: `/teacher/preview/enotes/${selectedClassId.value}`, icon: ENotesIcon, color: 'from-amber-500 to-orange-600' },
-  { label: 'Virtual Lab', description: 'Interactive experiments', to: `/teacher/preview/virtual-lab/${selectedClassId.value}`, icon: VirtualLabIcon, color: 'from-cyan-500 to-blue-600' },
-  { label: 'Assessments', description: 'Preview from your assessments list', to: '/teacher/assignments', icon: AssessmentIcon, color: 'from-sky-500 to-blue-600' },
+  { label: 'My Classes', description: 'Classmates & class overview', to: `/teacher/preview/classes/${selectedClassId.value}`, icon: ClassesIcon, color: 'bg-indigo-600' },
+  { label: 'eLibrary', description: 'Books available to this class', to: `/teacher/preview/library/${selectedClassId.value}`, icon: LibraryIcon, color: 'bg-emerald-600' },
+  { label: 'Item Bank', description: 'Practice question sets', to: `/teacher/preview/itembank/${selectedClassId.value}`, icon: ItemBankIcon, color: 'bg-violet-600' },
+  { label: 'Live Classes', description: 'Scheduled & past sessions', to: `/teacher/preview/live-classes/${selectedClassId.value}`, icon: LiveClassIcon, color: 'bg-red-600' },
+  { label: 'Videos', description: 'Published video lessons', to: `/teacher/preview/videos/${selectedClassId.value}`, icon: VideoIcon, color: 'bg-rose-600' },
+  { label: 'eNotes', description: 'Topic notes by subject', to: `/teacher/preview/enotes/${selectedClassId.value}`, icon: ENotesIcon, color: 'bg-amber-600' },
+  { label: 'Virtual Lab', description: 'Interactive experiments', to: `/teacher/preview/virtual-lab/${selectedClassId.value}`, icon: VirtualLabIcon, color: 'bg-cyan-600' },
+  { label: 'Assessments', description: 'Preview from your assessments list', to: '/teacher/assignments', icon: AssessmentIcon, color: 'bg-sky-600' },
 ] : [])
 
 const loadClasses = async () => {

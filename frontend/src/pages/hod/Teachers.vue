@@ -1,7 +1,7 @@
 <template>
   <div>
     <!-- Hero -->
-    <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-fuchsia-600 shadow-lg shadow-indigo-500/20 p-4 sm:p-5 mb-6">
+    <div class="relative overflow-hidden rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-500/20 p-4 sm:p-5 mb-6">
       <div class="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-white/10"></div>
       <div class="absolute -right-3 bottom-0 w-24 h-24 rounded-full bg-white/10"></div>
       <div class="relative flex items-center gap-3 mb-3">
@@ -84,7 +84,7 @@
             <tr v-for="teacher in teachers" :key="teacher.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
               <td class="px-5 py-3 whitespace-nowrap">
                 <div class="flex items-center gap-3">
-                  <div class="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-semibold bg-gradient-to-br flex-shrink-0" :class="avatarPalette(teacher.id)">
+                  <div class="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0" :class="avatarPalette(teacher.id)">
                     {{ initials(teacher) }}
                   </div>
                   <div class="min-w-0">
@@ -197,12 +197,12 @@ const fetchTeachers = async (page = 1) => {
 }
 
 const avatarPalettes = [
-  'from-indigo-500 to-purple-600',
-  'from-emerald-500 to-teal-600',
-  'from-amber-500 to-orange-600',
-  'from-rose-500 to-pink-600',
-  'from-sky-500 to-blue-600',
-  'from-violet-500 to-fuchsia-600'
+  'bg-indigo-600',
+  'bg-emerald-600',
+  'bg-amber-600',
+  'bg-rose-600',
+  'bg-sky-600',
+  'bg-violet-600'
 ]
 const avatarPalette = (id: number) => avatarPalettes[Math.abs(id) % avatarPalettes.length]
 

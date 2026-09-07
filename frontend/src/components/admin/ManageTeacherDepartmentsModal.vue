@@ -45,7 +45,7 @@
               @click="primaryId = dept.id"
               class="text-xs font-medium px-2 py-1 rounded-full transition-colors"
               :class="primaryId === dept.id
-                ? 'bg-blue-600 text-white'
+                ? 'bg-indigo-600 text-white'
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'"
             >
               {{ primaryId === dept.id ? 'Primary' : 'Set as primary' }}
@@ -68,7 +68,7 @@
           type="button"
           :disabled="saving || loading || selectedIds.length === 0"
           @click="save"
-          class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+          class="btn-primary"
         >
           {{ saving ? 'Saving...' : 'Save' }}
         </button>

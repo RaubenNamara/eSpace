@@ -5,7 +5,7 @@
     </div>
 
     <!-- Department Info -->
-    <div v-if="overview.department" class="card mb-6 bg-gradient-to-r from-indigo-500 to-purple-600 text-white">
+    <div v-if="overview.department" class="card mb-6 bg-indigo-600 text-white">
       <div class="flex items-center justify-between">
         <div>
           <p class="text-indigo-100 text-sm font-medium">Department</p>
@@ -22,27 +22,57 @@
 
     <!-- KPI Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-      <div class="card">
-        <p class="text-gray-500 dark:text-gray-400 text-sm">Teachers</p>
-        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ overview.teachers_count ?? '-' }}</p>
+      <div class="group card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg border border-transparent hover:border-emerald-300 dark:hover:border-emerald-700">
+        <template v-if="loading.overview">
+          <div class="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
+          <div class="h-8 w-14 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+        </template>
+        <template v-else>
+          <p class="text-gray-500 dark:text-gray-400 text-sm">Teachers</p>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{{ overview.teachers_count ?? '-' }}</p>
+        </template>
       </div>
-      <div class="card">
-        <p class="text-gray-500 dark:text-gray-400 text-sm">Students</p>
-        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ overview.students_count ?? '-' }}</p>
+      <div class="group card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg border border-transparent hover:border-emerald-300 dark:hover:border-emerald-700">
+        <template v-if="loading.overview">
+          <div class="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
+          <div class="h-8 w-14 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+        </template>
+        <template v-else>
+          <p class="text-gray-500 dark:text-gray-400 text-sm">Students</p>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{{ overview.students_count ?? '-' }}</p>
+        </template>
       </div>
-      <div class="card">
-        <p class="text-gray-500 dark:text-gray-400 text-sm">Subjects</p>
-        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ overview.subjects_count ?? '-' }}</p>
+      <div class="group card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg border border-transparent hover:border-emerald-300 dark:hover:border-emerald-700">
+        <template v-if="loading.overview">
+          <div class="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
+          <div class="h-8 w-14 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+        </template>
+        <template v-else>
+          <p class="text-gray-500 dark:text-gray-400 text-sm">Subjects</p>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{{ overview.subjects_count ?? '-' }}</p>
+        </template>
       </div>
-      <div class="card">
-        <p class="text-gray-500 dark:text-gray-400 text-sm">Assignments</p>
-        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ overview.assignments_count ?? '-' }}</p>
+      <div class="group card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg border border-transparent hover:border-emerald-300 dark:hover:border-emerald-700">
+        <template v-if="loading.overview">
+          <div class="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
+          <div class="h-8 w-14 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+        </template>
+        <template v-else>
+          <p class="text-gray-500 dark:text-gray-400 text-sm">Assignments</p>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{{ overview.assignments_count ?? '-' }}</p>
+        </template>
       </div>
-      <div class="card">
-        <p class="text-gray-500 dark:text-gray-400 text-sm">Average Score</p>
-        <p class="text-2xl font-bold text-gray-900 dark:text-white">
-          {{ overview.average_percentage !== null && overview.average_percentage !== undefined ? overview.average_percentage + '%' : 'N/A' }}
-        </p>
+      <div class="group card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg border border-transparent hover:border-emerald-300 dark:hover:border-emerald-700">
+        <template v-if="loading.overview">
+          <div class="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
+          <div class="h-8 w-14 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+        </template>
+        <template v-else>
+          <p class="text-gray-500 dark:text-gray-400 text-sm">Average Score</p>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400">
+            {{ overview.average_percentage !== null && overview.average_percentage !== undefined ? overview.average_percentage + '%' : 'N/A' }}
+          </p>
+        </template>
       </div>
     </div>
 
