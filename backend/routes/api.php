@@ -526,6 +526,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         // Students
         Router::get('/students', 'eSpace\App\Controllers\Admin\StudentController@index');
         Router::get('/students/enrolled', 'eSpace\App\Controllers\Admin\StudentController@enrolled');
+        Router::get('/students/enrolled-by-class', 'eSpace\App\Controllers\Admin\StudentController@enrolledByClass');
         Router::get('/students/analytics', 'eSpace\App\Controllers\Admin\StudentController@analytics');
         Router::post('/students', 'eSpace\App\Controllers\Admin\StudentController@create');
         Router::post('/students/enroll', 'eSpace\App\Controllers\Admin\StudentController@enroll');

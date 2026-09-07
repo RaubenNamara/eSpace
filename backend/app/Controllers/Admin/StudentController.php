@@ -353,6 +353,60 @@ class StudentController extends Controller
     }
 
     /**
+     * Total enrolled students per class stream, respecting the department/academic-year
+     * filters (but not class_id/search - this is the "how many per class" breakdown shown
+     * above the individual student list, not a component of it).
+     * GET /admin/students/enrolled-by-class
+     */
+    public function enrolledByClass(): void
+    {
+        if (!$this->isAdmin()) {
+            $this->forbidden();
+            return;
+        }
+
+        $departmentId = $this->query('department_id');
+        $academicYearId = $this->query('academic_year_id');
+
+        $whereClause = "se.deleted_at IS NULL AND se.status = 'active'";
+        $params = [];
+
+        if ($departmentId) {
+            $whereClause .= " AND se.department_id = ?";
+            $params[] = $departmentId;
+        }
+
+        if ($academicYearId) {
+            $stmt = $this->db->prepare("SELECT name FROM academic_years WHERE id = ? AND deleted_at IS NULL");
+            $stmt->execute([$academicYearId]);
+            $academicYear = $stmt->fetch();
+
+            if ($academicYear) {
+                $whereClause .= " AND se.academic_year = ?";
+                $params[] = $academicYear['name'];
+            }
+        }
+
+        try {
+            $sql = "SELECT c.id as class_id, c.name as class_name, c.level, c.stream_name, COUNT(se.id) as count
+                    FROM student_department_enrollments se
+                    INNER JOIN classes c ON se.class_id = c.id
+                    WHERE {$whereClause}
+                    GROUP BY c.id, c.name, c.level, c.stream_name
+                    ORDER BY c.name ASC, c.stream_name ASC";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            $byClass = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            $this->success(['by_class' => $byClass]);
+        } catch (\PDOException $e) {
+            error_log("Failed to fetch enrolled-by-class breakdown: " . $e->getMessage());
+            $this->error('Failed to fetch enrolled-by-class breakdown: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
      * Get enrolled students by department and/or academic year
      * GET /admin/students/enrolled
      */

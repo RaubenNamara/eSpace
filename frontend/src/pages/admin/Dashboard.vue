@@ -193,6 +193,22 @@
             </div>
           </div>
 
+          <!-- Total enrolled per class - click one to filter the list below to just that class -->
+          <div v-if="classBreakdown.length > 0" class="flex flex-wrap gap-2 pt-1">
+            <button
+              v-for="cb in classBreakdown"
+              :key="cb.class_id"
+              @click="selectClassFromBreakdown(cb.class_id)"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors"
+              :class="String(viewFilters.class_id) === String(cb.class_id)
+                ? 'border-green-500 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 bg-white dark:bg-gray-800'"
+            >
+              {{ cb.class_name }}{{ cb.stream_name ? '-' + cb.stream_name : '' }}
+              <span class="font-bold">{{ cb.count }}</span>
+            </button>
+          </div>
+
           <div class="flex flex-wrap items-center gap-3">
             <div class="relative flex-1 min-w-[200px]">
               <svg class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -670,6 +686,20 @@ const viewTotal = ref(0)
 const viewTotalPages = ref(1)
 let viewSearchDebounce: ReturnType<typeof setTimeout> | null = null
 
+// Total enrolled per class stream - a breakdown across every class (respecting the
+// department/academic-year filters, but not the class filter itself or search), so the admin
+// can see "how many students in each class" at a glance instead of switching the Class filter
+// one stream at a time.
+interface ClassBreakdownRow {
+  class_id: number
+  class_name: string
+  level: string
+  stream_name: string
+  count: number
+}
+
+const classBreakdown = ref<ClassBreakdownRow[]>([])
+
 // Filtering and pagination now happen server-side (see fetchEnrolledStudents) - this just
 // passes through the current page's rows so the template doesn't need to change.
 const visibleEnrolledStudentsList = computed(() => enrolledStudentsList.value)
@@ -903,15 +933,44 @@ const openViewEnrolledModal = async () => {
   await fetchDepartments()
   await fetchAcademicYears()
   await fetchClasses()
-  await fetchEnrolledStudents()
+  await Promise.all([fetchEnrolledStudents(), fetchClassBreakdown()])
   showViewEnrolledModal.value = true
+}
+
+const fetchClassBreakdown = async () => {
+  try {
+    const params: any = {}
+    if (viewFilters.value.department_id) {
+      params.department_id = viewFilters.value.department_id
+    }
+    if (viewFilters.value.academic_year_id) {
+      params.academic_year_id = viewFilters.value.academic_year_id
+    }
+
+    const response = await apiService.get('/admin/students/enrolled-by-class', { params })
+    if (response.data?.success && response.data?.data) {
+      classBreakdown.value = response.data.data.by_class || []
+    }
+  } catch (error) {
+    console.error('Failed to fetch class breakdown:', error)
+  }
+}
+
+// Clicking a class's count chip filters the list to that class - clicking the already-active
+// one clears the filter again.
+const selectClassFromBreakdown = (classId: number) => {
+  const value = String(classId)
+  viewFilters.value.class_id = viewFilters.value.class_id === value ? '' : value
+  onViewFilterChange()
 }
 
 // Filter dropdowns (@change) go through this so changing a filter always jumps back to page 1
 // - otherwise "page 3" of an old filter could silently become an out-of-range page of the new one.
+// Department/year also affect the class breakdown totals, so refresh those here too.
 const onViewFilterChange = () => {
   viewPage.value = 1
   fetchEnrolledStudents()
+  fetchClassBreakdown()
 }
 
 // Debounced so every keystroke doesn't fire a request - search is server-side (see
