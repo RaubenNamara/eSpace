@@ -422,10 +422,12 @@ class ENoteController extends Controller
         $db = $this->getDb();
 
         // Get topic
-        $sql = "SELECT et.*, 
-                       s.name as subject_name, 
+        $sql = "SELECT et.*,
+                       s.name as subject_name,
                        s.code as subject_code,
-                       c.name as class_name
+                       c.name as class_name,
+                       c.level as class_level,
+                       c.stream_name as class_stream_name
                 FROM enote_topics et
                 LEFT JOIN subjects s ON et.subject_id = s.id
                 LEFT JOIN classes c ON et.class_id = c.id
