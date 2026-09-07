@@ -193,20 +193,12 @@
             </div>
           </div>
 
-          <!-- Total enrolled per class - click one to filter the list below to just that class -->
-          <div v-if="classBreakdown.length > 0" class="flex flex-wrap gap-2 pt-1">
-            <button
-              v-for="cb in classBreakdown"
-              :key="cb.class_id"
-              @click="selectClassFromBreakdown(cb.class_id)"
-              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors"
-              :class="String(viewFilters.class_id) === String(cb.class_id)
-                ? 'border-green-500 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300'
-                : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 bg-white dark:bg-gray-800'"
-            >
-              {{ cb.class_name }}{{ cb.stream_name ? '-' + cb.stream_name : '' }}
-              <span class="font-bold">{{ cb.count }}</span>
-            </button>
+          <!-- Total enrolled in whichever class is selected above -->
+          <div v-if="selectedClassBreakdown" class="flex items-center gap-2 pt-1">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800">
+              Total enrolled in {{ selectedClassBreakdown.class_name }}{{ selectedClassBreakdown.stream_name ? '-' + selectedClassBreakdown.stream_name : '' }}:
+              <span class="font-bold">{{ selectedClassBreakdown.count }}</span>
+            </span>
           </div>
 
           <div class="flex flex-wrap items-center gap-3">
@@ -686,10 +678,8 @@ const viewTotal = ref(0)
 const viewTotalPages = ref(1)
 let viewSearchDebounce: ReturnType<typeof setTimeout> | null = null
 
-// Total enrolled per class stream - a breakdown across every class (respecting the
-// department/academic-year filters, but not the class filter itself or search), so the admin
-// can see "how many students in each class" at a glance instead of switching the Class filter
-// one stream at a time.
+// Per-class enrollment totals (respecting the department/academic-year filters), used only to
+// show "Total enrolled in <class>: N" once a specific class is picked in the dropdown above.
 interface ClassBreakdownRow {
   class_id: number
   class_name: string
@@ -699,6 +689,11 @@ interface ClassBreakdownRow {
 }
 
 const classBreakdown = ref<ClassBreakdownRow[]>([])
+
+const selectedClassBreakdown = computed(() => {
+  if (!viewFilters.value.class_id) return null
+  return classBreakdown.value.find(cb => String(cb.class_id) === String(viewFilters.value.class_id)) || null
+})
 
 // Filtering and pagination now happen server-side (see fetchEnrolledStudents) - this just
 // passes through the current page's rows so the template doesn't need to change.
@@ -954,14 +949,6 @@ const fetchClassBreakdown = async () => {
   } catch (error) {
     console.error('Failed to fetch class breakdown:', error)
   }
-}
-
-// Clicking a class's count chip filters the list to that class - clicking the already-active
-// one clears the filter again.
-const selectClassFromBreakdown = (classId: number) => {
-  const value = String(classId)
-  viewFilters.value.class_id = viewFilters.value.class_id === value ? '' : value
-  onViewFilterChange()
 }
 
 // Filter dropdowns (@change) go through this so changing a filter always jumps back to page 1
