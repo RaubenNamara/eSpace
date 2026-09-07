@@ -91,6 +91,7 @@ const AdminDashboard = () => import('../pages/admin/Dashboard.vue')
 const AdminUsers = () => import('../pages/admin/Admin.vue')
 const AdminStudents = () => import('../pages/admin/Students.vue')
 const AdminTeachers = () => import('../pages/admin/Teachers.vue')
+const AdminAssignTeachers = () => import('../pages/admin/AssignTeachers.vue')
 const AdminHODs = () => import('../pages/admin/HODs.vue')
 const AdminDepartments = () => import('../pages/admin/Departments.vue')
 const AdminSubjects = () => import('../pages/admin/Subjects.vue')
@@ -284,6 +285,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'users', name: 'AdminUsers', component: AdminUsers },
       { path: 'students', name: 'AdminStudents', component: AdminStudents },
       { path: 'teachers', name: 'AdminTeachers', component: AdminTeachers },
+      { path: 'assign-teachers', name: 'AdminAssignTeachers', component: AdminAssignTeachers },
       { path: 'hods', name: 'AdminHODs', component: AdminHODs },
       { path: 'departments', name: 'AdminDepartments', component: AdminDepartments },
       { path: 'subjects', name: 'AdminSubjects', component: AdminSubjects },

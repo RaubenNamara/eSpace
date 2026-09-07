@@ -147,7 +147,7 @@
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Department</label>
               <select
                 v-model="viewFilters.department_id"
-                @change="fetchEnrolledStudents"
+                @change="onViewFilterChange"
                 :disabled="loadingDepartments"
                 class="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-white dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed text-sm"
               >
@@ -163,7 +163,7 @@
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Academic Year</label>
               <select
                 v-model="viewFilters.academic_year_id"
-                @change="fetchEnrolledStudents"
+                @change="onViewFilterChange"
                 :disabled="loadingAcademicYears"
                 class="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-white dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed text-sm"
               >
@@ -179,7 +179,7 @@
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Class</label>
               <select
                 v-model="viewFilters.class_id"
-                @change="fetchEnrolledStudents"
+                @change="onViewFilterChange"
                 :disabled="loadingClasses"
                 class="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-white dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed text-sm"
               >
@@ -200,13 +200,14 @@
               </svg>
               <input
                 v-model="viewSearch"
+                @input="onViewSearchInput"
                 type="text"
                 placeholder="Search by name or admission number..."
                 class="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white dark:bg-gray-700 dark:text-white"
               >
             </div>
             <span v-if="!loadingEnrolled" class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-              {{ visibleEnrolledStudentsList.length }} of {{ enrolledStudentsList.length }} shown
+              {{ visibleEnrolledStudentsList.length }} of {{ viewTotal }} shown
             </span>
           </div>
         </div>
@@ -304,10 +305,29 @@
         </div>
 
         <!-- Footer -->
-        <div class="px-4 sm:px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-end flex-shrink-0 rounded-b-2xl">
+        <div class="px-4 sm:px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-3 flex-shrink-0 rounded-b-2xl">
+          <div v-if="viewTotalPages > 1" class="flex items-center gap-2 order-2 sm:order-1">
+            <button
+              @click="goToViewPage(viewPage - 1)"
+              :disabled="viewPage <= 1 || loadingEnrolled"
+              class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <span class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+              Page {{ viewPage }} of {{ viewTotalPages }}
+            </span>
+            <button
+              @click="goToViewPage(viewPage + 1)"
+              :disabled="viewPage >= viewTotalPages || loadingEnrolled"
+              class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
           <button
             @click="showViewEnrolledModal = false"
-            class="w-full sm:w-auto px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 font-medium"
+            class="w-full sm:w-auto order-1 sm:order-2 px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 font-medium"
           >
             Close
           </button>
@@ -644,15 +664,15 @@ const viewFilters = ref({
   class_id: ''
 })
 const viewSearch = ref('')
+const viewPage = ref(1)
+const viewLimit = 50
+const viewTotal = ref(0)
+const viewTotalPages = ref(1)
+let viewSearchDebounce: ReturnType<typeof setTimeout> | null = null
 
-const visibleEnrolledStudentsList = computed(() => {
-  const q = viewSearch.value.trim().toLowerCase()
-  if (!q) return enrolledStudentsList.value
-  return enrolledStudentsList.value.filter(s =>
-    `${s.first_name} ${s.last_name}`.toLowerCase().includes(q) ||
-    s.admission_number.toLowerCase().includes(q)
-  )
-})
+// Filtering and pagination now happen server-side (see fetchEnrolledStudents) - this just
+// passes through the current page's rows so the template doesn't need to change.
+const visibleEnrolledStudentsList = computed(() => enrolledStudentsList.value)
 
 const fetchDepartments = async () => {
   loadingDepartments.value = true
@@ -765,18 +785,23 @@ const filterStudentsByDepartment = async () => {
     // Deliberately not scoped by class_id here - the backend's duplicate check
     // (student + department + academic_year) ignores class_id too, so this must match it
     // exactly or a student enrolled under a different class_id would wrongly look available.
+    // limit is deliberately generous (not the modal's usual page size) - this check needs
+    // every matching enrollment, not one page, or a student beyond page 1 would wrongly
+    // look available for re-enrollment.
     const response = await apiService.get('/admin/students/enrolled', {
       params: {
         department_id: enrollData.value.department_id,
-        academic_year_id: enrollData.value.academic_year_id
+        academic_year_id: enrollData.value.academic_year_id,
+        limit: 1000
       }
     })
 
     if (response.data?.success && response.data?.data) {
-      enrolledStudentIds.value = response.data.data.map((s: any) => s.student_id)
+      const rows = response.data.data.students || []
+      enrolledStudentIds.value = rows.map((s: any) => s.student_id)
 
       const details: Record<number, { class_id: number | null; class_name: string | null; stream_name: string | null }> = {}
-      for (const s of response.data.data) {
+      for (const s of rows) {
         details[s.student_id] = { class_id: s.class_id ?? null, class_name: s.class_name ?? null, stream_name: s.stream_name ?? null }
       }
       enrolledStudentDetails.value = details
@@ -784,7 +809,7 @@ const filterStudentsByDepartment = async () => {
       // Show this class's students, but track which are already enrolled in this department
       filteredStudents.value = students.value
 
-      enrolledStudents.value = response.data.data
+      enrolledStudents.value = rows
     }
   } catch (error) {
     console.error('Failed to fetch enrolled students:', error)
@@ -874,6 +899,7 @@ const openEnrollModal = async () => {
 const openViewEnrolledModal = async () => {
   viewFilters.value = { department_id: '', academic_year_id: '', class_id: '' }
   viewSearch.value = ''
+  viewPage.value = 1
   await fetchDepartments()
   await fetchAcademicYears()
   await fetchClasses()
@@ -881,10 +907,33 @@ const openViewEnrolledModal = async () => {
   showViewEnrolledModal.value = true
 }
 
+// Filter dropdowns (@change) go through this so changing a filter always jumps back to page 1
+// - otherwise "page 3" of an old filter could silently become an out-of-range page of the new one.
+const onViewFilterChange = () => {
+  viewPage.value = 1
+  fetchEnrolledStudents()
+}
+
+// Debounced so every keystroke doesn't fire a request - search is server-side (see
+// fetchEnrolledStudents) since the full result set is no longer loaded into the browser at once.
+const onViewSearchInput = () => {
+  if (viewSearchDebounce) clearTimeout(viewSearchDebounce)
+  viewSearchDebounce = setTimeout(() => {
+    viewPage.value = 1
+    fetchEnrolledStudents()
+  }, 350)
+}
+
+const goToViewPage = (page: number) => {
+  if (page < 1 || page > viewTotalPages.value || page === viewPage.value) return
+  viewPage.value = page
+  fetchEnrolledStudents()
+}
+
 const fetchEnrolledStudents = async () => {
   loadingEnrolled.value = true
   try {
-    const params: any = {}
+    const params: any = { page: viewPage.value, limit: viewLimit }
     if (viewFilters.value.department_id) {
       params.department_id = viewFilters.value.department_id
     }
@@ -894,14 +943,28 @@ const fetchEnrolledStudents = async () => {
     if (viewFilters.value.class_id) {
       params.class_id = viewFilters.value.class_id
     }
-    
-    console.log('Fetching enrolled students with params:', params)
+    if (viewSearch.value.trim()) {
+      params.search = viewSearch.value.trim()
+    }
+
     const response = await apiService.get('/admin/students/enrolled', { params })
-    console.log('Enrolled students response:', response.data)
-    
+
     if (response.data?.success && response.data?.data) {
-      enrolledStudentsList.value = response.data.data
-      console.log('Enrolled students list set:', enrolledStudentsList.value)
+      enrolledStudentsList.value = response.data.data.students || []
+      const pagination = response.data.data.pagination
+      if (pagination) {
+        viewTotal.value = pagination.total
+        viewTotalPages.value = pagination.pages
+      }
+
+      // The page we were on can end up past the end (e.g. after de-enrolling the last
+      // student on it) - step back one page rather than showing an empty page that isn't
+      // actually the last one.
+      if (enrolledStudentsList.value.length === 0 && viewPage.value > 1) {
+        viewPage.value -= 1
+        await fetchEnrolledStudents()
+        return
+      }
     }
   } catch (error) {
     console.error('Failed to fetch enrolled students:', error)

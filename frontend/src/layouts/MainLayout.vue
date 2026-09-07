@@ -580,6 +580,7 @@ const academicMenu = computed(() => {
     return [
       { path: '/admin/students', label: 'Students', icon: 'AcademicCapIcon' },
       { path: '/admin/teachers', label: 'Teachers', icon: 'BriefcaseIcon' },
+      { path: '/admin/assign-teachers', label: 'Assign Teachers', icon: 'CheckCircleIcon' },
       { path: '/admin/hods', label: 'HODs', icon: 'UserGroupIcon' },
       { path: '/admin/departments', label: 'Departments', icon: 'BuildingOfficeIcon' },
       { path: '/admin/subjects', label: 'Subjects', icon: 'BookIcon' },

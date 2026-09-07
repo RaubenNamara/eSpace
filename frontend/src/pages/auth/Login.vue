@@ -51,9 +51,9 @@
         </div>
 
         <!-- Hero content -->
-        <div class="my-auto max-w-2xl animate-fade-up">
+        <div class="my-auto max-w-2xl 2xl:max-w-4xl animate-fade-up">
           <div
-            class="mb-7 inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-400/10 px-4 py-2 text-sm font-medium text-blue-100 backdrop-blur-md"
+            class="mb-7 inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-400/10 px-4 py-2 text-sm font-medium text-blue-100 backdrop-blur-md 2xl:px-5 2xl:py-2.5 2xl:text-base"
           >
             <span class="relative flex h-2.5 w-2.5">
               <span
@@ -68,7 +68,7 @@
           </div>
 
           <h2
-            class="max-w-xl text-4xl font-bold leading-tight tracking-tight text-white xl:text-6xl xl:leading-[1.08]"
+            class="max-w-xl 2xl:max-w-3xl text-4xl font-bold leading-tight tracking-tight text-white xl:text-6xl xl:leading-[1.08] 2xl:text-7xl"
           >
             Learn, teach and
             <span
@@ -79,14 +79,14 @@
           </h2>
 
           <p
-            class="mt-6 max-w-xl text-base leading-8 text-slate-300 xl:text-lg"
+            class="mt-6 max-w-xl 2xl:max-w-2xl text-base leading-8 text-slate-300 xl:text-lg 2xl:text-xl 2xl:leading-9"
           >
             Access lessons, live classes, assignments, digital resources and
             performance insights from one secure and connected platform.
           </p>
 
           <!-- Features -->
-          <div class="mt-10 grid max-w-xl grid-cols-2 gap-4">
+          <div class="mt-10 grid max-w-xl 2xl:max-w-2xl grid-cols-2 gap-4 2xl:gap-5">
             <div
               v-for="feature in features"
               :key="feature.title"

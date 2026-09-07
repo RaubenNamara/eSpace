@@ -1194,6 +1194,244 @@ class TeacherController extends Controller
     }
 
     /**
+     * A teacher's department IDs (all memberships from teacher_department_assignments, or
+     * their single teachers.department_id if no membership rows exist) - used to check that
+     * a subject picked for a teaching assignment actually belongs to that teacher's department.
+     */
+    private function getTeacherDepartmentIds($db, int $teacherId): array
+    {
+        $stmt = $db->prepare("SELECT department_id FROM teacher_department_assignments WHERE teacher_id = :teacher_id AND deleted_at IS NULL");
+        $stmt->execute(['teacher_id' => $teacherId]);
+        $ids = array_map('intval', array_column($stmt->fetchAll(), 'department_id'));
+
+        if (empty($ids)) {
+            $stmt = $db->prepare("SELECT department_id FROM teachers WHERE id = :id AND deleted_at IS NULL");
+            $stmt->execute(['id' => $teacherId]);
+            $row = $stmt->fetch();
+            if ($row && $row['department_id'] !== null) {
+                $ids[] = (int) $row['department_id'];
+            }
+        }
+
+        return $ids;
+    }
+
+    /**
+     * Get a teacher's subject-teaching assignments (which class streams they teach a
+     * subject in, per term).
+     * GET /admin/teachers/{id}/teaching-assignments
+     */
+    public function getTeachingAssignments($id): void
+    {
+        if (!$this->isAdmin()) {
+            $this->forbidden();
+            return;
+        }
+
+        $id = (int) $id;
+        $db = $this->getDb();
+
+        $stmt = $db->prepare("SELECT id FROM teachers WHERE id = :id AND deleted_at IS NULL");
+        $stmt->execute(['id' => $id]);
+        if (!$stmt->fetch()) {
+            $this->notFound('Teacher not found');
+            return;
+        }
+
+        $sql = "SELECT cs.id, cs.class_id, cs.subject_id, cs.term_id, c.name AS class_name,
+                       c.stream_name, c.level, s.name AS subject_name, s.code AS subject_code
+                FROM class_subjects cs
+                JOIN classes c ON c.id = cs.class_id
+                JOIN subjects s ON s.id = cs.subject_id
+                WHERE cs.teacher_id = :teacher_id
+                ORDER BY s.name, c.level, c.name, c.stream_name";
+        $stmt = $db->prepare($sql);
+        $stmt->execute(['teacher_id' => $id]);
+
+        $this->success(['assignments' => $stmt->fetchAll()]);
+    }
+
+    /**
+     * Assign a teacher to teach one subject across a set of class streams (checkbox multi-
+     * select). The subject must belong to one of the teacher's own departments - a teacher
+     * can be assigned to many classes, but never outside their department. Re-running this
+     * for the same teacher/subject/term replaces their previous class list for that subject,
+     * and also takes over any of the checked classes from a different teacher who was
+     * previously assigned that subject there.
+     * PUT /admin/teachers/{id}/teaching-assignments
+     * Body: { subject_id: number, class_ids: number[], term_id?: number }
+     */
+    public function assignTeachingAssignments($id): void
+    {
+        if (!$this->isAdmin()) {
+            $this->forbidden();
+            return;
+        }
+
+        $id = (int) $id;
+        $data = $this->input();
+
+        $subjectId = isset($data['subject_id']) ? (int) $data['subject_id'] : 0;
+        $classIds = $data['class_ids'] ?? [];
+
+        if ($subjectId <= 0) {
+            $this->validationError(['subject_id' => 'Subject is required']);
+            return;
+        }
+
+        if (!is_array($classIds)) {
+            $this->validationError(['class_ids' => 'Class IDs array is required']);
+            return;
+        }
+
+        $classIds = array_values(array_unique(array_map('intval', $classIds)));
+
+        $db = $this->getDb();
+
+        $stmt = $db->prepare("SELECT id, department_id FROM teachers WHERE id = :id AND deleted_at IS NULL");
+        $stmt->execute(['id' => $id]);
+        $teacher = $stmt->fetch();
+        if (!$teacher) {
+            $this->notFound('Teacher not found');
+            return;
+        }
+
+        $stmt = $db->prepare("SELECT id, department_id FROM subjects WHERE id = :id AND deleted_at IS NULL");
+        $stmt->execute(['id' => $subjectId]);
+        $subject = $stmt->fetch();
+        if (!$subject) {
+            $this->validationError(['subject_id' => 'Subject not found']);
+            return;
+        }
+
+        $teacherDepartmentIds = $this->getTeacherDepartmentIds($db, $id);
+        if (empty($teacherDepartmentIds)) {
+            $this->validationError(['subject_id' => 'This teacher has no department assigned yet. Assign a department first.']);
+            return;
+        }
+
+        if ($subject['department_id'] === null || !in_array((int) $subject['department_id'], $teacherDepartmentIds, true)) {
+            $this->validationError(['subject_id' => "This subject does not belong to the teacher's department"]);
+            return;
+        }
+
+        $termId = isset($data['term_id']) && $data['term_id'] !== '' ? (int) $data['term_id'] : null;
+        if ($termId === null) {
+            $stmt = $db->prepare("SELECT id FROM terms WHERE is_current = 1 AND deleted_at IS NULL ORDER BY id DESC LIMIT 1");
+            $stmt->execute();
+            $current = $stmt->fetch();
+            $termId = $current ? (int) $current['id'] : null;
+        }
+
+        if ($termId === null) {
+            $this->validationError(['term_id' => 'No current term is set - please specify a term']);
+            return;
+        }
+
+        if (!empty($classIds)) {
+            $placeholders = implode(',', array_fill(0, count($classIds), '?'));
+            $stmt = $db->prepare("SELECT id FROM classes WHERE id IN ({$placeholders}) AND deleted_at IS NULL");
+            $stmt->execute($classIds);
+            $foundIds = array_map('intval', array_column($stmt->fetchAll(), 'id'));
+            $missing = array_diff($classIds, $foundIds);
+            if (!empty($missing)) {
+                $this->validationError(['class_ids' => 'One or more classes were not found: ' . implode(', ', $missing)]);
+                return;
+            }
+        }
+
+        try {
+            $db->beginTransaction();
+
+            // Clear this teacher's previous class list for this subject/term (handles boxes
+            // that were unchecked), then free up any checked classes from whichever other
+            // teacher previously held this subject there, before re-inserting the new set.
+            $deleteMineStmt = $db->prepare("DELETE FROM class_subjects WHERE teacher_id = :teacher_id AND subject_id = :subject_id AND term_id = :term_id");
+            $deleteMineStmt->execute(['teacher_id' => $id, 'subject_id' => $subjectId, 'term_id' => $termId]);
+
+            if (!empty($classIds)) {
+                $placeholders = implode(',', array_fill(0, count($classIds), '?'));
+                $deleteOthersStmt = $db->prepare("DELETE FROM class_subjects WHERE subject_id = ? AND term_id = ? AND class_id IN ({$placeholders})");
+                $deleteOthersStmt->execute(array_merge([$subjectId, $termId], $classIds));
+
+                $insertStmt = $db->prepare("INSERT INTO class_subjects (class_id, subject_id, teacher_id, term_id, created_at, updated_at) VALUES (:class_id, :subject_id, :teacher_id, :term_id, NOW(), NOW())");
+                foreach ($classIds as $classId) {
+                    $insertStmt->execute([
+                        'class_id' => $classId,
+                        'subject_id' => $subjectId,
+                        'teacher_id' => $id,
+                        'term_id' => $termId,
+                    ]);
+                }
+            }
+
+            $db->commit();
+        } catch (\Exception $e) {
+            $db->rollBack();
+            $this->error('Failed to update teaching assignment: ' . $e->getMessage(), 500);
+            return;
+        }
+
+        $this->success([
+            'subject_id' => $subjectId,
+            'term_id' => $termId,
+            'class_ids' => $classIds,
+        ], 'Teaching assignment updated successfully');
+
+        $this->auditLog->logAction(
+            $this->getCurrentUserId(),
+            $this->getCurrentUserRole(),
+            'teacher_teaching_assignment_updated',
+            'teacher',
+            $id,
+            $id,
+            null,
+            json_encode(['subject_id' => $subjectId, 'term_id' => $termId, 'class_ids' => $classIds])
+        );
+    }
+
+    /**
+     * De-assign a teacher from a single class-subject-term teaching assignment.
+     * DELETE /admin/teachers/{id}/teaching-assignments/{assignmentId}
+     */
+    public function removeTeachingAssignment($id, $assignmentId): void
+    {
+        if (!$this->isAdmin()) {
+            $this->forbidden();
+            return;
+        }
+
+        $id = (int) $id;
+        $assignmentId = (int) $assignmentId;
+        $db = $this->getDb();
+
+        $stmt = $db->prepare("SELECT id, class_id, subject_id, term_id FROM class_subjects WHERE id = :id AND teacher_id = :teacher_id");
+        $stmt->execute(['id' => $assignmentId, 'teacher_id' => $id]);
+        $assignment = $stmt->fetch();
+
+        if (!$assignment) {
+            $this->notFound('Teaching assignment not found');
+            return;
+        }
+
+        $deleteStmt = $db->prepare("DELETE FROM class_subjects WHERE id = :id");
+        $deleteStmt->execute(['id' => $assignmentId]);
+
+        $this->success([], 'Teacher de-assigned from this class successfully');
+
+        $this->auditLog->logAction(
+            $this->getCurrentUserId(),
+            $this->getCurrentUserRole(),
+            'teacher_teaching_assignment_removed',
+            'teacher',
+            $id,
+            $id,
+            json_encode($assignment),
+            null
+        );
+    }
+
+    /**
      * Check if current user is admin
      */
     private function isAdmin(): bool

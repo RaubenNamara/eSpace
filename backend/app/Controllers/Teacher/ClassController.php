@@ -40,7 +40,32 @@ class ClassController extends Controller
     }
 
     /**
-     * Get list of classes in teacher's department
+     * The class IDs this teacher has been explicitly assigned to teach (Admin > Assign
+     * Teachers, class_subjects) for the current term. Empty means "not yet assigned" -
+     * callers should fall back to the old department-wide view rather than show nothing,
+     * so a teacher's dashboard isn't emptied out the moment this feature shipped.
+     */
+    private function getAssignedClassIds(): array
+    {
+        $teacherId = $this->resolveActiveTeacherId();
+        if (!$teacherId) {
+            return [];
+        }
+
+        $stmt = $this->getDb()->prepare(
+            "SELECT DISTINCT cs.class_id
+             FROM class_subjects cs
+             INNER JOIN terms t ON t.id = cs.term_id AND t.is_current = 1 AND t.deleted_at IS NULL
+             WHERE cs.teacher_id = :teacher_id"
+        );
+        $stmt->execute(['teacher_id' => $teacherId]);
+
+        return array_map('intval', array_column($stmt->fetchAll(\PDO::FETCH_ASSOC), 'class_id'));
+    }
+
+    /**
+     * Get list of classes in teacher's department - narrowed to their explicitly assigned
+     * class streams once they have any (see getAssignedClassIds()).
      * GET /teacher/classes
      */
     public function index(): void
@@ -51,13 +76,14 @@ class ClassController extends Controller
         }
 
         $departmentId = $this->getTeacherDepartmentId();
-        
+
         if (!$departmentId) {
             $this->error('Teacher not assigned to a department', 403);
             return;
         }
 
         $academicYear = $this->query('academic_year');
+        $assignedClassIds = $this->getAssignedClassIds();
 
         try {
             $sql = "SELECT DISTINCT c.id, c.name, c.level, c.stream_name, COUNT(se.id) as student_count
@@ -66,7 +92,7 @@ class ClassController extends Controller
                     WHERE se.department_id = :department_id
                     AND se.deleted_at IS NULL
                     AND c.deleted_at IS NULL";
-            
+
             $params = ['department_id' => $departmentId];
 
             if ($academicYear) {
@@ -74,8 +100,18 @@ class ClassController extends Controller
                 $params['academic_year'] = $academicYear;
             }
 
+            if (!empty($assignedClassIds)) {
+                $placeholders = [];
+                foreach ($assignedClassIds as $i => $classId) {
+                    $key = "assigned_class_{$i}";
+                    $placeholders[] = ":{$key}";
+                    $params[$key] = $classId;
+                }
+                $sql .= " AND c.id IN (" . implode(',', $placeholders) . ")";
+            }
+
             $sql .= " GROUP BY c.id, c.name, c.level, c.stream_name ORDER BY c.level, c.name";
-            
+
             $stmt = $this->getDb()->prepare($sql);
             $stmt->execute($params);
             $classes = $stmt->fetchAll(\PDO::FETCH_ASSOC);
@@ -142,9 +178,18 @@ class ClassController extends Controller
         }
 
         $classId = $this->routeParam('id');
-        
+
         if (!$classId) {
             $this->error('Class ID is required', 400);
+            return;
+        }
+
+        // Once a teacher has explicit class-stream assignments, they may only view students
+        // of a class in that set - otherwise (not assigned to any yet) keep the old
+        // department-wide access.
+        $assignedClassIds = $this->getAssignedClassIds();
+        if (!empty($assignedClassIds) && !in_array((int) $classId, $assignedClassIds, true)) {
+            $this->forbidden('You are not assigned to this class');
             return;
         }
 

@@ -50,12 +50,21 @@ class VideoController extends Controller
         }
 
         try {
-            $sql = "SELECT id, title, description, file_path AS url, file_size, duration,
-                           created_by, created_at, updated_at
-                    FROM videos
-                    WHERE deleted_at IS NULL
-                    ORDER BY created_at DESC";
-            
+            $sql = "SELECT v.id, v.title, v.description, v.file_path AS url, v.file_size, v.duration,
+                           v.created_by, v.created_at, v.updated_at,
+                           v.subject_id, v.class_id, v.department_id,
+                           s.name as subject_name,
+                           c.name as class_name, c.level as class_level, c.stream_name as class_stream_name,
+                           d.name as department_name,
+                           t.first_name as teacher_first_name, t.last_name as teacher_last_name
+                    FROM videos v
+                    LEFT JOIN subjects s ON v.subject_id = s.id
+                    LEFT JOIN classes c ON v.class_id = c.id
+                    LEFT JOIN departments d ON v.department_id = d.id
+                    LEFT JOIN teachers t ON v.teacher_id = t.id
+                    WHERE v.deleted_at IS NULL
+                    ORDER BY v.created_at DESC";
+
             $stmt = $this->db->prepare($sql);
             $stmt->execute();
             $videos = $stmt->fetchAll(\PDO::FETCH_ASSOC);

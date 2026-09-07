@@ -111,81 +111,151 @@
         <p class="text-gray-600 dark:text-gray-400">No topics match your filters</p>
       </div>
 
-      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div
-          v-for="topic in topics"
-          :key="topic.id"
-          class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow"
-        >
-          <div class="p-6">
-            <div class="flex items-start justify-between mb-3 gap-2">
-              <div class="flex items-center gap-2 min-w-0 cursor-pointer" @click="openViewer(topic)">
-                <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center flex-shrink-0">
-                  <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                  </svg>
-                </div>
-                <h3 class="text-base font-semibold text-gray-900 dark:text-white line-clamp-1">{{ topic.title }}</h3>
+      <div v-else>
+        <div class="flex items-center justify-between mb-4">
+          <p class="text-sm text-gray-500 dark:text-gray-400">
+            {{ topics.length }} topic{{ topics.length === 1 ? '' : 's' }} across {{ groupedTopics.length }} class{{ groupedTopics.length === 1 ? '' : 'es' }}
+          </p>
+          <button @click="toggleAllClasses" class="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">
+            {{ allClassesCollapsed ? 'Expand all' : 'Collapse all' }}
+          </button>
+        </div>
+
+        <!-- Grouped by class, then by subject within each class -->
+        <div class="space-y-4">
+          <div
+            v-for="group in groupedTopics"
+            :key="group.key"
+            class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden"
+          >
+            <button
+              @click="toggleClassGroup(group.key)"
+              class="w-full flex items-center justify-between gap-3 px-6 py-4 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+            >
+              <div class="flex items-center gap-3 min-w-0">
+                <svg
+                  class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform"
+                  :class="{ '-rotate-90': collapsedClasses.has(group.key) }"
+                  fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+                <h2 class="text-base font-bold text-gray-900 dark:text-white truncate">{{ group.label }}</h2>
               </div>
-              <span
-                class="px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 capitalize"
-                :class="topic.status === 'published' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                  topic.status === 'draft' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                  'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'"
-              >
-                {{ topic.status }}
+              <span class="flex-shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                {{ group.total }} topic{{ group.total === 1 ? '' : 's' }}
               </span>
-            </div>
+            </button>
 
-            <p v-if="topic.description" class="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">{{ topic.description }}</p>
-
-            <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
-              By {{ topic.teacher_first_name ? `${topic.teacher_first_name} ${topic.teacher_last_name}` : 'Unknown teacher' }}
-            </p>
-
-            <div class="flex flex-wrap items-center gap-2 mb-4">
-              <span v-if="topic.subject_name" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
-                {{ topic.subject_name }}
-              </span>
-              <span v-if="topic.department_name" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                {{ topic.department_name }}
-              </span>
-              <span v-if="topic.class_name" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-                {{ topic.class_name }}{{ topic.class_stream_name ? ' - ' + topic.class_stream_name : '' }}
-              </span>
-              <span class="ml-auto text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">{{ topic.total_pages }} page{{ topic.total_pages === 1 ? '' : 's' }}</span>
-            </div>
-
-            <div class="flex items-center justify-between gap-2">
-              <select
-                :value="topic.status"
-                @change="changeStatus(topic, ($event.target as HTMLSelectElement).value)"
-                class="text-xs px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-              >
-                <option value="draft">Draft</option>
-                <option value="published">Published</option>
-                <option value="archived">Archived</option>
-              </select>
-              <div class="flex items-center gap-1">
+            <div v-if="!collapsedClasses.has(group.key)" class="border-t border-gray-100 dark:border-gray-700 px-6 py-5">
+              <!-- Stream cards - click a stream to see its topics below -->
+              <div class="flex flex-wrap gap-3">
                 <button
-                  @click="openViewer(topic)"
-                  class="p-2 hover:bg-blue-100 dark:hover:bg-blue-900 rounded-lg transition-colors"
-                  title="View content"
+                  v-for="stream in group.streams"
+                  :key="stream.key"
+                  @click="toggleStream(group.key, stream.key)"
+                  class="group relative flex flex-col items-center justify-center gap-1 w-24 h-20 rounded-xl border-2 transition-all"
+                  :class="selectedStreams[group.key] === stream.key
+                    ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 shadow-md'
+                    : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 hover:border-emerald-300 hover:shadow-sm'"
                 >
-                  <svg class="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                  </svg>
+                  <span
+                    class="text-lg font-bold"
+                    :class="selectedStreams[group.key] === stream.key ? 'text-emerald-700 dark:text-emerald-300' : 'text-gray-800 dark:text-gray-200'"
+                  >
+                    {{ stream.label }}
+                  </span>
+                  <span class="text-xs text-gray-500 dark:text-gray-400">{{ stream.topics.length }} topic{{ stream.topics.length === 1 ? '' : 's' }}</span>
                 </button>
-                <button
-                  @click="deleteTopic(topic)"
-                  class="p-2 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg transition-colors"
-                  title="Delete"
+              </div>
+
+              <!-- Subjects and topics for the selected stream -->
+              <div v-if="selectedStreams[group.key]" class="mt-5 pt-5 border-t border-gray-100 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700">
+                <div
+                  v-for="subject in subjectsForStream(group.streams.find(s => s.key === selectedStreams[group.key])?.topics || [])"
+                  :key="subject.key"
+                  class="py-5 first:pt-0"
                 >
-                  <svg class="w-4 h-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                  </svg>
-                </button>
+                <h3 class="text-sm font-semibold text-indigo-700 dark:text-indigo-300 mb-3">
+                  {{ subject.label }}
+                  <span class="ml-1 font-normal text-gray-400 dark:text-gray-500">({{ subject.topics.length }})</span>
+                </h3>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div
+                    v-for="topic in subject.topics"
+                    :key="topic.id"
+                    class="bg-gray-50 dark:bg-gray-900/40 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow"
+                  >
+                    <div class="p-6">
+                      <div class="flex items-start justify-between mb-3 gap-2">
+                        <div class="flex items-center gap-2 min-w-0 cursor-pointer" @click="openViewer(topic)">
+                          <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center flex-shrink-0">
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                            </svg>
+                          </div>
+                          <h4 class="text-base font-semibold text-gray-900 dark:text-white line-clamp-1">{{ topic.title }}</h4>
+                        </div>
+                        <span
+                          class="px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 capitalize"
+                          :class="topic.status === 'published' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                            topic.status === 'draft' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                            'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'"
+                        >
+                          {{ topic.status }}
+                        </span>
+                      </div>
+
+                      <p v-if="topic.description" class="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">{{ topic.description }}</p>
+
+                      <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                        By {{ topic.teacher_first_name ? `${topic.teacher_first_name} ${topic.teacher_last_name}` : 'Unknown teacher' }}
+                      </p>
+
+                      <div class="flex flex-wrap items-center gap-2 mb-4">
+                        <span v-if="topic.department_name" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                          {{ topic.department_name }}
+                        </span>
+                        <span class="ml-auto text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">{{ topic.total_pages }} page{{ topic.total_pages === 1 ? '' : 's' }}</span>
+                      </div>
+
+                      <div class="flex items-center justify-between gap-2">
+                        <select
+                          :value="topic.status"
+                          @change="changeStatus(topic, ($event.target as HTMLSelectElement).value)"
+                          class="text-xs px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                        >
+                          <option value="draft">Draft</option>
+                          <option value="published">Published</option>
+                          <option value="archived">Archived</option>
+                        </select>
+                        <div class="flex items-center gap-1">
+                          <button
+                            @click="openViewer(topic)"
+                            class="p-2 hover:bg-blue-100 dark:hover:bg-blue-900 rounded-lg transition-colors"
+                            title="View content"
+                          >
+                            <svg class="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                            </svg>
+                          </button>
+                          <button
+                            @click="deleteTopic(topic)"
+                            class="p-2 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg transition-colors"
+                            title="Delete"
+                          >
+                            <svg class="w-4 h-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
               </div>
             </div>
           </div>
@@ -259,6 +329,111 @@ const teacherLeaderboard = computed(() => {
     }))
     .sort((a, b) => b.total - a.total)
 })
+
+// Topics arranged by class, with each class's streams shown as clickable cards - clicking a
+// stream reveals its topics grouped by subject. Matches how a teacher/admin actually thinks
+// about "what's been written for S.2-East Geography" rather than a flat list.
+interface SubjectGroup {
+  key: string
+  label: string
+  topics: ENoteTopic[]
+}
+
+interface StreamGroup {
+  key: string
+  label: string
+  topics: ENoteTopic[]
+}
+
+interface ClassGroup {
+  key: string
+  label: string
+  streams: StreamGroup[]
+  total: number
+}
+
+const groupedTopics = computed<ClassGroup[]>(() => {
+  const classMap = new Map<string, { label: string; streamMap: Map<string, StreamGroup> }>()
+
+  for (const topic of topics.value) {
+    const classKey = topic.class_name || '__unassigned'
+    const classLabel = topic.class_name || 'Unassigned class'
+
+    if (!classMap.has(classKey)) {
+      classMap.set(classKey, { label: classLabel, streamMap: new Map() })
+    }
+    const classEntry = classMap.get(classKey)!
+
+    const streamKey = topic.class_stream_name || '__none'
+    if (!classEntry.streamMap.has(streamKey)) {
+      classEntry.streamMap.set(streamKey, { key: streamKey, label: topic.class_stream_name || 'No stream', topics: [] })
+    }
+    classEntry.streamMap.get(streamKey)!.topics.push(topic)
+  }
+
+  const groups: ClassGroup[] = Array.from(classMap.entries()).map(([key, value]) => {
+    const streams = Array.from(value.streamMap.values()).sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }))
+    return {
+      key,
+      label: value.label,
+      streams,
+      total: streams.reduce((sum, s) => sum + s.topics.length, 0)
+    }
+  })
+
+  groups.sort((a, b) => {
+    if (a.key === '__unassigned') return 1
+    if (b.key === '__unassigned') return -1
+    return a.label.localeCompare(b.label, undefined, { numeric: true })
+  })
+
+  return groups
+})
+
+// Which stream is currently expanded within each class (keyed by class key). Clicking the
+// already-selected stream's card collapses it again.
+const selectedStreams = ref<Record<string, string>>({})
+
+const toggleStream = (classKey: string, streamKey: string) => {
+  selectedStreams.value = {
+    ...selectedStreams.value,
+    [classKey]: selectedStreams.value[classKey] === streamKey ? '' : streamKey
+  }
+}
+
+const subjectsForStream = (streamTopics: ENoteTopic[]): SubjectGroup[] => {
+  const bySubject = new Map<string, SubjectGroup>()
+  for (const topic of streamTopics) {
+    const key = topic.subject_name || '__unassigned'
+    if (!bySubject.has(key)) {
+      bySubject.set(key, { key, label: topic.subject_name || 'Unassigned subject', topics: [] })
+    }
+    bySubject.get(key)!.topics.push(topic)
+  }
+  return Array.from(bySubject.values()).sort((a, b) => a.label.localeCompare(b.label))
+}
+
+const collapsedClasses = ref<Set<string>>(new Set())
+
+const toggleClassGroup = (key: string) => {
+  const next = new Set(collapsedClasses.value)
+  if (next.has(key)) {
+    next.delete(key)
+  } else {
+    next.add(key)
+  }
+  collapsedClasses.value = next
+}
+
+const allClassesCollapsed = computed(() =>
+  groupedTopics.value.length > 0 && groupedTopics.value.every(g => collapsedClasses.value.has(g.key))
+)
+
+const toggleAllClasses = () => {
+  collapsedClasses.value = allClassesCollapsed.value
+    ? new Set()
+    : new Set(groupedTopics.value.map(g => g.key))
+}
 
 const fetchDepartments = async () => {
   try {

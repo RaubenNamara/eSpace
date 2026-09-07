@@ -27,36 +27,117 @@
       </svg>
       <p class="text-gray-500 dark:text-gray-400">No videos uploaded yet</p>
     </div>
-    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <div 
-        v-for="video in videos" 
-        :key="video.id"
-        class="card overflow-hidden"
-      >
-        <div class="aspect-video bg-gray-900 relative">
-          <video 
-            v-if="video.url"
-            :src="resolveAssetUrl(video.url)"
-            class="w-full h-full object-cover"
-            controls
-          ></video>
-          <div v-else class="w-full h-full flex items-center justify-center text-gray-500">
-            <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-            </svg>
-          </div>
-        </div>
-        <div class="p-4">
-          <h3 class="font-semibold text-gray-900 dark:text-white truncate">{{ video.title }}</h3>
-          <p class="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">{{ video.description || 'No description' }}</p>
-          <div class="flex items-center justify-between mt-3">
-            <span class="text-xs text-gray-500 dark:text-gray-400">{{ formatDate(video.created_at) }}</span>
-            <button
-              @click="deleteVideo(video.id)"
-              class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 text-sm"
-            >
-              Delete
-            </button>
+    <div v-else>
+      <div class="flex items-center justify-between mb-4">
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+          {{ videos.length }} video{{ videos.length === 1 ? '' : 's' }} across {{ groupedVideos.length }} class{{ groupedVideos.length === 1 ? '' : 'es' }}
+        </p>
+        <button @click="toggleAllClasses" class="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">
+          {{ allClassesCollapsed ? 'Expand all' : 'Collapse all' }}
+        </button>
+      </div>
+
+      <!-- Grouped by class, with each class's streams shown as clickable cards -->
+      <div class="space-y-4">
+        <div
+          v-for="group in groupedVideos"
+          :key="group.key"
+          class="card overflow-hidden"
+        >
+          <button
+            @click="toggleClassGroup(group.key)"
+            class="w-full flex items-center justify-between gap-3 px-6 py-4 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+          >
+            <div class="flex items-center gap-3 min-w-0">
+              <svg
+                class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform"
+                :class="{ '-rotate-90': collapsedClasses.has(group.key) }"
+                fill="none" stroke="currentColor" viewBox="0 0 24 24"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+              <h2 class="text-base font-bold text-gray-900 dark:text-white truncate">{{ group.label }}</h2>
+            </div>
+            <span class="flex-shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+              {{ group.total }} video{{ group.total === 1 ? '' : 's' }}
+            </span>
+          </button>
+
+          <div v-if="!collapsedClasses.has(group.key)" class="border-t border-gray-100 dark:border-gray-700 px-6 py-5">
+            <!-- Stream cards - click a stream to see its videos below -->
+            <div class="flex flex-wrap gap-3">
+              <button
+                v-for="stream in group.streams"
+                :key="stream.key"
+                @click="toggleStream(group.key, stream.key)"
+                class="group relative flex flex-col items-center justify-center gap-1 w-24 h-20 rounded-xl border-2 transition-all"
+                :class="selectedStreams[group.key] === stream.key
+                  ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 shadow-md'
+                  : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 hover:border-indigo-300 hover:shadow-sm'"
+              >
+                <span
+                  class="text-lg font-bold"
+                  :class="selectedStreams[group.key] === stream.key ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-800 dark:text-gray-200'"
+                >
+                  {{ stream.label }}
+                </span>
+                <span class="text-xs text-gray-500 dark:text-gray-400">{{ stream.videos.length }} video{{ stream.videos.length === 1 ? '' : 's' }}</span>
+              </button>
+            </div>
+
+            <!-- Subjects and videos for the selected stream -->
+            <div v-if="selectedStreams[group.key]" class="mt-5 pt-5 border-t border-gray-100 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700">
+              <div
+                v-for="subject in subjectsForStream(group.streams.find(s => s.key === selectedStreams[group.key])?.videos || [])"
+                :key="subject.key"
+                class="py-5 first:pt-0"
+              >
+                <h3 class="text-sm font-semibold text-indigo-700 dark:text-indigo-300 mb-3">
+                  {{ subject.label }}
+                  <span class="ml-1 font-normal text-gray-400 dark:text-gray-500">({{ subject.videos.length }})</span>
+                </h3>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div
+                    v-for="video in subject.videos"
+                    :key="video.id"
+                    class="bg-gray-50 dark:bg-gray-900/40 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700"
+                  >
+                    <div class="aspect-video bg-gray-900 relative">
+                      <video
+                        v-if="video.url"
+                        :src="resolveAssetUrl(video.url)"
+                        class="w-full h-full object-cover"
+                        controls
+                      ></video>
+                      <div v-else class="w-full h-full flex items-center justify-center text-gray-500">
+                        <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                        </svg>
+                      </div>
+                    </div>
+                    <div class="p-4">
+                      <h4 class="font-semibold text-gray-900 dark:text-white truncate">{{ video.title }}</h4>
+                      <p class="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">{{ video.description || 'No description' }}</p>
+                      <div v-if="video.department_name" class="mt-2">
+                        <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                          {{ video.department_name }}
+                        </span>
+                      </div>
+                      <div class="flex items-center justify-between mt-3">
+                        <span class="text-xs text-gray-500 dark:text-gray-400">{{ formatDate(video.created_at) }}</span>
+                        <button
+                          @click="deleteVideo(video.id)"
+                          class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 text-sm"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -128,14 +209,129 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import apiService from '@/services/api'
 import { resolveAssetUrl } from '@/utils/url'
 
-const videos = ref<any[]>([])
+interface Video {
+  id: number
+  title: string
+  description: string | null
+  url: string | null
+  created_at: string
+  subject_name: string | null
+  class_name: string | null
+  class_stream_name: string | null
+  department_name: string | null
+}
+
+const videos = ref<Video[]>([])
 const loading = ref(false)
 const showUploadModal = ref(false)
 const uploading = ref(false)
+
+// Videos arranged by class, with each class's streams shown as clickable cards - clicking a
+// stream reveals its videos grouped by subject.
+interface SubjectGroup {
+  key: string
+  label: string
+  videos: Video[]
+}
+
+interface StreamGroup {
+  key: string
+  label: string
+  videos: Video[]
+}
+
+interface ClassGroup {
+  key: string
+  label: string
+  streams: StreamGroup[]
+  total: number
+}
+
+const groupedVideos = computed<ClassGroup[]>(() => {
+  const classMap = new Map<string, { label: string; streamMap: Map<string, StreamGroup> }>()
+
+  for (const video of videos.value) {
+    const classKey = video.class_name || '__unassigned'
+    const classLabel = video.class_name || 'Unassigned class'
+
+    if (!classMap.has(classKey)) {
+      classMap.set(classKey, { label: classLabel, streamMap: new Map() })
+    }
+    const classEntry = classMap.get(classKey)!
+
+    const streamKey = video.class_stream_name || '__none'
+    if (!classEntry.streamMap.has(streamKey)) {
+      classEntry.streamMap.set(streamKey, { key: streamKey, label: video.class_stream_name || 'No stream', videos: [] })
+    }
+    classEntry.streamMap.get(streamKey)!.videos.push(video)
+  }
+
+  const groups: ClassGroup[] = Array.from(classMap.entries()).map(([key, value]) => {
+    const streams = Array.from(value.streamMap.values()).sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }))
+    return {
+      key,
+      label: value.label,
+      streams,
+      total: streams.reduce((sum, s) => sum + s.videos.length, 0)
+    }
+  })
+
+  groups.sort((a, b) => {
+    if (a.key === '__unassigned') return 1
+    if (b.key === '__unassigned') return -1
+    return a.label.localeCompare(b.label, undefined, { numeric: true })
+  })
+
+  return groups
+})
+
+const collapsedClasses = ref<Set<string>>(new Set())
+
+const toggleClassGroup = (key: string) => {
+  const next = new Set(collapsedClasses.value)
+  if (next.has(key)) {
+    next.delete(key)
+  } else {
+    next.add(key)
+  }
+  collapsedClasses.value = next
+}
+
+const allClassesCollapsed = computed(() =>
+  groupedVideos.value.length > 0 && groupedVideos.value.every(g => collapsedClasses.value.has(g.key))
+)
+
+const toggleAllClasses = () => {
+  collapsedClasses.value = allClassesCollapsed.value
+    ? new Set()
+    : new Set(groupedVideos.value.map(g => g.key))
+}
+
+// Which stream is currently expanded within each class (keyed by class key).
+const selectedStreams = ref<Record<string, string>>({})
+
+const toggleStream = (classKey: string, streamKey: string) => {
+  selectedStreams.value = {
+    ...selectedStreams.value,
+    [classKey]: selectedStreams.value[classKey] === streamKey ? '' : streamKey
+  }
+}
+
+const subjectsForStream = (streamVideos: Video[]): SubjectGroup[] => {
+  const bySubject = new Map<string, SubjectGroup>()
+  for (const video of streamVideos) {
+    const key = video.subject_name || '__unassigned'
+    if (!bySubject.has(key)) {
+      bySubject.set(key, { key, label: video.subject_name || 'Unassigned subject', videos: [] })
+    }
+    bySubject.get(key)!.videos.push(video)
+  }
+  return Array.from(bySubject.values()).sort((a, b) => a.label.localeCompare(b.label))
+}
 
 const uploadForm = ref({
   title: '',

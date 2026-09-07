@@ -366,6 +366,12 @@ class StudentController extends Controller
         $departmentId = $this->query('department_id');
         $academicYearId = $this->query('academic_year_id');
         $classId = $this->query('class_id');
+        $search = trim((string) $this->query('search', ''));
+        $page = max(1, (int) $this->query('page', 1));
+        // Capped well above realistic per-department/year enrollment counts at this school
+        // (~4,200 active enrollments school-wide) so the "already enrolled" duplicate-check
+        // fetch (which needs every matching row, not one page) can still request them all.
+        $limit = min(1000, max(1, (int) $this->query('limit', 50)));
 
         $whereClause = "se.deleted_at IS NULL AND se.status = 'active'";
         $params = [];
@@ -380,7 +386,7 @@ class StudentController extends Controller
             $stmt = $this->db->prepare("SELECT name FROM academic_years WHERE id = ? AND deleted_at IS NULL");
             $stmt->execute([$academicYearId]);
             $academicYear = $stmt->fetch();
-            
+
             if ($academicYear) {
                 $whereClause .= " AND se.academic_year = ?";
                 $params[] = $academicYear['name'];
@@ -392,7 +398,24 @@ class StudentController extends Controller
             $params[] = $classId;
         }
 
+        if ($search !== '') {
+            $whereClause .= " AND (s.first_name LIKE ? OR s.last_name LIKE ? OR s.admission_number LIKE ?)";
+            $like = "%{$search}%";
+            $params[] = $like;
+            $params[] = $like;
+            $params[] = $like;
+        }
+
         try {
+            $countSql = "SELECT COUNT(*) as total
+                         FROM student_department_enrollments se
+                         INNER JOIN students s ON se.student_id = s.id
+                         WHERE {$whereClause}";
+            $countStmt = $this->db->prepare($countSql);
+            $countStmt->execute($params);
+            $total = (int) $countStmt->fetch()['total'];
+
+            $offset = ($page - 1) * $limit;
             $sql = "SELECT se.id as enrollment_id, s.id as student_id, s.admission_number, s.first_name, s.last_name,
                            se.department_id, se.academic_year, se.enrolled_at, se.class_id,
                            d.name as department_name, c.name as class_name, c.level, c.stream_name
@@ -401,13 +424,22 @@ class StudentController extends Controller
                     LEFT JOIN departments d ON se.department_id = d.id
                     LEFT JOIN classes c ON se.class_id = c.id
                     WHERE {$whereClause}
-                    ORDER BY s.last_name, s.first_name";
-            
+                    ORDER BY s.last_name, s.first_name
+                    LIMIT {$limit} OFFSET {$offset}";
+
             $stmt = $this->db->prepare($sql);
             $stmt->execute($params);
             $students = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-            $this->success($students, 'Enrolled students retrieved successfully');
+            $this->success([
+                'students' => $students,
+                'pagination' => [
+                    'page' => $page,
+                    'limit' => $limit,
+                    'total' => $total,
+                    'pages' => (int) ceil($total / $limit),
+                ],
+            ], 'Enrolled students retrieved successfully');
         } catch (\PDOException $e) {
             error_log("Failed to fetch enrolled students: " . $e->getMessage());
             $this->error('Failed to fetch enrolled students: ' . $e->getMessage(), 500);

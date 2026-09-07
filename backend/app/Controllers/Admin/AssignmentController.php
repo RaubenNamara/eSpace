@@ -50,7 +50,8 @@ class AssignmentController extends Controller
         $whereClause = implode(' AND ', $where);
 
         $sql = "SELECT a.id, a.title, a.status, a.due_date, a.total_marks, a.category,
-                       s.name as subject_name, c.name as class_name, d.name as department_name,
+                       s.name as subject_name, c.name as class_name, c.stream_name as class_stream_name,
+                       d.name as department_name,
                        CONCAT(t.first_name, ' ', t.last_name) as teacher_name,
                        (SELECT COUNT(*) FROM assignment_submissions WHERE assignment_id = a.id) as submissions_count
                 FROM assignments a

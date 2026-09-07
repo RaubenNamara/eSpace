@@ -578,7 +578,10 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::put('/teachers/{id}/departments', 'eSpace\App\Controllers\Admin\TeacherController@assignDepartments');
         Router::put('/teachers/{id}/subjects', 'eSpace\App\Controllers\Admin\TeacherController@assignSubjects');
         Router::put('/teachers/{id}/classes', 'eSpace\App\Controllers\Admin\TeacherController@assignClasses');
-        
+        Router::get('/teachers/{id}/teaching-assignments', 'eSpace\App\Controllers\Admin\TeacherController@getTeachingAssignments');
+        Router::put('/teachers/{id}/teaching-assignments', 'eSpace\App\Controllers\Admin\TeacherController@assignTeachingAssignments');
+        Router::delete('/teachers/{id}/teaching-assignments/{assignmentId}', 'eSpace\App\Controllers\Admin\TeacherController@removeTeachingAssignment');
+
         // HODs
         Router::get('/hods', 'eSpace\App\Controllers\Admin\HODController@index');
         Router::post('/hods', 'eSpace\App\Controllers\Admin\HODController@create');
