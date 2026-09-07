@@ -98,7 +98,12 @@ export function usePdfRenderer(pdfUrl: Ref<string>, options: UsePdfRendererOptio
         url: pdfUrl.value,
         standardFontDataUrl: '/pdfjs/standard_fonts/',
         cMapUrl: '/pdfjs/cmaps/',
-        cMapPacked: true
+        cMapPacked: true,
+        // Pages are fetched on demand as the reader navigates (see renderPage below), not read
+        // through end to end - without this, pdf.js keeps downloading the rest of a large file in
+        // the background after page 1 renders, competing for bandwidth with the range request for
+        // whatever page the reader actually clicks to next.
+        disableAutoFetch: true
       })
       pdfDoc.value = await loadingTask.promise
       totalPages.value = pdfDoc.value.numPages
