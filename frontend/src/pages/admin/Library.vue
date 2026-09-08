@@ -1,9 +1,5 @@
 <template>
-<<<<<<< HEAD
   <div class="min-h-screen bg-gray-50 dark:bg-gray-950">
-=======
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
->>>>>>> 4253f1b5bde2b4ebfd6c6484db6ba056b7e1799f
     <div class="px-4 sm:px-6 lg:px-8 py-8 2xl:max-w-[110rem] 2xl:mx-auto">
       <!-- Header -->
       <div class="mb-8">
