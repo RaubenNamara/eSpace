@@ -52,7 +52,7 @@
     </div>
 
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
-      <RouterLink to="/teacher/classes" class="group card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 border border-transparent">
+      <RouterLink to="/teacher/classes" class="group card !p-4 sm:!p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 border border-transparent">
         <div class="flex items-center justify-between">
           <template v-if="loadingAnalytics">
             <div class="flex-1">
@@ -74,7 +74,9 @@
           </template>
         </div>
       </RouterLink>
-      <RouterLink to="/teacher/classes" class="group card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 border border-transparent">
+      <!-- Hidden below sm: a 7-day trend is a secondary metric compared to the totals, not
+           worth the space on a small screen. -->
+      <RouterLink to="/teacher/classes" class="hidden sm:block group card !p-4 sm:!p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 border border-transparent">
         <div class="flex items-center justify-between">
           <template v-if="loadingAnalytics">
             <div class="flex-1">
@@ -96,7 +98,7 @@
           </template>
         </div>
       </RouterLink>
-      <RouterLink to="/teacher/classes" class="group card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 border border-transparent">
+      <RouterLink to="/teacher/classes" class="group card !p-4 sm:!p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 border border-transparent">
         <div class="flex items-center justify-between">
           <template v-if="loadingAnalytics">
             <div class="flex-1">
@@ -118,7 +120,9 @@
           </template>
         </div>
       </RouterLink>
-      <RouterLink to="/teacher/classes" class="group card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 border border-transparent">
+      <!-- Hidden below sm: the same information at finer granularity than "Classes" above -
+           not worth doubling up on a small screen. -->
+      <RouterLink to="/teacher/classes" class="hidden sm:block group card !p-4 sm:!p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 border border-transparent">
         <div class="flex items-center justify-between">
           <template v-if="loadingAnalytics">
             <div class="flex-1">

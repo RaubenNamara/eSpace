@@ -1,161 +1,140 @@
 <template>
   <div>
-    <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-6">My Classes</h1>
-    
-    <!-- Class Groups List (e.g. "S.1", "S.2") -->
-    <template v-if="!selectedGroup && !selectedClass">
-      <!-- Filter Section -->
-      <div class="card mb-6">
-        <div class="flex items-center gap-4">
-          <div class="flex-1">
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Academic Year
-            </label>
-            <select
-              v-model="selectedAcademicYear"
-              @change="loadClasses"
-              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            >
-              <option v-for="year in academicYears" :key="year.academic_year" :value="year.academic_year">
-                {{ year.academic_year }}
-              </option>
-            </select>
+    <!-- Academic year sits next to the title instead of its own filter card, so the classes
+         row below starts higher up the page. -->
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">My Classes</h1>
+      <div class="flex items-center gap-2">
+        <label class="text-sm font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">Academic Year</label>
+        <select
+          v-model="selectedAcademicYear"
+          @change="onAcademicYearChange"
+          class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+        >
+          <option v-for="year in academicYears" :key="year.academic_year" :value="year.academic_year">
+            {{ year.academic_year }}
+          </option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Classes - one horizontally-scrollable row. Clicking a class expands its streams below
+         without this row disappearing, so you can jump between classes without losing your
+         place (see toggleGroup). -->
+    <div v-if="loadingClasses" class="text-center py-12 text-gray-500">Loading classes...</div>
+    <div v-else-if="classGroups.length === 0" class="text-center py-12 text-gray-500">No classes found in your department</div>
+    <div v-else class="flex gap-3 overflow-x-auto pb-1 mb-4 -mx-1 px-1">
+      <button
+        v-for="group in classGroups"
+        :key="group.name + group.level"
+        @click="toggleGroup(group)"
+        class="flex-shrink-0 w-44 text-left card !p-4 transition-all duration-200 border-2 hover:opacity-100 hover:blur-0"
+        :class="[
+          selectedGroup === group ? 'border-indigo-500 dark:border-indigo-400' : 'border-transparent hover:border-indigo-200 dark:hover:border-indigo-800',
+          { 'opacity-40 blur-[1px]': selectedGroup && selectedGroup !== group }
+        ]"
+      >
+        <div class="flex items-center gap-2.5 mb-2">
+          <div class="w-9 h-9 bg-indigo-100 dark:bg-indigo-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
+            <svg class="w-[18px] h-[18px] text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+            </svg>
+          </div>
+          <div class="min-w-0">
+            <p class="font-semibold text-gray-900 dark:text-white truncate">{{ group.name }}</p>
           </div>
         </div>
-      </div>
+        <p class="text-xs text-gray-500 dark:text-gray-400">
+          {{ group.streams.length }} stream{{ group.streams.length === 1 ? '' : 's' }} &middot; {{ group.totalStudents }} students
+        </p>
+      </button>
+    </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div v-if="loadingClasses" class="col-span-full text-center py-12">
-          <div class="text-gray-500">Loading classes...</div>
-        </div>
-        <div v-else-if="classGroups.length === 0" class="col-span-full text-center py-12">
-          <div class="text-gray-500">No classes found in your department</div>
-        </div>
-        <div v-else v-for="group in classGroups" :key="group.name + group.level"
-             @click="selectGroup(group)"
-             class="card cursor-pointer hover:shadow-lg transition-shadow">
-          <div class="p-6">
-            <div class="flex items-start justify-between mb-4">
-              <div>
-                <h3 class="text-xl font-semibold text-gray-900 dark:text-white">{{ group.name }}</h3>
-                <p class="text-sm text-gray-500 dark:text-gray-400">{{ group.level }}</p>
-              </div>
-              <div class="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/20 rounded-lg flex items-center justify-center">
-                <svg class="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                </svg>
-              </div>
+    <!-- Streams for the selected class - also one row, nested visually with a left rule so it
+         reads as "belonging to" the class above. Clicking a stream reveals students below,
+         again without hiding this row (see toggleStream). -->
+    <div v-if="selectedGroup" class="mb-4 pl-3 ml-1 border-l-2 border-indigo-200 dark:border-indigo-800">
+      <p class="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">{{ selectedGroup.name }} Streams</p>
+      <div v-if="selectedGroup.streams.length === 0" class="text-sm text-gray-500 dark:text-gray-400 py-2">No streams found</div>
+      <div v-else class="flex gap-3 overflow-x-auto pb-1">
+        <button
+          v-for="stream in selectedGroup.streams"
+          :key="stream.id"
+          @click="toggleStream(stream)"
+          class="flex-shrink-0 w-40 text-left card !p-3.5 transition-all duration-200 border-2 hover:opacity-100 hover:blur-0"
+          :class="[
+            selectedClass === stream ? 'border-indigo-500 dark:border-indigo-400' : 'border-transparent hover:border-indigo-200 dark:hover:border-indigo-800',
+            { 'opacity-40 blur-[1px]': selectedClass && selectedClass !== stream }
+          ]"
+        >
+          <div class="flex items-center gap-2 mb-1.5">
+            <div class="w-7 h-7 bg-indigo-100 dark:bg-indigo-900/20 rounded-md flex items-center justify-center flex-shrink-0">
+              <svg class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+              </svg>
             </div>
-            <div class="space-y-2">
-              <div class="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                <span class="font-medium">Streams:</span>
-                <span class="ml-2">{{ group.streams.length }}</span>
-              </div>
-              <div class="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                <span class="font-medium">Students:</span>
-                <span class="ml-2">{{ group.totalStudents }}</span>
-              </div>
-            </div>
+            <p class="font-medium text-sm text-gray-900 dark:text-white truncate">Stream {{ stream.stream_name || 'N/A' }}</p>
           </div>
-        </div>
+          <p class="text-xs text-gray-500 dark:text-gray-400">{{ stream.student_count }} students</p>
+        </button>
       </div>
-    </template>
+    </div>
 
-    <!-- Streams inside a class (e.g. S.1 -> A, B, C) -->
-    <template v-else-if="selectedGroup && !selectedClass">
-      <div class="mb-6">
-        <button @click="selectedGroup = null" class="text-indigo-600 hover:text-indigo-700 font-medium flex items-center">
-          <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-          </svg>
-          Back to Classes
+    <!-- Students in the selected stream, nested one level further. -->
+    <div v-if="selectedClass" class="card ml-1">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+        <div>
+          <h2 class="text-lg font-bold text-gray-900 dark:text-white">{{ selectedClass.name }} - {{ selectedClass.stream_name || 'No Stream' }}</h2>
+        </div>
+        <button
+          @click="bulkDeEnroll"
+          :disabled="selectedStudents.length === 0"
+          class="btn-danger !px-4 !py-2 text-sm self-start sm:self-auto"
+        >
+          De-enroll Selected ({{ selectedStudents.length }})
         </button>
       </div>
 
-      <div class="card mb-6">
-        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedGroup.name }}</h2>
-        <p class="text-gray-500 dark:text-gray-400">{{ selectedGroup.level }} &middot; {{ selectedGroup.streams.length }} stream(s)</p>
-      </div>
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+        <label class="flex items-center gap-2">
+          <input
+            type="checkbox"
+            v-model="selectAll"
+            class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+          >
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Select All</span>
+          <span class="text-xs text-gray-400 dark:text-gray-500">
+            ({{ filteredStudents.length }}{{ studentSearch ? ` of ${students.length}` : '' }})
+          </span>
+        </label>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div v-for="stream in selectedGroup.streams" :key="stream.id"
-             @click="selectClass(stream)"
-             class="card cursor-pointer hover:shadow-lg transition-shadow">
-          <div class="p-6">
-            <div class="flex items-start justify-between mb-4">
-              <div>
-                <h3 class="text-xl font-semibold text-gray-900 dark:text-white">{{ selectedGroup.name }} - {{ stream.stream_name || 'N/A' }}</h3>
-                <p class="text-sm text-gray-500 dark:text-gray-400">Stream {{ stream.stream_name || 'N/A' }}</p>
-              </div>
-              <div class="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/20 rounded-lg flex items-center justify-center">
-                <svg class="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                </svg>
-              </div>
-            </div>
-            <div class="flex items-center text-sm text-gray-600 dark:text-gray-400">
-              <span class="font-medium">Students:</span>
-              <span class="ml-2">{{ stream.student_count }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </template>
-
-    <!-- Class Students View -->
-    <div v-else>
-      <div class="mb-6">
-        <button @click="selectedClass = null" class="text-indigo-600 hover:text-indigo-700 font-medium flex items-center">
-          <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+        <!-- Searches the currently-loaded students in this stream, client-side - no extra
+             request needed since the whole stream's roster is already in memory. -->
+        <div class="relative w-full sm:w-64">
+          <svg class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
           </svg>
-          Back to {{ selectedGroup ? selectedGroup.name + ' Streams' : 'Classes' }}
-        </button>
-      </div>
-
-      <div class="card mb-6">
-        <div class="flex items-center justify-between">
-          <div>
-            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedClass.name }}</h2>
-            <p class="text-gray-500 dark:text-gray-400">
-              {{ selectedClass.level }} - {{ selectedClass.stream_name || 'No Stream' }}
-            </p>
-          </div>
-          <div class="flex gap-3">
-            <button 
-              @click="bulkDeEnroll"
-              :disabled="selectedStudents.length === 0"
-              class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              De-enroll Selected ({{ selectedStudents.length }})
-            </button>
-          </div>
+          <input
+            v-model="studentSearch"
+            type="text"
+            placeholder="Search students..."
+            class="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          >
         </div>
       </div>
 
-      <!-- Students Table -->
-      <div class="card">
-        <div class="mb-4">
-          <label class="flex items-center">
-            <input 
-              type="checkbox" 
-              v-model="selectAll"
-              @change="toggleSelectAll"
-              class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-            >
-            <span class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">Select All</span>
-          </label>
-        </div>
-
-        <div v-if="loadingStudents" class="text-center py-12">
-          <div class="text-gray-500">Loading students...</div>
-        </div>
-        <div v-else-if="students.length === 0" class="text-center py-12">
-          <div class="text-gray-500">No students enrolled in this class</div>
-        </div>
-        <div v-else class="overflow-x-auto">
+      <div v-if="loadingStudents" class="text-center py-12 text-gray-500">Loading students...</div>
+      <div v-else-if="filteredStudents.length === 0" class="text-center py-12 text-gray-500">
+        {{ studentSearch ? 'No students match your search' : 'No students enrolled in this class' }}
+      </div>
+      <!-- Class, Level, Stream and Academic Year columns were dropped - every row here shares
+           the exact same values (you've already drilled into one specific class-stream-year),
+           so they were just repeating the header for free horizontal scroll. The table itself
+           now scrolls internally with a sticky header instead of growing the whole page for a
+           big roster. -->
+      <div v-else class="overflow-auto max-h-[28rem] border border-gray-100 dark:border-gray-700 rounded-lg">
         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead class="bg-gray-50 dark:bg-gray-800">
+          <thead class="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
             <tr>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-12">
                 Select
@@ -170,68 +149,43 @@
                 Gender
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Class
-              </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Level
-              </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Stream
-              </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Department
-              </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Academic Year
               </th>
             </tr>
           </thead>
           <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-            <tr v-for="student in students" :key="student.enrollment_id" 
+            <tr v-for="student in filteredStudents" :key="student.enrollment_id"
                 class="hover:bg-gray-50 dark:hover:bg-gray-800">
-              <td class="px-6 py-4 whitespace-nowrap">
-                <input 
-                  type="checkbox" 
+              <td class="px-6 py-3 whitespace-nowrap">
+                <input
+                  type="checkbox"
                   v-model="selectedStudents"
                   :value="student.enrollment_id"
                   class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                 >
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+              <td class="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                 {{ student.first_name }} {{ student.last_name }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+              <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                 {{ student.admission_number }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 capitalize">
+              <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 capitalize">
                 {{ student.gender }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                {{ student.class_name || 'N/A' }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                {{ student.level || 'N/A' }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                {{ student.stream_name || 'N/A' }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+              <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                 {{ student.department_name || 'N/A' }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                {{ student.academic_year || 'N/A' }}
               </td>
             </tr>
           </tbody>
         </table>
-        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import apiService from '@/services/api'
 
 const loadingClasses = ref(false)
@@ -240,6 +194,7 @@ const classes = ref<any[]>([])
 const students = ref<any[]>([])
 const selectedGroup = ref<any>(null)
 const selectedClass = ref<any>(null)
+const studentSearch = ref('')
 
 // The backend returns one row per class+stream combination (e.g. "S.1" appears once per
 // stream A, B, C...) rather than a single "S.1" entity - group them here so the UI can show
@@ -258,13 +213,34 @@ const classGroups = computed(() => {
   return Array.from(groups.values())
 })
 
-const selectGroup = (group: any) => {
-  selectedGroup.value = group
-}
 const selectedStudents = ref<number[]>([])
-const selectAll = ref(false)
 const academicYears = ref<any[]>([])
 const selectedAcademicYear = ref('')
+
+const filteredStudents = computed(() => {
+  const q = studentSearch.value.trim().toLowerCase()
+  if (!q) return students.value
+  return students.value.filter(s =>
+    `${s.first_name} ${s.last_name}`.toLowerCase().includes(q) ||
+    (s.admission_number || '').toLowerCase().includes(q)
+  )
+})
+
+// A computed checkbox (rather than a plain ref + watch) so "select all" always reflects
+// whichever students are currently visible under the search filter, not the full roster.
+const selectAll = computed({
+  get: () => filteredStudents.value.length > 0 && filteredStudents.value.every(s => selectedStudents.value.includes(s.enrollment_id)),
+  set: (checked: boolean) => {
+    const visibleIds = new Set(filteredStudents.value.map(s => s.enrollment_id))
+    if (checked) {
+      const merged = new Set(selectedStudents.value)
+      visibleIds.forEach(id => merged.add(id))
+      selectedStudents.value = Array.from(merged)
+    } else {
+      selectedStudents.value = selectedStudents.value.filter(id => !visibleIds.has(id))
+    }
+  }
+})
 
 const loadAcademicYears = async () => {
   try {
@@ -282,6 +258,19 @@ const loadAcademicYears = async () => {
   } catch (error) {
     console.error('Failed to load academic years:', error)
   }
+}
+
+// Switching academic year replaces `classes.value`, which makes `classGroups` recompute into
+// brand-new objects - any class/stream selected from the old list would otherwise become a
+// stale reference: the streams/students panels would keep showing old-year data with no card
+// left to visually match it as "active". Clear the drill-down first so that can't happen.
+const onAcademicYearChange = () => {
+  selectedGroup.value = null
+  selectedClass.value = null
+  students.value = []
+  selectedStudents.value = []
+  studentSearch.value = ''
+  loadClasses()
 }
 
 const loadClasses = async () => {
@@ -302,11 +291,34 @@ const loadClasses = async () => {
   }
 }
 
-const selectClass = async (cls: any) => {
-  selectedClass.value = cls
+// Clicking a class toggles its streams open/closed in place - the classes row itself never
+// disappears, and switching to a different class drops whatever stream/students were showing.
+const toggleGroup = (group: any) => {
+  if (selectedGroup.value === group) {
+    selectedGroup.value = null
+  } else {
+    selectedGroup.value = group
+  }
+  selectedClass.value = null
+  students.value = []
   selectedStudents.value = []
-  selectAll.value = false
-  await loadStudents(cls.id)
+  studentSearch.value = ''
+}
+
+// Same idea one level down: toggling a stream reveals/hides its students without touching the
+// streams row above it.
+const toggleStream = async (stream: any) => {
+  if (selectedClass.value === stream) {
+    selectedClass.value = null
+    students.value = []
+    selectedStudents.value = []
+    studentSearch.value = ''
+    return
+  }
+  selectedClass.value = stream
+  selectedStudents.value = []
+  studentSearch.value = ''
+  await loadStudents(stream.id)
 }
 
 const loadStudents = async (classId: number) => {
@@ -327,18 +339,6 @@ const loadStudents = async (classId: number) => {
   }
 }
 
-const toggleSelectAll = () => {
-  if (selectAll.value) {
-    selectedStudents.value = students.value.map(s => s.enrollment_id)
-  } else {
-    selectedStudents.value = []
-  }
-}
-
-watch(selectedStudents, (newVal) => {
-  selectAll.value = newVal.length === students.value.length && students.value.length > 0
-})
-
 const bulkDeEnroll = async () => {
   if (selectedStudents.value.length === 0) {
     alert('Please select at least one student to de-enroll')
@@ -355,15 +355,14 @@ const bulkDeEnroll = async () => {
     const promises = selectedStudents.value.map(id =>
       apiService.delete(`/teacher/students/${id}`, { data: { reason } })
     )
-    
+
     await Promise.all(promises)
-    
+
     // Refresh the students list
     await loadStudents(selectedClass.value.id)
     // Clear selection
     selectedStudents.value = []
-    selectAll.value = false
-    
+
     alert('Students de-enrolled successfully')
   } catch (error) {
     console.error('Failed to de-enroll students:', error)
