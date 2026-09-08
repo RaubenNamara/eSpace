@@ -2,21 +2,21 @@
   <div class="min-h-screen bg-gray-50 dark:bg-gray-950">
     <!-- Sidebar -->
     <aside
-      class="overflow-hidden fixed left-0 top-2 bottom-0 rounded-tr-2xl bg-slate-950 shadow-2xl transform transition-all duration-300 z-50 flex flex-col border-r border-white/5"
-      :class="[isIconOnly ? 'w-[72px]' : 'w-64', { '-translate-x-full': !sidebarOpen, 'translate-x-0': sidebarOpen }]"
+      class="overflow-hidden fixed left-0 top-2 bottom-0 rounded-tr-2xl bg-white dark:bg-slate-900 shadow-lg border-r border-slate-200 dark:border-white/5 transform transition-all duration-300 z-50 flex flex-col"
+      :class="[isIconOnly ? 'w-16' : 'w-56', { '-translate-x-full': !sidebarOpen, 'translate-x-0': sidebarOpen }]"
       @mouseenter="onSidebarMouseEnter"
       @mouseleave="onSidebarMouseLeave"
     >
-      <div class="relative px-5 py-5 border-b border-white/5 flex-shrink-0">
+      <div class="relative px-4 py-4 border-b border-slate-100 dark:border-white/5 flex-shrink-0">
         <div class="flex items-center gap-3" :class="{ 'justify-center': isIconOnly }">
-          <div class="relative w-10 h-10 flex-shrink-0 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/25">
-            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="relative w-9 h-9 flex-shrink-0 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/25">
+            <svg class="w-[18px] h-[18px] text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
             </svg>
           </div>
           <div v-if="!isIconOnly" class="min-w-0">
-            <h1 class="text-base font-bold text-white tracking-tight leading-tight">eSpace</h1>
-            <p class="text-[11px] text-slate-300 capitalize font-medium tracking-wide leading-tight mt-0.5">{{ userRole }} Console</p>
+            <h1 class="text-sm font-bold text-slate-900 dark:text-white tracking-tight leading-tight">eSpace</h1>
+            <p class="text-[10.5px] text-slate-400 capitalize font-medium tracking-wide leading-tight mt-0.5">{{ userRole }} Console</p>
           </div>
         </div>
       </div>
@@ -25,8 +25,8 @@
         <!-- System Administration -->
         <div v-if="isAdmin" class="mb-5">
           <div v-if="!isIconOnly" class="px-3 mb-1.5 flex items-center gap-2">
-            <span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
-            <span class="text-[10.5px] font-semibold text-slate-300 uppercase tracking-widest">System Administration</span>
+            <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+            <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">System Administration</span>
           </div>
           <div class="space-y-0.5">
             <router-link
@@ -34,17 +34,13 @@
               :key="item.path"
               :to="item.path"
               :title="isIconOnly ? item.label : undefined"
-              class="relative flex items-center gap-3 pl-4 pr-3 py-2 rounded-lg transition-all duration-150 text-sm font-medium group hover:translate-x-0.5"
-              :class="[isActive(item.path) ? 'bg-rose-500/10 text-white ring-1 ring-inset ring-rose-500/15' : 'text-slate-100 hover:bg-white/10 hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
+              class="flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-lg transition-all duration-150 text-sm font-medium group"
+              :class="[isActive(item.path) ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
             >
-              <span
-                class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-sm bg-rose-400 transition-opacity duration-150"
-                :class="isActive(item.path) ? 'opacity-100' : 'opacity-0'"
-              ></span>
-              <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 bg-slate-800 shadow-sm ring-1 transition-all duration-150"
-                :class="isActive(item.path) ? 'ring-rose-400/40 text-rose-300' : 'ring-white/15 text-slate-200 group-hover:text-white'"
+              <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-all duration-150"
+                :class="isActive(item.path) ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300' : 'text-slate-400 group-hover:text-slate-700 dark:text-slate-400 dark:group-hover:text-white'"
               >
-                <component :is="iconMap[item.icon]" class="w-[18px] h-[18px]" />
+                <component :is="iconMap[item.icon]" class="w-4 h-4" />
               </div>
               <span v-if="!isIconOnly" class="truncate">{{ item.label }}</span>
             </router-link>
@@ -59,17 +55,13 @@
               :key="item.path"
               :to="item.path"
               :title="isIconOnly ? item.label : undefined"
-              class="relative flex items-center gap-3 pl-4 pr-3 py-2 rounded-lg transition-all duration-150 text-sm font-medium group hover:translate-x-0.5"
-              :class="[isActive(item.path) ? 'bg-sky-500/10 text-white ring-1 ring-inset ring-sky-500/15' : 'text-slate-100 hover:bg-white/10 hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
+              class="flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-lg transition-all duration-150 text-sm font-medium group"
+              :class="[isActive(item.path) ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
             >
-              <span
-                class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-sm bg-sky-400 transition-opacity duration-150"
-                :class="isActive(item.path) ? 'opacity-100' : 'opacity-0'"
-              ></span>
-              <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 bg-slate-800 shadow-sm ring-1 transition-all duration-150"
-                :class="isActive(item.path) ? 'ring-sky-400/40 text-sky-300' : 'ring-white/15 text-slate-200 group-hover:text-white'"
+              <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-all duration-150"
+                :class="isActive(item.path) ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300' : 'text-slate-400 group-hover:text-slate-700 dark:text-slate-400 dark:group-hover:text-white'"
               >
-                <component :is="iconMap[item.icon]" class="w-[18px] h-[18px]" />
+                <component :is="iconMap[item.icon]" class="w-4 h-4" />
               </div>
               <span v-if="!isIconOnly" class="truncate">{{ item.label }}</span>
             </router-link>
@@ -80,7 +72,7 @@
         <div class="mb-5">
           <div v-if="!isIconOnly" class="px-3 mb-1.5 flex items-center gap-2">
             <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
-            <span class="text-[10.5px] font-semibold text-slate-300 uppercase tracking-widest">Academic Management</span>
+            <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Academic Management</span>
           </div>
           <div class="space-y-0.5">
             <router-link
@@ -88,17 +80,13 @@
               :key="item.path"
               :to="item.path"
               :title="isIconOnly ? item.label : undefined"
-              class="relative flex items-center gap-3 pl-4 pr-3 py-2 rounded-lg transition-all duration-150 text-sm font-medium group hover:translate-x-0.5"
-              :class="[isActive(item.path) ? 'bg-indigo-500/10 text-white ring-1 ring-inset ring-indigo-500/15' : 'text-slate-100 hover:bg-white/10 hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
+              class="flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-lg transition-all duration-150 text-sm font-medium group"
+              :class="[isActive(item.path) ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
             >
-              <span
-                class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-sm bg-indigo-400 transition-opacity duration-150"
-                :class="isActive(item.path) ? 'opacity-100' : 'opacity-0'"
-              ></span>
-              <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 bg-slate-800 shadow-sm ring-1 transition-all duration-150"
-                :class="isActive(item.path) ? 'ring-indigo-400/40 text-indigo-300' : 'ring-white/15 text-slate-200 group-hover:text-white'"
+              <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-all duration-150"
+                :class="isActive(item.path) ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300' : 'text-slate-400 group-hover:text-slate-700 dark:text-slate-400 dark:group-hover:text-white'"
               >
-                <component :is="iconMap[item.icon]" class="w-[18px] h-[18px]" />
+                <component :is="iconMap[item.icon]" class="w-4 h-4" />
               </div>
               <span v-if="!isIconOnly" class="truncate">{{ item.label }}</span>
             </router-link>
@@ -108,8 +96,8 @@
         <!-- Learning Resources -->
         <div class="mb-5">
           <div v-if="!isIconOnly" class="px-3 mb-1.5 flex items-center gap-2">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-            <span class="text-[10.5px] font-semibold text-slate-300 uppercase tracking-widest">Learning Resources</span>
+            <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+            <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Learning Resources</span>
           </div>
           <div class="space-y-0.5">
             <router-link
@@ -117,17 +105,13 @@
               :key="item.path"
               :to="item.path"
               :title="isIconOnly ? item.label : undefined"
-              class="relative flex items-center gap-3 pl-4 pr-3 py-2 rounded-lg transition-all duration-150 text-sm font-medium group hover:translate-x-0.5"
-              :class="[isActive(item.path) ? 'bg-emerald-500/10 text-white ring-1 ring-inset ring-emerald-500/15' : 'text-slate-100 hover:bg-white/10 hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
+              class="flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-lg transition-all duration-150 text-sm font-medium group"
+              :class="[isActive(item.path) ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
             >
-              <span
-                class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-sm bg-emerald-400 transition-opacity duration-150"
-                :class="isActive(item.path) ? 'opacity-100' : 'opacity-0'"
-              ></span>
-              <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 bg-slate-800 shadow-sm ring-1 transition-all duration-150"
-                :class="isActive(item.path) ? 'ring-emerald-400/40 text-emerald-300' : 'ring-white/15 text-slate-200 group-hover:text-white'"
+              <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-all duration-150"
+                :class="isActive(item.path) ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300' : 'text-slate-400 group-hover:text-slate-700 dark:text-slate-400 dark:group-hover:text-white'"
               >
-                <component :is="iconMap[item.icon]" class="w-[18px] h-[18px]" />
+                <component :is="iconMap[item.icon]" class="w-4 h-4" />
               </div>
               <span v-if="!isIconOnly" class="truncate">{{ item.label }}</span>
             </router-link>
@@ -137,8 +121,8 @@
         <!-- Assessment & Analytics -->
         <div class="mb-5">
           <div v-if="!isIconOnly" class="px-3 mb-1.5 flex items-center gap-2">
-            <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-            <span class="text-[10.5px] font-semibold text-slate-300 uppercase tracking-widest">Assessment & Analytics</span>
+            <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+            <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Assessment & Analytics</span>
           </div>
           <div class="space-y-0.5">
             <router-link
@@ -146,17 +130,13 @@
               :key="item.path"
               :to="item.path"
               :title="isIconOnly ? item.label : undefined"
-              class="relative flex items-center gap-3 pl-4 pr-3 py-2 rounded-lg transition-all duration-150 text-sm font-medium group hover:translate-x-0.5"
-              :class="[isActive(item.path) ? 'bg-amber-500/10 text-white ring-1 ring-inset ring-amber-500/15' : 'text-slate-100 hover:bg-white/10 hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
+              class="flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-lg transition-all duration-150 text-sm font-medium group"
+              :class="[isActive(item.path) ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
             >
-              <span
-                class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-sm bg-amber-400 transition-opacity duration-150"
-                :class="isActive(item.path) ? 'opacity-100' : 'opacity-0'"
-              ></span>
-              <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 bg-slate-800 shadow-sm ring-1 transition-all duration-150"
-                :class="isActive(item.path) ? 'ring-amber-400/40 text-amber-300' : 'ring-white/15 text-slate-200 group-hover:text-white'"
+              <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-all duration-150"
+                :class="isActive(item.path) ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300' : 'text-slate-400 group-hover:text-slate-700 dark:text-slate-400 dark:group-hover:text-white'"
               >
-                <component :is="iconMap[item.icon]" class="w-[18px] h-[18px]" />
+                <component :is="iconMap[item.icon]" class="w-4 h-4" />
               </div>
               <span v-if="!isIconOnly" class="truncate">{{ item.label }}</span>
             </router-link>
@@ -164,18 +144,16 @@
         </div>
       </nav>
 
-      <div class="relative p-3 border-t border-white/5 flex-shrink-0">
+      <div class="relative p-2.5 border-t border-slate-100 dark:border-white/5 flex-shrink-0">
         <button
           @click="handleLogout"
           :title="isIconOnly ? 'Logout' : undefined"
-          class="flex items-center gap-3 pl-4 pr-3 py-2 rounded-lg text-slate-100 hover:bg-rose-500/15 hover:text-rose-300 w-full transition-colors duration-150 group"
+          class="flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-lg text-red-600 hover:bg-red-50 dark:text-slate-300 dark:hover:bg-rose-500/15 dark:hover:text-rose-300 w-full transition-colors duration-150 group"
           :class="isIconOnly ? 'justify-center px-0' : ''"
         >
-          <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 bg-slate-800 shadow-sm ring-1 ring-white/15 text-slate-200 group-hover:text-rose-300 transition-all duration-150">
-            <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-            </svg>
-          </div>
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+          </svg>
           <span v-if="!isIconOnly" class="text-sm font-medium">Logout</span>
         </button>
       </div>
@@ -189,7 +167,7 @@
     ></div>
 
     <!-- Main Content -->
-    <div class="min-h-screen flex flex-col transition-all duration-300 ml-0" :class="{ 'lg:ml-64': sidebarOpen && !sidebarCollapsed, 'lg:ml-[72px]': sidebarOpen && sidebarCollapsed }">
+    <div class="min-h-screen flex flex-col transition-all duration-300 ml-0" :class="{ 'lg:ml-56': sidebarOpen && !sidebarCollapsed, 'lg:ml-16': sidebarOpen && sidebarCollapsed }">
       <!-- Top Bar -->
       <header class="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-40">
         <div class="flex items-center justify-between px-6 py-4">
