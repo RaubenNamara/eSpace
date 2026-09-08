@@ -1,12 +1,18 @@
 <template>
   <div class="min-h-screen bg-gray-50 dark:bg-gray-950">
     <!-- Sidebar -->
+    <!-- Floats as a rounded card off the page edges on desktop (flush on mobile, where an inset
+         drawer just wastes thumb-reach) - depth and shape carry the "stand out" job instead of
+         another color, plus one slim indigo spine down the left edge as the single deliberate
+         brand-color touch. -->
     <aside
-      class="overflow-hidden fixed left-0 top-2 bottom-0 rounded-tr-2xl bg-white dark:bg-slate-900 shadow-lg border-r border-slate-200 dark:border-white/5 transform transition-all duration-300 z-50 flex flex-col"
+      class="overflow-hidden fixed left-0 top-0 bottom-0 lg:left-3 lg:top-3 lg:bottom-3 rounded-none lg:rounded-2xl bg-white dark:bg-slate-900 shadow-lg lg:shadow-2xl lg:shadow-slate-900/10 dark:lg:shadow-black/50 border border-slate-200 dark:border-white/5 transform transition-all duration-300 z-50 flex flex-col"
       :class="[isIconOnly ? 'w-16' : 'w-56', { '-translate-x-full': !sidebarOpen, 'translate-x-0': sidebarOpen }]"
       @mouseenter="onSidebarMouseEnter"
       @mouseleave="onSidebarMouseLeave"
     >
+      <div class="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500 rounded-l-none lg:rounded-l-2xl pointer-events-none"></div>
+
       <div class="relative px-4 py-4 border-b border-slate-100 dark:border-white/5 flex-shrink-0">
         <div class="flex items-center gap-3" :class="{ 'justify-center': isIconOnly }">
           <div class="relative w-9 h-9 flex-shrink-0 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/25">
@@ -167,7 +173,7 @@
     ></div>
 
     <!-- Main Content -->
-    <div class="min-h-screen flex flex-col transition-all duration-300 ml-0" :class="{ 'lg:ml-56': sidebarOpen && !sidebarCollapsed, 'lg:ml-16': sidebarOpen && sidebarCollapsed }">
+    <div class="min-h-screen flex flex-col transition-all duration-300 ml-0" :class="{ 'lg:ml-[248px]': sidebarOpen && !sidebarCollapsed, 'lg:ml-[88px]': sidebarOpen && sidebarCollapsed }">
       <!-- Top Bar -->
       <header class="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-40">
         <div class="flex items-center justify-between px-6 py-4">
