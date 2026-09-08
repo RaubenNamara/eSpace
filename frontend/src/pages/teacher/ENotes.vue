@@ -102,18 +102,7 @@
         >
           <option value="">All Classes</option>
           <option v-for="cls in assignments?.classes" :key="cls.id" :value="cls.id">
-            {{ cls.name }} ({{ cls.level }}{{ cls.stream_name ? ' - ' + cls.stream_name : '' }})
-          </option>
-        </select>
-
-        <select
-          v-model="streamFilter"
-          class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-          :disabled="streamOptions.length === 0"
-        >
-          <option value="">All Streams</option>
-          <option v-for="stream in streamOptions" :key="stream" :value="stream">
-            {{ stream }}
+            {{ cls.name }}{{ cls.stream_name ? ' - ' + cls.stream_name : '' }}
           </option>
         </select>
 
@@ -773,7 +762,6 @@ const topicSaveError = ref<string | null>(null)
 const statusFilter = ref('')
 const subjectFilter = ref('')
 const classFilter = ref('')
-const streamFilter = ref('')
 
 const showTopicModal = ref(false)
 const editingTopic = ref<ENoteTopic | null>(null)
@@ -893,21 +881,12 @@ const removeLearningOutcome = (index: number) => {
   topicForm.value.learning_outcomes.splice(index, 1)
 }
 
-const streamOptions = computed(() => {
-  const streams = new Set<string>()
-  assignments.value?.classes.forEach(cls => {
-    if (cls.stream_name) streams.add(cls.stream_name)
-  })
-  return Array.from(streams).sort()
-})
-
 const filteredTopics = computed(() => {
   return topics.value.filter(topic => {
     const matchesStatus = !statusFilter.value || topic.status === statusFilter.value
     const matchesSubject = !subjectFilter.value || topic.subject_id === parseInt(subjectFilter.value)
     const matchesClass = !classFilter.value || topic.class_id === parseInt(classFilter.value)
-    const matchesStream = !streamFilter.value || topic.class_stream_name === streamFilter.value
-    return matchesStatus && matchesSubject && matchesClass && matchesStream
+    return matchesStatus && matchesSubject && matchesClass
   })
 })
 
