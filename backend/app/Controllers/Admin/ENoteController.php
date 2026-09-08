@@ -231,6 +231,55 @@ class ENoteController extends Controller
     }
 
     /**
+     * Assign (or re-assign) which class stream a topic belongs to - moderation action, works
+     * across any teacher. Pass class_id: null to unassign the topic from any class.
+     * PUT /admin/enotes/{id}/class
+     */
+    public function assignClass(): void
+    {
+        if (!$this->isAdmin()) {
+            $this->forbidden();
+            return;
+        }
+
+        $id = (int) $this->routeParam('id');
+        $data = $this->input();
+
+        if (!array_key_exists('class_id', $data)) {
+            $this->validationError(['class_id' => 'class_id is required (use null to unassign)']);
+            return;
+        }
+
+        $stmt = $this->db->prepare("SELECT id FROM enote_topics WHERE id = :id AND deleted_at IS NULL");
+        $stmt->execute(['id' => $id]);
+        if (!$stmt->fetch()) {
+            $this->notFound('Topic not found');
+            return;
+        }
+
+        $classId = $data['class_id'] !== null && $data['class_id'] !== '' ? (int) $data['class_id'] : null;
+
+        if ($classId !== null) {
+            $stmt = $this->db->prepare("SELECT id FROM classes WHERE id = :id AND deleted_at IS NULL");
+            $stmt->execute(['id' => $classId]);
+            if (!$stmt->fetch()) {
+                $this->validationError(['class_id' => 'Class not found']);
+                return;
+            }
+        }
+
+        try {
+            $stmt = $this->db->prepare("UPDATE enote_topics SET class_id = :class_id, updated_at = NOW() WHERE id = :id");
+            $stmt->execute(['class_id' => $classId, 'id' => $id]);
+
+            $this->success(['class_id' => $classId], 'Topic class updated successfully');
+        } catch (\PDOException $e) {
+            error_log('Failed to assign eNote topic class: ' . $e->getMessage());
+            $this->error('Failed to assign topic class', 500);
+        }
+    }
+
+    /**
      * Delete a topic (soft delete, cascades to its pages) - moderation action, works across any
      * teacher.
      * DELETE /admin/enotes/{id}

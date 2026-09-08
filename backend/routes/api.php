@@ -526,6 +526,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         // Students
         Router::get('/students', 'eSpace\App\Controllers\Admin\StudentController@index');
         Router::get('/students/enrolled', 'eSpace\App\Controllers\Admin\StudentController@enrolled');
+        Router::get('/students/enrolled-by-class', 'eSpace\App\Controllers\Admin\StudentController@enrolledByClass');
         Router::get('/students/analytics', 'eSpace\App\Controllers\Admin\StudentController@analytics');
         Router::post('/students', 'eSpace\App\Controllers\Admin\StudentController@create');
         Router::post('/students/enroll', 'eSpace\App\Controllers\Admin\StudentController@enroll');
@@ -545,6 +546,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         // Library
         Router::get('/library', 'eSpace\App\Controllers\Admin\LibraryController@index');
         Router::put('/library/{id}', 'eSpace\App\Controllers\Admin\LibraryController@update');
+        Router::put('/library/{id}/class', 'eSpace\App\Controllers\Admin\LibraryController@assignClass');
         Router::delete('/library/{id}', 'eSpace\App\Controllers\Admin\LibraryController@delete');
 
         // Item Bank
@@ -562,6 +564,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/enotes', 'eSpace\App\Controllers\Admin\ENoteController@index');
         Router::get('/enotes/{id}', 'eSpace\App\Controllers\Admin\ENoteController@show');
         Router::put('/enotes/{id}', 'eSpace\App\Controllers\Admin\ENoteController@update');
+        Router::put('/enotes/{id}/class', 'eSpace\App\Controllers\Admin\ENoteController@assignClass');
         Router::delete('/enotes/{id}', 'eSpace\App\Controllers\Admin\ENoteController@delete');
         
         // Teachers
