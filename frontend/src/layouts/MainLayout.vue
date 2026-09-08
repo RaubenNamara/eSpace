@@ -11,7 +11,7 @@
       @mouseenter="onSidebarMouseEnter"
       @mouseleave="onSidebarMouseLeave"
     >
-      <div class="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500 rounded-l-none lg:rounded-l-2xl pointer-events-none"></div>
+      <div class="absolute right-0 top-0 bottom-0 w-1 bg-indigo-500 rounded-r-none lg:rounded-r-2xl pointer-events-none"></div>
 
       <div class="relative px-4 py-4 border-b border-slate-100 dark:border-white/5 flex-shrink-0">
         <div class="flex items-center gap-3" :class="{ 'justify-center': isIconOnly }">
