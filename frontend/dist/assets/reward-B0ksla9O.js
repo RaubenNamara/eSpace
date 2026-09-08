@@ -1,0 +1,1 @@
+const l={platinum:"💎",gold:"🥇",silver:"🥈",bronze:"🥉",special:"⭐"},a={platinum:"Platinum",gold:"Gold",silver:"Silver",bronze:"Bronze",special:"Special"},e={platinum:"bg-cyan-600",gold:"bg-amber-600",silver:"bg-gray-500",bronze:"bg-orange-600",special:"bg-purple-600"};export{e as B,l as a,a as b};

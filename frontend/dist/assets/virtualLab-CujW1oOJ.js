@@ -1,0 +1,1 @@
+const i={physics:"⚡",chemistry:"🧪",biology:"🧬",agriculture:"🌾"},s={physics:"Physics",chemistry:"Chemistry",biology:"Biology",agriculture:"Agriculture"},r={physics:"bg-indigo-600",chemistry:"bg-emerald-600",biology:"bg-purple-600",agriculture:"bg-amber-600"};export{r as C,i as a,s as b};
