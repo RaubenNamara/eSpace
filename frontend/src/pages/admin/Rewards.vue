@@ -222,7 +222,7 @@
             <p><span class="text-gray-400">Source:</span> {{ activeAward.award_source }}</p>
             <p><span class="text-gray-400">Awarded:</span> {{ formatDate(activeAward.awarded_at) }}</p>
           </div>
-          <p v-if="activeAward.rule_description" class="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3">
+          <p v-if="activeAward.rule_description" class="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-950/40 rounded-lg p-3">
             <strong>Why this was awarded:</strong> {{ activeAward.rule_description }}
           </p>
           <p v-if="activeAward.admin_note" class="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3">
@@ -251,7 +251,7 @@
           </div>
 
           <!-- Override form -->
-          <div v-if="showOverrideForm" class="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-4 space-y-3">
+          <div v-if="showOverrideForm" class="bg-gray-50 dark:bg-gray-950/40 rounded-lg p-4 space-y-3">
             <div>
               <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Badge Level</label>
               <select v-model="overrideForm.badge_type" class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">

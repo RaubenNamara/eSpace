@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-950">
     <div class="px-4 sm:px-6 lg:px-8 py-8">
       <div class="relative overflow-hidden rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-500/20 p-4 sm:p-5 mb-6">
         <div class="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-white/10"></div>
@@ -71,7 +71,7 @@
               </span>
             </div>
 
-            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-gray-50 dark:bg-gray-900/40 text-gray-500 dark:text-gray-400">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-gray-50 dark:bg-gray-950/40 text-gray-500 dark:text-gray-400">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
               {{ formatDate(period.start_date) }} – {{ period.end_date ? formatDate(period.end_date) : 'Present' }}
             </span>

@@ -1,19 +1,12 @@
 ﻿<template>
   <div>
-    <div class="flex items-center justify-between mb-6">
-      <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Admin Dashboard</h1>
+    <!-- The topbar already shows this admin's name and photo, so this line is a quick personal
+         greeting rather than a redundant "Admin Dashboard" title. The old "Preview as Student"
+         button was dropped too - it just linked to /admin/assessments, already one click away
+         in the sidebar's Assessment & Analytics section. -->
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <h1 class="text-xl font-bold text-gray-900 dark:text-white">{{ greeting }}, {{ authStore.userName }} 👋</h1>
       <div class="flex flex-wrap gap-3">
-        <RouterLink
-          to="/admin/assessments"
-          class="px-4 py-2.5 bg-purple-600 text-white font-semibold rounded-lg shadow-sm hover:bg-purple-700 hover:shadow-md transition-colors duration-150 flex items-center"
-          title="See exactly what students see for any assessment school-wide"
-        >
-          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-          </svg>
-          Preview as Student
-        </RouterLink>
         <button
           @click="openViewEnrolledModal"
           class="px-4 py-2.5 bg-green-600 text-white font-semibold rounded-lg shadow-sm hover:bg-green-700 hover:shadow-md transition-colors duration-150 flex items-center"
@@ -36,72 +29,108 @@
       </div>
     </div>
 
-    <!-- Quick Access -->
+    <!-- Quick Access - one color throughout since this is pure navigation, not status info. -->
     <h2 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Quick Access</h2>
-    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4 mb-8">
-      <QuickLink to="/admin/students" label="Students" icon="students" color="sky" />
-      <QuickLink to="/admin/teachers" label="Teachers" icon="teachers" color="emerald" />
-      <QuickLink to="/admin/classes" label="Classes" icon="classes" color="violet" />
-      <QuickLink to="/admin/live-classes" label="Live Classes" icon="live" color="red" />
-      <QuickLink to="/admin/library" label="eLibrary" icon="library" color="amber" />
+    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4 mb-6">
+      <QuickLink to="/admin/students" label="Students" icon="students" color="indigo" />
+      <QuickLink to="/admin/teachers" label="Teachers" icon="teachers" color="indigo" />
+      <QuickLink to="/admin/classes" label="Classes" icon="classes" color="indigo" />
+      <QuickLink to="/admin/live-classes" label="Live Classes" icon="live" color="indigo" />
+      <QuickLink to="/admin/library" label="eLibrary" icon="library" color="indigo" />
       <QuickLink to="/admin/notes" label="eNotes" icon="notes" color="indigo" />
-      <QuickLink to="/admin/itembank" label="Item Bank" icon="itembank" color="teal" />
-      <QuickLink to="/admin/reports" label="Reports" icon="reports" color="pink" />
+      <QuickLink to="/admin/itembank" label="Item Bank" icon="itembank" color="indigo" />
+      <QuickLink to="/admin/reports" label="Reports" icon="reports" color="indigo" />
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-      <div class="card">
+      <RouterLink to="/admin/students" class="group card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 border border-transparent">
         <div class="flex items-center justify-between">
-          <div>
-            <p class="text-gray-500 dark:text-gray-400 text-sm">Total Enrollments</p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ analytics.total_enrollments }}</p>
-          </div>
-          <div class="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/20 rounded-lg flex items-center justify-center">
-            <svg class="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
-            </svg>
-          </div>
+          <template v-if="loadingAnalytics">
+            <div class="flex-1">
+              <div class="h-3.5 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
+              <div class="h-7 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            </div>
+            <div class="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse flex-shrink-0"></div>
+          </template>
+          <template v-else>
+            <div>
+              <p class="text-gray-500 dark:text-gray-400 text-sm">Total Enrollments</p>
+              <p class="text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{{ analytics.total_enrollments }}</p>
+            </div>
+            <div class="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg class="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+              </svg>
+            </div>
+          </template>
         </div>
-      </div>
-      <div class="card">
+      </RouterLink>
+      <RouterLink to="/admin/students" class="group card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 border border-transparent">
         <div class="flex items-center justify-between">
-          <div>
-            <p class="text-gray-500 dark:text-gray-400 text-sm">Recent Enrollments (7 days)</p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ analytics.recent_enrollments }}</p>
-          </div>
-          <div class="w-12 h-12 bg-green-100 dark:bg-green-900/20 rounded-lg flex items-center justify-center">
-            <svg class="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
-            </svg>
-          </div>
+          <template v-if="loadingAnalytics">
+            <div class="flex-1">
+              <div class="h-3.5 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
+              <div class="h-7 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            </div>
+            <div class="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse flex-shrink-0"></div>
+          </template>
+          <template v-else>
+            <div>
+              <p class="text-gray-500 dark:text-gray-400 text-sm">Recent Enrollments (7 days)</p>
+              <p class="text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{{ analytics.recent_enrollments }}</p>
+            </div>
+            <div class="w-12 h-12 bg-green-100 dark:bg-green-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg class="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+              </svg>
+            </div>
+          </template>
         </div>
-      </div>
-      <div class="card">
+      </RouterLink>
+      <RouterLink to="/admin/departments" class="group card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 border border-transparent">
         <div class="flex items-center justify-between">
-          <div>
-            <p class="text-gray-500 dark:text-gray-400 text-sm">Departments</p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ analytics.by_department.length }}</p>
-          </div>
-          <div class="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg flex items-center justify-center">
-            <svg class="w-6 h-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-            </svg>
-          </div>
+          <template v-if="loadingAnalytics">
+            <div class="flex-1">
+              <div class="h-3.5 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
+              <div class="h-7 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            </div>
+            <div class="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse flex-shrink-0"></div>
+          </template>
+          <template v-else>
+            <div>
+              <p class="text-gray-500 dark:text-gray-400 text-sm">Departments</p>
+              <p class="text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{{ analytics.by_department.length }}</p>
+            </div>
+            <div class="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg class="w-6 h-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+              </svg>
+            </div>
+          </template>
         </div>
-      </div>
-      <div class="card">
+      </RouterLink>
+      <RouterLink to="/admin/classes" class="group card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 border border-transparent">
         <div class="flex items-center justify-between">
-          <div>
-            <p class="text-gray-500 dark:text-gray-400 text-sm">Active Classes</p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ analytics.by_class.length }}</p>
-          </div>
-          <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900/20 rounded-lg flex items-center justify-center">
-            <svg class="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-            </svg>
-          </div>
+          <template v-if="loadingAnalytics">
+            <div class="flex-1">
+              <div class="h-3.5 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
+              <div class="h-7 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            </div>
+            <div class="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse flex-shrink-0"></div>
+          </template>
+          <template v-else>
+            <div>
+              <p class="text-gray-500 dark:text-gray-400 text-sm">Active Classes</p>
+              <p class="text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{{ analytics.by_class.length }}</p>
+            </div>
+            <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg class="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+              </svg>
+            </div>
+          </template>
         </div>
-      </div>
+      </RouterLink>
     </div>
 
     <!-- Analytics Charts -->
@@ -155,7 +184,7 @@
         </div>
 
         <!-- Filters -->
-        <div class="p-4 sm:p-6 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-900 space-y-3 flex-shrink-0">
+        <div class="p-4 sm:p-6 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-950 space-y-3 flex-shrink-0">
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Department</label>
@@ -249,7 +278,7 @@
             <!-- Desktop table -->
             <div class="hidden sm:block overflow-x-auto">
               <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead class="bg-gray-50 dark:bg-gray-900 sticky top-0 z-10">
+                <thead class="bg-gray-50 dark:bg-gray-950 sticky top-0 z-10">
                   <tr>
                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Student</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Admission No</th>
@@ -327,7 +356,7 @@
         </div>
 
         <!-- Footer -->
-        <div class="px-4 sm:px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-3 flex-shrink-0 rounded-b-2xl">
+        <div class="px-4 sm:px-6 py-4 bg-gray-50 dark:bg-gray-950 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-3 flex-shrink-0 rounded-b-2xl">
           <div v-if="viewTotalPages > 1" class="flex items-center gap-2 order-2 sm:order-1">
             <button
               @click="goToViewPage(viewPage - 1)"
@@ -558,7 +587,7 @@
           </div>
 
           <!-- Footer -->
-          <div class="px-4 sm:px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-end gap-3 flex-shrink-0 rounded-b-2xl">
+          <div class="px-4 sm:px-6 py-4 bg-gray-50 dark:bg-gray-950 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-end gap-3 flex-shrink-0 rounded-b-2xl">
             <button
               type="button"
               @click="showEnrollModal = false"
@@ -583,6 +612,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import apiService from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
 import QuickLink from '@/components/dashboard/QuickLink.vue'
 import { Bar } from 'vue-chartjs'
 import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ArcElement } from 'chart.js'
@@ -631,6 +661,15 @@ const loadingAcademicYears = ref(false)
 const loadingClasses = ref(false)
 const loadingEnrolled = ref(false)
 const loadingStudentsForClass = ref(false)
+const authStore = useAuthStore()
+
+const greeting = computed(() => {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'Good morning'
+  if (hour < 17) return 'Good afternoon'
+  return 'Good evening'
+})
+
 const loadingAnalytics = ref(false)
 const departments = ref<Department[]>([])
 const academicYears = ref<AcademicYear[]>([])

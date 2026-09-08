@@ -1,88 +1,58 @@
 <template>
   <div>
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-      <div class="flex items-center gap-3">
-        <div class="hidden sm:flex w-11 h-11 rounded-xl bg-indigo-600 items-center justify-center shadow-lg shadow-indigo-500/30 flex-shrink-0">
-          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
-          </svg>
-        </div>
-        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Teacher Dashboard</h1>
-      </div>
-      <div class="flex flex-wrap gap-3">
-        <RouterLink
-          to="/teacher/preview"
-          class="btn-primary flex items-center"
-          title="See exactly what your students see across classes, eLibrary, Item Bank, Live Classes and assignments"
-        >
-          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-          </svg>
-          Preview as Student
-        </RouterLink>
-        <button
-          @click="openViewEnrolledModal"
-          class="btn-success flex items-center"
-        >
-          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-          </svg>
-          View Enrolled Students
-        </button>
-      </div>
-    </div>
+    <!-- The topbar already shows this teacher's name and photo, so this line is just a quick
+         personal greeting rather than a redundant "Teacher Dashboard" title + icon badge. -->
+    <h1 class="text-xl font-bold text-gray-900 dark:text-white mb-4">{{ greeting }}, {{ authStore.userName }} 👋</h1>
 
-    <!-- Department Info -->
-    <div v-if="analytics.department" class="card mb-6 bg-indigo-600 text-white">
-      <div class="flex items-center justify-between">
-        <div>
-          <p class="text-indigo-100 text-sm font-medium">Department</p>
-          <h2 class="text-2xl font-bold">{{ analytics.department.name }}</h2>
-          <p class="text-indigo-200 text-sm">{{ analytics.department.code }} - {{ analytics.department.description }}</p>
+    <!-- Department Info - a slim identity strip rather than a full hero card, since it's just
+         context (which department this data belongs to), not a headline number. "View Enrolled
+         Students" lives here as a compact link instead of its own header button, and "Preview as
+         Student" was dropped entirely - it's already one click away in the sidebar. -->
+    <div v-if="analytics.department" class="hidden sm:flex flex-wrap items-center gap-x-3 gap-y-1.5 bg-indigo-600 text-white rounded-lg px-4 py-2 mb-4 text-sm">
+      <span class="font-semibold">{{ analytics.department.name }}</span>
+      <span class="text-indigo-200 truncate">{{ analytics.department.code }} &middot; {{ analytics.department.description }}</span>
 
-          <!-- Department switcher - only shown when the teacher belongs to more than one -->
-          <div v-if="myDepartments.length > 1" class="mt-3 flex items-center gap-2">
-            <label class="text-indigo-100 text-xs font-medium">Switch to:</label>
-            <select
-              :value="activeDepartmentId"
-              @change="switchDepartment(($event.target as HTMLSelectElement).value)"
-              :disabled="switchingDepartment"
-              class="text-sm rounded-md bg-white/20 border border-white/30 text-white px-2 py-1 focus:outline-none focus:ring-2 focus:ring-white/50 disabled:opacity-50"
-            >
-              <option v-for="dept in myDepartments" :key="dept.id" :value="dept.id" class="text-gray-900">
-                {{ dept.name }}{{ dept.is_primary ? ' (Primary)' : '' }}
-              </option>
-            </select>
-          </div>
-        </div>
-        <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
-          <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-          </svg>
-        </div>
-      </div>
+      <!-- Department switcher - only shown when the teacher belongs to more than one -->
+      <select
+        v-if="myDepartments.length > 1"
+        :value="activeDepartmentId"
+        @change="switchDepartment(($event.target as HTMLSelectElement).value)"
+        :disabled="switchingDepartment"
+        class="text-xs rounded-md bg-white/20 border border-white/30 text-white px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-white/50 disabled:opacity-50"
+      >
+        <option v-for="dept in myDepartments" :key="dept.id" :value="dept.id" class="text-gray-900">
+          {{ dept.name }}{{ dept.is_primary ? ' (Primary)' : '' }}
+        </option>
+      </select>
+
+      <button
+        @click="openViewEnrolledModal"
+        class="ml-auto text-xs font-semibold text-white/90 hover:text-white hover:underline underline-offset-2 flex-shrink-0"
+      >
+        View Enrolled Students
+      </button>
     </div>
 
     <!-- Quick Access - the fast path into a teacher's most-used modules, front and centre so
-         there's no need to hunt through the sidebar for them. -->
-    <div class="max-w-4xl mx-auto mb-10">
-      <h2 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4 text-center">Quick Access</h2>
+         there's no need to hunt through the sidebar for them. One color throughout (rather than
+         a different hue per tile) keeps this section calm since it's pure navigation, not a set
+         of distinct statuses worth color-coding. -->
+    <div class="max-w-4xl mx-auto mb-6">
+      <h2 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3 text-center">Quick Access</h2>
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-5">
         <QuickLink to="/teacher/classes" label="My Classes" icon="classes" color="indigo" />
-        <QuickLink to="/teacher/live-classes" label="Live Classes" icon="live" color="red" />
-        <QuickLink to="/teacher/enotes" label="eNotes" icon="notes" color="amber" />
-        <QuickLink to="/teacher/library" label="eLibrary" icon="library" color="emerald" />
-        <QuickLink to="/teacher/itembank" label="Item Bank" icon="itembank" color="teal" />
-        <QuickLink to="/teacher/assignments" label="Assessments" icon="check" color="violet" />
-        <QuickLink to="/teacher/reports" label="Reports" icon="reports" color="pink" />
-        <QuickLink to="/teacher/chat" label="Chats" icon="chat" color="sky" />
+        <QuickLink to="/teacher/live-classes" label="Live Classes" icon="live" color="indigo" />
+        <QuickLink to="/teacher/enotes" label="eNotes" icon="notes" color="indigo" />
+        <QuickLink to="/teacher/library" label="eLibrary" icon="library" color="indigo" />
+        <QuickLink to="/teacher/itembank" label="Item Bank" icon="itembank" color="indigo" />
+        <QuickLink to="/teacher/assignments" label="Assessments" icon="check" color="indigo" />
+        <QuickLink to="/teacher/reports" label="Reports" icon="reports" color="indigo" />
+        <QuickLink to="/teacher/chat" label="Chats" icon="chat" color="indigo" />
       </div>
     </div>
 
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
-      <div class="group card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 border border-transparent">
+      <RouterLink to="/teacher/classes" class="group card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 border border-transparent">
         <div class="flex items-center justify-between">
           <template v-if="loadingAnalytics">
             <div class="flex-1">
@@ -103,8 +73,8 @@
             </div>
           </template>
         </div>
-      </div>
-      <div class="group card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 border border-transparent">
+      </RouterLink>
+      <RouterLink to="/teacher/classes" class="group card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 border border-transparent">
         <div class="flex items-center justify-between">
           <template v-if="loadingAnalytics">
             <div class="flex-1">
@@ -125,8 +95,8 @@
             </div>
           </template>
         </div>
-      </div>
-      <div class="group card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 border border-transparent">
+      </RouterLink>
+      <RouterLink to="/teacher/classes" class="group card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 border border-transparent">
         <div class="flex items-center justify-between">
           <template v-if="loadingAnalytics">
             <div class="flex-1">
@@ -147,8 +117,8 @@
             </div>
           </template>
         </div>
-      </div>
-      <div class="group card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 border border-transparent">
+      </RouterLink>
+      <RouterLink to="/teacher/classes" class="group card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 border border-transparent">
         <div class="flex items-center justify-between">
           <template v-if="loadingAnalytics">
             <div class="flex-1">
@@ -169,7 +139,7 @@
             </div>
           </template>
         </div>
-      </div>
+      </RouterLink>
     </div>
 
     <!-- Enrollments by Class-Stream -->
@@ -238,7 +208,7 @@
         </div>
 
         <!-- Filters -->
-        <div class="p-6 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+        <div class="p-6 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-950">
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Academic Year</label>
@@ -292,7 +262,7 @@
           </div>
           <div v-else class="overflow-x-auto">
           <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead class="bg-gray-50 dark:bg-gray-900">
+            <thead class="bg-gray-50 dark:bg-gray-950">
               <tr>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Student</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Admission No</th>
@@ -338,7 +308,7 @@
         </div>
 
         <!-- Footer -->
-        <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-end flex-shrink-0">
+        <div class="px-6 py-4 bg-gray-50 dark:bg-gray-950 border-t border-gray-200 dark:border-gray-700 flex justify-end flex-shrink-0">
           <button
             @click="showViewEnrolledModal = false"
             class="btn-secondary"
@@ -356,9 +326,19 @@ import { ref, onMounted, computed } from 'vue'
 import { Bar, Doughnut } from 'vue-chartjs'
 import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ArcElement } from 'chart.js'
 import apiService from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
 import QuickLink from '@/components/dashboard/QuickLink.vue'
 
 ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ArcElement)
+
+const authStore = useAuthStore()
+
+const greeting = computed(() => {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'Good morning'
+  if (hour < 17) return 'Good afternoon'
+  return 'Good evening'
+})
 
 const loadingAnalytics = ref(false)
 const loadingEnrolled = ref(false)

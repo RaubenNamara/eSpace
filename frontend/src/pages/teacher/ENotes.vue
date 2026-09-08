@@ -448,7 +448,7 @@
 
                   <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Competence</label>
-                    <p class="px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900/40 text-sm text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
+                    <p class="px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-950/40 text-sm text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
                       {{ selectedCurriculumTopic.competence }}
                     </p>
                   </div>
@@ -457,7 +457,7 @@
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Learning Outcomes</label>
                     <ol
                       v-if="selectedCurriculumTopic.learning_outcomes.length"
-                      class="space-y-1.5 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700"
+                      class="space-y-1.5 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-950/40 border border-gray-200 dark:border-gray-700"
                     >
                       <li
                         v-for="(o, i) in selectedCurriculumTopic.learning_outcomes"
@@ -496,7 +496,7 @@
           <div class="px-5 sm:px-6 pt-4 flex-shrink-0" v-if="topicSaveError">
             <p class="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-4 py-2.5">{{ topicSaveError }}</p>
           </div>
-          <div class="px-5 sm:px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-end gap-3 flex-shrink-0 rounded-b-2xl">
+          <div class="px-5 sm:px-6 py-4 bg-gray-50 dark:bg-gray-950 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-end gap-3 flex-shrink-0 rounded-b-2xl">
             <button
               type="button"
               @click="closeTopicModal"
@@ -622,7 +622,7 @@
           <div class="px-5 sm:px-6 pt-4 flex-shrink-0" v-if="topicSaveError">
             <p class="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-4 py-2.5">{{ topicSaveError }}</p>
           </div>
-          <div class="px-5 sm:px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-end gap-3 flex-shrink-0 rounded-b-2xl">
+          <div class="px-5 sm:px-6 py-4 bg-gray-50 dark:bg-gray-950 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-end gap-3 flex-shrink-0 rounded-b-2xl">
             <button
               type="button"
               @click="closeTopicModal"

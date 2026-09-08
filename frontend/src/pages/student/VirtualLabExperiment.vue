@@ -43,7 +43,7 @@
               v-for="o in apparatusList"
               :key="o.key"
               class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg transition-colors"
-              :class="isHighlightedApparatus(o.key) ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-300 dark:ring-indigo-700' : 'bg-gray-50 dark:bg-gray-900/40 text-gray-600 dark:text-gray-300'"
+              :class="isHighlightedApparatus(o.key) ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-300 dark:ring-indigo-700' : 'bg-gray-50 dark:bg-gray-950/40 text-gray-600 dark:text-gray-300'"
             >
               <span>{{ o.icon }}</span> {{ o.name }}
             </span>
@@ -88,7 +88,7 @@
               </div>
 
               <div v-if="previewStep" class="mb-3">
-                <div v-if="!isPreviewingCurrent" class="bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 rounded-xl p-3.5">
+                <div v-if="!isPreviewingCurrent" class="bg-gray-50 dark:bg-gray-950/40 border border-gray-200 dark:border-gray-700 rounded-xl p-3.5">
                   <p class="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-1">{{ previewStepNumber < attempt.current_step ? 'Already completed' : 'Coming up' }}</p>
                   <p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{{ previewStep.instruction }}</p>
                   <button @click="previewStepNumber = attempt.current_step" class="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline mt-2">Back to current step</button>
@@ -106,7 +106,7 @@
                     <button v-if="hintLevel < hintLevels.length" @click="requestHint" class="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
                       <span>💡</span> {{ hintLevel === 0 ? 'Need a hint?' : 'Show me more' }}
                     </button>
-                    <div v-for="(h, i) in hintLevels.slice(0, hintLevel)" :key="i" class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 italic bg-gray-50 dark:bg-gray-900/40 rounded-lg p-2.5">{{ h }}</div>
+                    <div v-for="(h, i) in hintLevels.slice(0, hintLevel)" :key="i" class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 italic bg-gray-50 dark:bg-gray-950/40 rounded-lg p-2.5">{{ h }}</div>
                   </div>
 
                   <button @click="resetCurrentStep" class="inline-flex items-center gap-1 text-xs font-medium text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:underline mt-2 ml-3">
@@ -215,7 +215,7 @@
             <div class="overflow-x-auto">
               <table class="w-full text-xs border-collapse">
                 <thead>
-                  <tr class="bg-gray-50 dark:bg-gray-900/40 text-left text-gray-500 dark:text-gray-400">
+                  <tr class="bg-gray-50 dark:bg-gray-950/40 text-left text-gray-500 dark:text-gray-400">
                     <th v-for="col in resultTableColumns" :key="col" class="px-3 py-2 font-semibold capitalize">{{ col }}</th>
                   </tr>
                 </thead>

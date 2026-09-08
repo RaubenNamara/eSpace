@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-950">
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-6">Settings</h1>
 
@@ -14,7 +14,7 @@
               v-model="profile.first_name"
               type="text"
               disabled
-              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-950 text-gray-500 dark:text-gray-400"
             >
           </div>
           <div>
@@ -23,7 +23,7 @@
               v-model="profile.last_name"
               type="text"
               disabled
-              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-950 text-gray-500 dark:text-gray-400"
             >
           </div>
           <div>
@@ -32,7 +32,7 @@
               v-model="profile.admission_number"
               type="text"
               disabled
-              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-950 text-gray-500 dark:text-gray-400"
             >
           </div>
           <div>
@@ -41,7 +41,7 @@
               v-model="profile.class_name"
               type="text"
               disabled
-              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-950 text-gray-500 dark:text-gray-400"
             >
           </div>
         </div>

@@ -306,7 +306,7 @@
 
                 <div v-else-if="isGroupEdit" class="md:col-span-2">
                   <label class="form-label">Class-Stream(s)</label>
-                  <div class="flex flex-wrap gap-1.5 px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900/40">
+                  <div class="flex flex-wrap gap-1.5 px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-950/40">
                     <span
                       v-for="instance in editingInstances"
                       :key="instance.id"
@@ -409,7 +409,7 @@
           </div>
 
           <!-- Footer -->
-          <div class="px-5 sm:px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-end gap-3 flex-shrink-0 rounded-b-2xl">
+          <div class="px-5 sm:px-6 py-4 bg-gray-50 dark:bg-gray-950 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-end gap-3 flex-shrink-0 rounded-b-2xl">
             <button type="button" @click="closeFormModal" class="w-full sm:w-auto px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 font-medium">
               Cancel
             </button>
@@ -471,7 +471,7 @@
               <div
                 v-for="instance in viewingGroup.instances"
                 :key="instance.id"
-                class="flex items-center justify-between gap-3 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700"
+                class="flex items-center justify-between gap-3 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-950/40 border border-gray-200 dark:border-gray-700"
               >
                 <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300">
                   {{ instance.class_stream_name }}

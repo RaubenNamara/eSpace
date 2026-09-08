@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-950">
     <div class="px-4 sm:px-6 lg:px-8 py-8 max-w-5xl 2xl:max-w-[100rem] mx-auto">
       <!-- Header -->
       <div class="mb-8">
@@ -145,7 +145,7 @@
         </div>
         <div v-else class="overflow-x-auto">
           <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700">
-            <thead class="bg-gray-50 dark:bg-gray-900">
+            <thead class="bg-gray-50 dark:bg-gray-950">
               <tr>
                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Subject</th>
                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Class</th>

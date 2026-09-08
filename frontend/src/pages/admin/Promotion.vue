@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-950">
     <div class="px-4 sm:px-6 lg:px-8 py-8">
       <div class="mb-8">
         <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Student Promotion</h1>
@@ -110,7 +110,7 @@
             <p class="text-sm text-yellow-700 dark:text-yellow-400">Already promoted</p>
             <p class="text-2xl font-bold text-yellow-800 dark:text-yellow-300">{{ preview.already_promoted.length }}</p>
           </div>
-          <div class="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-4">
+          <div class="bg-gray-50 dark:bg-gray-950/40 rounded-lg p-4">
             <p class="text-sm text-gray-600 dark:text-gray-400">Nothing to move</p>
             <p class="text-2xl font-bold text-gray-700 dark:text-gray-300">{{ preview.nothing_to_move.length }}</p>
           </div>
@@ -155,7 +155,7 @@
         <div v-if="history.length === 0" class="p-8 text-center text-gray-500 dark:text-gray-400 text-sm">No promotions recorded yet.</div>
         <div v-else class="overflow-x-auto">
           <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700">
-            <thead class="bg-gray-50 dark:bg-gray-900">
+            <thead class="bg-gray-50 dark:bg-gray-950">
               <tr>
                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Student</th>
                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">From</th>

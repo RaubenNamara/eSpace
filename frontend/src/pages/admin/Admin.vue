@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-950">
     <div class="px-4 sm:px-6 lg:px-8 py-8">
       <!-- Header -->
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
@@ -82,7 +82,7 @@
         <!-- Users Table -->
         <div v-else class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700">
-          <thead class="bg-gray-50 dark:bg-gray-900">
+          <thead class="bg-gray-50 dark:bg-gray-950">
             <tr>
               <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">User</th>
               <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Role</th>
@@ -177,7 +177,7 @@
         </div>
 
         <!-- Pagination -->
-        <div class="bg-gray-50 dark:bg-gray-900 px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+        <div class="bg-gray-50 dark:bg-gray-950 px-4 py-3 border-t border-gray-200 dark:border-gray-700">
           <div class="flex items-center justify-between">
             <div class="text-sm text-gray-700 dark:text-gray-300">
               Showing {{ (pagination.page - 1) * pagination.limit + 1 }} to {{ Math.min(pagination.page * pagination.limit, pagination.total) }} of {{ pagination.total }} results

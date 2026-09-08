@@ -101,7 +101,7 @@
                 class="group relative flex flex-col items-center justify-center gap-1 w-24 h-20 rounded-xl border-2 transition-all"
                 :class="selectedStreams[group.key] === stream.key
                   ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 shadow-md'
-                  : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 hover:border-indigo-300 hover:shadow-sm'"
+                  : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-950/40 hover:border-indigo-300 hover:shadow-sm'"
               >
                 <span
                   class="text-lg font-bold"
@@ -129,7 +129,7 @@
                   <div
                     v-for="a in subject.assignments"
                     :key="a.id"
-                    class="bg-gray-50 dark:bg-gray-900/40 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4"
+                    class="bg-gray-50 dark:bg-gray-950/40 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4"
                   >
                     <div class="flex items-start justify-between gap-3">
                       <div class="min-w-0">

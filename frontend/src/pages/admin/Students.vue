@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-950">
     <div class="px-4 sm:px-6 lg:px-8 py-8">
       <!-- Header -->
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
@@ -136,7 +136,7 @@
         <!-- Students Table -->
         <div v-else class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700">
-          <thead class="bg-gray-50 dark:bg-gray-900">
+          <thead class="bg-gray-50 dark:bg-gray-950">
             <tr>
               <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Name</th>
               <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Reg No</th>
@@ -417,7 +417,7 @@
           <h2 class="text-xl font-bold text-gray-900 dark:text-white text-center mb-2">Password Regenerated</h2>
           <p class="text-gray-600 dark:text-gray-400 text-center mb-6">The student's password has been reset to their admission number.</p>
 
-          <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 mb-6">
+          <div class="bg-gray-50 dark:bg-gray-950 rounded-lg p-4 mb-6">
             <div class="mb-3">
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Username</label>
               <div class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 dark:text-white rounded px-3 py-2 font-mono text-sm">

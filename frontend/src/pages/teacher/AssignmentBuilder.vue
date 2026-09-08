@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-950">
     <!-- Toast Notification -->
     <transition name="toast">
       <div
@@ -205,7 +205,7 @@
               </h2>
             </div>
             <div class="p-4 sm:p-6 space-y-4">
-              <div v-if="!form.subject_id || !form.classTarget.class_id" class="flex items-start gap-3 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3.5">
+              <div v-if="!form.subject_id || !form.classTarget.class_id" class="flex items-start gap-3 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-950/40 rounded-lg p-3.5">
                 <svg class="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
@@ -301,7 +301,7 @@
                   <div v-if="loaTopicDetail" class="space-y-3">
                     <div>
                       <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Competence</p>
-                      <p class="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3">{{ loaTopicDetail.competence }}</p>
+                      <p class="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-950/40 rounded-lg p-3">{{ loaTopicDetail.competence }}</p>
                     </div>
                     <div>
                       <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Select Learning Outcome(s) to Assess *</p>
@@ -322,7 +322,7 @@
                 <!-- AOI scope: Topic checkboxes -->
                 <div v-if="form.assessment_category === 'AOI'" class="pt-4 mt-2 border-t-2 border-violet-100 dark:border-violet-900/40">
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Topic(s) *</label>
-                  <div v-if="!curriculumMeta?.topics?.length" class="text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3">
+                  <div v-if="!curriculumMeta?.topics?.length" class="text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-950/40 rounded-lg p-3">
                     No curriculum topics have been configured for this Subject/Class-Stream/Term. Contact the administrator.
                   </div>
                   <div v-else class="space-y-1.5 border border-gray-200 dark:border-gray-700 rounded-lg p-2 max-h-56 overflow-y-auto">
@@ -345,14 +345,14 @@
                 <!-- EOC scope: pick one admin-defined Construct (department + Subject + Level scoped) -->
                 <div v-if="form.assessment_category === 'EOC'" class="pt-4 mt-2 border-t-2 border-fuchsia-100 dark:border-fuchsia-900/40 space-y-3">
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Construct *</label>
-                  <div v-if="!selectedClassLevel" class="text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3">
+                  <div v-if="!selectedClassLevel" class="text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-950/40 rounded-lg p-3">
                     Select a Class-Stream above to determine the Level (O Level / A Level) before choosing a Construct.
                   </div>
                   <div v-else-if="loadingEocConstructs" class="flex items-center gap-2 text-sm text-gray-400 py-2">
                     <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
                     Loading constructs...
                   </div>
-                  <div v-else-if="eocConstructs.length === 0" class="text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3">
+                  <div v-else-if="eocConstructs.length === 0" class="text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-950/40 rounded-lg p-3">
                     No constructs found for this Subject/{{ selectedClassLevel }} in your department. Contact the administrator.
                   </div>
                   <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-3">

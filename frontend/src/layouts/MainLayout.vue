@@ -1,18 +1,20 @@
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-950">
     <!-- Sidebar -->
     <aside
-      class="overflow-hidden fixed left-0 top-2 bottom-0 w-64 rounded-tr-2xl bg-slate-950 shadow-2xl transform transition-transform duration-300 z-50 flex flex-col border-r border-white/5"
-      :class="{ '-translate-x-full': !sidebarOpen, 'translate-x-0': sidebarOpen }"
+      class="overflow-hidden fixed left-0 top-2 bottom-0 rounded-tr-2xl bg-slate-950 shadow-2xl transform transition-all duration-300 z-50 flex flex-col border-r border-white/5"
+      :class="[isIconOnly ? 'w-[72px]' : 'w-64', { '-translate-x-full': !sidebarOpen, 'translate-x-0': sidebarOpen }]"
+      @mouseenter="onSidebarMouseEnter"
+      @mouseleave="onSidebarMouseLeave"
     >
       <div class="relative px-5 py-5 border-b border-white/5 flex-shrink-0">
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-3" :class="{ 'justify-center': isIconOnly }">
           <div class="relative w-10 h-10 flex-shrink-0 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/25">
             <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
             </svg>
           </div>
-          <div class="min-w-0">
+          <div v-if="!isIconOnly" class="min-w-0">
             <h1 class="text-base font-bold text-white tracking-tight leading-tight">eSpace</h1>
             <p class="text-[11px] text-slate-300 capitalize font-medium tracking-wide leading-tight mt-0.5">{{ userRole }} Console</p>
           </div>
@@ -22,7 +24,7 @@
       <nav class="sidebar-nav relative flex-1 overflow-y-auto px-3 py-4">
         <!-- System Administration -->
         <div v-if="isAdmin" class="mb-5">
-          <div class="px-3 mb-1.5 flex items-center gap-2">
+          <div v-if="!isIconOnly" class="px-3 mb-1.5 flex items-center gap-2">
             <span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
             <span class="text-[10.5px] font-semibold text-slate-300 uppercase tracking-widest">System Administration</span>
           </div>
@@ -31,8 +33,9 @@
               v-for="item in adminMenu"
               :key="item.path"
               :to="item.path"
+              :title="isIconOnly ? item.label : undefined"
               class="relative flex items-center gap-3 pl-4 pr-3 py-2 rounded-lg transition-all duration-150 text-sm font-medium group hover:translate-x-0.5"
-              :class="isActive(item.path) ? 'bg-rose-500/10 text-white ring-1 ring-inset ring-rose-500/15' : 'text-slate-100 hover:bg-white/10 hover:text-white'"
+              :class="[isActive(item.path) ? 'bg-rose-500/10 text-white ring-1 ring-inset ring-rose-500/15' : 'text-slate-100 hover:bg-white/10 hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
             >
               <span
                 class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-sm bg-rose-400 transition-opacity duration-150"
@@ -43,7 +46,7 @@
               >
                 <component :is="iconMap[item.icon]" class="w-[18px] h-[18px]" />
               </div>
-              <span class="truncate">{{ item.label }}</span>
+              <span v-if="!isIconOnly" class="truncate">{{ item.label }}</span>
             </router-link>
           </div>
         </div>
@@ -55,8 +58,9 @@
               v-for="item in dashboardMenu"
               :key="item.path"
               :to="item.path"
+              :title="isIconOnly ? item.label : undefined"
               class="relative flex items-center gap-3 pl-4 pr-3 py-2 rounded-lg transition-all duration-150 text-sm font-medium group hover:translate-x-0.5"
-              :class="isActive(item.path) ? 'bg-sky-500/10 text-white ring-1 ring-inset ring-sky-500/15' : 'text-slate-100 hover:bg-white/10 hover:text-white'"
+              :class="[isActive(item.path) ? 'bg-sky-500/10 text-white ring-1 ring-inset ring-sky-500/15' : 'text-slate-100 hover:bg-white/10 hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
             >
               <span
                 class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-sm bg-sky-400 transition-opacity duration-150"
@@ -67,14 +71,14 @@
               >
                 <component :is="iconMap[item.icon]" class="w-[18px] h-[18px]" />
               </div>
-              <span class="truncate">{{ item.label }}</span>
+              <span v-if="!isIconOnly" class="truncate">{{ item.label }}</span>
             </router-link>
           </div>
         </div>
 
         <!-- Academic Management -->
         <div class="mb-5">
-          <div class="px-3 mb-1.5 flex items-center gap-2">
+          <div v-if="!isIconOnly" class="px-3 mb-1.5 flex items-center gap-2">
             <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
             <span class="text-[10.5px] font-semibold text-slate-300 uppercase tracking-widest">Academic Management</span>
           </div>
@@ -83,8 +87,9 @@
               v-for="item in academicMenu"
               :key="item.path"
               :to="item.path"
+              :title="isIconOnly ? item.label : undefined"
               class="relative flex items-center gap-3 pl-4 pr-3 py-2 rounded-lg transition-all duration-150 text-sm font-medium group hover:translate-x-0.5"
-              :class="isActive(item.path) ? 'bg-indigo-500/10 text-white ring-1 ring-inset ring-indigo-500/15' : 'text-slate-100 hover:bg-white/10 hover:text-white'"
+              :class="[isActive(item.path) ? 'bg-indigo-500/10 text-white ring-1 ring-inset ring-indigo-500/15' : 'text-slate-100 hover:bg-white/10 hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
             >
               <span
                 class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-sm bg-indigo-400 transition-opacity duration-150"
@@ -95,14 +100,14 @@
               >
                 <component :is="iconMap[item.icon]" class="w-[18px] h-[18px]" />
               </div>
-              <span class="truncate">{{ item.label }}</span>
+              <span v-if="!isIconOnly" class="truncate">{{ item.label }}</span>
             </router-link>
           </div>
         </div>
 
         <!-- Learning Resources -->
         <div class="mb-5">
-          <div class="px-3 mb-1.5 flex items-center gap-2">
+          <div v-if="!isIconOnly" class="px-3 mb-1.5 flex items-center gap-2">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
             <span class="text-[10.5px] font-semibold text-slate-300 uppercase tracking-widest">Learning Resources</span>
           </div>
@@ -111,8 +116,9 @@
               v-for="item in resourcesMenu"
               :key="item.path"
               :to="item.path"
+              :title="isIconOnly ? item.label : undefined"
               class="relative flex items-center gap-3 pl-4 pr-3 py-2 rounded-lg transition-all duration-150 text-sm font-medium group hover:translate-x-0.5"
-              :class="isActive(item.path) ? 'bg-emerald-500/10 text-white ring-1 ring-inset ring-emerald-500/15' : 'text-slate-100 hover:bg-white/10 hover:text-white'"
+              :class="[isActive(item.path) ? 'bg-emerald-500/10 text-white ring-1 ring-inset ring-emerald-500/15' : 'text-slate-100 hover:bg-white/10 hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
             >
               <span
                 class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-sm bg-emerald-400 transition-opacity duration-150"
@@ -123,14 +129,14 @@
               >
                 <component :is="iconMap[item.icon]" class="w-[18px] h-[18px]" />
               </div>
-              <span class="truncate">{{ item.label }}</span>
+              <span v-if="!isIconOnly" class="truncate">{{ item.label }}</span>
             </router-link>
           </div>
         </div>
 
         <!-- Assessment & Analytics -->
         <div class="mb-5">
-          <div class="px-3 mb-1.5 flex items-center gap-2">
+          <div v-if="!isIconOnly" class="px-3 mb-1.5 flex items-center gap-2">
             <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
             <span class="text-[10.5px] font-semibold text-slate-300 uppercase tracking-widest">Assessment & Analytics</span>
           </div>
@@ -139,8 +145,9 @@
               v-for="item in assessmentMenu"
               :key="item.path"
               :to="item.path"
+              :title="isIconOnly ? item.label : undefined"
               class="relative flex items-center gap-3 pl-4 pr-3 py-2 rounded-lg transition-all duration-150 text-sm font-medium group hover:translate-x-0.5"
-              :class="isActive(item.path) ? 'bg-amber-500/10 text-white ring-1 ring-inset ring-amber-500/15' : 'text-slate-100 hover:bg-white/10 hover:text-white'"
+              :class="[isActive(item.path) ? 'bg-amber-500/10 text-white ring-1 ring-inset ring-amber-500/15' : 'text-slate-100 hover:bg-white/10 hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
             >
               <span
                 class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-sm bg-amber-400 transition-opacity duration-150"
@@ -151,7 +158,7 @@
               >
                 <component :is="iconMap[item.icon]" class="w-[18px] h-[18px]" />
               </div>
-              <span class="truncate">{{ item.label }}</span>
+              <span v-if="!isIconOnly" class="truncate">{{ item.label }}</span>
             </router-link>
           </div>
         </div>
@@ -160,14 +167,16 @@
       <div class="relative p-3 border-t border-white/5 flex-shrink-0">
         <button
           @click="handleLogout"
+          :title="isIconOnly ? 'Logout' : undefined"
           class="flex items-center gap-3 pl-4 pr-3 py-2 rounded-lg text-slate-100 hover:bg-rose-500/15 hover:text-rose-300 w-full transition-colors duration-150 group"
+          :class="isIconOnly ? 'justify-center px-0' : ''"
         >
           <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 bg-slate-800 shadow-sm ring-1 ring-white/15 text-slate-200 group-hover:text-rose-300 transition-all duration-150">
             <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
             </svg>
           </div>
-          <span class="text-sm font-medium">Logout</span>
+          <span v-if="!isIconOnly" class="text-sm font-medium">Logout</span>
         </button>
       </div>
     </aside>
@@ -180,7 +189,7 @@
     ></div>
 
     <!-- Main Content -->
-    <div class="min-h-screen flex flex-col transition-all duration-300 ml-0" :class="{ 'lg:ml-64': sidebarOpen }">
+    <div class="min-h-screen flex flex-col transition-all duration-300 ml-0" :class="{ 'lg:ml-64': sidebarOpen && !sidebarCollapsed, 'lg:ml-[72px]': sidebarOpen && sidebarCollapsed }">
       <!-- Top Bar -->
       <header class="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-40">
         <div class="flex items-center justify-between px-6 py-4">
@@ -387,33 +396,6 @@
       <main class="p-6 flex-1">
         <router-view />
       </main>
-
-      <!-- Footer -->
-      <footer class="mt-8 flex-shrink-0">
-        <div class="h-1 bg-indigo-600"></div>
-        <div class="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-          <div class="px-4 sm:px-6 py-5 sm:py-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
-            <div class="hidden sm:flex items-center gap-3">
-              <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-md shadow-indigo-500/20 flex-shrink-0">
-                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-                </svg>
-              </div>
-              <div>
-                <p class="text-sm font-bold text-gray-900 dark:text-white tracking-tight">eSpace</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400">Empowering Secondary Education</p>
-              </div>
-            </div>
-
-            <div class="flex flex-wrap items-center justify-center gap-3 text-xs">
-              <span class="hidden sm:inline-block px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-semibold capitalize">
-                {{ userRole }} Portal
-              </span>
-              <span class="text-gray-400 dark:text-gray-500">&copy; {{ currentYear }} eSpace. All rights reserved.</span>
-            </div>
-          </div>
-        </div>
-      </footer>
     </div>
   </div>
 </template>
@@ -436,8 +418,6 @@ const authStore = useAuthStore()
 const themeStore = useThemeStore()
 const chatBadge = useChatBadgeStore()
 
-const currentYear = new Date().getFullYear()
-
 // Sidebar starts open on desktop (>=1024px, Tailwind's `lg` breakpoint) and closed on
 // mobile/tablet, where it behaves as an overlay (see the `lg:ml-64` / backdrop below)
 // instead of pushing content into an already-narrow viewport.
@@ -445,8 +425,51 @@ const DESKTOP_BREAKPOINT = 1024
 const sidebarOpen = ref(typeof window !== 'undefined' ? window.innerWidth >= DESKTOP_BREAKPOINT : true)
 const showRoleSwitcher = ref(false)
 
+// Auto-collapsing sidebar (desktop only): shrinks to an icon-only rail after a few seconds of
+// not being hovered, then peeks back out to full width immediately on hover - the width change
+// while hovering doesn't touch the content margin below, so the expanded rail floats as an
+// overlay above the page instead of shoving content sideways every time you glance at it.
+const SIDEBAR_COLLAPSE_DELAY_MS = 4000
+const sidebarCollapsed = ref(false)
+const sidebarHovering = ref(false)
+let sidebarCollapseTimer: ReturnType<typeof setTimeout> | null = null
+
+const isIconOnly = computed(() => sidebarCollapsed.value && !sidebarHovering.value)
+
+const clearSidebarCollapseTimer = () => {
+  if (sidebarCollapseTimer) {
+    clearTimeout(sidebarCollapseTimer)
+    sidebarCollapseTimer = null
+  }
+}
+
+const scheduleSidebarCollapse = () => {
+  clearSidebarCollapseTimer()
+  if (window.innerWidth < DESKTOP_BREAKPOINT) return
+  sidebarCollapseTimer = setTimeout(() => {
+    sidebarCollapsed.value = true
+  }, SIDEBAR_COLLAPSE_DELAY_MS)
+}
+
+const onSidebarMouseEnter = () => {
+  clearSidebarCollapseTimer()
+  sidebarHovering.value = true
+}
+
+const onSidebarMouseLeave = () => {
+  sidebarHovering.value = false
+  scheduleSidebarCollapse()
+}
+
 const applyResponsiveSidebar = () => {
   sidebarOpen.value = window.innerWidth >= DESKTOP_BREAKPOINT
+  if (!sidebarOpen.value) {
+    // Mobile's sidebar is a manually-toggled full-width overlay - the auto-collapse rail is a
+    // desktop-only affordance, so drop any collapsed/hover state left over from a resize.
+    clearSidebarCollapseTimer()
+    sidebarCollapsed.value = false
+    sidebarHovering.value = false
+  }
 }
 
 // Presence heartbeat: while any authenticated page (not just chat) is open, periodically tell
@@ -503,6 +526,7 @@ let messagesTimer: ReturnType<typeof setInterval> | null = null
 
 onMounted(() => {
   window.addEventListener('resize', applyResponsiveSidebar)
+  scheduleSidebarCollapse()
   sendPresencePing()
   presenceTimer = setInterval(sendPresencePing, PRESENCE_PING_INTERVAL_MS)
 
@@ -517,6 +541,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', applyResponsiveSidebar)
+  clearSidebarCollapseTimer()
   if (presenceTimer) clearInterval(presenceTimer)
   if (notificationsTimer) clearInterval(notificationsTimer)
   document.removeEventListener('mousedown', handleOutsideNotificationClick)

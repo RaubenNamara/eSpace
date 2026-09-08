@@ -245,7 +245,7 @@
                 </table>
               </div>
               <div v-if="attempts.length > 0" class="sm:hidden space-y-2">
-                <div v-for="at in attempts" :key="at.id" class="bg-gray-50 dark:bg-gray-900/40 rounded-xl p-3">
+                <div v-for="at in attempts" :key="at.id" class="bg-gray-50 dark:bg-gray-950/40 rounded-xl p-3">
                   <div class="flex items-center justify-between">
                     <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ at.student_name }}</p>
                     <span class="text-xs font-semibold" :class="at.score !== null ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400'">{{ at.score ?? '-' }}</span>
@@ -341,7 +341,7 @@
               <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">3D Objects in Scene</p>
               <button @click="addSceneObject" class="text-xs font-semibold text-indigo-600 dark:text-indigo-400">+ Add Object</button>
             </div>
-            <div v-for="(o, i) in form.scene_objects" :key="i" class="bg-gray-50 dark:bg-gray-900/40 sm:bg-transparent dark:sm:bg-transparent rounded-lg p-2 sm:p-0 mb-2">
+            <div v-for="(o, i) in form.scene_objects" :key="i" class="bg-gray-50 dark:bg-gray-950/40 sm:bg-transparent dark:sm:bg-transparent rounded-lg p-2 sm:p-0 mb-2">
               <div class="grid grid-cols-2 sm:grid-cols-12 gap-2 sm:items-center">
                 <select v-model="o.object_type" class="input-field col-span-2 sm:col-span-4 text-xs">
                   <option v-for="obj in objectCatalog" :key="obj.object_type" :value="obj.object_type">{{ obj.icon }} {{ obj.display_name }}</option>
@@ -363,7 +363,7 @@
               <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">Experiment Steps</p>
               <button @click="addStep" class="text-xs font-semibold text-indigo-600 dark:text-indigo-400">+ Add Step</button>
             </div>
-            <div v-for="(s, i) in form.steps" :key="i" class="bg-gray-50 dark:bg-gray-900/40 rounded-xl p-3 mb-2 space-y-2">
+            <div v-for="(s, i) in form.steps" :key="i" class="bg-gray-50 dark:bg-gray-950/40 rounded-xl p-3 mb-2 space-y-2">
               <div class="flex items-center justify-between"><span class="text-xs font-bold text-indigo-500 dark:text-indigo-400">Step {{ Number(i) + 1 }}</span><button @click="form.steps.splice(i, 1)" class="text-red-500 text-xs font-medium">Remove</button></div>
               <input v-model="s.instruction" placeholder="Instruction" class="input-field w-full text-xs">
               <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
@@ -424,7 +424,7 @@
               <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">Questions</p>
               <button @click="addQuestion" class="text-xs font-semibold text-indigo-600 dark:text-indigo-400">+ Add Question</button>
             </div>
-            <div v-for="(q, i) in form.questions" :key="i" class="bg-gray-50 dark:bg-gray-900/40 rounded-xl p-2.5 mb-2 space-y-2">
+            <div v-for="(q, i) in form.questions" :key="i" class="bg-gray-50 dark:bg-gray-950/40 rounded-xl p-2.5 mb-2 space-y-2">
               <div class="grid grid-cols-2 sm:grid-cols-12 gap-2 sm:items-center">
                 <input v-model="q.question_text" placeholder="Question" class="input-field col-span-2 sm:col-span-6 text-xs">
                 <select v-model="q.question_type" class="input-field sm:col-span-3 text-xs">
@@ -501,12 +501,12 @@
         </div>
 
         <div class="grid grid-cols-3 sm:grid-cols-6 gap-2 text-center">
-          <div class="bg-gray-50 dark:bg-gray-900/40 rounded-lg py-2"><p class="text-sm font-bold text-gray-900 dark:text-white">{{ gradingAttempt.steps_completed }}/{{ gradingAttempt.total_steps }}</p><p class="text-[10px] text-gray-400">Steps</p></div>
-          <div class="bg-gray-50 dark:bg-gray-900/40 rounded-lg py-2"><p class="text-sm font-bold text-green-600 dark:text-green-400">{{ gradingAttempt.correct_actions }}</p><p class="text-[10px] text-gray-400">Correct</p></div>
-          <div class="bg-gray-50 dark:bg-gray-900/40 rounded-lg py-2"><p class="text-sm font-bold text-red-500 dark:text-red-400">{{ gradingAttempt.wrong_actions }}</p><p class="text-[10px] text-gray-400">Retries</p></div>
-          <div class="bg-gray-50 dark:bg-gray-900/40 rounded-lg py-2"><p class="text-sm font-bold text-amber-500 dark:text-amber-400">{{ gradingAttempt.hints_used }}</p><p class="text-[10px] text-gray-400">Hints</p></div>
-          <div class="rounded-lg py-2" :class="gradingAttempt.safety_mistakes > 0 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-gray-50 dark:bg-gray-900/40'"><p class="text-sm font-bold" :class="gradingAttempt.safety_mistakes > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'">{{ gradingAttempt.safety_mistakes }}</p><p class="text-[10px] text-gray-400">Safety Errors</p></div>
-          <div class="bg-gray-50 dark:bg-gray-900/40 rounded-lg py-2"><p class="text-sm font-bold text-gray-900 dark:text-white">{{ Math.round(gradingAttempt.time_spent_seconds / 60) }}m</p><p class="text-[10px] text-gray-400">Time</p></div>
+          <div class="bg-gray-50 dark:bg-gray-950/40 rounded-lg py-2"><p class="text-sm font-bold text-gray-900 dark:text-white">{{ gradingAttempt.steps_completed }}/{{ gradingAttempt.total_steps }}</p><p class="text-[10px] text-gray-400">Steps</p></div>
+          <div class="bg-gray-50 dark:bg-gray-950/40 rounded-lg py-2"><p class="text-sm font-bold text-green-600 dark:text-green-400">{{ gradingAttempt.correct_actions }}</p><p class="text-[10px] text-gray-400">Correct</p></div>
+          <div class="bg-gray-50 dark:bg-gray-950/40 rounded-lg py-2"><p class="text-sm font-bold text-red-500 dark:text-red-400">{{ gradingAttempt.wrong_actions }}</p><p class="text-[10px] text-gray-400">Retries</p></div>
+          <div class="bg-gray-50 dark:bg-gray-950/40 rounded-lg py-2"><p class="text-sm font-bold text-amber-500 dark:text-amber-400">{{ gradingAttempt.hints_used }}</p><p class="text-[10px] text-gray-400">Hints</p></div>
+          <div class="rounded-lg py-2" :class="gradingAttempt.safety_mistakes > 0 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-gray-50 dark:bg-gray-950/40'"><p class="text-sm font-bold" :class="gradingAttempt.safety_mistakes > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'">{{ gradingAttempt.safety_mistakes }}</p><p class="text-[10px] text-gray-400">Safety Errors</p></div>
+          <div class="bg-gray-50 dark:bg-gray-950/40 rounded-lg py-2"><p class="text-sm font-bold text-gray-900 dark:text-white">{{ Math.round(gradingAttempt.time_spent_seconds / 60) }}m</p><p class="text-[10px] text-gray-400">Time</p></div>
         </div>
 
         <!-- Sub-tabs -->
@@ -528,7 +528,7 @@
             <div class="overflow-x-auto">
               <table class="w-full text-xs border-collapse">
                 <thead>
-                  <tr class="bg-gray-50 dark:bg-gray-900/40 text-left text-gray-500 dark:text-gray-400">
+                  <tr class="bg-gray-50 dark:bg-gray-950/40 text-left text-gray-500 dark:text-gray-400">
                     <th v-for="col in Object.keys(notebookResultRows(gradingAttempt)[0]?.extra || {})" :key="col" class="px-3 py-2 font-semibold capitalize">{{ col }}</th>
                   </tr>
                 </thead>
@@ -566,7 +566,7 @@
 
           <div v-if="gradingAttempt.observations.length" class="text-sm">
             <p class="font-semibold text-gray-700 dark:text-gray-300 mb-1">Observations</p>
-            <p v-for="(o, i) in gradingAttempt.observations" :key="i" class="text-gray-600 dark:text-gray-300 italic bg-gray-50 dark:bg-gray-900/40 rounded-lg p-2.5">{{ o.text }}</p>
+            <p v-for="(o, i) in gradingAttempt.observations" :key="i" class="text-gray-600 dark:text-gray-300 italic bg-gray-50 dark:bg-gray-950/40 rounded-lg p-2.5">{{ o.text }}</p>
           </div>
 
           <!-- Per-question marking - separate from the single overall Score below, which stays the
@@ -574,7 +574,7 @@
                pre-filled just because an answer exists (empty until the teacher enters a value). -->
           <div v-if="generalAnswers(gradingAttempt).length" class="text-sm space-y-2">
             <p class="font-semibold text-gray-700 dark:text-gray-300">Answers</p>
-            <div v-for="a in generalAnswers(gradingAttempt)" :key="a.question_id" class="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-2.5 space-y-1.5">
+            <div v-for="a in generalAnswers(gradingAttempt)" :key="a.question_id" class="bg-gray-50 dark:bg-gray-950/40 rounded-lg p-2.5 space-y-1.5">
               <p class="text-xs text-gray-400">
                 <span v-if="a.stage !== 'after_experiment'" class="inline-block px-1.5 py-0.5 mr-1 rounded text-[10px] font-bold uppercase bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-300 align-middle">{{ a.stage.replace('_', ' ') }}</span>
                 {{ a.question_text }} ({{ a.question_marks }} marks)

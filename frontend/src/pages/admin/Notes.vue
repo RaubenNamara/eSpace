@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-950">
     <div class="px-4 sm:px-6 lg:px-8 py-8">
       <!-- Header -->
       <div class="mb-8">
@@ -68,7 +68,7 @@
         </div>
         <div class="overflow-x-auto">
           <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700">
-            <thead class="bg-gray-50 dark:bg-gray-900">
+            <thead class="bg-gray-50 dark:bg-gray-950">
               <tr>
                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Teacher</th>
                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Department</th>
@@ -157,7 +157,7 @@
                   class="group relative flex flex-col items-center justify-center gap-1 w-24 h-20 rounded-xl border-2 transition-all"
                   :class="selectedStreams[group.key] === stream.key
                     ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 shadow-md'
-                    : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 hover:border-emerald-300 hover:shadow-sm'"
+                    : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-950/40 hover:border-emerald-300 hover:shadow-sm'"
                 >
                   <span
                     class="text-lg font-bold"
@@ -185,7 +185,7 @@
                   <div
                     v-for="topic in subject.topics"
                     :key="topic.id"
-                    class="bg-gray-50 dark:bg-gray-900/40 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow"
+                    class="bg-gray-50 dark:bg-gray-950/40 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow"
                   >
                     <div class="p-6">
                       <div class="flex items-start justify-between mb-3 gap-2">
