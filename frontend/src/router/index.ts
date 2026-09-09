@@ -221,15 +221,24 @@ const routes: RouteRecordRaw[] = [
       { path: 'assignments/:id/edit', name: 'AssignmentEdit', component: AssignmentBuilder },
       { path: 'assignments/:id/submissions', name: 'AssignmentSubmissions', component: AssignmentSubmissions },
       { path: 'assignments/:id/preview', name: 'TeacherAssignmentPreview', component: StudentAssignmentAnswer, meta: { previewRole: 'teacher' } },
-      { path: 'preview', name: 'StudentPreview', component: StudentPreview },
-      { path: 'preview/classes/:classId', name: 'ClassmatesPreview', component: ClassmatesPreview },
-      { path: 'preview/library/:classId', name: 'LibraryPreview', component: LibraryPreview },
-      { path: 'preview/itembank/:classId', name: 'ItemBankPreview', component: ItemBankPreview },
-      { path: 'preview/live-classes/:classId', name: 'LiveClassesPreview', component: LiveClassesPreview },
-      { path: 'preview/videos/:classId', name: 'VideosPreview', component: VideosPreview },
-      { path: 'preview/enotes/:classId', name: 'ENotesPreview', component: ENotesPreview },
-      { path: 'preview/enotes/:classId/topics/:id', name: 'ENotesTopicPreview', component: ENotePreview, meta: { previewRole: 'teacher' } },
-      { path: 'preview/virtual-lab/:classId', name: 'VirtualLabPreview', component: VirtualLabPreview },
+      {
+        // Nested (not flat siblings) so the module content renders inside StudentPreview's own
+        // <router-view>, keeping the class/stream/module picker mounted and visible above it -
+        // switching modules no longer feels like leaving the page.
+        path: 'preview',
+        name: 'StudentPreview',
+        component: StudentPreview,
+        children: [
+          { path: 'classes/:classId', name: 'ClassmatesPreview', component: ClassmatesPreview },
+          { path: 'library/:classId', name: 'LibraryPreview', component: LibraryPreview },
+          { path: 'itembank/:classId', name: 'ItemBankPreview', component: ItemBankPreview },
+          { path: 'live-classes/:classId', name: 'LiveClassesPreview', component: LiveClassesPreview },
+          { path: 'videos/:classId', name: 'VideosPreview', component: VideosPreview },
+          { path: 'enotes/:classId', name: 'ENotesPreview', component: ENotesPreview },
+          { path: 'enotes/:classId/topics/:id', name: 'ENotesTopicPreview', component: ENotePreview, meta: { previewRole: 'teacher' } },
+          { path: 'virtual-lab/:classId', name: 'VirtualLabPreview', component: VirtualLabPreview },
+        ]
+      },
       { path: 'library', name: 'TeacherLibrary', component: TeacherLibrary },
       { path: 'videos', name: 'TeacherVideos', component: TeacherVideos },
       { path: 'notes', name: 'TeacherNotes', component: TeacherNotes },
