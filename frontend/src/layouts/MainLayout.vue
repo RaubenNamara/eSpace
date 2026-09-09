@@ -174,8 +174,12 @@
 
     <!-- Main Content -->
     <div class="min-h-screen flex flex-col transition-all duration-300 ml-0" :class="{ 'lg:ml-[248px]': sidebarOpen && !sidebarCollapsed, 'lg:ml-[88px]': sidebarOpen && sidebarCollapsed }">
-      <!-- Top Bar -->
-      <header class="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-40">
+      <!-- Top Bar - hides on scroll-down and reappears on scroll-up (like the Landing header),
+           so it doesn't permanently eat vertical space on long pages. -->
+      <header
+        class="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-40 transition-transform duration-300"
+        :class="{ '-translate-y-full': headerHidden }"
+      >
         <div class="flex items-center justify-between px-6 py-4">
           <button
             @click="sidebarOpen = !sidebarOpen"
@@ -456,6 +460,24 @@ const applyResponsiveSidebar = () => {
   }
 }
 
+// Top bar hide-on-scroll: hidden while scrolling down past a small threshold, shown again on
+// any scroll up or near the top - mirrors the Landing page header behaviour.
+const HEADER_SHOW_THRESHOLD_PX = 80
+const headerHidden = ref(false)
+let lastScrollY = typeof window !== 'undefined' ? window.scrollY : 0
+
+const handleHeaderScroll = () => {
+  const currentY = window.scrollY
+  if (currentY < HEADER_SHOW_THRESHOLD_PX) {
+    headerHidden.value = false
+  } else if (currentY > lastScrollY) {
+    headerHidden.value = true
+  } else if (currentY < lastScrollY) {
+    headerHidden.value = false
+  }
+  lastScrollY = currentY
+}
+
 // Presence heartbeat: while any authenticated page (not just chat) is open, periodically tell
 // the backend this user is active - lets chat show a WhatsApp-style online dot for everyone,
 // not just people currently viewing the chat screen itself.
@@ -510,6 +532,7 @@ let messagesTimer: ReturnType<typeof setInterval> | null = null
 
 onMounted(() => {
   window.addEventListener('resize', applyResponsiveSidebar)
+  window.addEventListener('scroll', handleHeaderScroll, { passive: true })
   scheduleSidebarCollapse()
   sendPresencePing()
   presenceTimer = setInterval(sendPresencePing, PRESENCE_PING_INTERVAL_MS)
@@ -525,6 +548,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', applyResponsiveSidebar)
+  window.removeEventListener('scroll', handleHeaderScroll)
   clearSidebarCollapseTimer()
   if (presenceTimer) clearInterval(presenceTimer)
   if (notificationsTimer) clearInterval(notificationsTimer)

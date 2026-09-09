@@ -1,36 +1,40 @@
 <template>
   <div>
     <!-- The topbar already shows this teacher's name and photo, so this line is just a quick
-         personal greeting rather than a redundant "Teacher Dashboard" title + icon badge. -->
-    <h1 class="text-xl font-bold text-gray-900 dark:text-white mb-4">{{ greeting }}, {{ authStore.userName }} 👋</h1>
+         personal greeting rather than a redundant "Teacher Dashboard" title + icon badge. The
+         department strip sits in the same row (rather than stacked below) so both fit on one
+         line instead of using two. -->
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <h1 class="text-xl font-bold text-gray-900 dark:text-white">{{ greeting }}, {{ authStore.userName }} 👋</h1>
 
-    <!-- Department Info - a slim identity strip rather than a full hero card, since it's just
-         context (which department this data belongs to), not a headline number. "View Enrolled
-         Students" lives here as a compact link instead of its own header button, and "Preview as
-         Student" was dropped entirely - it's already one click away in the sidebar. -->
-    <div v-if="analytics.department" class="hidden sm:flex flex-wrap items-center gap-x-3 gap-y-1.5 bg-indigo-600 text-white rounded-lg px-4 py-2 mb-4 text-sm">
-      <span class="font-semibold">{{ analytics.department.name }}</span>
-      <span class="text-indigo-200 truncate">{{ analytics.department.code }} &middot; {{ analytics.department.description }}</span>
+      <!-- Department Info - a slim identity strip rather than a full hero card, since it's just
+           context (which department this data belongs to), not a headline number. "View Enrolled
+           Students" lives here as a compact link instead of its own header button, and "Preview as
+           Student" was dropped entirely - it's already one click away in the sidebar. -->
+      <div v-if="analytics.department" class="hidden sm:flex flex-wrap items-center gap-x-3 gap-y-1.5 bg-indigo-600 text-white rounded-lg px-4 py-2 text-sm">
+        <span class="font-semibold">{{ analytics.department.name }}</span>
+        <span class="text-indigo-200 truncate">{{ analytics.department.code }} &middot; {{ analytics.department.description }}</span>
 
-      <!-- Department switcher - only shown when the teacher belongs to more than one -->
-      <select
-        v-if="myDepartments.length > 1"
-        :value="activeDepartmentId"
-        @change="switchDepartment(($event.target as HTMLSelectElement).value)"
-        :disabled="switchingDepartment"
-        class="text-xs rounded-md bg-white/20 border border-white/30 text-white px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-white/50 disabled:opacity-50"
-      >
-        <option v-for="dept in myDepartments" :key="dept.id" :value="dept.id" class="text-gray-900">
-          {{ dept.name }}{{ dept.is_primary ? ' (Primary)' : '' }}
-        </option>
-      </select>
+        <!-- Department switcher - only shown when the teacher belongs to more than one -->
+        <select
+          v-if="myDepartments.length > 1"
+          :value="activeDepartmentId"
+          @change="switchDepartment(($event.target as HTMLSelectElement).value)"
+          :disabled="switchingDepartment"
+          class="text-xs rounded-md bg-white/20 border border-white/30 text-white px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-white/50 disabled:opacity-50"
+        >
+          <option v-for="dept in myDepartments" :key="dept.id" :value="dept.id" class="text-gray-900">
+            {{ dept.name }}{{ dept.is_primary ? ' (Primary)' : '' }}
+          </option>
+        </select>
 
-      <button
-        @click="openViewEnrolledModal"
-        class="ml-auto text-xs font-semibold text-white/90 hover:text-white hover:underline underline-offset-2 flex-shrink-0"
-      >
-        View Enrolled Students
-      </button>
+        <button
+          @click="openViewEnrolledModal"
+          class="text-xs font-semibold text-white/90 hover:text-white hover:underline underline-offset-2 flex-shrink-0"
+        >
+          View Enrolled Students
+        </button>
+      </div>
     </div>
 
     <!-- Quick Access - the fast path into a teacher's most-used modules, front and centre so
@@ -146,7 +150,7 @@
       </RouterLink>
     </div>
 
-    <!-- Enrollments by Class-Stream -->
+    <!-- Enrollment by Stream -->
     <div class="card mb-8">
       <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1 flex items-center">
         <span class="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/20 flex items-center justify-center mr-2.5 flex-shrink-0">
@@ -154,7 +158,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
           </svg>
         </span>
-        Enrollments by Class-Stream
+        Enrollment by Stream
       </h3>
       <p class="text-sm text-gray-500 dark:text-gray-400 mb-4 ml-[42px]">How your students are distributed across each class-stream</p>
       <div class="h-72">
@@ -171,7 +175,7 @@
 
     <!-- Analytics Charts -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-      <!-- Enrollments by Academic Year -->
+      <!-- Enrollment by Year -->
       <div class="card">
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1 flex items-center">
           <span class="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-900/20 flex items-center justify-center mr-2.5 flex-shrink-0">
@@ -179,7 +183,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
             </svg>
           </span>
-          Enrollments by Academic Year
+          Enrollment by Year
         </h3>
         <p class="text-sm text-gray-500 dark:text-gray-400 mb-4 ml-[42px]">Enrollment trend across academic years</p>
         <div class="h-64">
