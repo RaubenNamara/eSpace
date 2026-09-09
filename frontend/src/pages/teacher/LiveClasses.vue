@@ -1,15 +1,38 @@
 <template>
   <div class="p-6">
-    <!-- Header -->
-    <div class="flex items-center gap-4 mb-6">
-      <div class="w-14 h-14 rounded-2xl bg-red-600 flex items-center justify-center shadow-lg shadow-red-500/20 flex-shrink-0">
-        <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-        </svg>
-      </div>
+    <!-- Header - icon stacked above the title (instead of beside it) and the description
+         shrunk down small, so this whole block takes less vertical space. The status filter and
+         "Schedule Class" action live on this same row instead of a separate row below the
+         stats, saving another full row of height. -->
+    <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
       <div>
-        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white leading-tight">Live Classes</h1>
-        <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">Host real-time video sessions with BigBlueButton</p>
+        <div class="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center mb-1.5">
+          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+          </svg>
+        </div>
+        <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-tight">Live Classes</h1>
+        <p class="text-xs text-gray-500 dark:text-gray-400">Host real-time video sessions with BigBlueButton</p>
+      </div>
+
+      <div class="flex items-center gap-3 flex-wrap">
+        <select v-model="statusFilter" class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 dark:bg-gray-700 dark:text-white">
+          <option value="">All Status</option>
+          <option value="scheduled">Scheduled</option>
+          <option value="started">Live Now</option>
+          <option value="ended">Ended</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+
+        <button
+          @click="openCreateModal"
+          class="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-1.5 text-sm shadow-sm shadow-red-500/20"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+          </svg>
+          <span>Schedule Class</span>
+        </button>
       </div>
     </div>
 
@@ -22,45 +45,44 @@
       </p>
     </div>
 
-    <!-- Stats -->
+    <!-- Stats - clickable to filter the list below (Live Now instead jumps straight into the
+         session if one is running); the count sits as a corner badge rather than its own line
+         so each card is shorter and the label can be centered. -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700">
-        <p class="text-sm text-gray-500 dark:text-gray-400">Total</p>
-        <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1">{{ stats.total }}</p>
-      </div>
-      <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700">
-        <p class="text-sm text-gray-500 dark:text-gray-400">Scheduled</p>
-        <p class="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">{{ stats.scheduled }}</p>
-      </div>
-      <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 relative overflow-hidden">
-        <div v-if="stats.started > 0" class="absolute top-3 right-3 w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
-        <p class="text-sm text-gray-500 dark:text-gray-400">Live Now</p>
-        <p class="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">{{ stats.started }}</p>
-      </div>
-      <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700">
-        <p class="text-sm text-gray-500 dark:text-gray-400">Ended</p>
-        <p class="text-2xl font-bold text-gray-600 dark:text-gray-400 mt-1">{{ stats.ended }}</p>
-      </div>
-    </div>
-
-    <!-- Actions -->
-    <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
-      <select v-model="statusFilter" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 dark:bg-gray-700 dark:text-white">
-        <option value="">All Status</option>
-        <option value="scheduled">Scheduled</option>
-        <option value="started">Live Now</option>
-        <option value="ended">Ended</option>
-        <option value="cancelled">Cancelled</option>
-      </select>
-
       <button
-        @click="openCreateModal"
-        class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 shadow-sm shadow-red-500/20"
+        @click="statusFilter = ''"
+        class="relative bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border transition-shadow hover:shadow-md text-center"
+        :class="statusFilter === '' ? 'border-red-300 dark:border-red-700 ring-1 ring-red-100 dark:ring-red-900/30' : 'border-gray-200 dark:border-gray-700'"
       >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-        </svg>
-        <span>Schedule Class</span>
+        <span class="absolute top-2 right-3 text-lg font-bold text-gray-900 dark:text-white">{{ stats.total }}</span>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Total</p>
+      </button>
+      <button
+        @click="statusFilter = 'scheduled'"
+        class="relative bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border transition-shadow hover:shadow-md text-center"
+        :class="statusFilter === 'scheduled' ? 'border-blue-300 dark:border-blue-700 ring-1 ring-blue-100 dark:ring-blue-900/30' : 'border-gray-200 dark:border-gray-700'"
+      >
+        <span class="absolute top-2 right-3 text-lg font-bold text-blue-600 dark:text-blue-400">{{ stats.scheduled }}</span>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Scheduled</p>
+      </button>
+      <button
+        @click="goToLiveOrFilter"
+        class="relative bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border transition-shadow hover:shadow-md text-center"
+        :class="statusFilter === 'started' ? 'border-red-300 dark:border-red-700 ring-1 ring-red-100 dark:ring-red-900/30' : 'border-gray-200 dark:border-gray-700'"
+      >
+        <span class="absolute top-2 right-3 flex items-center gap-1.5">
+          <span v-if="stats.started > 0" class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+          <span class="text-lg font-bold text-red-600 dark:text-red-400">{{ stats.started }}</span>
+        </span>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Live Now</p>
+      </button>
+      <button
+        @click="statusFilter = 'ended'"
+        class="relative bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border transition-shadow hover:shadow-md text-center"
+        :class="statusFilter === 'ended' ? 'border-gray-400 dark:border-gray-500 ring-1 ring-gray-200 dark:ring-gray-700' : 'border-gray-200 dark:border-gray-700'"
+      >
+        <span class="absolute top-2 right-3 text-lg font-bold text-gray-600 dark:text-gray-400">{{ stats.ended }}</span>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Ended</p>
       </button>
     </div>
 
@@ -384,6 +406,18 @@ const filteredClasses = computed(() => {
   if (!statusFilter.value) return classes.value
   return classes.value.filter(c => c.status === statusFilter.value)
 })
+
+// "Live Now" card jumps straight into whichever class is currently running instead of just
+// filtering the list - there's rarely more than one live session at a time, so joining it
+// directly saves the extra click of finding it in the (already filtered) list below.
+const goToLiveOrFilter = () => {
+  const liveClass = classes.value.find(c => c.status === 'started')
+  if (liveClass) {
+    joinClass(liveClass)
+  } else {
+    statusFilter.value = 'started'
+  }
+}
 
 const statusLabel = (status: string) => {
   if (status === 'started') return 'LIVE'
