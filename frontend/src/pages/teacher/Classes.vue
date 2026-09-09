@@ -82,45 +82,41 @@
 
     <!-- Students in the selected stream, nested one level further. -->
     <div v-if="selectedClass" class="card ml-1">
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-        <div>
-          <h2 class="text-lg font-bold text-gray-900 dark:text-white">{{ selectedClass.name }} - {{ selectedClass.stream_name || 'No Stream' }}</h2>
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+        <h2 class="text-base font-bold text-gray-900 dark:text-white">{{ selectedClass.name }} - {{ selectedClass.stream_name || 'No Stream' }}</h2>
+
+        <div class="flex items-center gap-3">
+          <label class="flex items-center gap-1.5">
+            <input
+              type="checkbox"
+              v-model="selectAll"
+              class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+            >
+            <span class="text-sm text-gray-600 dark:text-gray-400">Select All</span>
+          </label>
+
+          <button
+            v-if="selectedStudents.length > 0"
+            @click="bulkDeEnroll"
+            class="btn-danger !px-2.5 !py-1 text-xs"
+          >
+            De-enroll ({{ selectedStudents.length }})
+          </button>
         </div>
-        <button
-          @click="bulkDeEnroll"
-          :disabled="selectedStudents.length === 0"
-          class="btn-danger !px-4 !py-2 text-sm self-start sm:self-auto"
-        >
-          De-enroll Selected ({{ selectedStudents.length }})
-        </button>
       </div>
 
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-        <label class="flex items-center gap-2">
-          <input
-            type="checkbox"
-            v-model="selectAll"
-            class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-          >
-          <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Select All</span>
-          <span class="text-xs text-gray-400 dark:text-gray-500">
-            ({{ filteredStudents.length }}{{ studentSearch ? ` of ${students.length}` : '' }})
-          </span>
-        </label>
-
-        <!-- Searches the currently-loaded students in this stream, client-side - no extra
-             request needed since the whole stream's roster is already in memory. -->
-        <div class="relative w-full sm:w-64">
-          <svg class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-          </svg>
-          <input
-            v-model="studentSearch"
-            type="text"
-            placeholder="Search students..."
-            class="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-          >
-        </div>
+      <!-- Searches the currently-loaded students in this stream, client-side - no extra
+           request needed since the whole stream's roster is already in memory. -->
+      <div class="relative w-full sm:w-64 mb-3">
+        <svg class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+        </svg>
+        <input
+          v-model="studentSearch"
+          type="text"
+          placeholder="Search students..."
+          class="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+        >
       </div>
 
       <div v-if="loadingStudents" class="text-center py-12 text-gray-500">Loading students...</div>
