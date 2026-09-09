@@ -1,90 +1,50 @@
 <template>
   <div>
-    <div class="flex items-center gap-4 mb-6">
-      <div class="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 flex-shrink-0">
-        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-        </svg>
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0">
+          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+          </svg>
+        </div>
+        <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Preview as Student</h1>
       </div>
-      <div>
-        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white leading-tight">Preview as Student</h1>
-        <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">See exactly what your students see, in any of your classes</p>
+
+      <div v-if="classes.length > 0" class="flex items-center gap-2">
+        <label class="text-sm font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">Class</label>
+        <select
+          v-model="selectedStreamId"
+          class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+        >
+          <option value="">Select a class...</option>
+          <optgroup v-for="group in classGroups" :key="group.name + group.level" :label="group.name">
+            <option v-for="stream in group.streams" :key="stream.id" :value="stream.id">
+              {{ group.name }}{{ stream.stream_name ? ' - ' + stream.stream_name : '' }} ({{ stream.student_count }})
+            </option>
+          </optgroup>
+        </select>
       </div>
     </div>
 
-    <div v-if="loading" class="text-center py-16">
+    <div v-if="loading" class="text-center py-10">
       <div class="inline-block animate-spin rounded-full h-8 w-8 border-2 border-gray-200 dark:border-gray-700 border-t-indigo-600"></div>
     </div>
 
-    <div v-else-if="classGroups.length === 0" class="text-center py-16 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700">
+    <div v-else-if="classes.length === 0" class="text-center py-10 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700">
       <p class="text-gray-500 dark:text-gray-400">No classes found in your department yet.</p>
     </div>
 
     <template v-else>
-      <!-- Classes - one row. Clicking a class expands its streams below without this row
-           disappearing, matching the drill-down pattern used in My Classes. -->
-      <div class="mb-4">
-        <p class="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">Choose a class</p>
-        <div class="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
-          <button
-            v-for="group in classGroups"
-            :key="group.name + group.level"
-            @click="toggleGroup(group)"
-            class="flex-shrink-0 w-40 text-left card !p-3.5 transition-all duration-200 border-2 hover:opacity-100 hover:blur-0"
-            :class="[
-              selectedGroup === group ? 'border-indigo-500 dark:border-indigo-400' : 'border-transparent hover:border-indigo-200 dark:hover:border-indigo-800',
-              { 'opacity-40 blur-[1px]': selectedGroup && selectedGroup !== group }
-            ]"
-          >
-            <div class="flex items-center gap-2 mb-1.5">
-              <div class="w-8 h-8 bg-indigo-100 dark:bg-indigo-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                <svg class="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                </svg>
-              </div>
-              <p class="font-medium text-sm text-gray-900 dark:text-white truncate">{{ group.name }}</p>
-            </div>
-            <p class="text-xs text-gray-500 dark:text-gray-400">
-              {{ group.streams.length }} stream{{ group.streams.length === 1 ? '' : 's' }} &middot; {{ group.totalStudents }} students
-            </p>
-          </button>
-        </div>
+      <div v-if="!selectedStream" class="text-center py-10 bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700">
+        <p class="text-sm text-gray-500 dark:text-gray-400">Pick a class above to see its preview options.</p>
       </div>
 
-      <!-- Streams for the selected class - nested visually, same blur-on-sibling behaviour. -->
-      <div v-if="selectedGroup" class="mb-4 pl-3 ml-1 border-l-2 border-indigo-200 dark:border-indigo-800">
-        <p class="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">{{ selectedGroup.name }} Streams</p>
-        <div v-if="selectedGroup.streams.length === 0" class="text-sm text-gray-500 dark:text-gray-400 py-2">No streams found</div>
-        <div v-else class="flex gap-3 overflow-x-auto pb-1">
-          <button
-            v-for="stream in selectedGroup.streams"
-            :key="stream.id"
-            @click="toggleStream(stream)"
-            class="flex-shrink-0 w-40 text-left card !p-3.5 transition-all duration-200 border-2 hover:opacity-100 hover:blur-0"
-            :class="[
-              selectedStream === stream ? 'border-indigo-500 dark:border-indigo-400' : 'border-transparent hover:border-indigo-200 dark:hover:border-indigo-800',
-              { 'opacity-40 blur-[1px]': selectedStream && selectedStream !== stream }
-            ]"
-          >
-            <div class="flex items-center gap-2 mb-1.5">
-              <div class="w-7 h-7 bg-indigo-100 dark:bg-indigo-900/20 rounded-md flex items-center justify-center flex-shrink-0">
-                <svg class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                </svg>
-              </div>
-              <p class="font-medium text-sm text-gray-900 dark:text-white truncate">Stream {{ stream.stream_name || 'N/A' }}</p>
-            </div>
-            <p class="text-xs text-gray-500 dark:text-gray-400">{{ stream.student_count }} students</p>
-          </button>
-        </div>
-      </div>
-
-      <!-- Modules for the selected class-stream, nested one level further - same blur-on-sibling
+      <!-- Modules for the selected class-stream - same blur-on-sibling
            row, smaller cards, one indigo color throughout so it reads as the final step. Clicking
            one opens its content in the <router-view> below without leaving this page - the picker
            above stays put and the other module cards blur, just like the class/stream rows. -->
-      <div v-if="selectedStream" class="pl-3 ml-1 border-l-2 border-indigo-200 dark:border-indigo-800">
+      <div v-if="selectedStream">
         <p class="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">Modules</p>
         <div class="flex flex-wrap gap-3">
           <template v-for="mod in modules" :key="mod.label">
@@ -145,12 +105,12 @@ const route = useRoute()
 const router = useRouter()
 
 const classes = ref<TeacherClass[]>([])
-const selectedGroup = ref<any>(null)
-const selectedStream = ref<any>(null)
+const selectedStreamId = ref<number | ''>('')
 const loading = ref(false)
 
-// The backend returns one row per class+stream combination - group them here so the picker
-// shows one card per class (e.g. "S.6") with its streams nested inside, same as My Classes.
+// The backend returns one row per class+stream combination - group them here so the dropdown
+// shows an optgroup per class (e.g. "S.6") with its streams as options, same grouping used in
+// My Classes.
 const classGroups = computed(() => {
   const groups = new Map<string, { name: string; level: string; streams: TeacherClass[]; totalStudents: number }>()
   for (const cls of classes.value) {
@@ -165,14 +125,10 @@ const classGroups = computed(() => {
   return Array.from(groups.values())
 })
 
-const toggleGroup = (group: any) => {
-  selectedGroup.value = selectedGroup.value === group ? null : group
-  selectedStream.value = null
-}
-
-const toggleStream = (stream: any) => {
-  selectedStream.value = selectedStream.value === stream ? null : stream
-}
+const selectedStream = computed<TeacherClass | null>(() => {
+  if (!selectedStreamId.value) return null
+  return classes.value.find(c => c.id === selectedStreamId.value) || null
+})
 
 // Tiny inline icon factory so this file doesn't need eight separate heroicon imports for
 // single-use glyphs - each is just a path/viewBox pair rendered through the same <svg> shell.
@@ -243,13 +199,8 @@ const loadClasses = async () => {
 const initFromRoute = () => {
   const classId = Number(route.params.classId)
   if (!classId) return
-  for (const group of classGroups.value) {
-    const stream = group.streams.find((s: TeacherClass) => s.id === classId)
-    if (stream) {
-      selectedGroup.value = group
-      selectedStream.value = stream
-      return
-    }
+  if (classes.value.some(c => c.id === classId)) {
+    selectedStreamId.value = classId
   }
 }
 
