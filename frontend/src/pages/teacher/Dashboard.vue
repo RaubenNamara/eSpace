@@ -41,9 +41,9 @@
          there's no need to hunt through the sidebar for them. One color throughout (rather than
          a different hue per tile) keeps this section calm since it's pure navigation, not a set
          of distinct statuses worth color-coding. -->
-    <div class="max-w-4xl mx-auto mb-6">
+    <div class="mb-6">
       <h2 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3 text-center">Quick Access</h2>
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-5">
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <QuickLink to="/teacher/classes" label="My Classes" icon="classes" color="indigo" />
         <QuickLink to="/teacher/live-classes" label="Live Classes" icon="live" color="indigo" />
         <QuickLink to="/teacher/enotes" label="eNotes" icon="notes" color="indigo" />
