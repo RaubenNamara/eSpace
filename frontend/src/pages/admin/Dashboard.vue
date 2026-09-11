@@ -5,7 +5,7 @@
          button was dropped too - it just linked to /admin/assessments, already one click away
          in the sidebar's Assessment & Analytics section. -->
     <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-      <h1 class="text-xl font-bold text-gray-900 dark:text-white">{{ greeting }}, {{ authStore.userName }} 👋</h1>
+      <h1 class="text-xl font-bold text-gray-900 dark:text-white">{{ greeting }}, {{ authStore.userName }}</h1>
       <div class="flex flex-wrap gap-3">
         <button
           @click="openViewEnrolledModal"

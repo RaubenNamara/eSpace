@@ -5,7 +5,7 @@
          department strip sits in the same row (rather than stacked below) so both fit on one
          line instead of using two. -->
     <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-      <h1 class="text-xl font-bold text-gray-900 dark:text-white">{{ greeting }}, {{ authStore.userName }} 👋</h1>
+      <h1 class="text-xl font-bold text-gray-900 dark:text-white">{{ greeting }}, {{ authStore.userName }}</h1>
 
       <!-- Department Info - a slim identity strip rather than a full hero card, since it's just
            context (which department this data belongs to), not a headline number. "View Enrolled

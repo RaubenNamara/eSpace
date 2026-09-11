@@ -10,7 +10,7 @@
         </div>
         <div class="min-w-0">
           <h1 class="text-xl sm:text-3xl font-bold text-white leading-tight">
-            {{ greeting }}, {{ authStore.userName }} 👋
+            {{ greeting }}, {{ authStore.userName }}
           </h1>
           <p class="text-sm sm:text-base text-indigo-100 mt-1">
             {{ today }}<span v-if="admissionNumber"> · Admission No. {{ admissionNumber }}</span>
