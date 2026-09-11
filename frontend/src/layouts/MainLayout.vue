@@ -8,8 +8,6 @@
     <aside
       class="overflow-hidden fixed left-0 top-0 bottom-0 lg:left-3 lg:top-3 lg:bottom-3 rounded-none lg:rounded-2xl bg-white dark:bg-slate-900 shadow-lg lg:shadow-2xl lg:shadow-slate-900/10 dark:lg:shadow-black/50 border border-slate-200 dark:border-white/5 transform transition-all duration-300 z-50 flex flex-col"
       :class="[isIconOnly ? 'w-16' : 'w-56', { '-translate-x-full': !sidebarOpen, 'translate-x-0': sidebarOpen }]"
-      @mouseenter="onSidebarMouseEnter"
-      @mouseleave="onSidebarMouseLeave"
     >
       <div class="absolute right-0 top-0 bottom-0 w-1 bg-indigo-500 rounded-r-none lg:rounded-r-2xl pointer-events-none"></div>
 
@@ -164,6 +162,21 @@
         </button>
       </div>
     </aside>
+
+    <!-- Collapse/expand toggle - a small circular arrow straddling the sidebar's right edge,
+         desktop only. Sits outside the sidebar (rather than inside it) so it isn't clipped by
+         the sidebar's own overflow-hidden, and its `left` tracks the sidebar's current width. -->
+    <button
+      v-if="sidebarOpen"
+      @click="sidebarCollapsed = !sidebarCollapsed"
+      :title="isIconOnly ? 'Expand sidebar' : 'Collapse sidebar'"
+      class="hidden lg:flex fixed top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 shadow-md items-center justify-center text-slate-400 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-500/50 transition-all duration-300 z-50"
+      :style="{ left: sidebarToggleLeftPx + 'px' }"
+    >
+      <svg class="w-3.5 h-3.5 transition-transform duration-300" :class="{ 'rotate-180': isIconOnly }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+      </svg>
+    </button>
 
     <!-- Mobile/tablet backdrop - closes the sidebar on outside tap instead of pushing content -->
     <div
@@ -413,50 +426,24 @@ const DESKTOP_BREAKPOINT = 1024
 const sidebarOpen = ref(typeof window !== 'undefined' ? window.innerWidth >= DESKTOP_BREAKPOINT : true)
 const showRoleSwitcher = ref(false)
 
-// Auto-collapsing sidebar (desktop only): shrinks to an icon-only rail after a few seconds of
-// not being hovered, then peeks back out to full width immediately on hover - the width change
-// while hovering doesn't touch the content margin below, so the expanded rail floats as an
-// overlay above the page instead of shoving content sideways every time you glance at it.
-const SIDEBAR_COLLAPSE_DELAY_MS = 4000
+// Collapsible sidebar (desktop only): stays exactly as the user left it - expanded or icon-only
+// rail - until they click the collapse arrow, rather than auto-collapsing after a hover timeout.
+// While collapsed, each nav item's native `title` attribute (set below) shows its label on hover.
 const sidebarCollapsed = ref(false)
-const sidebarHovering = ref(false)
-let sidebarCollapseTimer: ReturnType<typeof setTimeout> | null = null
 
-const isIconOnly = computed(() => sidebarCollapsed.value && !sidebarHovering.value)
+const isIconOnly = computed(() => sidebarCollapsed.value)
 
-const clearSidebarCollapseTimer = () => {
-  if (sidebarCollapseTimer) {
-    clearTimeout(sidebarCollapseTimer)
-    sidebarCollapseTimer = null
-  }
-}
-
-const scheduleSidebarCollapse = () => {
-  clearSidebarCollapseTimer()
-  if (window.innerWidth < DESKTOP_BREAKPOINT) return
-  sidebarCollapseTimer = setTimeout(() => {
-    sidebarCollapsed.value = true
-  }, SIDEBAR_COLLAPSE_DELAY_MS)
-}
-
-const onSidebarMouseEnter = () => {
-  clearSidebarCollapseTimer()
-  sidebarHovering.value = true
-}
-
-const onSidebarMouseLeave = () => {
-  sidebarHovering.value = false
-  scheduleSidebarCollapse()
-}
+// Pixel offset for the collapse-arrow button: it sits centered on the sidebar's right edge,
+// which is 12px (the `lg:left-3` inset) plus the sidebar's own width - since the button is 24px
+// wide, centering it there means its own `left` equals the width exactly (the two 12s cancel).
+const sidebarToggleLeftPx = computed(() => (isIconOnly.value ? 64 : 224))
 
 const applyResponsiveSidebar = () => {
   sidebarOpen.value = window.innerWidth >= DESKTOP_BREAKPOINT
   if (!sidebarOpen.value) {
-    // Mobile's sidebar is a manually-toggled full-width overlay - the auto-collapse rail is a
-    // desktop-only affordance, so drop any collapsed/hover state left over from a resize.
-    clearSidebarCollapseTimer()
+    // Mobile's sidebar is a manually-toggled full-width overlay - the collapsed icon-only rail
+    // is a desktop-only affordance, so drop any collapsed state left over from a resize.
     sidebarCollapsed.value = false
-    sidebarHovering.value = false
   }
 }
 
@@ -533,7 +520,6 @@ let messagesTimer: ReturnType<typeof setInterval> | null = null
 onMounted(() => {
   window.addEventListener('resize', applyResponsiveSidebar)
   window.addEventListener('scroll', handleHeaderScroll, { passive: true })
-  scheduleSidebarCollapse()
   sendPresencePing()
   presenceTimer = setInterval(sendPresencePing, PRESENCE_PING_INTERVAL_MS)
 
@@ -549,7 +535,6 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('resize', applyResponsiveSidebar)
   window.removeEventListener('scroll', handleHeaderScroll)
-  clearSidebarCollapseTimer()
   if (presenceTimer) clearInterval(presenceTimer)
   if (notificationsTimer) clearInterval(notificationsTimer)
   document.removeEventListener('mousedown', handleOutsideNotificationClick)
@@ -595,7 +580,7 @@ const academicMenu = computed(() => {
       { path: '/teacher/classes', label: 'My Classes', icon: 'BookOpenIcon' },
       { path: '/teacher/preview', label: 'Preview as Student', icon: 'AcademicCapIcon' },
       { path: '/teacher/live-classes', label: 'Live Classes', icon: 'VideoCameraIcon' },
-      { path: '/teacher/enotes', label: 'eNotes', icon: 'NoteIcon' }
+      { path: '/teacher/videos', label: 'Videos', icon: 'VideoCameraIcon' }
     ]
   } else if (role === 'hod') {
     return [
@@ -636,8 +621,8 @@ const resourcesMenu = computed(() => {
   } else if (role === 'teacher') {
     return [
       { path: '/teacher/library', label: 'eLibrary', icon: 'LibraryIcon' },
-      { path: '/teacher/videos', label: 'Videos', icon: 'VideoCameraIcon' },
-      { path: '/teacher/itembank', label: 'Item Bank', icon: 'QuestionMarkCircleIcon' }
+      { path: '/teacher/itembank', label: 'Item Bank', icon: 'QuestionMarkCircleIcon' },
+      { path: '/teacher/enotes', label: 'eNotes', icon: 'NoteIcon' }
     ]
   } else if (role === 'hod') {
     return [

@@ -1,82 +1,22 @@
 <template>
   <div class="p-4 sm:p-6">
-    <div class="mb-6 flex items-center gap-3">
-      <div class="hidden sm:flex w-11 h-11 rounded-xl bg-indigo-600 items-center justify-center shadow-lg shadow-indigo-500/30 flex-shrink-0">
-        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-        </svg>
-      </div>
-      <div>
-        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">eNotes</h1>
-        <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">Create and manage interactive note topics for your classes</p>
-      </div>
-    </div>
-
-    <!-- Dashboard Stats -->
-    <div v-if="stats" class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-      <div class="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Topics</p>
-            <p class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{{ stats.total }}</p>
-          </div>
-          <div class="p-2.5 sm:p-3 bg-indigo-100 dark:bg-indigo-900 rounded-lg">
-            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-            </svg>
-          </div>
+    <!-- Header - icon and title share a row with the filters/action, so the dropdowns line up
+         exactly with the heading instead of floating above it; the subtitle drops to its own
+         full-width line underneath. -->
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
+      <div class="flex items-center gap-2.5">
+        <div class="hidden sm:flex w-8 h-8 rounded-lg bg-indigo-600 items-center justify-center flex-shrink-0">
+          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+          </svg>
         </div>
+        <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-tight">eNotes</h1>
       </div>
 
-      <div class="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Draft</p>
-            <p class="text-2xl sm:text-3xl font-bold text-yellow-600 dark:text-yellow-400">{{ stats.draft }}</p>
-          </div>
-          <div class="p-2.5 sm:p-3 bg-yellow-100 dark:bg-yellow-900 rounded-lg">
-            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-            </svg>
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Published</p>
-            <p class="text-2xl sm:text-3xl font-bold text-green-600 dark:text-green-400">{{ stats.published }}</p>
-          </div>
-          <div class="p-2.5 sm:p-3 bg-green-100 dark:bg-green-900 rounded-lg">
-            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Archived</p>
-            <p class="text-2xl sm:text-3xl font-bold text-gray-600 dark:text-gray-400">{{ stats.archived }}</p>
-          </div>
-          <div class="p-2.5 sm:p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
-            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
-            </svg>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Actions -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-      <div class="flex flex-wrap gap-3">
+      <div class="flex flex-wrap items-center gap-2.5">
         <select
           v-model="statusFilter"
-          class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+          class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
         >
           <option value="">All Status</option>
           <option value="draft">Draft</option>
@@ -86,7 +26,7 @@
 
         <select
           v-model="subjectFilter"
-          class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+          class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
           :disabled="!assignments?.subjects || assignments.subjects.length === 0"
         >
           <option value="">All Subjects</option>
@@ -97,7 +37,7 @@
 
         <select
           v-model="classFilter"
-          class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+          class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
           :disabled="!assignments?.classes || assignments.classes.length === 0"
         >
           <option value="">All Classes</option>
@@ -109,16 +49,54 @@
         <div v-if="assignmentsError" class="text-red-600 dark:text-red-400 text-sm flex items-center">
           {{ assignmentsError }}
         </div>
-      </div>
 
+        <button
+          @click="openCreateModal"
+          class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1.5 shadow-sm shadow-indigo-500/20"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+          </svg>
+          <span>Create Topic</span>
+        </button>
+      </div>
+    </div>
+    <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Create and manage interactive note topics for your classes</p>
+
+    <!-- Dashboard Stats - clickable to filter the list below; the count sits as a corner badge
+         so each card is shorter and the label can be centered. -->
+    <div v-if="stats" class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
       <button
-        @click="openCreateModal"
-        class="btn-primary w-full lg:w-auto shadow-lg shadow-indigo-500/30 flex items-center justify-center gap-2 flex-shrink-0"
+        @click="statusFilter = ''"
+        class="relative bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border transition-shadow hover:shadow-md text-center"
+        :class="statusFilter === '' ? 'border-indigo-300 dark:border-indigo-700 ring-1 ring-indigo-100 dark:ring-indigo-900/30' : 'border-gray-200 dark:border-gray-700'"
       >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-        </svg>
-        <span>Create Topic</span>
+        <span class="absolute top-2 right-3 text-lg font-bold text-gray-900 dark:text-white">{{ stats.total }}</span>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Total Topics</p>
+      </button>
+      <button
+        @click="statusFilter = 'draft'"
+        class="relative bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border transition-shadow hover:shadow-md text-center"
+        :class="statusFilter === 'draft' ? 'border-yellow-300 dark:border-yellow-700 ring-1 ring-yellow-100 dark:ring-yellow-900/30' : 'border-gray-200 dark:border-gray-700'"
+      >
+        <span class="absolute top-2 right-3 text-lg font-bold text-yellow-600 dark:text-yellow-400">{{ stats.draft }}</span>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Draft</p>
+      </button>
+      <button
+        @click="statusFilter = 'published'"
+        class="relative bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border transition-shadow hover:shadow-md text-center"
+        :class="statusFilter === 'published' ? 'border-green-300 dark:border-green-700 ring-1 ring-green-100 dark:ring-green-900/30' : 'border-gray-200 dark:border-gray-700'"
+      >
+        <span class="absolute top-2 right-3 text-lg font-bold text-green-600 dark:text-green-400">{{ stats.published }}</span>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Published</p>
+      </button>
+      <button
+        @click="statusFilter = 'archived'"
+        class="relative bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border transition-shadow hover:shadow-md text-center"
+        :class="statusFilter === 'archived' ? 'border-gray-400 dark:border-gray-500 ring-1 ring-gray-200 dark:ring-gray-700' : 'border-gray-200 dark:border-gray-700'"
+      >
+        <span class="absolute top-2 right-3 text-lg font-bold text-gray-600 dark:text-gray-400">{{ stats.archived }}</span>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Archived</p>
       </button>
     </div>
 

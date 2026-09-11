@@ -1,15 +1,13 @@
 <template>
   <div class="p-6">
-    <div class="mb-6">
-      <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Report Cards</h1>
-      <p class="text-gray-600 dark:text-gray-400">View learners' summative assessment reports for your department.</p>
-    </div>
+    <!-- Header - Term selector shares a row with the heading instead of a separate filter bar
+         below it. -->
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
+      <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-tight">Report Cards</h1>
 
-    <!-- Filters -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
-      <div>
-        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Term</label>
-        <select v-model="selectedTermId" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white min-w-[220px]">
+      <div class="flex items-center gap-2">
+        <label class="text-sm font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">Term</label>
+        <select v-model="selectedTermId" class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
           <option :value="null">Select term...</option>
           <option v-for="term in terms" :key="term.id" :value="term.id">
             {{ term.name }}{{ term.academic_year ? ` - ${term.academic_year}` : '' }}{{ term.is_current ? ' (Current)' : '' }}
@@ -17,6 +15,7 @@
         </select>
       </div>
     </div>
+    <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">View learners' summative assessment reports for your department.</p>
 
     <div v-if="error" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6 text-red-600 dark:text-red-400 text-sm">
       {{ error }}

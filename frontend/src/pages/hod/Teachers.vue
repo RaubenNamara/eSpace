@@ -1,30 +1,18 @@
 <template>
   <div>
-    <!-- Hero -->
-    <div class="relative overflow-hidden rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-500/20 p-4 sm:p-5 mb-6">
-      <div class="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-white/10"></div>
-      <div class="absolute -right-3 bottom-0 w-24 h-24 rounded-full bg-white/10"></div>
-      <div class="relative flex items-center gap-3 mb-3">
-        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center shadow-sm flex-shrink-0 ring-2 ring-white/20">
-          <svg class="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <!-- Header - icon and title share a row with the search box, so the input lines up exactly
+         with the heading; the subtitle (with the live count folded in) sits on its own line. -->
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0">
+          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-4-4"></path>
           </svg>
         </div>
-        <div class="min-w-0">
-          <h1 class="text-lg sm:text-2xl font-bold text-white leading-tight">Teachers</h1>
-          <p class="text-xs sm:text-sm text-indigo-100">Teachers in your department</p>
-        </div>
+        <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-tight">Teachers</h1>
       </div>
 
-      <div v-if="!loading" class="relative flex flex-wrap items-center gap-2 mb-3">
-        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-white/15 backdrop-blur-sm text-white">
-          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-4-4"></path></svg>
-          {{ pagination.total }} {{ pagination.total === 1 ? 'teacher' : 'teachers' }}
-        </span>
-      </div>
-
-      <!-- Search -->
-      <div class="relative">
+      <div class="relative w-full sm:w-80">
         <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
         </svg>
@@ -33,10 +21,13 @@
           @input="debouncedSearch"
           type="text"
           placeholder="Search by name, employee number, username or email..."
-          class="relative w-full pl-9 pr-4 py-2 rounded-lg border-0 shadow-md focus:ring-2 focus:ring-white/50 bg-white text-gray-900 dark:bg-gray-800 dark:text-white transition-colors"
+          class="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
         >
       </div>
     </div>
+    <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">
+      Teachers in your department<template v-if="!loading"> &middot; {{ pagination.total }} {{ pagination.total === 1 ? 'teacher' : 'teachers' }}</template>
+    </p>
 
     <!-- Loading -->
     <div v-if="loading" class="rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-6">

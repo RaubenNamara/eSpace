@@ -1,34 +1,15 @@
 <template>
   <div class="p-6">
-    <div class="mb-6">
-      <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Videos</h1>
-      <p class="text-gray-600 dark:text-gray-400">Upload video resources for your classes.</p>
-    </div>
+    <!-- Header - smaller title/subtitle, with the filters and "Upload Video" action merged
+         onto this same row instead of a separate bar below the stats. -->
+    <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
+      <div>
+        <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-tight">Videos</h1>
+        <p class="text-xs text-gray-500 dark:text-gray-400">Upload video resources for your classes.</p>
+      </div>
 
-    <!-- Stats -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-      <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-        <p class="text-sm text-gray-600 dark:text-gray-400">Total Videos</p>
-        <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ stats.total }}</p>
-      </div>
-      <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-        <p class="text-sm text-gray-600 dark:text-gray-400">Draft</p>
-        <p class="text-3xl font-bold text-yellow-600 dark:text-yellow-400">{{ stats.draft }}</p>
-      </div>
-      <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-        <p class="text-sm text-gray-600 dark:text-gray-400">Published</p>
-        <p class="text-3xl font-bold text-green-600 dark:text-green-400">{{ stats.published }}</p>
-      </div>
-      <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-        <p class="text-sm text-gray-600 dark:text-gray-400">Archived</p>
-        <p class="text-3xl font-bold text-gray-600 dark:text-gray-400">{{ stats.archived }}</p>
-      </div>
-    </div>
-
-    <!-- Actions -->
-    <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
-      <div class="flex items-center flex-wrap gap-3">
-        <select v-model="statusFilter" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white">
+      <div class="flex items-center flex-wrap gap-2.5">
+        <select v-model="statusFilter" class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white">
           <option value="">All Status</option>
           <option value="draft">Draft</option>
           <option value="published">Published</option>
@@ -37,7 +18,7 @@
 
         <select
           v-model="subjectFilter"
-          class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+          class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
           :disabled="!assignments?.subjects || assignments.subjects.length === 0"
         >
           <option value="">All Subjects</option>
@@ -46,7 +27,7 @@
 
         <select
           v-model="classFilter"
-          class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+          class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
           :disabled="!assignments?.classes || assignments.classes.length === 0"
         >
           <option value="">All Classes</option>
@@ -55,26 +36,55 @@
           </option>
         </select>
 
-        <select
-          v-model="streamFilter"
-          class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-          :disabled="streamOptions.length === 0"
-        >
-          <option value="">All Streams</option>
-          <option v-for="stream in streamOptions" :key="stream" :value="stream">{{ stream }}</option>
-        </select>
-
         <div v-if="assignmentsError" class="text-red-600 dark:text-red-400 text-sm">{{ assignmentsError }}</div>
-      </div>
 
+        <button
+          v-if="videos.length > 0"
+          @click="openCreateModal"
+          class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1.5 shadow-sm shadow-indigo-500/20"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+          </svg>
+          <span>Upload Video</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats - clickable to filter the list below; the count sits as a corner badge so each
+         card is shorter and the label can be centered. -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       <button
-        @click="openCreateModal"
-        class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center space-x-2"
+        @click="statusFilter = ''"
+        class="relative bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border transition-shadow hover:shadow-md text-center"
+        :class="statusFilter === '' ? 'border-indigo-300 dark:border-indigo-700 ring-1 ring-indigo-100 dark:ring-indigo-900/30' : 'border-gray-200 dark:border-gray-700'"
       >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-        </svg>
-        <span>Upload Video</span>
+        <span class="absolute top-2 right-3 text-lg font-bold text-gray-900 dark:text-white">{{ stats.total }}</span>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Total Videos</p>
+      </button>
+      <button
+        @click="statusFilter = 'draft'"
+        class="relative bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border transition-shadow hover:shadow-md text-center"
+        :class="statusFilter === 'draft' ? 'border-yellow-300 dark:border-yellow-700 ring-1 ring-yellow-100 dark:ring-yellow-900/30' : 'border-gray-200 dark:border-gray-700'"
+      >
+        <span class="absolute top-2 right-3 text-lg font-bold text-yellow-600 dark:text-yellow-400">{{ stats.draft }}</span>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Draft</p>
+      </button>
+      <button
+        @click="statusFilter = 'published'"
+        class="relative bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border transition-shadow hover:shadow-md text-center"
+        :class="statusFilter === 'published' ? 'border-green-300 dark:border-green-700 ring-1 ring-green-100 dark:ring-green-900/30' : 'border-gray-200 dark:border-gray-700'"
+      >
+        <span class="absolute top-2 right-3 text-lg font-bold text-green-600 dark:text-green-400">{{ stats.published }}</span>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Published</p>
+      </button>
+      <button
+        @click="statusFilter = 'archived'"
+        class="relative bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border transition-shadow hover:shadow-md text-center"
+        :class="statusFilter === 'archived' ? 'border-gray-400 dark:border-gray-500 ring-1 ring-gray-200 dark:ring-gray-700' : 'border-gray-200 dark:border-gray-700'"
+      >
+        <span class="absolute top-2 right-3 text-lg font-bold text-gray-600 dark:text-gray-400">{{ stats.archived }}</span>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Archived</p>
       </button>
     </div>
 
@@ -302,7 +312,6 @@ const uploadProgress = ref(0)
 const statusFilter = ref('')
 const subjectFilter = ref('')
 const classFilter = ref('')
-const streamFilter = ref('')
 
 const showVideoModal = ref(false)
 const editingVideo = ref<VideoResource | null>(null)
@@ -323,21 +332,12 @@ const stats = computed(() => ({
   archived: videos.value.filter(v => v.status === 'archived').length
 }))
 
-const streamOptions = computed(() => {
-  const streams = new Set<string>()
-  assignments.value?.classes.forEach(cls => {
-    if (cls.stream_name) streams.add(cls.stream_name)
-  })
-  return Array.from(streams).sort()
-})
-
 const filteredVideos = computed(() => {
   return videos.value.filter(video => {
     const matchesStatus = !statusFilter.value || video.status === statusFilter.value
     const matchesSubject = !subjectFilter.value || video.subject_id === parseInt(subjectFilter.value)
     const matchesClass = !classFilter.value || video.class_id === parseInt(classFilter.value)
-    const matchesStream = !streamFilter.value || video.class_stream_name === streamFilter.value
-    return matchesStatus && matchesSubject && matchesClass && matchesStream
+    return matchesStatus && matchesSubject && matchesClass
   })
 })
 

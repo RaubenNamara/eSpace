@@ -1,22 +1,13 @@
 <template>
   <div>
-    <div class="flex items-center justify-between mb-6">
-      <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Analytics</h1>
-    </div>
+    <!-- Header - department strip shares a row with the heading instead of its own full-width
+         hero card, and shrinks to a slim identity strip since it's just context, not a KPI. -->
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+      <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-tight">Analytics</h1>
 
-    <!-- Department Info -->
-    <div v-if="overview.department" class="card mb-6 bg-indigo-600 text-white">
-      <div class="flex items-center justify-between">
-        <div>
-          <p class="text-indigo-100 text-sm font-medium">Department</p>
-          <h2 class="text-2xl font-bold">{{ overview.department.name }}</h2>
-          <p class="text-indigo-200 text-sm">{{ overview.department.code }} - {{ overview.department.description }}</p>
-        </div>
-        <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
-          <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-          </svg>
-        </div>
+      <div v-if="overview.department" class="hidden sm:flex flex-wrap items-center gap-x-3 bg-indigo-600 text-white rounded-lg px-4 py-2 text-sm">
+        <span class="font-semibold">{{ overview.department.name }}</span>
+        <span class="text-indigo-200">{{ overview.department.code }} &middot; {{ overview.department.description }}</span>
       </div>
     </div>
 

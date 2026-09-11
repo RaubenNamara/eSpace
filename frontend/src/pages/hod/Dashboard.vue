@@ -3,14 +3,17 @@
     <!-- The topbar already shows this HOD's name and photo, so this is a quick personal greeting
          rather than a redundant "HOD Dashboard" title + icon badge. The old "Preview as Student"
          button was dropped too - it just linked to /hod/assessments, already one click away in
-         the sidebar's Assessment & Analytics section. -->
-    <h1 class="text-xl font-bold text-gray-900 dark:text-white mb-4">{{ greeting }}, {{ authStore.userName }} 👋</h1>
+         the sidebar's Assessment & Analytics section. The department strip sits in the same row
+         (rather than stacked below) so both fit on one line instead of using two. -->
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <h1 class="text-xl font-bold text-gray-900 dark:text-white">{{ greeting }}, {{ authStore.userName }}</h1>
 
-    <!-- Department strip - a slim identity bar rather than a full hero card, since it's just
-         context (which department this data belongs to), not a headline number. -->
-    <div v-if="departmentInfo" class="hidden sm:flex items-center gap-x-3 bg-indigo-600 text-white rounded-lg px-4 py-2 mb-4 text-sm">
-      <span class="font-semibold">{{ departmentInfo.name }}</span>
-      <span class="text-indigo-200">{{ departmentInfo.code }} &middot; Head of Department</span>
+      <!-- Department strip - a slim identity bar rather than a full hero card, since it's just
+           context (which department this data belongs to), not a headline number. -->
+      <div v-if="departmentInfo" class="hidden sm:flex items-center gap-x-3 bg-indigo-600 text-white rounded-lg px-4 py-2 text-sm">
+        <span class="font-semibold">{{ departmentInfo.name }}</span>
+        <span class="text-indigo-200">{{ departmentInfo.code }} &middot; Head of Department</span>
+      </div>
     </div>
 
     <!-- Statistics -->

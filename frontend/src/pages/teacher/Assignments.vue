@@ -1,94 +1,115 @@
 <template>
   <div class="p-3 sm:p-6">
-    <div class="mb-4 sm:mb-6">
-      <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1 sm:mb-2">Assignments</h1>
-      <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">Create and manage assessments for your classes</p>
+    <!-- Header - smaller title/subtitle, with search/filters and "Create Assignment" merged
+         onto this same row instead of a separate bar further down the page. -->
+    <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
+      <div>
+        <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-tight">Assignments</h1>
+        <p class="text-xs text-gray-500 dark:text-gray-400">Create and manage assessments for your classes</p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2.5">
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="Search assignments..."
+          class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white w-40"
+        >
+
+        <select
+          v-model="statusFilter"
+          class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+        >
+          <option value="">All Status</option>
+          <option value="draft">Draft</option>
+          <option value="published">Published</option>
+          <option value="archived">Archived</option>
+        </select>
+
+        <select
+          v-model="typeFilter"
+          class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+        >
+          <option value="">All Types</option>
+          <option value="essay">Essay</option>
+          <option value="scenario">Scenario</option>
+          <option value="objective">Objective</option>
+          <option value="file_upload">File Upload</option>
+          <option value="mixed">Mixed</option>
+        </select>
+
+        <select
+          v-model="subjectFilter"
+          class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+          :disabled="!availableSubjects || availableSubjects.length === 0"
+        >
+          <option value="">All Subjects</option>
+          <option v-for="subject in availableSubjects" :key="subject.id" :value="subject.id">
+            {{ subject.name }}
+          </option>
+        </select>
+
+        <select
+          v-model="classFilter"
+          class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+          :disabled="!availableClasses || availableClasses.length === 0"
+        >
+          <option value="">All Classes</option>
+          <option v-for="cls in availableClasses" :key="cls.id" :value="cls.id">
+            {{ cls.name }}
+          </option>
+        </select>
+
+        <button
+          v-if="assignments.length > 0"
+          @click="router.push('/teacher/assignments/create')"
+          class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-500/20"
+        >
+          Create Assignment
+        </button>
+      </div>
     </div>
 
-    <!-- Dashboard Stats -->
-    <div v-if="stats" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-4 mb-4 sm:mb-6">
-      <div class="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-        <div class="flex items-center justify-between gap-2">
-          <div class="min-w-0">
-            <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">Total</p>
-            <p class="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white">{{ stats.total }}</p>
-          </div>
-          <div class="p-2 sm:p-3 bg-indigo-100 dark:bg-indigo-900 rounded-lg flex-shrink-0">
-            <svg class="w-4 h-4 sm:w-6 sm:h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-            </svg>
-          </div>
-        </div>
+    <!-- Dashboard Stats - Total/Draft/Published are clickable to filter the list below; Active,
+         Awaiting Marking and Total Submissions are derived figures with no matching status
+         filter, so they stay as plain (non-clickable) cards in the same compact style. The count
+         sits as a corner badge so each card is shorter and the label can be centered. -->
+    <div v-if="stats" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-4 mb-6">
+      <button
+        @click="statusFilter = ''"
+        class="relative bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border transition-shadow hover:shadow-md text-center"
+        :class="statusFilter === '' ? 'border-indigo-300 dark:border-indigo-700 ring-1 ring-indigo-100 dark:ring-indigo-900/30' : 'border-gray-200 dark:border-gray-700'"
+      >
+        <span class="absolute top-2 right-3 text-lg font-bold text-gray-900 dark:text-white">{{ stats.total }}</span>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Total</p>
+      </button>
+      <button
+        @click="statusFilter = 'draft'"
+        class="relative bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border transition-shadow hover:shadow-md text-center"
+        :class="statusFilter === 'draft' ? 'border-yellow-300 dark:border-yellow-700 ring-1 ring-yellow-100 dark:ring-yellow-900/30' : 'border-gray-200 dark:border-gray-700'"
+      >
+        <span class="absolute top-2 right-3 text-lg font-bold text-yellow-600 dark:text-yellow-400">{{ stats.draft }}</span>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Draft</p>
+      </button>
+      <button
+        @click="statusFilter = 'published'"
+        class="relative bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border transition-shadow hover:shadow-md text-center"
+        :class="statusFilter === 'published' ? 'border-green-300 dark:border-green-700 ring-1 ring-green-100 dark:ring-green-900/30' : 'border-gray-200 dark:border-gray-700'"
+      >
+        <span class="absolute top-2 right-3 text-lg font-bold text-green-600 dark:text-green-400">{{ stats.published }}</span>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Published</p>
+      </button>
+      <div class="relative bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700 text-center">
+        <span class="absolute top-2 right-3 text-lg font-bold text-blue-600 dark:text-blue-400">{{ stats.active }}</span>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Active</p>
       </div>
-
-      <div class="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-        <div class="flex items-center justify-between gap-2">
-          <div class="min-w-0">
-            <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">Draft</p>
-            <p class="text-xl sm:text-3xl font-bold text-yellow-600 dark:text-yellow-400">{{ stats.draft }}</p>
-          </div>
-          <div class="p-2 sm:p-3 bg-yellow-100 dark:bg-yellow-900 rounded-lg flex-shrink-0">
-            <svg class="w-4 h-4 sm:w-6 sm:h-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-            </svg>
-          </div>
-        </div>
+      <div class="relative bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700 text-center">
+        <span class="absolute top-2 right-3 text-lg font-bold text-orange-600 dark:text-orange-400">{{ stats.awaiting_marking }}</span>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Awaiting Marking</p>
       </div>
-
-      <div class="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-        <div class="flex items-center justify-between gap-2">
-          <div class="min-w-0">
-            <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">Published</p>
-            <p class="text-xl sm:text-3xl font-bold text-green-600 dark:text-green-400">{{ stats.published }}</p>
-          </div>
-          <div class="p-2 sm:p-3 bg-green-100 dark:bg-green-900 rounded-lg flex-shrink-0">
-            <svg class="w-4 h-4 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-        <div class="flex items-center justify-between gap-2">
-          <div class="min-w-0">
-            <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">Active</p>
-            <p class="text-xl sm:text-3xl font-bold text-blue-600 dark:text-blue-400">{{ stats.active }}</p>
-          </div>
-          <div class="p-2 sm:p-3 bg-blue-100 dark:bg-blue-900 rounded-lg flex-shrink-0">
-            <svg class="w-4 h-4 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-        <div class="flex items-center justify-between gap-2">
-          <div class="min-w-0">
-            <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">Awaiting Marking</p>
-            <p class="text-xl sm:text-3xl font-bold text-orange-600 dark:text-orange-400">{{ stats.awaiting_marking }}</p>
-          </div>
-          <div class="p-2 sm:p-3 bg-orange-100 dark:bg-orange-900 rounded-lg flex-shrink-0">
-            <svg class="w-4 h-4 sm:w-6 sm:h-6 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
-            </svg>
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-        <div class="flex items-center justify-between gap-2">
-          <div class="min-w-0">
-            <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">Total Submissions</p>
-            <p class="text-xl sm:text-3xl font-bold text-purple-600 dark:text-purple-400">{{ stats.total_submissions }}</p>
-          </div>
-          <div class="p-2 sm:p-3 bg-purple-100 dark:bg-purple-900 rounded-lg flex-shrink-0">
-            <svg class="w-4 h-4 sm:w-6 sm:h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-            </svg>
-          </div>
-        </div>
+      <div class="relative bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700 text-center">
+        <span class="absolute top-2 right-3 text-lg font-bold text-purple-600 dark:text-purple-400">{{ stats.total_submissions }}</span>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Total Submissions</p>
       </div>
     </div>
 
@@ -124,71 +145,6 @@
 
     <!-- Assignments List -->
     <div v-else>
-      <!-- Filters -->
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-4 mb-4 sm:mb-6">
-        <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 sm:gap-4">
-          <div class="w-full sm:flex-1 sm:min-w-64">
-            <input
-              v-model="searchQuery"
-              type="text"
-              placeholder="Search assignments..."
-              class="w-full px-4 py-2.5 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-            >
-          </div>
-
-          <select
-            v-model="statusFilter"
-            class="w-full sm:w-auto px-4 py-2.5 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-          >
-            <option value="">All Status</option>
-            <option value="draft">Draft</option>
-            <option value="published">Published</option>
-            <option value="archived">Archived</option>
-          </select>
-
-          <select
-            v-model="typeFilter"
-            class="w-full sm:w-auto px-4 py-2.5 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-          >
-            <option value="">All Types</option>
-            <option value="essay">Essay</option>
-            <option value="scenario">Scenario</option>
-            <option value="objective">Objective</option>
-            <option value="file_upload">File Upload</option>
-            <option value="mixed">Mixed</option>
-          </select>
-
-          <select
-            v-model="subjectFilter"
-            class="w-full sm:w-auto px-4 py-2.5 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-            :disabled="!availableSubjects || availableSubjects.length === 0"
-          >
-            <option value="">All Subjects</option>
-            <option v-for="subject in availableSubjects" :key="subject.id" :value="subject.id">
-              {{ subject.name }}
-            </option>
-          </select>
-
-          <select
-            v-model="classFilter"
-            class="w-full sm:w-auto px-4 py-2.5 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-            :disabled="!availableClasses || availableClasses.length === 0"
-          >
-            <option value="">All Classes</option>
-            <option v-for="cls in availableClasses" :key="cls.id" :value="cls.id">
-              {{ cls.name }}
-            </option>
-          </select>
-
-          <button
-            @click="router.push('/teacher/assignments/create')"
-            class="w-full sm:w-auto px-4 py-2.5 sm:py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-          >
-            Create Assignment
-          </button>
-        </div>
-      </div>
-
       <!-- Assignments Cards (mobile / tablet) -->
       <div class="lg:hidden space-y-3">
         <div

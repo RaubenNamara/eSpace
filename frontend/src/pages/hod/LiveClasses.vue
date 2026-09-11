@@ -1,40 +1,58 @@
 <template>
   <div>
-    <!-- Header -->
-    <div class="flex items-center gap-4 mb-6">
-      <div class="w-12 h-12 rounded-xl bg-red-600 flex items-center justify-center shadow-sm flex-shrink-0">
-        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-        </svg>
+    <!-- Header - icon and title share a row with the status filter, so the dropdown lines up
+         exactly with the heading; the subtitle drops to its own full-width line underneath. -->
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center flex-shrink-0">
+          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+          </svg>
+        </div>
+        <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-tight">Live Classes</h1>
       </div>
-      <div>
-        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white leading-tight">Live Classes</h1>
-        <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">Oversight of live sessions run by your department's teachers</p>
-      </div>
-    </div>
 
-    <!-- Dashboard summary -->
+      <select v-model="statusFilter" class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 dark:bg-gray-700 dark:text-white">
+        <option value="">All Status</option>
+        <option value="scheduled">Scheduled</option>
+        <option value="started">Live Now</option>
+        <option value="ended">Ended</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+    </div>
+    <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Oversight of live sessions run by your department's teachers</p>
+
+    <!-- Dashboard summary - Live Now is clickable and jumps straight into observing the running
+         session if there is one, otherwise it filters the list; the other figures are date-scoped
+         counts with no matching status filter, so they stay as plain cards in the same compact
+         style. The count sits as a corner badge so each card is shorter and the label centered. -->
     <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-      <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 relative overflow-hidden">
-        <div v-if="summary.live_now > 0" class="absolute top-3 right-3 w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+      <button
+        @click="goToLiveOrFilter"
+        class="relative bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border transition-shadow hover:shadow-md text-center"
+        :class="statusFilter === 'started' ? 'border-red-300 dark:border-red-700 ring-1 ring-red-100 dark:ring-red-900/30' : 'border-gray-200 dark:border-gray-700'"
+      >
+        <span class="absolute top-2 right-3 flex items-center gap-1.5">
+          <span v-if="summary.live_now > 0" class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+          <span class="text-lg font-bold text-red-600 dark:text-red-400">{{ summary.live_now }}</span>
+        </span>
         <p class="text-sm text-gray-500 dark:text-gray-400">Live Now</p>
-        <p class="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">{{ summary.live_now }}</p>
-      </div>
-      <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700">
+      </button>
+      <div class="relative bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700 text-center">
+        <span class="absolute top-2 right-3 text-lg font-bold text-blue-600 dark:text-blue-400">{{ summary.upcoming_today }}</span>
         <p class="text-sm text-gray-500 dark:text-gray-400">Upcoming Today</p>
-        <p class="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">{{ summary.upcoming_today }}</p>
       </div>
-      <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700">
+      <div class="relative bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700 text-center">
+        <span class="absolute top-2 right-3 text-lg font-bold text-gray-600 dark:text-gray-400">{{ summary.completed_today }}</span>
         <p class="text-sm text-gray-500 dark:text-gray-400">Completed Today</p>
-        <p class="text-2xl font-bold text-gray-600 dark:text-gray-400 mt-1">{{ summary.completed_today }}</p>
       </div>
-      <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700">
+      <div class="relative bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700 text-center">
+        <span class="absolute top-2 right-3 text-lg font-bold text-emerald-600 dark:text-emerald-400">{{ summary.students_online }}</span>
         <p class="text-sm text-gray-500 dark:text-gray-400">Students Online</p>
-        <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">{{ summary.students_online }}</p>
       </div>
-      <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700">
+      <div class="relative bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700 text-center">
+        <span class="absolute top-2 right-3 text-lg font-bold text-purple-600 dark:text-purple-400">{{ summary.recorded_sessions }}</span>
         <p class="text-sm text-gray-500 dark:text-gray-400">Recorded Sessions</p>
-        <p class="text-2xl font-bold text-purple-600 dark:text-purple-400 mt-1">{{ summary.recorded_sessions }}</p>
       </div>
     </div>
 
@@ -49,14 +67,6 @@
         </li>
       </ul>
     </div>
-
-    <select v-model="statusFilter" class="mb-6 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 dark:bg-gray-700 dark:text-white">
-      <option value="">All Status</option>
-      <option value="scheduled">Scheduled</option>
-      <option value="started">Live Now</option>
-      <option value="ended">Ended</option>
-      <option value="cancelled">Cancelled</option>
-    </select>
 
     <div v-if="loading" class="text-center py-16">
       <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
@@ -232,6 +242,17 @@ const filteredClasses = computed(() => {
   if (!statusFilter.value) return classes.value
   return classes.value.filter(c => c.status === statusFilter.value)
 })
+
+// "Live Now" card jumps straight into observing whichever class is currently running instead of
+// just filtering the list - there's rarely more than one live session at a time.
+const goToLiveOrFilter = () => {
+  const liveClass = classes.value.find(c => c.status === 'started')
+  if (liveClass) {
+    joinClass(liveClass)
+  } else {
+    statusFilter.value = 'started'
+  }
+}
 
 const teacherName = (cls: LiveClass) => {
   if (!cls.teacher_first_name) return 'N/A'

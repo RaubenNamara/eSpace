@@ -1,42 +1,32 @@
 <template>
   <div class="p-4 sm:p-6">
-    <div class="mb-6">
-      <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1">Performance & Marksheets</h1>
-      <p class="text-sm text-gray-500 dark:text-gray-400">View student performance and download assignment marksheets by class/stream.</p>
-    </div>
+    <!-- Header - title shares a row with the Term/Class/Subject filters and "Download CSV" so
+         the dropdowns line up exactly with the heading; the subtitle drops to its own full-width
+         line underneath. -->
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
+      <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-tight">Marksheets</h1>
 
-    <!-- Filters -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
-      <div class="flex flex-wrap items-end gap-4">
-        <div>
-          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Term</label>
-          <select v-model="selectedTermId" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white min-w-[180px]">
-            <option :value="null">All terms</option>
-            <option v-for="term in terms" :key="term.id" :value="term.id">
-              {{ term.name }}{{ term.academic_year ? ` - ${term.academic_year}` : '' }}{{ term.is_current ? ' (Current)' : '' }}
-            </option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Class / Stream</label>
-          <select v-model="selectedClassId" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white min-w-[180px]">
-            <option :value="null">Select class...</option>
-            <option v-for="cls in classes" :key="cls.id" :value="cls.id">
-              {{ cls.name }}{{ cls.stream_name ? ` - ${cls.stream_name}` : '' }}
-            </option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Subject</label>
-          <select v-model="selectedSubjectId" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white min-w-[180px]">
-            <option :value="null">Select subject...</option>
-            <option v-for="subj in subjects" :key="subj.id" :value="subj.id">{{ subj.name }}</option>
-          </select>
-        </div>
+      <div class="flex flex-wrap items-center gap-2.5">
+        <select v-model="selectedTermId" class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+          <option :value="null">All terms</option>
+          <option v-for="term in terms" :key="term.id" :value="term.id">
+            {{ term.name }}{{ term.academic_year ? ` - ${term.academic_year}` : '' }}{{ term.is_current ? ' (Current)' : '' }}
+          </option>
+        </select>
+        <select v-model="selectedClassId" class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+          <option :value="null">Select class...</option>
+          <option v-for="cls in classes" :key="cls.id" :value="cls.id">
+            {{ cls.name }}{{ cls.stream_name ? ` - ${cls.stream_name}` : '' }}
+          </option>
+        </select>
+        <select v-model="selectedSubjectId" class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+          <option :value="null">Select subject...</option>
+          <option v-for="subj in subjects" :key="subj.id" :value="subj.id">{{ subj.name }}</option>
+        </select>
         <button
           v-if="selectedClassId && selectedSubjectId"
           @click="downloadCsv"
-          class="px-4 py-2 text-sm font-medium rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 flex items-center gap-2"
+          class="px-3 py-1.5 text-sm font-medium rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 flex items-center gap-1.5"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
@@ -45,6 +35,7 @@
         </button>
       </div>
     </div>
+    <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">View student performance and download assignment marksheets by class/stream.</p>
 
     <div v-if="error" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6 text-red-600 dark:text-red-400 text-sm">
       {{ error }}

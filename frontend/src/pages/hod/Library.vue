@@ -1,38 +1,18 @@
 <template>
   <div>
-    <!-- Hero -->
-    <div class="relative overflow-hidden rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-500/20 p-4 sm:p-5 mb-6">
-      <div class="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-white/10"></div>
-      <div class="absolute -right-3 bottom-0 w-24 h-24 rounded-full bg-white/10"></div>
-      <div class="relative flex items-center gap-3 mb-3">
-        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center shadow-sm flex-shrink-0 ring-2 ring-white/20">
-          <svg class="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <!-- Header - icon and title share a row with the search box, so the input lines up exactly
+         with the heading; the subtitle drops to its own line underneath. -->
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0">
+          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
           </svg>
         </div>
-        <div class="min-w-0">
-          <h1 class="text-lg sm:text-2xl font-bold text-white leading-tight">eLibrary</h1>
-          <p class="text-xs sm:text-sm text-indigo-100">Moderate PDF resources uploaded by teachers in your department</p>
-        </div>
+        <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-tight">eLibrary</h1>
       </div>
 
-      <div v-if="!loading" class="relative flex flex-wrap items-center gap-2 mb-3">
-        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-white/15 backdrop-blur-sm text-white">
-          {{ stats.total }} total
-        </span>
-        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-white/15 backdrop-blur-sm text-white">
-          {{ stats.draft }} draft
-        </span>
-        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-white/15 backdrop-blur-sm text-white">
-          {{ stats.published }} published
-        </span>
-        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-white/15 backdrop-blur-sm text-white">
-          {{ stats.archived }} archived
-        </span>
-      </div>
-
-      <!-- Search -->
-      <div class="relative">
+      <div class="relative w-full sm:w-80">
         <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
         </svg>
@@ -41,23 +21,46 @@
           @input="debouncedSearch"
           type="text"
           placeholder="Search by title, description, or teacher name..."
-          class="relative w-full pl-9 pr-4 py-2 rounded-lg border-0 shadow-md focus:ring-2 focus:ring-white/50 bg-white text-gray-900 dark:bg-gray-800 dark:text-white transition-colors"
+          class="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
         >
       </div>
     </div>
+    <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Moderate PDF resources uploaded by teachers in your department</p>
 
-    <!-- Status filter -->
-    <div class="flex flex-wrap gap-2 mb-6">
+    <!-- Stats - double as the status filter (replacing the separate filter-pill row); the count
+         sits as a corner badge so each card is shorter and the label can be centered. -->
+    <div v-if="!loading" class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       <button
-        v-for="opt in statusOptions"
-        :key="opt.value"
-        @click="statusFilter = opt.value; fetchBooks()"
-        class="px-3.5 py-1.5 text-sm font-medium rounded-lg transition-colors border"
-        :class="statusFilter === opt.value
-          ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
-          : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-indigo-300 dark:hover:border-indigo-700'"
+        @click="statusFilter = ''; fetchBooks()"
+        class="relative bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border transition-shadow hover:shadow-md text-center"
+        :class="statusFilter === '' ? 'border-indigo-300 dark:border-indigo-700 ring-1 ring-indigo-100 dark:ring-indigo-900/30' : 'border-gray-200 dark:border-gray-700'"
       >
-        {{ opt.label }}
+        <span class="absolute top-2 right-3 text-lg font-bold text-gray-900 dark:text-white">{{ stats.total }}</span>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Total</p>
+      </button>
+      <button
+        @click="statusFilter = 'draft'; fetchBooks()"
+        class="relative bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border transition-shadow hover:shadow-md text-center"
+        :class="statusFilter === 'draft' ? 'border-yellow-300 dark:border-yellow-700 ring-1 ring-yellow-100 dark:ring-yellow-900/30' : 'border-gray-200 dark:border-gray-700'"
+      >
+        <span class="absolute top-2 right-3 text-lg font-bold text-yellow-600 dark:text-yellow-400">{{ stats.draft }}</span>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Draft</p>
+      </button>
+      <button
+        @click="statusFilter = 'published'; fetchBooks()"
+        class="relative bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border transition-shadow hover:shadow-md text-center"
+        :class="statusFilter === 'published' ? 'border-green-300 dark:border-green-700 ring-1 ring-green-100 dark:ring-green-900/30' : 'border-gray-200 dark:border-gray-700'"
+      >
+        <span class="absolute top-2 right-3 text-lg font-bold text-green-600 dark:text-green-400">{{ stats.published }}</span>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Published</p>
+      </button>
+      <button
+        @click="statusFilter = 'archived'; fetchBooks()"
+        class="relative bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border transition-shadow hover:shadow-md text-center"
+        :class="statusFilter === 'archived' ? 'border-gray-400 dark:border-gray-500 ring-1 ring-gray-200 dark:ring-gray-700' : 'border-gray-200 dark:border-gray-700'"
+      >
+        <span class="absolute top-2 right-3 text-lg font-bold text-gray-600 dark:text-gray-400">{{ stats.archived }}</span>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Archived</p>
       </button>
     </div>
 
@@ -164,13 +167,6 @@ const loading = ref(false)
 const search = ref('')
 const statusFilter = ref('')
 const previewBook = ref<LibraryBook | null>(null)
-
-const statusOptions = [
-  { value: '', label: 'All' },
-  { value: 'draft', label: 'Draft' },
-  { value: 'published', label: 'Published' },
-  { value: 'archived', label: 'Archived' }
-]
 
 let searchTimer: number | null = null
 const debouncedSearch = () => {
