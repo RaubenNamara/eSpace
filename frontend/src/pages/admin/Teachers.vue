@@ -121,8 +121,18 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
           </svg>
           <h3 class="mt-4 text-lg font-medium text-gray-900 dark:text-white">No teachers found</h3>
-          <p class="mt-2 text-gray-500 dark:text-gray-400">Get started by creating your first teacher.</p>
+          <p class="mt-2 text-gray-500 dark:text-gray-400">
+            {{ search || filterStatus ? 'No teachers match your search or filter.' : 'Get started by creating your first teacher.' }}
+          </p>
           <button
+            v-if="search || filterStatus"
+            @click="clearFilters"
+            class="mt-4 px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
+          >
+            Clear filters
+          </button>
+          <button
+            v-else
             @click="showCreateModal = true"
             class="btn-primary mt-4"
           >
@@ -131,10 +141,32 @@
         </div>
 
         <!-- Teachers Table -->
-        <div v-else class="overflow-x-auto">
+        <div v-else>
+        <div class="px-6 pt-4">
+          <BulkActionBar :count="bulk.selectedCount.value" @clear="bulk.clear()">
+            <select v-model="bulkAssignDepartmentId" class="px-2.5 py-1 min-h-[32px] text-xs border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+              <option value="">Assign department...</option>
+              <option v-for="dept in departments" :key="dept.id" :value="dept.id">{{ dept.name }}</option>
+            </select>
+            <button @click="bulkAssignDepartment" :disabled="!bulkAssignDepartmentId" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50">Apply</button>
+            <button @click="bulkSetActive(true)" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Activate</button>
+            <button @click="bulkSetActive(false)" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Suspend</button>
+            <button @click="bulkExport" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Export CSV</button>
+            <button @click="bulkDeleteSelected" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors">Delete</button>
+          </BulkActionBar>
+        </div>
+        <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700">
           <thead class="bg-gray-50 dark:bg-gray-950">
             <tr>
+              <th class="px-4 py-4 text-left">
+                <input
+                  type="checkbox"
+                  :checked="bulk.allSelected(visibleIds)"
+                  @change="bulk.toggleAll(visibleIds)"
+                  class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
+                >
+              </th>
               <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Teacher</th>
               <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Staff Number</th>
               <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Department</th>
@@ -149,6 +181,14 @@
               :key="teacher.id"
               class="hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors duration-150"
             >
+              <td class="px-4 py-4">
+                <input
+                  type="checkbox"
+                  :checked="bulk.isSelected(teacher.id)"
+                  @change="bulk.toggle(teacher.id)"
+                  class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
+                >
+              </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="flex items-center">
                   <div class="flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center text-white font-medium" :class="getAvatarColor(teacher.first_name)">
@@ -184,7 +224,7 @@
                 <div class="flex justify-end gap-2">
                   <button
                     @click="viewTeacher(teacher)"
-                    class="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
+                    class="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
                     title="View"
                   >
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -194,7 +234,7 @@
                   </button>
                   <button
                     @click="editTeacher(teacher)"
-                    class="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300"
+                    class="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300"
                     title="Edit"
                   >
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -203,7 +243,7 @@
                   </button>
                   <button
                     @click="manageDepartments(teacher)"
-                    class="text-purple-600 dark:text-purple-400 hover:text-purple-900 dark:hover:text-purple-300"
+                    class="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center text-purple-600 dark:text-purple-400 hover:text-purple-900 dark:hover:text-purple-300"
                     title="Manage Departments"
                   >
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -212,7 +252,7 @@
                   </button>
                   <button
                     @click="resetPassword(teacher)"
-                    class="text-yellow-600 dark:text-yellow-400 hover:text-yellow-900 dark:hover:text-yellow-300"
+                    class="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center text-yellow-600 dark:text-yellow-400 hover:text-yellow-900 dark:hover:text-yellow-300"
                     title="Reset Password"
                   >
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -222,7 +262,7 @@
                   <button
                     v-if="teacher.is_active"
                     @click="suspendTeacher(teacher)"
-                    class="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                    class="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
                     title="Suspend"
                   >
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -232,7 +272,7 @@
                   <button
                     v-else
                     @click="restoreTeacher(teacher)"
-                    class="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300"
+                    class="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300"
                     title="Activate"
                   >
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -241,7 +281,7 @@
                   </button>
                   <button
                     @click="deleteTeacher(teacher)"
-                    class="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                    class="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
                     title="Delete"
                   >
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -253,6 +293,7 @@
             </tr>
           </tbody>
         </table>
+        </div>
         </div>
 
         <!-- Pagination -->
@@ -314,7 +355,7 @@
           <!-- Personal Information -->
           <div class="border-b border-gray-200 dark:border-gray-700 pb-4">
             <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Personal Information</h3>
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">First Name *</label>
                 <input v-model="formData.first_name" type="text" required class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
@@ -342,7 +383,7 @@
           <!-- Login Information -->
           <div class="border-b border-gray-200 dark:border-gray-700 pb-4">
             <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Login Information</h3>
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Username *</label>
                 <input v-model="formData.username" type="text" required class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
@@ -441,7 +482,7 @@
           <!-- Personal Information -->
           <div class="border-b border-gray-200 dark:border-gray-700 pb-4">
             <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Personal Information</h3>
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">First Name *</label>
                 <input v-model="editForm.first_name" type="text" required class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
@@ -473,7 +514,7 @@
           <!-- Account Information -->
           <div class="border-b border-gray-200 dark:border-gray-700 pb-4">
             <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Account Information</h3>
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Username *</label>
                 <input v-model="editForm.username" type="text" required class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
@@ -671,6 +712,17 @@ import { ref, computed, onMounted } from 'vue'
 import apiService from '@/services/api'
 import ImportTeachersModal from '@/components/admin/ImportTeachersModal.vue'
 import ManageTeacherDepartmentsModal from '@/components/admin/ManageTeacherDepartmentsModal.vue'
+import BulkActionBar from '@/components/common/BulkActionBar.vue'
+import { useToastStore } from '@/stores/toast'
+import { useConfirmStore } from '@/stores/confirm'
+import { useBulkSelection } from '@/composables/useBulkSelection'
+import { usePersistedRef } from '@/composables/usePersistedRef'
+import { downloadBlob } from '@/utils/downloadBlob'
+
+const toast = useToastStore()
+const confirmDialog = useConfirmStore()
+const bulk = useBulkSelection<number>()
+const bulkAssignDepartmentId = ref('')
 
 interface TeacherDepartment {
   id: number
@@ -706,7 +758,7 @@ const teachers = ref<Teacher[]>([])
 const departments = ref<any[]>([])
 const statistics = ref<Statistics | null>(null)
 const search = ref('')
-const filterStatus = ref('')
+const filterStatus = usePersistedRef('admin-teachers-status-filter', '')
 const loading = ref(false)
 const creating = ref(false)
 const editing = ref(false)
@@ -805,9 +857,69 @@ const fetchTeachers = async () => {
   }
 }
 
+const visibleIds = computed(() => teachers.value.map(t => t.id))
+
+const bulkAssignDepartment = async () => {
+  const ids = bulk.selectedArray()
+  if (ids.length === 0 || !bulkAssignDepartmentId.value) return
+  try {
+    await apiService.post('/admin/teachers/bulk-assign-department', { ids, department_id: parseInt(bulkAssignDepartmentId.value) })
+    toast.success(`${ids.length} teacher(s) assigned`)
+    bulk.clear()
+    bulkAssignDepartmentId.value = ''
+    await fetchTeachers()
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Failed to assign department')
+  }
+}
+
+const bulkSetActive = async (isActive: boolean) => {
+  const ids = bulk.selectedArray()
+  if (ids.length === 0) return
+  try {
+    await apiService.post('/admin/teachers/bulk-status', { ids, is_active: isActive })
+    toast.success(`${ids.length} teacher(s) updated`)
+    bulk.clear()
+    await fetchTeachers()
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Failed to update teachers')
+  }
+}
+
+const bulkDeleteSelected = async () => {
+  const ids = bulk.selectedArray()
+  if (ids.length === 0) return
+  if (!await confirmDialog.open({ title: 'Delete teachers', message: `Are you sure you want to delete ${ids.length} teacher(s)? This cannot be undone.`, confirmLabel: 'Delete', danger: true })) return
+  try {
+    await apiService.post('/admin/teachers/bulk-delete', { ids })
+    toast.success(`${ids.length} teacher(s) deleted`)
+    bulk.clear()
+    await fetchTeachers()
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Failed to delete teachers')
+  }
+}
+
+const bulkExport = async () => {
+  const ids = bulk.selectedArray()
+  try {
+    const response = await apiService.post('/admin/teachers/bulk-export', { ids }, { responseType: 'blob' })
+    downloadBlob(response.data as unknown as Blob, 'teachers.csv')
+  } catch (error) {
+    toast.error('Failed to export teachers')
+  }
+}
+
+const clearFilters = () => {
+  search.value = ''
+  filterStatus.value = ''
+  pagination.value.page = 1
+  fetchTeachers()
+}
+
 const createTeacher = async () => {
   if (formData.value.password !== formData.value.password_confirmation) {
-    alert('Passwords do not match')
+    toast.warning('Passwords do not match')
     return
   }
 
@@ -821,17 +933,17 @@ const createTeacher = async () => {
       showCreateModal.value = false
       resetFormData()
       fetchTeachers()
-      alert('Teacher created successfully')
+      toast.success('Teacher created successfully')
     } else {
       console.error('Server returned error:', response.data)
-      alert(response.data.message || 'Failed to create teacher')
+      toast.error(response.data.message || 'Failed to create teacher')
     }
   } catch (error: any) {
     console.error('Failed to create teacher:', error)
     console.error('Error response:', error.response?.data)
     const errorMessage = error.response?.data?.message || error.message || 'Failed to create teacher'
     console.error('Detailed error:', errorMessage)
-    alert(errorMessage)
+    toast.error(errorMessage)
   } finally {
     creating.value = false
   }
@@ -945,13 +1057,13 @@ const updateTeacher = async () => {
     if (response.data.success) {
       showEditModal.value = false
       fetchTeachers()
-      alert('Teacher updated successfully')
+      toast.success('Teacher updated successfully')
     } else {
-      alert(response.data.message || 'Failed to update teacher')
+      toast.error(response.data.message || 'Failed to update teacher')
     }
   } catch (error: any) {
     console.error('Failed to update teacher:', error)
-    alert(error.response?.data?.message || 'Failed to update teacher')
+    toast.error(error.response?.data?.message || 'Failed to update teacher')
   } finally {
     editing.value = false
   }
@@ -964,7 +1076,7 @@ const resetPassword = (teacher: Teacher) => {
 
 const confirmResetPassword = async () => {
   if (resetForm.value.password !== resetForm.value.password_confirmation) {
-    alert('Passwords do not match')
+    toast.warning('Passwords do not match')
     return
   }
 
@@ -975,69 +1087,69 @@ const confirmResetPassword = async () => {
     if (response.data.success) {
       showResetModal.value = false
       resetForm.value = { password: '', password_confirmation: '' }
-      alert('Password reset successfully')
+      toast.success('Password reset successfully')
     } else {
-      alert(response.data.message || 'Failed to reset password')
+      toast.error(response.data.message || 'Failed to reset password')
     }
   } catch (error: any) {
     console.error('Failed to reset password:', error)
-    alert(error.response?.data?.message || 'Failed to reset password')
+    toast.error(error.response?.data?.message || 'Failed to reset password')
   } finally {
     resetting.value = false
   }
 }
 
 const suspendTeacher = async (teacher: Teacher) => {
-  if (!confirm(`Are you sure you want to suspend ${teacher.first_name} ${teacher.last_name}?`)) return
+  if (!await confirmDialog.open({ title: 'Suspend teacher', message: `Are you sure you want to suspend ${teacher.first_name} ${teacher.last_name}?`, confirmLabel: 'Suspend', danger: true })) return
 
   try {
     const response = await apiService.put(`/admin/teachers/${teacher.id}/suspend`)
 
     if (response.data.success) {
       fetchTeachers()
-      alert('Teacher suspended successfully')
+      toast.success('Teacher suspended successfully')
     } else {
-      alert(response.data.message || 'Failed to suspend teacher')
+      toast.error(response.data.message || 'Failed to suspend teacher')
     }
   } catch (error: any) {
     console.error('Failed to suspend teacher:', error)
-    alert(error.response?.data?.message || 'Failed to suspend teacher')
+    toast.error(error.response?.data?.message || 'Failed to suspend teacher')
   }
 }
 
 const restoreTeacher = async (teacher: Teacher) => {
-  if (!confirm(`Are you sure you want to activate ${teacher.first_name} ${teacher.last_name}?`)) return
+  if (!await confirmDialog.open({ title: 'Activate teacher', message: `Are you sure you want to activate ${teacher.first_name} ${teacher.last_name}?`, confirmLabel: 'Activate' })) return
 
   try {
     const response = await apiService.put(`/admin/teachers/${teacher.id}/restore`)
 
     if (response.data.success) {
       fetchTeachers()
-      alert('Teacher activated successfully')
+      toast.success('Teacher activated successfully')
     } else {
-      alert(response.data.message || 'Failed to activate teacher')
+      toast.error(response.data.message || 'Failed to activate teacher')
     }
   } catch (error: any) {
     console.error('Failed to activate teacher:', error)
-    alert(error.response?.data?.message || 'Failed to activate teacher')
+    toast.error(error.response?.data?.message || 'Failed to activate teacher')
   }
 }
 
 const deleteTeacher = async (teacher: Teacher) => {
-  if (!confirm(`Are you sure you want to delete ${teacher.first_name} ${teacher.last_name}? This action cannot be undone.`)) return
+  if (!await confirmDialog.open({ title: 'Delete teacher', message: `Are you sure you want to delete ${teacher.first_name} ${teacher.last_name}? This action cannot be undone.`, confirmLabel: 'Delete', danger: true })) return
 
   try {
     const response = await apiService.delete(`/admin/teachers/${teacher.id}`)
 
     if (response.data.success) {
       fetchTeachers()
-      alert('Teacher deleted successfully')
+      toast.success('Teacher deleted successfully')
     } else {
-      alert(response.data.message || 'Failed to delete teacher')
+      toast.error(response.data.message || 'Failed to delete teacher')
     }
   } catch (error: any) {
     console.error('Failed to delete teacher:', error)
-    alert(error.response?.data?.message || 'Failed to delete teacher')
+    toast.error(error.response?.data?.message || 'Failed to delete teacher')
   }
 }
 

@@ -2,26 +2,26 @@
   <div>
     <!-- Header - icon and title share a row with the search box, so the input lines up exactly
          with the heading; the subtitle drops to its own line underneath. -->
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
-      <div class="flex items-center gap-2.5">
-        <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0">
-          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="flex items-center justify-between gap-2 mb-1">
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <div class="hidden sm:flex w-7 h-7 rounded-lg bg-indigo-600 items-center justify-center flex-shrink-0">
+          <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
           </svg>
         </div>
-        <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-tight">eLibrary</h1>
+        <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight whitespace-nowrap">eLibrary</h1>
       </div>
 
-      <div class="relative w-full sm:w-80">
-        <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div class="relative flex-shrink min-w-0 w-32 sm:w-80">
+        <svg class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
         </svg>
         <input
           v-model="search"
           @input="debouncedSearch"
           type="text"
-          placeholder="Search by title, description, or teacher name..."
-          class="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+          placeholder="Search..."
+          class="w-full pl-8 pr-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
         >
       </div>
     </div>
@@ -78,21 +78,52 @@
       <svg class="w-14 h-14 mx-auto text-gray-300 dark:text-gray-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
       </svg>
-      <p class="text-gray-500 dark:text-gray-400">
+      <p class="text-gray-500 dark:text-gray-400 mb-3">
         {{ search || statusFilter ? 'No books match your filters' : 'No books uploaded in your department yet' }}
       </p>
+      <button v-if="search || statusFilter" @click="clearFilters" class="px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors">
+        Clear filters
+      </button>
     </div>
 
     <!-- Books -->
-    <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <template v-else>
+      <div class="flex items-center gap-2 mb-3">
+        <label class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            :checked="bulk.allSelected(visibleIds)"
+            @change="bulk.toggleAll(visibleIds)"
+            class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+          >
+          Select all
+        </label>
+      </div>
+
+      <BulkActionBar :count="bulk.selectedCount.value" @clear="bulk.clear()">
+        <button @click="bulkSetStatus('published')" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Publish</button>
+        <button @click="bulkSetStatus('draft')" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Draft</button>
+        <button @click="bulkSetStatus('archived')" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Archive</button>
+        <button @click="bulkExport" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Export CSV</button>
+        <button @click="bulkDeleteSelected" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors">Delete</button>
+      </BulkActionBar>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       <div
         v-for="book in books"
         :key="book.id"
-        class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow overflow-hidden"
+        class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow overflow-hidden"
       >
         <div class="p-5">
           <div class="flex items-start justify-between mb-3 gap-2">
             <div class="flex items-center gap-2 min-w-0 cursor-pointer" @click="previewBook = book">
+              <input
+                type="checkbox"
+                :checked="bulk.isSelected(book.id)"
+                @click.stop
+                @change="bulk.toggle(book.id)"
+                class="flex-shrink-0 w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+              >
               <div class="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0">
                 <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
@@ -138,7 +169,7 @@
             </select>
             <button
               @click="deleteBook(book)"
-              class="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+              class="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
               title="Delete"
             >
               <svg class="w-4 h-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -148,7 +179,8 @@
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </template>
 
     <!-- Document Preview -->
     <LibraryDocumentViewer v-if="previewBook" :book="previewBook" @close="previewBook = null" />
@@ -156,16 +188,26 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { apiService } from '@/services/api'
 import LibraryDocumentViewer from '@/components/library/LibraryDocumentViewer.vue'
+import BulkActionBar from '@/components/common/BulkActionBar.vue'
 import type { LibraryBook } from '@/types/library'
+import { useToastStore } from '@/stores/toast'
+import { useConfirmStore } from '@/stores/confirm'
+import { useBulkSelection } from '@/composables/useBulkSelection'
+import { usePersistedRef } from '@/composables/usePersistedRef'
+import { downloadBlob } from '@/utils/downloadBlob'
+
+const toast = useToastStore()
+const confirmDialog = useConfirmStore()
+const bulk = useBulkSelection<number>()
 
 const books = ref<LibraryBook[]>([])
 const stats = ref({ total: 0, draft: 0, published: 0, archived: 0 })
 const loading = ref(false)
 const search = ref('')
-const statusFilter = ref('')
+const statusFilter = usePersistedRef('hod-library-status-filter', '')
 const previewBook = ref<LibraryBook | null>(null)
 
 let searchTimer: number | null = null
@@ -204,20 +246,66 @@ const changeStatus = async (book: LibraryBook, status: string) => {
     await fetchBooks()
   } catch (error: any) {
     console.error('Failed to update book status:', error)
-    alert(error.response?.data?.message || 'Failed to update book status')
+    toast.error(error.response?.data?.message || 'Failed to update book status')
   }
 }
 
 const deleteBook = async (book: LibraryBook) => {
-  if (!confirm(`Are you sure you want to delete "${book.title}"? This action cannot be undone.`)) return
+  if (!await confirmDialog.open({ title: 'Delete book', message: `Are you sure you want to delete "${book.title}"? This action cannot be undone.`, confirmLabel: 'Delete', danger: true })) return
 
   try {
     await apiService.delete(`/hod/library/${book.id}`)
     await fetchBooks()
+    toast.success('Book deleted')
   } catch (error: any) {
     console.error('Failed to delete book:', error)
-    alert(error.response?.data?.message || 'Failed to delete book')
+    toast.error(error.response?.data?.message || 'Failed to delete book')
   }
+}
+
+const visibleIds = computed(() => books.value.map(b => b.id))
+
+const bulkSetStatus = async (status: 'draft' | 'published' | 'archived') => {
+  const ids = bulk.selectedArray()
+  if (ids.length === 0) return
+  try {
+    await apiService.post('/hod/library/bulk-status', { ids, status })
+    toast.success(`${ids.length} resource(s) updated`)
+    bulk.clear()
+    await fetchBooks()
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Failed to update resources')
+  }
+}
+
+const bulkDeleteSelected = async () => {
+  const ids = bulk.selectedArray()
+  if (ids.length === 0) return
+  if (!await confirmDialog.open({ title: 'Delete resources', message: `Are you sure you want to delete ${ids.length} resource(s)? This cannot be undone.`, confirmLabel: 'Delete', danger: true })) return
+  try {
+    await apiService.post('/hod/library/bulk-delete', { ids })
+    toast.success(`${ids.length} resource(s) deleted`)
+    bulk.clear()
+    await fetchBooks()
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Failed to delete resources')
+  }
+}
+
+const bulkExport = async () => {
+  const ids = bulk.selectedArray()
+  try {
+    const response = await apiService.post('/hod/library/bulk-export', { ids }, { responseType: 'blob' })
+    downloadBlob(response.data as unknown as Blob, 'library.csv')
+  } catch (error) {
+    toast.error('Failed to export resources')
+  }
+}
+
+const clearFilters = () => {
+  search.value = ''
+  statusFilter.value = ''
+  fetchBooks()
 }
 
 onMounted(() => {

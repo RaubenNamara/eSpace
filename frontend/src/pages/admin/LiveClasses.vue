@@ -272,6 +272,11 @@
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import type { LiveClass, LiveClassAttendanceRow, LiveClassRecording, LiveClassSummary, BBBServerStatus } from '@/types/liveclass'
+import { useToastStore } from '@/stores/toast'
+import { useConfirmStore } from '@/stores/confirm'
+
+const toast = useToastStore()
+const confirmDialog = useConfirmStore()
 
 const API_BASE = '/api'
 
@@ -375,33 +380,33 @@ const joinClass = async (cls: LiveClass) => {
       window.open(response.data.data.join_url, '_blank')
     }
   } catch (error: any) {
-    alert(error.response?.data?.message || 'Failed to join the class')
+    toast.error(error.response?.data?.message || 'Failed to join the class')
   } finally {
     actingId.value = null
   }
 }
 
 const endClass = async (cls: LiveClass) => {
-  if (!confirm(`End "${cls.title}" for everyone?`)) return
+  if (!await confirmDialog.open({ title: 'End live class', message: `End "${cls.title}" for everyone?`, confirmLabel: 'End Class', danger: true })) return
   actingId.value = cls.id
   try {
     await axios.post(`${API_BASE}/admin/live-classes/${cls.id}/end`)
     await loadClasses()
   } catch (error: any) {
-    alert(error.response?.data?.message || 'Failed to end the class')
+    toast.error(error.response?.data?.message || 'Failed to end the class')
   } finally {
     actingId.value = null
   }
 }
 
 const cancelClass = async (cls: LiveClass) => {
-  if (!confirm(`Cancel "${cls.title}"?`)) return
+  if (!await confirmDialog.open({ title: 'Cancel live class', message: `Cancel "${cls.title}"?`, confirmLabel: 'Cancel Class', danger: true })) return
   actingId.value = cls.id
   try {
     await axios.post(`${API_BASE}/admin/live-classes/${cls.id}/cancel`)
     await loadClasses()
   } catch (error: any) {
-    alert(error.response?.data?.message || 'Failed to cancel the class')
+    toast.error(error.response?.data?.message || 'Failed to cancel the class')
   } finally {
     actingId.value = null
   }
@@ -445,17 +450,17 @@ const togglePublish = async (rec: LiveClassRecording) => {
     await axios.put(`${API_BASE}/admin/live-classes/recordings/${rec.id}/publish`, { publish })
     rec.is_published = publish
   } catch (error: any) {
-    alert(error.response?.data?.message || 'Failed to update the recording')
+    toast.error(error.response?.data?.message || 'Failed to update the recording')
   }
 }
 
 const removeRecording = async (rec: LiveClassRecording) => {
-  if (!confirm('Permanently delete this recording from the BBB server?')) return
+  if (!await confirmDialog.open({ title: 'Delete recording', message: 'Permanently delete this recording from the BBB server?', confirmLabel: 'Delete', danger: true })) return
   try {
     await axios.delete(`${API_BASE}/admin/live-classes/recordings/${rec.id}`)
     recordings.value = recordings.value.filter(r => r.id !== rec.id)
   } catch (error: any) {
-    alert(error.response?.data?.message || 'Failed to delete the recording')
+    toast.error(error.response?.data?.message || 'Failed to delete the recording')
   }
 }
 

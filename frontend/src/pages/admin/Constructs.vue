@@ -304,6 +304,9 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import apiService from '@/services/api'
 import type { Construct, ConstructMeta, ConstructForm, ConstructTopicOption } from '@/types/construct'
+import { useToastStore } from '@/stores/toast'
+
+const toast = useToastStore()
 
 const router = useRouter()
 
@@ -502,12 +505,13 @@ async function saveForm() {
     if (response.data.success) {
       closeFormModal()
       await loadConstructs()
+      toast.success('Construct saved')
     } else {
-      alert(response.data.message || 'Failed to save construct')
+      toast.error(response.data.message || 'Failed to save construct')
     }
   } catch (err: any) {
     console.error('Failed to save construct:', err)
-    alert(err.response?.data?.message || 'Failed to save construct')
+    toast.error(err.response?.data?.message || 'Failed to save construct')
   } finally {
     saving.value = false
   }

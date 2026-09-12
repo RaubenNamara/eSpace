@@ -167,6 +167,9 @@
 import { ref, onMounted } from 'vue'
 import apiService from '@/services/api'
 import type { Class, AcademicYear } from '@/types'
+import { useToastStore } from '@/stores/toast'
+
+const toast = useToastStore()
 
 const classes = ref<Class[]>([])
 const academicYears = ref<AcademicYear[]>([])
@@ -196,7 +199,7 @@ const fetchAcademicYears = async () => {
     }
   } catch (error: any) {
     console.error('Failed to fetch academic years:', error)
-    alert('Failed to fetch academic years')
+    toast.error('Failed to fetch academic years')
   } finally {
     loading.value = false
   }
@@ -211,7 +214,7 @@ const fetchClasses = async () => {
     }
   } catch (error: any) {
     console.error('Failed to fetch classes:', error)
-    alert('Failed to fetch classes')
+    toast.error('Failed to fetch classes')
   } finally {
     loading.value = false
   }
@@ -273,17 +276,18 @@ const saveClass = async () => {
     if (response.data.success) {
       closeClassModal()
       await fetchClasses()
+      toast.success('Class saved')
     } else {
       console.error('Backend error:', response.data)
-      alert(response.data.message || 'Failed to save class')
+      toast.error(response.data.message || 'Failed to save class')
     }
   } catch (error: any) {
     console.error('Failed to save class:', error)
     if (error.response?.data) {
       console.error('Error response:', error.response.data)
-      alert(error.response.data.message || error.response.data.error || 'Failed to save class')
+      toast.error(error.response.data.message || error.response.data.error || 'Failed to save class')
     } else {
-      alert('Failed to save class')
+      toast.error('Failed to save class')
     }
   } finally {
     loading.value = false
@@ -310,12 +314,13 @@ const executeDelete = async () => {
     if (response.data.success) {
       closeDeleteModal()
       await fetchClasses()
+      toast.success('Deleted')
     } else {
-      alert(response.data.message || 'Failed to delete')
+      toast.error(response.data.message || 'Failed to delete')
     }
   } catch (error: any) {
     console.error('Failed to delete:', error)
-    alert('Failed to delete')
+    toast.error('Failed to delete')
   } finally {
     loading.value = false
   }

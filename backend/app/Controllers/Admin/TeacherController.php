@@ -1432,6 +1432,233 @@ class TeacherController extends Controller
     }
 
     /**
+     * Sanitize a raw `ids` array from the request body into a deduped list of positive ints.
+     */
+    private function sanitizeIds($rawIds): array
+    {
+        if (!is_array($rawIds)) {
+            return [];
+        }
+        $ids = array_map('intval', $rawIds);
+        $ids = array_filter($ids, fn($v) => $v > 0);
+        return array_values(array_unique($ids));
+    }
+
+    /**
+     * Bulk suspend/restore across selected teachers.
+     * POST /admin/teachers/bulk-status
+     * Body: { ids: number[], is_active: boolean }
+     */
+    public function bulkStatus(): void
+    {
+        if (!$this->isAdmin()) {
+            $this->forbidden();
+            return;
+        }
+
+        $data = $this->input();
+        $ids = $this->sanitizeIds($data['ids'] ?? []);
+        if (empty($ids)) {
+            $this->validationError(['ids' => 'No valid teachers selected']);
+            return;
+        }
+        if (!isset($data['is_active'])) {
+            $this->validationError(['is_active' => 'is_active is required']);
+            return;
+        }
+        $isActive = !empty($data['is_active']) ? 1 : 0;
+
+        $db = $this->getDb();
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+        try {
+            $stmt = $db->prepare("UPDATE teachers SET is_active = ? WHERE id IN ($placeholders) AND deleted_at IS NULL");
+            $stmt->execute([$isActive, ...$ids]);
+
+            foreach ($ids as $teacherId) {
+                $this->auditLog->logAction(
+                    $this->getCurrentUserId(),
+                    $this->getCurrentUserRole(),
+                    $isActive ? 'teacher_restored' : 'teacher_suspended',
+                    'teacher',
+                    $teacherId,
+                    $teacherId,
+                    json_encode(['is_active' => $isActive ? 0 : 1]),
+                    json_encode(['is_active' => $isActive])
+                );
+            }
+
+            $this->success(['updated' => count($ids)], count($ids) . ' teacher(s) updated');
+        } catch (\PDOException $e) {
+            error_log('Failed to bulk update teacher status: ' . $e->getMessage());
+            $this->error('Failed to update teachers', 500);
+        }
+    }
+
+    /**
+     * Bulk soft delete across selected teachers.
+     * POST /admin/teachers/bulk-delete
+     */
+    public function bulkDelete(): void
+    {
+        if (!$this->isAdmin()) {
+            $this->forbidden();
+            return;
+        }
+
+        $data = $this->input();
+        $ids = $this->sanitizeIds($data['ids'] ?? []);
+        if (empty($ids)) {
+            $this->validationError(['ids' => 'No valid teachers selected']);
+            return;
+        }
+
+        $db = $this->getDb();
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+        try {
+            $stmt = $db->prepare("UPDATE teachers SET deleted_at = NOW() WHERE id IN ($placeholders)");
+            $stmt->execute($ids);
+
+            foreach ($ids as $teacherId) {
+                $this->auditLog->logAction($this->getCurrentUserId(), $this->getCurrentUserRole(), 'teacher_deleted', 'teacher', $teacherId, $teacherId, null, null);
+            }
+
+            $this->success(['deleted' => count($ids)], count($ids) . ' teacher(s) deleted');
+        } catch (\PDOException $e) {
+            error_log('Failed to bulk delete teachers: ' . $e->getMessage());
+            $this->error('Failed to delete teachers', 500);
+        }
+    }
+
+    /**
+     * Bulk-assign a department across selected teachers (sets both the primary
+     * teachers.department_id and the teacher_department_assignments membership row).
+     * POST /admin/teachers/bulk-assign-department
+     * Body: { ids: number[], department_id: number }
+     */
+    public function bulkAssignDepartment(): void
+    {
+        if (!$this->isAdmin()) {
+            $this->forbidden();
+            return;
+        }
+
+        $data = $this->input();
+        $ids = $this->sanitizeIds($data['ids'] ?? []);
+        if (empty($ids)) {
+            $this->validationError(['ids' => 'No valid teachers selected']);
+            return;
+        }
+        $departmentId = isset($data['department_id']) ? (int) $data['department_id'] : 0;
+        if ($departmentId <= 0) {
+            $this->validationError(['department_id' => 'department_id is required']);
+            return;
+        }
+
+        $db = $this->getDb();
+        $stmt = $db->prepare("SELECT id FROM departments WHERE id = ? AND deleted_at IS NULL");
+        $stmt->execute([$departmentId]);
+        if (!$stmt->fetch()) {
+            $this->validationError(['department_id' => 'Department not found']);
+            return;
+        }
+
+        try {
+            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+            $updateStmt = $db->prepare("UPDATE teachers SET department_id = ?, updated_at = NOW() WHERE id IN ($placeholders) AND deleted_at IS NULL");
+            $updateStmt->execute([$departmentId, ...$ids]);
+
+            foreach ($ids as $teacherId) {
+                $this->syncTeacherPrimaryDepartment($teacherId, $departmentId);
+                $this->auditLog->logAction(
+                    $this->getCurrentUserId(),
+                    $this->getCurrentUserRole(),
+                    'teacher_department_assigned',
+                    'teacher',
+                    $teacherId,
+                    $teacherId,
+                    null,
+                    json_encode(['department_id' => $departmentId])
+                );
+            }
+
+            $this->success(['updated' => count($ids)], count($ids) . ' teacher(s) assigned');
+        } catch (\PDOException $e) {
+            error_log('Failed to bulk assign department: ' . $e->getMessage());
+            $this->error('Failed to assign department', 500);
+        }
+    }
+
+    /**
+     * CSV export of selected teachers (or, with no ids, every teacher matching search/department/status).
+     * POST /admin/teachers/bulk-export
+     */
+    public function bulkExport(): void
+    {
+        if (!$this->isAdmin()) {
+            $this->forbidden();
+            return;
+        }
+
+        $data = $this->input();
+        $ids = $this->sanitizeIds($data['ids'] ?? []);
+        $db = $this->getDb();
+
+        $where = ['t.deleted_at IS NULL'];
+        $params = [];
+
+        if (!empty($ids)) {
+            $where[] = 't.id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')';
+            array_push($params, ...$ids);
+        } else {
+            $search = trim((string) ($data['search'] ?? ''));
+            $departmentId = $data['department_id'] ?? '';
+            $isActive = $data['is_active'] ?? '';
+            if ($search !== '') {
+                $where[] = '(t.username LIKE ? OR t.email LIKE ? OR t.first_name LIKE ? OR t.last_name LIKE ? OR t.employee_number LIKE ?)';
+                $like = "%{$search}%";
+                array_push($params, $like, $like, $like, $like, $like);
+            }
+            if (!empty($departmentId)) {
+                $where[] = 't.department_id = ?';
+                $params[] = $departmentId;
+            }
+            if ($isActive !== '') {
+                $where[] = 't.is_active = ?';
+                $params[] = $isActive;
+            }
+        }
+
+        $sql = "SELECT t.employee_number, t.first_name, t.last_name, t.email, t.phone, t.gender,
+                       d.name as department_name, t.is_active, t.created_at
+                FROM teachers t
+                LEFT JOIN departments d ON t.department_id = d.id
+                WHERE " . implode(' AND ', $where) . "
+                ORDER BY t.last_name, t.first_name";
+
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll();
+
+        foreach ($rows as &$row) {
+            $row['status'] = $row['is_active'] ? 'Active' : 'Suspended';
+        }
+
+        $this->downloadCsv('teachers.csv', [
+            'Employee No' => 'employee_number',
+            'First Name' => 'first_name',
+            'Last Name' => 'last_name',
+            'Email' => 'email',
+            'Phone' => 'phone',
+            'Gender' => 'gender',
+            'Department' => 'department_name',
+            'Status' => 'status',
+            'Created At' => 'created_at',
+        ], $rows);
+    }
+
+    /**
      * Check if current user is admin
      */
     private function isAdmin(): bool

@@ -355,6 +355,9 @@
 import { ref, onMounted } from 'vue'
 import apiService from '@/services/api'
 import type { AcademicYear, Term } from '@/types'
+import { useToastStore } from '@/stores/toast'
+
+const toast = useToastStore()
 
 const activeTab = ref<'academic-years' | 'terms'>('academic-years')
 const academicYears = ref<AcademicYear[]>([])
@@ -402,7 +405,7 @@ const fetchAcademicYears = async () => {
     }
   } catch (error: any) {
     console.error('Failed to fetch academic years:', error)
-    alert('Failed to fetch academic years')
+    toast.error('Failed to fetch academic years')
   } finally {
     loading.value = false
   }
@@ -422,7 +425,7 @@ const fetchTerms = async () => {
     }
   } catch (error: any) {
     console.error('Failed to fetch terms:', error)
-    alert('Failed to fetch terms')
+    toast.error('Failed to fetch terms')
   } finally {
     loading.value = false
   }
@@ -480,12 +483,13 @@ const saveAcademicYear = async () => {
       closeAcademicYearModal()
       await fetchAcademicYears()
       await fetchTerms()
+      toast.success('Academic year saved')
     } else {
-      alert(response.data.message || 'Failed to save academic year')
+      toast.error(response.data.message || 'Failed to save academic year')
     }
   } catch (error: any) {
     console.error('Failed to save academic year:', error)
-    alert('Failed to save academic year')
+    toast.error('Failed to save academic year')
   } finally {
     loading.value = false
   }
@@ -547,12 +551,13 @@ const saveTerm = async () => {
       closeTermModal()
       await fetchTerms()
       await fetchAcademicYears()
+      toast.success('Term saved')
     } else {
-      alert(response.data.message || 'Failed to save term')
+      toast.error(response.data.message || 'Failed to save term')
     }
   } catch (error: any) {
     console.error('Failed to save term:', error)
-    alert('Failed to save term')
+    toast.error('Failed to save term')
   } finally {
     loading.value = false
   }
@@ -590,12 +595,13 @@ const executeDelete = async () => {
       closeDeleteModal()
       await fetchAcademicYears()
       await fetchTerms()
+      toast.success('Deleted')
     } else {
-      alert(response.data.message || 'Failed to delete')
+      toast.error(response.data.message || 'Failed to delete')
     }
   } catch (error: any) {
     console.error('Failed to delete:', error)
-    alert('Failed to delete')
+    toast.error('Failed to delete')
   } finally {
     loading.value = false
   }

@@ -137,6 +137,9 @@ import {
   PasteFromOffice,
   WordCount
 } from 'ckeditor5'
+import { useToastStore } from '@/stores/toast'
+
+const toast = useToastStore()
 
 // SECURITY NOTE: Source Editing and HTML Embed can allow unsafe HTML.
 // All saved editor HTML must be sanitized by the PHP backend (HtmlSanitizer class)
@@ -696,11 +699,7 @@ const onError = (error: any) => {
   }
   
   // Show user-friendly notification
-  if (typeof window !== 'undefined' && (window as any).showNotification) {
-    (window as any).showNotification('error', errorMessage)
-  } else {
-    alert(errorMessage)
-  }
+  toast.error(errorMessage)
   
   emit('error', error)
 }

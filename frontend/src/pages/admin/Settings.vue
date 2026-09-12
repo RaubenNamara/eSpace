@@ -109,6 +109,9 @@
 import { ref, onMounted } from 'vue'
 import apiService from '@/services/api'
 import { resolveAssetUrl } from '@/utils/url'
+import { useToastStore } from '@/stores/toast'
+
+const toast = useToastStore()
 
 interface SchoolSettings {
   school_name: string
@@ -171,11 +174,11 @@ const saveSettings = async () => {
     if (response.data.success) {
       showSuccess('School settings saved')
     } else {
-      alert(response.data.message || 'Failed to save settings')
+      toast.error(response.data.message || 'Failed to save settings')
     }
   } catch (error: any) {
     console.error('Failed to save settings:', error)
-    alert(error.response?.data?.message || 'Failed to save settings')
+    toast.error(error.response?.data?.message || 'Failed to save settings')
   } finally {
     saving.value = false
   }
@@ -197,11 +200,11 @@ const handleLogoSelect = async (event: Event) => {
       settings.value.logo_path = response.data.data.logo_path
       showSuccess('Logo updated')
     } else {
-      alert(response.data.message || 'Failed to upload logo')
+      toast.error(response.data.message || 'Failed to upload logo')
     }
   } catch (error: any) {
     console.error('Failed to upload logo:', error)
-    alert(error.response?.data?.message || 'Failed to upload logo')
+    toast.error(error.response?.data?.message || 'Failed to upload logo')
   } finally {
     uploadingLogo.value = false
     target.value = ''

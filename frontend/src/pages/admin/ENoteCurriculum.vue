@@ -522,6 +522,9 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import apiService from '@/services/api'
 import type { CurriculumMeta, CurriculumTopic, CurriculumTopicForm, CurriculumClassStreamOption } from '@/types/curriculum'
+import { useToastStore } from '@/stores/toast'
+
+const toast = useToastStore()
 
 const router = useRouter()
 const meta = ref<CurriculumMeta | null>(null)
@@ -917,8 +920,9 @@ const saveForm = async () => {
 
     closeFormModal()
     await loadTopics()
+    toast.success('Curriculum topic saved')
   } catch (error: any) {
-    alert(error.response?.data?.message || 'Failed to save curriculum topic')
+    toast.error(error.response?.data?.message || 'Failed to save curriculum topic')
   } finally {
     saving.value = false
   }
@@ -947,8 +951,9 @@ const executeDelete = async () => {
     showDeleteModal.value = false
     deleteTargetIds.value = []
     await loadTopics()
+    toast.success('Deleted')
   } catch (error: any) {
-    alert(error.response?.data?.message || 'Failed to delete')
+    toast.error(error.response?.data?.message || 'Failed to delete')
   } finally {
     saving.value = false
   }

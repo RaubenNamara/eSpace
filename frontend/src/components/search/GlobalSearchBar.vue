@@ -95,9 +95,11 @@ const typeBadgeClass = (type: string) => {
   return map[type] || 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
 }
 
+const ALLOWED_ROLES = ['student', 'teacher', 'hod', 'admin']
+
 const fetchSuggestions = async () => {
   const role = authStore.userRole
-  if ((role !== 'student' && role !== 'teacher') || query.value.trim().length < 2) {
+  if (!ALLOWED_ROLES.includes(role || '') || query.value.trim().length < 2) {
     suggestions.value = []
     return
   }
@@ -139,7 +141,7 @@ const submit = () => {
   const term = query.value.trim()
   if (!term) return
   const role = authStore.userRole
-  if (role !== 'student' && role !== 'teacher') return
+  if (!role || !ALLOWED_ROLES.includes(role)) return
   close()
   router.push({ path: `/${role}/search`, query: { q: term } })
 }

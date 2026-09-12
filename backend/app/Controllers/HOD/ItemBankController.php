@@ -234,4 +234,172 @@ class ItemBankController extends Controller
             $this->error('Failed to delete resource', 500);
         }
     }
+
+    /**
+     * Sanitize a raw `ids` array from the request body into a deduped list of positive ints.
+     */
+    private function sanitizeIds($rawIds): array
+    {
+        if (!is_array($rawIds)) {
+            return [];
+        }
+        $ids = array_map('intval', $rawIds);
+        $ids = array_filter($ids, fn($v) => $v > 0);
+        return array_values(array_unique($ids));
+    }
+
+    /**
+     * Re-scope every requested id to this HOD's own department (never trust the client's list
+     * wholesale) and return only the ids that actually belong to it and aren't already deleted.
+     */
+    private function filterDepartmentIds(array $ids, int $departmentId): array
+    {
+        if (empty($ids)) {
+            return [];
+        }
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $this->db->prepare("SELECT id FROM item_bank_questions WHERE id IN ($placeholders) AND department_id = ? AND deleted_at IS NULL");
+        $stmt->execute([...$ids, $departmentId]);
+        return array_map('intval', array_column($stmt->fetchAll(), 'id'));
+    }
+
+    /**
+     * Bulk status change across selected resources in the HOD's department.
+     * POST /hod/itembank/bulk-status
+     */
+    public function bulkStatus(): void
+    {
+        if (!$this->isHOD()) {
+            $this->forbidden();
+            return;
+        }
+
+        $departmentId = $this->getHODDepartmentId();
+        if (!$departmentId) {
+            $this->error('Department not found for HOD', 404);
+            return;
+        }
+
+        $data = $this->input();
+        $status = $data['status'] ?? '';
+        if (!in_array($status, ['draft', 'published', 'archived'], true)) {
+            $this->validationError(['status' => 'status must be draft, published or archived']);
+            return;
+        }
+
+        $ids = $this->filterDepartmentIds($this->sanitizeIds($data['ids'] ?? []), $departmentId);
+        if (empty($ids)) {
+            $this->validationError(['ids' => 'No valid resources selected']);
+            return;
+        }
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+        try {
+            $publishedAtClause = $status === 'published' ? ", published_at = NOW()" : "";
+            $sql = "UPDATE item_bank_questions SET status = ?{$publishedAtClause}, updated_at = NOW() WHERE id IN ($placeholders)";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$status, ...$ids]);
+
+            $this->success(['updated' => count($ids)], count($ids) . ' resource(s) updated');
+        } catch (\PDOException $e) {
+            error_log('Failed to bulk update item bank resources: ' . $e->getMessage());
+            $this->error('Failed to update resources', 500);
+        }
+    }
+
+    /**
+     * Bulk soft delete across selected resources in the HOD's department.
+     * POST /hod/itembank/bulk-delete
+     */
+    public function bulkDelete(): void
+    {
+        if (!$this->isHOD()) {
+            $this->forbidden();
+            return;
+        }
+
+        $departmentId = $this->getHODDepartmentId();
+        if (!$departmentId) {
+            $this->error('Department not found for HOD', 404);
+            return;
+        }
+
+        $data = $this->input();
+        $ids = $this->filterDepartmentIds($this->sanitizeIds($data['ids'] ?? []), $departmentId);
+        if (empty($ids)) {
+            $this->validationError(['ids' => 'No valid resources selected']);
+            return;
+        }
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+        try {
+            $stmt = $this->db->prepare("UPDATE item_bank_questions SET deleted_at = NOW() WHERE id IN ($placeholders)");
+            $stmt->execute($ids);
+
+            $this->success(['deleted' => count($ids)], count($ids) . ' resource(s) deleted');
+        } catch (\PDOException $e) {
+            error_log('Failed to bulk delete item bank resources: ' . $e->getMessage());
+            $this->error('Failed to delete resources', 500);
+        }
+    }
+
+    /**
+     * CSV export of selected resources (or, with no ids, every resource in the HOD's department).
+     * POST /hod/itembank/bulk-export
+     */
+    public function bulkExport(): void
+    {
+        if (!$this->isHOD()) {
+            $this->forbidden();
+            return;
+        }
+
+        $departmentId = $this->getHODDepartmentId();
+        if (!$departmentId) {
+            $this->error('Department not found for HOD', 404);
+            return;
+        }
+
+        $data = $this->input();
+        $ids = $this->sanitizeIds($data['ids'] ?? []);
+
+        $where = ['q.department_id = ?', 'q.deleted_at IS NULL'];
+        $params = [$departmentId];
+
+        if (!empty($ids)) {
+            $where[] = 'q.id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')';
+            array_push($params, ...$ids);
+        }
+
+        $sql = "SELECT q.question_text as title, q.status, s.name as subject_name, c.name as class_name,
+                       t.first_name as teacher_first_name, t.last_name as teacher_last_name,
+                       q.file_size, q.created_at, q.updated_at
+                FROM item_bank_questions q
+                LEFT JOIN subjects s ON q.subject_id = s.id
+                LEFT JOIN classes c ON q.class_id = c.id
+                LEFT JOIN teachers t ON q.created_by = t.id
+                WHERE " . implode(' AND ', $where) . "
+                ORDER BY q.updated_at DESC";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll();
+
+        foreach ($rows as &$row) {
+            $row['teacher'] = trim(($row['teacher_first_name'] ?? '') . ' ' . ($row['teacher_last_name'] ?? ''));
+        }
+
+        $this->downloadCsv('item-bank.csv', [
+            'Title' => 'title',
+            'Status' => 'status',
+            'Subject' => 'subject_name',
+            'Class' => 'class_name',
+            'Teacher' => 'teacher',
+            'File Size (bytes)' => 'file_size',
+            'Created At' => 'created_at',
+            'Updated At' => 'updated_at',
+        ], $rows);
+    }
 }

@@ -2,26 +2,26 @@
   <div>
     <!-- Header - icon and title share a row with the search box, so the input lines up exactly
          with the heading; the subtitle (with the live count folded in) sits on its own line. -->
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
-      <div class="flex items-center gap-2.5">
-        <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0">
-          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="flex items-center justify-between gap-2 mb-1">
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <div class="hidden sm:flex w-7 h-7 rounded-lg bg-indigo-600 items-center justify-center flex-shrink-0">
+          <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222"></path>
           </svg>
         </div>
-        <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-tight">Students</h1>
+        <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight whitespace-nowrap">Students</h1>
       </div>
 
-      <div class="relative w-full sm:w-80">
-        <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div class="relative flex-shrink min-w-0 w-32 sm:w-80">
+        <svg class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
         </svg>
         <input
           v-model="search"
           @input="debouncedSearch"
           type="text"
-          placeholder="Search by name or admission number..."
-          class="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+          placeholder="Search..."
+          class="w-full pl-8 pr-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
         >
       </div>
     </div>
@@ -152,6 +152,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { apiService } from '@/services/api'
+import { useToastStore } from '@/stores/toast'
+import { useConfirmStore } from '@/stores/confirm'
+
+const toast = useToastStore()
+const confirmDialog = useConfirmStore()
 
 interface Student {
   id: number
@@ -212,7 +217,12 @@ const fetchStudents = async (page = 1) => {
 
 const deenrollStudent = async (student: Student) => {
   const name = `${student.first_name} ${student.last_name}`
-  if (!confirm(`De-enroll ${name} from your department?\n\nThis removes them from every teacher in the department, not just your view. Their account and historical records (submissions, marks, attendance) are kept.`)) {
+  if (!await confirmDialog.open({
+    title: 'De-enroll student',
+    message: `De-enroll ${name} from your department?\n\nThis removes them from every teacher in the department, not just your view. Their account and historical records (submissions, marks, attendance) are kept.`,
+    confirmLabel: 'De-enroll',
+    danger: true
+  })) {
     return
   }
 
@@ -226,11 +236,12 @@ const deenrollStudent = async (student: Student) => {
     })
     if (response.data.success) {
       await fetchStudents(pagination.value.page)
+      toast.success('Student de-enrolled successfully')
     } else {
-      alert(response.data.message || 'Failed to de-enroll student')
+      toast.error(response.data.message || 'Failed to de-enroll student')
     }
   } catch (err: any) {
-    alert(err.response?.data?.message || 'Failed to de-enroll student')
+    toast.error(err.response?.data?.message || 'Failed to de-enroll student')
   } finally {
     deenrolling.value = null
   }

@@ -115,6 +115,77 @@ class ENoteController extends Controller
     }
 
     /**
+     * Sanitize a raw `ids` array from the request body into a deduped list of positive ints.
+     */
+    private function sanitizeIds($rawIds): array
+    {
+        if (!is_array($rawIds)) {
+            return [];
+        }
+        $ids = array_map('intval', $rawIds);
+        $ids = array_filter($ids, fn($v) => $v > 0);
+        return array_values(array_unique($ids));
+    }
+
+    /**
+     * CSV export of selected topics (or, with no ids, every topic in the HOD's department).
+     * Read-only, like the rest of this controller - HOD can't publish/archive/delete eNotes.
+     * POST /hod/enotes/bulk-export
+     */
+    public function bulkExport(): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+
+        $departmentId = $this->getHodDepartmentId();
+        if (!$departmentId) {
+            $this->error('HOD not assigned to a department', 403);
+            return;
+        }
+
+        $data = $this->input();
+        $ids = $this->sanitizeIds($data['ids'] ?? []);
+
+        $db = $this->getDb();
+        $where = [
+            'et.deleted_at IS NULL',
+            'EXISTS (SELECT 1 FROM teacher_department_assignments tda WHERE tda.teacher_id = et.teacher_id AND tda.department_id = ? AND tda.deleted_at IS NULL)'
+        ];
+        $params = [$departmentId];
+
+        if (!empty($ids)) {
+            $where[] = 'et.id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')';
+            array_push($params, ...$ids);
+        }
+
+        $sql = "SELECT et.title, et.status, s.name as subject_name, c.name as class_name,
+                       CONCAT(t.first_name, ' ', t.last_name) as teacher_name, et.total_pages, et.created_at, et.updated_at
+                FROM enote_topics et
+                INNER JOIN teachers t ON et.teacher_id = t.id
+                LEFT JOIN subjects s ON et.subject_id = s.id
+                LEFT JOIN classes c ON et.class_id = c.id
+                WHERE " . implode(' AND ', $where) . "
+                ORDER BY et.updated_at DESC";
+
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll();
+
+        $this->downloadCsv('enotes.csv', [
+            'Title' => 'title',
+            'Status' => 'status',
+            'Subject' => 'subject_name',
+            'Class' => 'class_name',
+            'Teacher' => 'teacher_name',
+            'Pages' => 'total_pages',
+            'Created At' => 'created_at',
+            'Updated At' => 'updated_at',
+        ], $rows);
+    }
+
+    /**
      * Read-only single topic (with pages) authored by a teacher in this department.
      * GET /hod/enotes/{id}
      */

@@ -212,6 +212,11 @@
 import { ref, computed, onMounted } from 'vue'
 import apiService from '@/services/api'
 import { resolveAssetUrl } from '@/utils/url'
+import { useToastStore } from '@/stores/toast'
+import { useConfirmStore } from '@/stores/confirm'
+
+const toast = useToastStore()
+const confirmDialog = useConfirmStore()
 
 interface Video {
   id: number
@@ -362,7 +367,7 @@ const handleFileSelect = (event: Event) => {
 
 const uploadVideo = async () => {
   if (!uploadForm.value.file) {
-    alert('Please select a video file')
+    toast.warning('Please select a video file')
     return
   }
 
@@ -383,20 +388,20 @@ const uploadVideo = async () => {
       showUploadModal.value = false
       uploadForm.value = { title: '', description: '', file: null }
       await fetchVideos()
-      alert('Video uploaded successfully')
+      toast.success('Video uploaded successfully')
     } else {
-      alert('Failed to upload video: ' + (response.data.message || 'Unknown error'))
+      toast.error('Failed to upload video: ' + (response.data.message || 'Unknown error'))
     }
   } catch (error: any) {
     console.error('Failed to upload video:', error)
-    alert('Failed to upload video: ' + (error.response?.data?.message || error.message || 'Unknown error'))
+    toast.error('Failed to upload video: ' + (error.response?.data?.message || error.message || 'Unknown error'))
   } finally {
     uploading.value = false
   }
 }
 
 const deleteVideo = async (id: number) => {
-  if (!confirm('Are you sure you want to delete this video?')) {
+  if (!await confirmDialog.open({ title: 'Delete video', message: 'Are you sure you want to delete this video?', confirmLabel: 'Delete', danger: true })) {
     return
   }
 
@@ -404,13 +409,13 @@ const deleteVideo = async (id: number) => {
     const response = await apiService.delete(`/admin/videos/${id}`)
     if (response.data.success) {
       await fetchVideos()
-      alert('Video deleted successfully')
+      toast.success('Video deleted successfully')
     } else {
-      alert('Failed to delete video: ' + (response.data.message || 'Unknown error'))
+      toast.error('Failed to delete video: ' + (response.data.message || 'Unknown error'))
     }
   } catch (error: any) {
     console.error('Failed to delete video:', error)
-    alert('Failed to delete video: ' + (error.response?.data?.message || error.message || 'Unknown error'))
+    toast.error('Failed to delete video: ' + (error.response?.data?.message || error.message || 'Unknown error'))
   }
 }
 

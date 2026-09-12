@@ -191,6 +191,9 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import type { LiveClass, LiveClassRecording } from '@/types/liveclass'
+import { useToastStore } from '@/stores/toast'
+
+const toast = useToastStore()
 
 const route = useRoute()
 const router = useRouter()
@@ -310,7 +313,7 @@ const joinClass = async (cls: LiveClass) => {
       }
     }
   } catch (err: any) {
-    alert(err.response?.data?.message || 'Failed to join the class')
+    toast.error(err.response?.data?.message || 'Failed to join the class')
   } finally {
     actingId.value = null
   }

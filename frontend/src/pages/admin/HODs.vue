@@ -523,6 +523,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import apiService from '@/services/api'
+import { useToastStore } from '@/stores/toast'
+import { useConfirmStore } from '@/stores/confirm'
+
+const toast = useToastStore()
+const confirmDialog = useConfirmStore()
 
 interface HOD {
   id: number
@@ -672,8 +677,9 @@ const createHOD = async () => {
       showCreateModal.value = false
       resetFormData()
       fetchHODs()
+      toast.success('HOD created successfully')
     } else {
-      alert('Failed to create HOD: ' + (response.data.message || 'Unknown error'))
+      toast.error('Failed to create HOD: ' + (response.data.message || 'Unknown error'))
     }
   } catch (error: any) {
     console.error('Failed to create HOD:', error)
@@ -687,7 +693,7 @@ const createHOD = async () => {
       errorMessage = error.message
     }
 
-    alert('Failed to create HOD: ' + errorMessage)
+    toast.error('Failed to create HOD: ' + errorMessage)
   }
 }
 
@@ -728,9 +734,9 @@ const updateHOD = async () => {
     if (response.data.success) {
       showEditModal.value = false
       fetchHODs()
-      alert('HOD updated successfully')
+      toast.success('HOD updated successfully')
     } else {
-      alert('Failed to update HOD: ' + (response.data.message || 'Unknown error'))
+      toast.error('Failed to update HOD: ' + (response.data.message || 'Unknown error'))
     }
   } catch (error: any) {
     console.error('Failed to update HOD:', error)
@@ -740,16 +746,16 @@ const updateHOD = async () => {
     } else if (error.message) {
       errorMessage = error.message
     }
-    alert('Failed to update HOD: ' + errorMessage)
+    toast.error('Failed to update HOD: ' + errorMessage)
   }
 }
 
 const deassignHOD = async (id: number) => {
-  if (confirm('Are you sure you want to remove the HOD role from this person? They will no longer be a Head of Department.')) {
+  if (await confirmDialog.open({ title: 'Remove HOD role', message: 'Are you sure you want to remove the HOD role from this person? They will no longer be a Head of Department.', confirmLabel: 'Remove', danger: true })) {
     try {
       await apiService.post(`/admin/hods/${id}/deassign`, {})
       fetchHODs()
-      alert('HOD de-assigned successfully')
+      toast.success('HOD de-assigned successfully')
     } catch (error: any) {
       console.error('Failed to de-assign HOD:', error)
       let errorMessage = 'Unknown error'
@@ -758,7 +764,7 @@ const deassignHOD = async (id: number) => {
       } else if (error.message) {
         errorMessage = error.message
       }
-      alert('Failed to de-assign HOD: ' + errorMessage)
+      toast.error('Failed to de-assign HOD: ' + errorMessage)
     }
   }
 }
@@ -826,9 +832,9 @@ const assignTeacherAsHOD = async () => {
       showAssignTeacherModal.value = false
       resetAssignTeacherData()
       fetchHODs()
-      alert('Teacher assigned as HOD successfully')
+      toast.success('Teacher assigned as HOD successfully')
     } else {
-      alert('Failed to assign teacher as HOD: ' + (response.data.message || 'Unknown error'))
+      toast.error('Failed to assign teacher as HOD: ' + (response.data.message || 'Unknown error'))
     }
   } catch (error: any) {
     console.error('Failed to assign teacher as HOD:', error)
@@ -838,7 +844,7 @@ const assignTeacherAsHOD = async () => {
     } else if (error.message) {
       errorMessage = error.message
     }
-    alert('Failed to assign teacher as HOD: ' + errorMessage)
+    toast.error('Failed to assign teacher as HOD: ' + errorMessage)
   }
 }
 

@@ -83,6 +83,9 @@ import { ref, computed, watch } from 'vue'
 import axios from 'axios'
 import type { AssignmentQuestion } from '@/types'
 import { computeGradeSummary } from '@/utils/grading'
+import { useToastStore } from '@/stores/toast'
+
+const toast = useToastStore()
 
 interface MarkableQuestion extends AssignmentQuestion {
   question_mark?: { marks_awarded: number | null; feedback?: string } | null
@@ -207,7 +210,7 @@ async function completeMarking() {
     await axios.post(`${API_BASE}/teacher/assignments/${props.assignmentId}/submissions/${props.submissionId}/complete-marking`)
     emit('status-changed', 'graded')
   } catch (err: any) {
-    alert(err.response?.data?.message || 'Failed to complete marking')
+    toast.error(err.response?.data?.message || 'Failed to complete marking')
   }
 }
 
@@ -216,7 +219,7 @@ async function returnToStudent() {
     await axios.post(`${API_BASE}/teacher/assignments/${props.assignmentId}/submissions/${props.submissionId}/return`)
     emit('status-changed', 'returned')
   } catch (err: any) {
-    alert(err.response?.data?.message || 'Failed to return submission')
+    toast.error(err.response?.data?.message || 'Failed to return submission')
   }
 }
 
@@ -225,7 +228,7 @@ async function reopen() {
     await axios.post(`${API_BASE}/teacher/assignments/${props.assignmentId}/submissions/${props.submissionId}/reopen`)
     emit('status-changed', 'submitted')
   } catch (err: any) {
-    alert(err.response?.data?.message || 'Failed to reopen submission')
+    toast.error(err.response?.data?.message || 'Failed to reopen submission')
   }
 }
 

@@ -458,6 +458,175 @@ class VideoController extends Controller
     }
 
     /**
+     * Sanitize a raw `ids` array from the request body into a deduped list of positive ints.
+     */
+    private function sanitizeIds($rawIds): array
+    {
+        if (!is_array($rawIds)) {
+            return [];
+        }
+        $ids = array_map('intval', $rawIds);
+        $ids = array_filter($ids, fn($v) => $v > 0);
+        return array_values(array_unique($ids));
+    }
+
+    /**
+     * Re-verify ownership of every requested id (never trust the client's list wholesale) and
+     * return only the ids that actually belong to this teacher and aren't already deleted.
+     */
+    private function filterOwnedIds(array $ids, int $teacherId): array
+    {
+        if (empty($ids)) {
+            return [];
+        }
+        $db = $this->getDb();
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $db->prepare("SELECT id FROM videos WHERE id IN ($placeholders) AND teacher_id = ? AND deleted_at IS NULL");
+        $stmt->execute([...$ids, $teacherId]);
+        return array_map('intval', array_column($stmt->fetchAll(), 'id'));
+    }
+
+    /**
+     * Bulk status change (draft/published/archived) across selected videos.
+     * POST /teacher/videos/bulk-status
+     */
+    public function bulkStatus(): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+
+        $teacherId = $this->getTeacherId();
+        if (!$teacherId) {
+            $this->error('Teacher not found', 403);
+            return;
+        }
+
+        $data = $this->input();
+        $status = $data['status'] ?? '';
+        if (!in_array($status, ['draft', 'published', 'archived'], true)) {
+            $this->validationError(['status' => 'status must be draft, published or archived']);
+            return;
+        }
+
+        $ids = $this->filterOwnedIds($this->sanitizeIds($data['ids'] ?? []), $teacherId);
+        if (empty($ids)) {
+            $this->validationError(['ids' => 'No valid videos selected']);
+            return;
+        }
+
+        $db = $this->getDb();
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+        try {
+            $publishedAtClause = $status === 'published' ? ", published_at = NOW()" : "";
+            $sql = "UPDATE videos SET status = ?{$publishedAtClause}, updated_at = NOW() WHERE id IN ($placeholders)";
+            $stmt = $db->prepare($sql);
+            $stmt->execute([$status, ...$ids]);
+
+            $this->success(['updated' => count($ids)], count($ids) . ' video(s) updated');
+        } catch (\PDOException $e) {
+            error_log('Failed to bulk update videos: ' . $e->getMessage());
+            $this->error('Failed to update videos', 500);
+        }
+    }
+
+    /**
+     * Bulk soft delete across selected videos.
+     * POST /teacher/videos/bulk-delete
+     */
+    public function bulkDelete(): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+
+        $teacherId = $this->getTeacherId();
+        if (!$teacherId) {
+            $this->error('Teacher not found', 403);
+            return;
+        }
+
+        $data = $this->input();
+        $ids = $this->filterOwnedIds($this->sanitizeIds($data['ids'] ?? []), $teacherId);
+        if (empty($ids)) {
+            $this->validationError(['ids' => 'No valid videos selected']);
+            return;
+        }
+
+        $db = $this->getDb();
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+        try {
+            $stmt = $db->prepare("UPDATE videos SET deleted_at = NOW() WHERE id IN ($placeholders)");
+            $stmt->execute($ids);
+
+            $this->success(['deleted' => count($ids)], count($ids) . ' video(s) deleted');
+        } catch (\PDOException $e) {
+            error_log('Failed to bulk delete videos: ' . $e->getMessage());
+            $this->error('Failed to delete videos', 500);
+        }
+    }
+
+    /**
+     * CSV export of selected videos (or, with no ids, every video matching the current filters).
+     * POST /teacher/videos/bulk-export
+     */
+    public function bulkExport(): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+
+        $teacherId = $this->getTeacherId();
+        if (!$teacherId) {
+            $this->error('Teacher not found', 403);
+            return;
+        }
+
+        $data = $this->input();
+        $ids = $this->sanitizeIds($data['ids'] ?? []);
+
+        $db = $this->getDb();
+        $where = ['v.teacher_id = ?', 'v.deleted_at IS NULL'];
+        $params = [$teacherId];
+
+        if (!empty($ids)) {
+            $where[] = 'v.id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')';
+            array_push($params, ...$ids);
+        }
+
+        $sql = "SELECT v.title, v.status, s.name as subject_name, c.name as class_name, v.class_group_name,
+                       v.file_size, v.created_at, v.updated_at
+                FROM videos v
+                LEFT JOIN subjects s ON v.subject_id = s.id
+                LEFT JOIN classes c ON v.class_id = c.id
+                WHERE " . implode(' AND ', $where) . "
+                ORDER BY v.updated_at DESC";
+
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll();
+
+        foreach ($rows as &$row) {
+            $row['class'] = $row['class_name'] ?? $row['class_group_name'] ?? '';
+        }
+
+        $this->downloadCsv('videos.csv', [
+            'Title' => 'title',
+            'Status' => 'status',
+            'Subject' => 'subject_name',
+            'Class' => 'class',
+            'File Size (bytes)' => 'file_size',
+            'Created At' => 'created_at',
+            'Updated At' => 'updated_at',
+        ], $rows);
+    }
+
+    /**
      * Validate and store the uploaded video, returning its public URL/name/size/mime, or null
      * (having already sent an error response) if validation fails.
      */

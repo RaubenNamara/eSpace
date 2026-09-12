@@ -124,8 +124,18 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
           </svg>
           <h3 class="mt-4 text-lg font-medium text-gray-900 dark:text-white">No students found</h3>
-          <p class="mt-2 text-gray-500 dark:text-gray-400">Get started by adding your first student.</p>
+          <p class="mt-2 text-gray-500 dark:text-gray-400">
+            {{ searchQuery || classFilter ? 'No students match your search or filter.' : 'Get started by adding your first student.' }}
+          </p>
           <button
+            v-if="searchQuery || classFilter"
+            @click="clearFilters"
+            class="mt-4 px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
+          >
+            Clear filters
+          </button>
+          <button
+            v-else
             @click="showCreateModal = true"
             class="btn-primary mt-4"
           >
@@ -134,10 +144,32 @@
         </div>
 
         <!-- Students Table -->
-        <div v-else class="overflow-x-auto">
+        <div v-else>
+        <div class="px-6 pt-4">
+          <BulkActionBar :count="bulk.selectedCount.value" @clear="bulk.clear()">
+            <select v-model="bulkAssignClassId" class="px-2.5 py-1 min-h-[32px] text-xs border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+              <option value="">Assign class...</option>
+              <option v-for="cls in classes" :key="cls.id" :value="cls.id">{{ cls.name }} ({{ cls.level }}){{ cls.stream_name ? ' - ' + cls.stream_name : '' }}</option>
+            </select>
+            <button @click="bulkAssignClass" :disabled="!bulkAssignClassId" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50">Apply</button>
+            <button @click="bulkSetActive(true)" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Activate</button>
+            <button @click="bulkSetActive(false)" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Deactivate</button>
+            <button @click="bulkExport" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Export CSV</button>
+            <button @click="bulkDeleteSelected" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors">Delete</button>
+          </BulkActionBar>
+        </div>
+        <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700">
           <thead class="bg-gray-50 dark:bg-gray-950">
             <tr>
+              <th class="px-4 py-4 text-left">
+                <input
+                  type="checkbox"
+                  :checked="bulk.allSelected(visibleIds)"
+                  @change="bulk.toggleAll(visibleIds)"
+                  class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
+                >
+              </th>
               <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Name</th>
               <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Reg No</th>
               <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Class</th>
@@ -152,6 +184,14 @@
               :key="student.id"
               class="group hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors duration-150"
             >
+              <td class="px-4 py-4">
+                <input
+                  type="checkbox"
+                  :checked="bulk.isSelected(student.id)"
+                  @change="bulk.toggle(student.id)"
+                  class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
+                >
+              </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="text-sm font-semibold text-gray-900 dark:text-white">{{ student.first_name }} {{ student.last_name }}</div>
               </td>
@@ -178,7 +218,7 @@
                 <div class="flex items-center justify-end gap-2">
                   <button
                     @click="editStudent(student)"
-                    class="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors duration-150"
+                    class="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors duration-150"
                     title="Edit"
                   >
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -187,7 +227,7 @@
                   </button>
                   <button
                     @click="regeneratePassword(student)"
-                    class="p-2 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors duration-150"
+                    class="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors duration-150"
                     title="Regenerate Password"
                   >
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -196,7 +236,7 @@
                   </button>
                   <button
                     @click="deleteStudent(student)"
-                    class="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors duration-150"
+                    class="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors duration-150"
                     title="Delete"
                   >
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -208,6 +248,7 @@
             </tr>
           </tbody>
         </table>
+        </div>
         </div>
 
         <!-- Pagination -->
@@ -241,7 +282,7 @@
         <div class="p-6">
           <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4">Add New Student</h2>
           <form @submit.prevent="createStudent">
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">First Name *</label>
                 <input
@@ -320,7 +361,7 @@
         <div class="p-6">
           <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4">Edit Student</h2>
           <form @submit.prevent="updateStudent">
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">First Name *</label>
                 <input
@@ -445,8 +486,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { apiService } from '../../services/api'
+import { useToastStore } from '@/stores/toast'
+import { useConfirmStore } from '@/stores/confirm'
+import { useBulkSelection } from '@/composables/useBulkSelection'
+import { usePersistedRef } from '@/composables/usePersistedRef'
+import { downloadBlob } from '@/utils/downloadBlob'
+import BulkActionBar from '@/components/common/BulkActionBar.vue'
+
+const toast = useToastStore()
+const confirmDialog = useConfirmStore()
+const bulk = useBulkSelection<number>()
+const bulkAssignClassId = ref('')
 
 interface Student {
   id: number
@@ -480,7 +532,7 @@ const showCreateModal = ref(false)
 const showEditModal = ref(false)
 const showPasswordModal = ref(false)
 const searchQuery = ref('')
-const classFilter = ref('')
+const classFilter = usePersistedRef('admin-students-class-filter', '')
 const searchTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
 const regeneratedPassword = ref({
   username: '',
@@ -539,6 +591,65 @@ const fetchStudents = async (page = 1) => {
   }
 }
 
+const visibleIds = computed(() => students.value.map(s => s.id))
+
+const bulkAssignClass = async () => {
+  const ids = bulk.selectedArray()
+  if (ids.length === 0 || !bulkAssignClassId.value) return
+  try {
+    await apiService.post('/admin/students/bulk-update', { ids, class_id: parseInt(bulkAssignClassId.value) })
+    toast.success(`${ids.length} student(s) assigned`)
+    bulk.clear()
+    bulkAssignClassId.value = ''
+    await fetchStudents(pagination.value.page)
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Failed to assign class')
+  }
+}
+
+const bulkSetActive = async (isActive: boolean) => {
+  const ids = bulk.selectedArray()
+  if (ids.length === 0) return
+  try {
+    await apiService.post('/admin/students/bulk-update', { ids, is_active: isActive ? 1 : 0 })
+    toast.success(`${ids.length} student(s) updated`)
+    bulk.clear()
+    await fetchStudents(pagination.value.page)
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Failed to update students')
+  }
+}
+
+const bulkDeleteSelected = async () => {
+  const ids = bulk.selectedArray()
+  if (ids.length === 0) return
+  if (!await confirmDialog.open({ title: 'Delete students', message: `Are you sure you want to delete ${ids.length} student(s)? This cannot be undone.`, confirmLabel: 'Delete', danger: true })) return
+  try {
+    await apiService.post('/admin/students/bulk-delete', { ids })
+    toast.success(`${ids.length} student(s) deleted`)
+    bulk.clear()
+    await fetchStudents(pagination.value.page)
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Failed to delete students')
+  }
+}
+
+const bulkExport = async () => {
+  const ids = bulk.selectedArray()
+  try {
+    const response = await apiService.post('/admin/students/bulk-export', { ids }, { responseType: 'blob' })
+    downloadBlob(response.data as unknown as Blob, 'students.csv')
+  } catch (error) {
+    toast.error('Failed to export students')
+  }
+}
+
+const clearFilters = () => {
+  searchQuery.value = ''
+  classFilter.value = ''
+  fetchStudents(1)
+}
+
 const debouncedSearch = () => {
   if (searchTimeout.value) clearTimeout(searchTimeout.value)
   searchTimeout.value = setTimeout(() => {
@@ -570,12 +681,12 @@ const createStudent = async () => {
         successMessage.value = ''
       }, 5000)
     } else {
-      alert(response.data.message || 'Failed to create student')
+      toast.error(response.data.message || 'Failed to create student')
     }
   } catch (error: any) {
     console.error('Failed to create student:', error)
     const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Failed to create student'
-    alert(errorMessage)
+    toast.error(errorMessage)
   } finally {
     loading.value = false
   }
@@ -617,19 +728,19 @@ const updateStudent = async () => {
         successMessage.value = ''
       }, 5000)
     } else {
-      alert(response.data.message || 'Failed to update student')
+      toast.error(response.data.message || 'Failed to update student')
     }
   } catch (error: any) {
     console.error('Failed to update student:', error)
     const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Failed to update student'
-    alert(errorMessage)
+    toast.error(errorMessage)
   } finally {
     loading.value = false
   }
 }
 
 const deleteStudent = async (student: Student) => {
-  if (!confirm(`Are you sure you want to delete student "${student.first_name} ${student.last_name}"? This action cannot be undone.`)) return
+  if (!await confirmDialog.open({ title: 'Delete student', message: `Are you sure you want to delete student "${student.first_name} ${student.last_name}"? This action cannot be undone.`, confirmLabel: 'Delete', danger: true })) return
   
   loading.value = true
   try {
@@ -642,12 +753,12 @@ const deleteStudent = async (student: Student) => {
         successMessage.value = ''
       }, 5000)
     } else {
-      alert(response.data.message || 'Failed to delete student')
+      toast.error(response.data.message || 'Failed to delete student')
     }
   } catch (error: any) {
     console.error('Failed to delete student:', error)
     const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Failed to delete student'
-    alert(errorMessage)
+    toast.error(errorMessage)
   } finally {
     loading.value = false
   }
@@ -664,7 +775,7 @@ const resetFormData = () => {
 }
 
 const regeneratePassword = async (student: Student) => {
-  if (!confirm(`Are you sure you want to regenerate the password for ${student.first_name} ${student.last_name}?`)) return
+  if (!await confirmDialog.open({ title: 'Regenerate password', message: `Are you sure you want to regenerate the password for ${student.first_name} ${student.last_name}?`, confirmLabel: 'Regenerate' })) return
   
   loading.value = true
   try {
@@ -677,12 +788,12 @@ const regeneratePassword = async (student: Student) => {
       }
       showPasswordModal.value = true
     } else {
-      alert(response.data.message || 'Failed to regenerate password')
+      toast.error(response.data.message || 'Failed to regenerate password')
     }
   } catch (error: any) {
     console.error('Failed to regenerate password:', error)
     const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Failed to regenerate password'
-    alert(errorMessage)
+    toast.error(errorMessage)
   } finally {
     loading.value = false
   }

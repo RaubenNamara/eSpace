@@ -616,6 +616,11 @@ import { useAuthStore } from '@/stores/auth'
 import QuickLink from '@/components/dashboard/QuickLink.vue'
 import { Bar } from 'vue-chartjs'
 import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ArcElement } from 'chart.js'
+import { useToastStore } from '@/stores/toast'
+import { useConfirmStore } from '@/stores/confirm'
+
+const toast = useToastStore()
+const confirmDialog = useConfirmStore()
 
 ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ArcElement)
 
@@ -1074,15 +1079,15 @@ const fetchEnrolledStudents = async () => {
 }
 
 const deenrollSingleStudent = async (enrollmentId: number) => {
-  if (!confirm('Are you sure you want to de-enroll this student from this department?')) return
-  
+  if (!await confirmDialog.open({ title: 'De-enroll student', message: 'Are you sure you want to de-enroll this student from this department?', confirmLabel: 'De-enroll', danger: true })) return
+
   try {
     const response = await apiService.post('/admin/students/deenroll-single', { enrollment_id: enrollmentId })
     if (response.data.success) {
       await fetchEnrolledStudents()
-      alert('Student de-enrolled successfully')
+      toast.success('Student de-enrolled successfully')
     } else {
-      alert('Failed to de-enroll student: ' + (response.data.message || 'Unknown error'))
+      toast.error('Failed to de-enroll student: ' + (response.data.message || 'Unknown error'))
     }
   } catch (error: any) {
     console.error('Failed to de-enroll student:', error)
@@ -1092,7 +1097,7 @@ const deenrollSingleStudent = async (enrollmentId: number) => {
     } else if (error.message) {
       errorMessage = error.message
     }
-    alert('Failed to de-enroll student: ' + errorMessage)
+    toast.error('Failed to de-enroll student: ' + errorMessage)
   }
 }
 
@@ -1102,19 +1107,19 @@ const enrollStudents = async () => {
     
     // Validate before sending
     if (!enrollData.value.department_id) {
-      alert('Please select a department')
+      toast.warning('Please select a department')
       return
     }
     if (!enrollData.value.academic_year_id) {
-      alert('Please select an academic year')
+      toast.warning('Please select an academic year')
       return
     }
     if (!enrollData.value.class_id) {
-      alert('Please select a class')
+      toast.warning('Please select a class')
       return
     }
     if (!enrollData.value.student_ids || enrollData.value.student_ids.length === 0) {
-      alert('Please select at least one student')
+      toast.warning('Please select at least one student')
       return
     }
     
@@ -1132,9 +1137,9 @@ const enrollStudents = async () => {
     if (response.data.success) {
       enrollData.value.student_ids = []
       await filterStudentsByDepartment()
-      alert(response.data.message || 'Students enrolled successfully')
+      toast.success(response.data.message || 'Students enrolled successfully')
     } else {
-      alert('Failed to enroll students: ' + (response.data.message || 'Unknown error'))
+      toast.error('Failed to enroll students: ' + (response.data.message || 'Unknown error'))
     }
   } catch (error: any) {
     console.error('Failed to enroll students:', error)
@@ -1147,7 +1152,7 @@ const enrollStudents = async () => {
     } else if (error.message) {
       errorMessage = error.message
     }
-    alert('Failed to enroll students: ' + errorMessage)
+    toast.error('Failed to enroll students: ' + errorMessage)
   }
 }
 
@@ -1165,9 +1170,9 @@ const deenrollStudents = async () => {
     if (response.data.success) {
       deenrollData.value.student_ids = []
       await filterStudentsByDepartment()
-      alert('Students de-enrolled successfully')
+      toast.success('Students de-enrolled successfully')
     } else {
-      alert('Failed to de-enroll students: ' + (response.data.message || 'Unknown error'))
+      toast.error('Failed to de-enroll students: ' + (response.data.message || 'Unknown error'))
     }
   } catch (error: any) {
     console.error('Failed to de-enroll students:', error)
@@ -1177,7 +1182,7 @@ const deenrollStudents = async () => {
     } else if (error.message) {
       errorMessage = error.message
     }
-    alert('Failed to de-enroll students: ' + errorMessage)
+    toast.error('Failed to de-enroll students: ' + errorMessage)
   }
 }
 

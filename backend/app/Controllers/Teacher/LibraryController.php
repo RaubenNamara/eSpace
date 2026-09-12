@@ -542,6 +542,175 @@ class LibraryController extends Controller
     }
 
     /**
+     * Sanitize a raw `ids` array from the request body into a deduped list of positive ints.
+     */
+    private function sanitizeIds($rawIds): array
+    {
+        if (!is_array($rawIds)) {
+            return [];
+        }
+        $ids = array_map('intval', $rawIds);
+        $ids = array_filter($ids, fn($v) => $v > 0);
+        return array_values(array_unique($ids));
+    }
+
+    /**
+     * Re-verify ownership of every requested id (never trust the client's list wholesale) and
+     * return only the ids that actually belong to this teacher and aren't already deleted.
+     */
+    private function filterOwnedIds(array $ids, int $teacherId): array
+    {
+        if (empty($ids)) {
+            return [];
+        }
+        $db = $this->getDb();
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $db->prepare("SELECT id FROM library_books WHERE id IN ($placeholders) AND uploaded_by = ? AND deleted_at IS NULL");
+        $stmt->execute([...$ids, $teacherId]);
+        return array_map('intval', array_column($stmt->fetchAll(), 'id'));
+    }
+
+    /**
+     * Bulk status change (draft/published/archived) across selected books.
+     * POST /teacher/library/bulk-status
+     */
+    public function bulkStatus(): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+
+        $teacherId = $this->getTeacherId();
+        if (!$teacherId) {
+            $this->error('Teacher not found', 403);
+            return;
+        }
+
+        $data = $this->input();
+        $status = $data['status'] ?? '';
+        if (!in_array($status, ['draft', 'published', 'archived'], true)) {
+            $this->validationError(['status' => 'status must be draft, published or archived']);
+            return;
+        }
+
+        $ids = $this->filterOwnedIds($this->sanitizeIds($data['ids'] ?? []), $teacherId);
+        if (empty($ids)) {
+            $this->validationError(['ids' => 'No valid resources selected']);
+            return;
+        }
+
+        $db = $this->getDb();
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+        try {
+            $publishedAtClause = $status === 'published' ? ", published_at = NOW()" : "";
+            $sql = "UPDATE library_books SET status = ?{$publishedAtClause}, updated_at = NOW() WHERE id IN ($placeholders)";
+            $stmt = $db->prepare($sql);
+            $stmt->execute([$status, ...$ids]);
+
+            $this->success(['updated' => count($ids)], count($ids) . ' resource(s) updated');
+        } catch (\PDOException $e) {
+            error_log('Failed to bulk update library books: ' . $e->getMessage());
+            $this->error('Failed to update resources', 500);
+        }
+    }
+
+    /**
+     * Bulk soft delete across selected books.
+     * POST /teacher/library/bulk-delete
+     */
+    public function bulkDelete(): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+
+        $teacherId = $this->getTeacherId();
+        if (!$teacherId) {
+            $this->error('Teacher not found', 403);
+            return;
+        }
+
+        $data = $this->input();
+        $ids = $this->filterOwnedIds($this->sanitizeIds($data['ids'] ?? []), $teacherId);
+        if (empty($ids)) {
+            $this->validationError(['ids' => 'No valid resources selected']);
+            return;
+        }
+
+        $db = $this->getDb();
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+        try {
+            $stmt = $db->prepare("UPDATE library_books SET deleted_at = NOW() WHERE id IN ($placeholders)");
+            $stmt->execute($ids);
+
+            $this->success(['deleted' => count($ids)], count($ids) . ' resource(s) deleted');
+        } catch (\PDOException $e) {
+            error_log('Failed to bulk delete library books: ' . $e->getMessage());
+            $this->error('Failed to delete resources', 500);
+        }
+    }
+
+    /**
+     * CSV export of selected books (or, with no ids, every book matching the current filters).
+     * POST /teacher/library/bulk-export
+     */
+    public function bulkExport(): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+
+        $teacherId = $this->getTeacherId();
+        if (!$teacherId) {
+            $this->error('Teacher not found', 403);
+            return;
+        }
+
+        $data = $this->input();
+        $ids = $this->sanitizeIds($data['ids'] ?? []);
+
+        $db = $this->getDb();
+        $where = ['lb.uploaded_by = ?', 'lb.deleted_at IS NULL'];
+        $params = [$teacherId];
+
+        if (!empty($ids)) {
+            $where[] = 'lb.id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')';
+            array_push($params, ...$ids);
+        }
+
+        $sql = "SELECT lb.title, lb.status, s.name as subject_name, c.name as class_name, lb.class_group_name,
+                       lb.file_size, lb.created_at, lb.updated_at
+                FROM library_books lb
+                LEFT JOIN subjects s ON lb.subject_id = s.id
+                LEFT JOIN classes c ON lb.class_id = c.id
+                WHERE " . implode(' AND ', $where) . "
+                ORDER BY lb.updated_at DESC";
+
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll();
+
+        foreach ($rows as &$row) {
+            $row['class'] = $row['class_name'] ?? $row['class_group_name'] ?? '';
+        }
+
+        $this->downloadCsv('library.csv', [
+            'Title' => 'title',
+            'Status' => 'status',
+            'Subject' => 'subject_name',
+            'Class' => 'class',
+            'File Size (bytes)' => 'file_size',
+            'Created At' => 'created_at',
+            'Updated At' => 'updated_at',
+        ], $rows);
+    }
+
+    /**
      * MIME type -> [our short type label, file extension to store]. PPTX (and DOCX/XLSX) are all
      * ZIP containers with identical magic bytes, so MIME/extension alone can't tell a renamed
      * .zip/.docx/.xlsx apart from a real .pptx - verifyFileContent() does the real check by

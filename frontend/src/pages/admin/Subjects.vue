@@ -225,6 +225,11 @@
 import { ref, onMounted } from 'vue'
 import { apiService } from '../../services/api'
 import type { Subject, Department } from '../../types'
+import { useToastStore } from '@/stores/toast'
+import { useConfirmStore } from '@/stores/confirm'
+
+const toast = useToastStore()
+const confirmDialog = useConfirmStore()
 
 const subjects = ref<Subject[]>([])
 const departments = ref<Department[]>([])
@@ -294,12 +299,12 @@ const createSubject = async () => {
         successMessage.value = ''
       }, 5000)
     } else {
-      alert(response.data.message || 'Failed to create subject')
+      toast.error(response.data.message || 'Failed to create subject')
     }
   } catch (error: any) {
     console.error('Failed to create subject:', error)
     const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Failed to create subject'
-    alert(errorMessage)
+    toast.error(errorMessage)
   } finally {
     loading.value = false
   }
@@ -330,19 +335,19 @@ const updateSubject = async () => {
         successMessage.value = ''
       }, 5000)
     } else {
-      alert(response.data.message || 'Failed to update subject')
+      toast.error(response.data.message || 'Failed to update subject')
     }
   } catch (error: any) {
     console.error('Failed to update subject:', error)
     const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Failed to update subject'
-    alert(errorMessage)
+    toast.error(errorMessage)
   } finally {
     loading.value = false
   }
 }
 
 const deleteSubject = async (subject: Subject) => {
-  if (!confirm(`Are you sure you want to delete subject "${subject.name}"? This action cannot be undone.`)) return
+  if (!await confirmDialog.open({ title: 'Delete subject', message: `Are you sure you want to delete subject "${subject.name}"? This action cannot be undone.`, confirmLabel: 'Delete', danger: true })) return
 
   loading.value = true
   try {
@@ -355,12 +360,12 @@ const deleteSubject = async (subject: Subject) => {
         successMessage.value = ''
       }, 5000)
     } else {
-      alert(response.data.message || 'Failed to delete subject')
+      toast.error(response.data.message || 'Failed to delete subject')
     }
   } catch (error: any) {
     console.error('Failed to delete subject:', error)
     const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Failed to delete subject'
-    alert(errorMessage)
+    toast.error(errorMessage)
   } finally {
     loading.value = false
   }

@@ -2,14 +2,7 @@
   <div>
     <PreviewBanner module-label="eNotes" />
 
-    <div class="flex items-center gap-2 mb-6">
-      <RouterLink to="/teacher/preview" class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-        Back to Preview
-      </RouterLink>
-      <span v-if="activeSubjectId" class="text-gray-300 dark:text-gray-600">/</span>
-      <button v-if="activeSubjectId" @click="activeSubjectId = null" class="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-amber-600 dark:hover:text-amber-400">All Subjects</button>
-    </div>
+    <Breadcrumb :items="breadcrumbItems" />
 
     <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
       <div v-for="i in 8" :key="i" class="animate-pulse">
@@ -66,6 +59,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
 import PreviewBanner from '@/components/preview/PreviewBanner.vue'
+import Breadcrumb, { type BreadcrumbItem } from '@/components/common/Breadcrumb.vue'
 import type { ENoteTopic } from '@/types/enotes'
 
 interface SubjectGroup {
@@ -96,6 +90,16 @@ const subjectGroups = computed<SubjectGroup[]>(() => {
 })
 
 const activeSubjectTopics = computed(() => subjectGroups.value.find(g => g.id === activeSubjectId.value)?.topics || [])
+
+const breadcrumbItems = computed<BreadcrumbItem[]>(() => {
+  const items: BreadcrumbItem[] = [
+    { label: 'Preview as Student', to: '/teacher/preview' },
+    { label: 'eNotes', onClick: () => { activeSubjectId.value = null } }
+  ]
+  const activeSubject = subjectGroups.value.find(g => g.id === activeSubjectId.value)
+  if (activeSubject) items.push({ label: activeSubject.name })
+  return items
+})
 
 const loadTopics = async () => {
   loading.value = true

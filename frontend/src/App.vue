@@ -1,12 +1,16 @@
 <template>
   <div id="app" :class="{ 'dark': themeStore.isDarkMode }">
     <router-view />
+    <ToastContainer />
+    <ConfirmDialog />
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useThemeStore } from './stores/theme'
+import ToastContainer from './components/common/ToastContainer.vue'
+import ConfirmDialog from './components/common/ConfirmDialog.vue'
 
 const themeStore = useThemeStore()
 

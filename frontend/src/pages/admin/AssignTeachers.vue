@@ -178,6 +178,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { apiService } from '../../services/api'
+import { useConfirmStore } from '@/stores/confirm'
+
+const confirmDialog = useConfirmStore()
 
 interface TeacherDepartment {
   id: number
@@ -356,7 +359,7 @@ async function saveAssignment() {
 
 async function removeAssignment(assignment: AssignmentRow) {
   if (!selectedTeacherId.value) return
-  if (!confirm(`Remove ${assignment.subject_name} in ${assignment.class_name} ${assignment.stream_name} from this teacher?`)) {
+  if (!await confirmDialog.open({ title: 'Remove assignment', message: `Remove ${assignment.subject_name} in ${assignment.class_name} ${assignment.stream_name} from this teacher?`, confirmLabel: 'Remove', danger: true })) {
     return
   }
 

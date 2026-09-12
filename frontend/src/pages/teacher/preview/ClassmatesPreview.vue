@@ -2,12 +2,7 @@
   <div>
     <PreviewBanner module-label="My Classes" />
 
-    <div class="mb-6">
-      <RouterLink to="/teacher/preview" class="text-indigo-600 dark:text-indigo-400 hover:underline font-medium flex items-center text-sm">
-        <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-        Back to Preview
-      </RouterLink>
-    </div>
+    <Breadcrumb :items="[{ label: 'Preview as Student', to: '/teacher/preview' }, { label: 'My Classes' }]" />
 
     <div class="card mb-6">
       <h2 class="text-2xl font-bold text-gray-900 dark:text-white">{{ className }}</h2>
@@ -44,6 +39,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
 import PreviewBanner from '@/components/preview/PreviewBanner.vue'
+import Breadcrumb from '@/components/common/Breadcrumb.vue'
 
 interface Classmate {
   enrollment_id: number

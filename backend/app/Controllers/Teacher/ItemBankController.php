@@ -465,6 +465,171 @@ class ItemBankController extends Controller
     }
 
     /**
+     * Sanitize a raw `ids` array from the request body into a deduped list of positive ints.
+     */
+    private function sanitizeIds($rawIds): array
+    {
+        if (!is_array($rawIds)) {
+            return [];
+        }
+        $ids = array_map('intval', $rawIds);
+        $ids = array_filter($ids, fn($v) => $v > 0);
+        return array_values(array_unique($ids));
+    }
+
+    /**
+     * Re-verify ownership of every requested id (never trust the client's list wholesale) and
+     * return only the ids that actually belong to this teacher and aren't already deleted.
+     */
+    private function filterOwnedIds(array $ids, int $teacherId): array
+    {
+        if (empty($ids)) {
+            return [];
+        }
+        $db = $this->getDb();
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $db->prepare("SELECT id FROM item_bank_questions WHERE id IN ($placeholders) AND created_by = ? AND deleted_at IS NULL");
+        $stmt->execute([...$ids, $teacherId]);
+        return array_map('intval', array_column($stmt->fetchAll(), 'id'));
+    }
+
+    /**
+     * Bulk status change (draft/published/archived) across selected resources.
+     * POST /teacher/itembank/bulk-status
+     */
+    public function bulkStatus(): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+
+        $teacherId = $this->getTeacherId();
+        if (!$teacherId) {
+            $this->error('Teacher not found', 403);
+            return;
+        }
+
+        $data = $this->input();
+        $status = $data['status'] ?? '';
+        if (!in_array($status, ['draft', 'published', 'archived'], true)) {
+            $this->validationError(['status' => 'status must be draft, published or archived']);
+            return;
+        }
+
+        $ids = $this->filterOwnedIds($this->sanitizeIds($data['ids'] ?? []), $teacherId);
+        if (empty($ids)) {
+            $this->validationError(['ids' => 'No valid resources selected']);
+            return;
+        }
+
+        $db = $this->getDb();
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+        try {
+            $publishedAtClause = $status === 'published' ? ", published_at = NOW()" : "";
+            $sql = "UPDATE item_bank_questions SET status = ?{$publishedAtClause}, updated_at = NOW() WHERE id IN ($placeholders)";
+            $stmt = $db->prepare($sql);
+            $stmt->execute([$status, ...$ids]);
+
+            $this->success(['updated' => count($ids)], count($ids) . ' resource(s) updated');
+        } catch (\PDOException $e) {
+            error_log('Failed to bulk update item bank resources: ' . $e->getMessage());
+            $this->error('Failed to update resources', 500);
+        }
+    }
+
+    /**
+     * Bulk soft delete across selected resources.
+     * POST /teacher/itembank/bulk-delete
+     */
+    public function bulkDelete(): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+
+        $teacherId = $this->getTeacherId();
+        if (!$teacherId) {
+            $this->error('Teacher not found', 403);
+            return;
+        }
+
+        $data = $this->input();
+        $ids = $this->filterOwnedIds($this->sanitizeIds($data['ids'] ?? []), $teacherId);
+        if (empty($ids)) {
+            $this->validationError(['ids' => 'No valid resources selected']);
+            return;
+        }
+
+        $db = $this->getDb();
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+        try {
+            $stmt = $db->prepare("UPDATE item_bank_questions SET deleted_at = NOW() WHERE id IN ($placeholders)");
+            $stmt->execute($ids);
+
+            $this->success(['deleted' => count($ids)], count($ids) . ' resource(s) deleted');
+        } catch (\PDOException $e) {
+            error_log('Failed to bulk delete item bank resources: ' . $e->getMessage());
+            $this->error('Failed to delete resources', 500);
+        }
+    }
+
+    /**
+     * CSV export of selected resources (or, with no ids, every resource matching the current filters).
+     * POST /teacher/itembank/bulk-export
+     */
+    public function bulkExport(): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+
+        $teacherId = $this->getTeacherId();
+        if (!$teacherId) {
+            $this->error('Teacher not found', 403);
+            return;
+        }
+
+        $data = $this->input();
+        $ids = $this->sanitizeIds($data['ids'] ?? []);
+
+        $db = $this->getDb();
+        $where = ['q.created_by = ?', 'q.deleted_at IS NULL'];
+        $params = [$teacherId];
+
+        if (!empty($ids)) {
+            $where[] = 'q.id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')';
+            array_push($params, ...$ids);
+        }
+
+        $sql = "SELECT q.question_text as title, q.status, s.name as subject_name, c.name as class_name,
+                       q.file_size, q.created_at, q.updated_at
+                FROM item_bank_questions q
+                LEFT JOIN subjects s ON q.subject_id = s.id
+                LEFT JOIN classes c ON q.class_id = c.id
+                WHERE " . implode(' AND ', $where) . "
+                ORDER BY q.updated_at DESC";
+
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll();
+
+        $this->downloadCsv('item-bank.csv', [
+            'Title' => 'title',
+            'Status' => 'status',
+            'Subject' => 'subject_name',
+            'Class' => 'class_name',
+            'File Size (bytes)' => 'file_size',
+            'Created At' => 'created_at',
+            'Updated At' => 'updated_at',
+        ], $rows);
+    }
+
+    /**
      * Validate and store the uploaded PDF, returning its public URL/type/size, or null (having
      * already sent an error response) if validation fails.
      */

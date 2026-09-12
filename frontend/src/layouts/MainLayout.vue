@@ -193,18 +193,33 @@
         class="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-40 transition-transform duration-300"
         :class="{ '-translate-y-full': headerHidden }"
       >
-        <div class="flex items-center justify-between px-6 py-4">
-          <button
-            @click="sidebarOpen = !sidebarOpen"
-            class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
-          >
-            <svg class="w-6 h-6 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-            </svg>
-          </button>
+        <div class="flex items-center justify-between px-6 py-3">
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <button
+              @click="sidebarOpen = !sidebarOpen"
+              class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
+            >
+              <svg class="w-6 h-6 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+              </svg>
+            </button>
+
+            <!-- Command palette trigger - jumps to any page instantly, same list the sidebar
+                 links to but searchable in one place regardless of role. -->
+            <button
+              @click="showCommandPalette = true"
+              class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-600 dark:hover:text-gray-300 transition-colors text-sm"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+              </svg>
+              <span>Search pages...</span>
+              <kbd class="text-[10px] font-semibold border border-gray-300 dark:border-gray-600 rounded px-1.5 py-0.5">{{ shortcutHint }}</kbd>
+            </button>
+          </div>
 
           <!-- Global Search (student/teacher only) -->
-          <GlobalSearchBar v-if="userRole === 'student' || userRole === 'teacher'" class="hidden md:block flex-1 mx-4" />
+          <GlobalSearchBar v-if="userRole === 'student' || userRole === 'teacher' || userRole === 'hod' || userRole === 'admin'" class="hidden md:block flex-1 mx-4" />
 
           <div class="flex items-center space-x-4">
             <!-- Mobile search shortcut -->
@@ -394,10 +409,14 @@
       <ProfileSettingsModal v-if="showProfileModal" :focus-section="profileModalFocusSection" @close="showProfileModal = false" />
 
       <!-- Page Content -->
-      <main class="p-6 flex-1">
+      <main class="p-4 sm:p-6 flex-1">
         <router-view />
       </main>
     </div>
+
+    <!-- Command palette - Ctrl/Cmd+K from anywhere jumps straight to any page in the sidebar
+         without hunting through collapsed sections first. -->
+    <CommandPalette v-model="showCommandPalette" :items="allNavItems" />
   </div>
 </template>
 
@@ -411,6 +430,7 @@ import { useChatBadgeStore } from '../stores/chatBadge'
 import ProfileSettingsModal from '../components/profile/ProfileSettingsModal.vue'
 import NotificationPanel from '../components/notifications/NotificationPanel.vue'
 import GlobalSearchBar from '../components/search/GlobalSearchBar.vue'
+import CommandPalette, { type CommandItem } from '../components/common/CommandPalette.vue'
 import { resolveAssetUrl } from '@/utils/url'
 
 const router = useRouter()
@@ -520,6 +540,7 @@ let messagesTimer: ReturnType<typeof setInterval> | null = null
 onMounted(() => {
   window.addEventListener('resize', applyResponsiveSidebar)
   window.addEventListener('scroll', handleHeaderScroll, { passive: true })
+  window.addEventListener('keydown', handleGlobalShortcut)
   sendPresencePing()
   presenceTimer = setInterval(sendPresencePing, PRESENCE_PING_INTERVAL_MS)
 
@@ -535,6 +556,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('resize', applyResponsiveSidebar)
   window.removeEventListener('scroll', handleHeaderScroll)
+  window.removeEventListener('keydown', handleGlobalShortcut)
   if (presenceTimer) clearInterval(presenceTimer)
   if (notificationsTimer) clearInterval(notificationsTimer)
   document.removeEventListener('mousedown', handleOutsideNotificationClick)
@@ -725,6 +747,33 @@ const dashboardMenu = computed(() => {
   
   return []
 })
+
+// Command palette (Ctrl/Cmd+K) - the exact same destinations the sidebar links to, flattened
+// into one searchable list with a section label per item so results stay identifiable once
+// they're pulled out of their sidebar groupings.
+const showCommandPalette = ref(false)
+const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent)
+const shortcutHint = computed(() => (isMac ? '⌘K' : 'Ctrl+K'))
+
+const allNavItems = computed<CommandItem[]>(() => {
+  const sections: { section: string; items: { path: string; label: string; icon: string }[] }[] = [
+    { section: 'System Administration', items: adminMenu.value },
+    { section: 'Dashboard', items: dashboardMenu.value },
+    { section: 'Academic Management', items: academicMenu.value },
+    { section: 'Learning Resources', items: resourcesMenu.value },
+    { section: 'Assessment & Analytics', items: assessmentMenu.value }
+  ]
+  return sections.flatMap(({ section, items }) =>
+    items.map(item => ({ path: item.path, label: item.label, section, icon: iconMap[item.icon] }))
+  )
+})
+
+const handleGlobalShortcut = (event: KeyboardEvent) => {
+  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+    event.preventDefault()
+    showCommandPalette.value = true
+  }
+}
 
 function isActive(path: string): boolean {
   return route.path === path || route.path.startsWith(path + '/')

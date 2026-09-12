@@ -240,6 +240,11 @@ import { ref, computed, onMounted } from 'vue'
 import { apiService } from '../../services/api'
 import LibraryDocumentViewer from '../../components/library/LibraryDocumentViewer.vue'
 import type { LibraryBook } from '../../types/library'
+import { useToastStore } from '@/stores/toast'
+import { useConfirmStore } from '@/stores/confirm'
+
+const toast = useToastStore()
+const confirmDialog = useConfirmStore()
 
 interface Department {
   id: number
@@ -457,7 +462,7 @@ const changeStatus = async (book: LibraryBook, status: string) => {
     await fetchBooks()
   } catch (error: any) {
     console.error('Failed to update book status:', error)
-    alert(error.response?.data?.message || 'Failed to update book status')
+    toast.error(error.response?.data?.message || 'Failed to update book status')
   }
 }
 
@@ -473,19 +478,20 @@ const assignClass = async (book: LibraryBook, value: string) => {
     await fetchBooks()
   } catch (error: any) {
     console.error('Failed to assign book class:', error)
-    alert(error.response?.data?.message || 'Failed to assign book class')
+    toast.error(error.response?.data?.message || 'Failed to assign book class')
   }
 }
 
 const deleteBook = async (book: LibraryBook) => {
-  if (!confirm(`Are you sure you want to delete "${book.title}"? This action cannot be undone.`)) return
+  if (!await confirmDialog.open({ title: 'Delete book', message: `Are you sure you want to delete "${book.title}"? This action cannot be undone.`, confirmLabel: 'Delete', danger: true })) return
 
   try {
     await apiService.delete(`/admin/library/${book.id}`)
     await fetchBooks()
+    toast.success('Book deleted')
   } catch (error: any) {
     console.error('Failed to delete book:', error)
-    alert(error.response?.data?.message || 'Failed to delete book')
+    toast.error(error.response?.data?.message || 'Failed to delete book')
   }
 }
 

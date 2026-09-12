@@ -175,6 +175,9 @@ import TypedAnswerEditor from './TypedAnswerEditor.vue'
 import FilePreviewModal from './FilePreviewModal.vue'
 import { resolveAssetUrl } from '@/utils/url'
 import { isPlaceholderAttachmentName } from '@/utils/answerAttachment'
+import { useConfirmStore } from '@/stores/confirm'
+
+const confirmDialog = useConfirmStore()
 
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp']
 
@@ -495,7 +498,7 @@ async function removeAdditionalFile(fileId: number) {
 
 async function removeGalleryFile(file: GalleryFile) {
   if (props.readonly || removingFileKey.value) return
-  if (!window.confirm(`Remove ${file.originalName}? This cannot be undone.`)) return
+  if (!await confirmDialog.open({ title: 'Remove file', message: `Remove ${file.originalName}? This cannot be undone.`, confirmLabel: 'Remove', danger: true })) return
 
   removingFileKey.value = file.key
   try {

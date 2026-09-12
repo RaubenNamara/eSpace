@@ -184,6 +184,9 @@
 import { ref, onMounted } from 'vue'
 import apiService from '@/services/api'
 import type { Term, AcademicYear } from '@/types'
+import { useToastStore } from '@/stores/toast'
+
+const toast = useToastStore()
 
 const terms = ref<Term[]>([])
 const academicYears = ref<AcademicYear[]>([])
@@ -219,7 +222,7 @@ const fetchAcademicYears = async () => {
     }
   } catch (error: any) {
     console.error('Failed to fetch academic years:', error)
-    alert('Failed to fetch academic years')
+    toast.error('Failed to fetch academic years')
   } finally {
     loading.value = false
   }
@@ -239,7 +242,7 @@ const fetchTerms = async () => {
     }
   } catch (error: any) {
     console.error('Failed to fetch terms:', error)
-    alert('Failed to fetch terms')
+    toast.error('Failed to fetch terms')
   } finally {
     loading.value = false
   }
@@ -300,12 +303,13 @@ const saveTerm = async () => {
     if (response.data.success) {
       closeTermModal()
       await fetchTerms()
+      toast.success('Term saved')
     } else {
-      alert(response.data.message || 'Failed to save term')
+      toast.error(response.data.message || 'Failed to save term')
     }
   } catch (error: any) {
     console.error('Failed to save term:', error)
-    alert('Failed to save term')
+    toast.error('Failed to save term')
   } finally {
     loading.value = false
   }
@@ -329,12 +333,13 @@ const executeDelete = async () => {
     if (response.data.success) {
       closeDeleteModal()
       await fetchTerms()
+      toast.success('Term deleted')
     } else {
-      alert(response.data.message || 'Failed to delete')
+      toast.error(response.data.message || 'Failed to delete')
     }
   } catch (error: any) {
     console.error('Failed to delete:', error)
-    alert('Failed to delete')
+    toast.error('Failed to delete')
   } finally {
     loading.value = false
   }

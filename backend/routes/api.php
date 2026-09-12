@@ -208,6 +208,8 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         // Assignments
         Router::get('/assignments', 'eSpace\App\Controllers\Teacher\AssignmentController@index');
         Router::post('/assignments', 'eSpace\App\Controllers\Teacher\AssignmentController@create');
+        Router::post('/assignments/bulk-delete', 'eSpace\App\Controllers\Teacher\AssignmentController@bulkDelete');
+        Router::post('/assignments/bulk-export', 'eSpace\App\Controllers\Teacher\AssignmentController@bulkExport');
         Router::get('/assignments/{id}', 'eSpace\App\Controllers\Teacher\AssignmentController@show');
         Router::get('/assignments/{id}/preview', 'eSpace\App\Controllers\Teacher\AssignmentController@preview');
         Router::put('/assignments/{id}', 'eSpace\App\Controllers\Teacher\AssignmentController@update');
@@ -252,6 +254,9 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/library', 'eSpace\App\Controllers\Teacher\LibraryController@index');
         Router::post('/library', 'eSpace\App\Controllers\Teacher\LibraryController@create');
         Router::get('/library/preview', 'eSpace\App\Controllers\Teacher\LibraryController@previewIndex');
+        Router::post('/library/bulk-status', 'eSpace\App\Controllers\Teacher\LibraryController@bulkStatus');
+        Router::post('/library/bulk-delete', 'eSpace\App\Controllers\Teacher\LibraryController@bulkDelete');
+        Router::post('/library/bulk-export', 'eSpace\App\Controllers\Teacher\LibraryController@bulkExport');
         Router::get('/library/{id}', 'eSpace\App\Controllers\Teacher\LibraryController@show');
         Router::put('/library/{id}', 'eSpace\App\Controllers\Teacher\LibraryController@update');
         Router::post('/library/{id}/replace-file', 'eSpace\App\Controllers\Teacher\LibraryController@replaceFile');
@@ -261,6 +266,9 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/videos', 'eSpace\App\Controllers\Teacher\VideoController@index');
         Router::post('/videos', 'eSpace\App\Controllers\Teacher\VideoController@create');
         Router::get('/videos/preview', 'eSpace\App\Controllers\Teacher\VideoController@previewIndex');
+        Router::post('/videos/bulk-status', 'eSpace\App\Controllers\Teacher\VideoController@bulkStatus');
+        Router::post('/videos/bulk-delete', 'eSpace\App\Controllers\Teacher\VideoController@bulkDelete');
+        Router::post('/videos/bulk-export', 'eSpace\App\Controllers\Teacher\VideoController@bulkExport');
         Router::get('/videos/{id}', 'eSpace\App\Controllers\Teacher\VideoController@show');
         Router::put('/videos/{id}', 'eSpace\App\Controllers\Teacher\VideoController@update');
         Router::delete('/videos/{id}', 'eSpace\App\Controllers\Teacher\VideoController@delete');
@@ -289,6 +297,9 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::post('/enotes/topics/{id}/publish', 'eSpace\App\Controllers\Teacher\ENoteController@publish');
         Router::post('/enotes/topics/{id}/unpublish', 'eSpace\App\Controllers\Teacher\ENoteController@unpublish');
         Router::post('/enotes/topics/{id}/archive', 'eSpace\App\Controllers\Teacher\ENoteController@archive');
+        Router::post('/enotes/topics/bulk-status', 'eSpace\App\Controllers\Teacher\ENoteController@bulkStatus');
+        Router::post('/enotes/topics/bulk-delete', 'eSpace\App\Controllers\Teacher\ENoteController@bulkDelete');
+        Router::post('/enotes/topics/bulk-export', 'eSpace\App\Controllers\Teacher\ENoteController@bulkExport');
         Router::post('/enotes/topics/{id}/duplicate', 'eSpace\App\Controllers\Teacher\ENoteController@duplicateTopic');
         Router::put('/enotes/topics/{id}/narration-voice', 'eSpace\App\Controllers\Teacher\ENoteController@updateNarrationVoice');
         Router::post('/enotes/pages/{pageId}/narration', 'eSpace\App\Controllers\Teacher\ENoteController@generatePageNarration');
@@ -312,6 +323,9 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/itembank', 'eSpace\App\Controllers\Teacher\ItemBankController@index');
         Router::post('/itembank', 'eSpace\App\Controllers\Teacher\ItemBankController@create');
         Router::get('/itembank/preview', 'eSpace\App\Controllers\Teacher\ItemBankController@previewIndex');
+        Router::post('/itembank/bulk-status', 'eSpace\App\Controllers\Teacher\ItemBankController@bulkStatus');
+        Router::post('/itembank/bulk-delete', 'eSpace\App\Controllers\Teacher\ItemBankController@bulkDelete');
+        Router::post('/itembank/bulk-export', 'eSpace\App\Controllers\Teacher\ItemBankController@bulkExport');
         Router::get('/itembank/{id}', 'eSpace\App\Controllers\Teacher\ItemBankController@show');
         Router::put('/itembank/{id}', 'eSpace\App\Controllers\Teacher\ItemBankController@update');
         Router::delete('/itembank/{id}', 'eSpace\App\Controllers\Teacher\ItemBankController@delete');
@@ -424,16 +438,25 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
 
         // eLibrary - department-scoped moderation
         Router::get('/library', 'eSpace\App\Controllers\HOD\LibraryController@index');
+        Router::post('/library/bulk-status', 'eSpace\App\Controllers\HOD\LibraryController@bulkStatus');
+        Router::post('/library/bulk-delete', 'eSpace\App\Controllers\HOD\LibraryController@bulkDelete');
+        Router::post('/library/bulk-export', 'eSpace\App\Controllers\HOD\LibraryController@bulkExport');
         Router::put('/library/{id}', 'eSpace\App\Controllers\HOD\LibraryController@update');
         Router::delete('/library/{id}', 'eSpace\App\Controllers\HOD\LibraryController@delete');
 
         // Videos - department-scoped moderation
         Router::get('/videos', 'eSpace\App\Controllers\HOD\VideoController@index');
+        Router::post('/videos/bulk-status', 'eSpace\App\Controllers\HOD\VideoController@bulkStatus');
+        Router::post('/videos/bulk-delete', 'eSpace\App\Controllers\HOD\VideoController@bulkDelete');
+        Router::post('/videos/bulk-export', 'eSpace\App\Controllers\HOD\VideoController@bulkExport');
         Router::put('/videos/{id}', 'eSpace\App\Controllers\HOD\VideoController@update');
         Router::delete('/videos/{id}', 'eSpace\App\Controllers\HOD\VideoController@delete');
 
         // Item Bank - department-scoped moderation
         Router::get('/itembank', 'eSpace\App\Controllers\HOD\ItemBankController@index');
+        Router::post('/itembank/bulk-status', 'eSpace\App\Controllers\HOD\ItemBankController@bulkStatus');
+        Router::post('/itembank/bulk-delete', 'eSpace\App\Controllers\HOD\ItemBankController@bulkDelete');
+        Router::post('/itembank/bulk-export', 'eSpace\App\Controllers\HOD\ItemBankController@bulkExport');
         Router::put('/itembank/{id}', 'eSpace\App\Controllers\HOD\ItemBankController@update');
         Router::delete('/itembank/{id}', 'eSpace\App\Controllers\HOD\ItemBankController@delete');
 
@@ -455,6 +478,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
 
         // eNotes - read-only oversight, browsable by teacher
         Router::get('/enotes', 'eSpace\App\Controllers\HOD\ENoteController@index');
+        Router::post('/enotes/bulk-export', 'eSpace\App\Controllers\HOD\ENoteController@bulkExport');
         Router::get('/enotes/{id}', 'eSpace\App\Controllers\HOD\ENoteController@show');
 
         // Reports
@@ -483,6 +507,10 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::put('/approvals/notes/{id}', 'eSpace\App\Controllers\HOD\ApprovalController@approveNotes');
         Router::get('/approvals/itembank', 'eSpace\App\Controllers\HOD\ApprovalController@itemBank');
         Router::put('/approvals/itembank/{id}', 'eSpace\App\Controllers\HOD\ApprovalController@approveItemBank');
+
+        // Global search (shared eSpace\App\Controllers\SearchController - see notes there)
+        Router::get('/search', 'eSpace\App\Controllers\SearchController@index');
+        Router::get('/search/suggestions', 'eSpace\App\Controllers\SearchController@suggestions');
     });
 
     // A HOD assigned from an existing teacher account ("Assign Teacher as HOD") reaches the real
@@ -533,6 +561,9 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::post('/students/enroll-all-departments', 'eSpace\App\Controllers\Admin\StudentController@enrollAllDepartments');
         Router::post('/students/deenroll', 'eSpace\App\Controllers\Admin\StudentController@deenroll');
         Router::post('/students/deenroll-single', 'eSpace\App\Controllers\Admin\StudentController@deenrollSingle');
+        Router::post('/students/bulk-update', 'eSpace\App\Controllers\Admin\StudentController@bulkUpdate');
+        Router::post('/students/bulk-delete', 'eSpace\App\Controllers\Admin\StudentController@bulkDelete');
+        Router::post('/students/bulk-export', 'eSpace\App\Controllers\Admin\StudentController@bulkExport');
         Router::post('/students/{id}/regenerate-password', 'eSpace\App\Controllers\Admin\StudentController@regeneratePassword');
         Router::get('/students/{id}', 'eSpace\App\Controllers\Admin\StudentController@show');
         Router::put('/students/{id}', 'eSpace\App\Controllers\Admin\StudentController@update');
@@ -571,6 +602,10 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/teachers', 'eSpace\App\Controllers\Admin\TeacherController@index');
         Router::post('/teachers', 'eSpace\App\Controllers\Admin\TeacherController@create');
         Router::post('/teachers/import', 'eSpace\App\Controllers\Admin\TeacherController@import');
+        Router::post('/teachers/bulk-status', 'eSpace\App\Controllers\Admin\TeacherController@bulkStatus');
+        Router::post('/teachers/bulk-delete', 'eSpace\App\Controllers\Admin\TeacherController@bulkDelete');
+        Router::post('/teachers/bulk-assign-department', 'eSpace\App\Controllers\Admin\TeacherController@bulkAssignDepartment');
+        Router::post('/teachers/bulk-export', 'eSpace\App\Controllers\Admin\TeacherController@bulkExport');
         Router::get('/teachers/{id}', 'eSpace\App\Controllers\Admin\TeacherController@show');
         Router::put('/teachers/{id}', 'eSpace\App\Controllers\Admin\TeacherController@update');
         Router::delete('/teachers/{id}', 'eSpace\App\Controllers\Admin\TeacherController@delete');
@@ -716,6 +751,10 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         // System Logs
         Router::get('/logs', 'eSpace\App\Controllers\Admin\LogController@index');
         Router::get('/logs/{file}', 'eSpace\App\Controllers\Admin\LogController@show');
+
+        // Global search (shared eSpace\App\Controllers\SearchController - see notes there)
+        Router::get('/search', 'eSpace\App\Controllers\SearchController@index');
+        Router::get('/search/suggestions', 'eSpace\App\Controllers\SearchController@suggestions');
     });
 
     // Student routes (require student role)

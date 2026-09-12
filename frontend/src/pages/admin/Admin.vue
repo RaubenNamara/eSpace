@@ -341,6 +341,11 @@
 import { ref, onMounted, watch, computed } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import { apiService } from '../../services/api'
+import { useToastStore } from '@/stores/toast'
+import { useConfirmStore } from '@/stores/confirm'
+
+const toast = useToastStore()
+const confirmDialog = useConfirmStore()
 
 type UserRole = 'student' | 'teacher' | 'hod' | 'admin' | 'super_admin'
 
@@ -477,13 +482,13 @@ const createUser = async () => {
       }, 5000)
     } else {
       console.error('Create user error:', response.data)
-      alert(response.data.message || 'Failed to create user')
+      toast.error(response.data.message || 'Failed to create user')
     }
   } catch (error: any) {
     console.error('Failed to create user:', error)
     console.error('Error response:', error.response?.data)
     const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Failed to create user'
-    alert(errorMessage)
+    toast.error(errorMessage)
   } finally {
     loading.value = false
   }
@@ -491,7 +496,7 @@ const createUser = async () => {
 
 const suspendUser = async (user: AdminUser) => {
   const action = user.is_active ? 'suspend' : 'activate'
-  if (!confirm(`Are you sure you want to ${action} this user?`)) return
+  if (!await confirmDialog.open({ title: `${action.charAt(0).toUpperCase() + action.slice(1)} user`, message: `Are you sure you want to ${action} this user?`, confirmLabel: action.charAt(0).toUpperCase() + action.slice(1), danger: !!user.is_active })) return
 
   loading.value = true
   try {
@@ -505,19 +510,19 @@ const suspendUser = async (user: AdminUser) => {
         successMessage.value = ''
       }, 5000)
     } else {
-      alert(response.data.message || 'Failed to update user')
+      toast.error(response.data.message || 'Failed to update user')
     }
   } catch (error: any) {
     console.error('Failed to update user:', error)
     const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Failed to update user'
-    alert(errorMessage)
+    toast.error(errorMessage)
   } finally {
     loading.value = false
   }
 }
 
 const deleteUser = async (user: AdminUser) => {
-  if (!confirm(`Are you sure you want to delete user "${user.username}"? This action cannot be undone.`)) return
+  if (!await confirmDialog.open({ title: 'Delete user', message: `Are you sure you want to delete user "${user.username}"? This action cannot be undone.`, confirmLabel: 'Delete', danger: true })) return
 
   loading.value = true
   try {
@@ -530,12 +535,12 @@ const deleteUser = async (user: AdminUser) => {
         successMessage.value = ''
       }, 5000)
     } else {
-      alert(response.data.message || 'Failed to delete user')
+      toast.error(response.data.message || 'Failed to delete user')
     }
   } catch (error: any) {
     console.error('Failed to delete user:', error)
     const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Failed to delete user'
-    alert(errorMessage)
+    toast.error(errorMessage)
   } finally {
     loading.value = false
   }
@@ -571,13 +576,13 @@ const updateUser = async () => {
       }, 5000)
     } else {
       console.error('Update failed:', response.data)
-      alert(response.data.message || 'Failed to update user')
+      toast.error(response.data.message || 'Failed to update user')
     }
   } catch (error: any) {
     console.error('Failed to update user:', error)
     console.error('Error response:', error.response?.data)
     const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Failed to update user'
-    alert(errorMessage)
+    toast.error(errorMessage)
   } finally {
     loading.value = false
   }

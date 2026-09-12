@@ -1,40 +1,41 @@
 <template>
-  <div class="p-6">
-    <!-- Header - icon stacked above the title (instead of beside it) and the description
-         shrunk down small, so this whole block takes less vertical space. The status filter and
-         "Schedule Class" action live on this same row instead of a separate row below the
-         stats, saving another full row of height. -->
-    <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
-      <div>
-        <div class="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center mb-1.5">
-          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <div>
+    <!-- Header - icon and title share a row with the filters/action (never wrapping, scrolling
+         horizontally on narrow screens instead) so the dropdown always lines up with the
+         heading; the subtitle drops to its own full-width line underneath. -->
+    <div class="flex items-center justify-between gap-2 mb-1">
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <div class="hidden sm:flex w-7 h-7 rounded-lg bg-red-600 items-center justify-center flex-shrink-0">
+          <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
           </svg>
         </div>
-        <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-tight">Live Classes</h1>
-        <p class="text-xs text-gray-500 dark:text-gray-400">Host real-time video sessions with BigBlueButton</p>
+        <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight whitespace-nowrap">Live Classes</h1>
       </div>
 
-      <div class="flex items-center gap-3 flex-wrap">
-        <select v-model="statusFilter" class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 dark:bg-gray-700 dark:text-white">
-          <option value="">All Status</option>
-          <option value="scheduled">Scheduled</option>
-          <option value="started">Live Now</option>
-          <option value="ended">Ended</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
+      <div class="flex items-center gap-2 flex-1 min-w-0 justify-end">
+        <div class="flex flex-nowrap items-center gap-2 overflow-x-auto -mx-1 px-1 sm:mx-0 sm:px-0 min-w-0">
+          <select v-model="statusFilter" class="flex-shrink-0 max-w-[92px] truncate px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 dark:bg-gray-700 dark:text-white">
+            <option value="">Status</option>
+            <option value="scheduled">Scheduled</option>
+            <option value="started">Live Now</option>
+            <option value="ended">Ended</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
 
         <button
           @click="openCreateModal"
-          class="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-1.5 text-sm shadow-sm shadow-red-500/20"
+          class="flex-shrink-0 px-2.5 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-1.5 text-xs shadow-sm shadow-red-500/20 whitespace-nowrap"
         >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
           </svg>
           <span>Schedule Class</span>
         </button>
       </div>
     </div>
+    <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Host real-time video sessions with BigBlueButton</p>
 
     <div v-if="!bbbConfigured" class="mb-6 flex items-start gap-3 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4">
       <svg class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -362,6 +363,11 @@ import axios from 'axios'
 import type { LiveClass, LiveClassForm, LiveClassRecording, LiveClassAttendanceRow } from '@/types/liveclass'
 import type { ENoteAssignments } from '@/types/enotes'
 import TeacherClassSelector from '@/components/teacher/TeacherClassSelector.vue'
+import { useToastStore } from '@/stores/toast'
+import { useConfirmStore } from '@/stores/confirm'
+
+const toast = useToastStore()
+const confirmDialog = useConfirmStore()
 
 const API_BASE = '/api'
 
@@ -533,7 +539,7 @@ const saveClass = async () => {
     await loadClasses()
   } catch (error: any) {
     console.error('Failed to save live class:', error)
-    alert(error.response?.data?.message || 'Failed to save live class')
+    toast.error(error.response?.data?.message || 'Failed to save live class')
   } finally {
     saving.value = false
   }
@@ -546,20 +552,20 @@ const startClass = async (cls: LiveClass) => {
     await loadClasses()
   } catch (error: any) {
     bbbConfigured.value = !(error.response?.status === 502)
-    alert(error.response?.data?.message || 'Failed to start the class')
+    toast.error(error.response?.data?.message || 'Failed to start the class')
   } finally {
     actingId.value = null
   }
 }
 
 const endClass = async (cls: LiveClass) => {
-  if (!confirm('End this live class for everyone?')) return
+  if (!await confirmDialog.open({ title: 'End live class', message: 'End this live class for everyone?', confirmLabel: 'End Class', danger: true })) return
   actingId.value = cls.id
   try {
     await axios.post(`${API_BASE}/teacher/live-classes/${cls.id}/end`)
     await loadClasses()
   } catch (error: any) {
-    alert(error.response?.data?.message || 'Failed to end the class')
+    toast.error(error.response?.data?.message || 'Failed to end the class')
   } finally {
     actingId.value = null
   }
@@ -574,19 +580,19 @@ const joinClass = async (cls: LiveClass) => {
     }
   } catch (error: any) {
     bbbConfigured.value = !(error.response?.status === 502)
-    alert(error.response?.data?.message || 'Failed to join the class')
+    toast.error(error.response?.data?.message || 'Failed to join the class')
   } finally {
     actingId.value = null
   }
 }
 
 const deleteClass = async (id: number) => {
-  if (!confirm('Delete this live class?')) return
+  if (!await confirmDialog.open({ title: 'Delete live class', message: 'Delete this live class? This cannot be undone.', confirmLabel: 'Delete', danger: true })) return
   try {
     await axios.delete(`${API_BASE}/teacher/live-classes/${id}`)
     await loadClasses()
   } catch (error: any) {
-    alert(error.response?.data?.message || 'Failed to delete the class')
+    toast.error(error.response?.data?.message || 'Failed to delete the class')
   }
 }
 

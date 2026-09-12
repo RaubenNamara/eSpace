@@ -42,7 +42,6 @@
          a different hue per tile) keeps this section calm since it's pure navigation, not a set
          of distinct statuses worth color-coding. -->
     <div class="mb-6">
-      <h2 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3 text-center">Quick Access</h2>
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <QuickLink to="/teacher/classes" label="My Classes" icon="classes" color="indigo" />
         <QuickLink to="/teacher/live-classes" label="Live Classes" icon="live" color="indigo" />
@@ -361,6 +360,11 @@ import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, Li
 import apiService from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import QuickLink from '@/components/dashboard/QuickLink.vue'
+import { useToastStore } from '@/stores/toast'
+import { useConfirmStore } from '@/stores/confirm'
+
+const toast = useToastStore()
+const confirmDialog = useConfirmStore()
 
 ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ArcElement)
 
@@ -512,11 +516,11 @@ const switchDepartment = async (departmentId: string) => {
       activeDepartmentId.value = id
       await loadAnalytics()
     } else {
-      alert(response.data?.message || 'Failed to switch department')
+      toast.error(response.data?.message || 'Failed to switch department')
     }
   } catch (error: any) {
     console.error('Failed to switch department:', error)
-    alert(error.response?.data?.message || 'Failed to switch department')
+    toast.error(error.response?.data?.message || 'Failed to switch department')
   } finally {
     switchingDepartment.value = false
   }
@@ -559,7 +563,12 @@ const openViewEnrolledModal = async () => {
 }
 
 const deEnrollStudent = async (enrollmentId: number, firstName: string, lastName: string) => {
-  if (!confirm(`De-enroll ${firstName} ${lastName} from your account?\n\nThey'll lose access to your assignments, eNotes, and other content, but stay fully enrolled with every other teacher in the department.`)) {
+  if (!await confirmDialog.open({
+    title: 'De-enroll student',
+    message: `De-enroll ${firstName} ${lastName} from your account?\n\nThey'll lose access to your assignments, eNotes, and other content, but stay fully enrolled with every other teacher in the department.`,
+    confirmLabel: 'De-enroll',
+    danger: true
+  })) {
     return
   }
 
@@ -575,14 +584,14 @@ const deEnrollStudent = async (enrollmentId: number, firstName: string, lastName
       await fetchEnrolledStudents()
       // Refresh analytics
       await loadAnalytics()
-      alert('Student de-enrolled successfully')
+      toast.success('Student de-enrolled successfully')
     } else {
       console.error('De-enroll failed:', response.data?.message)
-      alert('Failed to de-enroll student: ' + (response.data?.message || 'Unknown error'))
+      toast.error('Failed to de-enroll student: ' + (response.data?.message || 'Unknown error'))
     }
   } catch (error) {
     console.error('Failed to de-enroll student:', error)
-    alert('Failed to de-enroll student. Please try again.')
+    toast.error('Failed to de-enroll student. Please try again.')
   }
 }
 

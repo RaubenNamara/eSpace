@@ -957,6 +957,163 @@ class StudentController extends Controller
     }
 
     /**
+     * Sanitize a raw `ids` array from the request body into a deduped list of positive ints.
+     */
+    private function sanitizeIds($rawIds): array
+    {
+        if (!is_array($rawIds)) {
+            return [];
+        }
+        $ids = array_map('intval', $rawIds);
+        $ids = array_filter($ids, fn($v) => $v > 0);
+        return array_values(array_unique($ids));
+    }
+
+    /**
+     * Bulk-update a whitelisted set of fields (same whitelist as update()) across selected
+     * students - e.g. bulk-assign a class/stream, or bulk activate/deactivate.
+     * POST /admin/students/bulk-update
+     */
+    public function bulkUpdate(): void
+    {
+        if (!$this->isAdmin()) {
+            $this->forbidden();
+            return;
+        }
+
+        $data = $this->input();
+        $ids = $this->sanitizeIds($data['ids'] ?? []);
+        if (empty($ids)) {
+            $this->validationError(['ids' => 'No valid students selected']);
+            return;
+        }
+
+        $data = $this->sanitize($data);
+
+        $updates = [];
+        $params = [];
+        $allowedFields = ['class_id', 'stream_id', 'is_active'];
+        foreach ($allowedFields as $field) {
+            if (isset($data[$field])) {
+                $updates[] = "{$field} = ?";
+                $params[] = $data[$field];
+            }
+        }
+
+        if (empty($updates)) {
+            $this->error('No fields to update', 400);
+            return;
+        }
+
+        $updates[] = 'updated_at = NOW()';
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $sql = "UPDATE students SET " . implode(', ', $updates) . " WHERE id IN ($placeholders) AND deleted_at IS NULL";
+
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([...$params, ...$ids]);
+
+            $this->success(['updated' => count($ids)], count($ids) . ' student(s) updated');
+        } catch (\PDOException $e) {
+            error_log('Failed to bulk update students: ' . $e->getMessage());
+            $this->error('Failed to update students', 500);
+        }
+    }
+
+    /**
+     * Bulk soft delete across selected students.
+     * POST /admin/students/bulk-delete
+     */
+    public function bulkDelete(): void
+    {
+        if (!$this->isAdmin()) {
+            $this->forbidden();
+            return;
+        }
+
+        $data = $this->input();
+        $ids = $this->sanitizeIds($data['ids'] ?? []);
+        if (empty($ids)) {
+            $this->validationError(['ids' => 'No valid students selected']);
+            return;
+        }
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+        try {
+            $stmt = $this->db->prepare("UPDATE students SET deleted_at = NOW() WHERE id IN ($placeholders)");
+            $stmt->execute($ids);
+
+            $this->success(['deleted' => count($ids)], count($ids) . ' student(s) deleted');
+        } catch (\PDOException $e) {
+            error_log('Failed to bulk delete students: ' . $e->getMessage());
+            $this->error('Failed to delete students', 500);
+        }
+    }
+
+    /**
+     * CSV export of selected students (or, with no ids, every student matching search/class_id).
+     * POST /admin/students/bulk-export
+     */
+    public function bulkExport(): void
+    {
+        if (!$this->isAdmin()) {
+            $this->forbidden();
+            return;
+        }
+
+        $data = $this->input();
+        $ids = $this->sanitizeIds($data['ids'] ?? []);
+
+        $where = ['s.deleted_at IS NULL'];
+        $params = [];
+
+        if (!empty($ids)) {
+            $where[] = 's.id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')';
+            array_push($params, ...$ids);
+        } else {
+            $search = trim((string) ($data['search'] ?? ''));
+            $classId = $data['class_id'] ?? '';
+            if ($search !== '') {
+                $where[] = '(s.username LIKE ? OR s.email LIKE ? OR s.first_name LIKE ? OR s.last_name LIKE ? OR s.admission_number LIKE ?)';
+                $like = "%{$search}%";
+                array_push($params, $like, $like, $like, $like, $like);
+            }
+            if (!empty($classId)) {
+                $where[] = 's.class_id = ?';
+                $params[] = $classId;
+            }
+        }
+
+        $sql = "SELECT s.admission_number, s.first_name, s.last_name, s.email, s.gender,
+                       c.name as class_name, c.stream_name, s.is_active, s.created_at
+                FROM students s
+                LEFT JOIN classes c ON s.class_id = c.id
+                WHERE " . implode(' AND ', $where) . "
+                ORDER BY s.last_name, s.first_name";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll();
+
+        foreach ($rows as &$row) {
+            $row['status'] = $row['is_active'] ? 'Active' : 'Inactive';
+            $row['class'] = trim(($row['class_name'] ?? '') . ($row['stream_name'] ? ' - ' . $row['stream_name'] : ''));
+        }
+
+        $this->downloadCsv('students.csv', [
+            'Admission No' => 'admission_number',
+            'First Name' => 'first_name',
+            'Last Name' => 'last_name',
+            'Email' => 'email',
+            'Gender' => 'gender',
+            'Class' => 'class',
+            'Status' => 'status',
+            'Created At' => 'created_at',
+        ], $rows);
+    }
+
+    /**
      * Check if current user is admin
      */
     private function isAdmin(): bool

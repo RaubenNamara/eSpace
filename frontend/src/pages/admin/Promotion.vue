@@ -185,6 +185,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { apiService } from '../../services/api'
+import { useToastStore } from '@/stores/toast'
+import { useConfirmStore } from '@/stores/confirm'
+
+const toast = useToastStore()
+const confirmDialog = useConfirmStore()
 
 interface AcademicYear { id: number; name: string }
 interface Term { id: number; name: string; academic_year_id: number }
@@ -341,10 +346,10 @@ const runPreview = async () => {
     if (response.data.success) {
       preview.value = response.data.data
     } else {
-      alert(response.data.message || 'Failed to preview promotion')
+      toast.error(response.data.message || 'Failed to preview promotion')
     }
   } catch (error: any) {
-    alert(error.response?.data?.message || 'Failed to preview promotion')
+    toast.error(error.response?.data?.message || 'Failed to preview promotion')
   } finally {
     previewing.value = false
   }
@@ -352,7 +357,7 @@ const runPreview = async () => {
 
 const confirmPromotion = async () => {
   if (!preview.value || preview.value.eligible.length === 0) return
-  if (!confirm(`Promote ${preview.value.eligible.length} student(s) from ${fromClassLabel.value} to ${toClassLabel.value}?`)) return
+  if (!await confirmDialog.open({ title: 'Promote students', message: `Promote ${preview.value.eligible.length} student(s) from ${fromClassLabel.value} to ${toClassLabel.value}?`, confirmLabel: 'Promote' })) return
 
   promoting.value = true
   try {
@@ -363,11 +368,12 @@ const confirmPromotion = async () => {
       selectedStudentIds.value = []
       await fetchStudents()
       await fetchHistory()
+      toast.success('Students promoted successfully')
     } else {
-      alert(response.data.message || 'Failed to promote students')
+      toast.error(response.data.message || 'Failed to promote students')
     }
   } catch (error: any) {
-    alert(error.response?.data?.message || 'Failed to promote students')
+    toast.error(error.response?.data?.message || 'Failed to promote students')
   } finally {
     promoting.value = false
   }

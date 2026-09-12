@@ -241,6 +241,11 @@
 import { ref, onMounted } from 'vue'
 import { apiService } from '../../services/api'
 import type { Department } from '../../types'
+import { useToastStore } from '@/stores/toast'
+import { useConfirmStore } from '@/stores/confirm'
+
+const toast = useToastStore()
+const confirmDialog = useConfirmStore()
 
 const departments = ref<Department[]>([])
 const loading = ref(false)
@@ -296,14 +301,14 @@ const createDepartment = async () => {
       }, 5000)
     } else {
       console.error('API returned error:', response.data)
-      alert(response.data.message || 'Failed to create department')
+      toast.error(response.data.message || 'Failed to create department')
     }
   } catch (error: any) {
     console.error('Failed to create department:', error)
     console.error('Error response:', error.response?.data)
     console.error('Error status:', error.response?.status)
     const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || 'Failed to create department'
-    alert(`Error: ${errorMessage}`)
+    toast.error(errorMessage)
   } finally {
     loading.value = false
   }
@@ -336,19 +341,19 @@ const updateDepartment = async () => {
         successMessage.value = ''
       }, 5000)
     } else {
-      alert(response.data.message || 'Failed to update department')
+      toast.error(response.data.message || 'Failed to update department')
     }
   } catch (error: any) {
     console.error('Failed to update department:', error)
     const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Failed to update department'
-    alert(errorMessage)
+    toast.error(errorMessage)
   } finally {
     loading.value = false
   }
 }
 
 const deleteDepartment = async (department: Department) => {
-  if (!confirm(`Are you sure you want to delete department "${department.name}"? This action cannot be undone.`)) return
+  if (!await confirmDialog.open({ title: 'Delete department', message: `Are you sure you want to delete department "${department.name}"? This action cannot be undone.`, confirmLabel: 'Delete', danger: true })) return
 
   loading.value = true
   try {
@@ -361,12 +366,12 @@ const deleteDepartment = async (department: Department) => {
         successMessage.value = ''
       }, 5000)
     } else {
-      alert(response.data.message || 'Failed to delete department')
+      toast.error(response.data.message || 'Failed to delete department')
     }
   } catch (error: any) {
     console.error('Failed to delete department:', error)
     const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Failed to delete department'
-    alert(errorMessage)
+    toast.error(errorMessage)
   } finally {
     loading.value = false
   }

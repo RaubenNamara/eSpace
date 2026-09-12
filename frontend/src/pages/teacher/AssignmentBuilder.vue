@@ -1205,6 +1205,7 @@ import type { AssignmentQuestion, QuestionType, Subject, ResponseType, Attachmen
 import type { ClassTarget } from '@/components/teacher/TeacherClassSelector.vue'
 import type { Construct, ConstructTopicOption } from '@/types/construct'
 import { resolveAssetUrl } from '@/utils/url'
+import { useConfirmStore } from '@/stores/confirm'
 
 interface QuestionOption {
   option_text: string
@@ -1246,6 +1247,7 @@ interface QuestionForm {
 
 const router = useRouter()
 const route = useRoute()
+const confirmDialog = useConfirmStore()
 
 const API_BASE = '/api'
 
@@ -1814,16 +1816,19 @@ const onLoaTopicChosen = async () => {
   }
 }
 
-const toggleAoiTopic = (topicId: number, checked: boolean) => {
+const toggleAoiTopic = async (topicId: number, checked: boolean) => {
   if (checked) {
     selectedTopicIds.value[topicId] = true
     return
   }
   const existingCount = questions.value.filter(q => (q as any).curriculum_topic_id === topicId).length
   if (existingCount > 0) {
-    const ok = confirm(
-      `This Topic already has ${existingCount} question${existingCount === 1 ? '' : 's'} attached. Removing it may also remove its assessment relationship. Do you want to continue?`
-    )
+    const ok = await confirmDialog.open({
+      title: 'Remove topic',
+      message: `This Topic already has ${existingCount} question${existingCount === 1 ? '' : 's'} attached. Removing it may also remove its assessment relationship. Do you want to continue?`,
+      confirmLabel: 'Remove',
+      danger: true
+    })
     if (!ok) return
   }
   delete selectedTopicIds.value[topicId]
@@ -2244,8 +2249,8 @@ const editQuestion = (question: AssignmentQuestion) => {
   showAddQuestionModal.value = true
 }
 
-const deleteQuestion = (index: number) => {
-  if (confirm('Are you sure you want to delete this question?')) {
+const deleteQuestion = async (index: number) => {
+  if (await confirmDialog.open({ title: 'Delete question', message: 'Are you sure you want to delete this question?', confirmLabel: 'Delete', danger: true })) {
     const [removed] = questions.value.splice(index, 1)
     // Real (already-saved) questions have small ids; new/unsaved ones use a Date.now()
     // temporary id and were never persisted, so there's nothing to delete server-side.

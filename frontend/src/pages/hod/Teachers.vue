@@ -2,26 +2,26 @@
   <div>
     <!-- Header - icon and title share a row with the search box, so the input lines up exactly
          with the heading; the subtitle (with the live count folded in) sits on its own line. -->
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
-      <div class="flex items-center gap-2.5">
-        <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0">
-          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="flex items-center justify-between gap-2 mb-1">
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <div class="hidden sm:flex w-7 h-7 rounded-lg bg-indigo-600 items-center justify-center flex-shrink-0">
+          <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-4-4"></path>
           </svg>
         </div>
-        <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-tight">Teachers</h1>
+        <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight whitespace-nowrap">Teachers</h1>
       </div>
 
-      <div class="relative w-full sm:w-80">
-        <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div class="relative flex-shrink min-w-0 w-32 sm:w-80">
+        <svg class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
         </svg>
         <input
           v-model="search"
           @input="debouncedSearch"
           type="text"
-          placeholder="Search by name, employee number, username or email..."
-          class="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+          placeholder="Search..."
+          class="w-full pl-8 pr-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
         >
       </div>
     </div>

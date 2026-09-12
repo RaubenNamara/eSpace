@@ -2,26 +2,26 @@
   <div>
     <!-- Header - icon and title share a row with the search box, so the input lines up exactly
          with the heading; the subtitle drops to its own line underneath. -->
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
-      <div class="flex items-center gap-2.5">
-        <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0">
-          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="flex items-center justify-between gap-2 mb-1">
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <div class="hidden sm:flex w-7 h-7 rounded-lg bg-indigo-600 items-center justify-center flex-shrink-0">
+          <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
           </svg>
         </div>
-        <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-tight">Videos</h1>
+        <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight whitespace-nowrap">Videos</h1>
       </div>
 
-      <div class="relative w-full sm:w-80">
-        <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div class="relative flex-shrink min-w-0 w-32 sm:w-80">
+        <svg class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
         </svg>
         <input
           v-model="search"
           @input="debouncedSearch"
           type="text"
-          placeholder="Search by title, description, or teacher name..."
-          class="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+          placeholder="Search..."
+          class="w-full pl-8 pr-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
         >
       </div>
     </div>
@@ -77,16 +77,47 @@
       <svg class="w-14 h-14 mx-auto text-gray-300 dark:text-gray-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
       </svg>
-      <p class="text-gray-500 dark:text-gray-400">
+      <p class="text-gray-500 dark:text-gray-400 mb-3">
         {{ search || statusFilter ? 'No videos match your filters' : 'No videos uploaded in your department yet' }}
       </p>
+      <button v-if="search || statusFilter" @click="clearFilters" class="px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors">
+        Clear filters
+      </button>
     </div>
 
     <!-- Videos -->
-    <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-      <div v-for="video in videos" :key="video.id" class="group bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow overflow-hidden">
+    <template v-else>
+      <div class="flex items-center gap-2 mb-3">
+        <label class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            :checked="bulk.allSelected(visibleIds)"
+            @change="bulk.toggleAll(visibleIds)"
+            class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+          >
+          Select all
+        </label>
+      </div>
+
+      <BulkActionBar :count="bulk.selectedCount.value" @clear="bulk.clear()">
+        <button @click="bulkSetStatus('published')" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Publish</button>
+        <button @click="bulkSetStatus('draft')" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Draft</button>
+        <button @click="bulkSetStatus('archived')" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Archive</button>
+        <button @click="bulkExport" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Export CSV</button>
+        <button @click="bulkDeleteSelected" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors">Delete</button>
+      </BulkActionBar>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div v-for="video in videos" :key="video.id" class="relative group bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow overflow-hidden">
         <button class="block w-full text-left" @click="previewVideo = video">
           <VideoCover :video="video" />
+          <input
+            type="checkbox"
+            :checked="bulk.isSelected(video.id)"
+            @click.stop
+            @change="bulk.toggle(video.id)"
+            class="absolute top-2 left-2 z-10 w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+          >
         </button>
 
         <div class="p-4">
@@ -129,7 +160,7 @@
             </select>
             <button
               @click="deleteVideo(video)"
-              class="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+              class="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
               title="Delete"
             >
               <svg class="w-4 h-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -139,7 +170,8 @@
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </template>
 
     <!-- Video Preview -->
     <div v-if="previewVideo" @click.self="previewVideo = null" class="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4">
@@ -159,17 +191,27 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { apiService } from '@/services/api'
 import VideoCover from '@/components/video/VideoCover.vue'
+import BulkActionBar from '@/components/common/BulkActionBar.vue'
 import type { VideoResource } from '@/types/video'
 import { resolveAssetUrl } from '@/utils/url'
+import { useToastStore } from '@/stores/toast'
+import { useConfirmStore } from '@/stores/confirm'
+import { useBulkSelection } from '@/composables/useBulkSelection'
+import { usePersistedRef } from '@/composables/usePersistedRef'
+import { downloadBlob } from '@/utils/downloadBlob'
+
+const toast = useToastStore()
+const confirmDialog = useConfirmStore()
+const bulk = useBulkSelection<number>()
 
 const videos = ref<VideoResource[]>([])
 const stats = ref({ total: 0, draft: 0, published: 0, archived: 0 })
 const loading = ref(false)
 const search = ref('')
-const statusFilter = ref('')
+const statusFilter = usePersistedRef('hod-videos-status-filter', '')
 const previewVideo = ref<VideoResource | null>(null)
 
 let searchTimer: number | null = null
@@ -202,20 +244,66 @@ const changeStatus = async (video: VideoResource, status: string) => {
     await fetchVideos()
   } catch (error: any) {
     console.error('Failed to update video status:', error)
-    alert(error.response?.data?.message || 'Failed to update video status')
+    toast.error(error.response?.data?.message || 'Failed to update video status')
   }
 }
 
 const deleteVideo = async (video: VideoResource) => {
-  if (!confirm(`Are you sure you want to delete "${video.title}"? This action cannot be undone.`)) return
+  if (!await confirmDialog.open({ title: 'Delete video', message: `Are you sure you want to delete "${video.title}"? This action cannot be undone.`, confirmLabel: 'Delete', danger: true })) return
 
   try {
     await apiService.delete(`/hod/videos/${video.id}`)
     await fetchVideos()
+    toast.success('Video deleted')
   } catch (error: any) {
     console.error('Failed to delete video:', error)
-    alert(error.response?.data?.message || 'Failed to delete video')
+    toast.error(error.response?.data?.message || 'Failed to delete video')
   }
+}
+
+const visibleIds = computed(() => videos.value.map(v => v.id))
+
+const bulkSetStatus = async (status: 'draft' | 'published' | 'archived') => {
+  const ids = bulk.selectedArray()
+  if (ids.length === 0) return
+  try {
+    await apiService.post('/hod/videos/bulk-status', { ids, status })
+    toast.success(`${ids.length} video(s) updated`)
+    bulk.clear()
+    await fetchVideos()
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Failed to update videos')
+  }
+}
+
+const bulkDeleteSelected = async () => {
+  const ids = bulk.selectedArray()
+  if (ids.length === 0) return
+  if (!await confirmDialog.open({ title: 'Delete videos', message: `Are you sure you want to delete ${ids.length} video(s)? This cannot be undone.`, confirmLabel: 'Delete', danger: true })) return
+  try {
+    await apiService.post('/hod/videos/bulk-delete', { ids })
+    toast.success(`${ids.length} video(s) deleted`)
+    bulk.clear()
+    await fetchVideos()
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Failed to delete videos')
+  }
+}
+
+const bulkExport = async () => {
+  const ids = bulk.selectedArray()
+  try {
+    const response = await apiService.post('/hod/videos/bulk-export', { ids }, { responseType: 'blob' })
+    downloadBlob(response.data as unknown as Blob, 'videos.csv')
+  } catch (error) {
+    toast.error('Failed to export videos')
+  }
+}
+
+const clearFilters = () => {
+  search.value = ''
+  statusFilter.value = ''
+  fetchVideos()
 }
 
 onMounted(() => {

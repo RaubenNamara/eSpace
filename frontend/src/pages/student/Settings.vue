@@ -139,6 +139,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { apiService } from '../../services/api'
+import { useToastStore } from '@/stores/toast'
+
+const toast = useToastStore()
 
 interface Profile {
   first_name: string
@@ -184,7 +187,7 @@ const fetchProfile = async () => {
 
 const updateCredentials = async () => {
   if (credentials.value.new_password !== credentials.value.confirm_password) {
-    alert('Passwords do not match')
+    toast.warning('Passwords do not match')
     return
   }
 
@@ -210,12 +213,12 @@ const updateCredentials = async () => {
         successMessage.value = ''
       }, 5000)
     } else {
-      alert(response.data.message || 'Failed to update credentials')
+      toast.error(response.data.message || 'Failed to update credentials')
     }
   } catch (error: any) {
     console.error('Failed to update credentials:', error)
     const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Failed to update credentials'
-    alert(errorMessage)
+    toast.error(errorMessage)
   } finally {
     loading.value = false
   }

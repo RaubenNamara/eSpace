@@ -197,6 +197,9 @@
 import { ref, computed } from 'vue'
 import * as XLSX from 'xlsx'
 import apiService from '@/services/api'
+import { useToastStore } from '@/stores/toast'
+
+const toast = useToastStore()
 
 const emit = defineEmits<{ close: []; imported: [] }>()
 
@@ -333,11 +336,11 @@ const confirmImport = async () => {
       step.value = 'results'
       emit('imported')
     } else {
-      alert(response.data.message || 'Import failed')
+      toast.error(response.data.message || 'Import failed')
     }
   } catch (error: any) {
     console.error('Failed to import teachers:', error)
-    alert(error.response?.data?.message || 'Import failed')
+    toast.error(error.response?.data?.message || 'Import failed')
   } finally {
     importing.value = false
   }

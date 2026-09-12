@@ -241,6 +241,11 @@
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import NoteViewer from '@/components/teacher/NoteViewer.vue'
+import { useToastStore } from '@/stores/toast'
+import { useConfirmStore } from '@/stores/confirm'
+
+const toast = useToastStore()
+const confirmDialog = useConfirmStore()
 
 interface Note {
   id: number
@@ -474,8 +479,8 @@ const saveNote = async () => {
 }
 
 const deleteNote = async (id: number) => {
-  if (!confirm('Are you sure you want to delete this note?')) return
-  
+  if (!await confirmDialog.open({ title: 'Delete note', message: 'Are you sure you want to delete this note?', confirmLabel: 'Delete', danger: true })) return
+
   try {
     await axios.delete(`${API_BASE}/teacher/notes/${id}`, {
       headers: {
@@ -483,8 +488,10 @@ const deleteNote = async (id: number) => {
       }
     })
     loadNotes()
+    toast.success('Note deleted')
   } catch (error) {
     console.error('Failed to delete note:', error)
+    toast.error('Failed to delete note. Please try again.')
   }
 }
 

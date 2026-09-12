@@ -2,18 +2,18 @@
   <div>
     <!-- Header - icon and title share a row with the status filter, so the dropdown lines up
          exactly with the heading; the subtitle drops to its own full-width line underneath. -->
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
-      <div class="flex items-center gap-2.5">
-        <div class="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center flex-shrink-0">
-          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="flex items-center justify-between gap-2 mb-1">
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <div class="hidden sm:flex w-7 h-7 rounded-lg bg-red-600 items-center justify-center flex-shrink-0">
+          <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
           </svg>
         </div>
-        <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-tight">Live Classes</h1>
+        <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight whitespace-nowrap">Live Classes</h1>
       </div>
 
-      <select v-model="statusFilter" class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 dark:bg-gray-700 dark:text-white">
-        <option value="">All Status</option>
+      <select v-model="statusFilter" class="flex-shrink-0 max-w-[92px] truncate px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 dark:bg-gray-700 dark:text-white">
+        <option value="">Status</option>
         <option value="scheduled">Scheduled</option>
         <option value="started">Live Now</option>
         <option value="ended">Ended</option>
@@ -220,6 +220,9 @@
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import type { LiveClass, LiveClassAttendanceRow, LiveClassRecording, LiveClassSummary } from '@/types/liveclass'
+import { useToastStore } from '@/stores/toast'
+
+const toast = useToastStore()
 
 const API_BASE = '/api'
 
@@ -308,7 +311,7 @@ const joinClass = async (cls: LiveClass) => {
       window.open(response.data.data.join_url, '_blank')
     }
   } catch (error: any) {
-    alert(error.response?.data?.message || 'Failed to join the class')
+    toast.error(error.response?.data?.message || 'Failed to join the class')
   } finally {
     actingId.value = null
   }

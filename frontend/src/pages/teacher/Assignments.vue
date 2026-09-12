@@ -1,74 +1,75 @@
 <template>
-  <div class="p-3 sm:p-6">
-    <!-- Header - smaller title/subtitle, with search/filters and "Create Assignment" merged
-         onto this same row instead of a separate bar further down the page. -->
-    <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
-      <div>
-        <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-tight">Assignments</h1>
-        <p class="text-xs text-gray-500 dark:text-gray-400">Create and manage assessments for your classes</p>
-      </div>
+  <div>
+    <!-- Header - title shares a row with the search/filters and "Create Assignment" so the
+         dropdowns line up exactly with the heading; the subtitle drops to its own line
+         underneath instead of a separate bar further down the page. -->
+    <div class="flex items-center justify-between gap-2 mb-1">
+      <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight whitespace-nowrap flex-shrink-0">Assignments</h1>
 
-      <div class="flex flex-wrap items-center gap-2.5">
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="Search assignments..."
-          class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white w-40"
-        >
+      <div class="flex items-center gap-2 flex-1 min-w-0 justify-end">
+        <div class="flex flex-nowrap items-center gap-2 overflow-x-auto -mx-1 px-1 sm:mx-0 sm:px-0 min-w-0">
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Search..."
+            class="flex-shrink-0 px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white w-28"
+          >
 
-        <select
-          v-model="statusFilter"
-          class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-        >
-          <option value="">All Status</option>
-          <option value="draft">Draft</option>
-          <option value="published">Published</option>
-          <option value="archived">Archived</option>
-        </select>
+          <select
+            v-model="statusFilter"
+            class="flex-shrink-0 max-w-[92px] truncate px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+          >
+            <option value="">Status</option>
+            <option value="draft">Draft</option>
+            <option value="published">Published</option>
+            <option value="archived">Archived</option>
+          </select>
 
-        <select
-          v-model="typeFilter"
-          class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-        >
-          <option value="">All Types</option>
-          <option value="essay">Essay</option>
-          <option value="scenario">Scenario</option>
-          <option value="objective">Objective</option>
-          <option value="file_upload">File Upload</option>
-          <option value="mixed">Mixed</option>
-        </select>
+          <select
+            v-model="typeFilter"
+            class="flex-shrink-0 max-w-[92px] truncate px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+          >
+            <option value="">Types</option>
+            <option value="essay">Essay</option>
+            <option value="scenario">Scenario</option>
+            <option value="objective">Objective</option>
+            <option value="file_upload">File Upload</option>
+            <option value="mixed">Mixed</option>
+          </select>
 
-        <select
-          v-model="subjectFilter"
-          class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-          :disabled="!availableSubjects || availableSubjects.length === 0"
-        >
-          <option value="">All Subjects</option>
-          <option v-for="subject in availableSubjects" :key="subject.id" :value="subject.id">
-            {{ subject.name }}
-          </option>
-        </select>
+          <select
+            v-model="subjectFilter"
+            class="flex-shrink-0 max-w-[92px] truncate px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+            :disabled="!availableSubjects || availableSubjects.length === 0"
+          >
+            <option value="">Subjects</option>
+            <option v-for="subject in availableSubjects" :key="subject.id" :value="subject.id">
+              {{ subject.name }}
+            </option>
+          </select>
 
-        <select
-          v-model="classFilter"
-          class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-          :disabled="!availableClasses || availableClasses.length === 0"
-        >
-          <option value="">All Classes</option>
-          <option v-for="cls in availableClasses" :key="cls.id" :value="cls.id">
-            {{ cls.name }}
-          </option>
-        </select>
+          <select
+            v-model="classFilter"
+            class="flex-shrink-0 max-w-[92px] truncate px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+            :disabled="!availableClasses || availableClasses.length === 0"
+          >
+            <option value="">Classes</option>
+            <option v-for="cls in availableClasses" :key="cls.id" :value="cls.id">
+              {{ cls.name }}
+            </option>
+          </select>
+        </div>
 
         <button
           v-if="assignments.length > 0"
           @click="router.push('/teacher/assignments/create')"
-          class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-500/20"
+          class="flex-shrink-0 px-2.5 py-1 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-500/20 whitespace-nowrap"
         >
           Create Assignment
         </button>
       </div>
     </div>
+    <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Create and manage assessments for your classes</p>
 
     <!-- Dashboard Stats - Total/Draft/Published are clickable to filter the list below; Active,
          Awaiting Marking and Total Submissions are derived figures with no matching status
@@ -145,6 +146,32 @@
 
     <!-- Assignments List -->
     <div v-else>
+      <BulkActionBar :count="bulk.selectedCount.value" @clear="bulk.clear()">
+        <button @click="bulkExport" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Export CSV</button>
+        <button @click="bulkDeleteSelected" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors">Delete</button>
+      </BulkActionBar>
+
+      <div v-if="filteredAssignments.length > 0" class="flex items-center gap-2 mb-3">
+        <label class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            :checked="bulk.allSelected(visibleIds)"
+            @change="bulk.toggleAll(visibleIds)"
+            class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+          >
+          Select all
+        </label>
+      </div>
+
+      <!-- No filter match -->
+      <div v-if="filteredAssignments.length === 0" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 sm:p-12 text-center">
+        <p class="text-gray-600 dark:text-gray-400 mb-3">No assignments match your filters</p>
+        <button @click="clearFilters" class="px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors">
+          Clear filters
+        </button>
+      </div>
+
+      <template v-else>
       <!-- Assignments Cards (mobile / tablet) -->
       <div class="lg:hidden space-y-3">
         <div
@@ -153,9 +180,17 @@
           class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4"
         >
           <div class="flex items-start justify-between gap-2 mb-3">
-            <div class="min-w-0">
-              <p class="font-medium text-gray-900 dark:text-white break-words">{{ assignment.title }}</p>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Created {{ formatDate(assignment.created_at) }}</p>
+            <div class="min-w-0 flex items-start gap-2">
+              <input
+                type="checkbox"
+                :checked="bulk.isSelected(assignment.id)"
+                @change="bulk.toggle(assignment.id)"
+                class="mt-1 flex-shrink-0 w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+              >
+              <div class="min-w-0">
+                <p class="font-medium text-gray-900 dark:text-white break-words">{{ assignment.title }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Created {{ formatDate(assignment.created_at) }}</p>
+              </div>
             </div>
             <span :class="getStatusClasses(assignment.status)" class="px-2 py-1 text-xs font-medium rounded-full flex-shrink-0">
               {{ capitalizeFirst(assignment.status) }}
@@ -277,6 +312,14 @@
         <table class="w-full">
           <thead class="bg-gray-50 dark:bg-gray-700">
             <tr>
+              <th class="px-4 py-3 text-left">
+                <input
+                  type="checkbox"
+                  :checked="bulk.allSelected(visibleIds)"
+                  @change="bulk.toggleAll(visibleIds)"
+                  class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                >
+              </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Assignment</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Subject</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Class</th>
@@ -290,6 +333,14 @@
           </thead>
           <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
             <tr v-for="assignment in filteredAssignments" :key="assignment.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+              <td class="px-4 py-4">
+                <input
+                  type="checkbox"
+                  :checked="bulk.isSelected(assignment.id)"
+                  @change="bulk.toggle(assignment.id)"
+                  class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                >
+              </td>
               <td class="px-6 py-4">
                 <div>
                   <p class="font-medium text-gray-900 dark:text-white">{{ assignment.title }}</p>
@@ -410,6 +461,7 @@
         </table>
         </div>
       </div>
+      </template>
     </div>
 
     <!-- Delete Confirmation Modal -->
@@ -443,6 +495,12 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import type { Assignment, AssignmentStats } from '@/types'
+import BulkActionBar from '@/components/common/BulkActionBar.vue'
+import { useToastStore } from '@/stores/toast'
+import { useConfirmStore } from '@/stores/confirm'
+import { useBulkSelection } from '@/composables/useBulkSelection'
+import { usePersistedRef } from '@/composables/usePersistedRef'
+import { downloadBlob } from '@/utils/downloadBlob'
 
 interface FilterOption {
   id: number
@@ -450,6 +508,9 @@ interface FilterOption {
 }
 
 const router = useRouter()
+const toast = useToastStore()
+const confirmDialog = useConfirmStore()
+const bulk = useBulkSelection<number>()
 
 const API_BASE = '/api'
 
@@ -459,10 +520,10 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 
 const searchQuery = ref('')
-const statusFilter = ref('')
-const typeFilter = ref('')
-const subjectFilter = ref('')
-const classFilter = ref('')
+const statusFilter = usePersistedRef('teacher-assignments-status-filter', '')
+const typeFilter = usePersistedRef('teacher-assignments-type-filter', '')
+const subjectFilter = usePersistedRef('teacher-assignments-subject-filter', '')
+const classFilter = usePersistedRef('teacher-assignments-class-filter', '')
 
 const availableSubjects = ref<FilterOption[]>([])
 const availableClasses = ref<FilterOption[]>([])
@@ -482,6 +543,40 @@ const filteredAssignments = computed(() => {
     return matchesSearch && matchesStatus && matchesType && matchesSubject && matchesClass
   })
 })
+
+const visibleIds = computed(() => filteredAssignments.value.map(a => a.id))
+
+const bulkDeleteSelected = async () => {
+  const ids = bulk.selectedArray()
+  if (ids.length === 0) return
+  if (!await confirmDialog.open({ title: 'Delete assignments', message: `Are you sure you want to delete ${ids.length} assignment(s)? This cannot be undone.`, confirmLabel: 'Delete', danger: true })) return
+  try {
+    await axios.post(`${API_BASE}/teacher/assignments/bulk-delete`, { ids })
+    toast.success(`${ids.length} assignment(s) deleted`)
+    bulk.clear()
+    await loadAssignments()
+  } catch (err: any) {
+    toast.error(err.response?.data?.message || 'Failed to delete assignments')
+  }
+}
+
+const bulkExport = async () => {
+  const ids = bulk.selectedArray()
+  try {
+    const response = await axios.post(`${API_BASE}/teacher/assignments/bulk-export`, { ids }, { responseType: 'blob' })
+    downloadBlob(response.data, 'assignments.csv')
+  } catch (err) {
+    toast.error('Failed to export assignments')
+  }
+}
+
+const clearFilters = () => {
+  searchQuery.value = ''
+  statusFilter.value = ''
+  typeFilter.value = ''
+  subjectFilter.value = ''
+  classFilter.value = ''
+}
 
 const loadAssignments = async () => {
   loading.value = true

@@ -2,22 +2,7 @@
   <div>
     <PreviewBanner module-label="Virtual Lab" />
 
-    <div class="flex items-center gap-2 mb-6">
-      <RouterLink to="/teacher/preview" class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-        Back to Preview
-      </RouterLink>
-      <template v-if="activeCategory || activeAssignment">
-        <span class="text-gray-300 dark:text-gray-600">/</span>
-        <button @click="reset" class="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-cyan-600 dark:hover:text-cyan-400">All Experiments</button>
-      </template>
-      <template v-if="activeAssignment">
-        <span class="text-gray-300 dark:text-gray-600">/</span>
-        <button @click="activeAssignment = null" class="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-cyan-600 dark:hover:text-cyan-400">
-          {{ CATEGORY_LABELS[activeCategory!] }}
-        </button>
-      </template>
-    </div>
+    <Breadcrumb :items="breadcrumbItems" />
 
     <!-- Loading -->
     <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
@@ -146,6 +131,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
 import PreviewBanner from '@/components/preview/PreviewBanner.vue'
+import Breadcrumb, { type BreadcrumbItem } from '@/components/common/Breadcrumb.vue'
 import VirtualLabScene from '@/components/virtuallab/VirtualLabScene.vue'
 import { resolve2DRenderer } from '@/components/virtuallab/render2d/registry'
 import { CATEGORY_ICONS, CATEGORY_LABELS, CATEGORY_COLORS } from '@/types/virtualLab'
@@ -188,6 +174,20 @@ const reset = () => {
   activeAssignment.value = null
   detail.value = null
 }
+
+const breadcrumbItems = computed<BreadcrumbItem[]>(() => {
+  const items: BreadcrumbItem[] = [
+    { label: 'Preview as Student', to: '/teacher/preview' },
+    { label: 'Virtual Lab', onClick: reset }
+  ]
+  if (activeCategory.value) {
+    items.push({ label: CATEGORY_LABELS[activeCategory.value], onClick: () => { activeAssignment.value = null; detail.value = null } })
+  }
+  if (activeAssignment.value) {
+    items.push({ label: activeAssignment.value.experiment_title })
+  }
+  return items
+})
 
 const formatDate = (d: string) => new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 

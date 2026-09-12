@@ -388,6 +388,9 @@ import QuestionProgress from '@/components/assignment/QuestionProgress.vue'
 import SubmitConfirmDialog from '@/components/assignment/SubmitConfirmDialog.vue'
 import NeedHelpPanel from '@/components/assignment/NeedHelpPanel.vue'
 import { isPlaceholderAttachmentName } from '@/utils/answerAttachment'
+import { useToastStore } from '@/stores/toast'
+
+const toast = useToastStore()
 
 const router = useRouter()
 const route = useRoute()
@@ -743,10 +746,10 @@ const saveDraft = async () => {
     }
     
     if (response.data.success) {
-      alert('Draft saved successfully')
+      toast.success('Draft saved successfully')
     }
   } catch (err: any) {
-    alert(err.response?.data?.message || 'Failed to save draft')
+    toast.error(err.response?.data?.message || 'Failed to save draft')
   } finally {
     saving.value = false
   }
@@ -805,11 +808,11 @@ const submitAssignment = async () => {
       submissionTiming.value = response.data.data?.submission_timing || null
       if (timerInterval) clearInterval(timerInterval)
       const timingLabel = submissionTiming.value === 'late' ? ' (late)' : submissionTiming.value === 'early' ? ' (early)' : ''
-      alert(`Assignment submitted successfully${timingLabel}`)
+      toast.success(`Assignment submitted successfully${timingLabel}`)
       router.push('/student/assignments')
     }
   } catch (err: any) {
-    alert(err.response?.data?.message || 'Failed to submit assignment')
+    toast.error(err.response?.data?.message || 'Failed to submit assignment')
   } finally {
     submitting.value = false
   }

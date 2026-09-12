@@ -1,60 +1,62 @@
 <template>
-  <div class="p-4 sm:p-6">
+  <div>
     <!-- Header - icon and title share a row with the filters/action, so the dropdowns line up
          exactly with the heading instead of floating above it; the subtitle drops to its own
          full-width line underneath. -->
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
-      <div class="flex items-center gap-2.5">
-        <div class="hidden sm:flex w-8 h-8 rounded-lg bg-indigo-600 items-center justify-center flex-shrink-0">
-          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="flex items-center justify-between gap-2 mb-1">
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <div class="hidden sm:flex w-7 h-7 rounded-lg bg-indigo-600 items-center justify-center flex-shrink-0">
+          <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
           </svg>
         </div>
-        <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-tight">eNotes</h1>
+        <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight whitespace-nowrap">eNotes</h1>
       </div>
 
-      <div class="flex flex-wrap items-center gap-2.5">
-        <select
-          v-model="statusFilter"
-          class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-        >
-          <option value="">All Status</option>
-          <option value="draft">Draft</option>
-          <option value="published">Published</option>
-          <option value="archived">Archived</option>
-        </select>
+      <div class="flex items-center gap-2 flex-1 min-w-0 justify-end">
+        <div class="flex flex-nowrap items-center gap-2 overflow-x-auto -mx-1 px-1 sm:mx-0 sm:px-0 min-w-0">
+          <select
+            v-model="statusFilter"
+            class="flex-shrink-0 max-w-[92px] truncate px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+          >
+            <option value="">Status</option>
+            <option value="draft">Draft</option>
+            <option value="published">Published</option>
+            <option value="archived">Archived</option>
+          </select>
 
-        <select
-          v-model="subjectFilter"
-          class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-          :disabled="!assignments?.subjects || assignments.subjects.length === 0"
-        >
-          <option value="">All Subjects</option>
-          <option v-for="subject in assignments?.subjects" :key="subject.id" :value="subject.id">
-            {{ subject.name }}
-          </option>
-        </select>
+          <select
+            v-model="subjectFilter"
+            class="flex-shrink-0 max-w-[92px] truncate px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+            :disabled="!assignments?.subjects || assignments.subjects.length === 0"
+          >
+            <option value="">Subjects</option>
+            <option v-for="subject in assignments?.subjects" :key="subject.id" :value="subject.id">
+              {{ subject.name }}
+            </option>
+          </select>
 
-        <select
-          v-model="classFilter"
-          class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-          :disabled="!assignments?.classes || assignments.classes.length === 0"
-        >
-          <option value="">All Classes</option>
-          <option v-for="cls in assignments?.classes" :key="cls.id" :value="cls.id">
-            {{ cls.name }}{{ cls.stream_name ? ' - ' + cls.stream_name : '' }}
-          </option>
-        </select>
+          <select
+            v-model="classFilter"
+            class="flex-shrink-0 max-w-[92px] truncate px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+            :disabled="!assignments?.classes || assignments.classes.length === 0"
+          >
+            <option value="">Classes</option>
+            <option v-for="cls in assignments?.classes" :key="cls.id" :value="cls.id">
+              {{ cls.name }}{{ cls.stream_name ? ' - ' + cls.stream_name : '' }}
+            </option>
+          </select>
 
-        <div v-if="assignmentsError" class="text-red-600 dark:text-red-400 text-sm flex items-center">
-          {{ assignmentsError }}
+          <div v-if="assignmentsError" class="flex-shrink-0 text-red-600 dark:text-red-400 text-xs flex items-center whitespace-nowrap">
+            {{ assignmentsError }}
+          </div>
         </div>
 
         <button
           @click="openCreateModal"
-          class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1.5 shadow-sm shadow-indigo-500/20"
+          class="flex-shrink-0 px-2.5 py-1 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1.5 shadow-sm shadow-indigo-500/20 whitespace-nowrap"
         >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
           </svg>
           <span>Create Topic</span>
@@ -116,7 +118,10 @@
     <!-- Browse by Class -->
     <template v-else-if="!activeClassName">
       <div v-if="classGroups.length === 0" class="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-        <p class="text-gray-500 dark:text-gray-400">No topics match these filters.</p>
+        <p class="text-gray-500 dark:text-gray-400 mb-3">No topics match these filters.</p>
+        <button @click="clearFilters" class="px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors">
+          Clear filters
+        </button>
       </div>
       <template v-else>
         <h2 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">Browse by Class</h2>
@@ -169,7 +174,28 @@
         <span class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ activeClassName }}</span>
       </div>
 
-      <div v-if="activeClassTopics.length > 0" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+      <template v-if="activeClassTopics.length > 0">
+        <div class="flex items-center gap-2 mb-3">
+          <label class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              :checked="bulk.allSelected(visibleTopicIds)"
+              @change="bulk.toggleAll(visibleTopicIds)"
+              class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+            >
+            Select all
+          </label>
+        </div>
+
+        <BulkActionBar :count="bulk.selectedCount.value" @clear="bulk.clear()">
+          <button @click="bulkSetStatus('published')" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Publish</button>
+          <button @click="bulkSetStatus('draft')" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Draft</button>
+          <button @click="bulkSetStatus('archived')" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Archive</button>
+          <button @click="bulkExport" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Export CSV</button>
+          <button @click="bulkDeleteSelected" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors">Delete</button>
+        </BulkActionBar>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
         <div
           v-for="topic in activeClassTopics"
           :key="topic.id"
@@ -184,6 +210,13 @@
 
           <div class="relative p-5 sm:p-6">
             <div class="flex items-start justify-between gap-2 mb-3">
+              <input
+                type="checkbox"
+                :checked="bulk.isSelected(topic.id)"
+                @click.stop
+                @change="bulk.toggle(topic.id)"
+                class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+              >
               <span
                 :class="[
                   'px-2.5 py-1 rounded-full text-xs font-semibold',
@@ -194,7 +227,7 @@
               >
                 {{ topic.status.charAt(0).toUpperCase() + topic.status.slice(1) }}
               </span>
-              <span class="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">{{ topic.total_pages }} pages</span>
+              <span class="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0 ml-auto">{{ topic.total_pages }} pages</span>
             </div>
 
             <h3 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-snug mb-2 line-clamp-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
@@ -234,7 +267,7 @@
               <div class="flex items-center gap-1">
                 <button
                   @click.stop="editTopic(topic)"
-                  class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  class="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                   title="Edit"
                 >
                   <svg class="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -243,7 +276,7 @@
                 </button>
                 <button
                   @click.stop="openDuplicateModal(topic)"
-                  class="p-2 hover:bg-indigo-100 dark:hover:bg-indigo-900 rounded-lg transition-colors"
+                  class="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center hover:bg-indigo-100 dark:hover:bg-indigo-900 rounded-lg transition-colors"
                   title="Duplicate to another class/stream"
                 >
                   <svg class="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -252,7 +285,7 @@
                 </button>
                 <button
                   @click.stop="deleteTopic(topic.id)"
-                  class="p-2 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg transition-colors"
+                  class="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-900 rounded-lg transition-colors"
                   title="Delete"
                 >
                   <svg class="w-4 h-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -264,6 +297,7 @@
           </div>
         </div>
       </div>
+      </template>
 
       <div v-else class="text-center py-16 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
         <p class="text-gray-500 dark:text-gray-400">No eNotes topics in this class yet.</p>
@@ -693,6 +727,16 @@ import type {
   ENoteTopicForm
 } from '@/types/enotes'
 import TeacherClassSelector from '@/components/teacher/TeacherClassSelector.vue'
+import BulkActionBar from '@/components/common/BulkActionBar.vue'
+import { useToastStore } from '@/stores/toast'
+import { useConfirmStore } from '@/stores/confirm'
+import { useBulkSelection } from '@/composables/useBulkSelection'
+import { usePersistedRef } from '@/composables/usePersistedRef'
+import { downloadBlob } from '@/utils/downloadBlob'
+
+const toast = useToastStore()
+const confirmDialog = useConfirmStore()
+const bulk = useBulkSelection<number>()
 
 interface CurriculumMetaOption {
   id: number
@@ -737,9 +781,9 @@ const loading = ref(false)
 const saving = ref(false)
 const topicSaveError = ref<string | null>(null)
 
-const statusFilter = ref('')
-const subjectFilter = ref('')
-const classFilter = ref('')
+const statusFilter = usePersistedRef('teacher-enotes-status-filter', '')
+const subjectFilter = usePersistedRef('teacher-enotes-subject-filter', '')
+const classFilter = usePersistedRef('teacher-enotes-class-filter', '')
 
 const showTopicModal = ref(false)
 const editingTopic = ref<ENoteTopic | null>(null)
@@ -896,6 +940,50 @@ const classGroups = computed<ClassTopicGroup[]>(() => {
 })
 
 const activeClassTopics = computed(() => classGroups.value.find(g => g.name === activeClassName.value)?.topics ?? [])
+const visibleTopicIds = computed(() => activeClassTopics.value.map(t => t.id))
+
+const bulkSetStatus = async (status: 'draft' | 'published' | 'archived') => {
+  const ids = bulk.selectedArray()
+  if (ids.length === 0) return
+  try {
+    await axios.post(`${API_BASE}/teacher/enotes/topics/bulk-status`, { ids, status })
+    toast.success(`${ids.length} topic(s) updated`)
+    bulk.clear()
+    await loadTopics()
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Failed to update topics')
+  }
+}
+
+const bulkDeleteSelected = async () => {
+  const ids = bulk.selectedArray()
+  if (ids.length === 0) return
+  if (!await confirmDialog.open({ title: 'Delete topics', message: `Are you sure you want to delete ${ids.length} topic(s)? This cannot be undone.`, confirmLabel: 'Delete', danger: true })) return
+  try {
+    await axios.post(`${API_BASE}/teacher/enotes/topics/bulk-delete`, { ids })
+    toast.success(`${ids.length} topic(s) deleted`)
+    bulk.clear()
+    await loadTopics()
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Failed to delete topics')
+  }
+}
+
+const bulkExport = async () => {
+  const ids = bulk.selectedArray()
+  try {
+    const response = await axios.post(`${API_BASE}/teacher/enotes/topics/bulk-export`, { ids }, { responseType: 'blob' })
+    downloadBlob(response.data, 'enotes.csv')
+  } catch (error) {
+    toast.error('Failed to export topics')
+  }
+}
+
+const clearFilters = () => {
+  statusFilter.value = ''
+  subjectFilter.value = ''
+  classFilter.value = ''
+}
 
 // Deterministic color per class name (not a fixed lookup - department class names vary), so each
 // class card/topic-card banner gets a distinct but stable palette across reloads.
@@ -1068,14 +1156,16 @@ const saveTopic = async () => {
 }
 
 const deleteTopic = async (id: number) => {
-  if (!confirm('Are you sure you want to delete this topic?')) return
+  if (!await confirmDialog.open({ title: 'Delete topic', message: 'Are you sure you want to delete this topic?', confirmLabel: 'Delete', danger: true })) return
 
   try {
     await axios.delete(`${API_BASE}/teacher/enotes/topics/${id}`)
     await loadTopics()
     await loadDashboard()
+    toast.success('Topic deleted')
   } catch (error) {
     console.error('Failed to delete topic:', error)
+    toast.error('Failed to delete topic. Please try again.')
   }
 }
 

@@ -984,6 +984,135 @@ class AssignmentController extends Controller
     }
 
     /**
+     * Sanitize a raw `ids` array from the request body into a deduped list of positive ints.
+     */
+    private function sanitizeIds($rawIds): array
+    {
+        if (!is_array($rawIds)) {
+            return [];
+        }
+        $ids = array_map('intval', $rawIds);
+        $ids = array_filter($ids, fn($v) => $v > 0);
+        return array_values(array_unique($ids));
+    }
+
+    /**
+     * Re-verify ownership of every requested id (never trust the client's list wholesale) and
+     * return only the ids that actually belong to this teacher and aren't already deleted.
+     */
+    private function filterOwnedAssignmentIds(array $ids, int $teacherId): array
+    {
+        if (empty($ids)) {
+            return [];
+        }
+        $db = $this->getDb();
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $db->prepare("SELECT id FROM assignments WHERE id IN ($placeholders) AND teacher_id = ? AND deleted_at IS NULL");
+        $stmt->execute([...$ids, $teacherId]);
+        return array_map('intval', array_column($stmt->fetchAll(), 'id'));
+    }
+
+    /**
+     * Bulk soft delete across selected assignments. Unlike publish(), delete has no curriculum-
+     * completeness or transactional side effects to replicate per-row here, so this just extends
+     * the same ownership-checked soft delete the single-item delete() does across many ids.
+     * POST /teacher/assignments/bulk-delete
+     */
+    public function bulkDelete(): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+
+        $teacherId = $this->getTeacherId();
+        if (!$teacherId) {
+            $this->error('Teacher not found', 403);
+            return;
+        }
+
+        $data = $this->input();
+        $ids = $this->filterOwnedAssignmentIds($this->sanitizeIds($data['ids'] ?? []), $teacherId);
+        if (empty($ids)) {
+            $this->validationError(['ids' => 'No valid assignments selected']);
+            return;
+        }
+
+        $db = $this->getDb();
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+        try {
+            $stmt = $db->prepare("UPDATE assignments SET deleted_at = NOW() WHERE id IN ($placeholders)");
+            $stmt->execute($ids);
+
+            $this->success(['deleted' => count($ids)], count($ids) . ' assignment(s) deleted');
+        } catch (\PDOException $e) {
+            error_log('Failed to bulk delete assignments: ' . $e->getMessage());
+            $this->error('Failed to delete assignments', 500);
+        }
+    }
+
+    /**
+     * CSV export of selected assignments (or, with no ids, every assignment owned by this teacher).
+     * POST /teacher/assignments/bulk-export
+     */
+    public function bulkExport(): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+
+        $teacherId = $this->getTeacherId();
+        if (!$teacherId) {
+            $this->error('Teacher not found', 403);
+            return;
+        }
+
+        $data = $this->input();
+        $ids = $this->sanitizeIds($data['ids'] ?? []);
+
+        $db = $this->getDb();
+        $where = ['a.teacher_id = ?', 'a.deleted_at IS NULL'];
+        $params = [$teacherId];
+
+        if (!empty($ids)) {
+            $where[] = 'a.id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')';
+            array_push($params, ...$ids);
+        }
+
+        $sql = "SELECT a.title, a.status, a.category, a.due_date, a.total_marks,
+                       s.name as subject_name, c.name as class_name, c.stream_name,
+                       COUNT(DISTINCT sub.id) as submission_count
+                FROM assignments a
+                LEFT JOIN subjects s ON a.subject_id = s.id
+                LEFT JOIN classes c ON a.class_id = c.id
+                LEFT JOIN assignment_submissions sub ON a.id = sub.assignment_id AND sub.deleted_at IS NULL
+                WHERE " . implode(' AND ', $where) . "
+                GROUP BY a.id
+                ORDER BY a.created_at DESC";
+
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll();
+
+        foreach ($rows as &$row) {
+            $row['class'] = trim(($row['class_name'] ?? '') . ($row['stream_name'] ? ' - ' . $row['stream_name'] : ''));
+        }
+
+        $this->downloadCsv('assignments.csv', [
+            'Title' => 'title',
+            'Type' => 'category',
+            'Status' => 'status',
+            'Subject' => 'subject_name',
+            'Class' => 'class',
+            'Due Date' => 'due_date',
+            'Total Marks' => 'total_marks',
+            'Submissions' => 'submission_count',
+        ], $rows);
+    }
+
+    /**
      * Publish an assignment
      * POST /teacher/assignments/{id}/publish
      */

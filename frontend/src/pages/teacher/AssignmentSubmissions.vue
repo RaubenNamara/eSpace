@@ -175,6 +175,9 @@ import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
 import TeacherMarkingCanvas from '@/components/assignment/TeacherMarkingCanvas.vue'
 import MarkingPanel from '@/components/assignment/MarkingPanel.vue'
+import { useToastStore } from '@/stores/toast'
+
+const toast = useToastStore()
 
 const router = useRouter()
 const route = useRoute()
@@ -228,7 +231,7 @@ const selectSubmission = async (submission: any) => {
       markingData.value = response.data.data
     }
   } catch (err: any) {
-    alert(err.response?.data?.message || 'Failed to load submission for marking')
+    toast.error(err.response?.data?.message || 'Failed to load submission for marking')
   }
 }
 

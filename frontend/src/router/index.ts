@@ -85,6 +85,7 @@ const HODAssignmentSubmissions = () => import('../pages/hod/AssignmentSubmission
 const HODCharts = () => import('../pages/hod/Charts.vue')
 const HODLiveClasses = () => import('../pages/hod/LiveClasses.vue')
 const HODChat = () => import('../pages/hod/Chat.vue')
+const HODSearch = () => import('../pages/hod/Search.vue')
 
 // Admin Pages
 const AdminDashboard = () => import('../pages/admin/Dashboard.vue')
@@ -118,6 +119,7 @@ const AdminAssessments = () => import('../pages/admin/Assessments.vue')
 const AdminCharts = () => import('../pages/admin/Charts.vue')
 const AdminLiveClasses = () => import('../pages/admin/LiveClasses.vue')
 const AdminChat = () => import('../pages/admin/Chat.vue')
+const AdminSearch = () => import('../pages/admin/Search.vue')
 
 const routes: RouteRecordRaw[] = [
   {
@@ -281,7 +283,8 @@ const routes: RouteRecordRaw[] = [
       { path: 'charts', name: 'HODCharts', component: HODCharts },
       { path: 'live-classes', name: 'HODLiveClasses', component: HODLiveClasses },
       { path: 'chat', name: 'HODChat', component: HODChat },
-      { path: 'marksheet', name: 'HODMarksheet', component: HODMarksheet }
+      { path: 'marksheet', name: 'HODMarksheet', component: HODMarksheet },
+      { path: 'search', name: 'HODSearch', component: HODSearch }
     ]
   },
   {
@@ -321,7 +324,8 @@ const routes: RouteRecordRaw[] = [
       { path: 'chat', name: 'AdminChat', component: AdminChat },
       { path: 'marksheet', name: 'AdminMarksheet', component: AdminMarksheet },
       { path: 'rewards', name: 'AdminRewards', component: AdminRewards },
-      { path: 'virtual-lab', name: 'AdminVirtualLab', component: AdminVirtualLab }
+      { path: 'virtual-lab', name: 'AdminVirtualLab', component: AdminVirtualLab },
+      { path: 'search', name: 'AdminSearch', component: AdminSearch }
     ]
   },
   {

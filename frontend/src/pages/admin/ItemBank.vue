@@ -223,6 +223,11 @@ import { ref, computed, onMounted } from 'vue'
 import { apiService } from '../../services/api'
 import ItemBankPdfViewer from '../../components/itembank/ItemBankPdfViewer.vue'
 import type { ItemBankResource } from '../../types/itembank'
+import { useToastStore } from '@/stores/toast'
+import { useConfirmStore } from '@/stores/confirm'
+
+const toast = useToastStore()
+const confirmDialog = useConfirmStore()
 
 interface Department {
   id: number
@@ -393,19 +398,20 @@ const changeStatus = async (resource: ItemBankResource, status: string) => {
     await fetchResources()
   } catch (error: any) {
     console.error('Failed to update resource status:', error)
-    alert(error.response?.data?.message || 'Failed to update resource status')
+    toast.error(error.response?.data?.message || 'Failed to update resource status')
   }
 }
 
 const deleteResource = async (resource: ItemBankResource) => {
-  if (!confirm(`Are you sure you want to delete "${resource.title}"? This action cannot be undone.`)) return
+  if (!await confirmDialog.open({ title: 'Delete resource', message: `Are you sure you want to delete "${resource.title}"? This action cannot be undone.`, confirmLabel: 'Delete', danger: true })) return
 
   try {
     await apiService.delete(`/admin/itembank/${resource.id}`)
     await fetchResources()
+    toast.success('Resource deleted')
   } catch (error: any) {
     console.error('Failed to delete resource:', error)
-    alert(error.response?.data?.message || 'Failed to delete resource')
+    toast.error(error.response?.data?.message || 'Failed to delete resource')
   }
 }
 

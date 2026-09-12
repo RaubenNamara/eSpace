@@ -1,34 +1,34 @@
 <template>
-  <div class="p-4 sm:p-6">
+  <div>
     <!-- Header - title shares a row with the Term/Class/Subject filters and "Download CSV" so
          the dropdowns line up exactly with the heading; the subtitle drops to its own full-width
          line underneath. -->
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
-      <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-tight">Marksheets</h1>
+    <div class="flex items-center justify-between gap-2 mb-1">
+      <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight whitespace-nowrap flex-shrink-0">Marksheets</h1>
 
-      <div class="flex flex-wrap items-center gap-2.5">
-        <select v-model="selectedTermId" class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
-          <option :value="null">All terms</option>
+      <div class="flex flex-nowrap items-center gap-2 overflow-x-auto -mx-1 px-1 sm:mx-0 sm:px-0 min-w-0">
+        <select v-model="selectedTermId" class="flex-shrink-0 max-w-[92px] truncate px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+          <option :value="null">Terms</option>
           <option v-for="term in terms" :key="term.id" :value="term.id">
             {{ term.name }}{{ term.academic_year ? ` - ${term.academic_year}` : '' }}{{ term.is_current ? ' (Current)' : '' }}
           </option>
         </select>
-        <select v-model="selectedClassId" class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
-          <option :value="null">Select class...</option>
+        <select v-model="selectedClassId" class="flex-shrink-0 max-w-[92px] truncate px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+          <option :value="null">Class</option>
           <option v-for="cls in classes" :key="cls.id" :value="cls.id">
             {{ cls.name }}{{ cls.stream_name ? ` - ${cls.stream_name}` : '' }}
           </option>
         </select>
-        <select v-model="selectedSubjectId" class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
-          <option :value="null">Select subject...</option>
+        <select v-model="selectedSubjectId" class="flex-shrink-0 max-w-[92px] truncate px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+          <option :value="null">Subject</option>
           <option v-for="subj in subjects" :key="subj.id" :value="subj.id">{{ subj.name }}</option>
         </select>
         <button
           v-if="selectedClassId && selectedSubjectId"
           @click="downloadCsv"
-          class="px-3 py-1.5 text-sm font-medium rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 flex items-center gap-1.5"
+          class="flex-shrink-0 px-2.5 py-1 text-xs font-medium rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 flex items-center gap-1.5 whitespace-nowrap"
         >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
           </svg>
           Download CSV

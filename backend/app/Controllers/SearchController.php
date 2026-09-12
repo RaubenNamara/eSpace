@@ -10,11 +10,11 @@ use RuntimeException;
 /**
  * Global Search Controller
  *
- * One shared controller for student and teacher (same pattern as AuthController/
- * NotificationController) - permission is enforced inside SearchService per role, scoped to the
- * signed-in user's own id from the session, so there's no separate per-role controller needed.
- * HOD/admin are out of scope - the request that specced this feature only asked for the student
- * and teacher portals.
+ * One shared controller for every role (same pattern as AuthController/NotificationController) -
+ * permission is enforced inside SearchService per role, scoped to the signed-in user's own id
+ * from the session, so there's no separate per-role controller needed. HOD is scoped to their own
+ * department (every status, since they moderate drafts too); admin is school-wide with no
+ * department restriction.
  */
 class SearchController extends Controller
 {
@@ -26,7 +26,7 @@ class SearchController extends Controller
     private function allowedRole(): ?string
     {
         $role = $this->getCurrentUserRole();
-        return in_array($role, ['student', 'teacher'], true) ? $role : null;
+        return in_array($role, ['student', 'teacher', 'hod', 'admin'], true) ? $role : null;
     }
 
     /**
@@ -41,7 +41,7 @@ class SearchController extends Controller
 
         $role = $this->allowedRole();
         if (!$role) {
-            $this->forbidden('Search is only available to students and teachers');
+            $this->forbidden('Search is not available for this account role');
             return;
         }
 
@@ -77,7 +77,7 @@ class SearchController extends Controller
 
         $role = $this->allowedRole();
         if (!$role) {
-            $this->forbidden('Search is only available to students and teachers');
+            $this->forbidden('Search is not available for this account role');
             return;
         }
 

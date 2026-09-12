@@ -152,7 +152,7 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 
-const role = computed(() => (authStore.userRole === 'teacher' ? 'teacher' : 'student'))
+const role = computed(() => authStore.userRole || 'student')
 
 const term = ref('')
 const inputTerm = ref('')
@@ -171,9 +171,13 @@ const totalPages = computed(() => Math.max(1, Math.ceil(total.value / perPage)))
 
 const TYPE_ORDER: SearchResultType[] = ['enote', 'library', 'assignment', 'item_bank', 'video', 'lesson']
 
+// Admin has no eNotes browsing page yet (see SearchService::adminBranches), so that tab would
+// always read "eNotes (0)" - just omit it rather than show a permanently-dead filter.
+const visibleTypes = computed(() => role.value === 'admin' ? TYPE_ORDER.filter(t => t !== 'enote') : TYPE_ORDER)
+
 const typeTabs = computed(() => [
   { value: 'all', label: 'All', count: total.value },
-  ...TYPE_ORDER.map(t => ({ value: t, label: SEARCH_TYPE_LABELS[t], count: counts.value[t] ?? 0 })),
+  ...visibleTypes.value.map(t => ({ value: t, label: SEARCH_TYPE_LABELS[t], count: counts.value[t] ?? 0 })),
 ])
 
 const typeBadgeClass = (type: string) => {

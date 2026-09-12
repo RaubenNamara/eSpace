@@ -1,55 +1,56 @@
 <template>
-  <div class="p-6">
-    <!-- Header - smaller title/subtitle, with the filters and "Upload Video" action merged
-         onto this same row instead of a separate bar below the stats. -->
-    <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
-      <div>
-        <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-tight">Videos</h1>
-        <p class="text-xs text-gray-500 dark:text-gray-400">Upload video resources for your classes.</p>
-      </div>
+  <div>
+    <!-- Header - title shares a row with the filters/action (never wrapping, scrolling
+         horizontally on narrow screens instead) so the dropdowns always line up with the
+         heading; the subtitle drops to its own full-width line underneath. -->
+    <div class="flex items-center justify-between gap-2 mb-1">
+      <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight whitespace-nowrap flex-shrink-0">Videos</h1>
 
-      <div class="flex items-center flex-wrap gap-2.5">
-        <select v-model="statusFilter" class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white">
-          <option value="">All Status</option>
-          <option value="draft">Draft</option>
-          <option value="published">Published</option>
-          <option value="archived">Archived</option>
-        </select>
+      <div class="flex items-center gap-2 flex-1 min-w-0 justify-end">
+        <div class="flex flex-nowrap items-center gap-2 overflow-x-auto -mx-1 px-1 sm:mx-0 sm:px-0 min-w-0">
+          <select v-model="statusFilter" class="flex-shrink-0 max-w-[92px] truncate px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white">
+            <option value="">Status</option>
+            <option value="draft">Draft</option>
+            <option value="published">Published</option>
+            <option value="archived">Archived</option>
+          </select>
 
-        <select
-          v-model="subjectFilter"
-          class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-          :disabled="!assignments?.subjects || assignments.subjects.length === 0"
-        >
-          <option value="">All Subjects</option>
-          <option v-for="subject in assignments?.subjects" :key="subject.id" :value="subject.id">{{ subject.name }}</option>
-        </select>
+          <select
+            v-model="subjectFilter"
+            class="flex-shrink-0 max-w-[92px] truncate px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+            :disabled="!assignments?.subjects || assignments.subjects.length === 0"
+          >
+            <option value="">Subjects</option>
+            <option v-for="subject in assignments?.subjects" :key="subject.id" :value="subject.id">{{ subject.name }}</option>
+          </select>
 
-        <select
-          v-model="classFilter"
-          class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-          :disabled="!assignments?.classes || assignments.classes.length === 0"
-        >
-          <option value="">All Classes</option>
-          <option v-for="cls in assignments?.classes" :key="cls.id" :value="cls.id">
-            {{ cls.name }} ({{ cls.level }}{{ cls.stream_name ? ' - ' + cls.stream_name : '' }})
-          </option>
-        </select>
+          <select
+            v-model="classFilter"
+            class="flex-shrink-0 max-w-[92px] truncate px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+            :disabled="!assignments?.classes || assignments.classes.length === 0"
+          >
+            <option value="">Classes</option>
+            <option v-for="cls in assignments?.classes" :key="cls.id" :value="cls.id">
+              {{ cls.name }} ({{ cls.level }}{{ cls.stream_name ? ' - ' + cls.stream_name : '' }})
+            </option>
+          </select>
 
-        <div v-if="assignmentsError" class="text-red-600 dark:text-red-400 text-sm">{{ assignmentsError }}</div>
+          <div v-if="assignmentsError" class="flex-shrink-0 text-red-600 dark:text-red-400 text-xs whitespace-nowrap">{{ assignmentsError }}</div>
+        </div>
 
         <button
           v-if="videos.length > 0"
           @click="openCreateModal"
-          class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1.5 shadow-sm shadow-indigo-500/20"
+          class="flex-shrink-0 px-2.5 py-1 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1.5 shadow-sm shadow-indigo-500/20 whitespace-nowrap"
         >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
           </svg>
           <span>Upload Video</span>
         </button>
       </div>
     </div>
+    <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Upload video resources for your classes.</p>
 
     <!-- Stats - clickable to filter the list below; the count sits as a corner badge so each
          card is shorter and the label can be centered. -->
@@ -102,16 +103,47 @@
       <button v-if="videos.length === 0" @click="openCreateModal" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
         Upload Your First Video
       </button>
+      <button v-else @click="clearFilters" class="px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors">
+        Clear filters
+      </button>
     </div>
 
-    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <template v-else>
+      <div class="flex items-center gap-2 mb-3">
+        <label class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            :checked="bulk.allSelected(visibleIds)"
+            @change="bulk.toggleAll(visibleIds)"
+            class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+          >
+          Select all
+        </label>
+      </div>
+
+      <BulkActionBar :count="bulk.selectedCount.value" @clear="bulk.clear()">
+        <button @click="bulkSetStatus('published')" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Publish</button>
+        <button @click="bulkSetStatus('draft')" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Draft</button>
+        <button @click="bulkSetStatus('archived')" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Archive</button>
+        <button @click="bulkExport" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Export CSV</button>
+        <button @click="bulkDeleteSelected" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors">Delete</button>
+      </BulkActionBar>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       <div
         v-for="video in filteredVideos"
         :key="video.id"
-        class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow cursor-pointer overflow-hidden"
+        class="relative bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow cursor-pointer overflow-hidden"
         @click="playVideo = video"
       >
         <div class="aspect-video bg-rose-600 relative flex items-center justify-center">
+          <input
+            type="checkbox"
+            :checked="bulk.isSelected(video.id)"
+            @click.stop
+            @change="bulk.toggle(video.id)"
+            class="absolute top-2 left-2 z-10 w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+          >
           <div class="w-14 h-14 rounded-full bg-white/25 backdrop-blur-sm flex items-center justify-center">
             <svg class="w-7 h-7 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
               <path d="M8 5v14l11-7z"></path>
@@ -149,7 +181,7 @@
             <div class="flex items-center space-x-2">
               <button
                 @click.stop="editVideo(video)"
-                class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                class="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                 title="Edit"
               >
                 <svg class="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -158,7 +190,7 @@
               </button>
               <button
                 @click.stop="deleteVideo(video.id)"
-                class="p-2 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg transition-colors"
+                class="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-900 rounded-lg transition-colors"
                 title="Delete"
               >
                 <svg class="w-4 h-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -169,7 +201,8 @@
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </template>
 
     <!-- Upload/Edit Modal -->
     <div v-if="showVideoModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -296,8 +329,18 @@ import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import VideoPlayerModal from '@/components/video/VideoPlayerModal.vue'
 import TeacherClassSelector from '@/components/teacher/TeacherClassSelector.vue'
+import BulkActionBar from '@/components/common/BulkActionBar.vue'
 import type { VideoResource, VideoForm } from '@/types/video'
 import type { ENoteAssignments } from '@/types/enotes'
+import { useToastStore } from '@/stores/toast'
+import { useConfirmStore } from '@/stores/confirm'
+import { useBulkSelection } from '@/composables/useBulkSelection'
+import { usePersistedRef } from '@/composables/usePersistedRef'
+import { downloadBlob } from '@/utils/downloadBlob'
+
+const toast = useToastStore()
+const confirmDialog = useConfirmStore()
+const bulk = useBulkSelection<number>()
 
 const API_BASE = '/api'
 
@@ -309,9 +352,9 @@ const saving = ref(false)
 const uploading = ref(false)
 const uploadProgress = ref(0)
 
-const statusFilter = ref('')
-const subjectFilter = ref('')
-const classFilter = ref('')
+const statusFilter = usePersistedRef('teacher-videos-status-filter', '')
+const subjectFilter = usePersistedRef('teacher-videos-subject-filter', '')
+const classFilter = usePersistedRef('teacher-videos-class-filter', '')
 
 const showVideoModal = ref(false)
 const editingVideo = ref<VideoResource | null>(null)
@@ -340,6 +383,51 @@ const filteredVideos = computed(() => {
     return matchesStatus && matchesSubject && matchesClass
   })
 })
+
+const visibleIds = computed(() => filteredVideos.value.map(v => v.id))
+
+const bulkSetStatus = async (status: 'draft' | 'published' | 'archived') => {
+  const ids = bulk.selectedArray()
+  if (ids.length === 0) return
+  try {
+    await axios.post(`${API_BASE}/teacher/videos/bulk-status`, { ids, status })
+    toast.success(`${ids.length} video(s) updated`)
+    bulk.clear()
+    await loadVideos()
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Failed to update videos')
+  }
+}
+
+const bulkDeleteSelected = async () => {
+  const ids = bulk.selectedArray()
+  if (ids.length === 0) return
+  if (!await confirmDialog.open({ title: 'Delete videos', message: `Are you sure you want to delete ${ids.length} video(s)? This cannot be undone.`, confirmLabel: 'Delete', danger: true })) return
+  try {
+    await axios.post(`${API_BASE}/teacher/videos/bulk-delete`, { ids })
+    toast.success(`${ids.length} video(s) deleted`)
+    bulk.clear()
+    await loadVideos()
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Failed to delete videos')
+  }
+}
+
+const bulkExport = async () => {
+  const ids = bulk.selectedArray()
+  try {
+    const response = await axios.post(`${API_BASE}/teacher/videos/bulk-export`, { ids }, { responseType: 'blob' })
+    downloadBlob(response.data, 'videos.csv')
+  } catch (error) {
+    toast.error('Failed to export videos')
+  }
+}
+
+const clearFilters = () => {
+  statusFilter.value = ''
+  subjectFilter.value = ''
+  classFilter.value = ''
+}
 
 const formatDate = (dateString?: string) => {
   if (!dateString) return ''
@@ -433,7 +521,7 @@ const saveVideo = async () => {
       })
     } else {
       if (!videoForm.value.file) {
-        alert('Please select a video file')
+        toast.warning('Please select a video file')
         return
       }
       const formData = new FormData()
@@ -460,7 +548,7 @@ const saveVideo = async () => {
     await loadVideos()
   } catch (error: any) {
     console.error('Failed to save video:', error)
-    alert(error.response?.data?.message || 'Failed to save video')
+    toast.error(error.response?.data?.message || 'Failed to save video')
   } finally {
     saving.value = false
     uploading.value = false
@@ -468,12 +556,14 @@ const saveVideo = async () => {
 }
 
 const deleteVideo = async (id: number) => {
-  if (!confirm('Are you sure you want to delete this video?')) return
+  if (!await confirmDialog.open({ title: 'Delete video', message: 'Are you sure you want to delete this video?', confirmLabel: 'Delete', danger: true })) return
   try {
     await axios.delete(`${API_BASE}/teacher/videos/${id}`)
     await loadVideos()
+    toast.success('Video deleted')
   } catch (error) {
     console.error('Failed to delete video:', error)
+    toast.error('Failed to delete video. Please try again.')
   }
 }
 

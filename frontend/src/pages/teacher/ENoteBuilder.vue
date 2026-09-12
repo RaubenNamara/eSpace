@@ -377,6 +377,11 @@ import CKEditor from '@/components/teacher/CKEditor.vue'
 import NarrationControls from '@/components/enotes/NarrationControls.vue'
 import { resolveContentAssetUrls } from '@/utils/richContent'
 import type { ENoteTopic, ENotePage, ENotePageForm, ENotePageNarration } from '@/types/enotes'
+import { useToastStore } from '@/stores/toast'
+import { useConfirmStore } from '@/stores/confirm'
+
+const toast = useToastStore()
+const confirmDialog = useConfirmStore()
 
 const router = useRouter()
 const route = useRoute()
@@ -561,7 +566,7 @@ const duplicatePage = async (pageId: number) => {
 }
 
 const deletePage = async (pageId: number) => {
-  if (!confirm('Are you sure you want to delete this page?')) return
+  if (!await confirmDialog.open({ title: 'Delete page', message: 'Are you sure you want to delete this page?', confirmLabel: 'Delete', danger: true })) return
 
   try {
     await axios.delete(`${API_BASE}/teacher/enotes/pages/${pageId}`)
@@ -572,6 +577,7 @@ const deletePage = async (pageId: number) => {
     }
   } catch (error) {
     console.error('Failed to delete page:', error)
+    toast.error('Failed to delete page. Please try again.')
   }
 }
 

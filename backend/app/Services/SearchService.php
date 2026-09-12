@@ -87,7 +87,12 @@ class SearchService
         $this->params = [];
         $this->counter = 0;
 
-        $branches = $role === 'teacher' ? $this->teacherBranches($userId, $type) : $this->studentBranches($userId, $type);
+        $branches = match ($role) {
+            'teacher' => $this->teacherBranches($userId, $type),
+            'hod' => $this->hodBranches($userId, $type),
+            'admin' => $this->adminBranches($type),
+            default => $this->studentBranches($userId, $type),
+        };
         if (empty($branches)) {
             return ['results' => [], 'total' => 0, 'counts' => [], 'subject_counts' => [], 'page' => $page, 'per_page' => $perPage];
         }
@@ -209,9 +214,15 @@ class SearchService
     {
         switch ($type) {
             case 'enote':
-                return $role === 'teacher' ? "/teacher/enotes/preview/{$id}" : "/student/enotes/{$id}";
+                if ($role === 'teacher') return "/teacher/enotes/preview/{$id}";
+                if ($role === 'hod') return "/hod/enotes/{$id}";
+                if ($role === 'admin') return "/admin/dashboard"; // no admin eNotes browsing page exists yet
+                return "/student/enotes/{$id}";
             case 'assignment':
-                return $role === 'teacher' ? "/teacher/assignments/{$id}" : "/student/assignments";
+                if ($role === 'teacher') return "/teacher/assignments/{$id}";
+                if ($role === 'hod') return "/hod/assessments/{$id}/preview";
+                if ($role === 'admin') return "/admin/assessments/{$id}/preview";
+                return "/student/assignments";
             case 'library':
                 return $filePath ?: "/{$role}/library";
             case 'item_bank':
@@ -221,6 +232,7 @@ class SearchService
             case 'lesson':
                 return $filePath ?: "/{$role}/live-classes";
             case 'subject':
+                if ($role === 'hod' || $role === 'admin') return "/{$role}/subjects";
                 return "/{$role}/enotes";
             default:
                 return "/{$role}/dashboard";
@@ -414,6 +426,180 @@ class SearchService
                     subj.name as subject_name, NULL as class_id, NULL as class_name, NULL as file_path, subj.created_at as published_at
                 FROM subjects subj
                 WHERE subj.deleted_at IS NULL AND subj.department_id = {$p}";
+        }
+
+        return $branches;
+    }
+
+    private function getHodDepartmentId(int $hodId): ?int
+    {
+        $stmt = $this->getDb()->prepare('SELECT department_id FROM hods WHERE id = :id AND deleted_at IS NULL');
+        $stmt->execute(['id' => $hodId]);
+        $row = $stmt->fetch();
+        return $row && $row['department_id'] !== null ? (int) $row['department_id'] : null;
+    }
+
+    /**
+     * @return string[] SQL branches, one per content type, already parameter-bound via bind()
+     *
+     * HOD moderation scope: every status (draft/published/archived), not just published - a HOD
+     * reviewing their department's content needs to find drafts too, matching what each HOD
+     * list controller (Video/Library/ItemBank/LiveClass/Assignment/ENote) already shows with no
+     * status filter applied. Scoping mirrors those controllers exactly: a direct department_id
+     * column check for videos/library/item_bank/live_classes/subjects, but an EXISTS against
+     * teacher_department_assignments for enotes/assignments (HOD\ENoteController and
+     * HOD\AssignmentController use that instead of trusting the content row's own department_id,
+     * since a teacher's assignment can move between departments after content was authored).
+     */
+    private function hodBranches(int $hodId, string $type): array
+    {
+        $departmentId = $this->getHodDepartmentId($hodId);
+        if ($departmentId === null) {
+            return [];
+        }
+
+        $branches = [];
+        $want = fn(string $t) => $type === 'all' || $type === $t;
+
+        if ($want('enote')) {
+            $p = $this->bind((string) $departmentId);
+            $branches[] = "SELECT 'enote' as type, et.id, et.title, et.description, et.subject_id, s.name as subject_name,
+                    et.class_id, c.name as class_name, NULL as file_path, COALESCE(et.published_at, et.created_at) as published_at
+                FROM enote_topics et
+                LEFT JOIN subjects s ON et.subject_id = s.id
+                LEFT JOIN classes c ON et.class_id = c.id
+                WHERE et.deleted_at IS NULL
+                  AND EXISTS (SELECT 1 FROM teacher_department_assignments tda WHERE tda.teacher_id = et.teacher_id AND tda.department_id = {$p} AND tda.deleted_at IS NULL)";
+        }
+
+        if ($want('library')) {
+            $p = $this->bind((string) $departmentId);
+            $branches[] = "SELECT 'library' as type, lb.id, lb.title, lb.description, lb.subject_id, s.name as subject_name,
+                    lb.class_id, c.name as class_name, lb.file_path, COALESCE(lb.published_at, lb.created_at) as published_at
+                FROM library_books lb
+                LEFT JOIN subjects s ON lb.subject_id = s.id
+                LEFT JOIN classes c ON lb.class_id = c.id
+                WHERE lb.deleted_at IS NULL AND lb.department_id = {$p}";
+        }
+
+        if ($want('assignment')) {
+            $p = $this->bind((string) $departmentId);
+            $branches[] = "SELECT 'assignment' as type, a.id, a.title, a.description, a.subject_id, s.name as subject_name,
+                    a.class_id, c.name as class_name, NULL as file_path, COALESCE(a.published_at, a.created_at) as published_at
+                FROM assignments a
+                INNER JOIN teachers t ON a.teacher_id = t.id
+                LEFT JOIN subjects s ON a.subject_id = s.id
+                LEFT JOIN classes c ON a.class_id = c.id
+                WHERE a.deleted_at IS NULL
+                  AND EXISTS (SELECT 1 FROM teacher_department_assignments tda WHERE tda.teacher_id = t.id AND tda.department_id = {$p} AND tda.deleted_at IS NULL)";
+        }
+
+        if ($want('item_bank')) {
+            $p = $this->bind((string) $departmentId);
+            $branches[] = "SELECT 'item_bank' as type, ibq.id, ibq.question_text as title, ibq.explanation as description,
+                    ibq.subject_id, s.name as subject_name, ibq.class_id, c.name as class_name, ibq.file_path,
+                    COALESCE(ibq.published_at, ibq.created_at) as published_at
+                FROM item_bank_questions ibq
+                LEFT JOIN subjects s ON ibq.subject_id = s.id
+                LEFT JOIN classes c ON ibq.class_id = c.id
+                WHERE ibq.deleted_at IS NULL AND ibq.department_id = {$p}";
+        }
+
+        if ($want('video')) {
+            $p = $this->bind((string) $departmentId);
+            $branches[] = "SELECT 'video' as type, v.id, v.title, v.description, v.subject_id, s.name as subject_name,
+                    v.class_id, c.name as class_name, v.file_path, COALESCE(v.published_at, v.created_at) as published_at
+                FROM videos v
+                LEFT JOIN subjects s ON v.subject_id = s.id
+                LEFT JOIN classes c ON v.class_id = c.id
+                WHERE v.deleted_at IS NULL AND v.department_id = {$p}";
+        }
+
+        if ($want('lesson')) {
+            $p = $this->bind((string) $departmentId);
+            $branches[] = "SELECT 'lesson' as type, lc.id, lc.title, lc.description, lc.subject_id, s.name as subject_name,
+                    lc.class_id, c.name as class_name, lc.recording_url as file_path, COALESCE(lc.scheduled_start, lc.created_at) as published_at
+                FROM live_classes lc
+                LEFT JOIN subjects s ON lc.subject_id = s.id
+                LEFT JOIN classes c ON lc.class_id = c.id
+                WHERE lc.deleted_at IS NULL AND lc.department_id = {$p}";
+        }
+
+        if ($type === 'all') {
+            $p = $this->bind((string) $departmentId);
+            $branches[] = "SELECT 'subject' as type, subj.id, subj.name as title, subj.description, subj.id as subject_id,
+                    subj.name as subject_name, NULL as class_id, NULL as class_name, NULL as file_path, subj.created_at as published_at
+                FROM subjects subj
+                WHERE subj.deleted_at IS NULL AND subj.department_id = {$p}";
+        }
+
+        return $branches;
+    }
+
+    /**
+     * @return string[] SQL branches, one per content type, already parameter-bound via bind()
+     *
+     * Admin scope: school-wide, every status, no department restriction - admin already sees
+     * everything through each module's own admin list page. eNotes is intentionally omitted:
+     * Admin\ENoteController exists on the backend but no admin frontend page browses individual
+     * eNote topics yet, so a search result there would have nowhere useful to link to.
+     */
+    private function adminBranches(string $type): array
+    {
+        $branches = [];
+        $want = fn(string $t) => $type === 'all' || $type === $t;
+
+        if ($want('library')) {
+            $branches[] = "SELECT 'library' as type, lb.id, lb.title, lb.description, lb.subject_id, s.name as subject_name,
+                    lb.class_id, c.name as class_name, lb.file_path, COALESCE(lb.published_at, lb.created_at) as published_at
+                FROM library_books lb
+                LEFT JOIN subjects s ON lb.subject_id = s.id
+                LEFT JOIN classes c ON lb.class_id = c.id
+                WHERE lb.deleted_at IS NULL";
+        }
+
+        if ($want('assignment')) {
+            $branches[] = "SELECT 'assignment' as type, a.id, a.title, a.description, a.subject_id, s.name as subject_name,
+                    a.class_id, c.name as class_name, NULL as file_path, COALESCE(a.published_at, a.created_at) as published_at
+                FROM assignments a
+                LEFT JOIN subjects s ON a.subject_id = s.id
+                LEFT JOIN classes c ON a.class_id = c.id
+                WHERE a.deleted_at IS NULL";
+        }
+
+        if ($want('item_bank')) {
+            $branches[] = "SELECT 'item_bank' as type, ibq.id, ibq.question_text as title, ibq.explanation as description,
+                    ibq.subject_id, s.name as subject_name, ibq.class_id, c.name as class_name, ibq.file_path,
+                    COALESCE(ibq.published_at, ibq.created_at) as published_at
+                FROM item_bank_questions ibq
+                LEFT JOIN subjects s ON ibq.subject_id = s.id
+                LEFT JOIN classes c ON ibq.class_id = c.id
+                WHERE ibq.deleted_at IS NULL";
+        }
+
+        if ($want('video')) {
+            $branches[] = "SELECT 'video' as type, v.id, v.title, v.description, v.subject_id, s.name as subject_name,
+                    v.class_id, c.name as class_name, v.file_path, COALESCE(v.published_at, v.created_at) as published_at
+                FROM videos v
+                LEFT JOIN subjects s ON v.subject_id = s.id
+                LEFT JOIN classes c ON v.class_id = c.id
+                WHERE v.deleted_at IS NULL";
+        }
+
+        if ($want('lesson')) {
+            $branches[] = "SELECT 'lesson' as type, lc.id, lc.title, lc.description, lc.subject_id, s.name as subject_name,
+                    lc.class_id, c.name as class_name, lc.recording_url as file_path, COALESCE(lc.scheduled_start, lc.created_at) as published_at
+                FROM live_classes lc
+                LEFT JOIN subjects s ON lc.subject_id = s.id
+                LEFT JOIN classes c ON lc.class_id = c.id
+                WHERE lc.deleted_at IS NULL";
+        }
+
+        if ($type === 'all') {
+            $branches[] = "SELECT 'subject' as type, subj.id, subj.name as title, subj.description, subj.id as subject_id,
+                    subj.name as subject_name, NULL as class_id, NULL as class_name, NULL as file_path, subj.created_at as published_at
+                FROM subjects subj
+                WHERE subj.deleted_at IS NULL";
         }
 
         return $branches;

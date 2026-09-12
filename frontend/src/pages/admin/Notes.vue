@@ -292,6 +292,11 @@ import { ref, computed, onMounted } from 'vue'
 import { apiService } from '../../services/api'
 import TopicViewer from '../../components/student/TopicViewer.vue'
 import type { ENoteTopic } from '../../types/enotes'
+import { useToastStore } from '@/stores/toast'
+import { useConfirmStore } from '@/stores/confirm'
+
+const toast = useToastStore()
+const confirmDialog = useConfirmStore()
 
 interface Department {
   id: number
@@ -528,7 +533,7 @@ const changeStatus = async (topic: ENoteTopic, status: string) => {
     await fetchTopics()
   } catch (error: any) {
     console.error('Failed to update topic status:', error)
-    alert(error.response?.data?.message || 'Failed to update topic status')
+    toast.error(error.response?.data?.message || 'Failed to update topic status')
   }
 }
 
@@ -539,7 +544,7 @@ const assignClass = async (topic: ENoteTopic, value: string) => {
     await fetchTopics()
   } catch (error: any) {
     console.error('Failed to assign topic class:', error)
-    alert(error.response?.data?.message || 'Failed to assign topic class')
+    toast.error(error.response?.data?.message || 'Failed to assign topic class')
   }
 }
 
@@ -566,14 +571,15 @@ const goToAdjacentTopic = async (direction: 1 | -1) => {
 }
 
 const deleteTopic = async (topic: ENoteTopic) => {
-  if (!confirm(`Are you sure you want to delete "${topic.title}"? This action cannot be undone.`)) return
+  if (!await confirmDialog.open({ title: 'Delete topic', message: `Are you sure you want to delete "${topic.title}"? This action cannot be undone.`, confirmLabel: 'Delete', danger: true })) return
 
   try {
     await apiService.delete(`/admin/enotes/${topic.id}`)
     await fetchTopics()
+    toast.success('Topic deleted')
   } catch (error: any) {
     console.error('Failed to delete topic:', error)
-    alert(error.response?.data?.message || 'Failed to delete topic')
+    toast.error(error.response?.data?.message || 'Failed to delete topic')
   }
 }
 

@@ -183,6 +183,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import apiService from '@/services/api'
+import { useToastStore } from '@/stores/toast'
+import { useConfirmStore } from '@/stores/confirm'
+
+const toast = useToastStore()
+const confirmDialog = useConfirmStore()
 
 const loadingClasses = ref(false)
 const loadingStudents = ref(false)
@@ -337,11 +342,16 @@ const loadStudents = async (classId: number) => {
 
 const bulkDeEnroll = async () => {
   if (selectedStudents.value.length === 0) {
-    alert('Please select at least one student to de-enroll')
+    toast.warning('Please select at least one student to de-enroll')
     return
   }
 
-  if (!confirm(`De-enroll ${selectedStudents.value.length} student(s) from your account?\n\nThey'll lose access to your assignments, eNotes, and other content, but stay fully enrolled with every other teacher in the department.`)) {
+  if (!await confirmDialog.open({
+    title: 'De-enroll students',
+    message: `De-enroll ${selectedStudents.value.length} student(s) from your account?\n\nThey'll lose access to your assignments, eNotes, and other content, but stay fully enrolled with every other teacher in the department.`,
+    confirmLabel: 'De-enroll',
+    danger: true
+  })) {
     return
   }
 
@@ -359,10 +369,10 @@ const bulkDeEnroll = async () => {
     // Clear selection
     selectedStudents.value = []
 
-    alert('Students de-enrolled successfully')
+    toast.success('Students de-enrolled successfully')
   } catch (error) {
     console.error('Failed to de-enroll students:', error)
-    alert('Failed to de-enroll some students. Please try again.')
+    toast.error('Failed to de-enroll some students. Please try again.')
   }
 }
 

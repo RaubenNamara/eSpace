@@ -144,6 +144,11 @@ import MessageComposer from '@/components/chat/MessageComposer.vue'
 import NewChatModal from '@/components/chat/NewChatModal.vue'
 import { useChatBadgeStore } from '@/stores/chatBadge'
 import type { Conversation, ChatMessage, ChatContact, ChatClassGroup } from '@/types/chat'
+import { useToastStore } from '@/stores/toast'
+import { useConfirmStore } from '@/stores/confirm'
+
+const toast = useToastStore()
+const confirmDialog = useConfirmStore()
 
 const API_BASE = '/api/student/chat'
 const chatBadge = useChatBadgeStore()
@@ -255,7 +260,7 @@ const openConversation = async (conv: Conversation) => {
 const clearActiveChat = async () => {
   showThreadMenu.value = false
   if (!activeConversation.value) return
-  if (!confirm('Clear this chat? Messages will be removed from your view only — the other person will still see them.')) return
+  if (!await confirmDialog.open({ title: 'Clear chat', message: 'Clear this chat? Messages will be removed from your view only — the other person will still see them.', confirmLabel: 'Clear' })) return
   try {
     const response = await axios.post(`${API_BASE}/conversations/${activeConversation.value.id}/clear`)
     if (response.data.success) {
@@ -264,7 +269,7 @@ const clearActiveChat = async () => {
       await loadConversations()
     }
   } catch (error: any) {
-    alert(error.response?.data?.message || 'Failed to clear chat')
+    toast.error(error.response?.data?.message || 'Failed to clear chat')
   }
 }
 
@@ -284,7 +289,7 @@ const startDirectChat = async (contact: ChatContact) => {
       if (conv) openConversation(conv)
     }
   } catch (error: any) {
-    alert(error.response?.data?.message || 'Failed to start chat')
+    toast.error(error.response?.data?.message || 'Failed to start chat')
   }
 }
 
@@ -298,7 +303,7 @@ const startClassChat = async (cls: ChatClassGroup) => {
       if (conv) openConversation(conv)
     }
   } catch (error: any) {
-    alert(error.response?.data?.message || 'Failed to open class chat')
+    toast.error(error.response?.data?.message || 'Failed to open class chat')
   }
 }
 
@@ -324,7 +329,7 @@ const sendMessage = async ({ message, file, replyToId }: { message: string; file
       await loadConversations()
     }
   } catch (error: any) {
-    alert(error.response?.data?.message || 'Failed to send message')
+    toast.error(error.response?.data?.message || 'Failed to send message')
   } finally {
     sending.value = false
   }

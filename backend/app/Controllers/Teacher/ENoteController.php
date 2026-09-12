@@ -1062,6 +1062,186 @@ class ENoteController extends Controller
     }
 
     /**
+     * Sanitize a raw `ids` array from the request body into a deduped list of positive ints.
+     */
+    private function sanitizeIds($rawIds): array
+    {
+        if (!is_array($rawIds)) {
+            return [];
+        }
+        $ids = array_map('intval', $rawIds);
+        $ids = array_filter($ids, fn($v) => $v > 0);
+        return array_values(array_unique($ids));
+    }
+
+    /**
+     * Re-verify ownership of every requested id (never trust the client's list wholesale) and
+     * return only the ids that actually belong to this teacher and aren't already deleted.
+     */
+    private function filterOwnedIds(array $ids, int $teacherId): array
+    {
+        if (empty($ids)) {
+            return [];
+        }
+        $db = $this->getDb();
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $db->prepare("SELECT id FROM enote_topics WHERE id IN ($placeholders) AND teacher_id = ? AND deleted_at IS NULL");
+        $stmt->execute([...$ids, $teacherId]);
+        return array_map('intval', array_column($stmt->fetchAll(), 'id'));
+    }
+
+    /**
+     * Bulk status change (draft/published/archived) across selected topics. Unlike the single-item
+     * publish() action, this doesn't fire a per-topic notification - a bulk operation across many
+     * topics at once would otherwise flood the class with individual "new eNote" alerts.
+     * POST /teacher/enotes/topics/bulk-status
+     */
+    public function bulkStatus(): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+
+        $teacherId = $this->getTeacherId();
+        if (!$teacherId) {
+            $this->error('Teacher not found', 403);
+            return;
+        }
+
+        $data = $this->input();
+        $status = $data['status'] ?? '';
+        if (!in_array($status, ['draft', 'published', 'archived'], true)) {
+            $this->validationError(['status' => 'status must be draft, published or archived']);
+            return;
+        }
+
+        $ids = $this->filterOwnedIds($this->sanitizeIds($data['ids'] ?? []), $teacherId);
+        if (empty($ids)) {
+            $this->validationError(['ids' => 'No valid topics selected']);
+            return;
+        }
+
+        $db = $this->getDb();
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+        $extraClause = '';
+        if ($status === 'published') {
+            $extraClause = ', published_at = NOW()';
+        } elseif ($status === 'archived') {
+            $extraClause = ', archived_at = NOW()';
+        }
+
+        try {
+            $sql = "UPDATE enote_topics SET status = ?{$extraClause}, updated_at = NOW() WHERE id IN ($placeholders)";
+            $stmt = $db->prepare($sql);
+            $stmt->execute([$status, ...$ids]);
+
+            $this->success(['updated' => count($ids)], count($ids) . ' topic(s) updated');
+        } catch (\PDOException $e) {
+            error_log('Failed to bulk update topics: ' . $e->getMessage());
+            $this->error('Failed to update topics', 500);
+        }
+    }
+
+    /**
+     * Bulk soft delete across selected topics (and their pages).
+     * POST /teacher/enotes/topics/bulk-delete
+     */
+    public function bulkDelete(): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+
+        $teacherId = $this->getTeacherId();
+        if (!$teacherId) {
+            $this->error('Teacher not found', 403);
+            return;
+        }
+
+        $data = $this->input();
+        $ids = $this->filterOwnedIds($this->sanitizeIds($data['ids'] ?? []), $teacherId);
+        if (empty($ids)) {
+            $this->validationError(['ids' => 'No valid topics selected']);
+            return;
+        }
+
+        $db = $this->getDb();
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+        try {
+            $stmt = $db->prepare("UPDATE enote_topics SET deleted_at = NOW() WHERE id IN ($placeholders)");
+            $stmt->execute($ids);
+
+            $stmt = $db->prepare("UPDATE enote_pages SET deleted_at = NOW() WHERE topic_id IN ($placeholders)");
+            $stmt->execute($ids);
+
+            $this->success(['deleted' => count($ids)], count($ids) . ' topic(s) deleted');
+        } catch (\PDOException $e) {
+            error_log('Failed to bulk delete topics: ' . $e->getMessage());
+            $this->error('Failed to delete topics', 500);
+        }
+    }
+
+    /**
+     * CSV export of selected topics (or, with no ids, every topic matching the current filters).
+     * POST /teacher/enotes/topics/bulk-export
+     */
+    public function bulkExport(): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+
+        $teacherId = $this->getTeacherId();
+        if (!$teacherId) {
+            $this->error('Teacher not found', 403);
+            return;
+        }
+
+        $data = $this->input();
+        $ids = $this->sanitizeIds($data['ids'] ?? []);
+
+        $db = $this->getDb();
+        $where = ['et.teacher_id = ?', 'et.deleted_at IS NULL'];
+        $params = [$teacherId];
+
+        if (!empty($ids)) {
+            $where[] = 'et.id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')';
+            array_push($params, ...$ids);
+        }
+
+        $sql = "SELECT et.title, et.status, s.name as subject_name, c.name as class_name, et.class_group_name,
+                       et.total_pages, et.created_at, et.updated_at
+                FROM enote_topics et
+                LEFT JOIN subjects s ON et.subject_id = s.id
+                LEFT JOIN classes c ON et.class_id = c.id
+                WHERE " . implode(' AND ', $where) . "
+                ORDER BY et.updated_at DESC";
+
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll();
+
+        foreach ($rows as &$row) {
+            $row['class'] = $row['class_name'] ?? $row['class_group_name'] ?? '';
+        }
+
+        $this->downloadCsv('enotes.csv', [
+            'Title' => 'title',
+            'Status' => 'status',
+            'Subject' => 'subject_name',
+            'Class' => 'class',
+            'Pages' => 'total_pages',
+            'Created At' => 'created_at',
+            'Updated At' => 'updated_at',
+        ], $rows);
+    }
+
+    /**
      * Create a new page
      * POST /teacher/enotes/topics/{topic_id}/pages
      */

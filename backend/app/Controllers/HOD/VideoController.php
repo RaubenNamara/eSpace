@@ -232,4 +232,172 @@ class VideoController extends Controller
             $this->error('Failed to delete video', 500);
         }
     }
+
+    /**
+     * Sanitize a raw `ids` array from the request body into a deduped list of positive ints.
+     */
+    private function sanitizeIds($rawIds): array
+    {
+        if (!is_array($rawIds)) {
+            return [];
+        }
+        $ids = array_map('intval', $rawIds);
+        $ids = array_filter($ids, fn($v) => $v > 0);
+        return array_values(array_unique($ids));
+    }
+
+    /**
+     * Re-scope every requested id to this HOD's own department (never trust the client's list
+     * wholesale) and return only the ids that actually belong to it and aren't already deleted.
+     */
+    private function filterDepartmentIds(array $ids, int $departmentId): array
+    {
+        if (empty($ids)) {
+            return [];
+        }
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $this->db->prepare("SELECT id FROM videos WHERE id IN ($placeholders) AND department_id = ? AND deleted_at IS NULL");
+        $stmt->execute([...$ids, $departmentId]);
+        return array_map('intval', array_column($stmt->fetchAll(), 'id'));
+    }
+
+    /**
+     * Bulk status change across selected videos in the HOD's department.
+     * POST /hod/videos/bulk-status
+     */
+    public function bulkStatus(): void
+    {
+        if (!$this->isHOD()) {
+            $this->forbidden();
+            return;
+        }
+
+        $departmentId = $this->getHODDepartmentId();
+        if (!$departmentId) {
+            $this->error('Department not found for HOD', 404);
+            return;
+        }
+
+        $data = $this->input();
+        $status = $data['status'] ?? '';
+        if (!in_array($status, ['draft', 'published', 'archived'], true)) {
+            $this->validationError(['status' => 'status must be draft, published or archived']);
+            return;
+        }
+
+        $ids = $this->filterDepartmentIds($this->sanitizeIds($data['ids'] ?? []), $departmentId);
+        if (empty($ids)) {
+            $this->validationError(['ids' => 'No valid videos selected']);
+            return;
+        }
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+        try {
+            $publishedAtClause = $status === 'published' ? ", published_at = NOW()" : "";
+            $sql = "UPDATE videos SET status = ?{$publishedAtClause}, updated_at = NOW() WHERE id IN ($placeholders)";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$status, ...$ids]);
+
+            $this->success(['updated' => count($ids)], count($ids) . ' video(s) updated');
+        } catch (\PDOException $e) {
+            error_log('Failed to bulk update videos: ' . $e->getMessage());
+            $this->error('Failed to update videos', 500);
+        }
+    }
+
+    /**
+     * Bulk soft delete across selected videos in the HOD's department.
+     * POST /hod/videos/bulk-delete
+     */
+    public function bulkDelete(): void
+    {
+        if (!$this->isHOD()) {
+            $this->forbidden();
+            return;
+        }
+
+        $departmentId = $this->getHODDepartmentId();
+        if (!$departmentId) {
+            $this->error('Department not found for HOD', 404);
+            return;
+        }
+
+        $data = $this->input();
+        $ids = $this->filterDepartmentIds($this->sanitizeIds($data['ids'] ?? []), $departmentId);
+        if (empty($ids)) {
+            $this->validationError(['ids' => 'No valid videos selected']);
+            return;
+        }
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+        try {
+            $stmt = $this->db->prepare("UPDATE videos SET deleted_at = NOW() WHERE id IN ($placeholders)");
+            $stmt->execute($ids);
+
+            $this->success(['deleted' => count($ids)], count($ids) . ' video(s) deleted');
+        } catch (\PDOException $e) {
+            error_log('Failed to bulk delete videos: ' . $e->getMessage());
+            $this->error('Failed to delete videos', 500);
+        }
+    }
+
+    /**
+     * CSV export of selected videos (or, with no ids, every video in the HOD's department).
+     * POST /hod/videos/bulk-export
+     */
+    public function bulkExport(): void
+    {
+        if (!$this->isHOD()) {
+            $this->forbidden();
+            return;
+        }
+
+        $departmentId = $this->getHODDepartmentId();
+        if (!$departmentId) {
+            $this->error('Department not found for HOD', 404);
+            return;
+        }
+
+        $data = $this->input();
+        $ids = $this->sanitizeIds($data['ids'] ?? []);
+
+        $where = ['v.department_id = ?', 'v.deleted_at IS NULL'];
+        $params = [$departmentId];
+
+        if (!empty($ids)) {
+            $where[] = 'v.id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')';
+            array_push($params, ...$ids);
+        }
+
+        $sql = "SELECT v.title, v.status, s.name as subject_name, c.name as class_name,
+                       t.first_name as teacher_first_name, t.last_name as teacher_last_name,
+                       v.file_size, v.created_at, v.updated_at
+                FROM videos v
+                LEFT JOIN subjects s ON v.subject_id = s.id
+                LEFT JOIN classes c ON v.class_id = c.id
+                LEFT JOIN teachers t ON v.teacher_id = t.id
+                WHERE " . implode(' AND ', $where) . "
+                ORDER BY v.updated_at DESC";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll();
+
+        foreach ($rows as &$row) {
+            $row['teacher'] = trim(($row['teacher_first_name'] ?? '') . ' ' . ($row['teacher_last_name'] ?? ''));
+        }
+
+        $this->downloadCsv('videos.csv', [
+            'Title' => 'title',
+            'Status' => 'status',
+            'Subject' => 'subject_name',
+            'Class' => 'class_name',
+            'Teacher' => 'teacher',
+            'File Size (bytes)' => 'file_size',
+            'Created At' => 'created_at',
+            'Updated At' => 'updated_at',
+        ], $rows);
+    }
 }
