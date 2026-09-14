@@ -1,17 +1,17 @@
 <template>
   <div class="min-h-screen bg-gray-50 dark:bg-gray-950">
     <!-- Sidebar -->
-    <!-- Floats as a rounded card off the page edges on desktop (flush on mobile, where an inset
-         drawer just wastes thumb-reach) - depth and shape carry the "stand out" job instead of
-         another color, plus one slim indigo spine down the left edge as the single deliberate
-         brand-color touch. -->
+    <!-- Floats as a frosted-glass card off the page edges on desktop (flush on mobile, where an
+         inset drawer just wastes thumb-reach) - semi-transparent + backdrop-blur over the page's
+         own background, in both themes (light glass on light-gray-50, dark glass on
+         dark-slate-950). Flat, no gradients or glow blobs. -->
     <aside
-      class="overflow-hidden fixed left-0 top-0 bottom-0 lg:left-3 lg:top-3 lg:bottom-3 rounded-none lg:rounded-2xl bg-white dark:bg-slate-900 shadow-lg lg:shadow-2xl lg:shadow-slate-900/10 dark:lg:shadow-black/50 border border-slate-200 dark:border-white/5 transform transition-all duration-300 z-50 flex flex-col"
-      :class="[isIconOnly ? 'w-16' : 'w-56', { '-translate-x-full': !sidebarOpen, 'translate-x-0': sidebarOpen }]"
+      class="overflow-hidden fixed left-0 top-3 bottom-3 lg:left-3 lg:top-3 lg:bottom-3 rounded-r-2xl lg:rounded-2xl bg-slate-100/80 dark:bg-slate-900/70 backdrop-blur-xl shadow-lg lg:shadow-2xl lg:shadow-slate-900/10 dark:lg:shadow-black/50 border border-slate-400/80 dark:border-white/10 transform transition-all duration-300 z-50 flex flex-col"
+      :class="[isIconOnly ? 'w-16' : 'w-48 md:w-56', { '-translate-x-full': !sidebarOpen, 'translate-x-0': sidebarOpen }]"
     >
-      <div class="absolute right-0 top-0 bottom-0 w-1 bg-indigo-500 rounded-r-none lg:rounded-r-2xl pointer-events-none"></div>
 
-      <div class="relative px-4 py-4 border-b border-slate-100 dark:border-white/5 flex-shrink-0">
+      <!-- Logo/brand header - desktop/tablet only; the mobile drawer skips straight to nav. -->
+      <div class="relative hidden lg:block px-4 py-4 border-b border-slate-400/80 dark:border-white/10 flex-shrink-0">
         <div class="flex items-center gap-3" :class="{ 'justify-center': isIconOnly }">
           <div class="relative w-9 h-9 flex-shrink-0 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/25">
             <svg class="w-[18px] h-[18px] text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -20,17 +20,17 @@
           </div>
           <div v-if="!isIconOnly" class="min-w-0">
             <h1 class="text-sm font-bold text-slate-900 dark:text-white tracking-tight leading-tight">eSpace</h1>
-            <p class="text-[10.5px] text-slate-400 capitalize font-medium tracking-wide leading-tight mt-0.5">{{ userRole }} Console</p>
+            <p class="text-[10.5px] text-slate-600 dark:text-white/40 capitalize font-medium tracking-wide leading-tight mt-0.5">{{ userRole }} Console</p>
           </div>
         </div>
       </div>
 
-      <nav class="sidebar-nav relative flex-1 overflow-y-auto px-3 py-4">
+      <nav class="sidebar-nav font-jakarta relative flex-1 overflow-y-auto px-3 py-4">
         <!-- System Administration -->
-        <div v-if="isAdmin" class="mb-5">
-          <div v-if="!isIconOnly" class="px-3 mb-1.5 flex items-center gap-2">
+        <div v-if="isAdmin" class="mb-6">
+          <div v-if="!isIconOnly" class="px-3 mb-2.5 flex items-center gap-2">
             <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
-            <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">System Administration</span>
+            <span class="text-[8px] md:text-[9px] font-bold text-indigo-600 dark:text-indigo-300 uppercase tracking-wider">System Administration</span>
           </div>
           <div class="space-y-0.5">
             <router-link
@@ -38,11 +38,11 @@
               :key="item.path"
               :to="item.path"
               :title="isIconOnly ? item.label : undefined"
-              class="flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-lg transition-all duration-150 text-sm font-medium group"
-              :class="[isActive(item.path) ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
+              class="flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-xl transition-all duration-150 text-sm font-medium group"
+              :class="[isActive(item.path) ? 'bg-indigo-500/10 dark:bg-white/12 text-indigo-700 dark:text-white shadow-inner shadow-indigo-500/5 dark:shadow-white/5' : 'text-slate-800 dark:text-white/55 hover:bg-black/5 dark:hover:bg-white/[0.07] hover:text-slate-900 dark:hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
             >
               <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-all duration-150"
-                :class="isActive(item.path) ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300' : 'text-slate-400 group-hover:text-slate-700 dark:text-slate-400 dark:group-hover:text-white'"
+                :class="isActive(item.path) ? 'bg-indigo-500 text-white shadow shadow-indigo-500/30 dark:shadow-indigo-500/40' : 'text-slate-600 dark:text-white/40 group-hover:text-slate-900 dark:group-hover:text-white/80'"
               >
                 <component :is="iconMap[item.icon]" class="w-4 h-4" />
               </div>
@@ -52,18 +52,18 @@
         </div>
 
         <!-- Dashboard -->
-        <div v-if="dashboardMenu.length > 0" class="mb-5">
+        <div v-if="dashboardMenu.length > 0" class="mb-6">
           <div class="space-y-0.5">
             <router-link
               v-for="item in dashboardMenu"
               :key="item.path"
               :to="item.path"
               :title="isIconOnly ? item.label : undefined"
-              class="flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-lg transition-all duration-150 text-sm font-medium group"
-              :class="[isActive(item.path) ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
+              class="flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-xl transition-all duration-150 text-sm font-medium group"
+              :class="[isActive(item.path) ? 'bg-indigo-500/10 dark:bg-white/12 text-indigo-700 dark:text-white shadow-inner shadow-indigo-500/5 dark:shadow-white/5' : 'text-slate-800 dark:text-white/55 hover:bg-black/5 dark:hover:bg-white/[0.07] hover:text-slate-900 dark:hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
             >
               <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-all duration-150"
-                :class="isActive(item.path) ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300' : 'text-slate-400 group-hover:text-slate-700 dark:text-slate-400 dark:group-hover:text-white'"
+                :class="isActive(item.path) ? 'bg-indigo-500 text-white shadow shadow-indigo-500/30 dark:shadow-indigo-500/40' : 'text-slate-600 dark:text-white/40 group-hover:text-slate-900 dark:group-hover:text-white/80'"
               >
                 <component :is="iconMap[item.icon]" class="w-4 h-4" />
               </div>
@@ -73,10 +73,10 @@
         </div>
 
         <!-- Academic Management -->
-        <div class="mb-5">
-          <div v-if="!isIconOnly" class="px-3 mb-1.5 flex items-center gap-2">
+        <div class="mb-6">
+          <div v-if="!isIconOnly" class="px-3 mb-2.5 flex items-center gap-2">
             <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
-            <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Academic Management</span>
+            <span class="text-[8px] md:text-[9px] font-bold text-indigo-600 dark:text-indigo-300 uppercase tracking-wider">Academic Management</span>
           </div>
           <div class="space-y-0.5">
             <router-link
@@ -84,11 +84,11 @@
               :key="item.path"
               :to="item.path"
               :title="isIconOnly ? item.label : undefined"
-              class="flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-lg transition-all duration-150 text-sm font-medium group"
-              :class="[isActive(item.path) ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
+              class="flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-xl transition-all duration-150 text-sm font-medium group"
+              :class="[isActive(item.path) ? 'bg-indigo-500/10 dark:bg-white/12 text-indigo-700 dark:text-white shadow-inner shadow-indigo-500/5 dark:shadow-white/5' : 'text-slate-800 dark:text-white/55 hover:bg-black/5 dark:hover:bg-white/[0.07] hover:text-slate-900 dark:hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
             >
               <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-all duration-150"
-                :class="isActive(item.path) ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300' : 'text-slate-400 group-hover:text-slate-700 dark:text-slate-400 dark:group-hover:text-white'"
+                :class="isActive(item.path) ? 'bg-indigo-500 text-white shadow shadow-indigo-500/30 dark:shadow-indigo-500/40' : 'text-slate-600 dark:text-white/40 group-hover:text-slate-900 dark:group-hover:text-white/80'"
               >
                 <component :is="iconMap[item.icon]" class="w-4 h-4" />
               </div>
@@ -98,10 +98,10 @@
         </div>
 
         <!-- Learning Resources -->
-        <div class="mb-5">
-          <div v-if="!isIconOnly" class="px-3 mb-1.5 flex items-center gap-2">
+        <div class="mb-6">
+          <div v-if="!isIconOnly" class="px-3 mb-2.5 flex items-center gap-2">
             <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
-            <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Learning Resources</span>
+            <span class="text-[8px] md:text-[9px] font-bold text-indigo-600 dark:text-indigo-300 uppercase tracking-wider">Learning Resources</span>
           </div>
           <div class="space-y-0.5">
             <router-link
@@ -109,11 +109,11 @@
               :key="item.path"
               :to="item.path"
               :title="isIconOnly ? item.label : undefined"
-              class="flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-lg transition-all duration-150 text-sm font-medium group"
-              :class="[isActive(item.path) ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
+              class="flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-xl transition-all duration-150 text-sm font-medium group"
+              :class="[isActive(item.path) ? 'bg-indigo-500/10 dark:bg-white/12 text-indigo-700 dark:text-white shadow-inner shadow-indigo-500/5 dark:shadow-white/5' : 'text-slate-800 dark:text-white/55 hover:bg-black/5 dark:hover:bg-white/[0.07] hover:text-slate-900 dark:hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
             >
               <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-all duration-150"
-                :class="isActive(item.path) ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300' : 'text-slate-400 group-hover:text-slate-700 dark:text-slate-400 dark:group-hover:text-white'"
+                :class="isActive(item.path) ? 'bg-indigo-500 text-white shadow shadow-indigo-500/30 dark:shadow-indigo-500/40' : 'text-slate-600 dark:text-white/40 group-hover:text-slate-900 dark:group-hover:text-white/80'"
               >
                 <component :is="iconMap[item.icon]" class="w-4 h-4" />
               </div>
@@ -123,10 +123,10 @@
         </div>
 
         <!-- Assessment & Analytics -->
-        <div class="mb-5">
-          <div v-if="!isIconOnly" class="px-3 mb-1.5 flex items-center gap-2">
+        <div class="mb-6">
+          <div v-if="!isIconOnly" class="px-3 mb-2.5 flex items-center gap-2">
             <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
-            <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Assessment & Analytics</span>
+            <span class="text-[8px] md:text-[9px] font-bold text-indigo-600 dark:text-indigo-300 uppercase tracking-wider">Assessment & Analytics</span>
           </div>
           <div class="space-y-0.5">
             <router-link
@@ -134,11 +134,11 @@
               :key="item.path"
               :to="item.path"
               :title="isIconOnly ? item.label : undefined"
-              class="flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-lg transition-all duration-150 text-sm font-medium group"
-              :class="[isActive(item.path) ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
+              class="flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-xl transition-all duration-150 text-sm font-medium group"
+              :class="[isActive(item.path) ? 'bg-indigo-500/10 dark:bg-white/12 text-indigo-700 dark:text-white shadow-inner shadow-indigo-500/5 dark:shadow-white/5' : 'text-slate-800 dark:text-white/55 hover:bg-black/5 dark:hover:bg-white/[0.07] hover:text-slate-900 dark:hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
             >
               <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-all duration-150"
-                :class="isActive(item.path) ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300' : 'text-slate-400 group-hover:text-slate-700 dark:text-slate-400 dark:group-hover:text-white'"
+                :class="isActive(item.path) ? 'bg-indigo-500 text-white shadow shadow-indigo-500/30 dark:shadow-indigo-500/40' : 'text-slate-600 dark:text-white/40 group-hover:text-slate-900 dark:group-hover:text-white/80'"
               >
                 <component :is="iconMap[item.icon]" class="w-4 h-4" />
               </div>
@@ -148,18 +148,21 @@
         </div>
       </nav>
 
-      <div class="relative p-2.5 border-t border-slate-100 dark:border-white/5 flex-shrink-0">
-        <button
-          @click="handleLogout"
-          :title="isIconOnly ? 'Logout' : undefined"
-          class="flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-lg text-red-600 hover:bg-red-50 dark:text-slate-300 dark:hover:bg-rose-500/15 dark:hover:text-rose-300 w-full transition-colors duration-150 group"
-          :class="isIconOnly ? 'justify-center px-0' : ''"
-        >
-          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-          </svg>
-          <span v-if="!isIconOnly" class="text-sm font-medium">Logout</span>
-        </button>
+      <!-- Footer -->
+      <div class="relative border-t border-slate-400/80 dark:border-white/10 flex-shrink-0">
+        <div class="p-2.5">
+          <button
+            @click="handleLogout"
+            :title="isIconOnly ? 'Logout' : undefined"
+            class="flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-xl text-red-600 hover:bg-red-50 dark:text-rose-300 dark:hover:bg-rose-500/15 dark:hover:text-rose-200 w-full transition-colors duration-150 group"
+            :class="isIconOnly ? 'justify-center px-0' : ''"
+          >
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+            </svg>
+            <span v-if="!isIconOnly" class="text-sm font-medium">Logout</span>
+          </button>
+        </div>
       </div>
     </aside>
 
@@ -170,7 +173,7 @@
       v-if="sidebarOpen"
       @click="sidebarCollapsed = !sidebarCollapsed"
       :title="isIconOnly ? 'Expand sidebar' : 'Collapse sidebar'"
-      class="hidden lg:flex fixed top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 shadow-md items-center justify-center text-slate-400 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-500/50 transition-all duration-300 z-50"
+      class="hidden lg:flex fixed top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white dark:bg-slate-800 border border-slate-400 dark:border-white/10 shadow-md items-center justify-center text-slate-600 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-500/50 transition-all duration-300 z-50"
       :style="{ left: sidebarToggleLeftPx + 'px' }"
     >
       <svg class="w-3.5 h-3.5 transition-transform duration-300" :class="{ 'rotate-180': isIconOnly }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
