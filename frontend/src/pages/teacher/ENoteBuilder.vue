@@ -1,7 +1,7 @@
 <template>
   <div class="h-screen flex flex-col">
     <!-- Header -->
-    <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-3 sm:px-6 py-3 sm:py-4 flex flex-wrap items-center justify-between gap-2 sm:gap-3">
+    <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-3 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-between gap-2 sm:gap-3">
       <div class="flex items-center gap-2 sm:gap-4 min-w-0">
         <button
           @click="goBack"
@@ -17,7 +17,7 @@
         </div>
       </div>
 
-      <div class="flex items-center gap-1.5 sm:gap-3 flex-wrap">
+      <div class="flex items-center justify-between sm:justify-end gap-1.5 sm:gap-3 w-full sm:w-auto">
         <div class="hidden sm:flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
           <span v-if="autosaveStatus === 'saving'" class="text-yellow-600 dark:text-yellow-400">
             <svg class="animate-spin h-4 w-4 inline" fill="none" viewBox="0 0 24 24">
@@ -200,17 +200,7 @@
       <!-- Main Editor -->
       <div class="flex-1 flex flex-col overflow-hidden">
         <div class="flex-1 overflow-y-auto p-4 sm:p-6">
-          <div v-if="currentPage" class="max-w-4xl mx-auto">
-            <div class="mb-4">
-              <input
-                v-model="currentPage.title"
-                @input="scheduleAutosave"
-                type="text"
-                placeholder="Page Title"
-                class="w-full text-xl sm:text-2xl font-bold text-gray-900 dark:text-white bg-transparent border-none focus:ring-0 p-0"
-              >
-            </div>
-
+          <div v-if="currentPage" class="max-w-4xl xl:max-w-6xl 2xl:max-w-[1600px] mx-auto">
             <div class="mb-4">
               <CKEditor
                 v-if="currentPage"
@@ -243,6 +233,18 @@
                   class="px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   Next
+                </button>
+                <!-- Quick "add page" - the Pages panel (where "Add New Page" normally lives) is
+                     hidden by default now, so this stays reachable without opening it. -->
+                <button
+                  v-if="!showPagesPanel"
+                  @click="addPage"
+                  title="Add New Page"
+                  class="w-7 h-7 flex-shrink-0 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center transition-colors"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path>
+                  </svg>
                 </button>
               </div>
             </div>
@@ -398,23 +400,23 @@ const autosaveTimeout = ref<number | null>(null)
 
 const draggedIndex = ref<number | null>(null)
 
-// Both side panels can be hidden to give the editor more width - state isn't persisted since
-// it's a per-session editing preference, not something that should carry over between topics.
-// Below the lg breakpoint they render as full-screen overlays (see template), so default to
-// closed there - starting with both open would bury the editor under two full-screen panels.
+// Both side panels start closed (toggled open via the header buttons) to give the editor the
+// full width by default - state isn't persisted since it's a per-session editing preference, not
+// something that should carry over between topics. Below the lg breakpoint they render as
+// full-screen overlays (see template), so a panel left open when the window shrinks that far
+// needs to auto-close rather than bury the editor under a full-screen overlay - it just never
+// auto-opens on its own.
 const LG_BREAKPOINT = 1024
 const isDesktop = ref(typeof window !== 'undefined' ? window.innerWidth >= LG_BREAKPOINT : true)
-const showPagesPanel = ref(isDesktop.value)
-const showSettingsPanel = ref(isDesktop.value)
+const showPagesPanel = ref(false)
+const showSettingsPanel = ref(false)
 
 const applyResponsivePanels = () => {
   const wasDesktop = isDesktop.value
   isDesktop.value = window.innerWidth >= LG_BREAKPOINT
-  // Only auto-flip on an actual breakpoint crossing, so resizing within a single screen size
-  // doesn't fight a panel the user just closed/opened by hand.
-  if (isDesktop.value !== wasDesktop) {
-    showPagesPanel.value = isDesktop.value
-    showSettingsPanel.value = isDesktop.value
+  if (wasDesktop && !isDesktop.value) {
+    showPagesPanel.value = false
+    showSettingsPanel.value = false
   }
 }
 
