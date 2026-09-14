@@ -770,8 +770,14 @@ class StudentController extends Controller
         // Sanitize input
         $data = $this->sanitize($data);
 
-        // De-enroll students from department
-        $studentIds = $data['student_ids'];
+        // De-enroll students from department - drop any non-positive-integer entries (a stale
+        // client payload, e.g. undefined ids serialized to null) so they never silently make it
+        // into an `IN (...)` clause that would just quietly match nothing.
+        $studentIds = array_values(array_filter(array_map('intval', $data['student_ids']), fn ($id) => $id > 0));
+        if (empty($studentIds)) {
+            $this->validationError(['student_ids' => 'At least one valid student must be selected']);
+            return;
+        }
         $departmentId = $data['department_id'] ?? null;
         $academicYearId = $data['academic_year_id'] ?? null;
 
@@ -813,6 +819,14 @@ class StudentController extends Controller
             $stmt->execute($params);
 
             $affectedRows = $stmt->rowCount();
+
+            // Nothing actually matched (stale list, ids already withdrawn, or a department/year
+            // mismatch) - report it as a failure rather than the generic success message, so the
+            // admin isn't told students were de-enrolled when none were.
+            if ($affectedRows === 0) {
+                $this->error('No matching active enrollments found to de-enroll - the list may be out of date, please refresh and try again', 404);
+                return;
+            }
 
             $performedBy = $this->getCurrentUserId();
             foreach ($affected as $row) {
