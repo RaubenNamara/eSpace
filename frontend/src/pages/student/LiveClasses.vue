@@ -1,36 +1,20 @@
 <template>
   <div>
-    <!-- Header -->
-    <div class="relative overflow-hidden rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-500/20 p-4 sm:p-5 mb-6">
-      <div class="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-white/10"></div>
-      <div class="absolute -right-3 bottom-0 w-24 h-24 rounded-full bg-white/10"></div>
-      <div class="relative flex items-center gap-3 mb-3">
-        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center shadow-sm flex-shrink-0 ring-2 ring-white/20">
-          <svg class="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-          </svg>
-        </div>
-        <div class="min-w-0">
-          <h1 class="text-lg sm:text-2xl font-bold text-white leading-tight">Live Classes</h1>
-          <p class="text-xs sm:text-sm text-indigo-100">Join real-time sessions from your teachers</p>
-        </div>
-      </div>
-
-      <!-- Quick stats -->
-      <div v-if="!loading && classes.length > 0" class="relative flex flex-wrap items-center gap-2">
-        <span v-if="liveNow.length > 0" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-white/20 backdrop-blur-sm text-white">
-          <span class="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse"></span>
-          {{ liveNow.length }} live now
-        </span>
-        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-white/15 backdrop-blur-sm text-white">
-          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-          {{ upcoming.length }} upcoming
-        </span>
-        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-white/15 backdrop-blur-sm text-white">
-          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-          {{ past.length }} past
-        </span>
-      </div>
+    <!-- Header - a plain title/subtitle row, matching the compact style used on the teacher
+         dashboard; the live/upcoming/past counts fold into the subtitle. -->
+    <div class="mb-4">
+      <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Live Classes</h1>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 flex flex-wrap items-center gap-x-1.5">
+        <span>Join real-time sessions from your teachers</span>
+        <template v-if="!loading && classes.length > 0">
+          <span>&middot;</span>
+          <span v-if="liveNow.length > 0" class="inline-flex items-center gap-1 text-red-600 dark:text-red-400 font-medium">
+            <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>{{ liveNow.length }} live now
+          </span>
+          <span v-if="liveNow.length > 0">&middot;</span>
+          <span>{{ upcoming.length }} upcoming &middot; {{ past.length }} past</span>
+        </template>
+      </p>
     </div>
 
     <div v-if="autoJoinNotice" class="mb-6 flex items-start gap-3 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4">

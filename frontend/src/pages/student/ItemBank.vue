@@ -1,47 +1,36 @@
 <template>
   <div>
     <template v-if="!activeSubjectId">
-      <!-- Header -->
-      <div class="relative overflow-hidden rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-500/20 p-4 sm:p-5 mb-6">
-        <div class="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-white/10"></div>
-        <div class="absolute -right-3 bottom-0 w-24 h-24 rounded-full bg-white/10"></div>
-        <div class="relative flex items-center gap-3 mb-3">
-          <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center shadow-sm flex-shrink-0 ring-2 ring-white/20">
-            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <!-- Header - icon and title share a row with the search box, matching the compact style
+           used across the teacher/HOD modules; the subtitle (with counts folded in) sits on its
+           own line underneath. -->
+      <div class="flex items-center gap-2 mb-1">
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <div class="hidden sm:flex w-7 h-7 rounded-lg bg-indigo-600 items-center justify-center flex-shrink-0">
+            <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
             </svg>
           </div>
-          <div class="min-w-0">
-            <h1 class="text-lg sm:text-2xl font-bold text-white leading-tight">Item Bank</h1>
-            <p class="text-xs sm:text-sm text-indigo-100">PDF resources shared by your teachers</p>
+          <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight whitespace-nowrap">Item Bank</h1>
+        </div>
+
+        <div class="flex-1 flex justify-center min-w-0">
+          <div class="relative flex-shrink min-w-0 w-32 sm:w-80">
+            <svg class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+            <input
+              v-model="searchQuery"
+              type="text"
+              placeholder="Search..."
+              class="w-full pl-8 pr-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+            >
           </div>
         </div>
-
-        <!-- Quick stats -->
-        <div v-if="!loading && subjectGroups.length > 0" class="relative flex flex-wrap items-center gap-2 mb-3">
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-white/15 backdrop-blur-sm text-white">
-            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-            {{ resources.length }} {{ resources.length === 1 ? 'resource' : 'resources' }}
-          </span>
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-white/15 backdrop-blur-sm text-white">
-            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
-            {{ subjectGroups.length }} {{ subjectGroups.length === 1 ? 'subject' : 'subjects' }}
-          </span>
-        </div>
-
-        <!-- Search -->
-        <div class="relative">
-          <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-          </svg>
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="Search subjects or resources..."
-            class="relative w-full pl-9 pr-4 py-2 rounded-lg border-0 shadow-md focus:ring-2 focus:ring-white/50 bg-white text-gray-900 dark:bg-gray-800 dark:text-white transition-colors"
-          >
-        </div>
       </div>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">
+        PDF resources shared by your teachers<span v-if="!loading && subjectGroups.length > 0"> &middot; {{ resources.length }} {{ resources.length === 1 ? 'resource' : 'resources' }} &middot; {{ subjectGroups.length }} {{ subjectGroups.length === 1 ? 'subject' : 'subjects' }}</span>
+      </p>
 
       <!-- Loading -->
       <div v-if="loading" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-5">

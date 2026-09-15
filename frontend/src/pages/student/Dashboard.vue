@@ -1,22 +1,12 @@
 <template>
   <div>
-    <!-- Header -->
-    <div class="relative overflow-hidden rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-500/20 p-5 sm:p-7 mb-6">
-      <div class="absolute -right-10 -top-10 w-52 h-52 rounded-full bg-white/10"></div>
-      <div class="absolute -right-4 bottom-0 w-32 h-32 rounded-full bg-white/10"></div>
-      <div class="relative flex items-center gap-4">
-        <div class="hidden sm:flex w-14 h-14 rounded-2xl bg-white/15 backdrop-blur-sm items-center justify-center flex-shrink-0 text-white text-xl font-bold ring-2 ring-white/20">
-          {{ userInitials }}
-        </div>
-        <div class="min-w-0">
-          <h1 class="text-xl sm:text-3xl font-bold text-white leading-tight">
-            {{ greeting }}, {{ authStore.userName }}
-          </h1>
-          <p class="text-sm sm:text-base text-indigo-100 mt-1">
-            {{ today }}<span v-if="admissionNumber"> · Admission No. {{ admissionNumber }}</span>
-          </p>
-        </div>
-      </div>
+    <!-- Header - a quick personal greeting rather than a hero card, matching the compact style
+         used on the teacher dashboard. -->
+    <div class="mb-6">
+      <h1 class="text-xl font-bold text-gray-900 dark:text-white">{{ greeting }}, {{ authStore.userName }}</h1>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        {{ today }}<span v-if="admissionNumber"> · Admission No. {{ admissionNumber }}</span>
+      </p>
     </div>
 
     <!-- Loading skeleton -->
@@ -171,11 +161,6 @@ const greeting = computed(() => {
   if (hour < 12) return 'Good morning'
   if (hour < 17) return 'Good afternoon'
   return 'Good evening'
-})
-
-const userInitials = computed(() => {
-  const name = authStore.userName || ''
-  return name.split(' ').filter(Boolean).map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || 'S'
 })
 
 const loadDashboard = async () => {

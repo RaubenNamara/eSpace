@@ -1,19 +1,8 @@
 <template>
   <div class="p-6">
-    <div class="relative overflow-hidden rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-500/20 p-4 sm:p-5 mb-6">
-      <div class="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-white/10"></div>
-      <div class="absolute -right-3 bottom-0 w-24 h-24 rounded-full bg-white/10"></div>
-      <div class="relative flex items-center gap-3">
-        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center shadow-sm flex-shrink-0 ring-2 ring-white/20">
-          <svg class="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-          </svg>
-        </div>
-        <div class="min-w-0">
-          <h1 class="text-lg sm:text-2xl font-bold text-white leading-tight">Assignments</h1>
-          <p class="text-xs sm:text-sm text-indigo-100">View and complete your assigned assignments</p>
-        </div>
-      </div>
+    <div class="mb-4">
+      <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Assignments</h1>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">View and complete your assigned assignments</p>
     </div>
 
     <!-- Summary Cards -->

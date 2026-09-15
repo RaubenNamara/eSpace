@@ -1,27 +1,11 @@
 <template>
   <div class="min-h-screen bg-gray-50 dark:bg-gray-950">
     <div class="px-4 sm:px-6 lg:px-8 py-8">
-      <div class="relative overflow-hidden rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-500/20 p-4 sm:p-5 mb-6">
-        <div class="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-white/10"></div>
-        <div class="absolute -right-3 bottom-0 w-24 h-24 rounded-full bg-white/10"></div>
-        <div class="relative flex items-center gap-3">
-          <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center shadow-sm flex-shrink-0 ring-2 ring-white/20">
-            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222"></path>
-            </svg>
-          </div>
-          <div class="min-w-0">
-            <h1 class="text-lg sm:text-2xl font-bold text-white leading-tight">My Academic History</h1>
-            <p class="text-xs sm:text-sm text-indigo-100">Every class and academic year you've been part of</p>
-          </div>
-        </div>
-
-        <div v-if="!loading && periods.length > 0" class="relative flex flex-wrap items-center gap-2 mt-3">
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-white/15 backdrop-blur-sm text-white">
-            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222"></path></svg>
-            {{ periods.length }} {{ periods.length === 1 ? 'period' : 'periods' }}
-          </span>
-        </div>
+      <div class="mb-4">
+        <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">My Academic History</h1>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          Every class and academic year you've been part of<span v-if="!loading && periods.length > 0"> &middot; {{ periods.length }} {{ periods.length === 1 ? 'period' : 'periods' }}</span>
+        </p>
       </div>
 
       <div v-if="loading" class="text-center py-12">

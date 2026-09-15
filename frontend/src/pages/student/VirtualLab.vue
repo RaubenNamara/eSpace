@@ -1,18 +1,11 @@
 <template>
   <div class="min-h-full">
     <div class="p-4 sm:p-6 lg:p-8">
-      <!-- Hero -->
-      <div class="relative overflow-hidden rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-500/20 p-4 sm:p-5 mb-6 print-color-exact">
-        <div class="absolute inset-0 opacity-20" style="background-image: radial-gradient(circle at 20% 20%, white 1px, transparent 1px), radial-gradient(circle at 80% 60%, white 1px, transparent 1px); background-size: 32px 32px;"></div>
-        <div class="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-white/10"></div>
-        <div class="absolute -right-3 bottom-0 w-24 h-24 rounded-full bg-white/10"></div>
-        <div class="relative flex items-center gap-3">
-          <span class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center shadow-sm text-xl sm:text-2xl flex-shrink-0 ring-2 ring-white/20">🧪</span>
-          <div class="min-w-0">
-            <h1 class="text-lg sm:text-2xl font-bold text-white leading-tight">Virtual Lab</h1>
-            <p class="text-xs sm:text-sm text-indigo-100">Step into a 3D laboratory and run real science experiments &mdash; Physics, Chemistry, Biology and Agriculture, right from your browser.</p>
-          </div>
-        </div>
+      <!-- Header - a plain title/subtitle row, matching the compact style used on the teacher
+           dashboard, instead of a hero card. -->
+      <div class="mb-4">
+        <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Virtual Lab</h1>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Step into a 3D laboratory and run real science experiments &mdash; Physics, Chemistry, Biology and Agriculture, right from your browser.</p>
       </div>
       <!-- Tabs -->
       <div class="inline-flex flex-wrap gap-1 mb-5 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-1 shadow-sm">
