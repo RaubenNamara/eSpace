@@ -434,7 +434,12 @@ const configureEditor = () => {
         '|',
         'sourceEditing'
       ],
-      shouldNotGroupWhenFull: false
+      // CKEditor's default (false) groups overflowing items behind a "..." dropdown - on a
+      // narrow phone width that dropdown balloon ends up positioned off-screen/clipped (see the
+      // horizontally-scrollable strip below instead), so most of the ~40 buttons became
+      // unreachable. true leaves every item in the toolbar and lets the CSS below handle overflow
+      // by scrolling instead.
+      shouldNotGroupWhenFull: true
     },
     heading: {
       options: [
@@ -834,14 +839,18 @@ onBeforeUnmount(() => {
   font-weight: 500;
 }
 
-/* Responsive toolbar */
+/* Responsive toolbar - a single row that scrolls horizontally rather than wrapping onto extra
+   rows (which would eat most of the screen) or grouping into a dropdown (see
+   shouldNotGroupWhenFull above for why that dropdown doesn't work well here). */
 @media (max-width: 768px) {
   .ckeditor-wrapper :deep(.ck-toolbar) {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .ckeditor-wrapper :deep(.ck-toolbar__items) {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
   }
 }
 

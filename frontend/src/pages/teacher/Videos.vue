@@ -129,7 +129,7 @@
         <button @click="bulkDeleteSelected" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors">Delete</button>
       </BulkActionBar>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
       <div
         v-for="video in filteredVideos"
         :key="video.id"

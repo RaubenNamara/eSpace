@@ -3,7 +3,7 @@
     <!-- Academic year sits next to the title instead of its own filter card, so the classes
          row below starts higher up the page. -->
     <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-      <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">My Classes</h1>
+      <h1 class="text-base sm:text-3xl font-bold text-gray-900 dark:text-white">My Classes</h1>
       <div class="flex items-center gap-2">
         <label class="text-sm font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">Academic Year</label>
         <select
@@ -23,12 +23,12 @@
          place (see toggleGroup). -->
     <div v-if="loadingClasses" class="text-center py-12 text-gray-500">Loading classes...</div>
     <div v-else-if="classGroups.length === 0" class="text-center py-12 text-gray-500">No classes found in your department</div>
-    <div v-else class="flex gap-3 overflow-x-auto pb-1 mb-4 -mx-1 px-1">
+    <div v-else class="grid grid-cols-2 gap-3 sm:flex sm:overflow-x-auto pb-1 mb-4 -mx-1 px-1">
       <button
         v-for="group in classGroups"
         :key="group.name + group.level"
         @click="toggleGroup(group)"
-        class="flex-shrink-0 w-44 text-left card !p-4 transition-all duration-200 border-2 hover:opacity-100 hover:blur-0"
+        class="w-full sm:w-44 sm:flex-shrink-0 text-left card !p-4 transition-all duration-200 border-2 hover:opacity-100 hover:blur-0"
         :class="[
           selectedGroup === group ? 'border-indigo-500 dark:border-indigo-400' : 'border-transparent hover:border-indigo-200 dark:hover:border-indigo-800',
           { 'opacity-40 blur-[1px]': selectedGroup && selectedGroup !== group }
@@ -56,12 +56,12 @@
     <div v-if="selectedGroup" class="mb-4 pl-3 ml-1 border-l-2 border-indigo-200 dark:border-indigo-800">
       <p class="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">{{ selectedGroup.name }} Streams</p>
       <div v-if="selectedGroup.streams.length === 0" class="text-sm text-gray-500 dark:text-gray-400 py-2">No streams found</div>
-      <div v-else class="flex gap-3 overflow-x-auto pb-1">
+      <div v-else class="grid grid-cols-2 gap-3 sm:flex sm:overflow-x-auto pb-1">
         <button
           v-for="stream in selectedGroup.streams"
           :key="stream.id"
           @click="toggleStream(stream)"
-          class="flex-shrink-0 w-40 text-left card !p-3.5 transition-all duration-200 border-2 hover:opacity-100 hover:blur-0"
+          class="w-full sm:w-40 sm:flex-shrink-0 text-left card !p-3.5 transition-all duration-200 border-2 hover:opacity-100 hover:blur-0"
           :class="[
             selectedClass === stream ? 'border-indigo-500 dark:border-indigo-400' : 'border-transparent hover:border-indigo-200 dark:hover:border-indigo-800',
             { 'opacity-40 blur-[1px]': selectedClass && selectedClass !== stream }

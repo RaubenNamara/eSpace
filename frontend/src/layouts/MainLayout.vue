@@ -603,7 +603,7 @@ const academicMenu = computed(() => {
   } else if (role === 'teacher') {
     return [
       { path: '/teacher/classes', label: 'My Classes', icon: 'BookOpenIcon' },
-      { path: '/teacher/preview', label: 'Preview as Student', icon: 'AcademicCapIcon' },
+      { path: '/teacher/preview', label: 'Student View', icon: 'AcademicCapIcon' },
       { path: '/teacher/live-classes', label: 'Live Classes', icon: 'VideoCameraIcon' },
       { path: '/teacher/videos', label: 'Videos', icon: 'VideoCameraIcon' }
     ]
