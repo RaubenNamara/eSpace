@@ -3,10 +3,10 @@
     <!-- Header - title shares a row with the search/filters and "Create Assignment" so the
          dropdowns line up exactly with the heading; the subtitle drops to its own line
          underneath instead of a separate bar further down the page. -->
-    <div class="flex items-center justify-between gap-2 mb-1">
+    <div class="flex items-center gap-2 mb-1">
       <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight whitespace-nowrap flex-shrink-0">Assignments</h1>
 
-      <div class="flex items-center gap-2 flex-1 min-w-0 justify-end">
+      <div class="flex items-center gap-2 min-w-0">
         <div class="flex flex-nowrap items-center gap-2 overflow-x-auto -mx-1 px-1 sm:mx-0 sm:px-0 min-w-0">
           <input
             v-model="searchQuery"

@@ -2,7 +2,7 @@
   <div>
     <!-- Header - Term selector shares a row with the heading instead of a separate filter bar
          below it. -->
-    <div class="flex items-center justify-between gap-2 mb-1">
+    <div class="flex items-center gap-2 mb-1">
       <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight whitespace-nowrap flex-shrink-0">Report Cards</h1>
 
       <div class="flex flex-nowrap items-center gap-2 overflow-x-auto -mx-1 px-1 sm:mx-0 sm:px-0 min-w-0">

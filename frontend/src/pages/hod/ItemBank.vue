@@ -2,7 +2,7 @@
   <div>
     <!-- Header - icon and title share a row with the search box, so the input lines up exactly
          with the heading; the subtitle drops to its own line underneath. -->
-    <div class="flex items-center justify-between gap-2 mb-1">
+    <div class="flex items-center gap-2 mb-1">
       <div class="flex items-center gap-2 flex-shrink-0">
         <div class="hidden sm:flex w-7 h-7 rounded-lg bg-indigo-600 items-center justify-center flex-shrink-0">
           <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">

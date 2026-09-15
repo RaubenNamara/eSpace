@@ -3,7 +3,7 @@
     <!-- Header - icon and title share a row with the filters/action, so the dropdowns line up
          exactly with the heading instead of floating above it; the subtitle drops to its own
          full-width line underneath. -->
-    <div class="flex items-center justify-between gap-2 mb-1">
+    <div class="flex items-center gap-2 mb-1">
       <div class="flex items-center gap-2 flex-shrink-0">
         <div class="hidden sm:flex w-7 h-7 rounded-lg bg-indigo-600 items-center justify-center flex-shrink-0">
           <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -13,7 +13,7 @@
         <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight whitespace-nowrap">Item Bank</h1>
       </div>
 
-      <div class="flex items-center gap-2 flex-1 min-w-0 justify-end">
+      <div class="flex items-center gap-2 min-w-0">
         <div class="flex flex-nowrap items-center gap-2 overflow-x-auto -mx-1 px-1 sm:mx-0 sm:px-0 min-w-0">
           <select v-model="statusFilter" class="flex-shrink-0 max-w-[92px] truncate px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white">
             <option value="">Status</option>
