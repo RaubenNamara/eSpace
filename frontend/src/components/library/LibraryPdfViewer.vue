@@ -1,17 +1,50 @@
 <template>
-  <div class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
-    <div class="bg-white dark:bg-gray-800 w-full h-full sm:h-[92vh] lg:h-[95vh] sm:max-w-4xl lg:max-w-5xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+  <div ref="viewerRef" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-1 sm:p-3">
+    <div class="bg-white dark:bg-gray-800 w-full h-full sm:h-[97vh] lg:h-[98vh] sm:max-w-6xl lg:max-w-7xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col">
       <!-- Header -->
-      <div class="relative flex-shrink-0 bg-emerald-600 px-4 sm:px-8 py-4 sm:py-5">
+      <div class="relative flex-shrink-0 bg-emerald-600 px-3 sm:px-6 py-2 sm:py-3">
         <div class="flex items-start justify-between gap-3">
-          <div class="min-w-0">
-            <h2 class="text-base sm:text-xl font-bold text-white leading-tight truncate">{{ book.title }}</h2>
-            <div class="flex flex-wrap items-center gap-2 mt-1 text-xs sm:text-sm text-emerald-100">
+          <div class="min-w-0 flex-1">
+            <h2 class="text-sm sm:text-lg font-bold text-white leading-tight truncate">{{ book.title }}</h2>
+            <div class="flex flex-wrap items-center gap-2 mt-0.5 text-xs text-emerald-100">
               <span v-if="book.subject_name" class="px-2 py-0.5 rounded-full bg-white/20 font-medium">{{ book.subject_name }}</span>
               <span v-if="teacherName" class="truncate">By {{ teacherName }}</span>
             </div>
+            <!-- Reading progress - same "status readout sharing the title's own bar" pattern as
+                 the AI Tutor widget in the eNotes reader, so it's visible without looking down at
+                 the footer controls. -->
+            <div v-if="bookImages.length > 0" class="hidden sm:flex items-center gap-2 mt-1.5 max-w-xs">
+              <div class="flex-1 h-1.5 rounded-full bg-white/20 overflow-hidden">
+                <div class="h-full bg-white rounded-full transition-all" :style="{ width: `${(currentPage / totalPages) * 100}%` }"></div>
+              </div>
+              <span class="text-[11px] text-emerald-100 flex-shrink-0">{{ currentPage }}/{{ totalPages }}</span>
+            </div>
           </div>
           <div class="flex items-center gap-2 flex-shrink-0">
+            <button
+              v-if="bookImages.length > 0"
+              @click="isMuted = !isMuted"
+              class="p-2 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
+              :title="isMuted ? 'Unmute page-turn sound' : 'Mute page-turn sound'"
+            >
+              <svg v-if="isMuted" class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M11 5L6 9H2v6h4l5 4V5z"></path>
+              </svg>
+              <svg v-else class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5L6 9H2v6h4l5 4V5z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.54 8.46a5 5 0 010 7.07M18.36 5.64a9 9 0 010 12.73"></path>
+              </svg>
+            </button>
+            <button
+              v-if="bookImages.length > 0"
+              @click="toggleFullscreen"
+              class="p-2 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
+              title="Fullscreen"
+            >
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4"></path>
+              </svg>
+            </button>
             <a
               v-if="allowDownload"
               :href="pdfUrl"
@@ -35,40 +68,33 @@
         </div>
       </div>
 
-      <!-- Canvas (pdf.js renders to pixels here - no native browser download affordance) -->
-      <div
-        ref="wrapperRef"
-        class="flex-1 overflow-auto flex justify-center items-start p-4 sm:p-6 bg-gray-200 dark:bg-gray-900"
-        @contextmenu.prevent
-      >
+      <!-- Book -->
+      <div class="flex-1 overflow-hidden flex justify-center items-center p-1 sm:p-3 bg-gray-200 dark:bg-gray-900" @contextmenu.prevent>
         <div v-if="loading" class="text-gray-500 dark:text-gray-300 py-20 text-sm">Loading document…</div>
         <div v-else-if="error" class="text-red-400 py-20 text-sm">{{ error }}</div>
-        <canvas
+        <div v-else-if="preparing" class="w-full max-w-xs text-center">
+          <p class="text-sm text-gray-500 dark:text-gray-300 mb-2">Preparing your book… {{ prepared }} / {{ totalPages }}</p>
+          <div class="h-1.5 rounded-full bg-gray-300 dark:bg-gray-700 overflow-hidden">
+            <div class="h-full bg-emerald-600 transition-all" :style="{ width: `${totalPages ? (prepared / totalPages) * 100 : 0}%` }"></div>
+          </div>
+        </div>
+        <BookFlipbook
           v-else
-          ref="canvasRef"
-          :key="currentPage"
-          :width="pageWidth"
-          :height="pageHeight"
-          class="shadow-lg bg-white"
-          style="max-width: 100%; height: auto;"
-        ></canvas>
+          ref="flipbookRef"
+          :images="bookImages"
+          :page-width="bookPageWidth"
+          :page-height="bookPageHeight"
+          :muted="isMuted"
+          class="max-w-full max-h-full transition-shadow duration-300 hover:drop-shadow-2xl"
+          @flip="onFlip"
+        />
       </div>
 
-      <!-- Controls - bottom bar. Centered as one wrapped row on mobile; on sm+ the page-nav and
-           zoom groups split to either side so the extra width is put to use instead of leaving
-           everything bunched in the middle. -->
-      <div class="flex items-center justify-center sm:justify-between gap-3 sm:gap-6 px-3 sm:px-6 py-2.5 sm:py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 flex-wrap flex-shrink-0">
-        <div class="flex items-center gap-2">
-          <button type="button" class="nav-btn" @click="zoomOut" title="Zoom out">−</button>
-          <span class="text-xs text-gray-500 dark:text-gray-400 min-w-[48px] text-center">{{ Math.round(scale * 100) }}%</span>
-          <button type="button" class="nav-btn" @click="zoomIn" title="Zoom in">+</button>
-          <button type="button" class="nav-btn" @click="fitWidth">Fit Width</button>
-        </div>
-        <div class="flex items-center gap-2">
-          <button type="button" class="nav-btn" :disabled="currentPage <= 1" @click="prevPage">‹ Prev</button>
-          <span class="text-xs sm:text-sm text-gray-600 dark:text-gray-300 min-w-[100px] text-center">Page {{ currentPage }} of {{ totalPages || '…' }}</span>
-          <button type="button" class="nav-btn" :disabled="currentPage >= totalPages" @click="nextPage">Next ›</button>
-        </div>
+      <!-- Controls -->
+      <div class="flex items-center justify-center gap-3 sm:gap-6 px-3 sm:px-6 py-1.5 sm:py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 flex-shrink-0">
+        <button type="button" class="nav-btn" :disabled="currentPage <= 1" @click="goPrev">‹ Prev</button>
+        <span class="text-xs sm:text-sm text-gray-600 dark:text-gray-300 min-w-[100px] text-center">Page {{ currentPage }} of {{ totalPages || '…' }}</span>
+        <button type="button" class="nav-btn" :disabled="currentPage >= totalPages" @click="goNext">Next ›</button>
       </div>
     </div>
   </div>
@@ -79,22 +105,27 @@ import { ref, computed, onMounted } from 'vue'
 import { usePdfRenderer } from '@/composables/usePdfRenderer'
 import type { LibraryBook } from '@/types/library'
 import { resolveAssetUrl } from '@/utils/url'
+import { usePersistedRef } from '@/composables/usePersistedRef'
+import BookFlipbook from '@/components/common/BookFlipbook.vue'
 
 const props = defineProps<{ book: LibraryBook }>()
 defineEmits(['close'])
 
-const wrapperRef = ref<HTMLElement | null>(null)
-const canvasRef = ref<HTMLCanvasElement | null>(null)
+// Shared with the eNotes reader too - muting the page-turn sound in one place should mean it
+// stays muted everywhere, since it's a preference about the sound itself, not this one book.
+const isMuted = usePersistedRef('espace:flipbook-muted', false)
 
 const pdfUrl = computed(() => resolveAssetUrl(props.book.file_path))
 const allowDownload = computed(() => !!props.book.allow_download)
 
 const {
-  loading, error, currentPage, totalPages, scale, pageWidth, pageHeight,
-  loadPdf, prevPage, nextPage, zoomIn, zoomOut, fitWidth
+  loading, error, currentPage, totalPages, scale,
+  loadPdf, renderPage
 } = usePdfRenderer(pdfUrl, {
-  getCanvasEl: () => canvasRef.value,
-  getWrapperEl: () => wrapperRef.value
+  // No live single-page canvas in this viewer any more - every page is pre-rendered once into a
+  // flipbook image (see prepareBook below), so the composable never needs a persistent canvas.
+  getCanvasEl: () => null,
+  getWrapperEl: () => null
 })
 
 const teacherName = computed(() => {
@@ -102,7 +133,82 @@ const teacherName = computed(() => {
   return `${props.book.teacher_first_name} ${props.book.teacher_last_name || ''}`.trim()
 })
 
-onMounted(loadPdf)
+// A real drag-to-curl flipbook (like heyzine.com/flip-book) needs every page as a picture up
+// front - this is how Heyzine's own PDF conversion works too - rendered once at a fixed, readable
+// resolution rather than per-zoom-level like the old single-page view, since re-rendering dozens
+// of pages on every zoom click would be far too slow.
+const BOOK_RENDER_SCALE = 1.8
+const preparing = ref(false)
+const prepared = ref(0)
+const bookImages = ref<string[]>([])
+const bookPageWidth = ref(0)
+const bookPageHeight = ref(0)
+const flipbookRef = ref<InstanceType<typeof BookFlipbook> | null>(null)
+
+async function prepareBook() {
+  preparing.value = true
+  prepared.value = 0
+  scale.value = BOOK_RENDER_SCALE
+  const scratch = document.createElement('canvas')
+  const images: string[] = []
+  try {
+    if (!totalPages.value) throw new Error('This document has no readable pages.')
+
+    for (let p = 1; p <= totalPages.value; p++) {
+      try {
+        await renderPage(p, scratch)
+        if (p === 1) {
+          bookPageWidth.value = scratch.width
+          bookPageHeight.value = scratch.height
+        }
+        images.push(scratch.toDataURL('image/jpeg', 0.85))
+      } catch (pageErr) {
+        // One bad page (a malformed embedded image, a canvas taint, ...) shouldn't take down the
+        // whole book - fall back to a blank placeholder at the right size so the page count and
+        // flip behavior stay correct, and keep going.
+        console.error(`Library PDF: failed to render page ${p}`, pageErr)
+        if (bookPageWidth.value && bookPageHeight.value) {
+          const placeholder = document.createElement('canvas')
+          placeholder.width = bookPageWidth.value
+          placeholder.height = bookPageHeight.value
+          const ctx = placeholder.getContext('2d')
+          if (ctx) {
+            ctx.fillStyle = '#ffffff'
+            ctx.fillRect(0, 0, placeholder.width, placeholder.height)
+          }
+          images.push(placeholder.toDataURL('image/jpeg', 0.85))
+        }
+      }
+      prepared.value = p
+    }
+
+    if (images.length === 0) throw new Error('None of this document\'s pages could be rendered.')
+    bookImages.value = images
+  } catch (err: any) {
+    console.error('Library PDF: failed to prepare book', err)
+    error.value = err?.message || 'Failed to prepare this document for reading. Please try again.'
+  } finally {
+    preparing.value = false
+  }
+}
+
+const onFlip = (page: number) => {
+  currentPage.value = page + 1 // StPageFlip is 0-indexed; the rest of this viewer is 1-indexed
+}
+
+const goPrev = () => flipbookRef.value?.flipPrev()
+const goNext = () => flipbookRef.value?.flipNext()
+
+const viewerRef = ref<HTMLElement | null>(null)
+const toggleFullscreen = async () => {
+  if (!document.fullscreenElement) await viewerRef.value?.requestFullscreen()
+  else await document.exitFullscreen()
+}
+
+onMounted(async () => {
+  await loadPdf()
+  if (!error.value) await prepareBook()
+})
 </script>
 
 <style scoped>

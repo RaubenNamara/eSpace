@@ -52,6 +52,21 @@
         <StatTile label="Upcoming Live Classes" :value="data.upcoming_live_classes.length" icon="live" color="red" to="/student/live-classes" />
       </div>
 
+      <!-- Quick links -->
+      <div class="mb-6">
+        <h2 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Quick Links</h2>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+          <QuickLink to="/student/classes" label="My Classes" icon="classes" color="indigo" />
+          <QuickLink to="/student/live-classes" label="Live Classes" icon="live" color="red" />
+          <QuickLink to="/student/library" label="eLibrary" icon="library" :badge="data.stats.library_resources" color="emerald" />
+          <QuickLink to="/student/itembank" label="Item Bank" icon="itembank" :badge="data.stats.itembank_resources" color="violet" />
+          <QuickLink to="/student/chat" label="Chats" icon="chat" :badge="data.stats.unread_messages" color="teal" />
+          <QuickLink to="/student/notes" label="eNotes" icon="notes" color="amber" />
+          <QuickLink to="/student/videos" label="Videos" icon="video" color="pink" />
+          <QuickLink to="/student/reports" label="Reports" icon="reports" color="sky" />
+        </div>
+      </div>
+
       <!-- Performance trend -->
       <div class="mb-6">
         <PerformanceTrend
@@ -98,19 +113,6 @@
             </div>
           </RouterLink>
         </div>
-      </div>
-
-      <!-- Quick links -->
-      <h2 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Quick Links</h2>
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-        <QuickLink to="/student/classes" label="My Classes" icon="classes" color="indigo" />
-        <QuickLink to="/student/live-classes" label="Live Classes" icon="live" color="red" />
-        <QuickLink to="/student/library" label="eLibrary" icon="library" :badge="data.stats.library_resources" color="emerald" />
-        <QuickLink to="/student/itembank" label="Item Bank" icon="itembank" :badge="data.stats.itembank_resources" color="violet" />
-        <QuickLink to="/student/chat" label="Chats" icon="chat" :badge="data.stats.unread_messages" color="teal" />
-        <QuickLink to="/student/notes" label="eNotes" icon="notes" color="amber" />
-        <QuickLink to="/student/videos" label="Videos" icon="video" color="pink" />
-        <QuickLink to="/student/reports" label="Reports" icon="reports" color="sky" />
       </div>
     </template>
   </div>

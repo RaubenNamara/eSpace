@@ -257,7 +257,7 @@ class ENoteController extends Controller
              LEFT JOIN subjects s ON et.subject_id = s.id
              WHERE ep.id = :page_id AND ep.is_active = 1 AND ep.deleted_at IS NULL AND {$whereClause}"
         );
-        $stmt->execute(['page_id' => $pageId, 'student_id' => $studentId]);
+        $stmt->execute(['page_id' => $pageId, 'student_id' => $studentId, 'student_id_te' => $studentId]);
         $page = $stmt->fetch();
 
         if (!$page) {

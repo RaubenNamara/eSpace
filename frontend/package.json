@@ -11,7 +11,6 @@
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore"
   },
   "dependencies": {
-    "@ckeditor/ckeditor5-build-classic": "^41.4.2",
     "@ckeditor/ckeditor5-vue": "^8.2.0",
     "@headlessui/vue": "^1.7.17",
     "@heroicons/vue": "^2.1.1",
@@ -30,7 +29,7 @@
     "@types/qrcode": "^1.5.6",
     "axios": "^1.6.2",
     "chart.js": "^4.4.1",
-    "ckeditor5": "^48.4.0",
+    "ckeditor5": "48.3.1",
     "dayjs": "^1.11.10",
     "fabric": "^7.4.0",
     "html2canvas": "^1.4.1",
@@ -38,6 +37,7 @@
     "jspdf": "^4.2.1",
     "katex": "^0.18.4",
     "konva": "^9.2.0",
+    "page-flip": "^2.0.7",
     "pdfjs-dist": "^4.0.379",
     "pinia": "^2.1.7",
     "qrcode": "^1.5.4",

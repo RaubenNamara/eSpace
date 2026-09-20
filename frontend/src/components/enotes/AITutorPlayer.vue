@@ -133,7 +133,12 @@ import axios from 'axios'
 import type { ENoteTutorBlock } from '@/types/enotes'
 
 const props = defineProps<{ pageId: number }>()
-const emit = defineEmits<{ 'block-active': [number]; 'block-cleared': [] }>()
+const emit = defineEmits<{
+  'block-active': [number]
+  'block-cleared': []
+  'status-change': [Status]
+  'progress': [{ current: number; total: number }]
+}>()
 
 type Status = 'idle' | 'loading' | 'ready' | 'error'
 
@@ -179,6 +184,13 @@ const resetForNewPage = () => {
 }
 
 watch(() => props.pageId, resetForNewPage)
+
+// Lets a compact status readout live elsewhere (the page header) without duplicating any of this
+// component's own state or playback logic.
+watch(status, (s) => emit('status-change', s))
+watch([currentIndex, () => blocks.value.length], ([idx, total]) => {
+  if (idx >= 0 && total > 0) emit('progress', { current: idx + 1, total })
+})
 
 onBeforeUnmount(() => {
   audioEl.value?.pause()
@@ -268,4 +280,8 @@ const setSpeed = (rate: number) => {
   playbackRate.value = rate
   if (audioEl.value) audioEl.value.playbackRate = rate
 }
+
+// Lets an external trigger (the compact header widget) start the walkthrough without duplicating
+// the fetch-and-cache logic here.
+defineExpose({ start: () => fetchWalkthrough(false) })
 </script>

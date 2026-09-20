@@ -1,7 +1,7 @@
 <template>
   <div class="h-screen flex flex-col bg-gray-50 dark:bg-gray-950">
     <!-- Header -->
-    <div class="relative bg-indigo-600 px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-2 flex-shrink-0 shadow-sm">
+    <div class="relative bg-indigo-600 px-3 sm:px-6 py-2 sm:py-2.5 flex items-center justify-between gap-2 flex-shrink-0 shadow-sm">
       <div class="flex items-center gap-2 sm:gap-3 min-w-0">
         <button
           @click="goBack"
@@ -44,9 +44,54 @@
             </span>
           </div>
         </div>
+
+        <!-- AI Tutor: a compact status readout sharing the topic's own bar, rather than only
+             appearing once you scroll down to the panel below - idle shows a start trigger,
+             active shows live paragraph progress. The full controls (play/pause/replay/speed/
+             transcript) stay in that panel; this is just always-visible status. -->
+        <button
+          v-if="isStudentMode && currentPage && tutorStatus === 'idle'"
+          @click="aiTutorRef?.start()"
+          class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-white/10 hover:bg-white/25 text-white text-xs font-medium rounded-lg transition-colors flex-shrink-0"
+        >
+          <span>🧑‍🏫</span><span>AI Tutor</span>
+        </button>
+        <div
+          v-else-if="isStudentMode && currentPage && tutorStatus === 'loading'"
+          class="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-white/10 text-white text-xs font-medium rounded-lg flex-shrink-0"
+        >
+          <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+          </svg>
+          <span>AI Tutor</span>
+        </div>
+        <div
+          v-else-if="isStudentMode && currentPage && tutorStatus === 'ready' && tutorProgress.total > 0"
+          class="hidden sm:flex items-center gap-2 px-2.5 py-1.5 bg-white/10 text-white text-xs font-medium rounded-lg flex-shrink-0"
+        >
+          <span>🧑‍🏫 {{ tutorProgress.current }}/{{ tutorProgress.total }}</span>
+          <div class="w-14 h-1.5 rounded-full bg-white/20 overflow-hidden">
+            <div class="h-full bg-white rounded-full transition-all" :style="{ width: `${(tutorProgress.current / tutorProgress.total) * 100}%` }"></div>
+          </div>
+        </div>
       </div>
 
       <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+        <button
+          v-if="currentPage"
+          @click="isMuted = !isMuted"
+          class="p-2 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
+          :title="isMuted ? 'Unmute page-turn sound' : 'Mute page-turn sound'"
+        >
+          <svg v-if="isMuted" class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M11 5L6 9H2v6h4l5 4V5z"></path>
+          </svg>
+          <svg v-else class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5L6 9H2v6h4l5 4V5z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.54 8.46a5 5 0 010 7.07M18.36 5.64a9 9 0 010 12.73"></path>
+          </svg>
+        </button>
         <button
           @click="toggleFullscreen"
           class="p-2 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
@@ -140,10 +185,28 @@
 
       <!-- Left Sidebar - Navigation -->
       <div
-        class="fixed lg:static inset-y-0 left-0 z-40 w-56 max-w-[75vw] mt-2 lg:mt-3 lg:mb-3 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 rounded-tr-2xl overflow-hidden flex flex-col transform transition-transform duration-300 lg:translate-x-0"
-        :class="showToc ? 'translate-x-0' : '-translate-x-full'"
+        class="fixed lg:static inset-y-0 left-0 z-40 w-56 max-w-[75vw] mt-2 lg:mt-3 lg:mb-3 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 rounded-tr-2xl overflow-hidden flex flex-col transform transition-[transform,width] duration-300 lg:translate-x-0 relative"
+        :class="[showToc ? 'translate-x-0' : '-translate-x-full', sidebarCollapsed ? 'lg:!w-14' : 'lg:!w-56']"
       >
-        <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+        <!-- Desktop-only collapse toggle, so the reader can reclaim the sidebar's width for the
+             book without losing it entirely (mobile already has its own overlay drawer). -->
+        <button
+          @click="sidebarCollapsed = !sidebarCollapsed"
+          class="hidden lg:flex absolute top-5 -right-3 z-10 w-6 h-6 rounded-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 shadow items-center justify-center text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+          :title="sidebarCollapsed ? 'Expand contents' : 'Collapse contents'"
+        >
+          <svg class="w-3.5 h-3.5 transition-transform" :class="{ 'rotate-180': sidebarCollapsed }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
+          </svg>
+        </button>
+
+        <!-- Collapsed rail: just enough to show there's more, and to re-expand -->
+        <div v-if="sidebarCollapsed" class="hidden lg:flex flex-col items-center pt-6 gap-2 text-gray-400 dark:text-gray-500">
+          <span class="text-[10px] font-bold text-indigo-600 dark:text-indigo-400">{{ progressPercentage }}%</span>
+          <span class="text-[10px] tracking-wide" style="writing-mode: vertical-rl;">Contents</span>
+        </div>
+
+        <div v-show="!sidebarCollapsed" class="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <div class="flex items-center gap-3">
             <div class="relative w-10 h-10 flex-shrink-0">
               <svg class="w-10 h-10 -rotate-90" viewBox="0 0 36 36">
@@ -177,7 +240,7 @@
           </button>
         </div>
 
-        <div class="flex-1 overflow-y-auto p-2 space-y-1">
+        <div v-show="!sidebarCollapsed" class="flex-1 overflow-y-auto p-2 space-y-1">
           <div
             v-for="page in pages"
             :key="page.id"
@@ -216,7 +279,7 @@
         </div>
 
         <!-- Reading Progress -->
-        <div class="p-4 border-t border-gray-200 dark:border-gray-700">
+        <div v-show="!sidebarCollapsed" class="p-4 border-t border-gray-200 dark:border-gray-700">
           <div class="mb-2">
             <div class="flex justify-between text-sm mb-1">
               <span class="text-gray-600 dark:text-gray-400">Your progress</span>
@@ -237,72 +300,90 @@
 
       <!-- Main Content Area -->
       <div class="flex-1 overflow-y-auto">
-        <div class="w-full max-w-4xl xl:max-w-6xl 2xl:max-w-[1600px] mx-auto p-4 sm:p-8 2xl:p-12">
-          <!-- Page Content -->
-          <div v-if="currentPage" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden mb-6">
-            <div class="h-1.5 bg-indigo-600"></div>
-            <div class="p-5 sm:p-8">
-              <div class="mb-6">
-                <h2 v-if="hasMeaningfulTitle(currentPage.title)" class="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-3">
-                  {{ currentPage.title }}
-                </h2>
-                <div class="flex flex-wrap items-center gap-3 text-xs sm:text-sm">
-                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-600 text-white font-semibold shadow-sm">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-                    </svg>
-                    Page {{ currentPage.order_number }} of {{ pages.length }}
-                  </span>
-                  <span class="inline-flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path>
-                    </svg>
-                    {{ getPageWordCount(currentPage.content) }} words
-                  </span>
-                  <span class="inline-flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    {{ getReadingTime(currentPage.content) }} min read
-                  </span>
-                </div>
-              </div>
-
-              <div v-if="narrationAudioUrl" class="mb-6">
-                <p class="text-xs font-medium text-indigo-600 dark:text-indigo-400 mb-1.5 flex items-center gap-1">
-                  <span>🔊</span><span>Read Aloud</span>
-                </p>
-                <div class="flex items-center gap-3 px-4 py-3 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800">
-                  <svg class="w-5 h-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-14 0m7 7v3m-3 0h6M12 15a3 3 0 003-3V6a3 3 0 00-6 0v6a3 3 0 003 3z"></path>
-                  </svg>
-                  <audio :key="narrationAudioUrl" :src="narrationAudioUrl" controls class="flex-1 h-9"></audio>
-                </div>
-              </div>
-
-              <AITutorPlayer
-                v-if="isStudentMode && currentPage"
-                :key="`tutor-${currentPage.id}`"
-                :page-id="currentPage.id"
-                @block-active="onTutorBlockActive"
-                @block-cleared="tutorActiveBlockIndex = null"
-              />
-
-              <div ref="contentRef" class="prose prose-sm sm:prose-lg dark:prose-invert max-w-none">
-                <template v-if="isStudentMode && contentBlocks.length">
-                  <div
-                    v-for="(block, i) in contentBlocks"
-                    :key="i"
-                    :ref="el => block.narrationIndex !== null && setBlockRef(el, block.narrationIndex)"
-                    class="ai-tutor-block"
-                    :class="{ 'ai-tutor-active': block.narrationIndex !== null && tutorActiveBlockIndex === block.narrationIndex }"
-                    v-html="block.html"
-                  ></div>
-                </template>
-                <div v-else v-html="formatContent(currentPage.content)"></div>
+        <div class="w-full max-w-5xl xl:max-w-7xl 2xl:max-w-[1800px] mx-auto p-2 sm:p-4 2xl:p-6">
+          <template v-if="currentPage">
+            <!-- Read-aloud + AI tutor controls for whichever page is open right now - kept
+                 outside the book itself since it's the reader's current position that's live,
+                 not a specific page object being turned. -->
+            <div v-if="narrationAudioUrl" class="mb-3">
+              <p class="text-xs font-medium text-indigo-600 dark:text-indigo-400 mb-1.5 flex items-center gap-1">
+                <span>🔊</span><span>Read Aloud</span>
+              </p>
+              <div class="flex items-center gap-3 px-4 py-3 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800">
+                <svg class="w-5 h-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-14 0m7 7v3m-3 0h6M12 15a3 3 0 003-3V6a3 3 0 00-6 0v6a3 3 0 003 3z"></path>
+                </svg>
+                <audio
+                  :key="narrationAudioUrl"
+                  :src="narrationAudioUrl"
+                  :autoplay="autoplayNarration"
+                  controls
+                  class="flex-1 h-9"
+                  @ended="onNarrationEnded"
+                ></audio>
               </div>
             </div>
-          </div>
+
+            <AITutorPlayer
+              v-if="isStudentMode"
+              ref="aiTutorRef"
+              :key="`tutor-${currentPage.id}`"
+              :page-id="currentPage.id"
+              @block-active="onTutorBlockActive"
+              @block-cleared="tutorActiveBlockIndex = null"
+              @status-change="tutorStatus = $event"
+              @progress="tutorProgress = $event"
+              class="mb-3"
+            />
+
+            <!-- The book: drag a page corner to curl it, like heyzine.com/flip-book. Every page
+                 renders up front (StPageFlip needs them all present to turn between), but only
+                 the page currently open gets the narration-highlight markup - the rest render as
+                 plain formatted content. -->
+            <div class="h-[74vh] sm:h-[80vh] min-h-[420px] mb-3">
+              <BookFlipbook
+                ref="flipbookRef"
+                mode="html"
+                :page-width="700"
+                :page-height="900"
+                :show-cover="false"
+                :muted="isMuted"
+                class="transition-shadow duration-300 hover:drop-shadow-2xl"
+                @flip="onBookFlip"
+              >
+                <template #pages>
+                  <div v-for="page in pages" :key="page.id" class="enote-flip-page bg-white dark:bg-gray-800">
+                    <div class="h-1.5 bg-indigo-600"></div>
+                    <div class="p-5 sm:p-8">
+                      <h2 v-if="hasMeaningfulTitle(page.title)" class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-3">
+                        {{ page.title }}
+                      </h2>
+                      <div class="flex flex-wrap items-center gap-3 text-xs mb-5">
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-600 text-white font-semibold shadow-sm">
+                          Page {{ page.order_number }} of {{ pages.length }}
+                        </span>
+                        <span class="text-gray-500 dark:text-gray-400">{{ getPageWordCount(page.content) }} words</span>
+                        <span class="text-gray-500 dark:text-gray-400">{{ getReadingTime(page.content) }} min read</span>
+                      </div>
+                      <div class="prose prose-sm sm:prose-base dark:prose-invert max-w-none">
+                        <template v-if="isStudentMode && page.id === currentPage?.id && contentBlocks.length">
+                          <div
+                            v-for="(block, i) in contentBlocks"
+                            :key="i"
+                            :ref="el => block.narrationIndex !== null && setBlockRef(el, block.narrationIndex)"
+                            class="ai-tutor-block"
+                            :class="{ 'ai-tutor-active': block.narrationIndex !== null && tutorActiveBlockIndex === block.narrationIndex }"
+                            v-html="block.html"
+                          ></div>
+                        </template>
+                        <div v-else v-html="formatContent(page.content)"></div>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </BookFlipbook>
+            </div>
+          </template>
 
           <!-- Empty state -->
           <div v-else class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-12 mb-6 text-center">
@@ -317,7 +398,7 @@
           <!-- Navigation Buttons -->
           <div class="flex items-center justify-between">
             <button
-              @click="previousPage"
+              @click="handlePrevious"
               :disabled="!hasPreviousPage"
               class="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base font-medium bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
@@ -329,7 +410,7 @@
 
             <button
               v-if="!(isStudentMode && !hasNextPage)"
-              @click="nextPage"
+              @click="handleNext"
               :disabled="!hasNextPage"
               class="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2 text-sm sm:text-base font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm hover:shadow-md hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-sm transition-all"
             >
@@ -476,7 +557,9 @@ import type { ENoteTopic, ENotePage } from '@/types/enotes'
 import { AI_VOICES } from '@/types/enotes'
 import { autoEmbedYoutube, resolveContentAssetUrls, splitContentBlocks } from '@/utils/richContent'
 import { resolveAssetUrl } from '@/utils/url'
+import { usePersistedRef } from '@/composables/usePersistedRef'
 import AITutorPlayer from '@/components/enotes/AITutorPlayer.vue'
+import BookFlipbook from '@/components/common/BookFlipbook.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -500,9 +583,15 @@ const pages = ref<ENotePage[]>([])
 const currentPage = ref<ENotePage | null>(null)
 const isFullscreen = ref(false)
 const showToc = ref(false)
+// Desktop-only, session-scoped (not persisted) - a reader who collapses the contents rail to
+// give the book more room shouldn't come back to a topic later and find an empty-looking sidebar.
+const sidebarCollapsed = ref(false)
+// Shared with the eLibrary flipbook too - muting the page-turn sound in one place should mean it
+// stays muted everywhere, since it's a preference about the sound itself, not this one topic.
+const isMuted = usePersistedRef('espace:flipbook-muted', false)
 const showIntro = ref(false)
 const showCompletion = ref(false)
-const contentRef = ref<HTMLElement | null>(null)
+const flipbookRef = ref<InstanceType<typeof BookFlipbook> | null>(null)
 
 // Which pages the reader has actually opened this session - drives the ToC checkmarks and a
 // progress bar that reflects real coverage rather than just "how far is the current page."
@@ -624,26 +713,46 @@ const loadTopic = async () => {
 }
 
 const selectPage = (pageId: number) => {
-  currentPage.value = pages.value.find(p => p.id === pageId) || null
+  autoplayNarration.value = false
+  const index = pages.value.findIndex(p => p.id === pageId)
+  if (index === -1) return
+  currentPage.value = pages.value[index]
+  flipbookRef.value?.turnToPage(index)
   showToc.value = false
 }
 
-const previousPage = () => {
-  if (!hasPreviousPage.value || !currentPage.value) return
+// Fired by the book itself once a turn completes (StPageFlip is 0-indexed) - this is the single
+// source of truth for "which page is current" now, whichever triggered the turn (buttons, ToC,
+// or the reader just dragging a corner directly).
+const onBookFlip = (index: number) => {
+  currentPage.value = pages.value[index] ?? null
+}
 
-  const currentIndex = pages.value.findIndex(p => p.id === currentPage.value!.id)
-  if (currentIndex > 0) {
-    currentPage.value = pages.value[currentIndex - 1]
+// Whether the *next* page's Read Aloud audio should autoplay the instant it mounts - only true
+// when we're auto-advancing because the current page's narration just finished (see
+// onNarrationEnded below), never on manual navigation, so pressing Next/Previous or picking a
+// page from the contents list never triggers an unexpected autoplay.
+const autoplayNarration = ref(false)
+
+const onNarrationEnded = () => {
+  if (hasNextPage.value) {
+    autoplayNarration.value = true
+    flipbookRef.value?.flipNext()
+  } else if (isStudentMode.value) {
+    showCompletion.value = true
   }
 }
 
-const nextPage = () => {
-  if (!hasNextPage.value || !currentPage.value) return
+const handlePrevious = () => {
+  autoplayNarration.value = false
+  if (!hasPreviousPage.value) return
+  flipbookRef.value?.flipPrev()
+}
 
-  const currentIndex = pages.value.findIndex(p => p.id === currentPage.value!.id)
-  if (currentIndex < pages.value.length - 1) {
-    currentPage.value = pages.value[currentIndex + 1]
-  }
+const handleNext = () => {
+  autoplayNarration.value = false
+  if (!hasNextPage.value) return
+  flipbookRef.value?.flipNext()
 }
 
 const formatContent = (content: string): string => {
@@ -678,6 +787,9 @@ const contentBlocks = computed(() => {
 
 const tutorActiveBlockIndex = ref<number | null>(null)
 const blockEls = ref<Record<number, HTMLElement | null>>({})
+const aiTutorRef = ref<InstanceType<typeof AITutorPlayer> | null>(null)
+const tutorStatus = ref<'idle' | 'loading' | 'ready' | 'error'>('idle')
+const tutorProgress = ref<{ current: number; total: number }>({ current: 0, total: 0 })
 
 const setBlockRef = (el: unknown, i: number) => {
   blockEls.value[i] = (el as HTMLElement) || null
@@ -751,17 +863,15 @@ watch(currentPage, (page) => {
   if (page) visitedPageIds.value.add(page.id)
 }, { immediate: true })
 
-watch(contentRef, (el, _old, onCleanup) => {
-  if (!el) return
-  el.addEventListener('error', hideBrokenImages, true)
-  onCleanup(() => el.removeEventListener('error', hideBrokenImages, true))
-})
-
 onMounted(() => {
   loadTopic()
+  // All pages render into the book at once now (not just the current one), so this listens
+  // document-wide rather than watching a single "current page" content element.
+  document.addEventListener('error', hideBrokenImages, true)
 })
 
 onBeforeUnmount(() => {
+  document.removeEventListener('error', hideBrokenImages, true)
   if (document.fullscreenElement) {
     document.exitFullscreen().catch(() => {})
   }
@@ -769,6 +879,16 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+/* StPageFlip forces each page to its own fixed pixel box (like a real page) via inline styles -
+   this fills that box and scrolls internally for a page whose content runs long, rather than
+   trying to grow the page itself. */
+.enote-flip-page {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
 .prose {
   line-height: 1.8;
   text-align: justify;

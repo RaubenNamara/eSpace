@@ -341,14 +341,27 @@
               <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">3D Objects in Scene</p>
               <button @click="addSceneObject" class="text-xs font-semibold text-indigo-600 dark:text-indigo-400">+ Add Object</button>
             </div>
+
+            <!-- Visual bench preview - click an object to select it, then drag it into place
+                 instead of guessing x/z coordinates. Only meaningful for the 3D renderer. -->
+            <div v-if="form.render_mode === '3d' && form.scene_objects.length" class="h-72 sm:h-80 mb-3 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+              <VirtualLabLayoutEditor :objects="form.scene_objects" :object-catalog="objectCatalog" />
+            </div>
+
             <div v-for="(o, i) in form.scene_objects" :key="i" class="bg-gray-50 dark:bg-gray-950/40 sm:bg-transparent dark:sm:bg-transparent rounded-lg p-2 sm:p-0 mb-2">
               <div class="grid grid-cols-2 sm:grid-cols-12 gap-2 sm:items-center">
-                <select v-model="o.object_type" class="input-field col-span-2 sm:col-span-4 text-xs">
+                <select v-model="o.object_type" class="input-field col-span-2 sm:col-span-3 text-xs">
                   <option v-for="obj in objectCatalog" :key="obj.object_type" :value="obj.object_type">{{ obj.icon }} {{ obj.display_name }}</option>
                 </select>
                 <input v-model="o.key" placeholder="key (unique)" class="input-field col-span-2 sm:col-span-3 text-xs">
                 <input v-model.number="o.position.x" type="number" step="0.5" placeholder="x" class="input-field sm:col-span-2 text-xs">
                 <input v-model.number="o.position.z" type="number" step="0.5" placeholder="z" class="input-field sm:col-span-2 text-xs">
+                <input
+                  :value="Math.round((((o.rotation?.y || 0) * 180) / Math.PI + 360) % 360)"
+                  @change="setRotationDegrees(o, ($event.target as HTMLInputElement).valueAsNumber)"
+                  type="number" step="15" placeholder="rot°" title="Rotation in degrees"
+                  class="input-field sm:col-span-1 text-xs"
+                >
                 <button @click="form.scene_objects.splice(i, 1)" class="col-span-2 sm:col-span-1 text-red-500 text-xs font-medium py-1 sm:py-0">Remove</button>
               </div>
               <label class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 mt-1.5" title="Starts off the bench in the apparatus tray until the student picks it up and places it">
@@ -624,9 +637,10 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import axios from 'axios'
 import { CATEGORY_ICONS, CATEGORY_LABELS, CATEGORY_COLORS } from '@/types/virtualLab'
-import type { ExperimentSummary, ExperimentDetail, LabObjectDef, TeacherAssignment, AttemptSummary, AttemptDetail, LabAction, LabCategory } from '@/types/virtualLab'
+import type { ExperimentSummary, ExperimentDetail, LabObjectDef, TeacherAssignment, AttemptSummary, AttemptDetail, LabAction, LabCategory, SceneObjectConfig } from '@/types/virtualLab'
 import VirtualLabSkillsPanel from '@/components/virtuallab/VirtualLabSkillsPanel.vue'
 import VirtualLabGraph from '@/components/virtuallab/VirtualLabGraph.vue'
+import VirtualLabLayoutEditor from '@/components/virtuallab/VirtualLabLayoutEditor.vue'
 import { RENDER_2D_REGISTRY } from '@/components/virtuallab/render2d/registry'
 import TeacherClassSelector from '@/components/teacher/TeacherClassSelector.vue'
 import type { ClassTarget } from '@/components/teacher/TeacherClassSelector.vue'
@@ -812,6 +826,10 @@ const toggleAssignment = async (id: number) => {
 }
 
 const addSceneObject = () => form.value.scene_objects.push({ key: `obj${form.value.scene_objects.length + 1}`, object_type: objectCatalog.value[0]?.object_type || 'beaker', position: { x: 0, y: 0, z: 0 } })
+const setRotationDegrees = (o: SceneObjectConfig, degrees: number) => {
+  if (Number.isNaN(degrees)) return
+  o.rotation = { y: (degrees * Math.PI) / 180 }
+}
 const addStep = () => form.value.steps.push({ instruction: '', required_action: 'inspect', target_object_key: '', expected_value: '', tolerance: null, hint: '', feedback_correct: '', feedback_incorrect: '', is_safety_check: false })
 const addQuestion = () => form.value.questions.push({
   question_text: '', question_type: 'short_answer', marks: 1,

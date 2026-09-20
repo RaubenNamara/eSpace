@@ -38,8 +38,13 @@
       </div>
 
       <!-- Content -->
-      <div class="flex-1 overflow-y-auto">
-        <div class="px-4 py-6 sm:p-8">
+      <div class="flex-1 overflow-y-auto" style="perspective: 1800px;">
+        <div
+          ref="flipWrapRef"
+          class="px-4 py-6 sm:p-8 flip-page"
+          :class="{ 'no-transition': noTransition }"
+          :style="{ transform: `rotateY(${flipDeg}deg)` }"
+        >
           <h3 v-if="currentPage && pages.length > 1 && !isDefaultPageTitle(currentPage.title)" class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4">
             {{ currentPage.title }}
           </h3>
@@ -53,6 +58,7 @@
             v-html="renderedContent"
           ></div>
           <p v-if="pages.length === 0" class="text-gray-500 dark:text-gray-400 italic">This topic has no pages yet.</p>
+          <div class="flip-shadow" :style="{ opacity: flipShadowOpacity }"></div>
         </div>
       </div>
 
@@ -60,7 +66,7 @@
       <div class="flex-shrink-0 flex items-center justify-between gap-2 px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60">
         <button
           @click="previous"
-          :disabled="!canGoPrevious"
+          :disabled="!canGoPrevious || isAnimating"
           class="flex items-center gap-1.5 px-3 sm:px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-500"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -73,7 +79,7 @@
 
         <button
           @click="next"
-          :disabled="!canGoNext"
+          :disabled="!canGoNext || isAnimating"
           class="flex items-center gap-1.5 px-3 sm:px-4 py-2 text-sm font-medium rounded-lg bg-purple-600 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed hover:bg-purple-700"
         >
           <span>Next</span>
@@ -87,7 +93,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { autoEmbedYoutube } from '@/utils/richContent'
 import { resolveAssetUrl } from '@/utils/url'
 
@@ -119,11 +125,45 @@ const emit = defineEmits(['close', 'next-topic', 'previous-topic'])
 
 const currentPageIndex = ref(0)
 const contentRef = ref<HTMLElement | null>(null)
+const flipWrapRef = ref<HTMLElement | null>(null)
 
 const pages = computed(() => props.topic?.pages || [])
 const currentPage = computed(() => pages.value[currentPageIndex.value] || null)
 const pageProgress = computed(() => pages.value.length ? Math.round(((currentPageIndex.value + 1) / pages.value.length) * 100) : 0)
 const renderedContent = computed(() => autoEmbedYoutube(currentPage.value?.content || ''))
+
+// Book-style page-turn animation: rotate the current page away on its vertical axis, swap the
+// content once it's edge-on (invisible), then rotate the new page in from the opposite side.
+const FLIP_DURATION = 220
+const flipDeg = ref(0)
+const noTransition = ref(false)
+const isAnimating = ref(false)
+const flipShadowOpacity = computed(() => Math.min(Math.abs(flipDeg.value) / 90, 1) * 0.35)
+
+const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+async function animateFlip(direction: 'next' | 'prev', changePage: () => void) {
+  if (isAnimating.value) return
+  isAnimating.value = true
+  const outDeg = direction === 'next' ? -90 : 90
+
+  noTransition.value = false
+  flipDeg.value = outDeg
+  await wait(FLIP_DURATION)
+
+  changePage()
+  await nextTick()
+
+  // Jump the page to the opposite edge with no transition, then flip it back in - this is what
+  // makes it look like a new page turning into view rather than the old one reversing.
+  noTransition.value = true
+  flipDeg.value = -outDeg
+  void flipWrapRef.value?.offsetHeight // force reflow so the jump is painted before re-enabling the transition
+  noTransition.value = false
+  flipDeg.value = 0
+  await wait(FLIP_DURATION)
+  isAnimating.value = false
+}
 
 // Pages left with their auto-generated default title (from "Add Page" / "Duplicate Page" in the
 // builder, never renamed by the teacher) aren't meaningful to a reader - hide the heading rather
@@ -154,7 +194,7 @@ const canGoNext = computed(() => currentPageIndex.value < pages.value.length - 1
 
 const previous = () => {
   if (currentPageIndex.value > 0) {
-    currentPageIndex.value--
+    animateFlip('prev', () => { currentPageIndex.value-- })
   } else if (topicIndex.value > 0) {
     emit('previous-topic')
   }
@@ -162,7 +202,7 @@ const previous = () => {
 
 const next = () => {
   if (currentPageIndex.value < pages.value.length - 1) {
-    currentPageIndex.value++
+    animateFlip('next', () => { currentPageIndex.value++ })
   } else if (topicIndex.value < props.allTopics.length - 1) {
     emit('next-topic')
   }
@@ -170,6 +210,9 @@ const next = () => {
 
 watch(() => props.topic?.id, () => {
   currentPageIndex.value = 0
+  isAnimating.value = false
+  noTransition.value = true
+  flipDeg.value = 0
 })
 
 onMounted(() => {
@@ -182,6 +225,25 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.flip-page {
+  position: relative;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  transition: transform 0.22s ease-in;
+  will-change: transform;
+}
+
+.flip-page.no-transition {
+  transition: none;
+}
+
+.flip-shadow {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  pointer-events: none;
+}
+
 .prose {
   line-height: 1.8;
 }

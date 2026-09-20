@@ -5,45 +5,54 @@
          it's visible without being clipped by a parent grid/flex track. -->
     <div class="absolute inset-y-1 right-0 w-1.5 sm:w-2 rounded-r-sm page-edges"></div>
 
-    <!-- Cover -->
-    <div
-      class="book-cover relative aspect-[3/4] rounded-l-md rounded-r-[3px] shadow-md group-hover:shadow-2xl transition-shadow duration-300 overflow-hidden flex items-center justify-center"
-      :class="palette"
-    >
-      <!-- Spine: a darker strip down the left edge, like the book's binding -->
-      <div class="absolute inset-y-0 left-0 w-[14%] bg-black/25 pointer-events-none"></div>
-      <div class="absolute inset-y-0 left-[14%] w-px bg-white/25 pointer-events-none"></div>
-
-      <!-- Ghost document icon watermark -->
-      <svg class="w-1/2 h-1/2 text-white/20" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M6 2a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6H6zm7 1.5L18.5 9H13V3.5z"></path>
-      </svg>
-
-      <!-- Corner chips -->
-      <div class="absolute top-0 left-0 right-0 p-2 pl-3.5 flex items-start justify-between gap-1">
-        <span
-          v-if="subjectLabel"
-          class="px-1.5 py-0.5 rounded text-white bg-white/20 backdrop-blur-sm font-bold tracking-wide truncate"
-          :class="size === 'sm' ? 'text-[8px]' : 'text-[9px]'"
-        >
-          {{ subjectLabel }}
-        </span>
-        <span
-          class="px-1.5 py-0.5 rounded text-white bg-white/20 backdrop-blur-sm font-bold tracking-wide flex-shrink-0"
-          :class="size === 'sm' ? 'text-[8px]' : 'text-[9px]'"
-        >
-          {{ formatLabel }}
-        </span>
+    <!-- 3D stage: the cover and the page beneath it share this perspective space, so the cover
+         can swing open on its spine and actually reveal the page behind it, like a real book. -->
+    <div class="book-stage relative aspect-[3/4]">
+      <!-- Inner page: sits underneath the cover, only seen once the cover opens -->
+      <div class="absolute inset-0 rounded-l-md rounded-r-[3px] book-page overflow-hidden">
+        <div class="absolute inset-y-0 left-0 w-[14%] bg-black/10 pointer-events-none"></div>
       </div>
 
-      <!-- Title stamp -->
-      <div class="absolute bottom-0 left-0 right-0 p-2.5 pl-3.5 bg-black/40">
-        <p
-          class="text-white font-semibold leading-snug drop-shadow-sm"
-          :class="size === 'sm' ? 'text-[11px] line-clamp-2' : 'text-xs sm:text-sm line-clamp-3'"
-        >
-          {{ book.title }}
-        </p>
+      <!-- Cover: hinged on its left edge (the spine), rotates open toward the viewer on hover -->
+      <div
+        class="book-cover absolute inset-0 rounded-l-md rounded-r-[3px] shadow-md group-hover:shadow-2xl transition-shadow duration-300 overflow-hidden flex items-center justify-center"
+        :class="palette"
+      >
+        <!-- Spine: a darker strip down the left edge, like the book's binding -->
+        <div class="absolute inset-y-0 left-0 w-[14%] bg-black/25 pointer-events-none"></div>
+        <div class="absolute inset-y-0 left-[14%] w-px bg-white/25 pointer-events-none"></div>
+
+        <!-- Ghost document icon watermark -->
+        <svg class="w-1/2 h-1/2 text-white/20" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M6 2a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6H6zm7 1.5L18.5 9H13V3.5z"></path>
+        </svg>
+
+        <!-- Corner chips -->
+        <div class="absolute top-0 left-0 right-0 p-2 pl-3.5 flex items-start justify-between gap-1">
+          <span
+            v-if="subjectLabel"
+            class="px-1.5 py-0.5 rounded text-white bg-white/20 backdrop-blur-sm font-bold tracking-wide truncate"
+            :class="size === 'sm' ? 'text-[8px]' : 'text-[9px]'"
+          >
+            {{ subjectLabel }}
+          </span>
+          <span
+            class="px-1.5 py-0.5 rounded text-white bg-white/20 backdrop-blur-sm font-bold tracking-wide flex-shrink-0"
+            :class="size === 'sm' ? 'text-[8px]' : 'text-[9px]'"
+          >
+            {{ formatLabel }}
+          </span>
+        </div>
+
+        <!-- Title stamp -->
+        <div class="absolute bottom-0 left-0 right-0 p-2.5 pl-3.5 bg-black/40">
+          <p
+            class="text-white font-semibold leading-snug drop-shadow-sm"
+            :class="size === 'sm' ? 'text-[11px] line-clamp-2' : 'text-xs sm:text-sm line-clamp-3'"
+          >
+            {{ book.title }}
+          </p>
+        </div>
       </div>
     </div>
   </div>
@@ -81,7 +90,11 @@ const formatLabel = computed(() => (props.book.file_type || 'pdf').toUpperCase()
 
 <style scoped>
 .book-scene {
-  perspective: 1000px;
+  perspective: 900px;
+}
+
+.book-stage {
+  transform-style: preserve-3d;
 }
 
 .page-edges {
@@ -105,15 +118,51 @@ const formatLabel = computed(() => (props.book.file_type || 'pdf').toUpperCase()
   );
 }
 
-/* The book "opens" toward the viewer on hover - a gentle 3D tilt around its spine, grounded by a
-   matching shadow beneath so it reads as lifting off the shelf rather than just skewing flat. */
+/* The paper page that lives under the cover. It never moves - it's only ever revealed once the
+   cover has rotated far enough for its front face to turn away from the viewer. */
+.book-page {
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.15), transparent 14%), #f5f1e6;
+  transform: translateZ(-1px);
+}
+
+.book-page::before {
+  content: '';
+  position: absolute;
+  inset: 12% 10% 12% 20%;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.1) 0,
+    rgba(0, 0, 0, 0.1) 2px,
+    transparent 2px,
+    transparent 11px
+  );
+}
+
+.dark .book-page {
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.4), transparent 14%), #3f3b32;
+}
+
+.dark .book-page::before {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.12) 0,
+    rgba(255, 255, 255, 0.12) 2px,
+    transparent 2px,
+    transparent 11px
+  );
+}
+
+/* The cover is hinged on its left edge (the spine) and swings open toward the viewer on hover,
+   like an actual front cover being turned - past the halfway point its front face turns away
+   from us and backface-visibility hides it, revealing the page sitting underneath. */
 .book-cover {
   transform-style: preserve-3d;
   transform-origin: left center;
-  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.35s ease;
+  backface-visibility: hidden;
+  transition: transform 0.65s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s ease;
 }
 
 .group:hover .book-cover {
-  transform: rotateY(-18deg) translateX(1px) translateY(-2px);
+  transform: rotateY(-130deg);
 }
 </style>

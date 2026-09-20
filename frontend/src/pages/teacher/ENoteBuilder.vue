@@ -217,6 +217,47 @@
               </div>
             </div>
 
+            <!-- Page-fit meter: the reader shows this page in a fixed-size flipbook page, not a
+                 free-scrolling column, so content that runs long forces students to scroll inside
+                 that one page instead of turning to a fresh one. Measured against the real
+                 flipbook page size (a hidden probe below, styled identically). Enforced, not just
+                 advisory - see measurePageFit(): once a page is full, any edit that would push it
+                 over capacity is reverted, so the teacher has to create a new page instead. -->
+            <div
+              v-if="currentPage"
+              class="mb-4 rounded-lg border px-3 py-2.5 flex items-center gap-3 text-xs sm:text-sm transition-colors"
+              :class="pageFitStatus === 'over'
+                ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300'
+                : pageFitStatus === 'near'
+                  ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300'
+                  : 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300'"
+            >
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2 mb-1">
+                  <span class="font-medium">
+                    {{ pageFitStatus === 'over' ? "Page is full - anything more you type will be undone. Trim content or start a new page."
+                      : pageFitStatus === 'near' ? 'Getting close to a full page'
+                      : 'Fits comfortably on one page' }}
+                  </span>
+                  <span class="flex-shrink-0 font-semibold">{{ Math.round(pageFitRatio * 100) }}%</span>
+                </div>
+                <div class="h-1.5 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
+                  <div
+                    class="h-full rounded-full transition-all"
+                    :class="pageFitStatus === 'over' ? 'bg-red-500' : pageFitStatus === 'near' ? 'bg-amber-500' : 'bg-emerald-500'"
+                    :style="{ width: `${Math.min(pageFitRatio, 1) * 100}%` }"
+                  ></div>
+                </div>
+              </div>
+              <button
+                v-if="pageFitStatus === 'over'"
+                @click="addPage"
+                class="flex-shrink-0 px-2.5 py-1.5 rounded-md bg-red-600 hover:bg-red-700 text-white font-medium whitespace-nowrap transition-colors"
+              >
+                + New Page
+              </button>
+            </div>
+
             <div class="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
               <span>Page {{ currentPage?.order_number }} of {{ pages.length }}</span>
               <div class="flex items-center space-x-2">
@@ -368,11 +409,28 @@
         </div>
       </div>
     </div>
+
+    <!-- Hidden page-fit probe: an off-screen clone of the real flipbook page's markup and fixed
+         size (matches ENotePreview.vue's book page exactly), used only to measure whether this
+         page's content overflows it. -->
+    <div ref="pageFitProbeRef" class="page-fit-probe">
+      <div class="h-1.5 bg-indigo-600"></div>
+      <div class="p-5 sm:p-8">
+        <div class="flex flex-wrap items-center gap-3 text-xs mb-5">
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-600 text-white font-semibold">
+            Page {{ currentPage?.order_number }} of {{ pages.length }}
+          </span>
+          <span>{{ getPageWordCount(currentPage?.content || '') }} words</span>
+          <span>{{ getReadingTime(currentPage?.content || '') }} min read</span>
+        </div>
+        <div class="prose prose-sm sm:prose-base max-w-none" v-html="currentPage?.content || ''"></div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute, onBeforeRouteLeave } from 'vue-router'
 import axios from 'axios'
 import CKEditor from '@/components/teacher/CKEditor.vue'
@@ -453,7 +511,11 @@ const loadTopic = async () => {
         currentPage.value = pages.value[0]
         console.log('Current page set:', currentPage.value)
       } else {
-        console.log('No pages found, currentPage is null')
+        // A topic with zero pages (freshly created, or every page deleted) has nothing for the
+        // teacher to click into - create the first one automatically so the editor is ready to
+        // type into the moment the builder appears, instead of an empty state and an extra click.
+        console.log('No pages found, creating a first page automatically')
+        await addPage()
       }
     }
   } catch (error) {
@@ -641,6 +703,70 @@ const getReadingTime = (content: string): number => {
   return Math.ceil(wordCount / 200) // Average reading speed: 200 words per minute
 }
 
+// The reader shows this page inside a fixed-size flipbook page (see ENotePreview.vue's
+// BookFlipbook usage) rather than a free-scrolling column - 900 is that page's height in the
+// same reference pixels used there (`:page-height="900"`). The hidden probe below is styled
+// identically, so its natural (unclipped) height tells us how this content would actually sit
+// on that page, not just a word-count guess.
+const PAGE_FIT_HEIGHT = 900
+const pageFitProbeRef = ref<HTMLElement | null>(null)
+const pageFitRatio = ref(0)
+const pageFitStatus = computed<'ok' | 'near' | 'over'>(() => {
+  if (pageFitRatio.value >= 1) return 'over'
+  if (pageFitRatio.value >= 0.85) return 'near'
+  return 'ok'
+})
+
+// The last content this page had while still at/under capacity - reverting to this (rather than
+// just blocking the editor outright) means a teacher who overshoots can still freely delete text
+// to get back under the limit, instead of being locked out of editing entirely the moment they
+// cross it.
+const lastGoodContent = ref<string | null>(null)
+const lastGoodContentPageId = ref<number | null>(null)
+let lastPageFullToastAt = 0
+const notifyPageFull = () => {
+  const now = Date.now()
+  if (now - lastPageFullToastAt < 2500) return // typing/pasting can trigger several checks in a row
+  lastPageFullToastAt = now
+  toast.error('This page is full - create a new page to keep writing.')
+}
+
+let pageFitTimeout: number | null = null
+const measurePageFit = () => {
+  const el = pageFitProbeRef.value
+  const page = currentPage.value
+  pageFitRatio.value = el ? el.offsetHeight / PAGE_FIT_HEIGHT : 0
+  if (!page || !el) return
+
+  if (lastGoodContentPageId.value !== page.id) {
+    // First measurement since switching to this page (or loading it) - just start tracking from
+    // here, even if it's already over capacity. Pre-existing long content isn't destructively
+    // trimmed; only further growth from this point on gets blocked.
+    lastGoodContentPageId.value = page.id
+    lastGoodContent.value = page.content
+    return
+  }
+
+  if (pageFitRatio.value < 1) {
+    lastGoodContent.value = page.content
+  } else if (lastGoodContent.value !== null && page.content !== lastGoodContent.value) {
+    page.content = lastGoodContent.value
+    notifyPageFull()
+  }
+}
+
+watch(
+  () => [currentPage.value?.id, currentPage.value?.content],
+  () => {
+    if (pageFitTimeout) window.clearTimeout(pageFitTimeout)
+    pageFitTimeout = window.setTimeout(async () => {
+      await nextTick()
+      measurePageFit()
+    }, 350)
+  },
+  { immediate: true }
+)
+
 const onDragStart = (index: number) => {
   draggedIndex.value = index
 }
@@ -757,3 +883,73 @@ onUnmounted(() => {
   window.removeEventListener('resize', applyResponsivePanels)
 })
 </script>
+
+<style scoped>
+.page-fit-probe {
+  position: fixed;
+  top: 0;
+  left: -9999px;
+  width: 700px;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Mirrors ENotePreview.vue's .prose rules exactly - the probe's measured height is only
+   trustworthy if the content is laid out with the same line-height/spacing the reader actually
+   uses, not Tailwind Typography's unmodified defaults. */
+.page-fit-probe .prose {
+  line-height: 1.8;
+  text-align: justify;
+}
+
+.page-fit-probe .prose :deep(p) {
+  margin-bottom: 1em;
+  text-align: justify;
+}
+
+.page-fit-probe .prose :deep(h1),
+.page-fit-probe .prose :deep(h2),
+.page-fit-probe .prose :deep(h3),
+.page-fit-probe .prose :deep(h4),
+.page-fit-probe .prose :deep(h5),
+.page-fit-probe .prose :deep(h6) {
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+}
+
+.page-fit-probe .prose :deep(ul),
+.page-fit-probe .prose :deep(ol) {
+  margin-bottom: 1em;
+  padding-left: 1.5em;
+}
+
+.page-fit-probe .prose :deep(li) {
+  margin-bottom: 0.25em;
+}
+
+.page-fit-probe .prose :deep(blockquote) {
+  border-left: 4px solid #6366f1;
+  padding-left: 1em;
+  margin: 1em 0;
+  font-style: italic;
+}
+
+.page-fit-probe .prose :deep(pre) {
+  padding: 1em;
+  border-radius: 0.5em;
+  margin: 1em 0;
+}
+
+.page-fit-probe .prose :deep(table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+}
+
+.page-fit-probe .prose :deep(th),
+.page-fit-probe .prose :deep(td) {
+  border: 1px solid #e5e7eb;
+  padding: 0.5em 0.75em;
+}
+</style>

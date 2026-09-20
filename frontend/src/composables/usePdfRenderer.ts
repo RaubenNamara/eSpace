@@ -33,18 +33,25 @@ export function usePdfRenderer(pdfUrl: Ref<string>, options: UsePdfRendererOptio
   const pageWidth = ref(0)
   const pageHeight = ref(0)
 
-  async function renderPage(pageNum: number) {
+  async function renderPage(pageNum: number, targetCanvas?: HTMLCanvasElement | null) {
     if (!pdfDoc.value) return
     const page = await pdfDoc.value.getPage(pageNum)
     const viewport = page.getViewport({ scale: scale.value })
 
-    // Set the page dimensions first so the live <canvas> element mounts (or resizes) at the
-    // correct size, then render pdf.js's output directly into it.
-    pageWidth.value = viewport.width
-    pageHeight.value = viewport.height
-    await nextTick()
-
-    const canvas = options.getCanvasEl()
+    // A caller-supplied canvas (e.g. pre-rendering the next page onto a flip transition's back
+    // face) sizes itself directly; the primary canvas is sized reactively so the live element
+    // mounts (or resizes) at the correct size before render.
+    let canvas: HTMLCanvasElement | null
+    if (targetCanvas) {
+      canvas = targetCanvas
+      canvas.width = viewport.width
+      canvas.height = viewport.height
+    } else {
+      pageWidth.value = viewport.width
+      pageHeight.value = viewport.height
+      await nextTick()
+      canvas = options.getCanvasEl()
+    }
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
@@ -56,7 +63,7 @@ export function usePdfRenderer(pdfUrl: Ref<string>, options: UsePdfRendererOptio
     ctx.fillRect(0, 0, canvas.width, canvas.height)
 
     await page.render({ canvasContext: ctx, viewport }).promise
-    options.onPageChange?.(pageNum)
+    if (!targetCanvas) options.onPageChange?.(pageNum)
   }
 
   async function fitWidth() {

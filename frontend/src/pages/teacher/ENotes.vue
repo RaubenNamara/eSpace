@@ -331,7 +331,7 @@
 
         <!-- Creating: driven by admin-authored curriculum data, cascading
              Subject -> Academic Year -> Class-Stream -> Term -> Theme/Branch -> Topic. -->
-        <form v-if="!editingTopic" @submit.prevent="saveTopic" class="flex-1 flex flex-col min-h-0">
+        <form v-if="!editingTopic && useCurriculumWizard" @submit.prevent="saveTopic" class="flex-1 flex flex-col min-h-0">
           <div class="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
             <div>
               <h4 class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide mb-3 flex items-center">
@@ -492,6 +492,16 @@
             <div v-else class="text-sm text-gray-500 dark:text-gray-400 py-6 text-center border border-dashed border-gray-200 dark:border-gray-700 rounded-lg">
               Select a Subject, Academic Year, Class-Stream, Term, Theme/Branch, and Topic above to continue.
             </div>
+
+            <!-- Escape hatch: the cascade above only offers combinations an admin has already
+                 authored curriculum content for, so a subject/department without full coverage
+                 down to the topic level would otherwise leave the teacher stuck with a
+                 permanently-disabled Create button and no way to make an eNote at all. -->
+            <p class="text-center text-sm">
+              <button type="button" @click="skipCurriculumWizard" class="text-indigo-600 dark:text-indigo-400 font-medium hover:underline">
+                Can't find your topic here? Create it without linking to the curriculum
+              </button>
+            </p>
           </div>
 
           <div class="px-5 sm:px-6 pt-4 flex-shrink-0" v-if="topicSaveError">
@@ -515,7 +525,8 @@
           </div>
         </form>
 
-        <!-- Editing an existing topic: unchanged free-form metadata edit. -->
+        <!-- Editing an existing topic, or creating one without linking to a curriculum topic
+             (the "Can't find your topic here?" escape hatch above): free-form metadata form. -->
         <form v-else @submit.prevent="saveTopic" class="flex-1 flex flex-col min-h-0">
           <div class="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
             <div>
@@ -636,7 +647,7 @@
               :disabled="saving"
               class="btn-primary w-full sm:w-auto shadow-lg shadow-indigo-500/30"
             >
-              {{ saving ? 'Saving...' : 'Update Topic' }}
+              {{ saving ? 'Saving...' : (editingTopic ? 'Update Topic' : 'Create Topic') }}
             </button>
           </div>
         </form>
@@ -787,6 +798,11 @@ const classFilter = usePersistedRef('teacher-enotes-class-filter', '')
 
 const showTopicModal = ref(false)
 const editingTopic = ref<ENoteTopic | null>(null)
+// Creating starts in the guided curriculum wizard; a teacher whose department/subject doesn't
+// have curriculum content authored all the way down to a topic can switch this off (see
+// skipCurriculumWizard) to fall back to the same free-form fields the edit form uses, rather
+// than being stuck at a permanently-disabled Create button with no way to make an eNote at all.
+const useCurriculumWizard = ref(true)
 const learningOutcomeDraft = ref('')
 const topicForm = ref<ENoteTopicForm>({
   title: '',
@@ -1089,8 +1105,19 @@ const openCreateModal = () => {
   selectedCurriculumTopic.value = null
   curriculumMeta.value = null
   topicSaveError.value = null
+  useCurriculumWizard.value = true
   showTopicModal.value = true
   loadCurriculumMeta()
+}
+
+// Carries over whatever subject/class-stream the teacher had already picked in the cascade (if
+// any) rather than making them re-pick it in the free-form fields.
+const skipCurriculumWizard = () => {
+  if (curriculumSelection.value.subject_id) topicForm.value.subject_id = String(curriculumSelection.value.subject_id)
+  if (curriculumSelection.value.class_id) {
+    topicForm.value.classTarget = { scope: 'stream', class_id: Number(curriculumSelection.value.class_id), class_group_name: null }
+  }
+  useCurriculumWizard.value = false
 }
 
 const editTopic = (topic: ENoteTopic) => {
@@ -1133,10 +1160,20 @@ const saveTopic = async () => {
       class_group_name: topicForm.value.classTarget.class_group_name
     }
 
+    const isNewTopic = !editingTopic.value
+
     if (editingTopic.value) {
       await axios.put(`${API_BASE}/teacher/enotes/topics/${editingTopic.value.id}`, payload)
     } else {
-      await axios.post(`${API_BASE}/teacher/enotes/topics`, payload)
+      const response = await axios.post(`${API_BASE}/teacher/enotes/topics`, payload)
+      // Creating a topic on its own leaves it with zero pages - jump straight into the builder
+      // so the teacher can start writing right away, instead of landing back on the list with no
+      // obvious next step.
+      if (isNewTopic && response.data?.data?.id) {
+        closeTopicModal()
+        openBuilder(response.data.data.id)
+        return
+      }
     }
 
     closeTopicModal()

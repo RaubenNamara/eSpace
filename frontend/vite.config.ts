@@ -88,6 +88,17 @@ export default defineConfig(() => ({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     }
   },
+  optimizeDeps: {
+    // ckeditor5 is only ever reached through lazy route chunks (AssignmentBuilder.vue,
+    // ENoteBuilder.vue - both `() => import(...)` in router/index.ts, never imported eagerly
+    // anywhere), so Vite's dependency scanner never finds it at cold start. Left to its default
+    // on-demand discovery, the *first* navigation to either page in a given dev server's
+    // lifetime forces Vite to stop, re-optimize it mid-navigation, and reload - and CKEditor5's
+    // own duplicate-instance guard (`ckeditor-duplicated-modules`) trips during that reload
+    // race, since the page ends up with two evaluations of the same module. Pre-bundling it here
+    // makes it available from cold start instead, so no lazy navigation ever triggers that path.
+    include: ['ckeditor5', '@ckeditor/ckeditor5-vue']
+  },
   server: {
     port: 3000,
     proxy: {
