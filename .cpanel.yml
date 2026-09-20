@@ -1,7 +1,7 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/smacon/public_html/eSpace
+    - export DEPLOYPATH=$HOME/public_html/eSpace
     - /bin/cp -rf backend/app/. $DEPLOYPATH/backend/app/
     - /bin/cp -rf backend/routes/. $DEPLOYPATH/backend/routes/
     - /bin/cp -rf backend/config/. $DEPLOYPATH/backend/config/
