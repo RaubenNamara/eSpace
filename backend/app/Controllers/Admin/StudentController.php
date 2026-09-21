@@ -73,7 +73,7 @@ class StudentController extends Controller
         // Get paginated results
         $offset = ($page - 1) * $limit;
         $sql = "SELECT s.id, s.username, s.email, s.admission_number, s.first_name, s.last_name, s.phone,
-                       s.is_active, s.created_at, s.class_id, s.stream_id, s.gender,
+                       s.is_active, s.created_at, s.class_id, s.stream_id, s.gender, s.profile_photo,
                        c.name as class_name, c.level as class_level, c.stream_name
                 FROM students s
                 LEFT JOIN classes c ON s.class_id = c.id
@@ -1125,6 +1125,81 @@ class StudentController extends Controller
             'Status' => 'status',
             'Created At' => 'created_at',
         ], $rows);
+    }
+
+    /**
+     * Upload/replace a student's profile photo (so it can appear on their report card).
+     * POST /admin/students/{id}/photo
+     *
+     * Same validation/storage approach as AuthController::uploadProfilePhoto() (self-service
+     * upload) - the only difference is the target student comes from the route, not the session.
+     */
+    public function uploadPhoto(): void
+    {
+        if (!$this->isAdmin()) {
+            $this->forbidden();
+            return;
+        }
+
+        $id = (int) $this->routeParam('id');
+
+        $stmt = $this->db->prepare('SELECT id, profile_photo FROM students WHERE id = :id AND deleted_at IS NULL');
+        $stmt->execute(['id' => $id]);
+        $student = $stmt->fetch();
+        if (!$student) {
+            $this->notFound('Student not found');
+            return;
+        }
+
+        if (!isset($_FILES['photo']) || $_FILES['photo']['error'] !== UPLOAD_ERR_OK) {
+            $this->error('No photo uploaded or upload error occurred', 400);
+            return;
+        }
+
+        $allowedMime = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
+        $maxSize = 2 * 1024 * 1024; // 2MB
+        $file = $_FILES['photo'];
+
+        if ($file['size'] > $maxSize) {
+            $this->error('Photo exceeds maximum size of 2MB', 400);
+            return;
+        }
+
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = finfo_file($finfo, $file['tmp_name']);
+        finfo_close($finfo);
+
+        if (!isset($allowedMime[$mimeType]) || getimagesize($file['tmp_name']) === false) {
+            $this->error('Invalid file type. Only JPEG, PNG, and WebP images are allowed', 400);
+            return;
+        }
+
+        $uploadDir = __DIR__ . '/../../../public/uploads/profiles/';
+        if (!file_exists($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        $filename = 'profile_' . $id . '_' . bin2hex(random_bytes(8)) . '.' . $allowedMime[$mimeType];
+        $filepath = $uploadDir . $filename;
+
+        if (!move_uploaded_file($file['tmp_name'], $filepath)) {
+            $this->error('Failed to save photo', 500);
+            return;
+        }
+
+        $photoUrl = '/uploads/profiles/' . $filename;
+
+        $stmt = $this->db->prepare('UPDATE students SET profile_photo = :photo WHERE id = :id');
+        $stmt->execute(['photo' => $photoUrl, 'id' => $id]);
+
+        if (!empty($student['profile_photo'])) {
+            $oldPath = __DIR__ . '/../../../public' . $student['profile_photo'];
+            if (is_file($oldPath)) {
+                @unlink($oldPath);
+            }
+        }
+
+        $this->success(['profile_photo' => $photoUrl], 'Student photo updated');
     }
 
     /**

@@ -360,6 +360,17 @@
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div class="p-6">
           <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4">Edit Student</h2>
+
+          <div class="flex items-center gap-3 mb-5">
+            <img v-if="editFormData.profile_photo" :src="resolveAssetUrl(editFormData.profile_photo)" alt="" class="w-14 h-14 rounded-lg object-cover ring-2 ring-gray-200 dark:ring-gray-600">
+            <div v-else class="w-14 h-14 rounded-lg flex items-center justify-center bg-indigo-600 text-white font-bold">
+              {{ (editFormData.first_name[0] || '') + (editFormData.last_name[0] || '') }}
+            </div>
+            <button type="button" @click="showPhotoModal = true" class="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
+              Change photo
+            </button>
+          </div>
+
           <form @submit.prevent="updateStudent">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -444,6 +455,16 @@
       </div>
     </div>
 
+    <StudentPhotoModal
+      v-if="showPhotoModal"
+      :student-id="editFormData.id"
+      :student-name="`${editFormData.first_name} ${editFormData.last_name}`"
+      :current-photo="editFormData.profile_photo"
+      :upload-url="`/admin/students/${editFormData.id}/photo`"
+      @close="showPhotoModal = false"
+      @uploaded="onPhotoUploaded"
+    />
+
     <!-- Password Display Modal -->
     <div v-if="showPasswordModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
@@ -493,7 +514,9 @@ import { useConfirmStore } from '@/stores/confirm'
 import { useBulkSelection } from '@/composables/useBulkSelection'
 import { usePersistedRef } from '@/composables/usePersistedRef'
 import { downloadBlob } from '@/utils/downloadBlob'
+import { resolveAssetUrl } from '@/utils/url'
 import BulkActionBar from '@/components/common/BulkActionBar.vue'
+import StudentPhotoModal from '@/components/students/StudentPhotoModal.vue'
 
 const toast = useToastStore()
 const confirmDialog = useConfirmStore()
@@ -513,6 +536,7 @@ interface Student {
   gender?: string
   stream_name?: string
   stream_id?: number
+  profile_photo?: string | null
 }
 
 interface Class {
@@ -530,6 +554,7 @@ const loading = ref(false)
 const successMessage = ref('')
 const showCreateModal = ref(false)
 const showEditModal = ref(false)
+const showPhotoModal = ref(false)
 const showPasswordModal = ref(false)
 const searchQuery = ref('')
 const classFilter = usePersistedRef('admin-students-class-filter', '')
@@ -554,7 +579,8 @@ const editFormData = ref({
   admission_number: '',
   gender: '',
   class_id: '',
-  is_active: 1
+  is_active: 1,
+  profile_photo: null as string | null
 })
 
 const fetchClasses = async () => {
@@ -700,9 +726,17 @@ const editStudent = (student: Student) => {
     admission_number: student.admission_number,
     gender: student.gender || '',
     class_id: student.class_id?.toString() || '',
-    is_active: student.is_active
+    is_active: student.is_active,
+    profile_photo: student.profile_photo || null
   }
   showEditModal.value = true
+}
+
+const onPhotoUploaded = (newPath: string) => {
+  editFormData.value.profile_photo = newPath
+  const student = students.value.find(s => s.id === editFormData.value.id)
+  if (student) student.profile_photo = newPath
+  showPhotoModal.value = false
 }
 
 const updateStudent = async () => {

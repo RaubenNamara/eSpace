@@ -77,7 +77,8 @@
             <tr v-for="student in students" :key="student.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
               <td class="px-5 py-3 whitespace-nowrap">
                 <div class="flex items-center gap-3">
-                  <div class="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0" :class="avatarPalette(student.id)">
+                  <img v-if="student.profile_photo" :src="resolveAssetUrl(student.profile_photo)" alt="" class="w-9 h-9 rounded-full object-cover flex-shrink-0">
+                  <div v-else class="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0" :class="avatarPalette(student.id)">
                     {{ initials(student) }}
                   </div>
                   <div class="min-w-0">
@@ -109,6 +110,12 @@
                 </span>
               </td>
               <td class="px-5 py-3 whitespace-nowrap text-right">
+                <button
+                  @click="photoTarget = student"
+                  class="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 mr-3"
+                >
+                  Photo
+                </button>
                 <button
                   @click="deenrollStudent(student)"
                   :disabled="deenrolling === student.id"
@@ -146,6 +153,16 @@
         </div>
       </div>
     </div>
+
+    <StudentPhotoModal
+      v-if="photoTarget"
+      :student-id="photoTarget.id"
+      :student-name="`${photoTarget.first_name} ${photoTarget.last_name}`"
+      :current-photo="photoTarget.profile_photo"
+      :upload-url="`/hod/students/${photoTarget.id}/photo`"
+      @close="photoTarget = null"
+      @uploaded="onPhotoUploaded"
+    />
   </div>
 </template>
 
@@ -154,6 +171,8 @@ import { ref, onMounted } from 'vue'
 import { apiService } from '@/services/api'
 import { useToastStore } from '@/stores/toast'
 import { useConfirmStore } from '@/stores/confirm'
+import { resolveAssetUrl } from '@/utils/url'
+import StudentPhotoModal from '@/components/students/StudentPhotoModal.vue'
 
 const toast = useToastStore()
 const confirmDialog = useConfirmStore()
@@ -173,6 +192,7 @@ interface Student {
   class_level: string | null
   stream_name: string | null
   academic_year: string | null
+  profile_photo: string | null
 }
 
 interface Pagination {
@@ -188,6 +208,12 @@ const loading = ref(false)
 const error = ref('')
 const search = ref('')
 const deenrolling = ref<number | null>(null)
+const photoTarget = ref<Student | null>(null)
+
+const onPhotoUploaded = (newPath: string) => {
+  if (photoTarget.value) photoTarget.value.profile_photo = newPath
+  photoTarget.value = null
+}
 
 let searchTimer: number | null = null
 const debouncedSearch = () => {

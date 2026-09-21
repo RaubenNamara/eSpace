@@ -43,6 +43,13 @@ const stagingRef = ref<HTMLElement | null>(null)
 let flip: PageFlip | null = null
 let resizeObserver: ResizeObserver | null = null
 
+// Below this width, force single-page-at-a-time flipping instead of StPageFlip's two-page
+// spread, which gets cramped on phones. Matches the Tailwind `sm` breakpoint the rest of the
+// reader UI already uses.
+const MOBILE_QUERY = '(max-width: 639px)'
+const mq = typeof window !== 'undefined' ? window.matchMedia(MOBILE_QUERY) : null
+const isMobile = ref(mq?.matches ?? false)
+
 function build() {
   const host = hostRef.value
   if (!host || !props.pageWidth || !props.pageHeight) return
@@ -53,7 +60,9 @@ function build() {
     width: props.pageWidth,
     height: props.pageHeight,
     size: 'stretch',
-    minWidth: 300,
+    // A minWidth far larger than the book ever gets stretched to keeps StPageFlip's internal
+    // "container narrower than 2x minWidth -> single page" check permanently true on mobile.
+    minWidth: isMobile.value ? 4000 : 300,
     maxWidth: 2000,
     minHeight: 400,
     maxHeight: 2800,
@@ -63,6 +72,13 @@ function build() {
     mobileScrollSupport: true,
     startPage: props.startPage,
   })
+
+  // StPageFlip's constructor also applies `minWidth` as this container's own inline CSS
+  // min-width (so it never gets squeezed smaller than one page in a normal fluid layout) - but
+  // that fights us on mobile, where minWidth is inflated on purpose just to force single-page
+  // mode. Strip it back off so the actual layout width still comes from the real container, and
+  // only the internal single/two-page threshold check sees the inflated value.
+  host.style.minWidth = ''
 
   if (props.mode === 'html') {
     flip.loadFromHTML(Array.from(stagingRef.value!.children) as HTMLElement[])
@@ -88,8 +104,20 @@ function destroy() {
   flip = null
 }
 
-onMounted(() => nextTick(build))
-onBeforeUnmount(destroy)
+function handleMqChange(e: MediaQueryListEvent) {
+  if (e.matches === isMobile.value) return
+  isMobile.value = e.matches
+  rebuild()
+}
+
+onMounted(() => {
+  nextTick(build)
+  mq?.addEventListener('change', handleMqChange)
+})
+onBeforeUnmount(() => {
+  mq?.removeEventListener('change', handleMqChange)
+  destroy()
+})
 
 // A different book (new document/topic) replaces pages wholesale - rebuild rather than
 // updateFrom*, since the aspect ratio (pageWidth/pageHeight) may have changed too. Image mode

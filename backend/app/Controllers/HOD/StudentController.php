@@ -93,7 +93,7 @@ class StudentController extends Controller
         // Get paginated results
         $offset = ($page - 1) * $limit;
         $sql = "SELECT s.id, s.username, s.email, s.admission_number, s.first_name, s.last_name, s.gender, s.phone,
-                       s.is_active, s.created_at,
+                       s.is_active, s.created_at, s.profile_photo,
                        c.name as class_name, c.level as class_level, c.stream_name,
                        sde.academic_year
                 FROM student_department_enrollments sde
@@ -394,6 +394,92 @@ class StudentController extends Controller
             error_log("HOD de-enrollment failed: " . $e->getMessage());
             $this->error('Failed to de-enroll students: ' . $e->getMessage(), 500);
         }
+    }
+
+    /**
+     * Upload/replace a student's profile photo (so it can appear on their report card), scoped
+     * to students actively enrolled in the HOD's department - same enrollment check as show(),
+     * not the students.department_id column update()/create() use (per the department note on
+     * index() above, that column isn't the reliable source of department membership).
+     * POST /hod/students/{id}/photo
+     */
+    public function uploadPhoto(): void
+    {
+        if (!$this->isHOD()) {
+            $this->forbidden();
+            return;
+        }
+
+        $departmentId = $this->getHODDepartmentId();
+        if (!$departmentId) {
+            $this->error('Department not found for HOD', 404);
+            return;
+        }
+
+        $id = (int) $this->routeParam('id');
+
+        $stmt = $this->db->prepare(
+            "SELECT s.id, s.profile_photo FROM students s
+             INNER JOIN student_department_enrollments sde ON sde.student_id = s.id
+             WHERE s.id = :id AND sde.department_id = :department_id AND sde.status = 'active'
+               AND sde.deleted_at IS NULL AND s.deleted_at IS NULL LIMIT 1"
+        );
+        $stmt->execute(['id' => $id, 'department_id' => $departmentId]);
+        $student = $stmt->fetch();
+        if (!$student) {
+            $this->notFound('Student not found in your department');
+            return;
+        }
+
+        if (!isset($_FILES['photo']) || $_FILES['photo']['error'] !== UPLOAD_ERR_OK) {
+            $this->error('No photo uploaded or upload error occurred', 400);
+            return;
+        }
+
+        $allowedMime = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
+        $maxSize = 2 * 1024 * 1024; // 2MB
+        $file = $_FILES['photo'];
+
+        if ($file['size'] > $maxSize) {
+            $this->error('Photo exceeds maximum size of 2MB', 400);
+            return;
+        }
+
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = finfo_file($finfo, $file['tmp_name']);
+        finfo_close($finfo);
+
+        if (!isset($allowedMime[$mimeType]) || getimagesize($file['tmp_name']) === false) {
+            $this->error('Invalid file type. Only JPEG, PNG, and WebP images are allowed', 400);
+            return;
+        }
+
+        $uploadDir = __DIR__ . '/../../../public/uploads/profiles/';
+        if (!file_exists($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        $filename = 'profile_' . $id . '_' . bin2hex(random_bytes(8)) . '.' . $allowedMime[$mimeType];
+        $filepath = $uploadDir . $filename;
+
+        if (!move_uploaded_file($file['tmp_name'], $filepath)) {
+            $this->error('Failed to save photo', 500);
+            return;
+        }
+
+        $photoUrl = '/uploads/profiles/' . $filename;
+
+        $stmt = $this->db->prepare('UPDATE students SET profile_photo = :photo WHERE id = :id');
+        $stmt->execute(['photo' => $photoUrl, 'id' => $id]);
+
+        if (!empty($student['profile_photo'])) {
+            $oldPath = __DIR__ . '/../../../public' . $student['profile_photo'];
+            if (is_file($oldPath)) {
+                @unlink($oldPath);
+            }
+        }
+
+        $this->success(['profile_photo' => $photoUrl], 'Student photo updated');
     }
 
     /**

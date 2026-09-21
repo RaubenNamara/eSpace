@@ -688,6 +688,7 @@ const assessmentMenu = computed(() => {
       { path: '/teacher/reports', label: 'Reports', icon: 'ChartBarIcon' },
       { path: '/teacher/engagement', label: 'Engagement', icon: 'ChartIcon' },
       { path: '/teacher/marksheet', label: 'Marksheet', icon: 'TableCellsIcon' },
+      { path: '/teacher/physical-exams', label: 'Physical Exams', icon: 'DocumentTextIcon' },
       { path: '/teacher/chat', label: 'Chats', icon: 'ChatIcon' }
     ]
   } else if (role === 'hod') {
@@ -697,6 +698,7 @@ const assessmentMenu = computed(() => {
       { path: '/hod/reports', label: 'Reports', icon: 'ChartBarIcon' },
       { path: '/hod/charts', label: 'Engagement', icon: 'ChartIcon' },
       { path: '/hod/marksheet', label: 'Marksheet', icon: 'TableCellsIcon' },
+      { path: '/hod/physical-exams', label: 'Physical Exams', icon: 'DocumentTextIcon' },
       { path: '/hod/chat', label: 'Chats', icon: 'ChatIcon' }
     ]
   } else if (role === 'admin' || role === 'super_admin') {
@@ -706,6 +708,7 @@ const assessmentMenu = computed(() => {
       { path: '/admin/reports', label: 'Reports', icon: 'ChartBarIcon' },
       { path: '/admin/charts', label: 'Engagement', icon: 'ChartIcon' },
       { path: '/admin/marksheet', label: 'Marksheet', icon: 'TableCellsIcon' },
+      { path: '/admin/physical-exams', label: 'Physical Exams', icon: 'DocumentTextIcon' },
       { path: '/admin/rewards', label: 'Rewards & Badges', icon: 'TrophyIcon' },
       { path: '/admin/chat', label: 'Chats', icon: 'ChatIcon' }
     ]
