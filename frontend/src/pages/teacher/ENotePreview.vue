@@ -84,6 +84,22 @@
       </div>
 
       <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+        <!-- Only matters at lg+ - below that the book already always shows one page at a time
+             (no room for two), so this toggle would have nothing to do. -->
+        <button
+          v-if="currentPage"
+          @click="preferSinglePage = !preferSinglePage"
+          class="hidden lg:flex p-1.5 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
+          :title="preferSinglePage ? 'Switch to two-page view' : 'Switch to single-page view'"
+        >
+          <svg v-if="preferSinglePage" class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <rect x="7" y="4" width="10" height="16" rx="1" stroke-width="2"></rect>
+          </svg>
+          <svg v-else class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <rect x="3" y="4" width="8" height="16" rx="1" stroke-width="2"></rect>
+            <rect x="13" y="4" width="8" height="16" rx="1" stroke-width="2"></rect>
+          </svg>
+        </button>
         <button
           v-if="currentPage"
           @click="isMuted = !isMuted"
@@ -191,7 +207,7 @@
 
       <!-- Right Sidebar - Navigation -->
       <div
-        class="order-2 fixed lg:static inset-y-0 right-0 z-40 w-56 max-w-[75vw] mt-2 lg:mt-3 lg:mb-3 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 rounded-tl-2xl overflow-hidden flex flex-col transform transition-[transform,width] duration-300 lg:translate-x-0 relative"
+        class="order-2 fixed lg:static inset-y-0 right-0 z-40 w-56 max-w-[75vw] mt-2 lg:mt-3 lg:mb-3 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 rounded-tl-2xl overflow-hidden flex flex-col transform transition-[transform,width] duration-300 lg:translate-x-0 lg:relative"
         :class="[showToc ? 'translate-x-0' : 'translate-x-full', sidebarCollapsed ? 'lg:!w-14' : 'lg:!w-56']"
       >
         <!-- Desktop-only collapse toggle, so the reader can reclaim the sidebar's width for the
@@ -342,6 +358,7 @@
                 :page-height="900"
                 :show-cover="false"
                 :muted="isMuted"
+                :prefer-single-page="preferSinglePage"
                 class="transition-shadow duration-300 hover:drop-shadow-2xl"
                 @flip="onBookFlip"
               >
@@ -583,6 +600,10 @@ const sidebarCollapsed = ref(false)
 // Shared with the eLibrary flipbook too - muting the page-turn sound in one place should mean it
 // stays muted everywhere, since it's a preference about the sound itself, not this one topic.
 const isMuted = usePersistedRef('espace:flipbook-muted', false)
+// Shared with the eLibrary flipbook and read directly by BookFlipbook.vue itself (same key) -
+// this button just gives the reader a visible way to flip it, on top of whatever screen size
+// already forces.
+const preferSinglePage = usePersistedRef('espace:flipbook-single-page-preferred', false)
 const showIntro = ref(false)
 const showCompletion = ref(false)
 const flipbookRef = ref<InstanceType<typeof BookFlipbook> | null>(null)

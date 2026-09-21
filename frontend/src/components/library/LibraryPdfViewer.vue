@@ -21,6 +21,22 @@
             </div>
           </div>
           <div class="flex items-center gap-2 flex-shrink-0">
+            <!-- Only matters at lg+ - below that the book already always shows one page at a
+                 time (no room for two), so this toggle would have nothing to do. -->
+            <button
+              v-if="bookImages.length > 0"
+              @click="preferSinglePage = !preferSinglePage"
+              class="hidden lg:flex p-2 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
+              :title="preferSinglePage ? 'Switch to two-page view' : 'Switch to single-page view'"
+            >
+              <svg v-if="preferSinglePage" class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <rect x="7" y="4" width="10" height="16" rx="1" stroke-width="2"></rect>
+              </svg>
+              <svg v-else class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <rect x="3" y="4" width="8" height="16" rx="1" stroke-width="2"></rect>
+                <rect x="13" y="4" width="8" height="16" rx="1" stroke-width="2"></rect>
+              </svg>
+            </button>
             <button
               v-if="bookImages.length > 0"
               @click="isMuted = !isMuted"
@@ -101,6 +117,7 @@
             :page-width="bookPageWidth"
             :page-height="bookPageHeight"
             :muted="isMuted"
+            :prefer-single-page="preferSinglePage"
             class="max-w-full max-h-full transition-shadow duration-300 hover:drop-shadow-2xl"
             @flip="onFlip"
           />
@@ -163,6 +180,10 @@ defineEmits(['close'])
 // Shared with the eNotes reader too - muting the page-turn sound in one place should mean it
 // stays muted everywhere, since it's a preference about the sound itself, not this one book.
 const isMuted = usePersistedRef('espace:flipbook-muted', false)
+// Shared with the eNotes reader and read directly by BookFlipbook.vue itself (same key) - this
+// button just gives the reader a visible way to flip it, on top of whatever screen size already
+// forces.
+const preferSinglePage = usePersistedRef('espace:flipbook-single-page-preferred', false)
 
 const pdfUrl = computed(() => resolveAssetUrl(props.book.file_path))
 const allowDownload = computed(() => !!props.book.allow_download)
