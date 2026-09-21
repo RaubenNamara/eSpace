@@ -1,9 +1,8 @@
 import axios, { AxiosInstance, AxiosError, AxiosRequestConfig, InternalAxiosRequestConfig, AxiosResponse } from 'axios'
 import type { ApiResponse } from '../types'
 
-// import.meta.env.BASE_URL is '/eSpace/' in both dev (Vite's dev server proxies /eSpace/api
-// itself, see vite.config.ts) and the production build (see vite.config.ts's `base`), so this
-// resolves to '/eSpace/api' in both without a separate env var.
+// import.meta.env.BASE_URL is '/' in both dev and the production build (see vite.config.ts's
+// `base`), so this resolves to plain '/api' in both without a separate env var.
 const baseUrl = import.meta.env.BASE_URL.replace(/\/$/, '') + '/api'
 
 // Create axios instance

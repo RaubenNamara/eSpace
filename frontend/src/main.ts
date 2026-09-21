@@ -27,13 +27,10 @@ const { updateServiceWorker } = useRegisterSW({
 })
 
 // Every page in this app calls the default `axios` import directly with paths hardcoded like
-// `/api/...` (relative to the domain root) rather than going through a shared instance - a
-// root-relative '/api/...' would miss the backend entirely since the app is served under
-// /eSpace/ in both dev and production. Setting the default instance's baseURL here covers every
-// one of those call sites at once: axios's own URL-combining already strips/rejoins slashes
-// correctly, so '/api/foo' becomes '/eSpace/api/foo'. import.meta.env.BASE_URL is '/eSpace/' in
-// both dev (Vite's dev server proxies /eSpace/api itself, see vite.config.ts) and the production
-// build (see vite.config.ts's `base`), so this needs no separate env var of its own.
+// `/api/...`. import.meta.env.BASE_URL is '/' in both dev and production (see vite.config.ts's
+// `base`), so baseUrl is '' here and this is a no-op - kept in case a future deployment ever
+// needs a subpath prefix again, in which case every one of those `/api/...` call sites would
+// pick it up automatically through axios's default baseURL.
 const baseUrl = import.meta.env.BASE_URL.replace(/\/$/, '')
 if (baseUrl) {
   axios.defaults.baseURL = baseUrl

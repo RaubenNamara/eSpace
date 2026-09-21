@@ -247,9 +247,9 @@ class SimpleUploadAdapter {
 
         this.xhr = new XMLHttpRequest()
         // This is a raw XMLHttpRequest (not the shared axios instance), so it doesn't inherit
-        // main.ts's axios.defaults.baseURL - it needs the same /eSpace base prefix applied here
-        // directly, or the request 404s (it hits the domain root instead of the app's subpath in
-        // both dev and production, since import.meta.env.BASE_URL is '/eSpace/' in both).
+        // main.ts's axios.defaults.baseURL. BASE_URL is '/' in both dev and production, so this
+        // is just '/api/teacher/enotes/upload-image' - kept in case a future deployment ever
+        // needs a subpath prefix again.
         const uploadUrl = import.meta.env.BASE_URL.replace(/\/$/, '') + '/api/teacher/enotes/upload-image'
         console.log('Uploading to:', uploadUrl)
         this.xhr.open('POST', uploadUrl, true)

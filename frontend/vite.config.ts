@@ -4,13 +4,11 @@ import { fileURLToPath, URL } from 'node:url'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig(() => ({
-  // Production is deployed under a subdirectory (https://stmark.sc.ug/eSpace/), and the dev
-  // server mirrors that same /eSpace/ prefix (http://localhost:3000/eSpace/) so routes, the
-  // API base URL, and asset URLs behave identically in both environments. Vite's dev server
-  // strips the base off incoming requests itself before resolving modules/assets, so this one
-  // setting is enough - see the proxy rewrite below for the one place that still needs to know
-  // about it explicitly (the proxy sees the raw URL before Vite's base-stripping runs).
-  base: '/eSpace/',
+  // Production is deployed at the root of its own subdomain (https://espace.stmark.sc.ug/), so
+  // every route, asset URL, and API call is root-relative - no prefix to strip anywhere. (An
+  // older deployment lived under https://stmark.sc.ug/eSpace/ and needed base: '/eSpace/' plus
+  // matching proxy rewrites here; that subpath deployment is no longer used.)
+  base: '/',
   plugins: [
     vue(),
     VitePWA({
@@ -102,19 +100,14 @@ export default defineConfig(() => ({
   server: {
     port: 3000,
     proxy: {
-      // The proxy sees the raw incoming request URL (e.g. /eSpace/api/...) since it runs before
-      // Vite's own base-stripping middleware, so the /eSpace prefix has to be matched here and
-      // stripped again before forwarding to the backend, which expects plain /api/... paths.
-      '/eSpace/api': {
+      '/api': {
         target: 'http://localhost/eSpace/backend/public',
         changeOrigin: true,
-        secure: false,
-        rewrite: (path) => path.replace(/^\/eSpace/, '')
+        secure: false
       },
-      '/eSpace/uploads': {
+      '/uploads': {
         target: 'http://localhost/eSpace/backend/public',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/eSpace/, '')
+        changeOrigin: true
       }
     }
   }

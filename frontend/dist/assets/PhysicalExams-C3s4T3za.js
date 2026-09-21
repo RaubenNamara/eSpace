@@ -1,0 +1,1 @@
+import{_ as a}from"./PhysicalExamsPage.vue_vue_type_script_setup_true_lang-CAo3mfTh.js";import{d as e,x as o,i as s}from"./index-CFFW5tET.js";const m=e({__name:"PhysicalExams",setup(r){return(t,_)=>(s(),o(a))}});export{m as default};

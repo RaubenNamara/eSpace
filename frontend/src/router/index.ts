@@ -341,8 +341,7 @@ const routes: RouteRecordRaw[] = [
 ]
 
 const router = createRouter({
-  // BASE_URL is '/eSpace/' in both dev and the production build (see vite.config.ts's `base`),
-  // so this strips that prefix when matching routes and re-adds it when generating links.
+  // BASE_URL is '/' in both dev and the production build (see vite.config.ts's `base`).
   history: createWebHistory(import.meta.env.BASE_URL),
   routes
 })
