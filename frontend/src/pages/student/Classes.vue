@@ -119,7 +119,6 @@
             <thead class="bg-gray-50 dark:bg-gray-950/40">
               <tr>
                 <th class="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Student</th>
-                <th class="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Admission No</th>
                 <th class="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Gender</th>
                 <th class="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Stream</th>
                 <th class="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Academic Year</th>
@@ -143,7 +142,6 @@
                     </span>
                   </div>
                 </td>
-                <td class="px-5 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ student.admission_number }}</td>
                 <td class="px-5 py-3 whitespace-nowrap">
                   <span
                     class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium capitalize"
@@ -183,7 +181,6 @@ interface StudentClass {
 interface Classmate {
   enrollment_id: number
   student_id: number
-  admission_number: string
   first_name: string
   last_name: string
   gender: string

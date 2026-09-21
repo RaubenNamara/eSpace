@@ -50,7 +50,7 @@
       <!-- Account Credentials Section -->
       <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
         <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Account Credentials</h2>
-        <p class="text-gray-600 dark:text-gray-400 mb-6">Update your login credentials. Your username and password are used to access the system.</p>
+        <p class="text-gray-600 dark:text-gray-400 mb-6">Update your password. Your username is set by your administrator.</p>
 
         <form @submit.prevent="updateCredentials">
           <div class="space-y-4">
@@ -59,10 +59,10 @@
               <input
                 v-model="credentials.username"
                 type="text"
-                required
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                disabled
+                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-950 text-gray-500 dark:text-gray-400"
               >
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">This is your login username</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Contact your administrator to change your username</p>
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current Password</label>
@@ -199,12 +199,7 @@ const updateCredentials = async () => {
     })
 
     if (response.data.success) {
-      // Update username separately
-      await apiService.put('/auth/profile', {
-        username: credentials.value.username
-      })
-
-      successMessage.value = 'Credentials updated successfully!'
+      successMessage.value = 'Password updated successfully!'
       credentials.value.current_password = ''
       credentials.value.new_password = ''
       credentials.value.confirm_password = ''

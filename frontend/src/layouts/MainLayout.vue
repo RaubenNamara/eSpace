@@ -362,7 +362,11 @@
                   <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ userName }}</p>
                   <p class="text-xs text-gray-500 dark:text-gray-400 capitalize">{{ userRole }}</p>
                 </div>
+                <!-- A student's photo is admin/HOD-managed (it appears on official report
+                     cards), not self-service - so this entry (which opens the photo section of
+                     ProfileSettingsModal) is hidden for students; only Change Password remains. -->
                 <button
+                  v-if="userRole !== 'student'"
                   role="menuitem"
                   @click="openProfileSection('photo')"
                   class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2.5 transition-colors"

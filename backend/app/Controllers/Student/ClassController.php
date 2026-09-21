@@ -121,7 +121,9 @@ class ClassController extends Controller
         }
 
         try {
-            $sql = "SELECT se.id as enrollment_id, s.id as student_id, s.admission_number, s.first_name, s.last_name, s.gender,
+            // admission_number is deliberately left out - it's also a student's login username,
+            // so classmates shouldn't be able to see each other's.
+            $sql = "SELECT se.id as enrollment_id, s.id as student_id, s.first_name, s.last_name, s.gender,
                            se.department_id, se.academic_year, se.class_id,
                            d.name as department_name, c.name as class_name, c.level, c.stream_name
                     FROM student_department_enrollments se

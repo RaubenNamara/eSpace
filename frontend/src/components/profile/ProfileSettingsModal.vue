@@ -15,39 +15,42 @@
       </div>
 
       <div class="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
-        <!-- Profile Photo -->
-        <div>
-          <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">Profile Photo</h3>
-          <div class="flex items-center gap-4">
-            <div class="w-20 h-20 rounded-full overflow-hidden bg-indigo-600 flex items-center justify-center text-white text-2xl font-bold ring-4 ring-indigo-100 dark:ring-indigo-900/40 flex-shrink-0">
-              <img v-if="photoPreview" :src="photoPreview" alt="Profile photo" class="w-full h-full object-cover">
-              <span v-else>{{ initials }}</span>
+        <!-- Profile Photo - admin/HOD-managed for a student (it appears on official report
+             cards), not self-service. -->
+        <template v-if="authStore.userRole !== 'student'">
+          <div>
+            <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">Profile Photo</h3>
+            <div class="flex items-center gap-4">
+              <div class="w-20 h-20 rounded-full overflow-hidden bg-indigo-600 flex items-center justify-center text-white text-2xl font-bold ring-4 ring-indigo-100 dark:ring-indigo-900/40 flex-shrink-0">
+                <img v-if="photoPreview" :src="photoPreview" alt="Profile photo" class="w-full h-full object-cover">
+                <span v-else>{{ initials }}</span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <input ref="fileInputRef" type="file" accept="image/jpeg,image/png,image/webp" class="hidden" @change="onFileSelected">
+                <button
+                  @click="fileInputRef?.click()"
+                  class="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Choose Photo
+                </button>
+                <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-1.5">JPEG, PNG or WebP, up to 2MB</p>
+                <button
+                  v-if="selectedFile"
+                  :disabled="uploadingPhoto"
+                  @click="uploadPhoto"
+                  class="mt-2 px-3 py-1.5 text-xs font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                >
+                  {{ uploadingPhoto ? 'Uploading...' : 'Save Photo' }}
+                </button>
+              </div>
             </div>
-            <div class="flex-1 min-w-0">
-              <input ref="fileInputRef" type="file" accept="image/jpeg,image/png,image/webp" class="hidden" @change="onFileSelected">
-              <button
-                @click="fileInputRef?.click()"
-                class="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                Choose Photo
-              </button>
-              <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-1.5">JPEG, PNG or WebP, up to 2MB</p>
-              <button
-                v-if="selectedFile"
-                :disabled="uploadingPhoto"
-                @click="uploadPhoto"
-                class="mt-2 px-3 py-1.5 text-xs font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-              >
-                {{ uploadingPhoto ? 'Uploading...' : 'Save Photo' }}
-              </button>
-            </div>
+            <p v-if="photoMessage" class="text-xs mt-2" :class="photoError ? 'text-red-500' : 'text-green-600 dark:text-green-400'">
+              {{ photoMessage }}
+            </p>
           </div>
-          <p v-if="photoMessage" class="text-xs mt-2" :class="photoError ? 'text-red-500' : 'text-green-600 dark:text-green-400'">
-            {{ photoMessage }}
-          </p>
-        </div>
 
-        <div class="border-t border-gray-200 dark:border-gray-700"></div>
+          <div class="border-t border-gray-200 dark:border-gray-700"></div>
+        </template>
 
         <!-- Password -->
         <div ref="passwordSectionRef">

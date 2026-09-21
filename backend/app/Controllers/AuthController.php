@@ -277,6 +277,14 @@ class AuthController extends Controller
             return;
         }
 
+        // Students don't manage their own identity/login details - only admin/HOD edit a
+        // student's record (username included), the same way admission number, name, and class
+        // already are on the student Settings page.
+        if ($this->getCurrentUserRole() === 'student') {
+            $this->forbidden('Contact your administrator to update your account details');
+            return;
+        }
+
         $userId = $this->getCurrentUserId();
         $data = $this->input();
 
@@ -346,6 +354,14 @@ class AuthController extends Controller
     {
         if (!$this->isAuthenticated()) {
             $this->unauthorized();
+            return;
+        }
+
+        // A student's photo is admin/HOD-managed (see Admin/StudentController::uploadPhoto() and
+        // HOD/StudentController::uploadPhoto()) since it appears on official report cards - not
+        // something a student sets for themselves.
+        if ($this->getCurrentUserRole() === 'student') {
+            $this->forbidden('Contact your administrator to update your profile photo');
             return;
         }
 
