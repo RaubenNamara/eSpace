@@ -319,6 +319,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
 
         // eNotes Image Upload
         Router::post('/enotes/upload-image', 'eSpace\App\Controllers\Teacher\ENoteImageController@upload');
+        Router::post('/enotes/upload-video', 'eSpace\App\Controllers\Teacher\ENoteVideoController@upload');
         // Item Bank
         Router::get('/itembank', 'eSpace\App\Controllers\Teacher\ItemBankController@index');
         Router::post('/itembank', 'eSpace\App\Controllers\Teacher\ItemBankController@create');
@@ -361,6 +362,14 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::post('/report-cards/{studentId}/{termId}/generate', 'eSpace\App\Controllers\Teacher\ReportCardController@generateFull');
         Router::put('/report-cards/{studentId}/{termId}/class-teacher-comment', 'eSpace\App\Controllers\Teacher\ReportCardController@updateClassTeacherComment');
         Router::get('/report-cards/{studentId}/{termId}', 'eSpace\App\Controllers\Teacher\ReportCardController@show');
+
+        // Physical (offline) exams
+        Router::get('/physical-exams', 'eSpace\App\Controllers\Teacher\PhysicalAssessmentController@index');
+        Router::post('/physical-exams', 'eSpace\App\Controllers\Teacher\PhysicalAssessmentController@create');
+        Router::put('/physical-exams/{id}', 'eSpace\App\Controllers\Teacher\PhysicalAssessmentController@update');
+        Router::delete('/physical-exams/{id}', 'eSpace\App\Controllers\Teacher\PhysicalAssessmentController@delete');
+        Router::get('/physical-exams/{id}/marksheet', 'eSpace\App\Controllers\Teacher\PhysicalAssessmentController@getMarksheet');
+        Router::put('/physical-exams/{id}/marksheet', 'eSpace\App\Controllers\Teacher\PhysicalAssessmentController@saveScores');
 
         // Performance reports & marksheets
         Router::get('/performance/subjects', 'eSpace\App\Controllers\Teacher\PerformanceController@listSubjects');
@@ -431,6 +440,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::post('/students/deenroll', 'eSpace\App\Controllers\HOD\StudentController@deenroll');
         Router::get('/students/{id}', 'eSpace\App\Controllers\HOD\StudentController@show');
         Router::put('/students/{id}', 'eSpace\App\Controllers\HOD\StudentController@update');
+        Router::post('/students/{id}/photo', 'eSpace\App\Controllers\HOD\StudentController@uploadPhoto');
 
         // Subjects
         Router::get('/subjects', 'eSpace\App\Controllers\HOD\SubjectController@index');
@@ -490,6 +500,14 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/report-cards/terms', 'eSpace\App\Controllers\HOD\ReportCardController@listTerms');
         Router::get('/report-cards/students', 'eSpace\App\Controllers\HOD\ReportCardController@listStudents');
         Router::get('/report-cards/{studentId}/{termId}', 'eSpace\App\Controllers\HOD\ReportCardController@show');
+
+        // Physical (offline) exams (department-scoped)
+        Router::get('/physical-exams', 'eSpace\App\Controllers\HOD\PhysicalAssessmentController@index');
+        Router::post('/physical-exams', 'eSpace\App\Controllers\HOD\PhysicalAssessmentController@create');
+        Router::put('/physical-exams/{id}', 'eSpace\App\Controllers\HOD\PhysicalAssessmentController@update');
+        Router::delete('/physical-exams/{id}', 'eSpace\App\Controllers\HOD\PhysicalAssessmentController@delete');
+        Router::get('/physical-exams/{id}/marksheet', 'eSpace\App\Controllers\HOD\PhysicalAssessmentController@getMarksheet');
+        Router::put('/physical-exams/{id}/marksheet', 'eSpace\App\Controllers\HOD\PhysicalAssessmentController@saveScores');
 
         // Performance reports & marksheets (department-scoped)
         Router::get('/performance/classes', 'eSpace\App\Controllers\HOD\PerformanceController@listClasses');
@@ -702,6 +720,17 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::post('/report-cards/{studentId}/{termId}/generate', 'eSpace\App\Controllers\Admin\ReportCardController@generate');
         Router::get('/report-cards/{studentId}/{termId}', 'eSpace\App\Controllers\Admin\ReportCardController@show');
         Router::put('/report-cards/{studentId}/{termId}/head-teacher-comment', 'eSpace\App\Controllers\Admin\ReportCardController@updateHeadTeacherComment');
+
+        // Physical (offline) exams
+        Router::get('/physical-exams', 'eSpace\App\Controllers\Admin\PhysicalAssessmentController@index');
+        Router::post('/physical-exams', 'eSpace\App\Controllers\Admin\PhysicalAssessmentController@create');
+        Router::put('/physical-exams/{id}', 'eSpace\App\Controllers\Admin\PhysicalAssessmentController@update');
+        Router::delete('/physical-exams/{id}', 'eSpace\App\Controllers\Admin\PhysicalAssessmentController@delete');
+        Router::get('/physical-exams/{id}/marksheet', 'eSpace\App\Controllers\Admin\PhysicalAssessmentController@getMarksheet');
+        Router::put('/physical-exams/{id}/marksheet', 'eSpace\App\Controllers\Admin\PhysicalAssessmentController@saveScores');
+
+        // Student profile photo (admin can set/change any student's photo)
+        Router::post('/students/{id}/photo', 'eSpace\App\Controllers\Admin\StudentController@uploadPhoto');
 
         // Competency Reports (LOA/AOI/EOC) - one student, one term, three reports
         Router::get('/reports/students', 'eSpace\App\Controllers\Admin\ReportCardController@listCompetencyStudents');

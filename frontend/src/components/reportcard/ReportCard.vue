@@ -43,7 +43,11 @@
 
       <!-- Student info -->
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
-        <div class="sm:col-span-2 bg-gray-50 dark:bg-gray-900/40 border-2 border-gray-300 dark:border-gray-700 rounded-xl p-4 space-y-2 text-sm">
+        <div class="sm:col-span-2 bg-gray-50 dark:bg-gray-900/40 border-2 border-gray-300 dark:border-gray-700 rounded-xl p-4 flex items-center gap-4 text-sm">
+          <img v-if="report.student.profile_photo" :src="resolveAssetUrl(report.student.profile_photo)" alt="" class="w-16 h-16 rounded-lg object-cover flex-shrink-0 ring-2 ring-gray-200 dark:ring-gray-600">
+          <div v-else class="student-photo-fallback w-16 h-16 rounded-lg flex-shrink-0 bg-indigo-600 text-white font-bold text-lg print-color-exact">
+            {{ studentInitials }}
+          </div>
           <div class="flex flex-wrap gap-x-6 gap-y-1.5">
             <p><span class="block text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-500">Admission No</span><span class="font-medium text-gray-900 dark:text-white">{{ report.student.admission_number }}</span></p>
             <p><span class="block text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-500">Name</span><span class="font-semibold text-gray-900 dark:text-white">{{ report.student.first_name }} {{ report.student.last_name }}</span></p>
@@ -88,7 +92,10 @@
                 <td v-for="n in maxConstructs" :key="n" class="border border-gray-400 dark:border-gray-700 px-1 py-2 text-center text-gray-700 dark:text-gray-300">
                   <template v-if="subject.constructs[n - 1]">
                     {{ subject.constructs[n - 1].score_obtained }}/{{ subject.constructs[n - 1].score_total }}
-                    <div class="text-[10px] text-gray-500 dark:text-gray-500">w{{ subject.constructs[n - 1].weight }}</div>
+                    <div class="text-[10px] text-gray-500 dark:text-gray-500">
+                      w{{ subject.constructs[n - 1].weight }}
+                      <span v-if="subject.constructs[n - 1].source_type === 'physical'" class="text-amber-600 dark:text-amber-500 font-semibold">&middot; Physical</span>
+                    </div>
                   </template>
                   <template v-else>-</template>
                 </td>
@@ -347,6 +354,11 @@ const maxConstructs = computed(() => {
   return Math.max(max, 1)
 })
 
+const studentInitials = computed(() => {
+  const { first_name, last_name } = props.report.student
+  return `${first_name?.[0] || ''}${last_name?.[0] || ''}`.toUpperCase()
+})
+
 // Mirrors ReportCardGradingService::GRADE_BANDS exactly - the A-Level (5) table is the reference
 // bands as-is; the O-Level (3) table is that same service's proportional 3/5 scaling of them.
 const RESULT_KEYS: Record<number, { range: string; level: string; grade: string; points: number }[]> = {
@@ -456,6 +468,12 @@ watch(() => props.report, (r) => {
   line-height: 24px;
   text-align: center;
   border-radius: 9999px;
+}
+
+.student-photo-fallback {
+  display: inline-block;
+  line-height: 64px;
+  text-align: center;
 }
 
 .award-pill {

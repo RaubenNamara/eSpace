@@ -1,14 +1,15 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/smacon/public_html/eSpace
+    - export DEPLOYPATH=$HOME/public_html/eSpace
+    - /bin/mkdir -p $DEPLOYPATH
+    - /bin/mkdir -p $DEPLOYPATH/backend/app
+    - /bin/mkdir -p $DEPLOYPATH/backend/routes
+    - /bin/mkdir -p $DEPLOYPATH/backend/config
+    - /bin/mkdir -p $DEPLOYPATH/backend/public
+    - /bin/mkdir -p $DEPLOYPATH/assets
+    - /bin/cp -rf frontend/dist/. $DEPLOYPATH/
     - /bin/cp -rf backend/app/. $DEPLOYPATH/backend/app/
     - /bin/cp -rf backend/routes/. $DEPLOYPATH/backend/routes/
     - /bin/cp -rf backend/config/. $DEPLOYPATH/backend/config/
     - /bin/cp -rf backend/public/. $DEPLOYPATH/backend/public/
-    - /bin/cp -f frontend/dist/index.html $DEPLOYPATH/index.html
-    - /bin/cp -f frontend/dist/manifest.webmanifest $DEPLOYPATH/manifest.webmanifest
-    - /bin/rm -f $DEPLOYPATH/registerSW.js
-    - /bin/cp -f frontend/dist/sw.js $DEPLOYPATH/sw.js
-    - /bin/cp -f frontend/dist/workbox-8553a241.js $DEPLOYPATH/workbox-8553a241.js
-    - /bin/cp -rf frontend/dist/assets/. $DEPLOYPATH/assets/

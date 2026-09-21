@@ -1,11 +1,11 @@
 <template>
   <div class="h-screen flex flex-col bg-gray-50 dark:bg-gray-950">
     <!-- Header -->
-    <div class="relative bg-indigo-600 px-3 sm:px-6 py-2 sm:py-2.5 flex items-center justify-between gap-2 flex-shrink-0 shadow-sm">
+    <div class="relative bg-indigo-600 px-3 sm:px-6 py-1.5 sm:py-2 flex items-center justify-between gap-2 flex-shrink-0 shadow-sm">
       <div class="flex items-center gap-2 sm:gap-3 min-w-0">
         <button
           @click="goBack"
-          class="p-2 rounded-lg bg-white/10 hover:bg-white/25 transition-colors flex-shrink-0"
+          class="p-1.5 rounded-lg bg-white/10 hover:bg-white/25 transition-colors flex-shrink-0"
         >
           <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
@@ -14,20 +14,20 @@
         <!-- Table of contents toggle - sidebar is an overlay below lg -->
         <button
           @click="showToc = !showToc"
-          class="p-2 rounded-lg bg-white/10 hover:bg-white/25 transition-colors flex-shrink-0 lg:hidden"
+          class="p-1.5 rounded-lg bg-white/10 hover:bg-white/25 transition-colors flex-shrink-0 lg:hidden"
           title="Table of contents"
         >
           <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
           </svg>
         </button>
-        <div class="hidden sm:flex w-10 h-10 rounded-xl bg-white/15 items-center justify-center flex-shrink-0">
-          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="hidden sm:flex w-8 h-8 rounded-lg bg-white/15 items-center justify-center flex-shrink-0">
+          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
           </svg>
         </div>
         <div class="min-w-0">
-          <h1 class="text-base sm:text-xl font-bold text-white truncate leading-tight">{{ topic?.title }}</h1>
+          <h1 class="text-sm sm:text-lg font-bold text-white truncate leading-tight">{{ topic?.title }}</h1>
           <div class="flex items-center gap-2 mt-0.5">
             <span class="text-xs sm:text-sm text-indigo-100 truncate">{{ topic?.subject_name }}</span>
             <span v-if="isPreviewMode" class="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium bg-white/20 text-white">
@@ -45,34 +45,40 @@
           </div>
         </div>
 
-        <!-- AI Tutor: a compact status readout sharing the topic's own bar, rather than only
-             appearing once you scroll down to the panel below - idle shows a start trigger,
-             active shows live paragraph progress. The full controls (play/pause/replay/speed/
-             transcript) stay in that panel; this is just always-visible status. -->
-        <button
-          v-if="isStudentMode && currentPage && tutorStatus === 'idle'"
-          @click="aiTutorRef?.start()"
-          class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-white/10 hover:bg-white/25 text-white text-xs font-medium rounded-lg transition-colors flex-shrink-0"
-        >
-          <span>🧑‍🏫</span><span>AI Tutor</span>
-        </button>
-        <div
-          v-else-if="isStudentMode && currentPage && tutorStatus === 'loading'"
-          class="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-white/10 text-white text-xs font-medium rounded-lg flex-shrink-0"
-        >
-          <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-          </svg>
-          <span>AI Tutor</span>
-        </div>
-        <div
-          v-else-if="isStudentMode && currentPage && tutorStatus === 'ready' && tutorProgress.total > 0"
-          class="hidden sm:flex items-center gap-2 px-2.5 py-1.5 bg-white/10 text-white text-xs font-medium rounded-lg flex-shrink-0"
-        >
-          <span>🧑‍🏫 {{ tutorProgress.current }}/{{ tutorProgress.total }}</span>
-          <div class="w-14 h-1.5 rounded-full bg-white/20 overflow-hidden">
-            <div class="h-full bg-white rounded-full transition-all" :style="{ width: `${(tutorProgress.current / tutorProgress.total) * 100}%` }"></div>
+        <!-- AI Tutor: lives entirely in the header now, as a trigger + dropdown panel (same
+             pattern as the Voice panel on the right), instead of an inline block in the reading
+             area - keeps that whole vertical space free for the notes themselves. -->
+        <div v-if="isStudentMode && currentPage" class="relative flex-shrink-0">
+          <button
+            @click="onTutorHeaderClick"
+            class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-white/10 hover:bg-white/25 text-white text-xs font-medium rounded-lg transition-colors"
+          >
+            <svg v-if="tutorStatus === 'loading'" class="w-3.5 h-3.5 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+            <span v-else>🧑‍🏫</span>
+            <span>
+              AI Tutor<template v-if="tutorStatus === 'ready' && tutorProgress.total > 0"> · {{ tutorProgress.current }}/{{ tutorProgress.total }}</template>
+            </span>
+            <div v-if="tutorStatus === 'ready' && tutorProgress.total > 0" class="w-10 h-1.5 rounded-full bg-white/20 overflow-hidden">
+              <div class="h-full bg-white rounded-full transition-all" :style="{ width: `${(tutorProgress.current / tutorProgress.total) * 100}%` }"></div>
+            </div>
+          </button>
+
+          <div v-show="showTutorPanel" @click="showTutorPanel = false" class="fixed inset-0 z-40"></div>
+
+          <div v-show="showTutorPanel" class="absolute left-0 top-full mt-2 w-80 max-w-[90vw] z-50 text-left">
+            <AITutorPlayer
+              v-if="currentPage"
+              ref="aiTutorRef"
+              :key="`tutor-${currentPage.id}`"
+              :page-id="currentPage.id"
+              @block-active="onTutorBlockActive"
+              @block-cleared="tutorActiveBlockIndex = null"
+              @status-change="tutorStatus = $event"
+              @progress="tutorProgress = $event"
+            />
           </div>
         </div>
       </div>
@@ -81,7 +87,7 @@
         <button
           v-if="currentPage"
           @click="isMuted = !isMuted"
-          class="p-2 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
+          class="p-1.5 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
           :title="isMuted ? 'Unmute page-turn sound' : 'Mute page-turn sound'"
         >
           <svg v-if="isMuted" class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -94,7 +100,7 @@
         </button>
         <button
           @click="toggleFullscreen"
-          class="p-2 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
+          class="p-1.5 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
           title="Toggle Fullscreen"
         >
           <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -105,7 +111,7 @@
         <div v-if="!isReadOnly" class="relative">
           <button
             @click="showVoicePanel = !showVoicePanel"
-            class="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-white/10 hover:bg-white/25 text-white font-medium text-sm sm:text-base rounded-lg transition-colors"
+            class="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-white/10 hover:bg-white/25 text-white font-medium text-sm sm:text-base rounded-lg transition-colors"
           >
             <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-14 0m7 7v3m-3 0h6M12 15a3 3 0 003-3V6a3 3 0 00-6 0v6a3 3 0 003 3z"></path>
@@ -164,7 +170,7 @@
         <button
           v-if="!isReadOnly"
           @click="editTopic"
-          class="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-white text-indigo-700 font-medium text-sm sm:text-base rounded-lg hover:bg-indigo-50 transition-colors shadow-sm"
+          class="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-white text-indigo-700 font-medium text-sm sm:text-base rounded-lg hover:bg-indigo-50 transition-colors shadow-sm"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
@@ -183,19 +189,19 @@
         class="fixed inset-0 bg-black/50 z-30 lg:hidden"
       ></div>
 
-      <!-- Left Sidebar - Navigation -->
+      <!-- Right Sidebar - Navigation -->
       <div
-        class="fixed lg:static inset-y-0 left-0 z-40 w-56 max-w-[75vw] mt-2 lg:mt-3 lg:mb-3 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 rounded-tr-2xl overflow-hidden flex flex-col transform transition-[transform,width] duration-300 lg:translate-x-0 relative"
-        :class="[showToc ? 'translate-x-0' : '-translate-x-full', sidebarCollapsed ? 'lg:!w-14' : 'lg:!w-56']"
+        class="order-2 fixed lg:static inset-y-0 right-0 z-40 w-56 max-w-[75vw] mt-2 lg:mt-3 lg:mb-3 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 rounded-tl-2xl overflow-hidden flex flex-col transform transition-[transform,width] duration-300 lg:translate-x-0 relative"
+        :class="[showToc ? 'translate-x-0' : 'translate-x-full', sidebarCollapsed ? 'lg:!w-14' : 'lg:!w-56']"
       >
         <!-- Desktop-only collapse toggle, so the reader can reclaim the sidebar's width for the
              book without losing it entirely (mobile already has its own overlay drawer). -->
         <button
           @click="sidebarCollapsed = !sidebarCollapsed"
-          class="hidden lg:flex absolute top-5 -right-3 z-10 w-6 h-6 rounded-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 shadow items-center justify-center text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+          class="hidden lg:flex absolute top-5 -left-3 z-10 w-6 h-6 rounded-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 shadow items-center justify-center text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
           :title="sidebarCollapsed ? 'Expand contents' : 'Collapse contents'"
         >
-          <svg class="w-3.5 h-3.5 transition-transform" :class="{ 'rotate-180': sidebarCollapsed }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-3.5 h-3.5 transition-transform" :class="{ 'rotate-180': !sidebarCollapsed }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
           </svg>
         </button>
@@ -323,18 +329,6 @@
                 ></audio>
               </div>
             </div>
-
-            <AITutorPlayer
-              v-if="isStudentMode"
-              ref="aiTutorRef"
-              :key="`tutor-${currentPage.id}`"
-              :page-id="currentPage.id"
-              @block-active="onTutorBlockActive"
-              @block-cleared="tutorActiveBlockIndex = null"
-              @status-change="tutorStatus = $event"
-              @progress="tutorProgress = $event"
-              class="mb-3"
-            />
 
             <!-- The book: drag a page corner to curl it, like heyzine.com/flip-book. Every page
                  renders up front (StPageFlip needs them all present to turn between), but only
@@ -737,7 +731,7 @@ const autoplayNarration = ref(false)
 const onNarrationEnded = () => {
   if (hasNextPage.value) {
     autoplayNarration.value = true
-    flipbookRef.value?.flipNext()
+    flipbookRef.value?.flipNext({ silent: true }) // auto-advance, not a reader gesture - no flip sound
   } else if (isStudentMode.value) {
     showCompletion.value = true
   }
@@ -773,6 +767,15 @@ const formatContent = (content: string): string => {
   // the src itself - see resolveContentAssetUrls().
   formatted = resolveContentAssetUrls(formatted)
 
+  // BookFlipbook's html mode mounts every page's content into the DOM at once (so the reader can
+  // flip between pages instantly), not just the current one - without this, the browser eagerly
+  // fetches every image on every page in the topic the moment it opens, not just the page being
+  // read. loading="lazy" defers a page's images until the reader actually flips near it; the
+  // negative lookahead skips any <img> that already specifies its own loading behavior.
+  formatted = formatted.replace(/<img(?:(?!loading=)[^>])*>/gi, (tag) =>
+    tag.replace(/\s*\/?>$/, ' loading="lazy" decoding="async"$&')
+  )
+
   return formatted
 }
 
@@ -790,6 +793,14 @@ const blockEls = ref<Record<number, HTMLElement | null>>({})
 const aiTutorRef = ref<InstanceType<typeof AITutorPlayer> | null>(null)
 const tutorStatus = ref<'idle' | 'loading' | 'ready' | 'error'>('idle')
 const tutorProgress = ref<{ current: number; total: number }>({ current: 0, total: 0 })
+const showTutorPanel = ref(false)
+
+const onTutorHeaderClick = () => {
+  showTutorPanel.value = !showTutorPanel.value
+  if (showTutorPanel.value && tutorStatus.value === 'idle') {
+    aiTutorRef.value?.start()
+  }
+}
 
 const setBlockRef = (el: unknown, i: number) => {
   blockEls.value[i] = (el as HTMLElement) || null
@@ -861,6 +872,7 @@ const hideBrokenImages = (e: Event) => {
 
 watch(currentPage, (page) => {
   if (page) visitedPageIds.value.add(page.id)
+  showTutorPanel.value = false
 }, { immediate: true })
 
 onMounted(() => {
@@ -1013,6 +1025,13 @@ onBeforeUnmount(() => {
   height: auto;
   border-radius: 8px;
   margin: 1em 0;
+}
+
+.prose :deep(video.enote-video) {
+  max-width: 100%;
+  border-radius: 8px;
+  margin: 1em 0;
+  background: #000;
 }
 
 .prose :deep(iframe) {

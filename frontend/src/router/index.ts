@@ -52,6 +52,7 @@ const TeacherReports = () => import('../pages/teacher/Reports.vue')
 const TeacherEngagement = () => import('../pages/teacher/Engagement.vue')
 const TeacherConstructs = () => import('../pages/teacher/Constructs.vue')
 const TeacherMarksheet = () => import('../pages/teacher/Marksheet.vue')
+const TeacherPhysicalExams = () => import('../pages/teacher/PhysicalExams.vue')
 const TeacherVirtualLab = () => import('../pages/teacher/VirtualLab.vue')
 const TeacherSettings = () => import('../pages/teacher/Settings.vue')
 const StudentPreview = () => import('../pages/teacher/StudentPreview.vue')
@@ -75,6 +76,7 @@ const HODStudents = () => import('../pages/hod/Students.vue')
 const HODSubjects = () => import('../pages/hod/Subjects.vue')
 const HODReports = () => import('../pages/hod/Reports.vue')
 const HODMarksheet = () => import('../pages/hod/Marksheet.vue')
+const HODPhysicalExams = () => import('../pages/hod/PhysicalExams.vue')
 const HODApprovals = () => import('../pages/hod/Approvals.vue')
 const HODLibrary = () => import('../pages/hod/Library.vue')
 const HODENotes = () => import('../pages/hod/ENotes.vue')
@@ -104,6 +106,7 @@ const AdminConstructs = () => import('../pages/admin/Constructs.vue')
 const AdminPromotion = () => import('../pages/admin/Promotion.vue')
 const AdminReports = () => import('../pages/admin/Reports.vue')
 const AdminMarksheet = () => import('../pages/admin/Marksheet.vue')
+const AdminPhysicalExams = () => import('../pages/admin/PhysicalExams.vue')
 const AdminRewards = () => import('../pages/admin/Rewards.vue')
 const AdminVirtualLab = () => import('../pages/admin/VirtualLab.vue')
 const AdminAuditLogs = () => import('../pages/admin/AuditLogs.vue')
@@ -255,6 +258,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'enotes/preview/:id', name: 'ENotePreview', component: ENotePreview },
       { path: 'search', name: 'TeacherSearch', component: TeacherSearch },
       { path: 'marksheet', name: 'TeacherMarksheet', component: TeacherMarksheet },
+      { path: 'physical-exams', name: 'TeacherPhysicalExams', component: TeacherPhysicalExams },
       { path: 'virtual-lab', name: 'TeacherVirtualLab', component: TeacherVirtualLab }
     ]
   },
@@ -284,6 +288,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'live-classes', name: 'HODLiveClasses', component: HODLiveClasses },
       { path: 'chat', name: 'HODChat', component: HODChat },
       { path: 'marksheet', name: 'HODMarksheet', component: HODMarksheet },
+      { path: 'physical-exams', name: 'HODPhysicalExams', component: HODPhysicalExams },
       { path: 'search', name: 'HODSearch', component: HODSearch }
     ]
   },
@@ -323,6 +328,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'live-classes', name: 'AdminLiveClasses', component: AdminLiveClasses },
       { path: 'chat', name: 'AdminChat', component: AdminChat },
       { path: 'marksheet', name: 'AdminMarksheet', component: AdminMarksheet },
+      { path: 'physical-exams', name: 'AdminPhysicalExams', component: AdminPhysicalExams },
       { path: 'rewards', name: 'AdminRewards', component: AdminRewards },
       { path: 'virtual-lab', name: 'AdminVirtualLab', component: AdminVirtualLab },
       { path: 'search', name: 'AdminSearch', component: AdminSearch }

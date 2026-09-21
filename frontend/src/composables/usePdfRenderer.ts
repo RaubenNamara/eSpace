@@ -156,6 +156,7 @@ export function usePdfRenderer(pdfUrl: Ref<string>, options: UsePdfRendererOptio
   return {
     loading,
     error,
+    pdfDoc,
     currentPage,
     totalPages,
     scale,

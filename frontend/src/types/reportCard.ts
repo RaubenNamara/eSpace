@@ -3,6 +3,7 @@ export interface ReportCardConstruct {
   score_obtained: number
   score_total: number
   weight: number
+  source_type: 'assignment' | 'physical'
 }
 
 export interface ReportCardCompetency {
@@ -71,6 +72,7 @@ export interface ReportCard {
     first_name: string
     last_name: string
     admission_number: string
+    profile_photo: string | null
   }
   term: {
     id: number

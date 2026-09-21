@@ -17,12 +17,13 @@ class HtmlSanitizer
         'div', 'span',
         'figure', 'figcaption',
         'iframe',
-        'oembed'
+        'oembed',
+        'video'
     ];
 
     private static $allowedAttributes = [
         'href' => ['a'],
-        'src' => ['img', 'iframe'],
+        'src' => ['img', 'iframe', 'video'],
         'alt' => ['img'],
         'title' => ['img', 'a'],
         'width' => ['img', 'iframe', 'td', 'th'],
@@ -43,6 +44,8 @@ class HtmlSanitizer
         'scrolling' => ['iframe'],
         'allow' => ['iframe'],
         'loading' => ['img'],
+        'controls' => ['video'],
+        'preload' => ['video'],
         'url' => ['oembed'],
         'data-oembed-url' => ['iframe', 'figure', 'oembed'],
         'data-oembed-type' => ['iframe', 'figure', 'oembed'],
@@ -217,9 +220,9 @@ class HtmlSanitizer
             }
         }
 
-        // Drop <img> elements left with no src (e.g. an upload placeholder CKEditor inserted
-        // that never resolved to a real URL) - an empty img element has nothing to render.
-        $emptyImages = $xpath->query('//img[not(@src) or normalize-space(@src) = ""]');
+        // Drop <img>/<video> elements left with no src (e.g. an upload placeholder CKEditor
+        // inserted that never resolved to a real URL) - nothing to render without one.
+        $emptyImages = $xpath->query('//img[not(@src) or normalize-space(@src) = ""] | //video[not(@src) or normalize-space(@src) = ""]');
         foreach ($emptyImages as $img) {
             $img->parentNode->removeChild($img);
         }
@@ -279,8 +282,9 @@ class HtmlSanitizer
             return false;
         }
 
-        // For img tags, allow relative URLs (starting with /)
-        if ($tagName === 'img' && strpos($url, '/') === 0) {
+        // For img/video tags, allow relative URLs (starting with /) - both are always uploaded
+        // files served from this app's own backend, never an arbitrary external host.
+        if (($tagName === 'img' || $tagName === 'video') && strpos($url, '/') === 0) {
             return true;
         }
 

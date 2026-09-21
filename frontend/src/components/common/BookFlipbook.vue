@@ -43,6 +43,31 @@ const stagingRef = ref<HTMLElement | null>(null)
 let flip: PageFlip | null = null
 let resizeObserver: ResizeObserver | null = null
 
+// How long one flip's turning animation takes - also passed to PageFlip's own `flippingTime`
+// setting below, so the two stay in sync.
+const FLIPPING_TIME = 700
+
+// Set right before a programmatic (not drag/click) page turn - e.g. Read Aloud auto-advancing to
+// the next page once narration ends - so the flip sound only ever plays for an actual reader
+// gesture, not a turn the app triggered on its own. Consumed and reset by the next 'flip' event.
+let suppressNextFlipSound = false
+
+// StPageFlip fires its own 'flip' event twice per single page turn - once as the turn starts and
+// again when the page finishes landing on the other side - so playing a sound on every event
+// doubles up. Only the first one (the actual turn) should make a sound; anything else firing
+// before one flip's animation would even be done landing is that same turn's second event, not a
+// new flip, so it's ignored.
+let lastFlipSoundAt = 0
+
+// Below this width, force single-page-at-a-time flipping instead of StPageFlip's two-page
+// spread, which gets cramped not just on phones but on tablets too - two 700px-reference pages
+// side by side need real desktop width to not feel cramped. Matches Tailwind's `lg` breakpoint,
+// so phones and tablets (portrait and most landscape) get single-page, and only laptop/desktop
+// widths get the two-page spread.
+const MOBILE_QUERY = '(max-width: 1023px)'
+const mq = typeof window !== 'undefined' ? window.matchMedia(MOBILE_QUERY) : null
+const isMobile = ref(mq?.matches ?? false)
+
 function build() {
   const host = hostRef.value
   if (!host || !props.pageWidth || !props.pageHeight) return
@@ -53,16 +78,25 @@ function build() {
     width: props.pageWidth,
     height: props.pageHeight,
     size: 'stretch',
-    minWidth: 300,
+    // A minWidth far larger than the book ever gets stretched to keeps StPageFlip's internal
+    // "container narrower than 2x minWidth -> single page" check permanently true on mobile.
+    minWidth: isMobile.value ? 4000 : 300,
     maxWidth: 2000,
     minHeight: 400,
     maxHeight: 2800,
     showCover: props.showCover,
     maxShadowOpacity: 0.5,
-    flippingTime: 700,
+    flippingTime: FLIPPING_TIME,
     mobileScrollSupport: true,
     startPage: props.startPage,
   })
+
+  // StPageFlip's constructor also applies `minWidth` as this container's own inline CSS
+  // min-width (so it never gets squeezed smaller than one page in a normal fluid layout) - but
+  // that fights us on mobile, where minWidth is inflated on purpose just to force single-page
+  // mode. Strip it back off so the actual layout width still comes from the real container, and
+  // only the internal single/two-page threshold check sees the inflated value.
+  host.style.minWidth = ''
 
   if (props.mode === 'html') {
     flip.loadFromHTML(Array.from(stagingRef.value!.children) as HTMLElement[])
@@ -70,7 +104,12 @@ function build() {
     flip.loadFromImages(props.images)
   }
   flip.on('flip', (e) => {
-    if (!props.muted) playPageFlipSound()
+    const now = Date.now()
+    if (!props.muted && !suppressNextFlipSound && now - lastFlipSoundAt >= FLIPPING_TIME) {
+      playPageFlipSound()
+      lastFlipSoundAt = now
+    }
+    suppressNextFlipSound = false
     emit('flip', e.data)
   })
 
@@ -88,8 +127,20 @@ function destroy() {
   flip = null
 }
 
-onMounted(() => nextTick(build))
-onBeforeUnmount(destroy)
+function handleMqChange(e: MediaQueryListEvent) {
+  if (e.matches === isMobile.value) return
+  isMobile.value = e.matches
+  rebuild()
+}
+
+onMounted(() => {
+  nextTick(build)
+  mq?.addEventListener('change', handleMqChange)
+})
+onBeforeUnmount(() => {
+  mq?.removeEventListener('change', handleMqChange)
+  destroy()
+})
 
 // A different book (new document/topic) replaces pages wholesale - rebuild rather than
 // updateFrom*, since the aspect ratio (pageWidth/pageHeight) may have changed too. Image mode
@@ -106,9 +157,18 @@ function rebuild() {
   nextTick(build)
 }
 
-function flipNext() { flip?.flipNext() }
-function flipPrev() { flip?.flipPrev() }
-function turnToPage(page: number) { flip?.turnToPage(page) }
+function flipNext(opts?: { silent?: boolean }) {
+  if (opts?.silent) suppressNextFlipSound = true
+  flip?.flipNext()
+}
+function flipPrev(opts?: { silent?: boolean }) {
+  if (opts?.silent) suppressNextFlipSound = true
+  flip?.flipPrev()
+}
+function turnToPage(page: number, opts?: { silent?: boolean }) {
+  if (opts?.silent) suppressNextFlipSound = true
+  flip?.turnToPage(page)
+}
 function getCurrentPageIndex(): number { return flip?.getCurrentPageIndex() ?? 0 }
 
 defineExpose({ flipNext, flipPrev, turnToPage, getCurrentPageIndex, rebuild })

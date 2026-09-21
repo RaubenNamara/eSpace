@@ -130,14 +130,18 @@ class ReportCardService
                 $weight = ReportCardGradingService::percentageToWeight($pct, $maxWeight);
                 $weights[] = $weight;
                 $constructs[] = [
-                    'assignment_id' => (int) $item['assignment_id'],
+                    'assignment_id' => $item['assignment_id'] !== null ? (int) $item['assignment_id'] : null,
+                    'physical_assessment_id' => $item['physical_assessment_id'] !== null ? (int) $item['physical_assessment_id'] : null,
+                    'source_type' => $item['source_type'],
                     'construct_label' => $item['title'],
                     'score_obtained' => (float) $item['total_score'],
                     'score_total' => (float) $item['total_marks'],
                     'weight' => $weight,
                 ];
-                $hashParts[] = $item['assignment_id'] . ':' . round($pct, 2);
-                $lastTeacherId = (int) $item['teacher_id'];
+                $hashParts[] = $item['source_type'] . ':' . ($item['assignment_id'] ?? $item['physical_assessment_id']) . ':' . round($pct, 2);
+                if ($item['teacher_id'] !== null) {
+                    $lastTeacherId = (int) $item['teacher_id'];
+                }
             }
 
             $avgWeight = ReportCardGradingService::averageWeight($weights);
@@ -352,7 +356,10 @@ class ReportCardService
     /**
      * Every returned (student-visible) submission within the term's date window, grouped by
      * subject - assignments have no term_id FK, only due_date, so that's the filter used. Pass
-     * $onlySubjectId to scope to a single subject (the per-subject generation tier).
+     * $onlySubjectId to scope to a single subject (the per-subject generation tier). Merges in
+     * physical (offline) exam marks for the same student/term/subject via
+     * fetchPhysicalItemsBySubject(), normalized to the same item shape, so they feed the same
+     * weighted-grade averaging as online assignments.
      */
     private function fetchGradedItemsBySubject(int $studentId, array $term, ?int $onlySubjectId = null): array
     {
@@ -380,7 +387,64 @@ class ReportCardService
 
         $bySubject = [];
         foreach ($stmt->fetchAll() as $row) {
+            $row['assignment_id'] = (int) $row['assignment_id'];
+            $row['physical_assessment_id'] = null;
+            $row['source_type'] = 'assignment';
             $bySubject[(int) $row['subject_id']][] = $row;
+        }
+
+        foreach ($this->fetchPhysicalItemsBySubject($studentId, $term, $onlySubjectId) as $subjectId => $items) {
+            foreach ($items as $item) {
+                $bySubject[$subjectId][] = $item;
+            }
+        }
+
+        return $bySubject;
+    }
+
+    /**
+     * Physical (offline) exam marks for this student/term(/subject), normalized to the same
+     * item shape fetchGradedItemsBySubject() builds from assignment_submissions - only exams
+     * whose creator has toggled include_on_report on, and only where a mark has actually been
+     * entered for this student.
+     */
+    private function fetchPhysicalItemsBySubject(int $studentId, array $term, ?int $onlySubjectId = null): array
+    {
+        $subjectFilter = $onlySubjectId ? ' AND pa.subject_id = :subject_id' : '';
+
+        $stmt = $this->getDb()->prepare(
+            "SELECT pa.id AS physical_assessment_id, pa.title, pa.subject_id, pa.max_score,
+                    pas.score
+             FROM physical_assessment_scores pas
+             INNER JOIN physical_assessments pa ON pa.id = pas.physical_assessment_id
+             WHERE pas.student_id = :student_id AND pa.term_id = :term_id
+               AND pa.include_on_report = 1 AND pa.deleted_at IS NULL AND pas.score IS NOT NULL{$subjectFilter}
+             ORDER BY pa.subject_id, pa.exam_date ASC"
+        );
+        $params = [
+            'student_id' => $studentId,
+            'term_id' => $term['id'],
+        ];
+        if ($onlySubjectId) {
+            $params['subject_id'] = $onlySubjectId;
+        }
+        $stmt->execute($params);
+
+        $bySubject = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $maxScore = (float) $row['max_score'];
+            $score = (float) $row['score'];
+            $bySubject[(int) $row['subject_id']][] = [
+                'assignment_id' => null,
+                'physical_assessment_id' => (int) $row['physical_assessment_id'],
+                'source_type' => 'physical',
+                'title' => $row['title'],
+                'subject_id' => (int) $row['subject_id'],
+                'teacher_id' => null,
+                'total_marks' => $maxScore,
+                'total_score' => $score,
+                'percentage' => $maxScore > 0 ? round(($score / $maxScore) * 100, 2) : 0.0,
+            ];
         }
 
         return $bySubject;
@@ -602,13 +666,15 @@ class ReportCardService
         $stmt->execute(['id' => $subjectRowId]);
 
         $insertConstruct = $db->prepare(
-            "INSERT INTO report_card_constructs (report_card_subject_id, assignment_id, construct_label, score_obtained, score_total, weight, created_at)
-             VALUES (:report_card_subject_id, :assignment_id, :construct_label, :score_obtained, :score_total, :weight, NOW())"
+            "INSERT INTO report_card_constructs (report_card_subject_id, assignment_id, physical_assessment_id, source_type, construct_label, score_obtained, score_total, weight, created_at)
+             VALUES (:report_card_subject_id, :assignment_id, :physical_assessment_id, :source_type, :construct_label, :score_obtained, :score_total, :weight, NOW())"
         );
         foreach ($subject['constructs'] as $construct) {
             $insertConstruct->execute([
                 'report_card_subject_id' => $subjectRowId,
                 'assignment_id' => $construct['assignment_id'],
+                'physical_assessment_id' => $construct['physical_assessment_id'],
+                'source_type' => $construct['source_type'],
                 'construct_label' => $construct['construct_label'],
                 'score_obtained' => $construct['score_obtained'],
                 'score_total' => $construct['score_total'],
@@ -628,7 +694,7 @@ class ReportCardService
         $db = $this->getDb();
 
         $stmt = $db->prepare(
-            "SELECT rc.*, s.first_name, s.last_name, s.admission_number, c.name AS class_name, c.stream_name, c.level AS class_level,
+            "SELECT rc.*, s.first_name, s.last_name, s.admission_number, s.profile_photo, c.name AS class_name, c.stream_name, c.level AS class_level,
                     t.name AS term_name, t.start_date AS term_start_date, t.end_date AS term_end_date, ay.name AS academic_year_name
              FROM report_cards rc
              INNER JOIN students s ON rc.student_id = s.id
@@ -680,6 +746,7 @@ class ReportCardService
                     'score_obtained' => (float) $c['score_obtained'],
                     'score_total' => (float) $c['score_total'],
                     'weight' => (int) $c['weight'],
+                    'source_type' => $c['source_type'],
                 ], $stmt2->fetchAll()),
                 'competencies' => array_map(fn($c) => [
                     'category' => $c['assessment_category'],
@@ -722,6 +789,7 @@ class ReportCardService
                 'first_name' => $report['first_name'],
                 'last_name' => $report['last_name'],
                 'admission_number' => $report['admission_number'],
+                'profile_photo' => $report['profile_photo'],
             ],
             'term' => [
                 'id' => (int) $report['term_id'],
