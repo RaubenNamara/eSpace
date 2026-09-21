@@ -1,5 +1,10 @@
-# Prevent execution of any script inside the uploads directory
-php_flag engine off
+# Prevent execution of any script inside the uploads directory. php_flag is only a valid directive
+# when mod_php is handling PHP, so it's guarded here - on PHP-via-LSAPI/php-fpm setups (as used in
+# production), an unguarded php_flag isn't a recognized directive and makes Apache 500 on every
+# request under this directory. The FilesMatch block below is the real protection either way.
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
 
 <FilesMatch "\.(php|php\d|phtml|phar|pl|py|cgi|sh)$">
     Require all denied

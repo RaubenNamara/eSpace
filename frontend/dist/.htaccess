@@ -16,6 +16,13 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
 
+  # If the docroot points straight at this folder itself (e.g. a subdomain whose docroot is set
+  # to public_html/eSpace, rather than public_html one level up), incoming requests still carry
+  # the leading "eSpace/" segment baked into every URL by Vite's base: '/eSpace/' config. Strip it
+  # here so the rules below - which assume that segment is already gone, as it is when the docroot
+  # is one level up - work the same regardless of which docroot depth this got deployed under.
+  RewriteRule ^eSpace/(.*)$ $1 [L]
+
   # Requests under backend/ (e.g. someone hitting it directly, or the LiveClassController BBB
   # return URL) are left completely alone - backend/public/.htaccess owns that space already.
   RewriteRule ^backend/ - [L]
