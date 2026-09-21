@@ -1,6 +1,6 @@
 <template>
-  <div ref="viewerRef" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-1 sm:p-3">
-    <div class="bg-white dark:bg-gray-800 w-full h-full sm:h-[97vh] lg:h-[98vh] sm:max-w-6xl lg:max-w-7xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+  <div ref="viewerRef" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-0 lg:p-3">
+    <div class="bg-white dark:bg-gray-800 w-full h-full lg:h-[98vh] lg:max-w-7xl lg:rounded-2xl shadow-2xl overflow-hidden flex flex-col">
       <!-- Header -->
       <div class="relative flex-shrink-0 bg-emerald-600 px-3 sm:px-6 py-2 sm:py-3">
         <div class="flex items-start justify-between gap-3">
@@ -101,7 +101,7 @@
              positioning would pin the drawer/backdrop to the browser window instead of the card. -->
         <div v-if="showToc" @click="showToc = false" class="absolute inset-0 bg-black/50 z-30 lg:hidden"></div>
 
-        <div class="flex-1 overflow-hidden flex justify-center items-center p-1 sm:p-3 bg-gray-200 dark:bg-gray-900" @contextmenu.prevent>
+        <div class="flex-1 overflow-hidden flex justify-center items-center p-0 lg:p-3 bg-gray-200 dark:bg-gray-900" @contextmenu.prevent>
           <div v-if="loading" class="text-gray-500 dark:text-gray-300 py-20 text-sm">Loading document…</div>
           <div v-else-if="error" class="text-red-400 py-20 text-sm">{{ error }}</div>
           <div v-else-if="preparing" class="w-full max-w-xs text-center">

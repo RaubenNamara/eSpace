@@ -321,13 +321,17 @@
       </div>
 
       <!-- Main Content Area -->
-      <div class="flex-1 overflow-y-auto">
-        <div class="w-full max-w-5xl xl:max-w-7xl 2xl:max-w-[1800px] mx-auto p-2 sm:p-4 2xl:p-6">
+      <div class="flex-1 overflow-y-auto flex flex-col lg:block">
+        <!-- Below `lg` this becomes a flex column filling the full remaining height (no vh
+             guessing) so the book claims every pixel between the header and the screen edge -
+             at `lg`+ it reverts to plain block flow with its old fixed sizing, where there's
+             already room to spare. -->
+        <div class="w-full max-w-5xl xl:max-w-7xl 2xl:max-w-[1800px] mx-auto p-0 lg:p-4 2xl:p-6 flex-1 min-h-0 flex flex-col lg:block">
           <template v-if="currentPage">
             <!-- Read-aloud + AI tutor controls for whichever page is open right now - kept
                  outside the book itself since it's the reader's current position that's live,
                  not a specific page object being turned. -->
-            <div v-if="narrationAudioUrl" class="mb-3">
+            <div v-if="narrationAudioUrl" class="mx-3 mt-2 mb-2 lg:mx-0 lg:mt-0 lg:mb-3 flex-shrink-0">
               <p class="text-xs font-medium text-indigo-600 dark:text-indigo-400 mb-1.5 flex items-center gap-1">
                 <span>🔊</span><span>Read Aloud</span>
               </p>
@@ -350,7 +354,7 @@
                  renders up front (StPageFlip needs them all present to turn between), but only
                  the page currently open gets the narration-highlight markup - the rest render as
                  plain formatted content. -->
-            <div class="h-[74vh] sm:h-[80vh] min-h-[420px] mb-3">
+            <div class="flex-1 min-h-0 lg:flex-none lg:h-[80vh] lg:min-h-[420px] lg:mb-3">
               <BookFlipbook
                 ref="flipbookRef"
                 mode="html"
@@ -397,7 +401,7 @@
           </template>
 
           <!-- Empty state -->
-          <div v-else class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-12 mb-6 text-center">
+          <div v-else class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-12 mb-6 mx-3 lg:mx-0 flex-shrink-0 text-center">
             <div class="w-14 h-14 mx-auto mb-3 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
               <svg class="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
@@ -407,7 +411,7 @@
           </div>
 
           <!-- Navigation Buttons -->
-          <div class="flex items-center justify-between">
+          <div class="flex items-center justify-between flex-shrink-0 px-3 pb-3 pt-2 lg:px-0 lg:pb-0 lg:pt-0">
             <button
               @click="handlePrevious"
               :disabled="!hasPreviousPage"

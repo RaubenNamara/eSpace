@@ -194,7 +194,7 @@
            so it doesn't permanently eat vertical space on long pages. -->
       <header
         class="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-40 transition-transform duration-300"
-        :class="{ '-translate-y-full': headerHidden }"
+        :class="[{ '-translate-y-full': headerHidden }, isImmersiveReader ? 'hidden lg:block' : '']"
       >
         <div class="flex items-center justify-between px-6 py-3">
           <div class="flex items-center gap-2 flex-shrink-0">
@@ -416,7 +416,7 @@
       <ProfileSettingsModal v-if="showProfileModal" :focus-section="profileModalFocusSection" @close="showProfileModal = false" />
 
       <!-- Page Content -->
-      <main class="p-4 sm:p-6 flex-1">
+      <main class="flex-1" :class="isImmersiveReader ? 'p-0 lg:p-6' : 'p-4 sm:p-6'">
         <router-view />
       </main>
     </div>
@@ -459,6 +459,13 @@ const showRoleSwitcher = ref(false)
 const sidebarCollapsed = ref(false)
 
 const isIconOnly = computed(() => sidebarCollapsed.value)
+
+// The eNotes reader (ENotePreview.vue) is its own full-bleed, full-height page - it already
+// renders its own header and manages its own viewport height. Below `lg` there's no room to
+// spare for this shell's own sticky header + `<main>` padding on top of that, so both are
+// dropped on mobile/tablet for routes that opt in, letting the reader claim the whole screen
+// instead of being squeezed into whatever's left over.
+const isImmersiveReader = computed(() => !!route.meta.immersiveReader)
 
 // Pixel offset for the collapse-arrow button: it sits centered on the sidebar's right edge,
 // which is 12px (the `lg:left-3` inset) plus the sidebar's own width - since the button is 24px
