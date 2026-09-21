@@ -15,7 +15,11 @@ class ENoteImageController extends Controller
         'image/gif',
         'image/webp'
     ];
-    private $maxFileSize = 5242880; // 5MB in bytes
+    // Raised from the old 5MB cap now that oversized images get resized/compressed after upload
+    // (see resizeAndCompress()) - a phone photo can easily be 8-15MB at full resolution, and
+    // rejecting those outright was itself a source of "image didn't load" reports (a teacher who
+    // didn't notice the upload error toast would assume it saved).
+    private $maxFileSize = 15728640; // 15MB in bytes
     private $uploadDir;
 
     public function __construct()
@@ -58,7 +62,7 @@ class ENoteImageController extends Controller
             if ($file['size'] > $this->maxFileSize) {
                 $this->json([
                     'error' => [
-                        'message' => 'File size exceeds maximum limit of 5MB'
+                        'message' => 'File size exceeds maximum limit of 15MB'
                     ]
                 ], 400);
                 return;
@@ -117,6 +121,18 @@ class ENoteImageController extends Controller
                 return;
             }
 
+            // Downscale/re-encode oversized images so students actually get a page-sized image
+            // instead of a multi-megabyte phone photo at full resolution - this was the main
+            // cause of slow-loading eNote images. Best-effort: if GD isn't available on this PHP
+            // install, or anything about the source image is unexpected, the original upload is
+            // still perfectly usable as-is, so failures here are swallowed rather than failing
+            // the whole upload over a nice-to-have.
+            try {
+                $this->resizeAndCompress($filepath, $mimeType);
+            } catch (\Throwable $e) {
+                error_log('ENoteImageController: resize skipped - ' . $e->getMessage());
+            }
+
             // Return CKEditor-compatible response. This is a root-relative path (relative to
             // backend/public/) - the frontend upload adapter is responsible for prefixing it with
             // the app's /eSpace/ base path before handing it to CKEditor, the same way every
@@ -144,6 +160,58 @@ class ENoteImageController extends Controller
     private function generateUniqueFilename(string $extension): string
     {
         return uniqid('enote_', true) . '_' . time() . '.' . $extension;
+    }
+
+    // Resizes an oversized image down to a page-appropriate maximum dimension and re-encodes it
+    // at a reasonable quality - both animated GIFs (would lose their animation on re-encode, see
+    // the move_uploaded_file() comment above) and already-small images are left untouched.
+    private function resizeAndCompress(string $filepath, string $mimeType): void
+    {
+        if (!extension_loaded('gd') || $mimeType === 'image/gif') {
+            return;
+        }
+
+        $maxDimension = 1600;
+        $info = getimagesize($filepath);
+        if (!$info) {
+            return;
+        }
+        [$width, $height] = $info;
+        if ($width <= $maxDimension && $height <= $maxDimension) {
+            return;
+        }
+
+        $source = match ($mimeType) {
+            'image/jpeg', 'image/jpg' => imagecreatefromjpeg($filepath),
+            'image/png' => imagecreatefrompng($filepath),
+            'image/webp' => function_exists('imagecreatefromwebp') ? imagecreatefromwebp($filepath) : false,
+            default => false,
+        };
+        if (!$source) {
+            return;
+        }
+
+        $scale = min($maxDimension / $width, $maxDimension / $height);
+        $newWidth = max(1, (int) round($width * $scale));
+        $newHeight = max(1, (int) round($height * $scale));
+
+        $resized = imagecreatetruecolor($newWidth, $newHeight);
+        if ($mimeType === 'image/png') {
+            // Preserve transparency - without this, transparent areas turn solid black.
+            imagealphablending($resized, false);
+            imagesavealpha($resized, true);
+        }
+        imagecopyresampled($resized, $source, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+
+        match ($mimeType) {
+            'image/jpeg', 'image/jpg' => imagejpeg($resized, $filepath, 82),
+            'image/png' => imagepng($resized, $filepath, 6),
+            'image/webp' => function_exists('imagewebp') ? imagewebp($resized, $filepath, 82) : null,
+            default => null,
+        };
+
+        imagedestroy($source);
+        imagedestroy($resized);
     }
 
     private function isValidImage(string $filepath): bool

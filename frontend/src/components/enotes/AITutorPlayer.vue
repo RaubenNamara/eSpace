@@ -1,15 +1,8 @@
 <template>
-  <div class="mb-6">
-    <button
-      v-if="status === 'idle'"
-      @click="fetchWalkthrough(false)"
-      class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-700 transition-colors shadow-sm"
-    >
-      <span>🧑‍🏫</span>
-      <span>AI Tutor – Explain</span>
-    </button>
-
-    <div v-else class="rounded-xl border border-purple-100 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/20 p-4">
+  <!-- No idle-state trigger here - the header's AI Tutor button is the only entry point (calls
+       start() via ref) and shows/hides this panel; this only ever renders once the walkthrough
+       has actually been requested. -->
+  <div v-if="status !== 'idle'" class="rounded-xl border border-purple-100 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/20 p-4 shadow-xl">
       <div class="flex items-center gap-2 mb-3">
         <span class="text-lg">🧑‍🏫</span>
         <h4 class="text-sm font-semibold text-purple-900 dark:text-purple-200">AI Tutor Walkthrough</h4>
@@ -124,7 +117,6 @@
         </div>
       </template>
     </div>
-  </div>
 </template>
 
 <script setup lang="ts">

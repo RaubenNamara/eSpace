@@ -77,7 +77,7 @@ const BLOCK_TAGS = new Set(['P', 'UL', 'OL', 'BLOCKQUOTE', 'TABLE'])
 // they're still not narratable, but they must still be displayed, so they're kept as
 // narrationIndex: null entries instead of being excluded from the split.
 const isMediaElement = (el: Element): boolean =>
-  el.tagName === 'FIGURE' || el.tagName === 'IFRAME' || (el.tagName === 'SPAN' && el.classList.contains('yt-embed'))
+  el.tagName === 'FIGURE' || el.tagName === 'IFRAME' || el.tagName === 'VIDEO' || (el.tagName === 'SPAN' && el.classList.contains('yt-embed'))
 
 export interface ContentBlock {
   html: string

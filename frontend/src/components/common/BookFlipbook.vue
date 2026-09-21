@@ -43,10 +43,28 @@ const stagingRef = ref<HTMLElement | null>(null)
 let flip: PageFlip | null = null
 let resizeObserver: ResizeObserver | null = null
 
+// How long one flip's turning animation takes - also passed to PageFlip's own `flippingTime`
+// setting below, so the two stay in sync.
+const FLIPPING_TIME = 700
+
+// Set right before a programmatic (not drag/click) page turn - e.g. Read Aloud auto-advancing to
+// the next page once narration ends - so the flip sound only ever plays for an actual reader
+// gesture, not a turn the app triggered on its own. Consumed and reset by the next 'flip' event.
+let suppressNextFlipSound = false
+
+// StPageFlip fires its own 'flip' event twice per single page turn - once as the turn starts and
+// again when the page finishes landing on the other side - so playing a sound on every event
+// doubles up. Only the first one (the actual turn) should make a sound; anything else firing
+// before one flip's animation would even be done landing is that same turn's second event, not a
+// new flip, so it's ignored.
+let lastFlipSoundAt = 0
+
 // Below this width, force single-page-at-a-time flipping instead of StPageFlip's two-page
-// spread, which gets cramped on phones. Matches the Tailwind `sm` breakpoint the rest of the
-// reader UI already uses.
-const MOBILE_QUERY = '(max-width: 639px)'
+// spread, which gets cramped not just on phones but on tablets too - two 700px-reference pages
+// side by side need real desktop width to not feel cramped. Matches Tailwind's `lg` breakpoint,
+// so phones and tablets (portrait and most landscape) get single-page, and only laptop/desktop
+// widths get the two-page spread.
+const MOBILE_QUERY = '(max-width: 1023px)'
 const mq = typeof window !== 'undefined' ? window.matchMedia(MOBILE_QUERY) : null
 const isMobile = ref(mq?.matches ?? false)
 
@@ -68,7 +86,7 @@ function build() {
     maxHeight: 2800,
     showCover: props.showCover,
     maxShadowOpacity: 0.5,
-    flippingTime: 700,
+    flippingTime: FLIPPING_TIME,
     mobileScrollSupport: true,
     startPage: props.startPage,
   })
@@ -86,7 +104,12 @@ function build() {
     flip.loadFromImages(props.images)
   }
   flip.on('flip', (e) => {
-    if (!props.muted) playPageFlipSound()
+    const now = Date.now()
+    if (!props.muted && !suppressNextFlipSound && now - lastFlipSoundAt >= FLIPPING_TIME) {
+      playPageFlipSound()
+      lastFlipSoundAt = now
+    }
+    suppressNextFlipSound = false
     emit('flip', e.data)
   })
 
@@ -134,9 +157,18 @@ function rebuild() {
   nextTick(build)
 }
 
-function flipNext() { flip?.flipNext() }
-function flipPrev() { flip?.flipPrev() }
-function turnToPage(page: number) { flip?.turnToPage(page) }
+function flipNext(opts?: { silent?: boolean }) {
+  if (opts?.silent) suppressNextFlipSound = true
+  flip?.flipNext()
+}
+function flipPrev(opts?: { silent?: boolean }) {
+  if (opts?.silent) suppressNextFlipSound = true
+  flip?.flipPrev()
+}
+function turnToPage(page: number, opts?: { silent?: boolean }) {
+  if (opts?.silent) suppressNextFlipSound = true
+  flip?.turnToPage(page)
+}
 function getCurrentPageIndex(): number { return flip?.getCurrentPageIndex() ?? 0 }
 
 defineExpose({ flipNext, flipPrev, turnToPage, getCurrentPageIndex, rebuild })

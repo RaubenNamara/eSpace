@@ -45,6 +45,16 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4"></path>
               </svg>
             </button>
+            <button
+              v-if="bookImages.length > 0"
+              @click="showToc = !showToc"
+              class="p-2 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
+              title="Contents"
+            >
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+              </svg>
+            </button>
             <a
               v-if="allowDownload"
               :href="pdfUrl"
@@ -68,26 +78,65 @@
         </div>
       </div>
 
-      <!-- Book -->
-      <div class="flex-1 overflow-hidden flex justify-center items-center p-1 sm:p-3 bg-gray-200 dark:bg-gray-900" @contextmenu.prevent>
-        <div v-if="loading" class="text-gray-500 dark:text-gray-300 py-20 text-sm">Loading document…</div>
-        <div v-else-if="error" class="text-red-400 py-20 text-sm">{{ error }}</div>
-        <div v-else-if="preparing" class="w-full max-w-xs text-center">
-          <p class="text-sm text-gray-500 dark:text-gray-300 mb-2">Preparing your book… {{ prepared }} / {{ totalPages }}</p>
-          <div class="h-1.5 rounded-full bg-gray-300 dark:bg-gray-700 overflow-hidden">
-            <div class="h-full bg-emerald-600 transition-all" :style="{ width: `${totalPages ? (prepared / totalPages) * 100 : 0}%` }"></div>
+      <!-- Book + table of contents -->
+      <div class="flex-1 flex overflow-hidden relative">
+        <!-- Mobile/tablet backdrop for the contents drawer - absolute (not fixed) since this
+             viewer is a centered modal below the lg breakpoint, not a full-viewport page; fixed
+             positioning would pin the drawer/backdrop to the browser window instead of the card. -->
+        <div v-if="showToc" @click="showToc = false" class="absolute inset-0 bg-black/50 z-30 lg:hidden"></div>
+
+        <div class="flex-1 overflow-hidden flex justify-center items-center p-1 sm:p-3 bg-gray-200 dark:bg-gray-900" @contextmenu.prevent>
+          <div v-if="loading" class="text-gray-500 dark:text-gray-300 py-20 text-sm">Loading document…</div>
+          <div v-else-if="error" class="text-red-400 py-20 text-sm">{{ error }}</div>
+          <div v-else-if="preparing" class="w-full max-w-xs text-center">
+            <p class="text-sm text-gray-500 dark:text-gray-300 mb-2">Preparing your book… {{ prepared }} / {{ totalPages }}</p>
+            <div class="h-1.5 rounded-full bg-gray-300 dark:bg-gray-700 overflow-hidden">
+              <div class="h-full bg-emerald-600 transition-all" :style="{ width: `${totalPages ? (prepared / totalPages) * 100 : 0}%` }"></div>
+            </div>
+          </div>
+          <BookFlipbook
+            v-else
+            ref="flipbookRef"
+            :images="bookImages"
+            :page-width="bookPageWidth"
+            :page-height="bookPageHeight"
+            :muted="isMuted"
+            class="max-w-full max-h-full transition-shadow duration-300 hover:drop-shadow-2xl"
+            @flip="onFlip"
+          />
+        </div>
+
+        <!-- Right-side contents panel - the PDF's own bookmarks/outline when it has one, else a
+             plain page list, so a reader can jump straight to a topic instead of flipping through. -->
+        <div
+          v-if="bookImages.length > 0"
+          class="absolute lg:static inset-y-0 right-0 z-40 w-64 max-w-[80vw] bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col transform transition-transform duration-300 lg:translate-x-0"
+          :class="showToc ? 'translate-x-0' : 'translate-x-full'"
+        >
+          <div class="p-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
+            <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Contents</h3>
+            <button @click="showToc = false" class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors lg:hidden">
+              <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="flex-1 overflow-y-auto p-2 space-y-0.5">
+            <button
+              v-for="(entry, i) in tocEntries"
+              :key="i"
+              @click="jumpToPage(entry.page)"
+              :disabled="!entry.page"
+              :style="{ paddingLeft: `${8 + entry.depth * 14}px` }"
+              class="w-full text-left py-1.5 pr-2 rounded-lg text-xs truncate transition-colors disabled:opacity-50 disabled:cursor-default"
+              :class="entry.page === currentPage
+                ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 font-medium'
+                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'"
+            >
+              {{ entry.title }}
+            </button>
           </div>
         </div>
-        <BookFlipbook
-          v-else
-          ref="flipbookRef"
-          :images="bookImages"
-          :page-width="bookPageWidth"
-          :page-height="bookPageHeight"
-          :muted="isMuted"
-          class="max-w-full max-h-full transition-shadow duration-300 hover:drop-shadow-2xl"
-          @flip="onFlip"
-        />
       </div>
 
       <!-- Controls -->
@@ -119,7 +168,7 @@ const pdfUrl = computed(() => resolveAssetUrl(props.book.file_path))
 const allowDownload = computed(() => !!props.book.allow_download)
 
 const {
-  loading, error, currentPage, totalPages, scale,
+  loading, error, pdfDoc, currentPage, totalPages, scale,
   loadPdf, renderPage
 } = usePdfRenderer(pdfUrl, {
   // No live single-page canvas in this viewer any more - every page is pre-rendered once into a
@@ -199,6 +248,72 @@ const onFlip = (page: number) => {
 const goPrev = () => flipbookRef.value?.flipPrev()
 const goNext = () => flipbookRef.value?.flipNext()
 
+// Table of contents: the PDF's own embedded bookmarks/outline when it has one (most real
+// textbooks do), resolved down to a 1-indexed page number per entry; falls back to a plain
+// page-number list for documents with no outline, so "jump to a topic" always has something to
+// jump to.
+interface TocEntry {
+  title: string
+  page: number | null
+  depth: number
+}
+
+const showToc = ref(false)
+const tocEntries = ref<TocEntry[]>([])
+
+async function resolveOutlineDestPage(dest: unknown): Promise<number | null> {
+  try {
+    let explicitDest = dest
+    if (typeof dest === 'string') {
+      explicitDest = await pdfDoc.value.getDestination(dest)
+    }
+    if (!Array.isArray(explicitDest) || !explicitDest[0]) return null
+    const pageIndex = await pdfDoc.value.getPageIndex(explicitDest[0])
+    return pageIndex + 1
+  } catch {
+    return null
+  }
+}
+
+async function loadToc() {
+  if (!pdfDoc.value) return
+  try {
+    const outline = await pdfDoc.value.getOutline()
+    if (!outline || outline.length === 0) {
+      // No embedded bookmarks - a flat page list is still a faster way to jump than flipping.
+      tocEntries.value = Array.from({ length: totalPages.value }, (_, i) => ({
+        title: `Page ${i + 1}`,
+        page: i + 1,
+        depth: 0,
+      }))
+      return
+    }
+
+    const flat: TocEntry[] = []
+    const walk = async (items: any[], depth: number) => {
+      for (const item of items) {
+        flat.push({
+          title: item.title || 'Untitled',
+          page: item.dest ? await resolveOutlineDestPage(item.dest) : null,
+          depth,
+        })
+        if (item.items?.length) await walk(item.items, depth + 1)
+      }
+    }
+    await walk(outline, 0)
+    tocEntries.value = flat
+  } catch (err) {
+    console.error('Library PDF: failed to load table of contents', err)
+    tocEntries.value = []
+  }
+}
+
+const jumpToPage = (page: number | null) => {
+  if (!page) return
+  flipbookRef.value?.turnToPage(page - 1) // StPageFlip is 0-indexed
+  showToc.value = false
+}
+
 const viewerRef = ref<HTMLElement | null>(null)
 const toggleFullscreen = async () => {
   if (!document.fullscreenElement) await viewerRef.value?.requestFullscreen()
@@ -207,7 +322,10 @@ const toggleFullscreen = async () => {
 
 onMounted(async () => {
   await loadPdf()
-  if (!error.value) await prepareBook()
+  if (!error.value) {
+    await prepareBook()
+    await loadToc()
+  }
 })
 </script>
 

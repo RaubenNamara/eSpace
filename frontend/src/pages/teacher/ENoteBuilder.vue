@@ -239,7 +239,7 @@
                       : pageFitStatus === 'near' ? 'Getting close to a full page'
                       : 'Fits comfortably on one page' }}
                   </span>
-                  <span class="flex-shrink-0 font-semibold">{{ Math.round(pageFitRatio * 100) }}%</span>
+                  <span class="flex-shrink-0 font-semibold">~{{ Math.min(estimatedLines, PAGE_LINE_TARGET) }} of {{ PAGE_LINE_TARGET }} lines</span>
                 </div>
                 <div class="h-1.5 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
                   <div
@@ -411,11 +411,16 @@
     </div>
 
     <!-- Hidden page-fit probe: an off-screen clone of the real flipbook page's markup and fixed
-         size (matches ENotePreview.vue's book page exactly), used only to measure whether this
-         page's content overflows it. -->
+         size (matches ENotePreview.vue's book page exactly, including the optional title and
+         embed/asset-URL processing - see formatProbeContent() - since either can add real height
+         a raw content measurement would miss), used only to measure whether this page's content
+         overflows it. -->
     <div ref="pageFitProbeRef" class="page-fit-probe">
       <div class="h-1.5 bg-indigo-600"></div>
       <div class="p-5 sm:p-8">
+        <h2 v-if="hasMeaningfulTitle(currentPage?.title || '')" class="text-xl sm:text-2xl font-bold mb-3">
+          {{ currentPage?.title }}
+        </h2>
         <div class="flex flex-wrap items-center gap-3 text-xs mb-5">
           <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-600 text-white font-semibold">
             Page {{ currentPage?.order_number }} of {{ pages.length }}
@@ -423,7 +428,7 @@
           <span>{{ getPageWordCount(currentPage?.content || '') }} words</span>
           <span>{{ getReadingTime(currentPage?.content || '') }} min read</span>
         </div>
-        <div class="prose prose-sm sm:prose-base max-w-none" v-html="currentPage?.content || ''"></div>
+        <div class="prose prose-sm sm:prose-base max-w-none" v-html="formatProbeContent(currentPage?.content || '')"></div>
       </div>
     </div>
   </div>
@@ -435,7 +440,7 @@ import { useRouter, useRoute, onBeforeRouteLeave } from 'vue-router'
 import axios from 'axios'
 import CKEditor from '@/components/teacher/CKEditor.vue'
 import NarrationControls from '@/components/enotes/NarrationControls.vue'
-import { resolveContentAssetUrls } from '@/utils/richContent'
+import { autoEmbedYoutube, resolveContentAssetUrls } from '@/utils/richContent'
 import type { ENoteTopic, ENotePage, ENotePageForm, ENotePageNarration } from '@/types/enotes'
 import { useToastStore } from '@/stores/toast'
 import { useConfirmStore } from '@/stores/confirm'
@@ -706,11 +711,41 @@ const getReadingTime = (content: string): number => {
 // The reader shows this page inside a fixed-size flipbook page (see ENotePreview.vue's
 // BookFlipbook usage) rather than a free-scrolling column - 900 is that page's height in the
 // same reference pixels used there (`:page-height="900"`). The hidden probe below is styled
-// identically, so its natural (unclipped) height tells us how this content would actually sit
-// on that page, not just a word-count guess.
+// identically (including the title/embeds a real page can have - see updateProbeHtml()), so its
+// natural (unclipped) height tells us how this content would actually sit on that page, not just
+// a word-count guess. A full page (ratio 1.0) comfortably holds at least 24 lines of plain body
+// text at the reader's default font size - PAGE_LINE_TARGET turns that same measured ratio into
+// a "N of 24 lines" readout instead of a raw percentage, since that's a much more concrete sense
+// of "how full is this page" for a teacher than a percentage is. It's still driven by the exact
+// same pixel-height measurement underneath, so a bigger font (which renders each line taller)
+// still eats through the 24-line budget faster automatically - nothing extra needed for that.
 const PAGE_FIT_HEIGHT = 900
+const PAGE_LINE_TARGET = 24
 const pageFitProbeRef = ref<HTMLElement | null>(null)
 const pageFitRatio = ref(0)
+const estimatedLines = computed(() => Math.max(0, Math.round(pageFitRatio.value * PAGE_LINE_TARGET)))
+
+// Untitled pages default to a generic placeholder - mirrors ENotePreview.vue's own check exactly,
+// since the probe needs to know whether the real page would render a title (and its height) too.
+const GENERIC_PAGE_TITLES = ['page', 'new page']
+const hasMeaningfulTitle = (title: string): boolean => {
+  if (!title) return false
+  const normalized = title.trim().toLowerCase().replace(/\s*\(copy\)$/, '')
+  return !GENERIC_PAGE_TITLES.includes(normalized)
+}
+
+// Mirrors ENotePreview.vue's own formatContent() - a raw v-html of page.content would measure an
+// inert <oembed> placeholder as near-zero height instead of the real ~315px video iframe it
+// becomes in the reader, silently letting a video-containing page pass as "fits" when it doesn't.
+const formatProbeContent = (content: string): string => {
+  if (!content) return ''
+  let formatted = autoEmbedYoutube(content)
+  formatted = formatted.replace(
+    /<oembed url="https:\/\/vimeo\.com\/(\d+)"><\/oembed>/gi,
+    '<iframe width="560" height="315" src="https://player.vimeo.com/video/$1" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>'
+  )
+  return resolveContentAssetUrls(formatted)
+}
 const pageFitStatus = computed<'ok' | 'near' | 'over'>(() => {
   if (pageFitRatio.value >= 1) return 'over'
   if (pageFitRatio.value >= 0.85) return 'near'

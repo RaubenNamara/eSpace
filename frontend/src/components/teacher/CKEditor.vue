@@ -137,6 +137,11 @@ import {
   PasteFromOffice,
   WordCount
 } from 'ckeditor5'
+
+// UI building block for the custom "Insert Video" toolbar button (see InsertVideoPlugin below) -
+// there's no built-in CKEditor video plugin, so this is hand-rolled the same lightweight way
+// SimpleUploadAdapterPlugin below wires in its own custom behavior.
+import { ButtonView } from 'ckeditor5'
 import { useToastStore } from '@/stores/toast'
 
 const toast = useToastStore()
@@ -228,6 +233,15 @@ class SimpleUploadAdapter {
     return new Promise((resolve, reject) => {
       this.loader.file.then((file: File) => {
         console.log('File received for upload:', file.name, file.size, file.type)
+
+        // Reject an oversized file immediately instead of spending time uploading it only for
+        // the backend to reject it after the fact (matches ENoteImageController's own 15MB cap).
+        const MAX_UPLOAD_SIZE = 15 * 1024 * 1024
+        if (file.size > MAX_UPLOAD_SIZE) {
+          reject(new Error(`"${file.name}" is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Images must be under 15MB.`))
+          return
+        }
+
         const data = new FormData()
         data.append('upload', file)
 
@@ -314,6 +328,121 @@ class SimpleUploadAdapter {
   }
 }
 
+// "Short video" limits (matches ENoteVideoController's own 20MB cap) - size is checked here
+// before even reading the file, duration only after the browser has decoded its metadata, since
+// there's no way to know a video's length without doing that first.
+const MAX_VIDEO_SIZE = 20 * 1024 * 1024
+const MAX_VIDEO_DURATION_SECONDS = 3 * 60
+
+// Reads a video file's duration without uploading it, by handing it to a throwaway <video>
+// element and waiting for the browser to decode just its metadata (not the whole file).
+function readVideoDuration(file: File): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const el = document.createElement('video')
+    el.preload = 'metadata'
+    const objectUrl = URL.createObjectURL(file)
+    el.src = objectUrl
+    el.onloadedmetadata = () => {
+      URL.revokeObjectURL(objectUrl)
+      resolve(el.duration)
+    }
+    el.onerror = () => {
+      URL.revokeObjectURL(objectUrl)
+      reject(new Error('Could not read this video file'))
+    }
+  })
+}
+
+function uploadVideoFile(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const data = new FormData()
+    data.append('upload', file)
+
+    const xhr = new XMLHttpRequest()
+    const uploadUrl = import.meta.env.BASE_URL.replace(/\/$/, '') + '/api/teacher/enotes/upload-video'
+    xhr.open('POST', uploadUrl, true)
+    xhr.withCredentials = true
+    xhr.responseType = 'json'
+
+    xhr.onload = () => {
+      if (xhr.status === 200 && xhr.response?.url) {
+        const url = xhr.response.url as string
+        const resolvedUrl = /^(https?:|data:|blob:)/i.test(url)
+          ? url
+          : import.meta.env.BASE_URL.replace(/\/$/, '') + (url.startsWith('/') ? url : `/${url}`)
+        resolve(resolvedUrl)
+      } else {
+        reject(new Error(xhr.response?.error?.message || 'Video upload failed'))
+      }
+    }
+    xhr.onerror = () => reject(new Error('Network error during video upload'))
+    xhr.send(data)
+  })
+}
+
+async function insertVideo(editor: any, file: File) {
+  if (file.size > MAX_VIDEO_SIZE) {
+    toast.error(`"${file.name}" is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Videos must be under 20MB.`)
+    return
+  }
+
+  let duration: number
+  try {
+    duration = await readVideoDuration(file)
+  } catch {
+    toast.error(`"${file.name}" doesn't look like a playable video file.`)
+    return
+  }
+  if (duration > MAX_VIDEO_DURATION_SECONDS) {
+    toast.error(`This video is ${Math.ceil(duration / 60)} minutes long. Videos must be 3 minutes or shorter.`)
+    return
+  }
+
+  toast.info('Uploading video...')
+  try {
+    const url = await uploadVideoFile(file)
+    const html = `<video src="${url}" controls preload="metadata" class="enote-video"></video>`
+    const viewFragment = editor.data.processor.toView(html)
+    const modelFragment = editor.data.toModel(viewFragment)
+    editor.model.insertContent(modelFragment)
+    toast.success('Video added')
+  } catch (err: any) {
+    toast.error(err?.message || 'Failed to upload video')
+  }
+}
+
+class InsertVideoPlugin {
+  constructor(editor: any) {
+    editor.ui.componentFactory.add('insertVideo', (locale: any) => {
+      const button = new ButtonView(locale)
+      button.set({
+        label: 'Insert Video',
+        withText: false,
+        tooltip: true,
+        // A plain camera/video icon - CKEditor's ButtonView accepts a raw SVG string directly.
+        icon: '<svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M14 7l5-3v12l-5-3v3a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h11a1 1 0 0 1 1 1v1z"/></svg>'
+      })
+
+      button.on('execute', () => {
+        const input = document.createElement('input')
+        input.type = 'file'
+        input.accept = 'video/mp4,video/webm,video/ogg,video/quicktime'
+        input.onchange = () => {
+          const file = input.files?.[0]
+          if (file) insertVideo(editor, file)
+        }
+        input.click()
+      })
+
+      return button
+    })
+  }
+
+  static get pluginName() {
+    return 'InsertVideoPlugin'
+  }
+}
+
 const configureEditor = () => {
   console.log('Configuring CKEditor with modular plugins...')
   
@@ -387,7 +516,8 @@ const configureEditor = () => {
       SpecialCharactersEssentials,
       PasteFromOffice,
       WordCount,
-      SimpleUploadAdapterPlugin
+      SimpleUploadAdapterPlugin,
+      InsertVideoPlugin
     ],
     placeholder: props.placeholder,
     toolbar: {
@@ -422,6 +552,7 @@ const configureEditor = () => {
         '|',
         'link',
         'uploadImage',
+        'insertVideo',
         'mediaEmbed',
         'insertTable',
         '|',
@@ -582,6 +713,18 @@ const configureEditor = () => {
         {
           name: 'figure',
           classes: ['media']
+        },
+        {
+          // Without this, a <video> inserted by the custom "Insert Video" toolbar button (see
+          // InsertVideoPlugin below) would be stripped out the next time the editor normalizes
+          // its content, since raw <video> isn't part of CKEditor's own default schema.
+          name: 'video',
+          attributes: {
+            src: true,
+            controls: true,
+            preload: true
+          },
+          classes: ['enote-video']
         }
       ]
     },

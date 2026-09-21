@@ -319,6 +319,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
 
         // eNotes Image Upload
         Router::post('/enotes/upload-image', 'eSpace\App\Controllers\Teacher\ENoteImageController@upload');
+        Router::post('/enotes/upload-video', 'eSpace\App\Controllers\Teacher\ENoteVideoController@upload');
         // Item Bank
         Router::get('/itembank', 'eSpace\App\Controllers\Teacher\ItemBankController@index');
         Router::post('/itembank', 'eSpace\App\Controllers\Teacher\ItemBankController@create');
