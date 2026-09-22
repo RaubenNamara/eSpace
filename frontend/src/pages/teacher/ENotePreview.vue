@@ -788,6 +788,7 @@ import { AI_VOICES } from '@/types/enotes'
 import { autoEmbedYoutube, resolveContentAssetUrls, splitContentBlocks } from '@/utils/richContent'
 import { resolveAssetUrl } from '@/utils/url'
 import { usePersistedRef } from '@/composables/usePersistedRef'
+import { useReadModeStore } from '@/stores/readMode'
 import { applyHighlights, rangeToOffsets, removeHighlightMark, type StoredHighlight } from '@/utils/textHighlight'
 import AITutorPlayer from '@/components/enotes/AITutorPlayer.vue'
 import BookFlipbook from '@/components/common/BookFlipbook.vue'
@@ -839,15 +840,15 @@ const zoomLevel = ref(MIN_ZOOM)
 const zoomIn = () => { zoomLevel.value = Math.min(MAX_ZOOM, Math.round((zoomLevel.value + ZOOM_STEP) * 100) / 100) }
 const zoomOut = () => { zoomLevel.value = Math.max(MIN_ZOOM, Math.round((zoomLevel.value - ZOOM_STEP) * 100) / 100) }
 
-// The book's own fixed 700x900 "notebook page" aspect ratio doesn't match a phone's actual
-// available space (much taller and narrower), so StPageFlip's aspect-preserving "stretch" sizing
-// was leaving real letterbox gaps above/below the page even though the *container* itself
-// already fills the screen correctly. In single-page mode, StPageFlip sets the page's width to
-// the container's own full width and derives height from our width:height ratio - so feeding it
-// a ratio that already matches the container's own measured aspect makes the computed height
-// land exactly on the container's height too, closing the gap outright rather than shrinking it.
-// Left untouched on desktop's two-page spread, which isn't just half this same math (StPageFlip
-// halves the width there) and already looks right with the fixed notebook-page shape.
+// The book's own fixed 700x900 "notebook page" aspect ratio doesn't match whatever screen/window
+// shape it's actually being read in, so StPageFlip's aspect-preserving "stretch" sizing was
+// leaving real letterbox gaps around the page even though the *container* itself already fills
+// the available space correctly - eLibrary never has this problem since its page ratio always
+// comes from the real rendered PDF page, never a fixed guess. Matching eNotes' book to its own
+// container's actual aspect ratio (StPageFlip derives page height from our width:height ratio,
+// so feeding it a ratio that already matches the container makes the computed height land
+// exactly on the container's height too) closes the gap outright, in every mode - single-page
+// (mobile, or the desktop manual toggle) and desktop's natural two-page spread alike.
 const MOBILE_QUERY = '(max-width: 1023px)'
 const mq = typeof window !== 'undefined' ? window.matchMedia(MOBILE_QUERY) : null
 const isMobileForAspect = ref(mq?.matches ?? false)
@@ -856,19 +857,38 @@ const dynamicPageWidth = ref(700)
 const dynamicPageHeight = ref(900)
 let bookWrapResizeObserver: ResizeObserver | null = null
 
+// Below this, treat a measurement as a transient/bogus one (e.g. mid-layout-transition, such as
+// the moment Read Mode's classes are still being applied) rather than a real container size -
+// BookFlipbook rebuilds the whole book on a pageWidth/pageHeight change, so feeding it a
+// momentarily-tiny value would tear it down for no real reason instead of just skipping a stale
+// measurement and waiting for a real one.
+const MIN_PLAUSIBLE_CONTAINER_SIZE = 50
+
 const updateDynamicAspect = () => {
   const el = bookWrapRef.value
-  if (!el || el.clientWidth === 0 || el.clientHeight === 0) return
+  if (!el || el.clientWidth < MIN_PLAUSIBLE_CONTAINER_SIZE || el.clientHeight < MIN_PLAUSIBLE_CONTAINER_SIZE) return
   dynamicPageWidth.value = el.clientWidth
   dynamicPageHeight.value = el.clientHeight
 }
 
-// Deliberately not extended to the desktop manual single-page toggle: BookFlipbook caps its own
-// width there (`max-w-[560px]`, see its capWidthForToggle) below bookWrapRef's own full measured
-// width, so matching against bookWrapRef's width would compute the wrong ratio in that case.
-const usesDynamicAspect = computed(() => isMobileForAspect.value)
-const effectivePageWidth = computed(() => usesDynamicAspect.value ? dynamicPageWidth.value : 700)
-const effectivePageHeight = computed(() => usesDynamicAspect.value ? dynamicPageHeight.value : 900)
+// BookFlipbook caps its own container width to 560px specifically for the desktop manual
+// single-page toggle (its capWidthForToggle) - matching that here keeps the ratio in sync with
+// what it actually renders at, rather than computing against bookWrapRef's uncapped full width.
+const MANUAL_SINGLE_PAGE_CAP = 560
+// Mirrors StPageFlip's own portrait/landscape threshold (blockWidth < minWidth(300)*2) directly,
+// rather than our own separate `lg` breakpoint, so this never disagrees with which mode it
+// actually picks - in landscape/two-page mode it halves the container width per page, same as
+// StPageFlip itself does.
+const AUTO_PORTRAIT_THRESHOLD = 600
+
+const effectivePageWidth = computed(() => {
+  const containerWidth = dynamicPageWidth.value
+  if (preferSinglePage.value && !isMobileForAspect.value) {
+    return Math.min(containerWidth, MANUAL_SINGLE_PAGE_CAP)
+  }
+  return containerWidth < AUTO_PORTRAIT_THRESHOLD ? containerWidth : containerWidth / 2
+})
+const effectivePageHeight = computed(() => dynamicPageHeight.value)
 
 // Reading focus overlay - a plain colored tint over the whole book, purely a personal display
 // preference (like `isMuted`), not content, so it's a localStorage preference rather than
@@ -1260,14 +1280,17 @@ const toggleFullscreen = () => {
 // don't support requestFullscreen() reliably, and Read Mode's own layout already maximizes the
 // book regardless of whether that succeeds.
 const readMode = ref(false)
+const readModeStore = useReadModeStore()
 
 const enterReadMode = () => {
   readMode.value = true
+  readModeStore.enter()
   document.documentElement.requestFullscreen?.().catch(() => {})
 }
 
 const exitReadMode = () => {
   readMode.value = false
+  readModeStore.exit()
   if (document.fullscreenElement) {
     document.exitFullscreen().catch(() => {})
   }
@@ -1389,6 +1412,9 @@ onBeforeUnmount(() => {
   document.removeEventListener('scroll', handlePageScroll, true)
   mq?.removeEventListener('change', handleAspectMqChange)
   bookWrapResizeObserver?.disconnect()
+  // Safety net for navigating away without pressing Exit (back button, a TOC/search jump, ...) -
+  // otherwise the app shell's chrome would stay hidden on whatever page the reader lands on next.
+  readModeStore.exit()
   if (document.fullscreenElement) {
     document.exitFullscreen().catch(() => {})
   }

@@ -20,6 +20,10 @@ class ENoteImageController extends Controller
     // rejecting those outright was itself a source of "image didn't load" reports (a teacher who
     // didn't notice the upload error toast would assume it saved).
     private $maxFileSize = 15728640; // 15MB in bytes
+    // GIFs never get resizeAndCompress() (re-encoding would kill the animation), so a GIF is
+    // stored exactly as uploaded - the flat 15MB cap that's fine for a JPEG/PNG that still gets
+    // compressed down was letting through GIFs that then loaded painfully slowly for students.
+    private $maxGifFileSize = 5242880; // 5MB in bytes
     private $uploadDir;
 
     public function __construct()
@@ -77,6 +81,15 @@ class ENoteImageController extends Controller
                 $this->json([
                     'error' => [
                         'message' => 'Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed'
+                    ]
+                ], 400);
+                return;
+            }
+
+            if ($mimeType === 'image/gif' && $file['size'] > $this->maxGifFileSize) {
+                $this->json([
+                    'error' => [
+                        'message' => 'GIF file size exceeds maximum limit of 5MB'
                     ]
                 ], 400);
                 return;

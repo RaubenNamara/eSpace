@@ -66,6 +66,19 @@ export function resolveContentAssetUrls(html: string): string {
   return html.replace(SRC_ATTR_RE, (_match, path) => ` src="${resolveAssetUrl(path)}"`)
 }
 
+const IMG_TAG_RE = /<img(?:(?!loading=)[^>])*>/gi
+
+/**
+ * Adds loading="lazy" decoding="async" to every <img> that doesn't already specify its own
+ * loading behavior. A note/topic page can carry many images (and GIFs, which can be several MB
+ * each) - without this the browser fetches all of them the moment the page renders instead of
+ * only the ones actually scrolled into view. Mirrors ENotePreview.vue's own formatContent().
+ */
+export function injectLazyLoading(html: string): string {
+  if (!html || !html.includes('<img')) return html || ''
+  return html.replace(IMG_TAG_RE, (tag) => tag.replace(/\s*\/?>$/, ' loading="lazy" decoding="async"$&'))
+}
+
 // Only these top-level tags count as an explainable "paragraph" for the AI Tutor walkthrough -
 // must match backend\app\Utils\HtmlBlockSplitter::BLOCK_TAGS exactly, so a block's narrationIndex
 // here lines up with the paragraph_index the backend narrates against.

@@ -6,6 +6,7 @@
          own background, in both themes (light glass on light-gray-50, dark glass on
          dark-slate-950). Flat, no gradients or glow blobs. -->
     <aside
+      v-if="!shouldHideAppChrome"
       class="overflow-hidden fixed left-0 top-3 bottom-3 lg:left-3 lg:top-3 lg:bottom-3 rounded-r-2xl lg:rounded-2xl bg-slate-100/80 dark:bg-slate-900/70 backdrop-blur-xl shadow-lg lg:shadow-2xl lg:shadow-slate-900/10 dark:lg:shadow-black/50 border border-slate-400/80 dark:border-white/10 transform transition-all duration-300 z-50 flex flex-col"
       :class="[isIconOnly ? 'w-16' : 'w-48 md:w-56', { '-translate-x-full': !sidebarOpen, 'translate-x-0': sidebarOpen }]"
     >
@@ -170,7 +171,7 @@
          desktop only. Sits outside the sidebar (rather than inside it) so it isn't clipped by
          the sidebar's own overflow-hidden, and its `left` tracks the sidebar's current width. -->
     <button
-      v-if="sidebarOpen"
+      v-if="sidebarOpen && !shouldHideAppChrome"
       @click="sidebarCollapsed = !sidebarCollapsed"
       :title="isIconOnly ? 'Expand sidebar' : 'Collapse sidebar'"
       class="hidden lg:flex fixed top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white dark:bg-slate-800 border border-slate-400 dark:border-white/10 shadow-md items-center justify-center text-slate-600 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-500/50 transition-all duration-300 z-50"
@@ -183,16 +184,20 @@
 
     <!-- Mobile/tablet backdrop - closes the sidebar on outside tap instead of pushing content -->
     <div
-      v-if="sidebarOpen"
+      v-if="sidebarOpen && !shouldHideAppChrome"
       @click="sidebarOpen = false"
       class="fixed inset-0 bg-black/50 z-40 lg:hidden"
     ></div>
 
     <!-- Main Content -->
-    <div class="min-h-screen flex flex-col transition-all duration-300 ml-0" :class="{ 'lg:ml-[248px]': sidebarOpen && !sidebarCollapsed, 'lg:ml-[88px]': sidebarOpen && sidebarCollapsed }">
+    <div
+      class="min-h-screen flex flex-col transition-all duration-300 ml-0"
+      :class="shouldHideAppChrome ? '' : { 'lg:ml-[248px]': sidebarOpen && !sidebarCollapsed, 'lg:ml-[88px]': sidebarOpen && sidebarCollapsed }"
+    >
       <!-- Top Bar - hides on scroll-down and reappears on scroll-up (like the Landing header),
            so it doesn't permanently eat vertical space on long pages. -->
       <header
+        v-if="!shouldHideAppChrome"
         class="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-40 transition-transform duration-300"
         :class="[{ '-translate-y-full': headerHidden }, isImmersiveReader ? 'hidden lg:block' : '']"
       >
@@ -416,7 +421,7 @@
       <ProfileSettingsModal v-if="showProfileModal" :focus-section="profileModalFocusSection" @close="showProfileModal = false" />
 
       <!-- Page Content -->
-      <main class="flex-1" :class="isImmersiveReader ? 'p-0 lg:p-6' : 'p-4 sm:p-6'">
+      <main class="flex-1" :class="shouldHideAppChrome ? 'p-0' : (isImmersiveReader ? 'p-0 lg:p-6' : 'p-4 sm:p-6')">
         <router-view />
       </main>
     </div>
@@ -434,6 +439,7 @@ import axios from 'axios'
 import { useAuthStore } from '../stores/auth'
 import { useThemeStore } from '../stores/theme'
 import { useChatBadgeStore } from '../stores/chatBadge'
+import { useReadModeStore } from '../stores/readMode'
 import ProfileSettingsModal from '../components/profile/ProfileSettingsModal.vue'
 import NotificationPanel from '../components/notifications/NotificationPanel.vue'
 import GlobalSearchBar from '../components/search/GlobalSearchBar.vue'
@@ -445,6 +451,7 @@ const route = useRoute()
 const authStore = useAuthStore()
 const themeStore = useThemeStore()
 const chatBadge = useChatBadgeStore()
+const readModeStore = useReadModeStore()
 
 // Sidebar starts open on desktop (>=1024px, Tailwind's `lg` breakpoint) and closed on
 // mobile/tablet, where it behaves as an overlay (see the `lg:ml-64` / backdrop below)
@@ -466,6 +473,15 @@ const isIconOnly = computed(() => sidebarCollapsed.value)
 // dropped on mobile/tablet for routes that opt in, letting the reader claim the whole screen
 // instead of being squeezed into whatever's left over.
 const isImmersiveReader = computed(() => !!route.meta.immersiveReader)
+
+// Read Mode (a full-screen focus mode either reader can toggle, on top of just being an immersive
+// route) needs the app shell's own chrome gone entirely - on *every* breakpoint, not just
+// mobile/tablet like isImmersiveReader's own default behavior above, since desktop is a
+// first-class target for Read Mode too. Based purely on the shared store (not on route meta like
+// isImmersiveReader above) since LibraryPdfViewer's Read Mode is a modal, not a routed page - its
+// route never carries immersiveReader meta, even though it should hide the shell's chrome the
+// same way eNotes' Read Mode does.
+const shouldHideAppChrome = computed(() => readModeStore.isActive)
 
 // Pixel offset for the collapse-arrow button: it sits centered on the sidebar's right edge,
 // which is 12px (the `lg:left-3` inset) plus the sidebar's own width - since the button is 24px

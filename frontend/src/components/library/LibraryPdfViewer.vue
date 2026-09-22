@@ -342,6 +342,7 @@ import type { LibraryBook } from '@/types/library'
 import { resolveAssetUrl } from '@/utils/url'
 import { usePersistedRef } from '@/composables/usePersistedRef'
 import { useAuthStore } from '@/stores/auth'
+import { useReadModeStore } from '@/stores/readMode'
 import axios from 'axios'
 import BookFlipbook from '@/components/common/BookFlipbook.vue'
 
@@ -611,14 +612,17 @@ const toggleFullscreen = async () => {
 // requests real fullscreen as a bonus - best-effort, since some mobile browsers don't support it
 // reliably, and Read Mode's own layout already maximizes the book regardless.
 const readMode = ref(false)
+const readModeStore = useReadModeStore()
 
 const enterReadMode = () => {
   readMode.value = true
+  readModeStore.enter()
   viewerRef.value?.requestFullscreen?.().catch(() => {})
 }
 
 const exitReadMode = () => {
   readMode.value = false
+  readModeStore.exit()
   if (document.fullscreenElement) {
     document.exitFullscreen().catch(() => {})
   }
@@ -650,6 +654,8 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   document.removeEventListener('fullscreenchange', onFullscreenChange)
   document.removeEventListener('keydown', onReadModeKeydown)
+  // Safety net for closing the modal without pressing Exit first.
+  readModeStore.exit()
   if (document.fullscreenElement) {
     document.exitFullscreen().catch(() => {})
   }

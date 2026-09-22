@@ -235,8 +235,15 @@ class SimpleUploadAdapter {
         console.log('File received for upload:', file.name, file.size, file.type)
 
         // Reject an oversized file immediately instead of spending time uploading it only for
-        // the backend to reject it after the fact (matches ENoteImageController's own 15MB cap).
+        // the backend to reject it after the fact (matches ENoteImageController's own caps).
+        // GIFs get a tighter cap: they're never resized/compressed server-side (re-encoding
+        // would kill the animation), so a GIF is stored exactly as uploaded.
         const MAX_UPLOAD_SIZE = 15 * 1024 * 1024
+        const MAX_GIF_UPLOAD_SIZE = 5 * 1024 * 1024
+        if (file.type === 'image/gif' && file.size > MAX_GIF_UPLOAD_SIZE) {
+          reject(new Error(`"${file.name}" is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). GIFs must be under 5MB.`))
+          return
+        }
         if (file.size > MAX_UPLOAD_SIZE) {
           reject(new Error(`"${file.name}" is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Images must be under 15MB.`))
           return

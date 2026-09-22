@@ -1,6 +1,16 @@
 <template>
   <div class="relative w-full h-full" :class="{ 'mx-auto max-w-[560px]': capWidthForToggle }">
-    <div ref="hostRef" class="book-flipbook-host w-full h-full"></div>
+    <!-- v-if (not just a :key bump) forces Vue to fully unmount and later remount this element on
+         every rebuild - StPageFlip's own destroy() calls `this.block.remove()` on this exact node
+         (raw DOM removal, entirely outside Vue's reconciliation), permanently detaching it from
+         the document. Without this, Vue has no reason to know the element it's still holding a
+         reference to (hostRef) is no longer actually in the page, and happily keeps reusing that
+         orphaned node forever after - the book silently renders into a detached DOM subtree
+         nobody can see. destroy() awaits a tick with showHost false before build() flips it back
+         true and awaits another - two full reactivity flushes, not one :key bump processed in the
+         same pass as StPageFlip's own removal, which raced Vue's own patch for the same node and
+         threw ("insertBefore" on the now-parentless old element) rather than reliably recovering. -->
+    <div v-if="showHost" ref="hostRef" class="book-flipbook-host w-full h-full"></div>
     <!-- HTML mode's staging area: the parent renders one element per page into this slot, and
          `loadFromHTML` physically moves (not clones) each one into the host above - Vue keeps
          patching them normally afterward since they're still the same DOM nodes, just relocated. -->
@@ -45,6 +55,7 @@ const props = withDefaults(
 const emit = defineEmits<{ flip: [page: number] }>()
 
 const hostRef = ref<HTMLElement | null>(null)
+const showHost = ref(true)
 const stagingRef = ref<HTMLElement | null>(null)
 let flip: PageFlip | null = null
 let resizeObserver: ResizeObserver | null = null
@@ -140,7 +151,7 @@ function build() {
   resizeObserver.observe(host)
 }
 
-function destroy() {
+async function destroy() {
   resizeObserver?.disconnect()
   resizeObserver = null
 
@@ -151,12 +162,22 @@ function destroy() {
   // clause) - the reader then silently keeps showing the old layout until a full page reload
   // re-renders the #pages slot from scratch. Move them back into the staging area ourselves so
   // every subsequent rebuild (a preference toggle, a breakpoint change, ...) has pages to load.
+  // Done *before* hostRef unmounts below, while it's still genuinely attached and queryable.
   if (flip && props.mode === 'html' && stagingRef.value) {
     const block = hostRef.value?.querySelector(':scope > .stf__wrapper > .stf__block')
     if (block) {
       Array.from(block.children).forEach((el) => stagingRef.value!.appendChild(el))
     }
   }
+
+  // Unmount hostRef through Vue's own reconciliation *first*, while it's still genuinely attached
+  // - only *then* let StPageFlip's own destroy() run its raw `.remove()` calls against a subtree
+  // Vue has already cleanly detached (harmless no-ops at that point). The reverse order is what
+  // actually broke: StPageFlip's `this.block.remove()` sets hostRef's parentNode to null, and
+  // Vue's own v-if-driven unmount - which needs that parentNode to know where to insert the
+  // comment-node placeholder v-if leaves behind - throws instead of recovering when it runs after.
+  showHost.value = false
+  await nextTick()
 
   flip?.destroy()
   flip = null
@@ -174,6 +195,7 @@ onMounted(() => {
 })
 onBeforeUnmount(() => {
   mq?.removeEventListener('change', handleMqChange)
+  if (pageSizeRebuildTimer) clearTimeout(pageSizeRebuildTimer)
   destroy()
 })
 
@@ -184,7 +206,22 @@ watch(() => props.preferSinglePage, () => rebuild())
 // resized container, it doesn't pick up a genuinely different ratio. A parent computing a
 // dynamic pageWidth/pageHeight (e.g. to match its container's own aspect ratio exactly, avoiding
 // letterboxing) needs a real rebuild for a changed ratio to actually take effect.
-watch(() => [props.pageWidth, props.pageHeight], () => rebuild())
+//
+// Guarded and debounced: a parent measuring its own container via ResizeObserver (as
+// ENotePreview/LibraryPdfViewer both do) can report several changes in quick succession while a
+// layout transition (e.g. entering/exiting Read Mode) settles, or - transiently, mid-measurement -
+// an invalid value. rebuild() tears the whole book down and reconstructs it from scratch
+// (destroy() removes PageFlip's DOM subtree entirely, and html mode's build() aborts without
+// content if the staging area briefly disagrees with what destroy() just rescued into it), so
+// firing it repeatedly for values that were never meant to stick risks a genuine race between
+// overlapping destroy/build cycles - filtering bad values and coalescing bursts into one rebuild
+// after things settle avoids that outright, rather than trying to reason about the interleaving.
+let pageSizeRebuildTimer: ReturnType<typeof setTimeout> | null = null
+watch(() => [props.pageWidth, props.pageHeight], ([w, h]) => {
+  if (!w || !h || w <= 0 || h <= 0) return
+  if (pageSizeRebuildTimer) clearTimeout(pageSizeRebuildTimer)
+  pageSizeRebuildTimer = setTimeout(rebuild, 50)
+})
 
 // A different book (new document/topic) replaces pages wholesale - rebuild rather than
 // updateFrom*, since the aspect ratio (pageWidth/pageHeight) may have changed too. Image mode
@@ -192,13 +229,19 @@ watch(() => [props.pageWidth, props.pageHeight], () => rebuild())
 // the parent calls `rebuild()` explicitly once its new pages have rendered.
 watch(() => props.images, () => {
   if (props.mode !== 'image') return
-  destroy()
-  nextTick(build)
+  rebuild()
 })
 
-function rebuild() {
-  destroy()
-  nextTick(build)
+// destroy() unmounts hostRef (v-if="showHost" -> false) rather than just clearing PageFlip's own
+// state, since StPageFlip's own destroy() rips that exact DOM node out from under Vue via a raw
+// .remove() call - see destroy()'s and the template's comments. Bringing it back needs its own
+// separate reactivity flush (an awaited nextTick) before build() can use a genuinely fresh
+// hostRef.value, the same way destroy() needs its own flush before letting StPageFlip loose.
+async function rebuild() {
+  await destroy()
+  showHost.value = true
+  await nextTick()
+  build()
 }
 
 function flipNext(opts?: { silent?: boolean }) {

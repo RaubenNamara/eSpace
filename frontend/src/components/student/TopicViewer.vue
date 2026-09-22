@@ -94,7 +94,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { autoEmbedYoutube } from '@/utils/richContent'
+import { autoEmbedYoutube, injectLazyLoading } from '@/utils/richContent'
 import { resolveAssetUrl } from '@/utils/url'
 
 interface Page {
@@ -130,7 +130,7 @@ const flipWrapRef = ref<HTMLElement | null>(null)
 const pages = computed(() => props.topic?.pages || [])
 const currentPage = computed(() => pages.value[currentPageIndex.value] || null)
 const pageProgress = computed(() => pages.value.length ? Math.round(((currentPageIndex.value + 1) / pages.value.length) * 100) : 0)
-const renderedContent = computed(() => autoEmbedYoutube(currentPage.value?.content || ''))
+const renderedContent = computed(() => injectLazyLoading(autoEmbedYoutube(currentPage.value?.content || '')))
 
 // Book-style page-turn animation: rotate the current page away on its vertical axis, swap the
 // content once it's edge-on (invisible), then rotate the new page in from the opposite side.
