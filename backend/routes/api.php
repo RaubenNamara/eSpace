@@ -77,6 +77,8 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/library/{id}', 'eSpace\App\Controllers\Student\LibraryController@show');
         Router::post('/library/{id}/progress', 'eSpace\App\Controllers\Student\LibraryController@updateProgress');
         Router::post('/library/{id}/bookmark', 'eSpace\App\Controllers\Student\LibraryController@toggleBookmark');
+        Router::get('/library/books/{bookId}/pages/{pageNumber}/note', 'eSpace\App\Controllers\Student\PageNoteController@getLibraryNote');
+        Router::put('/library/books/{bookId}/pages/{pageNumber}/note', 'eSpace\App\Controllers\Student\PageNoteController@saveLibraryNote');
 
         // Videos
         Router::get('/videos', 'eSpace\App\Controllers\Student\VideoController@index');
@@ -93,6 +95,11 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/enotes/topics', 'eSpace\App\Controllers\Student\ENoteController@index');
         Router::get('/enotes/topics/{id}', 'eSpace\App\Controllers\Student\ENoteController@show');
         Router::post('/enotes/pages/{pageId}/tutor-explain', 'eSpace\App\Controllers\Student\ENoteController@tutorExplain');
+        Router::get('/enotes/pages/{pageId}/note', 'eSpace\App\Controllers\Student\PageNoteController@getEnoteNote');
+        Router::put('/enotes/pages/{pageId}/note', 'eSpace\App\Controllers\Student\PageNoteController@saveEnoteNote');
+        Router::get('/enotes/pages/{pageId}/highlights', 'eSpace\App\Controllers\Student\PageHighlightController@index');
+        Router::post('/enotes/pages/{pageId}/highlights', 'eSpace\App\Controllers\Student\PageHighlightController@create');
+        Router::delete('/enotes/highlights/{highlightId}', 'eSpace\App\Controllers\Student\PageHighlightController@delete');
 
         // Constructs (read-only)
         Router::get('/constructs', 'eSpace\App\Controllers\Student\ConstructController@index');

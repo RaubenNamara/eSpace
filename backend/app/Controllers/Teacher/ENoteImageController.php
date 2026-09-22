@@ -171,7 +171,7 @@ class ENoteImageController extends Controller
             return;
         }
 
-        $maxDimension = 1600;
+        $maxDimension = 2000;
         $info = getimagesize($filepath);
         if (!$info) {
             return;
@@ -204,9 +204,9 @@ class ENoteImageController extends Controller
         imagecopyresampled($resized, $source, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
 
         match ($mimeType) {
-            'image/jpeg', 'image/jpg' => imagejpeg($resized, $filepath, 82),
+            'image/jpeg', 'image/jpg' => imagejpeg($resized, $filepath, 90),
             'image/png' => imagepng($resized, $filepath, 6),
-            'image/webp' => function_exists('imagewebp') ? imagewebp($resized, $filepath, 82) : null,
+            'image/webp' => function_exists('imagewebp') ? imagewebp($resized, $filepath, 90) : null,
             default => null,
         };
 

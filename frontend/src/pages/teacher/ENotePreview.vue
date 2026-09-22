@@ -1,7 +1,8 @@
 <template>
   <div class="h-screen flex flex-col bg-gray-50 dark:bg-gray-950">
-    <!-- Header -->
-    <div class="relative bg-indigo-600 px-3 sm:px-6 py-1.5 sm:py-2 flex items-center justify-between gap-2 flex-shrink-0 shadow-sm">
+    <!-- Header - hidden entirely in Read Mode, which replaces it with floating overlay controls
+         so the book can claim literally the whole screen. -->
+    <div v-if="!readMode" class="relative bg-indigo-600 px-3 sm:px-6 py-1.5 sm:py-2 flex items-center justify-between gap-2 flex-shrink-0 shadow-sm">
       <div class="flex items-center gap-2 sm:gap-3 min-w-0">
         <button
           @click="goBack"
@@ -84,6 +85,49 @@
       </div>
 
       <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+        <!-- Read Mode - whole screen given over to the book, floating overlay controls replace
+             every other piece of chrome. Only for students, who are the ones this is meant to
+             help focus - teachers/HOD previewing already have their own editing chrome to worry
+             about keeping visible. -->
+        <button
+          v-if="isStudentMode && currentPage"
+          @click="enterReadMode"
+          class="flex items-center gap-1.5 px-3 py-1.5 bg-white text-indigo-700 font-medium text-sm rounded-lg hover:bg-indigo-50 transition-colors shadow-sm"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+          </svg>
+          <span class="hidden sm:inline">Read</span>
+        </button>
+
+        <!-- Zoom controls - scale the whole book area via CSS transform (see the wrapping div
+             around BookFlipbook below), so the reader can pan around an enlarged page when the
+             base size isn't big enough, without page-flip itself needing any zoom support. -->
+        <div v-if="currentPage" class="flex items-center bg-white/10 rounded-lg">
+          <button
+            @click="zoomOut"
+            :disabled="zoomLevel <= MIN_ZOOM"
+            class="p-1.5 rounded-lg hover:bg-white/25 transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
+            title="Zoom out"
+          >
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11h6"></path>
+            </svg>
+          </button>
+          <span v-if="zoomLevel > MIN_ZOOM" class="text-xs text-white/90 font-medium px-0.5 min-w-[2.5rem] text-center select-none">{{ Math.round(zoomLevel * 100) }}%</span>
+          <button
+            @click="zoomIn"
+            :disabled="zoomLevel >= MAX_ZOOM"
+            class="p-1.5 rounded-lg hover:bg-white/25 transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
+            title="Zoom in"
+          >
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 8v6M8 11h6"></path>
+            </svg>
+          </button>
+        </div>
         <!-- Only matters at lg+ - below that the book already always shows one page at a time
              (no room for two), so this toggle would have nothing to do. -->
         <button
@@ -123,6 +167,35 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
           </svg>
         </button>
+
+        <!-- Reading focus overlay picker - a colored tint over the page, common reading-focus aid. -->
+        <div v-if="currentPage" class="relative">
+          <button
+            @click="showTintPanel = !showTintPanel"
+            class="p-1.5 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
+            title="Reading focus color"
+          >
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h10a2 2 0 002-2v-4a2 2 0 00-2-2h-2.5"></path>
+            </svg>
+          </button>
+          <div v-if="showTintPanel" @click="showTintPanel = false" class="fixed inset-0 z-40"></div>
+          <div
+            v-if="showTintPanel"
+            class="absolute right-0 top-full mt-2 w-44 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-2 z-50"
+          >
+            <button
+              v-for="tint in READING_TINTS"
+              :key="tint.value"
+              @click="readingTint = tint.value; showTintPanel = false"
+              class="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              :class="readingTint === tint.value ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium' : 'text-gray-700 dark:text-gray-200'"
+            >
+              <span class="w-4 h-4 rounded-full border border-gray-300 dark:border-gray-600 flex-shrink-0" :class="tint.swatchClass"></span>
+              <span>{{ tint.label }}</span>
+            </button>
+          </div>
+        </div>
 
         <div v-if="!isReadOnly" class="relative">
           <button
@@ -200,13 +273,15 @@
     <div class="flex-1 flex overflow-hidden relative">
       <!-- Mobile/tablet backdrop for the table-of-contents drawer -->
       <div
-        v-if="showToc"
+        v-if="showToc && !readMode"
         @click="showToc = false"
         class="fixed inset-0 bg-black/50 z-30 lg:hidden"
       ></div>
 
-      <!-- Right Sidebar - Navigation -->
+      <!-- Right Sidebar - Navigation - hidden entirely in Read Mode, both the mobile drawer and
+           the desktop-docked version, so the book claims that width too. -->
       <div
+        v-if="!readMode"
         class="order-2 fixed lg:static inset-y-0 right-0 z-40 w-56 max-w-[75vw] mt-2 lg:mt-3 lg:mb-3 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 rounded-tl-2xl overflow-hidden flex flex-col transform transition-[transform,width] duration-300 lg:translate-x-0 lg:relative"
         :class="[showToc ? 'translate-x-0' : 'translate-x-full', sidebarCollapsed ? 'lg:!w-14' : 'lg:!w-56']"
       >
@@ -321,12 +396,16 @@
       </div>
 
       <!-- Main Content Area -->
-      <div class="flex-1 overflow-y-auto flex flex-col lg:block">
+      <div class="flex-1 overflow-y-auto flex flex-col" :class="{ 'lg:block': !readMode }">
         <!-- Below `lg` this becomes a flex column filling the full remaining height (no vh
              guessing) so the book claims every pixel between the header and the screen edge -
              at `lg`+ it reverts to plain block flow with its old fixed sizing, where there's
-             already room to spare. -->
-        <div class="w-full max-w-5xl xl:max-w-7xl 2xl:max-w-[1800px] mx-auto p-0 lg:p-4 2xl:p-6 flex-1 min-h-0 flex flex-col lg:block">
+             already room to spare. Read Mode forces the flex-column/fill behavior at every
+             breakpoint, on top of the header/sidebar/nav-buttons already being gone entirely. -->
+        <div
+          class="w-full max-w-5xl xl:max-w-7xl 2xl:max-w-[1800px] mx-auto flex-1 min-h-0 flex flex-col"
+          :class="readMode ? 'p-0' : 'p-0 lg:p-4 2xl:p-6 lg:block'"
+        >
           <template v-if="currentPage">
             <!-- Read-aloud + AI tutor controls for whichever page is open right now - kept
                  outside the book itself since it's the reader's current position that's live,
@@ -354,7 +433,16 @@
                  renders up front (StPageFlip needs them all present to turn between), but only
                  the page currently open gets the narration-highlight markup - the rest render as
                  plain formatted content. -->
-            <div class="flex-1 min-h-0 lg:flex-none lg:h-[80vh] lg:min-h-[420px] lg:mb-3">
+            <div
+              :class="[
+                readMode ? 'flex-1 min-h-0' : 'flex-1 min-h-0 lg:flex-none lg:h-[80vh] lg:min-h-[420px] lg:mb-3',
+                zoomLevel > MIN_ZOOM ? 'overflow-auto' : 'overflow-hidden',
+              ]"
+            >
+              <div
+                class="w-full h-full transition-transform duration-200"
+                :style="{ transform: `scale(${zoomLevel})`, transformOrigin: 'top center' }"
+              >
               <BookFlipbook
                 ref="flipbookRef"
                 mode="html"
@@ -391,12 +479,80 @@
                             v-html="block.html"
                           ></div>
                         </template>
-                        <div v-else v-html="formatContent(page.content)"></div>
+                        <!-- .stop on mousedown/touchstart is the same fix as the summary textarea
+                             below: without it, StPageFlip's own drag-to-flip listener on this
+                             element's ".stf__block" ancestor calls preventDefault() on every
+                             mousedown here, which also blocks the browser's native text-selection
+                             drag - meaning a student could never start selecting text to highlight
+                             it. Trades away "click/drag directly on the text to flip" (still
+                             possible via the page's own margins or the corner-drag/Prev-Next
+                             controls) for selection actually working. -->
+                        <div
+                          v-else
+                          :ref="el => setPageContentRef(el, page.id)"
+                          @mousedown.stop
+                          @touchstart.stop
+                          @mouseup="onContentMouseUp(page.id)"
+                          @click="onContentClick(page.id, $event)"
+                          v-html="formatContent(page.content)"
+                        ></div>
+                      </div>
+
+                      <!-- Student's own private summary of this page - never seen by the
+                           teacher/HOD, just a small space to write what they understood. -->
+                      <div v-if="isStudentMode" class="mt-6 pt-4 border-t border-dashed border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center justify-between mb-1.5">
+                          <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
+                            <span>📝</span><span>My Summary</span>
+                          </p>
+                          <span class="text-[11px] text-gray-400 dark:text-gray-500">{{ pageNoteStatus[page.id] === 'saving' ? 'Saving…' : pageNoteStatus[page.id] === 'saved' ? 'Saved' : '' }}</span>
+                        </div>
+                        <!-- .stop is load-bearing: this textarea lives inside StPageFlip's own
+                             ".stf__block" (html mode physically moves page content in there), and
+                             StPageFlip attaches a mousedown/touchstart listener on that block for
+                             its own drag-to-flip gesture which calls preventDefault() on every
+                             target except <a>/<button> - silently blocking the browser's native
+                             "focus this textarea" behavior, so nothing typed ever registered. -->
+                        <textarea
+                          v-model="pageNotes[page.id]"
+                          @input="onPageNoteInput(page.id)"
+                          @mousedown.stop
+                          @touchstart.stop
+                          rows="2"
+                          maxlength="2000"
+                          placeholder="What did you understand from this page? (only you can see this)"
+                          class="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 text-gray-700 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y"
+                        ></textarea>
                       </div>
                     </div>
                   </div>
                 </template>
               </BookFlipbook>
+
+              <!-- Reading focus overlay - a plain colored tint over the whole book, toggled from
+                   the header, purely visual (no interaction of its own). -->
+              <div
+                v-if="readingTint !== 'none'"
+                class="absolute inset-0 pointer-events-none z-10 mix-blend-multiply"
+                :class="READING_TINTS.find(t => t.value === readingTint)?.class"
+              ></div>
+
+              <!-- Highlight color picker - appears near a text selection while in student mode. -->
+              <div
+                v-if="highlightPopup"
+                class="fixed z-50 flex items-center gap-1 bg-white dark:bg-gray-800 rounded-full shadow-xl border border-gray-200 dark:border-gray-700 px-2 py-1.5 -translate-x-1/2 -translate-y-[calc(100%+8px)]"
+                :style="{ left: `${highlightPopup.x}px`, top: `${highlightPopup.y}px` }"
+              >
+                <button
+                  v-for="color in HIGHLIGHT_COLORS"
+                  :key="color"
+                  @click="pickHighlightColor(color)"
+                  class="w-6 h-6 rounded-full border-2 border-white dark:border-gray-800 shadow ring-1 ring-black/10 hover:scale-110 transition-transform"
+                  :class="HIGHLIGHT_SWATCH_CLASS[color]"
+                  :title="`Highlight ${color}`"
+                ></button>
+              </div>
+              </div>
             </div>
           </template>
 
@@ -410,8 +566,8 @@
             <p class="text-gray-500 dark:text-gray-400">This topic has no pages yet.</p>
           </div>
 
-          <!-- Navigation Buttons -->
-          <div class="flex items-center justify-between flex-shrink-0 px-3 pb-3 pt-2 lg:px-0 lg:pb-0 lg:pt-0">
+          <!-- Navigation Buttons - replaced by floating overlay arrows in Read Mode. -->
+          <div v-if="!readMode" class="flex items-center justify-between flex-shrink-0 px-3 pb-3 pt-2 lg:px-0 lg:pb-0 lg:pt-0">
             <button
               @click="handlePrevious"
               :disabled="!hasPreviousPage"
@@ -448,6 +604,57 @@
         </div>
       </div>
     </div>
+
+    <!-- Read Mode overlay controls - back/next/exit float over the book itself rather than
+         taking any layout space of their own, since the whole point is the book gets literally
+         the entire screen. Fixed (not absolute) so they stay put regardless of any scrolling
+         inside the book area. -->
+    <template v-if="readMode">
+      <button
+        @click="handlePrevious"
+        :disabled="!hasPreviousPage"
+        class="fixed left-2 sm:left-4 top-1/2 -translate-y-1/2 z-50 p-3 sm:p-4 rounded-full bg-gray-900/40 hover:bg-gray-900/60 text-white backdrop-blur-sm shadow-lg transition-colors disabled:opacity-0 disabled:pointer-events-none"
+        title="Previous page"
+      >
+        <svg class="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+        </svg>
+      </button>
+
+      <button
+        v-if="!(isStudentMode && !hasNextPage)"
+        @click="handleNext"
+        :disabled="!hasNextPage"
+        class="fixed right-2 sm:right-4 top-1/2 -translate-y-1/2 z-50 p-3 sm:p-4 rounded-full bg-gray-900/40 hover:bg-gray-900/60 text-white backdrop-blur-sm shadow-lg transition-colors disabled:opacity-0 disabled:pointer-events-none"
+        title="Next page"
+      >
+        <svg class="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+        </svg>
+      </button>
+      <button
+        v-else-if="isStudentMode"
+        @click="showCompletion = true"
+        class="fixed right-2 sm:right-4 top-1/2 -translate-y-1/2 z-50 flex items-center gap-1.5 pl-3 pr-4 py-3 rounded-full bg-emerald-600/90 hover:bg-emerald-600 text-white backdrop-blur-sm shadow-lg transition-colors"
+        title="Finish topic"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        </svg>
+        <span class="text-sm font-medium hidden sm:inline">Finish</span>
+      </button>
+
+      <button
+        @click="exitReadMode"
+        class="fixed top-2 right-2 sm:top-4 sm:right-4 z-50 flex items-center gap-1.5 pl-3 pr-3.5 py-2 rounded-full bg-gray-900/40 hover:bg-gray-900/60 text-white backdrop-blur-sm shadow-lg transition-colors"
+        title="Exit Read Mode"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+        <span class="text-xs font-medium hidden sm:inline">Exit</span>
+      </button>
+    </template>
 
     <!-- Completion celebration - shown once the student reaches the end of a topic. -->
     <div
@@ -573,6 +780,7 @@ import { AI_VOICES } from '@/types/enotes'
 import { autoEmbedYoutube, resolveContentAssetUrls, splitContentBlocks } from '@/utils/richContent'
 import { resolveAssetUrl } from '@/utils/url'
 import { usePersistedRef } from '@/composables/usePersistedRef'
+import { applyHighlights, rangeToOffsets, removeHighlightMark, type StoredHighlight } from '@/utils/textHighlight'
 import AITutorPlayer from '@/components/enotes/AITutorPlayer.vue'
 import BookFlipbook from '@/components/common/BookFlipbook.vue'
 
@@ -611,6 +819,145 @@ const preferSinglePage = usePersistedRef('espace:flipbook-single-page-preferred'
 const showIntro = ref(false)
 const showCompletion = ref(false)
 const flipbookRef = ref<InstanceType<typeof BookFlipbook> | null>(null)
+
+// Zoom: a plain CSS transform on the wrapper around BookFlipbook (see the template) - StPageFlip
+// itself has no notion of zoom, so this scales the whole rendered book visually and lets the
+// wrapper's own scroll (enabled once zoomed past 1x) pan around the enlarged result, rather than
+// needing any cooperation from the flip engine.
+const MIN_ZOOM = 1
+const MAX_ZOOM = 2.5
+const ZOOM_STEP = 0.25
+const zoomLevel = ref(MIN_ZOOM)
+const zoomIn = () => { zoomLevel.value = Math.min(MAX_ZOOM, Math.round((zoomLevel.value + ZOOM_STEP) * 100) / 100) }
+const zoomOut = () => { zoomLevel.value = Math.max(MIN_ZOOM, Math.round((zoomLevel.value - ZOOM_STEP) * 100) / 100) }
+
+// Reading focus overlay - a plain colored tint over the whole book, purely a personal display
+// preference (like `isMuted`), not content, so it's a localStorage preference rather than
+// anything saved server-side.
+const showTintPanel = ref(false)
+const readingTint = usePersistedRef('espace:reading-tint', 'none')
+const READING_TINTS = [
+  { value: 'none', label: 'None', class: '', swatchClass: 'bg-white dark:bg-gray-800' },
+  { value: 'sepia', label: 'Sepia', class: 'bg-amber-700/10', swatchClass: 'bg-amber-200' },
+  { value: 'blue', label: 'Cool Blue', class: 'bg-blue-500/10', swatchClass: 'bg-blue-200' },
+  { value: 'green', label: 'Soft Green', class: 'bg-emerald-500/10', swatchClass: 'bg-emerald-200' },
+  { value: 'rose', label: 'Warm Rose', class: 'bg-rose-500/10', swatchClass: 'bg-rose-200' },
+]
+
+// Student's own private per-page summary ("what I understood from this page") - loaded/saved via
+// PageNoteController, never visible to the teacher/HOD.
+const pageNotes = ref<Record<number, string>>({})
+const pageNoteStatus = ref<Record<number, 'idle' | 'saving' | 'saved'>>({})
+const noteSaveTimers: Record<number, ReturnType<typeof setTimeout>> = {}
+
+const onPageNoteInput = (pageId: number) => {
+  pageNoteStatus.value[pageId] = 'saving'
+  clearTimeout(noteSaveTimers[pageId])
+  noteSaveTimers[pageId] = setTimeout(async () => {
+    try {
+      await axios.put(`${API_BASE}/student/enotes/pages/${pageId}/note`, { content: pageNotes.value[pageId] || '' })
+      pageNoteStatus.value[pageId] = 'saved'
+    } catch {
+      pageNoteStatus.value[pageId] = 'idle'
+    }
+  }, 800)
+}
+
+// Student's own private text highlights - stored as plain-text offsets (see textHighlight.ts),
+// applied imperatively onto each page's rendered content once both the DOM element and the
+// stored highlights for that page are available.
+const HIGHLIGHT_COLORS = ['yellow', 'green', 'blue', 'pink'] as const
+const HIGHLIGHT_SWATCH_CLASS: Record<string, string> = {
+  yellow: 'bg-yellow-300', green: 'bg-emerald-300', blue: 'bg-sky-300', pink: 'bg-pink-300',
+}
+const pageHighlights = ref<Record<number, StoredHighlight[]>>({})
+const pageContentRefs: Record<number, HTMLElement> = {}
+const highlightPopup = ref<{ pageId: number; x: number; y: number; range: Range } | null>(null)
+
+const setPageContentRef = (el: Element | { $el?: Element } | null, pageId: number) => {
+  const node = el && '$el' in el ? el.$el : el
+  if (node instanceof HTMLElement) {
+    pageContentRefs[pageId] = node
+    const highlights = pageHighlights.value[pageId]
+    if (highlights?.length) applyHighlights(node, highlights)
+  }
+}
+
+const onContentMouseUp = (pageId: number) => {
+  if (!isStudentMode.value) return
+  const selection = window.getSelection()
+  if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
+    highlightPopup.value = null
+    return
+  }
+  const range = selection.getRangeAt(0)
+  const container = pageContentRefs[pageId]
+  if (!container || !container.contains(range.commonAncestorContainer)) return
+  const rect = range.getBoundingClientRect()
+  if (rect.width === 0 && rect.height === 0) return
+  highlightPopup.value = { pageId, x: rect.left + rect.width / 2, y: rect.top, range: range.cloneRange() }
+}
+
+const pickHighlightColor = async (color: string) => {
+  if (!highlightPopup.value) return
+  const { pageId, range } = highlightPopup.value
+  const container = pageContentRefs[pageId]
+  highlightPopup.value = null
+  window.getSelection()?.removeAllRanges()
+  if (!container) return
+  const offsets = rangeToOffsets(container, range)
+  if (!offsets) return
+  try {
+    const response = await axios.post(`${API_BASE}/student/enotes/pages/${pageId}/highlights`, {
+      start_offset: offsets.start,
+      end_offset: offsets.end,
+      color,
+    })
+    if (response.data.success) {
+      const newHighlight: StoredHighlight = { id: response.data.data.id, start_offset: offsets.start, end_offset: offsets.end, color }
+      pageHighlights.value[pageId] = [...(pageHighlights.value[pageId] || []), newHighlight]
+      applyHighlights(container, [newHighlight])
+    }
+  } catch {
+    // best-effort - losing one highlight isn't worth surfacing an error over
+  }
+}
+
+const onContentClick = async (pageId: number, event: MouseEvent) => {
+  const target = event.target as HTMLElement
+  if (!target.classList?.contains('student-highlight')) return
+  const highlightId = Number(target.dataset.highlightId)
+  if (!highlightId) return
+  const container = pageContentRefs[pageId]
+  try {
+    await axios.delete(`${API_BASE}/student/enotes/highlights/${highlightId}`)
+  } catch {
+    return
+  }
+  pageHighlights.value[pageId] = (pageHighlights.value[pageId] || []).filter(h => h.id !== highlightId)
+  if (container) removeHighlightMark(container, highlightId)
+}
+
+// Loaded once per topic open (student mode only) - a handful of small requests per page rather
+// than a bulk endpoint, since eNote topics are typically well under 20 pages.
+const loadStudentPageData = async () => {
+  await Promise.all(pages.value.map(async (page) => {
+    try {
+      const [noteRes, highlightRes] = await Promise.all([
+        axios.get(`${API_BASE}/student/enotes/pages/${page.id}/note`),
+        axios.get(`${API_BASE}/student/enotes/pages/${page.id}/highlights`),
+      ])
+      if (noteRes.data.success) pageNotes.value[page.id] = noteRes.data.data.content || ''
+      if (highlightRes.data.success) {
+        pageHighlights.value[page.id] = highlightRes.data.data.highlights || []
+        const el = pageContentRefs[page.id]
+        if (el) applyHighlights(el, pageHighlights.value[page.id])
+      }
+    } catch {
+      // best-effort - a student can still read the page without their notes/highlights loading
+    }
+  }))
+}
 
 // Which pages the reader has actually opened this session - drives the ToC checkmarks and a
 // progress bar that reflects real coverage rather than just "how far is the current page."
@@ -724,6 +1071,7 @@ const loadTopic = async () => {
 
       if (isStudentMode.value) {
         showIntro.value = true
+        loadStudentPageData()
       }
     }
   } catch (error) {
@@ -866,6 +1214,42 @@ const toggleFullscreen = () => {
   }
 }
 
+// Read Mode: the whole screen becomes the book - header, TOC sidebar and the nav-button row all
+// disappear (see the template's `v-if="!readMode"` / `:class="readMode ? ..."` bindings), replaced
+// by floating overlay arrows. Also requests real browser fullscreen as a bonus (reclaims the
+// browser's own chrome too, mainly useful on desktop) - best-effort, since some mobile browsers
+// don't support requestFullscreen() reliably, and Read Mode's own layout already maximizes the
+// book regardless of whether that succeeds.
+const readMode = ref(false)
+
+const enterReadMode = () => {
+  readMode.value = true
+  document.documentElement.requestFullscreen?.().catch(() => {})
+}
+
+const exitReadMode = () => {
+  readMode.value = false
+  if (document.fullscreenElement) {
+    document.exitFullscreen().catch(() => {})
+  }
+}
+
+// A student can also leave real fullscreen directly (Esc, swipe-down on mobile, browser UI)
+// without touching our own Exit button - Read Mode should still end when that happens rather than
+// leaving the overlay controls stranded with the browser's own chrome back.
+const onFullscreenChange = () => {
+  if (!document.fullscreenElement && readMode.value) {
+    readMode.value = false
+  }
+}
+
+const onReadModeKeydown = (e: KeyboardEvent) => {
+  if (!readMode.value) return
+  if (e.key === 'Escape') exitReadMode()
+  else if (e.key === 'ArrowLeft') handlePrevious()
+  else if (e.key === 'ArrowRight') handleNext()
+}
+
 const editTopic = () => {
   router.push(`/teacher/enotes/builder/${topicId.value}`)
 }
@@ -905,10 +1289,14 @@ onMounted(() => {
   // All pages render into the book at once now (not just the current one), so this listens
   // document-wide rather than watching a single "current page" content element.
   document.addEventListener('error', hideBrokenImages, true)
+  document.addEventListener('fullscreenchange', onFullscreenChange)
+  document.addEventListener('keydown', onReadModeKeydown)
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('error', hideBrokenImages, true)
+  document.removeEventListener('fullscreenchange', onFullscreenChange)
+  document.removeEventListener('keydown', onReadModeKeydown)
   if (document.fullscreenElement) {
     document.exitFullscreen().catch(() => {})
   }
@@ -1103,6 +1491,20 @@ onBeforeUnmount(() => {
   background-color: rgba(250, 204, 21, 0.09);
   box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.09);
 }
+
+/* Student highlight marks are added imperatively (see textHighlight.ts) directly onto the
+   v-html-rendered content, so they need :deep() the same way the rest of .prose's typography
+   does - Vue's scoped-style attribute never reaches elements created outside the template. */
+.prose :deep(mark.student-highlight) {
+  padding: 0 1px;
+  border-radius: 2px;
+  cursor: pointer;
+  background-image: none;
+}
+.prose :deep(mark.student-highlight-yellow) { background-color: rgba(250, 204, 21, 0.45); }
+.prose :deep(mark.student-highlight-green) { background-color: rgba(52, 211, 153, 0.4); }
+.prose :deep(mark.student-highlight-blue) { background-color: rgba(56, 189, 248, 0.4); }
+.prose :deep(mark.student-highlight-pink) { background-color: rgba(244, 114, 182, 0.4); }
 
 .ai-tutor-active::after {
   content: '';

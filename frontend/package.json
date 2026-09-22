@@ -8,7 +8,8 @@
     "build": "vue-tsc && vite build",
     "preview": "vite preview",
     "type-check": "vue-tsc --noEmit",
-    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore"
+    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@ckeditor/ckeditor5-vue": "^8.2.0",
@@ -56,6 +57,7 @@
     "@types/three": "^0.185.4",
     "@vitejs/plugin-vue": "^5.0.0",
     "autoprefixer": "^10.4.16",
+    "patch-package": "^8.0.1",
     "postcss": "^8.4.32",
     "tailwindcss": "^3.4.0",
     "typescript": "^5.3.3",

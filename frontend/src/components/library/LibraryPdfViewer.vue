@@ -1,8 +1,15 @@
 <template>
-  <div ref="viewerRef" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-0 lg:p-3">
-    <div class="bg-white dark:bg-gray-800 w-full h-full lg:h-[98vh] lg:max-w-7xl lg:rounded-2xl shadow-2xl overflow-hidden flex flex-col">
-      <!-- Header -->
-      <div class="relative flex-shrink-0 bg-emerald-600 px-3 sm:px-6 py-2 sm:py-3">
+  <div
+    ref="viewerRef"
+    class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50"
+    :class="readMode ? 'p-0' : 'p-0 lg:p-3'"
+  >
+    <div
+      class="bg-white dark:bg-gray-800 w-full h-full shadow-2xl overflow-hidden flex flex-col"
+      :class="readMode ? '' : 'lg:h-[98vh] lg:max-w-7xl lg:rounded-2xl'"
+    >
+      <!-- Header - hidden entirely in Read Mode, replaced by floating overlay controls. -->
+      <div v-if="!readMode" class="relative flex-shrink-0 bg-emerald-600 px-3 sm:px-6 py-2 sm:py-3">
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0 flex-1">
             <h2 class="text-sm sm:text-lg font-bold text-white leading-tight truncate">{{ book.title }}</h2>
@@ -21,6 +28,47 @@
             </div>
           </div>
           <div class="flex items-center gap-2 flex-shrink-0">
+            <!-- Read Mode - whole screen given over to the book, floating overlay controls
+                 replace every other piece of chrome. Student-only, same as the eNotes reader. -->
+            <button
+              v-if="bookImages.length > 0 && isStudentRole"
+              @click="enterReadMode"
+              class="flex items-center gap-1.5 px-3 py-2 bg-white text-emerald-700 font-medium text-sm rounded-lg hover:bg-emerald-50 transition-colors shadow-sm"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+              </svg>
+              <span class="hidden sm:inline">Read</span>
+            </button>
+
+            <!-- Zoom controls - scale the whole book area via CSS transform (see the wrapping
+                 div around BookFlipbook below), so the reader can pan around an enlarged page
+                 when the base size isn't big enough. -->
+            <div v-if="bookImages.length > 0" class="flex items-center bg-white/10 rounded-lg">
+              <button
+                @click="zoomOut"
+                :disabled="zoomLevel <= MIN_ZOOM"
+                class="p-2 rounded-lg hover:bg-white/25 transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
+                title="Zoom out"
+              >
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11h6"></path>
+                </svg>
+              </button>
+              <span v-if="zoomLevel > MIN_ZOOM" class="text-xs text-white/90 font-medium px-0.5 min-w-[2.5rem] text-center select-none">{{ Math.round(zoomLevel * 100) }}%</span>
+              <button
+                @click="zoomIn"
+                :disabled="zoomLevel >= MAX_ZOOM"
+                class="p-2 rounded-lg hover:bg-white/25 transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
+                title="Zoom in"
+              >
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 8v6M8 11h6"></path>
+                </svg>
+              </button>
+            </div>
             <!-- Only matters at lg+ - below that the book already always shows one page at a
                  time (no room for two), so this toggle would have nothing to do. -->
             <button
@@ -59,6 +107,46 @@
             >
               <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4"></path>
+              </svg>
+            </button>
+            <!-- Reading focus overlay picker - a colored tint over the page. -->
+            <div v-if="bookImages.length > 0" class="relative">
+              <button
+                @click="showTintPanel = !showTintPanel"
+                class="p-2 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
+                title="Reading focus color"
+              >
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h10a2 2 0 002-2v-4a2 2 0 00-2-2h-2.5"></path>
+                </svg>
+              </button>
+              <div v-if="showTintPanel" @click="showTintPanel = false" class="fixed inset-0 z-40"></div>
+              <div
+                v-if="showTintPanel"
+                class="absolute right-0 top-full mt-2 w-44 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-2 z-50"
+              >
+                <button
+                  v-for="tint in READING_TINTS"
+                  :key="tint.value"
+                  @click="readingTint = tint.value; showTintPanel = false"
+                  class="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  :class="readingTint === tint.value ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 font-medium' : 'text-gray-700 dark:text-gray-200'"
+                >
+                  <span class="w-4 h-4 rounded-full border border-gray-300 dark:border-gray-600 flex-shrink-0" :class="tint.swatchClass"></span>
+                  <span>{{ tint.label }}</span>
+                </button>
+              </div>
+            </div>
+            <!-- Student's own private per-page summary. -->
+            <button
+              v-if="bookImages.length > 0 && isStudentRole"
+              @click="showNotesPanel = !showNotesPanel"
+              class="p-2 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
+              :class="{ 'ring-2 ring-white/50': showNotesPanel }"
+              title="My notes for this page"
+            >
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
               </svg>
             </button>
             <button
@@ -101,7 +189,11 @@
              positioning would pin the drawer/backdrop to the browser window instead of the card. -->
         <div v-if="showToc" @click="showToc = false" class="absolute inset-0 bg-black/50 z-30 lg:hidden"></div>
 
-        <div class="flex-1 overflow-hidden flex justify-center items-center p-0 lg:p-3 bg-gray-200 dark:bg-gray-900" @contextmenu.prevent>
+        <div
+          class="flex-1 p-0 lg:p-3 bg-gray-200 dark:bg-gray-900"
+          :class="zoomLevel > MIN_ZOOM ? 'overflow-auto' : 'overflow-hidden flex justify-center items-center'"
+          @contextmenu.prevent
+        >
           <div v-if="loading" class="text-gray-500 dark:text-gray-300 py-20 text-sm">Loading document…</div>
           <div v-else-if="error" class="text-red-400 py-20 text-sm">{{ error }}</div>
           <div v-else-if="preparing" class="w-full max-w-xs text-center">
@@ -110,23 +202,66 @@
               <div class="h-full bg-emerald-600 transition-all" :style="{ width: `${totalPages ? (prepared / totalPages) * 100 : 0}%` }"></div>
             </div>
           </div>
-          <BookFlipbook
+          <div
             v-else
-            ref="flipbookRef"
-            :images="bookImages"
-            :page-width="bookPageWidth"
-            :page-height="bookPageHeight"
-            :muted="isMuted"
-            :prefer-single-page="preferSinglePage"
-            class="max-w-full max-h-full transition-shadow duration-300 hover:drop-shadow-2xl"
-            @flip="onFlip"
-          />
+            class="w-full h-full flex justify-center items-center transition-transform duration-200"
+            :style="{ transform: `scale(${zoomLevel})`, transformOrigin: zoomLevel > MIN_ZOOM ? 'top center' : 'center' }"
+          >
+            <BookFlipbook
+              ref="flipbookRef"
+              :images="bookImages"
+              :page-width="bookPageWidth"
+              :page-height="bookPageHeight"
+              :muted="isMuted"
+              :prefer-single-page="preferSinglePage"
+              class="max-w-full max-h-full transition-shadow duration-300 hover:drop-shadow-2xl"
+              @flip="onFlip"
+            />
+          </div>
+
+          <!-- Reading focus overlay - a plain colored tint over the whole book, purely visual. -->
+          <div
+            v-if="readingTint !== 'none'"
+            class="absolute inset-0 pointer-events-none z-10 mix-blend-multiply"
+            :class="READING_TINTS.find(t => t.value === readingTint)?.class"
+          ></div>
+
+          <!-- Student's own private summary for the current page - a bottom drawer rather than
+               something embedded in the page itself, since eLibrary pages are rendered images
+               (no DOM to inject a textarea into, unlike the eNotes reader). -->
+          <div
+            v-if="showNotesPanel && isStudentRole"
+            class="absolute inset-x-0 bottom-0 z-40 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-2xl rounded-t-2xl p-3 max-h-[50%] flex flex-col"
+          >
+            <div class="flex items-center justify-between mb-1.5 flex-shrink-0">
+              <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
+                <span>📝</span><span>My Notes — Page {{ currentPage }}</span>
+              </p>
+              <div class="flex items-center gap-2">
+                <span class="text-[11px] text-gray-400">{{ noteStatus === 'saving' ? 'Saving…' : noteStatus === 'saved' ? 'Saved' : '' }}</span>
+                <button @click="showNotesPanel = false" class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                  <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <textarea
+              v-model="currentPageNote"
+              @input="onNoteInput"
+              rows="3"
+              maxlength="2000"
+              placeholder="What did you understand from this page? (only you can see this)"
+              class="flex-1 w-full text-sm px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 text-gray-700 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+            ></textarea>
+          </div>
         </div>
 
         <!-- Right-side contents panel - the PDF's own bookmarks/outline when it has one, else a
-             plain page list, so a reader can jump straight to a topic instead of flipping through. -->
+             plain page list, so a reader can jump straight to a topic instead of flipping through.
+             Hidden entirely in Read Mode, same as the eNotes reader's TOC sidebar. -->
         <div
-          v-if="bookImages.length > 0"
+          v-if="bookImages.length > 0 && !readMode"
           class="absolute lg:static inset-y-0 right-0 z-40 w-64 max-w-[80vw] bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col transform transition-transform duration-300 lg:translate-x-0"
           :class="showToc ? 'translate-x-0' : 'translate-x-full'"
         >
@@ -156,26 +291,66 @@
         </div>
       </div>
 
-      <!-- Controls -->
-      <div class="flex items-center justify-center gap-3 sm:gap-6 px-3 sm:px-6 py-1.5 sm:py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 flex-shrink-0">
+      <!-- Controls - replaced by floating overlay arrows in Read Mode. -->
+      <div v-if="!readMode" class="flex items-center justify-center gap-3 sm:gap-6 px-3 sm:px-6 py-1.5 sm:py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 flex-shrink-0">
         <button type="button" class="nav-btn" :disabled="currentPage <= 1" @click="goPrev">‹ Prev</button>
         <span class="text-xs sm:text-sm text-gray-600 dark:text-gray-300 min-w-[100px] text-center">Page {{ currentPage }} of {{ totalPages || '…' }}</span>
         <button type="button" class="nav-btn" :disabled="currentPage >= totalPages" @click="goNext">Next ›</button>
       </div>
     </div>
+
+    <!-- Read Mode overlay controls - back/next/exit float over the book itself. -->
+    <template v-if="readMode">
+      <button
+        @click="goPrev"
+        :disabled="currentPage <= 1"
+        class="fixed left-2 sm:left-4 top-1/2 -translate-y-1/2 z-50 p-3 sm:p-4 rounded-full bg-gray-900/40 hover:bg-gray-900/60 text-white backdrop-blur-sm shadow-lg transition-colors disabled:opacity-0 disabled:pointer-events-none"
+        title="Previous page"
+      >
+        <svg class="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+        </svg>
+      </button>
+      <button
+        @click="goNext"
+        :disabled="currentPage >= totalPages"
+        class="fixed right-2 sm:right-4 top-1/2 -translate-y-1/2 z-50 p-3 sm:p-4 rounded-full bg-gray-900/40 hover:bg-gray-900/60 text-white backdrop-blur-sm shadow-lg transition-colors disabled:opacity-0 disabled:pointer-events-none"
+        title="Next page"
+      >
+        <svg class="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+        </svg>
+      </button>
+      <button
+        @click="exitReadMode"
+        class="fixed top-2 right-2 sm:top-4 sm:right-4 z-50 flex items-center gap-1.5 pl-3 pr-3.5 py-2 rounded-full bg-gray-900/40 hover:bg-gray-900/60 text-white backdrop-blur-sm shadow-lg transition-colors"
+        title="Exit Read Mode"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+        <span class="text-xs font-medium hidden sm:inline">Exit</span>
+      </button>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { usePdfRenderer } from '@/composables/usePdfRenderer'
 import type { LibraryBook } from '@/types/library'
 import { resolveAssetUrl } from '@/utils/url'
 import { usePersistedRef } from '@/composables/usePersistedRef'
+import { useAuthStore } from '@/stores/auth'
+import axios from 'axios'
 import BookFlipbook from '@/components/common/BookFlipbook.vue'
 
 const props = defineProps<{ book: LibraryBook }>()
 defineEmits(['close'])
+
+const API_BASE = '/api'
+const authStore = useAuthStore()
+const isStudentRole = computed(() => authStore.userRole === 'student')
 
 // Shared with the eNotes reader too - muting the page-turn sound in one place should mean it
 // stays muted everywhere, since it's a preference about the sound itself, not this one book.
@@ -207,13 +382,80 @@ const teacherName = computed(() => {
 // front - this is how Heyzine's own PDF conversion works too - rendered once at a fixed, readable
 // resolution rather than per-zoom-level like the old single-page view, since re-rendering dozens
 // of pages on every zoom click would be far too slow.
-const BOOK_RENDER_SCALE = 1.8
+const BOOK_RENDER_SCALE = 2.2
 const preparing = ref(false)
 const prepared = ref(0)
 const bookImages = ref<string[]>([])
 const bookPageWidth = ref(0)
 const bookPageHeight = ref(0)
 const flipbookRef = ref<InstanceType<typeof BookFlipbook> | null>(null)
+
+// Zoom: a plain CSS transform on the wrapper around BookFlipbook (see the template) - StPageFlip
+// itself has no notion of zoom, so this scales the whole rendered book visually and lets the
+// wrapper's own scroll (enabled once zoomed past 1x) pan around the enlarged result.
+const MIN_ZOOM = 1
+const MAX_ZOOM = 2.5
+const ZOOM_STEP = 0.25
+const zoomLevel = ref(MIN_ZOOM)
+const zoomIn = () => { zoomLevel.value = Math.min(MAX_ZOOM, Math.round((zoomLevel.value + ZOOM_STEP) * 100) / 100) }
+const zoomOut = () => { zoomLevel.value = Math.max(MIN_ZOOM, Math.round((zoomLevel.value - ZOOM_STEP) * 100) / 100) }
+
+// Reading focus overlay - shared preference key with the eNotes reader (espace:reading-tint), so
+// picking a tint in one reader carries over to the other.
+const showTintPanel = ref(false)
+const readingTint = usePersistedRef('espace:reading-tint', 'none')
+const READING_TINTS = [
+  { value: 'none', label: 'None', class: '', swatchClass: 'bg-white dark:bg-gray-800' },
+  { value: 'sepia', label: 'Sepia', class: 'bg-amber-700/10', swatchClass: 'bg-amber-200' },
+  { value: 'blue', label: 'Cool Blue', class: 'bg-blue-500/10', swatchClass: 'bg-blue-200' },
+  { value: 'green', label: 'Soft Green', class: 'bg-emerald-500/10', swatchClass: 'bg-emerald-200' },
+  { value: 'rose', label: 'Warm Rose', class: 'bg-rose-500/10', swatchClass: 'bg-rose-200' },
+]
+
+// Student's own private per-page summary ("what I understood from this page") - lazy-loaded per
+// page visit (unlike eNotes, a library book can run to hundreds of pages, so bulk-loading every
+// page's note upfront isn't worth it), never visible to the teacher/HOD.
+const showNotesPanel = ref(false)
+const pageNotes = ref<Record<number, string>>({})
+const noteStatus = ref<'idle' | 'saving' | 'saved'>('idle')
+const loadedNotePages = new Set<number>()
+let noteSaveTimer: ReturnType<typeof setTimeout> | null = null
+
+const currentPageNote = computed({
+  get: () => pageNotes.value[currentPage.value] ?? '',
+  set: (val: string) => { pageNotes.value[currentPage.value] = val },
+})
+
+async function loadPageNote(pageNumber: number) {
+  if (!isStudentRole.value || loadedNotePages.has(pageNumber)) return
+  loadedNotePages.add(pageNumber)
+  try {
+    const response = await axios.get(`${API_BASE}/student/library/books/${props.book.id}/pages/${pageNumber}/note`)
+    if (response.data.success) pageNotes.value[pageNumber] = response.data.data.content || ''
+  } catch {
+    // best-effort - a student can still read without their note loading
+  }
+}
+
+function onNoteInput() {
+  noteStatus.value = 'saving'
+  const pageNumber = currentPage.value
+  if (noteSaveTimer) clearTimeout(noteSaveTimer)
+  noteSaveTimer = setTimeout(async () => {
+    try {
+      await axios.put(`${API_BASE}/student/library/books/${props.book.id}/pages/${pageNumber}/note`, {
+        content: pageNotes.value[pageNumber] || '',
+      })
+      noteStatus.value = 'saved'
+    } catch {
+      noteStatus.value = 'idle'
+    }
+  }, 800)
+}
+
+watch(currentPage, (page) => {
+  if (page > 0) loadPageNote(page)
+}, { immediate: true })
 
 async function prepareBook() {
   preparing.value = true
@@ -231,7 +473,7 @@ async function prepareBook() {
           bookPageWidth.value = scratch.width
           bookPageHeight.value = scratch.height
         }
-        images.push(scratch.toDataURL('image/jpeg', 0.85))
+        images.push(scratch.toDataURL('image/jpeg', 0.92))
       } catch (pageErr) {
         // One bad page (a malformed embedded image, a canvas taint, ...) shouldn't take down the
         // whole book - fall back to a blank placeholder at the right size so the page count and
@@ -341,11 +583,52 @@ const toggleFullscreen = async () => {
   else await document.exitFullscreen()
 }
 
+// Read Mode: the whole modal becomes the book - header, TOC panel and Controls bar all disappear
+// (see the template's `v-if="!readMode"` bindings), replaced by floating overlay arrows. Also
+// requests real fullscreen as a bonus - best-effort, since some mobile browsers don't support it
+// reliably, and Read Mode's own layout already maximizes the book regardless.
+const readMode = ref(false)
+
+const enterReadMode = () => {
+  readMode.value = true
+  viewerRef.value?.requestFullscreen?.().catch(() => {})
+}
+
+const exitReadMode = () => {
+  readMode.value = false
+  if (document.fullscreenElement) {
+    document.exitFullscreen().catch(() => {})
+  }
+}
+
+const onFullscreenChange = () => {
+  if (!document.fullscreenElement && readMode.value) {
+    readMode.value = false
+  }
+}
+
+const onReadModeKeydown = (e: KeyboardEvent) => {
+  if (!readMode.value) return
+  if (e.key === 'Escape') exitReadMode()
+  else if (e.key === 'ArrowLeft') goPrev()
+  else if (e.key === 'ArrowRight') goNext()
+}
+
 onMounted(async () => {
   await loadPdf()
   if (!error.value) {
     await prepareBook()
     await loadToc()
+  }
+  document.addEventListener('fullscreenchange', onFullscreenChange)
+  document.addEventListener('keydown', onReadModeKeydown)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('fullscreenchange', onFullscreenChange)
+  document.removeEventListener('keydown', onReadModeKeydown)
+  if (document.fullscreenElement) {
+    document.exitFullscreen().catch(() => {})
   }
 })
 </script>
