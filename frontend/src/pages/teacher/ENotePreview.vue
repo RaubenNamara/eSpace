@@ -8,8 +8,8 @@
          slid-away header. -->
     <div
       v-if="!readMode"
-      class="relative bg-indigo-600 px-3 sm:px-6 flex items-center justify-between gap-2 flex-shrink-0 shadow-sm overflow-hidden transition-[max-height,padding,opacity] duration-300"
-      :class="headerHidden ? 'max-h-0 !py-0 opacity-0' : 'max-h-24 py-1.5 sm:py-2 opacity-100'">
+      class="relative bg-indigo-600 px-3 sm:px-6 flex items-center justify-between gap-2 flex-shrink-0 shadow-sm transition-[max-height,padding,opacity] duration-300"
+      :class="headerHidden ? 'max-h-0 !py-0 opacity-0 overflow-hidden' : 'max-h-24 py-1.5 sm:py-2 opacity-100 overflow-visible'">
       <div class="flex items-center gap-2 sm:gap-3 min-w-0">
         <button
           @click="goBack"
