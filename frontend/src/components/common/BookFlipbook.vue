@@ -59,6 +59,12 @@ const showHost = ref(true)
 const stagingRef = ref<HTMLElement | null>(null)
 let flip: PageFlip | null = null
 let resizeObserver: ResizeObserver | null = null
+let canvasResizeObserver: ResizeObserver | null = null
+// Shared debounce timer between the host resizeObserver (below, in build()) and the
+// pageWidth/pageHeight watcher further down - both ultimately want the same thing (a rebuild
+// once the container/aspect-ratio has actually settled), and coalescing both sources through one
+// timer avoids two overlapping rebuilds firing back to back for the same underlying size change.
+let pageSizeRebuildTimer: ReturnType<typeof setTimeout> | null = null
 
 // How long one flip's turning animation takes - also passed to PageFlip's own `flippingTime`
 // setting below, so the two stay in sync.
@@ -133,6 +139,33 @@ function build() {
     flip.loadFromHTML(Array.from(stagingRef.value!.children) as HTMLElement[])
   } else {
     flip.loadFromImages(props.images)
+    // Image mode draws every page onto one <canvas>, and page-flip only ever sets that canvas's
+    // actual bitmap resolution (not just its CSS box) once, during its own internal construction -
+    // at a point that, empirically (verified with headless-browser measurements taken at several
+    // points after construction, including a full animation frame and a macrotask later), can
+    // still read stale/constrained dimensions rather than this container's real, current size.
+    // No fixed delay reliably outlasts that: how long it takes depends on what triggered the
+    // resize (a real Fullscreen API transition can easily take longer than a synthetic CSS toggle
+    // does), so guessing one just trades an unreliable early read for a slower, still-unreliable
+    // one. A canvas has no ResizeObserver-adjacent API of its own to report bitmap staleness, but
+    // its own on-screen box size is exactly the thing that needs to eventually stay in sync with
+    // it, so watching that directly (rather than the host, which merely contains this canvas)
+    // catches the moment it actually finishes changing - and correcting it while re-running that
+    // check on every future resize besides makes the fix self-healing for as long as this book
+    // exists, not just at construction. Left uncorrected, later drawing happens in the wrong pixel
+    // space while CSS stretches the result to the canvas's real (correct) size, showing up as the
+    // book being gapped, cut off, or both, depending on which way the two sizes disagree.
+    const canvasEl = host.querySelector('.stf__canvas') as HTMLCanvasElement | null
+    if (canvasEl) {
+      canvasResizeObserver = new ResizeObserver(() => {
+        if (canvasEl.width !== canvasEl.clientWidth || canvasEl.height !== canvasEl.clientHeight) {
+          canvasEl.width = canvasEl.clientWidth
+          canvasEl.height = canvasEl.clientHeight
+          flip?.update()
+        }
+      })
+      canvasResizeObserver.observe(canvasEl)
+    }
   }
   flip.on('flip', (e) => {
     const now = Date.now()
@@ -146,7 +179,10 @@ function build() {
 
   // "stretch" mode fits the book to its container, but only recalculates on PageFlip's own
   // internal resize listener - toggling fullscreen (or any container resize outside a window
-  // resize event) needs an explicit nudge to actually re-fit.
+  // resize event) needs an explicit nudge to actually re-fit. calculateBoundsRect() (what this
+  // recomputes) always reads the container's live CSS size, so a plain update() - no rebuild
+  // needed - keeps it correctly positioned; image mode's separate canvas-bitmap staleness (see
+  // the canvasResizeObserver above) is a different problem, handled independently of this.
   resizeObserver = new ResizeObserver(() => flip?.update())
   resizeObserver.observe(host)
 }
@@ -154,6 +190,8 @@ function build() {
 async function destroy() {
   resizeObserver?.disconnect()
   resizeObserver = null
+  canvasResizeObserver?.disconnect()
+  canvasResizeObserver = null
 
   // In html mode, loadFromHTML() moved our page elements into StPageFlip's own internal
   // ".stf__block" wrapper - its destroy() below detaches that whole wrapper (taking our page
@@ -216,7 +254,6 @@ watch(() => props.preferSinglePage, () => rebuild())
 // firing it repeatedly for values that were never meant to stick risks a genuine race between
 // overlapping destroy/build cycles - filtering bad values and coalescing bursts into one rebuild
 // after things settle avoids that outright, rather than trying to reason about the interleaving.
-let pageSizeRebuildTimer: ReturnType<typeof setTimeout> | null = null
 watch(() => [props.pageWidth, props.pageHeight], ([w, h]) => {
   if (!w || !h || w <= 0 || h <= 0) return
   if (pageSizeRebuildTimer) clearTimeout(pageSizeRebuildTimer)

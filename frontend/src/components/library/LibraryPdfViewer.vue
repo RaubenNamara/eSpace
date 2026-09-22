@@ -336,7 +336,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { usePdfRenderer } from '@/composables/usePdfRenderer'
 import type { LibraryBook } from '@/types/library'
 import { resolveAssetUrl } from '@/utils/url'
@@ -617,31 +617,23 @@ const readModeStore = useReadModeStore()
 const enterReadMode = () => {
   readMode.value = true
   readModeStore.enter()
-  nextTick(() => flipbookRef.value?.rebuild())
   viewerRef.value?.requestFullscreen?.().catch(() => {})
 }
 
 const exitReadMode = () => {
   readMode.value = false
   readModeStore.exit()
-  nextTick(() => flipbookRef.value?.rebuild())
   if (document.fullscreenElement) {
     document.exitFullscreen().catch(() => {})
   }
 }
 
-// page-flip's own resize-triggered recalculation (see BookFlipbook's resizeObserver) only
-// recalculates the *existing* book's bounds - it doesn't reliably catch the browser's own
-// Fullscreen API transition, which resolves asynchronously and can land the container at its
-// truly-final size well after requestFullscreen() above already returned. That's what was
-// leaving the book's vertical centering stuck using stale (pre-fullscreen) bounds, appearing
-// flush at the top with a leftover gap at the bottom. A full rebuild re-measures from scratch.
+// BookFlipbook's own host resizeObserver rebuilds itself whenever the container's real size
+// actually changes (see its comment) - covers this fullscreen transition, the plain "Fullscreen"
+// header button, and Read Mode uniformly, so nothing extra is needed here beyond tracking state.
 const onFullscreenChange = () => {
   if (!document.fullscreenElement && readMode.value) {
     readMode.value = false
-  }
-  if (readMode.value) {
-    nextTick(() => flipbookRef.value?.rebuild())
   }
 }
 

@@ -1,1 +1,0 @@
-import{Y as o,r as s,u,i as n}from"./index-BV4V7h1u.js";const d=o("chatBadge",()=>{const e=s(0);async function r(){const t=u().userRole;if(!(t!=="student"&&t!=="teacher"))try{const a=await n.get(`/api/${t}/chat/unread-count`);e.value=a.data.data.count}catch{}}return{unreadCount:e,refresh:r}});export{d as u};
