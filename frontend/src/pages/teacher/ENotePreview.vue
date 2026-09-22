@@ -463,7 +463,14 @@
                 @flip="onBookFlip"
               >
                 <template #pages>
-                  <div v-for="page in pages" :key="page.id" class="enote-flip-page bg-white dark:bg-gray-800">
+                  <!-- @touchstart.stop: page-flip's own touch handler (attached on an ancestor)
+                       starts its drag/flip state machine on *any* touch lasting past its internal
+                       250ms swipeTimeout, even a purely vertical one - it can't tell a sustained
+                       scroll gesture on a long page from an intentional flip. Stopping the touch
+                       from ever bubbling to that handler keeps it from registering the touch at
+                       all, so a real scroll just scrolls (no more white-screen mid-flip glitch);
+                       page navigation on mobile still works via the explicit prev/next buttons. -->
+                  <div v-for="page in pages" :key="page.id" class="enote-flip-page bg-white dark:bg-gray-800" @touchstart.stop>
                     <div class="h-1.5 bg-indigo-600"></div>
                     <div class="p-5 sm:p-8">
                       <h2 v-if="hasMeaningfulTitle(page.title)" class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-3">
