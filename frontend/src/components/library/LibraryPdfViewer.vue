@@ -457,28 +457,37 @@ watch(currentPage, (page) => {
   if (page > 0) loadPageNote(page)
 }, { immediate: true })
 
+// Pages used to render strictly one-at-a-time (await in a for loop) onto a single shared canvas -
+// simple, but the reused canvas is exactly what forced serialization. pdf.js supports safely
+// requesting several different pages concurrently (each gets its own canvas here instead), so a
+// small worker pool renders several pages in parallel, meaningfully cutting the wall-clock time
+// to prepare a book without touching render scale or JPEG quality at all.
+const PREPARE_CONCURRENCY = 3
+
 async function prepareBook() {
   preparing.value = true
   prepared.value = 0
   scale.value = BOOK_RENDER_SCALE
-  const scratch = document.createElement('canvas')
-  const images: string[] = []
+  const totalCount = totalPages.value
+  const images: (string | undefined)[] = new Array(totalCount)
   try {
-    if (!totalPages.value) throw new Error('This document has no readable pages.')
+    if (!totalCount) throw new Error('This document has no readable pages.')
 
-    for (let p = 1; p <= totalPages.value; p++) {
+    let nextPageIndex = 0 // 0-based cursor into the shared page-number work queue
+
+    const renderOnePage = async (pageNum: number, canvas: HTMLCanvasElement) => {
       try {
-        await renderPage(p, scratch)
-        if (p === 1) {
-          bookPageWidth.value = scratch.width
-          bookPageHeight.value = scratch.height
+        await renderPage(pageNum, canvas)
+        if (pageNum === 1) {
+          bookPageWidth.value = canvas.width
+          bookPageHeight.value = canvas.height
         }
-        images.push(scratch.toDataURL('image/jpeg', 0.92))
+        images[pageNum - 1] = canvas.toDataURL('image/jpeg', 0.92)
       } catch (pageErr) {
         // One bad page (a malformed embedded image, a canvas taint, ...) shouldn't take down the
         // whole book - fall back to a blank placeholder at the right size so the page count and
         // flip behavior stay correct, and keep going.
-        console.error(`Library PDF: failed to render page ${p}`, pageErr)
+        console.error(`Library PDF: failed to render page ${pageNum}`, pageErr)
         if (bookPageWidth.value && bookPageHeight.value) {
           const placeholder = document.createElement('canvas')
           placeholder.width = bookPageWidth.value
@@ -488,14 +497,28 @@ async function prepareBook() {
             ctx.fillStyle = '#ffffff'
             ctx.fillRect(0, 0, placeholder.width, placeholder.height)
           }
-          images.push(placeholder.toDataURL('image/jpeg', 0.85))
+          images[pageNum - 1] = placeholder.toDataURL('image/jpeg', 0.85)
         }
       }
-      prepared.value = p
+      prepared.value++
     }
 
-    if (images.length === 0) throw new Error('None of this document\'s pages could be rendered.')
-    bookImages.value = images
+    const worker = async () => {
+      const canvas = document.createElement('canvas')
+      while (true) {
+        const idx = nextPageIndex++
+        if (idx >= totalCount) break
+        await renderOnePage(idx + 1, canvas)
+      }
+    }
+
+    await Promise.all(
+      Array.from({ length: Math.min(PREPARE_CONCURRENCY, totalCount) }, () => worker())
+    )
+
+    const finalImages = images.filter((img): img is string => !!img)
+    if (finalImages.length === 0) throw new Error('None of this document\'s pages could be rendered.')
+    bookImages.value = finalImages
   } catch (err: any) {
     console.error('Library PDF: failed to prepare book', err)
     error.value = err?.message || 'Failed to prepare this document for reading. Please try again.'

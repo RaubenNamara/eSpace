@@ -1,8 +1,15 @@
 <template>
   <div class="h-screen flex flex-col bg-gray-50 dark:bg-gray-950">
-    <!-- Header - hidden entirely in Read Mode, which replaces it with floating overlay controls
-         so the book can claim literally the whole screen. -->
-    <div v-if="!readMode" class="relative bg-indigo-600 px-3 sm:px-6 py-1.5 sm:py-2 flex items-center justify-between gap-2 flex-shrink-0 shadow-sm">
+    <!-- Header - hidden entirely in Read Mode (replaced by floating overlay controls), and also
+         auto-collapses while the reader scrolls down through a page's content, reappearing on
+         scroll-up - same idea as the app shell's own header (MainLayout.vue), applied here so
+         scrolling to read reclaims that space too. max-height (not a transform) so the book
+         actually grows into the reclaimed space rather than leaving a blank gap behind a
+         slid-away header. -->
+    <div
+      v-if="!readMode"
+      class="relative bg-indigo-600 px-3 sm:px-6 flex items-center justify-between gap-2 flex-shrink-0 shadow-sm overflow-hidden transition-[max-height,padding,opacity] duration-300"
+      :class="headerHidden ? 'max-h-0 !py-0 opacity-0' : 'max-h-24 py-1.5 sm:py-2 opacity-100'">
       <div class="flex items-center gap-2 sm:gap-3 min-w-0">
         <button
           @click="goBack"
@@ -434,6 +441,7 @@
                  the page currently open gets the narration-highlight markup - the rest render as
                  plain formatted content. -->
             <div
+              ref="bookWrapRef"
               :class="[
                 readMode ? 'flex-1 min-h-0' : 'flex-1 min-h-0 lg:flex-none lg:h-[80vh] lg:min-h-[420px] lg:mb-3',
                 zoomLevel > MIN_ZOOM ? 'overflow-auto' : 'overflow-hidden',
@@ -446,8 +454,8 @@
               <BookFlipbook
                 ref="flipbookRef"
                 mode="html"
-                :page-width="700"
-                :page-height="900"
+                :page-width="effectivePageWidth"
+                :page-height="effectivePageHeight"
                 :show-cover="false"
                 :muted="isMuted"
                 :prefer-single-page="preferSinglePage"
@@ -830,6 +838,37 @@ const ZOOM_STEP = 0.25
 const zoomLevel = ref(MIN_ZOOM)
 const zoomIn = () => { zoomLevel.value = Math.min(MAX_ZOOM, Math.round((zoomLevel.value + ZOOM_STEP) * 100) / 100) }
 const zoomOut = () => { zoomLevel.value = Math.max(MIN_ZOOM, Math.round((zoomLevel.value - ZOOM_STEP) * 100) / 100) }
+
+// The book's own fixed 700x900 "notebook page" aspect ratio doesn't match a phone's actual
+// available space (much taller and narrower), so StPageFlip's aspect-preserving "stretch" sizing
+// was leaving real letterbox gaps above/below the page even though the *container* itself
+// already fills the screen correctly. In single-page mode, StPageFlip sets the page's width to
+// the container's own full width and derives height from our width:height ratio - so feeding it
+// a ratio that already matches the container's own measured aspect makes the computed height
+// land exactly on the container's height too, closing the gap outright rather than shrinking it.
+// Left untouched on desktop's two-page spread, which isn't just half this same math (StPageFlip
+// halves the width there) and already looks right with the fixed notebook-page shape.
+const MOBILE_QUERY = '(max-width: 1023px)'
+const mq = typeof window !== 'undefined' ? window.matchMedia(MOBILE_QUERY) : null
+const isMobileForAspect = ref(mq?.matches ?? false)
+const bookWrapRef = ref<HTMLElement | null>(null)
+const dynamicPageWidth = ref(700)
+const dynamicPageHeight = ref(900)
+let bookWrapResizeObserver: ResizeObserver | null = null
+
+const updateDynamicAspect = () => {
+  const el = bookWrapRef.value
+  if (!el || el.clientWidth === 0 || el.clientHeight === 0) return
+  dynamicPageWidth.value = el.clientWidth
+  dynamicPageHeight.value = el.clientHeight
+}
+
+// Deliberately not extended to the desktop manual single-page toggle: BookFlipbook caps its own
+// width there (`max-w-[560px]`, see its capWidthForToggle) below bookWrapRef's own full measured
+// width, so matching against bookWrapRef's width would compute the wrong ratio in that case.
+const usesDynamicAspect = computed(() => isMobileForAspect.value)
+const effectivePageWidth = computed(() => usesDynamicAspect.value ? dynamicPageWidth.value : 700)
+const effectivePageHeight = computed(() => usesDynamicAspect.value ? dynamicPageHeight.value : 900)
 
 // Reading focus overlay - a plain colored tint over the whole book, purely a personal display
 // preference (like `isMuted`), not content, so it's a localStorage preference rather than
@@ -1250,6 +1289,40 @@ const onReadModeKeydown = (e: KeyboardEvent) => {
   else if (e.key === 'ArrowRight') handleNext()
 }
 
+// Header hide-on-scroll: mirrors MainLayout.vue's own app-shell header, but there's no single
+// page-level scroll here to listen to - each open page (`.enote-flip-page`) scrolls internally
+// when its content runs long (see the "overflow-y: auto" rule in this file's <style>), and native
+// `scroll` events don't bubble, so this listens in the capture phase on `document` (same trick
+// already used for `hideBrokenImages` below) rather than needing a handler wired to every page.
+const HEADER_SHOW_THRESHOLD_PX = 80
+const headerHidden = ref(false)
+let lastPageScrollTop = 0
+let lastPageScrollTarget: EventTarget | null = null
+
+const handlePageScroll = (e: Event) => {
+  const target = e.target as HTMLElement
+  if (!target.classList?.contains('enote-flip-page')) return
+
+  const currentTop = target.scrollTop
+  // Just started scrolling a *different* page (e.g. right after a flip) - its scrollTop resets
+  // to near 0 regardless of where the reader left off on the last one, which would otherwise
+  // read as a big upward jump and force the header back open on every single page turn.
+  if (target !== lastPageScrollTarget) {
+    lastPageScrollTarget = target
+    lastPageScrollTop = currentTop
+    return
+  }
+
+  if (currentTop < HEADER_SHOW_THRESHOLD_PX) {
+    headerHidden.value = false
+  } else if (currentTop > lastPageScrollTop) {
+    headerHidden.value = true
+  } else if (currentTop < lastPageScrollTop) {
+    headerHidden.value = false
+  }
+  lastPageScrollTop = currentTop
+}
+
 const editTopic = () => {
   router.push(`/teacher/enotes/builder/${topicId.value}`)
 }
@@ -1284,6 +1357,20 @@ watch(currentPage, (page) => {
   showTutorPanel.value = false
 }, { immediate: true })
 
+// bookWrapRef only exists once currentPage is set (it's inside `v-if="currentPage"`), which
+// happens asynchronously once loadTopic()'s request resolves - watching the ref itself (rather
+// than trying to attach in onMounted, before it exists) catches it whenever that actually happens.
+watch(bookWrapRef, (el) => {
+  bookWrapResizeObserver?.disconnect()
+  bookWrapResizeObserver = null
+  if (!el) return
+  updateDynamicAspect()
+  bookWrapResizeObserver = new ResizeObserver(updateDynamicAspect)
+  bookWrapResizeObserver.observe(el)
+})
+
+const handleAspectMqChange = (e: MediaQueryListEvent) => { isMobileForAspect.value = e.matches }
+
 onMounted(() => {
   loadTopic()
   // All pages render into the book at once now (not just the current one), so this listens
@@ -1291,12 +1378,17 @@ onMounted(() => {
   document.addEventListener('error', hideBrokenImages, true)
   document.addEventListener('fullscreenchange', onFullscreenChange)
   document.addEventListener('keydown', onReadModeKeydown)
+  document.addEventListener('scroll', handlePageScroll, true)
+  mq?.addEventListener('change', handleAspectMqChange)
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('error', hideBrokenImages, true)
   document.removeEventListener('fullscreenchange', onFullscreenChange)
   document.removeEventListener('keydown', onReadModeKeydown)
+  document.removeEventListener('scroll', handlePageScroll, true)
+  mq?.removeEventListener('change', handleAspectMqChange)
+  bookWrapResizeObserver?.disconnect()
   if (document.fullscreenElement) {
     document.exitFullscreen().catch(() => {})
   }

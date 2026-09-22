@@ -88,8 +88,12 @@ class HtmlSanitizer
         // Remove script tags and their content
         $html = preg_replace('#<script[^>]*>.*?</script>#is', '', $html);
         
-        // Remove on* event handlers
-        $html = preg_replace('/\s*on\w+\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)/is', '', $html);
+        // Remove on* event handlers - requires at least one real whitespace character before
+        // "on" (not just \s* which can match zero characters and start matching "on" wherever it
+        // happens to occur, including mid-word) so this doesn't also delete legitimate attributes
+        // that merely contain "on" as a substring, like <video controls> - "c[on]trols" was
+        // matching as "ontrols=" and getting stripped, silently breaking every video's controls.
+        $html = preg_replace('/\s+on\w+\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)/is', '', $html);
         
         // Remove javascript: protocol
         $html = preg_replace('/\s*href\s*=\s*("|\')javascript:[^"\']*("|\')/is', '', $html);

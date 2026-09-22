@@ -179,6 +179,13 @@ onBeforeUnmount(() => {
 
 watch(() => props.preferSinglePage, () => rebuild())
 
+// PageFlip captures width/height once at construction (`new PageFlip(...)`) and never re-reads
+// them - the host's own resizeObserver below only re-fits the *existing* aspect ratio to a
+// resized container, it doesn't pick up a genuinely different ratio. A parent computing a
+// dynamic pageWidth/pageHeight (e.g. to match its container's own aspect ratio exactly, avoiding
+// letterboxing) needs a real rebuild for a changed ratio to actually take effect.
+watch(() => [props.pageWidth, props.pageHeight], () => rebuild())
+
 // A different book (new document/topic) replaces pages wholesale - rebuild rather than
 // updateFrom*, since the aspect ratio (pageWidth/pageHeight) may have changed too. Image mode
 // reacts to its own prop; html mode has no single prop to watch (content arrives via slot), so
