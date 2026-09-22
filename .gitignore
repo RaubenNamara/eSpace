@@ -35,8 +35,8 @@ Thumbs.db
 *.sublime-project
 *.sublime-workspace
 
-# Build outputs
-dist/
+# Build outputs - frontend/dist/ is deliberately NOT ignored: .cpanel.yml's deploy task copies
+# it straight to production, so the built app has to actually be committed for deploys to work.
 build/
 *.cache
 
