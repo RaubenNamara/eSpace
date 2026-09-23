@@ -291,8 +291,12 @@ class ENoteController extends Controller
         }
 
         if (!empty($search)) {
-            $where[] = '(et.title LIKE :search OR et.description LIKE :search)';
-            $params['search'] = "%{$search}%";
+            // Non-emulated PDO prepares (this app's ATTR_EMULATE_PREPARES => false) can't reuse
+            // one named placeholder twice in the same query - two separate ones bound to the
+            // same value instead.
+            $where[] = '(et.title LIKE :search1 OR et.description LIKE :search2)';
+            $params['search1'] = "%{$search}%";
+            $params['search2'] = "%{$search}%";
         }
 
         $whereClause = implode(' AND ', $where);
@@ -469,6 +473,19 @@ class ENoteController extends Controller
         }
 
         $topic['pages'] = $this->attachNarrations($pages);
+
+        // Most recent assignment this teacher has linked to this topic, any status (draft or
+        // published) - this is the teacher's own authoring view, not the gated student-visible
+        // lookup Student\ENoteController::show() does. Powers the "Create/Edit Assessment"
+        // button on the topic preview screen.
+        $stmt = $db->prepare(
+            'SELECT id, title, status FROM assignments
+             WHERE enote_topic_id = :topic_id AND teacher_id = :teacher_id AND deleted_at IS NULL
+             ORDER BY created_at DESC LIMIT 1'
+        );
+        $stmt->execute(['topic_id' => $id, 'teacher_id' => $teacherId]);
+        $linkedAssignment = $stmt->fetch();
+        $topic['linked_assignment'] = $linkedAssignment ?: null;
 
         $this->success($topic);
     }

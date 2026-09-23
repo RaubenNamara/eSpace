@@ -263,6 +263,30 @@
           </div>
         </div>
 
+        <!-- Quick-create (or jump to editing) an assignment linked to this topic, without
+             leaving to the full Assignments screen first. -->
+        <button
+          v-if="!isReadOnly && topic && !topic.linked_assignment"
+          @click="showQuickAssessment = true"
+          class="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-white/10 hover:bg-white/25 text-white font-medium text-sm sm:text-base rounded-lg transition-colors"
+        >
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+          </svg>
+          <span class="hidden sm:inline">Create Assessment</span>
+        </button>
+        <button
+          v-else-if="!isReadOnly && topic?.linked_assignment"
+          @click="router.push(`/teacher/assignments/${topic!.linked_assignment!.id}/edit`)"
+          class="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-white/10 hover:bg-white/25 text-white font-medium text-sm sm:text-base rounded-lg transition-colors"
+          title="This topic already has a linked assessment"
+        >
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+          </svg>
+          <span class="hidden sm:inline">Edit Assessment</span>
+        </button>
+
         <button
           v-if="!isReadOnly"
           @click="editTopic"
@@ -273,6 +297,49 @@
           </svg>
           <span>Edit</span>
         </button>
+      </div>
+    </div>
+
+    <!-- Quick-create assessment modal - only due date and marks are asked for; everything else
+         (title, subject, class, the topic link itself) is derived from this topic, and the
+         teacher lands in the full assignment editor afterward to add questions, curriculum
+         alignment, etc. before publishing. -->
+    <div
+      v-if="showQuickAssessment"
+      class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      @click.self="showQuickAssessment = false"
+    >
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 class="text-base font-bold text-gray-900 dark:text-white">Create Assessment</h2>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Linked to "{{ topic?.title }}" - total marks are set automatically as you add questions next.</p>
+        </div>
+        <div class="p-5 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Due Date *</label>
+            <input
+              v-model="quickAssessmentForm.due_date"
+              type="date"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
+            >
+          </div>
+          <p v-if="quickAssessmentError" class="text-xs text-red-600 dark:text-red-400">{{ quickAssessmentError }}</p>
+        </div>
+        <div class="flex gap-3 p-5 pt-0">
+          <button
+            @click="showQuickAssessment = false"
+            class="flex-1 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            @click="createQuickAssessment"
+            :disabled="creatingQuickAssessment || !quickAssessmentForm.due_date"
+            class="flex-1 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {{ creatingQuickAssessment ? 'Creating...' : 'Create & Continue' }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -1393,6 +1460,46 @@ const attemptLinkedAssignment = () => {
   if (!topic.value?.linked_assignment) return
   if (readMode.value) exitReadMode()
   router.push(`/student/assignments/${topic.value.linked_assignment.id}/answer`)
+}
+
+// Quick-create an assignment linked to this topic straight from the preview screen, instead of
+// making the teacher go to Assignments, create one from scratch, and remember to link it back
+// here themselves. Everything the full builder would otherwise ask for up front (title, subject,
+// class, the topic link) is derived from this topic - due date is the only genuinely new
+// decision. Total marks isn't asked for here at all: AssignmentBuilder derives it automatically
+// from whatever marks the teacher gives each question as they add them (see its calculatedMarks
+// watcher), so it starts at 0 and fills itself in once real questions exist - asking for a number
+// before any question has been written would just be a guess to reconcile later anyway. Reuses
+// Teacher\AssignmentController::create() exactly as the full builder does, so what comes back is
+// a completely ordinary draft assignment the teacher lands straight into editing (to add
+// questions, curriculum alignment, etc.) before publishing.
+const showQuickAssessment = ref(false)
+const quickAssessmentForm = ref<{ due_date: string }>({ due_date: '' })
+const creatingQuickAssessment = ref(false)
+const quickAssessmentError = ref('')
+
+const createQuickAssessment = async () => {
+  if (!topic.value || !quickAssessmentForm.value.due_date) return
+  creatingQuickAssessment.value = true
+  quickAssessmentError.value = ''
+  try {
+    const response = await axios.post(`${API_BASE}/teacher/assignments`, {
+      title: `${topic.value.title} Assessment`,
+      total_marks: 0,
+      due_date: quickAssessmentForm.value.due_date,
+      subject_id: topic.value.subject_id,
+      scope: topic.value.class_group_name ? 'all_streams' : 'stream',
+      class_id: topic.value.class_id,
+      class_group_name: topic.value.class_group_name,
+      enote_topic_id: topic.value.id,
+    })
+    showQuickAssessment.value = false
+    router.push(`/teacher/assignments/${response.data.data.id}/edit`)
+  } catch (err: any) {
+    quickAssessmentError.value = err.response?.data?.message || 'Failed to create assessment'
+  } finally {
+    creatingQuickAssessment.value = false
+  }
 }
 
 // Content sometimes contains <img> tags with a missing/deleted source - hide those instead of

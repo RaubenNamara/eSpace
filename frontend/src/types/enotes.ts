@@ -34,10 +34,13 @@ export interface ENoteTopic {
   teacher_first_name?: string
   teacher_last_name?: string
   pages?: ENotePage[]
-  /** A published assignment linked to this topic that's currently visible to the reading
-   *  student (student-facing show() response only) - null if none, or one exists but isn't
-   *  visible. Powers the "Attempt Assessment" quick-link on topic completion. */
-  linked_assignment?: { id: number; title: string; due_date: string | null; submission_status: string } | null
+  /** The assignment linked to this topic, shape depends on who's asking: the student-facing
+   *  show() response includes due_date/submission_status and is gated to a published assignment
+   *  currently visible to that student (powers the "Attempt Assessment" topic-completion
+   *  quick-link); the teacher's own show() response includes status instead and returns any
+   *  status, gating who can see it themselves via ownership (powers the "Create/Edit Assessment"
+   *  button on the topic preview screen). Null if none in either case. */
+  linked_assignment?: { id: number; title: string; due_date?: string | null; submission_status?: string; status?: string } | null
 }
 
 export interface ENotePage {

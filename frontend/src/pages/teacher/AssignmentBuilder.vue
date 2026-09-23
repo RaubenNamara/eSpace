@@ -77,20 +77,6 @@
       </div>
     </div>
 
-    <!-- Warning Banner -->
-    <div v-if="marksMismatch && questions.length > 0" class="bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800">
-      <div class="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-16 py-3">
-        <div class="flex items-center">
-          <svg class="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-          </svg>
-          <p class="text-sm text-yellow-800 dark:text-yellow-200">
-            Total question marks ({{ calculatedMarks }}) do not match assignment total marks ({{ form.total_marks }}). Please adjust before publishing.
-          </p>
-        </div>
-      </div>
-    </div>
-
     <!-- Main Content -->
     <div class="w-full max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12 py-4 sm:py-6 xl:grid xl:grid-cols-[1fr_300px] xl:gap-6 xl:items-start">
       <div class="space-y-4 sm:space-y-6">
@@ -451,14 +437,11 @@
             <div class="p-4 sm:p-6 space-y-4">
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Total Marks *</label>
-                  <input
-                    v-model.number="form.total_marks"
-                    type="number"
-                    min="1"
-                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white transition-colors"
-                    placeholder="100"
-                  >
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Total Marks</label>
+                  <div class="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900/40 text-gray-700 dark:text-gray-200">
+                    {{ form.total_marks }}
+                  </div>
+                  <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Automatic - the sum of every question's own marks below.</p>
                 </div>
                 <div>
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Pass Mark</label>
@@ -823,15 +806,10 @@
               <span class="font-semibold text-emerald-600 dark:text-emerald-400">{{ questions.length }}</span>
             </div>
             <div class="flex items-center justify-between gap-3 py-2">
-              <span class="text-slate-500 dark:text-slate-400 font-medium">Marks</span>
-              <span class="font-semibold" :class="marksMismatch && questions.length > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'">
-                {{ calculatedMarks }} / {{ form.total_marks || 0 }}
-              </span>
+              <span class="text-slate-500 dark:text-slate-400 font-medium">Total Marks</span>
+              <span class="font-semibold text-emerald-600 dark:text-emerald-400">{{ form.total_marks || 0 }}</span>
             </div>
           </div>
-          <p v-if="marksMismatch && questions.length > 0" class="px-4 pb-3 text-xs font-medium text-amber-600 dark:text-amber-400">
-            Question marks don't add up to the total yet.
-          </p>
         </div>
       </div>
     </div>
@@ -890,6 +868,9 @@
                 + Add Sub-Question
               </button>
             </div>
+            <p v-if="questionForm.sub_questions && questionForm.sub_questions.length > 0" class="text-xs mb-2" :class="subQuestionsMarksTotal > remainingMarksBudget ? 'text-red-500 dark:text-red-400' : 'text-gray-400 dark:text-gray-500'">
+              {{ subQuestionsMarksTotal }} marks allocated - {{ remainingMarksBudget }} of 100 available across this assessment.
+            </p>
             <div v-if="questionForm.sub_questions && questionForm.sub_questions.length > 0" class="space-y-3 mb-4">
               <div
                 v-for="(subQ, index) in questionForm.sub_questions"
@@ -958,9 +939,11 @@
                 v-model.number="questionForm.marks"
                 type="number"
                 min="1"
+                :max="remainingMarksBudget"
                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
                 placeholder="Set marks for this scenario"
               >
+              <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ remainingMarksBudget }} of 100 marks available across this assessment.</p>
             </div>
             <div>
               <label class="flex items-center mt-2 sm:mt-6">
@@ -1030,8 +1013,10 @@
                 v-model.number="questionForm.marks"
                 type="number"
                 min="1"
+                :max="remainingMarksBudget"
                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
               >
+              <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ remainingMarksBudget }} of 100 marks available across this assessment.</p>
             </div>
             <div>
               <label class="flex items-center mt-2 sm:mt-6">
@@ -1286,7 +1271,7 @@ const form = ref({
   title: '',
   description: '',
   type: 'mixed' as const,
-  total_marks: 100,
+  total_marks: 0, // auto-derived from question marks - see the calculatedMarks watcher
   due_date: '',
   instructions: '',
   category: '',
@@ -1523,8 +1508,46 @@ const calculatedMarks = computed(() => {
   }, 0)
 })
 
-const marksMismatch = computed(() => {
-  return calculatedMarks.value !== Number(form.value.total_marks)
+// Total Marks is not something a teacher sets independently of the questions - each question
+// already carries its own marks (set right where the question itself is added/edited), so the
+// assignment's total is just their sum, always, automatically. Removes the entire class of "total
+// marks doesn't match the questions" problem outright rather than making it easier to fix by
+// hand - there's nothing left to fall out of sync.
+watch(calculatedMarks, (sum) => {
+  form.value.total_marks = sum
+}, { immediate: true })
+
+// Every assessment is scored out of 100, always - this is how a student's performance on a topic
+// is measured across the app (report cards, analytics, ...), the same fixed scale regardless of
+// how many questions an assessment happens to have. Rather than let a teacher build past 100 and
+// then have to go back and rebalance every question's marks by hand, the marks input for whichever
+// question they're currently adding/editing is capped to exactly what's left in that 100-point
+// budget - there's no way to overshoot it in the first place.
+const ASSIGNMENT_MARKS_CAP = 100
+
+const questionMarksTotal = (q: { marks: number; question_type: string; sub_questions?: SubQuestion[] }): number => {
+  if (q.question_type === 'scenario' && q.sub_questions && q.sub_questions.length > 0) {
+    return q.sub_questions.reduce((sum, sq) => sum + Number(sq.marks), 0)
+  }
+  return Number(q.marks)
+}
+
+// The budget available to the question currently open in the Add/Edit modal - every *other*
+// question's marks, subtracted from the 100-point cap. Excludes the question being edited from
+// its own budget (otherwise its own already-counted marks would eat into the room left for it).
+const remainingMarksBudget = computed(() => {
+  const othersTotal = questions.value.reduce((sum, q) => {
+    if (editingQuestion.value && q.id === editingQuestion.value.id) return sum
+    return sum + questionMarksTotal(q as any)
+  }, 0)
+  return Math.max(0, ASSIGNMENT_MARKS_CAP - othersTotal)
+})
+
+// A scenario question's own marks are the sum of its sub-questions (see questionMarksTotal) -
+// shown live next to the sub-question list itself, since capping each individual sub-question
+// input's own max wouldn't account for what its siblings already use from the same shared budget.
+const subQuestionsMarksTotal = computed(() => {
+  return (questionForm.value.sub_questions || []).reduce((sum, sq) => sum + Number(sq.marks), 0)
 })
 
 // Read-only fields for the "Assessment Snapshot" sidebar - reuses state/computeds already
@@ -1638,7 +1661,7 @@ const loadAssignment = async () => {
         title: assignment.title || '',
         description: assignment.description || '',
         type: assignment.type || 'mixed',
-        total_marks: Number(assignment.total_marks) || 100,
+        total_marks: Number(assignment.total_marks) || 0, // overwritten by the calculatedMarks watcher once questions load below
         due_date: assignment.due_date || '',
         instructions: assignment.instructions || '',
         category: assignment.category || '',
@@ -2195,6 +2218,18 @@ const saveQuestion = () => {
     }
   }
 
+  // Every assessment is out of 100, always (see remainingMarksBudget) - a hard backstop here
+  // alongside each marks input's own max attribute, since browsers don't universally block
+  // typing/pasting past an <input max>, and a scenario's sub-questions can individually stay
+  // under budget while still summing past it.
+  const thisQuestionMarks = questionForm.value.question_type === 'scenario' && questionForm.value.sub_questions && questionForm.value.sub_questions.length > 0
+    ? questionForm.value.sub_questions.reduce((sum, sq) => sum + Number(sq.marks), 0)
+    : Number(questionForm.value.marks)
+  if (thisQuestionMarks > remainingMarksBudget.value) {
+    showToast('error', `This question is ${thisQuestionMarks} marks, but only ${remainingMarksBudget.value} are left out of the 100-mark assessment total.`)
+    return
+  }
+
   if (isObjectiveQuestion.value) {
     const hasCorrectOption = questionForm.value.options.some(opt => opt.is_correct)
     if (!hasCorrectOption) {
@@ -2541,11 +2576,7 @@ const publishAssignment = async () => {
     return
   }
   if (!form.value.total_marks || form.value.total_marks <= 0) {
-    showToast('error', 'Total marks must be greater than 0')
-    return
-  }
-  if (marksMismatch.value) {
-    showToast('error', `Question marks (${calculatedMarks.value}) must match total marks (${form.value.total_marks})`)
+    showToast('error', 'Total marks must be greater than 0 - add marks to at least one question')
     return
   }
   // Client-side pre-check mirroring the backend's real publish validation (see

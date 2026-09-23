@@ -136,8 +136,12 @@ class ENoteController extends Controller
         $params = ['student_id' => $studentId, 'student_id_te' => $studentId];
 
         if (!empty($search)) {
-            $where[] = '(et.title LIKE :search OR et.description LIKE :search)';
-            $params['search'] = "%{$search}%";
+            // Non-emulated PDO prepares (this app's ATTR_EMULATE_PREPARES => false) can't reuse
+            // one named placeholder twice in the same query - two separate ones bound to the
+            // same value instead.
+            $where[] = '(et.title LIKE :search1 OR et.description LIKE :search2)';
+            $params['search1'] = "%{$search}%";
+            $params['search2'] = "%{$search}%";
         }
 
         if (!empty($subjectId)) {

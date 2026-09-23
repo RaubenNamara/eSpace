@@ -29,10 +29,7 @@
       <nav class="sidebar-nav font-jakarta relative flex-1 overflow-y-auto px-3 py-4">
         <!-- System Administration -->
         <div v-if="isAdmin" class="mb-6">
-          <div v-if="!isIconOnly" class="px-3 mb-2.5 flex items-center gap-2">
-            <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
-            <span class="text-[8px] md:text-[9px] font-bold text-indigo-600 dark:text-indigo-300 uppercase tracking-wider">System Administration</span>
-          </div>
+          <div class="mx-3 mb-2.5 h-px bg-slate-300 dark:bg-white/10"></div>
           <div class="space-y-0.5">
             <router-link
               v-for="item in adminMenu"
@@ -54,6 +51,7 @@
 
         <!-- Dashboard -->
         <div v-if="dashboardMenu.length > 0" class="mb-6">
+          <div class="mx-3 mb-2.5 h-px bg-slate-300 dark:bg-white/10"></div>
           <div class="space-y-0.5">
             <router-link
               v-for="item in dashboardMenu"
@@ -75,10 +73,7 @@
 
         <!-- Academic Management -->
         <div class="mb-6">
-          <div v-if="!isIconOnly" class="px-3 mb-2.5 flex items-center gap-2">
-            <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
-            <span class="text-[8px] md:text-[9px] font-bold text-indigo-600 dark:text-indigo-300 uppercase tracking-wider">Academic Management</span>
-          </div>
+          <div class="mx-3 mb-2.5 h-px bg-slate-300 dark:bg-white/10"></div>
           <div class="space-y-0.5">
             <router-link
               v-for="item in academicMenu"
@@ -100,10 +95,7 @@
 
         <!-- Learning Resources -->
         <div class="mb-6">
-          <div v-if="!isIconOnly" class="px-3 mb-2.5 flex items-center gap-2">
-            <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
-            <span class="text-[8px] md:text-[9px] font-bold text-indigo-600 dark:text-indigo-300 uppercase tracking-wider">Learning Resources</span>
-          </div>
+          <div class="mx-3 mb-2.5 h-px bg-slate-300 dark:bg-white/10"></div>
           <div class="space-y-0.5">
             <router-link
               v-for="item in resourcesMenu"
@@ -125,10 +117,7 @@
 
         <!-- Assessment & Analytics -->
         <div class="mb-6">
-          <div v-if="!isIconOnly" class="px-3 mb-2.5 flex items-center gap-2">
-            <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
-            <span class="text-[8px] md:text-[9px] font-bold text-indigo-600 dark:text-indigo-300 uppercase tracking-wider">Assessment & Analytics</span>
-          </div>
+          <div class="mx-3 mb-2.5 h-px bg-slate-300 dark:bg-white/10"></div>
           <div class="space-y-0.5">
             <router-link
               v-for="item in assessmentMenu"

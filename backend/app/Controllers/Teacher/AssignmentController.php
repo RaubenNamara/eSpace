@@ -762,8 +762,11 @@ class AssignmentController extends Controller
         // the assignment's own subject so a Physics assignment can't get linked to a Math topic.
         $enoteTopicId = (isset($data['enote_topic_id']) && $data['enote_topic_id'] !== '') ? (int) $data['enote_topic_id'] : null;
         if ($enoteTopicId !== null) {
-            $stmt = $db->prepare('SELECT id FROM enote_topics WHERE id = :id AND teacher_id = :teacher_id AND deleted_at IS NULL AND (subject_id = :subject_id OR :subject_id IS NULL)');
-            $stmt->execute(['id' => $enoteTopicId, 'teacher_id' => $teacherId, 'subject_id' => $subjectId]);
+            // Native (non-emulated) prepared statements can't bind the same named placeholder
+            // twice in one query - :subject_id appearing on both sides of the OR needs two
+            // separate placeholders bound to the same value, not one reused.
+            $stmt = $db->prepare('SELECT id FROM enote_topics WHERE id = :id AND teacher_id = :teacher_id AND deleted_at IS NULL AND (subject_id = :subject_id1 OR :subject_id2 IS NULL)');
+            $stmt->execute(['id' => $enoteTopicId, 'teacher_id' => $teacherId, 'subject_id1' => $subjectId, 'subject_id2' => $subjectId]);
             if (!$stmt->fetch()) {
                 $this->validationError(['enote_topic_id' => 'That eNote topic does not belong to you or this assignment\'s subject']);
                 return;
@@ -945,8 +948,9 @@ class AssignmentController extends Controller
                     $effectiveSubjectId = isset($data['subject_id']) && $data['subject_id'] !== ''
                         ? (int) $data['subject_id']
                         : $this->getAssignmentSubjectId($db, $assignmentId);
-                    $stmt = $db->prepare('SELECT id FROM enote_topics WHERE id = :id AND teacher_id = :teacher_id AND deleted_at IS NULL AND (subject_id = :subject_id OR :subject_id IS NULL)');
-                    $stmt->execute(['id' => $enoteTopicId, 'teacher_id' => $teacherId, 'subject_id' => $effectiveSubjectId]);
+                    // Same duplicate-named-placeholder pitfall as create() - see its comment.
+                    $stmt = $db->prepare('SELECT id FROM enote_topics WHERE id = :id AND teacher_id = :teacher_id AND deleted_at IS NULL AND (subject_id = :subject_id1 OR :subject_id2 IS NULL)');
+                    $stmt->execute(['id' => $enoteTopicId, 'teacher_id' => $teacherId, 'subject_id1' => $effectiveSubjectId, 'subject_id2' => $effectiveSubjectId]);
                     if (!$stmt->fetch()) {
                         Database::rollback();
                         $this->validationError(['enote_topic_id' => 'That eNote topic does not belong to you or this assignment\'s subject']);
