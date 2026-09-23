@@ -1198,6 +1198,24 @@ const loadAcademicYears = async () => {
   }
 }
 
+// The school-wide "current term" (terms.is_current, the same flag Marksheet/Report Card already
+// key off) - a topic's teacher is virtually always linking curriculum for the term they're
+// actually teaching in right now, so the Curriculum Link modal auto-selects Year+Term to this
+// instead of asking the teacher to pick both by hand. Reuses the existing report-cards/terms
+// endpoint (no new route) rather than adding a bespoke "current term" lookup.
+const currentTermInfo = ref<{ name: string; academic_year: string | null } | null>(null)
+const loadCurrentTermInfo = async () => {
+  try {
+    const response = await axios.get(`${API_BASE}/teacher/report-cards/terms`)
+    if (response.data.success) {
+      const current = (response.data.data.terms || []).find((t: any) => t.is_current)
+      currentTermInfo.value = current ? { name: current.name, academic_year: current.academic_year } : null
+    }
+  } catch (error) {
+    console.error('Failed to load current term:', error)
+  }
+}
+
 const showCurriculumLinkModal = ref(false)
 const curriculumMeta = ref<CurriculumMeta | null>(null)
 const curriculumLinkSelection = ref<{ academic_year_id: number | ''; term_id: number | ''; theme_branch: string; curriculum_topic_id: number | '' }>({
@@ -1253,6 +1271,23 @@ const openCurriculumLinkModal = async () => {
   curriculumLinkSelection.value = { academic_year_id: '', term_id: '', theme_branch: '', curriculum_topic_id: '' }
   curriculumMeta.value = null
   showCurriculumLinkModal.value = true
+  await loadCurriculumLinkMeta()
+
+  // Auto-select the current term (and its year) if curriculum data actually exists for it -
+  // matched by name, same as AssignmentBuilder.vue's own Year auto-fill, since these dropdowns
+  // are only ever populated with years/terms that have curriculum entries. Falls back to leaving
+  // both for manual selection if there's no curriculum yet for the current term specifically.
+  if (!currentTermInfo.value) return
+  const metaAfterYearsLoad = curriculumMeta.value as CurriculumMeta | null
+  const matchedYear = metaAfterYearsLoad?.academic_years.find(y => y.name === currentTermInfo.value!.academic_year)
+  if (!matchedYear) return
+  curriculumLinkSelection.value.academic_year_id = matchedYear.id
+  await loadCurriculumLinkMeta()
+
+  const metaAfterTermsLoad = curriculumMeta.value as CurriculumMeta | null
+  const matchedTerm = metaAfterTermsLoad?.terms.find(t => t.name === currentTermInfo.value!.name)
+  if (!matchedTerm) return
+  curriculumLinkSelection.value.term_id = matchedTerm.id
   await loadCurriculumLinkMeta()
 }
 
@@ -1375,6 +1410,7 @@ onMounted(() => {
   console.log('ENoteBuilder mounted, topicId:', topicId.value)
   loadTopic()
   loadAcademicYears()
+  loadCurrentTermInfo()
   window.addEventListener('resize', applyResponsivePanels)
 })
 
