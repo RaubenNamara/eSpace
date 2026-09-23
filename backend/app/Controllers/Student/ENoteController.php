@@ -221,6 +221,7 @@ class ENoteController extends Controller
 
         $previewService = new \eSpace\App\Services\StudentModulePreviewService();
         $topic['pages'] = $previewService->attachNarrationAudio($pages, $topic['narration_voice']);
+        $topic['pages'] = $this->attachPageLinkedAssignments($db, $topic['pages'], $studentId);
 
         $topic['linked_assignment'] = $this->getLinkedAssignment($db, $id, $studentId);
 
@@ -248,6 +249,7 @@ class ENoteController extends Controller
                     ORDER BY attempt_number DESC
                 ) sub ON a.id = sub.assignment_id
                 WHERE a.enote_topic_id = :topic_id
+                AND a.enote_page_id IS NULL
                 AND a.status = 'published'
                 AND a.deleted_at IS NULL
                 AND EXISTS (
@@ -278,6 +280,82 @@ class ENoteController extends Controller
         $stmt->execute(['topic_id' => $topicId, 'student_id_sub' => $studentId, 'student_id_enroll' => $studentId, 'student_id_te' => $studentId]);
         $assignment = $stmt->fetch();
         return $assignment ?: null;
+    }
+
+    /**
+     * The per-page counterpart of getLinkedAssignment() - a published, currently-visible Learning
+     * Outcome Assessment (Teacher\AssignmentController's enote_page_id) for each page in one
+     * batch, using the same eligibility rule (enrolled, within the enrollment window, not
+     * withdrawn from that teacher). Powers ENotePreview.vue's per-page "Ignore/Attempt" prompt
+     * when a student finishes reading a page that has one attached.
+     * @return array<int, array> keyed by page id
+     */
+    private function attachPageLinkedAssignments($db, array $pages, int $studentId): array
+    {
+        if (empty($pages)) {
+            return $pages;
+        }
+
+        $pageIds = array_column($pages, 'id');
+        $placeholders = implode(',', array_fill(0, count($pageIds), '?'));
+
+        $sql = "SELECT a.id, a.title, a.due_date, a.enote_page_id,
+                       elo.learning_outcome_id, elo2.learning_outcome AS learning_outcome_label,
+                       COALESCE(sub.status, 'new') as submission_status
+                FROM assignments a
+                INNER JOIN subjects s ON a.subject_id = s.id
+                LEFT JOIN assignment_learning_outcomes elo ON elo.assignment_id = a.id
+                LEFT JOIN enote_learning_outcomes elo2 ON elo2.id = elo.learning_outcome_id
+                LEFT JOIN (
+                    SELECT * FROM assignment_submissions
+                    WHERE student_id = ?
+                    ORDER BY attempt_number DESC
+                ) sub ON a.id = sub.assignment_id
+                WHERE a.enote_page_id IN ({$placeholders})
+                AND a.status = 'published'
+                AND a.deleted_at IS NULL
+                AND EXISTS (
+                    SELECT 1 FROM student_department_enrollments sde
+                    LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
+                    WHERE sde.student_id = ?
+                      AND (
+                        sde.class_id = a.class_id
+                        OR (a.class_group_name IS NOT NULL AND sde_c.name = a.class_group_name)
+                        OR EXISTS (SELECT 1 FROM assignment_classes ac WHERE ac.assignment_id = a.id AND ac.class_id = sde.class_id)
+                      )
+                      AND sde.department_id = s.department_id
+                      AND sde.deleted_at IS NULL
+                      AND sde.status = 'active'
+                      AND COALESCE(a.published_at, a.created_at) BETWEEN sde.start_date AND COALESCE(sde.end_date, NOW())
+                )
+                AND NOT EXISTS (
+                    SELECT 1 FROM student_teacher_enrollments ste
+                    WHERE ste.student_id = ?
+                      AND ste.teacher_id = a.teacher_id
+                      AND ste.department_id = s.department_id
+                      AND ste.status = 'withdrawn'
+                )";
+
+        $stmt = $db->prepare($sql);
+        $stmt->execute([$studentId, ...$pageIds, $studentId, $studentId]);
+
+        $byPage = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $byPage[(int) $row['enote_page_id']] = [
+                'id' => (int) $row['id'],
+                'title' => $row['title'],
+                'due_date' => $row['due_date'],
+                'learning_outcome_label' => $row['learning_outcome_label'],
+                'submission_status' => $row['submission_status'],
+            ];
+        }
+
+        foreach ($pages as &$page) {
+            $page['linked_assignment'] = $byPage[(int) $page['id']] ?? null;
+        }
+        unset($page);
+
+        return $pages;
     }
 
     /**

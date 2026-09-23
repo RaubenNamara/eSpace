@@ -220,9 +220,10 @@
             <!-- Page-fit meter: the reader shows this page in a fixed-size flipbook page, not a
                  free-scrolling column, so content that runs long forces students to scroll inside
                  that one page instead of turning to a fresh one. Measured against the real
-                 flipbook page size (a hidden probe below, styled identically). Enforced, not just
-                 advisory - see measurePageFit(): once a page is full, any edit that would push it
-                 over capacity is reverted, so the teacher has to create a new page instead. -->
+                 flipbook page size (a hidden probe below, styled identically). Advisory only for
+                 now, not enforced - see measurePageFit(): a full page shows a warning toast (once
+                 per crossing) and this banner, but a teacher can keep typing past it. Hard
+                 blocking was tried and reverted - see git history if reintroducing it. -->
             <div
               v-if="currentPage"
               class="mb-4 rounded-lg border px-3 py-2.5 flex items-center gap-3 text-xs sm:text-sm transition-colors"
@@ -235,7 +236,7 @@
               <div class="flex-1 min-w-0">
                 <div class="flex items-center justify-between gap-2 mb-1">
                   <span class="font-medium">
-                    {{ pageFitStatus === 'over' ? "Page is full - anything more you type will be undone. Trim content or start a new page."
+                    {{ pageFitStatus === 'over' ? "Page is full - students will need to scroll. Consider starting a new page."
                       : pageFitStatus === 'near' ? 'Getting close to a full page'
                       : 'Fits comfortably on one page' }}
                   </span>
@@ -402,10 +403,279 @@
               </div>
             </div>
           </div>
+
+          <!-- One-time link from this eNote topic to the admin-authored curriculum bank, so the
+               LO button below knows this topic's outcomes. -->
+          <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+            <h3 class="text-sm font-medium text-gray-900 dark:text-white mb-2">Curriculum Link</h3>
+            <div v-if="topic?.curriculum_topic_id" class="space-y-1.5">
+              <p v-if="linkedCurriculumTopic" class="text-xs text-gray-500 dark:text-gray-400">{{ linkedCurriculumTopic.theme_branch }}</p>
+              <p v-if="linkedCurriculumTopic" class="text-sm text-gray-900 dark:text-white font-medium">{{ linkedCurriculumTopic.topic }}</p>
+              <button @click="openCurriculumLinkModal" class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">Change Link</button>
+            </div>
+            <div v-else class="space-y-2">
+              <p class="text-xs text-gray-500 dark:text-gray-400">Link to the curriculum bank to enable Learning Outcome Assessments on this topic's pages.</p>
+              <button @click="openCurriculumLinkModal" class="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">Link to Curriculum</button>
+            </div>
+          </div>
+
         </div>
 
         <div v-else class="text-center text-gray-500 dark:text-gray-400 text-sm">
           Select a page to view settings
+        </div>
+      </div>
+    </div>
+
+    <!-- Floating quick-create assessments - small chips (abbreviated: LO = Learning Outcome
+         Assessment, page-scoped, shown to students on finishing this page; AOI = Activity of
+         Integration Assessment, topic-scoped, shown at topic-completion), always visible on every
+         page for easy access rather than tucked inside the Page Settings panel. Bottom-center,
+         small enough to stay out of the way of everything else. -->
+    <div v-if="currentPage" class="fixed left-1/2 -translate-x-1/2 bottom-4 sm:bottom-6 z-30 flex items-center gap-1.5">
+      <span
+        v-if="!topic?.curriculum_topic_id"
+        class="text-[11px] text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-2.5 py-1.5 shadow-lg"
+      >
+        Link curriculum to enable LO
+      </span>
+      <button
+        v-else-if="!currentPage.linked_assignment"
+        @click="openLoaModal"
+        class="inline-flex items-center gap-1 pl-2 pr-2.5 py-1.5 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-lg hover:shadow-xl transition-all"
+        title="Create a Learning Outcome Assessment for this page"
+      >
+        <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+        </svg>
+        <span>LO</span>
+      </button>
+      <button
+        v-else
+        @click="router.push(`/teacher/assignments/${currentPage.linked_assignment!.id}/edit`)"
+        class="inline-flex items-center gap-1 pl-2 pr-2.5 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 text-xs font-medium shadow-lg hover:shadow-xl transition-all"
+        :title="currentPage.linked_assignment.learning_outcome_label || 'Edit this page\'s Learning Outcome Assessment'"
+      >
+        <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        </svg>
+        <span>LO</span>
+      </button>
+
+      <button
+        v-if="!topic?.linked_assignment"
+        @click="openAoiModal"
+        class="inline-flex items-center gap-1 pl-2 pr-2.5 py-1.5 rounded-full bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold shadow-lg hover:shadow-xl transition-all"
+        title="Create an AOI (Activity of Integration) Assessment for this topic"
+      >
+        <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+        </svg>
+        <span>AOI</span>
+      </button>
+      <button
+        v-else
+        @click="router.push(`/teacher/assignments/${topic!.linked_assignment!.id}/edit`)"
+        class="inline-flex items-center gap-1 pl-2 pr-2.5 py-1.5 rounded-full bg-violet-50 dark:bg-violet-900/40 border border-violet-200 dark:border-violet-700 text-violet-700 dark:text-violet-300 text-xs font-medium shadow-lg hover:shadow-xl transition-all"
+        title="This topic already has a linked assessment"
+      >
+        <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        </svg>
+        <span>AOI</span>
+      </button>
+    </div>
+
+    <!-- One-time curriculum link modal -->
+    <div
+      v-if="showCurriculumLinkModal"
+      class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      @click.self="showCurriculumLinkModal = false"
+    >
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 class="text-base font-bold text-gray-900 dark:text-white">Link to Curriculum</h2>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">One-time setup - after linking, every page in this topic can quick-create a Learning Outcome Assessment from this topic's own outcomes.</p>
+        </div>
+        <div class="p-5 space-y-4">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Academic Year</label>
+              <select
+                v-model="curriculumLinkSelection.academic_year_id"
+                @change="onCurriculumLinkStepChange('academic_year_id')"
+                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+              >
+                <option value="">Select year</option>
+                <option v-for="y in curriculumMeta?.academic_years" :key="y.id" :value="y.id">{{ y.name }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Term</label>
+              <select
+                v-model="curriculumLinkSelection.term_id"
+                :disabled="!curriculumLinkSelection.academic_year_id"
+                @change="onCurriculumLinkStepChange('term_id')"
+                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white disabled:opacity-50"
+              >
+                <option value="">Select term</option>
+                <option v-for="t in curriculumMeta?.terms" :key="t.id" :value="t.id">{{ t.name }}</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Theme / Branch</label>
+            <select
+              v-model="curriculumLinkSelection.theme_branch"
+              :disabled="!curriculumLinkSelection.term_id"
+              @change="onCurriculumLinkStepChange('theme_branch')"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white disabled:opacity-50"
+            >
+              <option value="">Select theme/branch</option>
+              <option v-for="theme in curriculumMeta?.themes" :key="theme" :value="theme">{{ theme }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Topic</label>
+            <select
+              v-model="curriculumLinkSelection.curriculum_topic_id"
+              :disabled="!curriculumLinkSelection.theme_branch"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white disabled:opacity-50"
+            >
+              <option value="">Select topic</option>
+              <option v-for="t in curriculumMeta?.topics" :key="t.id" :value="t.id">{{ t.topic }}</option>
+            </select>
+          </div>
+          <p v-if="curriculumLinkError" class="text-xs text-red-600 dark:text-red-400">{{ curriculumLinkError }}</p>
+        </div>
+        <div class="flex gap-3 p-5 pt-0">
+          <button
+            @click="showCurriculumLinkModal = false"
+            class="flex-1 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            @click="saveCurriculumLink"
+            :disabled="savingCurriculumLink || !curriculumLinkSelection.curriculum_topic_id"
+            class="flex-1 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {{ savingCurriculumLink ? 'Saving...' : 'Link' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Learning Outcome Assessment quick-create modal (page-scoped) -->
+    <div
+      v-if="showLoaModal"
+      class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      @click.self="showLoaModal = false"
+    >
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 class="text-base font-bold text-gray-900 dark:text-white">Learning Outcome Assessment</h2>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Attached to Page {{ currentPage?.order_number }} - students are prompted the moment they finish reading this page.</p>
+        </div>
+        <div class="p-5 space-y-4">
+          <div>
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Learning Outcome *</label>
+            <div v-if="!linkedCurriculumTopic?.learning_outcomes?.length" class="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-950/40 rounded-lg p-3">
+              No learning outcomes found for the linked curriculum topic.
+            </div>
+            <div v-else class="space-y-1.5 border border-gray-200 dark:border-gray-700 rounded-lg p-2 max-h-48 overflow-y-auto">
+              <label
+                v-for="(o, i) in linkedCurriculumTopic.learning_outcomes"
+                :key="linkedCurriculumTopic.learning_outcome_ids[i]"
+                class="flex items-start gap-2.5 px-2 py-1.5 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer text-sm text-gray-700 dark:text-gray-300"
+              >
+                <input type="radio" name="loa-outcome" :value="linkedCurriculumTopic.learning_outcome_ids[i]" v-model="loaForm.learning_outcome_id" class="mt-0.5 text-indigo-600 focus:ring-indigo-500">
+                <span>{{ i + 1 }}. {{ o }}</span>
+              </label>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Year *</label>
+              <select v-model="loaForm.academic_year" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white">
+                <option value="">Select year</option>
+                <option v-for="y in academicYears" :key="y.academic_year" :value="y.academic_year">{{ y.academic_year }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Weight</label>
+              <input v-model="loaForm.weight" type="number" min="0" step="0.5" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white">
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Due Date *</label>
+            <input v-model="loaForm.due_date" type="date" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white">
+          </div>
+          <p v-if="loaError" class="text-xs text-red-600 dark:text-red-400">{{ loaError }}</p>
+        </div>
+        <div class="flex gap-3 p-5 pt-0">
+          <button
+            @click="showLoaModal = false"
+            class="flex-1 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            @click="createLoaAssessment"
+            :disabled="creatingLoa || !loaForm.learning_outcome_id || !loaForm.academic_year || !loaForm.due_date"
+            class="flex-1 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {{ creatingLoa ? 'Creating...' : 'Create & Continue' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AOI Assessment quick-create modal (topic-scoped) -->
+    <div
+      v-if="showAoiModal"
+      class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      @click.self="showAoiModal = false"
+    >
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 class="text-base font-bold text-gray-900 dark:text-white">AOI Assessment</h2>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Linked to "{{ topic?.title }}" - shown to students at the end of this topic.</p>
+        </div>
+        <div class="p-5 space-y-4">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Year *</label>
+              <select v-model="aoiForm.academic_year" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white">
+                <option value="">Select year</option>
+                <option v-for="y in academicYears" :key="y.academic_year" :value="y.academic_year">{{ y.academic_year }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Weight</label>
+              <input v-model="aoiForm.weight" type="number" min="0" step="0.5" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white">
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Due Date *</label>
+            <input v-model="aoiForm.due_date" type="date" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white">
+          </div>
+          <p v-if="aoiError" class="text-xs text-red-600 dark:text-red-400">{{ aoiError }}</p>
+        </div>
+        <div class="flex gap-3 p-5 pt-0">
+          <button
+            @click="showAoiModal = false"
+            class="flex-1 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            @click="createAoiAssessment"
+            :disabled="creatingAoi || !aoiForm.academic_year || !aoiForm.due_date"
+            class="flex-1 py-2.5 text-sm font-semibold text-white bg-violet-600 hover:bg-violet-700 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {{ creatingAoi ? 'Creating...' : 'Create & Continue' }}
+          </button>
         </div>
       </div>
     </div>
@@ -511,7 +781,7 @@ const loadTopic = async () => {
         content: resolveContentAssetUrls(page.content || '')
       }))
       console.log('Pages loaded:', pages.value.length)
-      
+
       if (pages.value.length > 0) {
         currentPage.value = pages.value[0]
         console.log('Current page set:', currentPage.value)
@@ -522,6 +792,8 @@ const loadTopic = async () => {
         console.log('No pages found, creating a first page automatically')
         await addPage()
       }
+
+      await loadLinkedCurriculumTopic()
     }
   } catch (error) {
     console.error('Failed to load topic:', error)
@@ -752,40 +1024,31 @@ const pageFitStatus = computed<'ok' | 'near' | 'over'>(() => {
   return 'ok'
 })
 
-// The last content this page had while still at/under capacity - reverting to this (rather than
-// just blocking the editor outright) means a teacher who overshoots can still freely delete text
-// to get back under the limit, instead of being locked out of editing entirely the moment they
-// cross it.
-const lastGoodContent = ref<string | null>(null)
-const lastGoodContentPageId = ref<number | null>(null)
+// Advisory only for now (not enforced): a full page just warns, via this toast (throttled so
+// rapid typing doesn't spam it) and the banner above, but a teacher can keep adding past it if
+// they choose to. A hard-blocking version (reverting content that would grow past the limit) was
+// tried and turned out to fight CKEditor's one-way v-model binding (it only syncs editor->data,
+// never external changes back into the visible editor), causing real edits - including
+// legitimate deletions - to get silently rejected. Simpler and reliable for now; revisit
+// enforcement later if needed, using the CKEditor instance's setData() directly rather than
+// reassigning page.content alone.
 let lastPageFullToastAt = 0
 const notifyPageFull = () => {
   const now = Date.now()
-  if (now - lastPageFullToastAt < 2500) return // typing/pasting can trigger several checks in a row
+  if (now - lastPageFullToastAt < 4000) return // typing/pasting can trigger several checks in a row
   lastPageFullToastAt = now
-  toast.error('This page is full - create a new page to keep writing.')
+  toast.error('This page is full - students will need to scroll. Consider starting a new page.')
 }
 
 let pageFitTimeout: number | null = null
 const measurePageFit = () => {
   const el = pageFitProbeRef.value
   const page = currentPage.value
-  pageFitRatio.value = el ? el.offsetHeight / PAGE_FIT_HEIGHT : 0
+  const newRatio = el ? el.offsetHeight / PAGE_FIT_HEIGHT : 0
+  pageFitRatio.value = newRatio
   if (!page || !el) return
 
-  if (lastGoodContentPageId.value !== page.id) {
-    // First measurement since switching to this page (or loading it) - just start tracking from
-    // here, even if it's already over capacity. Pre-existing long content isn't destructively
-    // trimmed; only further growth from this point on gets blocked.
-    lastGoodContentPageId.value = page.id
-    lastGoodContent.value = page.content
-    return
-  }
-
-  if (pageFitRatio.value < 1) {
-    lastGoodContent.value = page.content
-  } else if (lastGoodContent.value !== null && page.content !== lastGoodContent.value) {
-    page.content = lastGoodContent.value
+  if (newRatio >= 1) {
     notifyPageFull()
   }
 }
@@ -826,8 +1089,8 @@ const onDrop = async (dropIndex: number) => {
       order_number: idx + 1
     }))
 
-    await axios.post(`${API_BASE}/teacher/enotes/topics/${topicId.value}/pages/reorder`, {
-      pages: pageOrders
+    await axios.post(`${API_BASE}/teacher/enotes/topics/${topicId.value}/reorder`, {
+      page_orders: pageOrders
     })
 
     await loadTopic()
@@ -865,8 +1128,8 @@ const movePageUp = async (index: number) => {
       order_number: idx + 1
     }))
 
-    await axios.post(`${API_BASE}/teacher/enotes/topics/${topicId.value}/pages/reorder`, {
-      pages: pageOrders
+    await axios.post(`${API_BASE}/teacher/enotes/topics/${topicId.value}/reorder`, {
+      page_orders: pageOrders
     })
 
     await loadTopic()
@@ -890,8 +1153,8 @@ const movePageDown = async (index: number) => {
       order_number: idx + 1
     }))
 
-    await axios.post(`${API_BASE}/teacher/enotes/topics/${topicId.value}/pages/reorder`, {
-      pages: pageOrders
+    await axios.post(`${API_BASE}/teacher/enotes/topics/${topicId.value}/reorder`, {
+      page_orders: pageOrders
     })
 
     await loadTopic()
@@ -901,9 +1164,217 @@ const movePageDown = async (index: number) => {
   }
 }
 
+// --- One-time link from this eNote topic to the admin-authored curriculum bank
+// (enote_curriculum_topics/enote_learning_outcomes) - reuses the same cascading
+// Year -> Term -> Theme/Branch -> Topic endpoint AssignmentBuilder.vue's LOA/AOI picker uses.
+// Unlike that picker, Academic Year is asked directly here since eNote topics carry no year of
+// their own to auto-derive it from. ---
+interface CurriculumMetaOption { id: number; name: string }
+interface CurriculumTopicMetaOption { id: number; topic: string }
+interface CurriculumMeta {
+  academic_years: CurriculumMetaOption[]
+  terms: CurriculumMetaOption[]
+  themes: string[]
+  topics: CurriculumTopicMetaOption[]
+}
+interface CurriculumTopicDetail {
+  topic: string
+  theme_branch: string
+  competence: string
+  learning_outcomes: string[]
+  learning_outcome_ids: number[]
+}
+
+// Same "Year" options AssignmentBuilder.vue's Target Audience section uses, for the LOA/AOI
+// quick-create modals below (a plain year value on the created assignment, independent of
+// whichever year/term the linked curriculum topic itself happens to be scoped to).
+const academicYears = ref<{ academic_year: string }[]>([])
+const loadAcademicYears = async () => {
+  try {
+    const response = await axios.get(`${API_BASE}/teacher/classes/academic-years`)
+    if (response.data.success) academicYears.value = response.data.data
+  } catch (error) {
+    console.error('Failed to load academic years:', error)
+  }
+}
+
+const showCurriculumLinkModal = ref(false)
+const curriculumMeta = ref<CurriculumMeta | null>(null)
+const curriculumLinkSelection = ref<{ academic_year_id: number | ''; term_id: number | ''; theme_branch: string; curriculum_topic_id: number | '' }>({
+  academic_year_id: '', term_id: '', theme_branch: '', curriculum_topic_id: ''
+})
+const linkedCurriculumTopic = ref<CurriculumTopicDetail | null>(null)
+const savingCurriculumLink = ref(false)
+const curriculumLinkError = ref('')
+
+const loadLinkedCurriculumTopic = async () => {
+  linkedCurriculumTopic.value = null
+  if (!topic.value?.curriculum_topic_id) return
+  try {
+    const response = await axios.get(`${API_BASE}/teacher/enotes/curriculum/topics/${topic.value.curriculum_topic_id}`)
+    if (response.data.success) linkedCurriculumTopic.value = response.data.data
+  } catch (error) {
+    console.error('Failed to load linked curriculum topic:', error)
+  }
+}
+
+const loadCurriculumLinkMeta = async () => {
+  if (!topic.value) return
+  try {
+    const params: Record<string, string> = { subject_id: String(topic.value.subject_id) }
+    if (topic.value.class_id) params.class_id = String(topic.value.class_id)
+    if (curriculumLinkSelection.value.academic_year_id) params.academic_year_id = String(curriculumLinkSelection.value.academic_year_id)
+    if (curriculumLinkSelection.value.term_id) params.term_id = String(curriculumLinkSelection.value.term_id)
+    if (curriculumLinkSelection.value.theme_branch) params.theme_branch = curriculumLinkSelection.value.theme_branch
+
+    const response = await axios.get(`${API_BASE}/teacher/enotes/curriculum/meta`, { params })
+    if (response.data.success) curriculumMeta.value = response.data.data
+  } catch (error) {
+    console.error('Failed to load curriculum meta:', error)
+  }
+}
+
+const onCurriculumLinkStepChange = async (changed: 'academic_year_id' | 'term_id' | 'theme_branch') => {
+  if (changed === 'academic_year_id') {
+    curriculumLinkSelection.value.term_id = ''
+    curriculumLinkSelection.value.theme_branch = ''
+    curriculumLinkSelection.value.curriculum_topic_id = ''
+  } else if (changed === 'term_id') {
+    curriculumLinkSelection.value.theme_branch = ''
+    curriculumLinkSelection.value.curriculum_topic_id = ''
+  } else {
+    curriculumLinkSelection.value.curriculum_topic_id = ''
+  }
+  await loadCurriculumLinkMeta()
+}
+
+const openCurriculumLinkModal = async () => {
+  curriculumLinkError.value = ''
+  curriculumLinkSelection.value = { academic_year_id: '', term_id: '', theme_branch: '', curriculum_topic_id: '' }
+  curriculumMeta.value = null
+  showCurriculumLinkModal.value = true
+  await loadCurriculumLinkMeta()
+}
+
+const saveCurriculumLink = async () => {
+  if (!topic.value || !curriculumLinkSelection.value.curriculum_topic_id) return
+  savingCurriculumLink.value = true
+  curriculumLinkError.value = ''
+  try {
+    await axios.put(`${API_BASE}/teacher/enotes/topics/${topic.value.id}`, {
+      curriculum_topic_id: curriculumLinkSelection.value.curriculum_topic_id
+    })
+    topic.value.curriculum_topic_id = Number(curriculumLinkSelection.value.curriculum_topic_id)
+    await loadLinkedCurriculumTopic()
+    showCurriculumLinkModal.value = false
+  } catch (err: any) {
+    curriculumLinkError.value = err.response?.data?.message || 'Failed to link curriculum topic'
+  } finally {
+    savingCurriculumLink.value = false
+  }
+}
+
+// --- Per-page Learning Outcome Assessment (LOA) quick-create - attached to currentPage via
+// enote_page_id, so it's shown to students the moment they finish reading this one page (see
+// ENotePreview.vue's per-page Ignore/Attempt prompt). Reuses
+// Teacher\AssignmentController::create()/updateCurriculum() exactly as the full builder does. ---
+const showLoaModal = ref(false)
+const loaForm = ref<{ learning_outcome_id: number | ''; academic_year: string; weight: string; due_date: string }>({
+  learning_outcome_id: '', academic_year: '', weight: '', due_date: ''
+})
+const creatingLoa = ref(false)
+const loaError = ref('')
+
+const openLoaModal = () => {
+  loaError.value = ''
+  loaForm.value = { learning_outcome_id: '', academic_year: '', weight: '', due_date: '' }
+  showLoaModal.value = true
+}
+
+const createLoaAssessment = async () => {
+  if (!topic.value || !currentPage.value || !loaForm.value.learning_outcome_id || !loaForm.value.academic_year || !loaForm.value.due_date) return
+  creatingLoa.value = true
+  loaError.value = ''
+  try {
+    const response = await axios.post(`${API_BASE}/teacher/assignments`, {
+      title: `${topic.value.title} - Page ${currentPage.value.order_number} Learning Outcome Assessment`,
+      total_marks: 0,
+      due_date: loaForm.value.due_date,
+      subject_id: topic.value.subject_id,
+      scope: topic.value.class_group_name ? 'all_streams' : 'stream',
+      class_id: topic.value.class_id,
+      class_group_name: topic.value.class_group_name,
+      enote_topic_id: topic.value.id,
+      enote_page_id: currentPage.value.id,
+      assessment_category: 'LOA',
+      academic_year: loaForm.value.academic_year,
+      weight: loaForm.value.weight || null,
+    })
+    const assignmentId = response.data.data.id
+    await axios.put(`${API_BASE}/teacher/assignments/${assignmentId}/curriculum`, {
+      curriculum_topic_id: topic.value.curriculum_topic_id,
+      learning_outcome_ids: [Number(loaForm.value.learning_outcome_id)]
+    })
+    showLoaModal.value = false
+    router.push(`/teacher/assignments/${assignmentId}/edit`)
+  } catch (err: any) {
+    loaError.value = err.response?.data?.message || 'Failed to create assessment'
+  } finally {
+    creatingLoa.value = false
+  }
+}
+
+// --- Topic-level AOI quick-create - reuses the same topic.linked_assignment slot the older
+// generic "Create Assessment" quick-link (ENotePreview.vue's header) also fills, just pre-set to
+// assessment_category: 'AOI' and linked to this topic's curriculum topic wholesale. ---
+const showAoiModal = ref(false)
+const aoiForm = ref<{ academic_year: string; weight: string; due_date: string }>({ academic_year: '', weight: '', due_date: '' })
+const creatingAoi = ref(false)
+const aoiError = ref('')
+
+const openAoiModal = () => {
+  aoiError.value = ''
+  aoiForm.value = { academic_year: '', weight: '', due_date: '' }
+  showAoiModal.value = true
+}
+
+const createAoiAssessment = async () => {
+  if (!topic.value || !aoiForm.value.academic_year || !aoiForm.value.due_date) return
+  creatingAoi.value = true
+  aoiError.value = ''
+  try {
+    const response = await axios.post(`${API_BASE}/teacher/assignments`, {
+      title: `${topic.value.title} AOI Assessment`,
+      total_marks: 0,
+      due_date: aoiForm.value.due_date,
+      subject_id: topic.value.subject_id,
+      scope: topic.value.class_group_name ? 'all_streams' : 'stream',
+      class_id: topic.value.class_id,
+      class_group_name: topic.value.class_group_name,
+      enote_topic_id: topic.value.id,
+      assessment_category: 'AOI',
+      academic_year: aoiForm.value.academic_year,
+      weight: aoiForm.value.weight || null,
+    })
+    const assignmentId = response.data.data.id
+    if (topic.value.curriculum_topic_id) {
+      await axios.put(`${API_BASE}/teacher/assignments/${assignmentId}/curriculum`, {
+        topic_ids: [topic.value.curriculum_topic_id]
+      })
+    }
+    showAoiModal.value = false
+    router.push(`/teacher/assignments/${assignmentId}/edit`)
+  } catch (err: any) {
+    aoiError.value = err.response?.data?.message || 'Failed to create assessment'
+  } finally {
+    creatingAoi.value = false
+  }
+}
+
 onMounted(() => {
   console.log('ENoteBuilder mounted, topicId:', topicId.value)
   loadTopic()
+  loadAcademicYears()
   window.addEventListener('resize', applyResponsivePanels)
 })
 

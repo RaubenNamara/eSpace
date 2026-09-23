@@ -473,14 +473,17 @@ class ENoteController extends Controller
         }
 
         $topic['pages'] = $this->attachNarrations($pages);
+        $topic['pages'] = $this->attachPageLinkedAssignments($topic['pages'], $teacherId);
 
-        // Most recent assignment this teacher has linked to this topic, any status (draft or
-        // published) - this is the teacher's own authoring view, not the gated student-visible
-        // lookup Student\ENoteController::show() does. Powers the "Create/Edit Assessment"
-        // button on the topic preview screen.
+        // Most recent topic-scoped assignment this teacher has linked to this topic (AOI, or the
+        // older generic "Create Assessment" quick-link), any status (draft or published) - this is
+        // the teacher's own authoring view, not the gated student-visible lookup
+        // Student\ENoteController::show() does. Powers the "Create/Edit Assessment"/"AOI
+        // Assessment" button on the topic preview screen. enote_page_id IS NULL excludes
+        // page-scoped Learning Outcome Assessments, which are surfaced per-page instead.
         $stmt = $db->prepare(
             'SELECT id, title, status FROM assignments
-             WHERE enote_topic_id = :topic_id AND teacher_id = :teacher_id AND deleted_at IS NULL
+             WHERE enote_topic_id = :topic_id AND enote_page_id IS NULL AND teacher_id = :teacher_id AND deleted_at IS NULL
              ORDER BY created_at DESC LIMIT 1'
         );
         $stmt->execute(['topic_id' => $id, 'teacher_id' => $teacherId]);
@@ -526,6 +529,49 @@ class ENoteController extends Controller
                 ];
             }
             $page['narrations'] = $narrations;
+        }
+        unset($page);
+
+        return $pages;
+    }
+
+    /**
+     * Attach this teacher's own Learning Outcome Assessment (any status) to each page that has
+     * one, batched over all pages at once. Mirrors attachNarrations()'s batching shape. Powers the
+     * per-page "Learning Outcome Assessment: Create/Edit" button in ENoteBuilder.vue.
+     */
+    private function attachPageLinkedAssignments(array $pages, int $teacherId): array
+    {
+        if (empty($pages)) {
+            return $pages;
+        }
+
+        $db = $this->getDb();
+        $pageIds = array_column($pages, 'id');
+        $placeholders = implode(',', array_fill(0, count($pageIds), '?'));
+
+        $stmt = $db->prepare(
+            "SELECT a.id, a.title, a.status, a.enote_page_id,
+                    elo.learning_outcome_id, elo2.learning_outcome AS learning_outcome_label
+             FROM assignments a
+             LEFT JOIN assignment_learning_outcomes elo ON elo.assignment_id = a.id
+             LEFT JOIN enote_learning_outcomes elo2 ON elo2.id = elo.learning_outcome_id
+             WHERE a.enote_page_id IN ({$placeholders}) AND a.teacher_id = ? AND a.deleted_at IS NULL"
+        );
+        $stmt->execute([...$pageIds, $teacherId]);
+
+        $byPage = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $byPage[(int) $row['enote_page_id']] = [
+                'id' => (int) $row['id'],
+                'title' => $row['title'],
+                'status' => $row['status'],
+                'learning_outcome_label' => $row['learning_outcome_label'],
+            ];
+        }
+
+        foreach ($pages as &$page) {
+            $page['linked_assignment'] = $byPage[(int) $page['id']] ?? null;
         }
         unset($page);
 
@@ -807,7 +853,7 @@ class ENoteController extends Controller
         $db = $this->getDb();
 
         // Verify topic belongs to teacher
-        $stmt = $db->prepare("SELECT id, status, content_group_id FROM enote_topics WHERE id = :id AND teacher_id = :teacher_id AND deleted_at IS NULL");
+        $stmt = $db->prepare("SELECT id, status, content_group_id, subject_id FROM enote_topics WHERE id = :id AND teacher_id = :teacher_id AND deleted_at IS NULL");
         $stmt->execute(['id' => $id, 'teacher_id' => $teacherId]);
         $topic = $stmt->fetch();
 
@@ -860,6 +906,29 @@ class ENoteController extends Controller
         if (!empty($data['status'])) {
             $updates[] = 'status = :status';
             $params['status'] = $data['status'];
+        }
+
+        // One-time link from this eNote topic to an admin-authored curriculum-bank topic, so a
+        // future per-page Learning Outcome Assessment quick-create knows this topic's outcomes
+        // without re-picking Theme/Branch/Topic. Re-validated against this topic's own subject on
+        // every write (never trust a raw curriculum_topic_id from the client) - null clears the link.
+        if (array_key_exists('curriculum_topic_id', $data)) {
+            $curriculumTopicId = $data['curriculum_topic_id'];
+            if ($curriculumTopicId === null || $curriculumTopicId === '') {
+                $updates[] = 'curriculum_topic_id = NULL';
+            } else {
+                $curriculumTopicId = (int) $curriculumTopicId;
+                $stmt = $db->prepare(
+                    "SELECT id FROM enote_curriculum_topics WHERE id = :curriculum_topic_id AND subject_id = :subject_id AND deleted_at IS NULL"
+                );
+                $stmt->execute(['curriculum_topic_id' => $curriculumTopicId, 'subject_id' => $topic['subject_id']]);
+                if (!$stmt->fetch()) {
+                    $this->validationError(['curriculum_topic_id' => 'Curriculum topic not found for this subject']);
+                    return;
+                }
+                $updates[] = 'curriculum_topic_id = :curriculum_topic_id';
+                $params['curriculum_topic_id'] = $curriculumTopicId;
+            }
         }
 
         if (empty($updates)) {

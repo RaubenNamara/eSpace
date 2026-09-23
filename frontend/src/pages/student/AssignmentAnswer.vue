@@ -1,6 +1,45 @@
 <template>
   <div class="p-3 sm:p-6">
-    <div v-if="loading" class="flex items-center justify-center py-12">
+    <!-- Completion screen: shown in place of the redirect that used to happen silently after
+         submitting. The destination depends on how the student got here - see submitAssignment(). -->
+    <div v-if="showCompletionScreen" class="flex items-center justify-center py-16 px-4">
+      <div class="max-w-md w-full text-center">
+        <div class="mx-auto mb-4 w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
+          <svg class="w-8 h-8 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+        </div>
+        <h1 class="text-xl font-bold text-gray-900 dark:text-white mb-2">
+          {{ completionOrigin === 'enote' ? 'Learning Outcome Complete!' : 'Assignment Submitted' }}
+        </h1>
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
+          You've completed "{{ assignment?.title }}"{{ completionTimingLabel }}.
+        </p>
+        <button
+          v-if="completionOrigin === 'enote' && completionNextPageId"
+          @click="continueToNextPage"
+          class="w-full py-3 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors"
+        >
+          Continue to Next Page
+        </button>
+        <button
+          v-else-if="completionOrigin === 'enote'"
+          @click="backToEnotes"
+          class="w-full py-3 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors"
+        >
+          Back to eNotes
+        </button>
+        <button
+          v-else
+          @click="router.push('/student/assignments')"
+          class="w-full py-3 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors"
+        >
+          Back to Assessments
+        </button>
+      </div>
+    </div>
+
+    <div v-else-if="loading" class="flex items-center justify-center py-12">
       <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
     </div>
 
@@ -809,13 +848,36 @@ const submitAssignment = async () => {
       if (timerInterval) clearInterval(timerInterval)
       const timingLabel = submissionTiming.value === 'late' ? ' (late)' : submissionTiming.value === 'early' ? ' (early)' : ''
       toast.success(`Assignment submitted successfully${timingLabel}`)
-      router.push('/student/assignments')
+      showCompletionScreen.value = true
     }
   } catch (err: any) {
     toast.error(err.response?.data?.message || 'Failed to submit assignment')
   } finally {
     submitting.value = false
   }
+}
+
+// Where the student came from - present only when they arrived via an eNotes page/topic quick-
+// link (ENotePreview.vue's per-page "Attempt" or the topic-completion "Attempt ... Now" CTA), so
+// the post-submit screen can send them back into the reader instead of the plain Assessments list.
+const showCompletionScreen = ref(false)
+const completionOrigin = computed(() => (route.query.origin as string) || '')
+const completionTopicId = computed(() => route.query.topicId as string | undefined)
+const completionNextPageId = computed(() => route.query.nextPageId as string | undefined)
+const completionTimingLabel = computed(() => {
+  if (submissionTiming.value === 'late') return ' (late)'
+  if (submissionTiming.value === 'early') return ' (early)'
+  return ''
+})
+
+const continueToNextPage = () => {
+  if (!completionTopicId.value || !completionNextPageId.value) return
+  router.push(`/student/enotes/${completionTopicId.value}?resumePage=${completionNextPageId.value}`)
+}
+
+const backToEnotes = () => {
+  if (!completionTopicId.value) return
+  router.push(`/student/enotes/${completionTopicId.value}`)
 }
 
 onMounted(() => {

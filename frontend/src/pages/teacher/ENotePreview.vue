@@ -738,45 +738,116 @@
       </button>
     </template>
 
-    <!-- Completion celebration - shown once the student reaches the end of a topic. -->
+    <!-- Learning Outcome Assessment prompt - interrupts manual "Next" when the page just read has
+         its own linked assessment, naming the outcome and letting the student ignore it (keep
+         reading) or attempt it right away. -->
+    <div
+      v-if="isStudentMode && showLoaPrompt && currentPage?.linked_assignment"
+      class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+    >
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden text-center">
+        <div class="p-6">
+          <span class="mx-auto mb-3 w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center">
+            <svg class="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+            </svg>
+          </span>
+          <h2 class="text-base font-bold text-gray-900 dark:text-white mb-1">Learning Outcome Complete</h2>
+          <p class="text-sm text-gray-600 dark:text-gray-400">
+            You've finished a page covering <span class="font-medium text-gray-900 dark:text-white">{{ currentPage.linked_assignment.learning_outcome_label || currentPage.linked_assignment.title }}</span>. Want to attempt a quick assessment on it now?
+          </p>
+        </div>
+        <div class="flex gap-3 p-5 pt-0">
+          <button
+            @click="ignoreLoaPrompt"
+            class="flex-1 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+          >
+            Ignore
+          </button>
+          <button
+            @click="attemptPageLoa"
+            class="flex-1 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors"
+          >
+            Attempt
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Completion celebration - shown once the student reaches the end of a topic. Animated
+         (confetti burst, drawn-in checkmark, bouncy entrance) since this is meant to feel like a
+         genuine little reward for finishing, not just a plain confirmation dialog - see the
+         keyframes in <style scoped> below. -->
     <div
       v-if="isStudentMode && showCompletion && topic"
       class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
     >
-      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden text-center">
-        <div class="bg-emerald-600 px-6 py-8">
-          <div class="w-16 h-16 mx-auto mb-3 rounded-full bg-white/20 flex items-center justify-center">
-            <svg class="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
-            </svg>
-          </div>
-          <h2 class="text-xl font-bold text-white">Topic Complete!</h2>
-          <p class="text-emerald-50 text-sm mt-1">{{ topic.title }}</p>
-        </div>
-        <div class="p-6 space-y-4">
-          <div class="flex items-center justify-center gap-6 text-sm">
-            <div>
-              <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ pages.length }}</div>
-              <div class="text-xs text-gray-500 dark:text-gray-400">{{ pages.length === 1 ? 'page' : 'pages' }} read</div>
+      <div class="completion-card bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden text-center">
+        <div class="relative bg-gradient-to-br from-emerald-400 via-emerald-500 to-teal-600 px-6 py-9 overflow-hidden">
+          <!-- Soft decorative circles, purely for depth - not confetti, those are the small
+               rects below that actually animate outward. -->
+          <div class="absolute -top-6 -left-6 w-24 h-24 rounded-full bg-white/10"></div>
+          <div class="absolute -bottom-8 -right-4 w-32 h-32 rounded-full bg-white/10"></div>
+
+          <div class="relative w-20 h-20 mx-auto mb-3">
+            <span
+              v-for="i in 10"
+              :key="i"
+              class="confetti-piece"
+              :class="`confetti-piece--${i}`"
+            ></span>
+            <!-- The pulsing ripple and the stable badge circle are deliberately separate
+                 elements - the ripple's own animation fades it to nothing, so it can't also be
+                 what gives the checkmark its permanent circular background. -->
+            <div class="absolute inset-0 rounded-full bg-white/25 completion-ring"></div>
+            <div class="absolute inset-0 rounded-full bg-white/20"></div>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                <path class="completion-check" stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
+              </svg>
             </div>
-            <div class="w-px h-8 bg-gray-200 dark:bg-gray-700"></div>
-            <div>
-              <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ totalReadingTime }}</div>
-              <div class="text-xs text-gray-500 dark:text-gray-400">min invested</div>
+          </div>
+          <h2 class="text-xl font-bold text-white completion-fade-1">Topic Complete!</h2>
+          <p class="text-emerald-50 text-sm mt-1 completion-fade-1">{{ topic.title }}</p>
+        </div>
+        <div class="p-6 space-y-4 completion-fade-2">
+          <div class="flex items-center justify-center gap-6 text-sm">
+            <div class="flex items-center gap-2">
+              <svg class="w-5 h-5 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+              </svg>
+              <div class="text-left">
+                <div class="text-xl font-bold text-gray-900 dark:text-white leading-tight">{{ pages.length }}</div>
+                <div class="text-xs text-gray-500 dark:text-gray-400">{{ pages.length === 1 ? 'page' : 'pages' }} read</div>
+              </div>
+            </div>
+            <div class="w-px h-9 bg-gray-200 dark:bg-gray-700"></div>
+            <div class="flex items-center gap-2">
+              <svg class="w-5 h-5 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <div class="text-left">
+                <div class="text-xl font-bold text-gray-900 dark:text-white leading-tight">{{ totalReadingTime }}</div>
+                <div class="text-xs text-gray-500 dark:text-gray-400">min invested</div>
+              </div>
             </div>
           </div>
           <!-- Quick-link to the assignment the teacher linked to this topic, offered right while
                the material is fresh rather than leaving the student to go find it themselves -
-               only when they haven't already attempted it. -->
+               only when they haven't already attempted it. Given its own gentle glow/pulse so
+               it's the obvious next step to reach for, not just another button in the row. -->
           <button
             v-if="topic.linked_assignment && topic.linked_assignment.submission_status === 'new'"
             @click="attemptLinkedAssignment"
-            class="w-full py-3 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl hover:shadow-md transition-all flex items-center justify-center gap-2"
+            class="assessment-cta w-full py-3 text-sm font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl transition-transform hover:scale-[1.02] flex items-center justify-center gap-2"
           >
             <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
             </svg>
             <span>Attempt "{{ topic.linked_assignment.title }}" Now</span>
+            <svg class="w-4 h-4 flex-shrink-0 assessment-cta-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+            </svg>
           </button>
           <div class="flex gap-3 pt-2">
             <button
@@ -867,7 +938,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
 import type { ENoteTopic, ENotePage } from '@/types/enotes'
@@ -1211,13 +1282,27 @@ const loadTopic = async () => {
       topic.value = response.data.data
       pages.value = response.data.data.pages || []
 
-      if (pages.value.length > 0) {
+      // A student arriving back from a per-page Learning Outcome Assessment (see
+      // attemptPageLoa()) resumes on the page after the one they attempted from, rather than
+      // starting the topic over - resumePage is only ever set by that redirect.
+      const resumePageId = isStudentMode.value ? Number(route.query.resumePage) : NaN
+      const resumeIndex = !isNaN(resumePageId) ? pages.value.findIndex(p => p.id === resumePageId) : -1
+
+      if (resumeIndex >= 0) {
+        currentPage.value = pages.value[resumeIndex]
+      } else if (pages.value.length > 0) {
         currentPage.value = pages.value[0]
       }
 
       if (isStudentMode.value) {
-        showIntro.value = true
+        if (resumeIndex < 0) {
+          showIntro.value = true
+        }
         loadStudentPageData()
+        if (resumeIndex >= 0) {
+          await nextTick()
+          flipbookRef.value?.turnToPage(resumeIndex)
+        }
       }
     }
   } catch (error) {
@@ -1262,10 +1347,42 @@ const handlePrevious = () => {
   flipbookRef.value?.flipPrev()
 }
 
+// A page that has its own Learning Outcome Assessment (see ENoteBuilder.vue's per-page quick
+// create) interrupts manual forward navigation with an Ignore/Attempt prompt instead of flipping
+// straight away - only on manual Next (this handler), not narration auto-advance
+// (onNarrationEnded above), so finishing an audio narration never gets unexpectedly interrupted.
+// Already-attempted assignments (submission_status !== 'new') don't prompt again.
+const showLoaPrompt = ref(false)
+
 const handleNext = () => {
   autoplayNarration.value = false
   if (!hasNextPage.value) return
+  const linked = currentPage.value?.linked_assignment
+  if (isStudentMode.value && linked && linked.submission_status === 'new') {
+    showLoaPrompt.value = true
+    return
+  }
   flipbookRef.value?.flipNext()
+}
+
+const ignoreLoaPrompt = () => {
+  showLoaPrompt.value = false
+  flipbookRef.value?.flipNext()
+}
+
+// Attempting straight from the prompt carries `nextPageId` so the completion screen
+// (AssignmentAnswer.vue) knows which page to resume on afterward - omitted if this was the last
+// page (nothing to resume to but the topic itself).
+const attemptPageLoa = () => {
+  const linked = currentPage.value?.linked_assignment
+  if (!linked || !topic.value || !currentPage.value) return
+  showLoaPrompt.value = false
+  const currentIndex = pages.value.findIndex(p => p.id === currentPage.value!.id)
+  const nextPageInBook = pages.value[currentIndex + 1]
+  const params = new URLSearchParams({ origin: 'enote', topicId: String(topic.value.id) })
+  if (nextPageInBook) params.set('nextPageId', String(nextPageInBook.id))
+  if (readMode.value) exitReadMode()
+  router.push(`/student/assignments/${linked.id}/answer?${params.toString()}`)
 }
 
 const formatContent = (content: string): string => {
@@ -1459,7 +1576,7 @@ const goBack = () => {
 const attemptLinkedAssignment = () => {
   if (!topic.value?.linked_assignment) return
   if (readMode.value) exitReadMode()
-  router.push(`/student/assignments/${topic.value.linked_assignment.id}/answer`)
+  router.push(`/student/assignments/${topic.value.linked_assignment.id}/answer?origin=enote&topicId=${topic.value.id}`)
 }
 
 // Quick-create an assignment linked to this topic straight from the preview screen, instead of
@@ -1558,6 +1675,97 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+/* Topic-completion celebration - a bouncy entrance, a hand-drawn checkmark, a small confetti
+   burst, and a gentle pulse on the assessment CTA. Pure CSS (no animation library), kept to a
+   handful of short keyframes rather than anything heavier, since this plays once per topic. */
+.completion-card {
+  animation: completion-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes completion-pop {
+  0% { opacity: 0; transform: scale(0.75) translateY(12px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.completion-fade-1 {
+  animation: completion-fade-up 0.4s ease-out 0.25s both;
+}
+.completion-fade-2 {
+  animation: completion-fade-up 0.4s ease-out 0.4s both;
+}
+@keyframes completion-fade-up {
+  0% { opacity: 0; transform: translateY(6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.completion-check {
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+  animation: completion-draw 0.5s ease-out 0.35s forwards;
+}
+@keyframes completion-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+.completion-ring {
+  animation: completion-ring-pulse 1.4s ease-out 0.1s;
+}
+@keyframes completion-ring-pulse {
+  0% { transform: scale(0.6); opacity: 0.9; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+
+/* Ten little bursts of color flying outward from the checkmark, each its own angle/color/timing -
+   :nth-child keeps this to one rule instead of ten near-duplicate ones. */
+.confetti-piece {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 1px;
+  opacity: 0;
+  animation: confetti-burst 0.9s ease-out 0.3s forwards;
+}
+.confetti-piece--1 { background: #fde047; transform: rotate(0deg); animation-delay: 0.30s; }
+.confetti-piece--2 { background: #fca5a5; transform: rotate(36deg); animation-delay: 0.33s; }
+.confetti-piece--3 { background: #93c5fd; transform: rotate(72deg); animation-delay: 0.30s; }
+.confetti-piece--4 { background: #6ee7b7; transform: rotate(108deg); animation-delay: 0.36s; }
+.confetti-piece--5 { background: #fdba74; transform: rotate(144deg); animation-delay: 0.32s; }
+.confetti-piece--6 { background: #fde047; transform: rotate(180deg); animation-delay: 0.35s; }
+.confetti-piece--7 { background: #fca5a5; transform: rotate(216deg); animation-delay: 0.31s; }
+.confetti-piece--8 { background: #93c5fd; transform: rotate(252deg); animation-delay: 0.37s; }
+.confetti-piece--9 { background: #6ee7b7; transform: rotate(288deg); animation-delay: 0.33s; }
+.confetti-piece--10 { background: #fdba74; transform: rotate(324deg); animation-delay: 0.29s; }
+@keyframes confetti-burst {
+  0% { opacity: 1; translate: 0 0; }
+  100% { opacity: 0; translate: 0 -38px; }
+}
+
+/* The linked-assessment button gets a slow, subtle glow so it reads as "the next step" without
+   being distracting - and its arrow nudges forward on a loop to invite a click. */
+.assessment-cta {
+  animation: assessment-glow 2.2s ease-in-out infinite;
+}
+@keyframes assessment-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.45); }
+  50% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+}
+.assessment-cta-arrow {
+  animation: assessment-arrow-nudge 1.4s ease-in-out infinite;
+}
+@keyframes assessment-arrow-nudge {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(3px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .completion-card, .completion-fade-1, .completion-fade-2, .completion-check,
+  .completion-ring, .confetti-piece, .assessment-cta, .assessment-cta-arrow {
+    animation: none !important;
+  }
+  .completion-check { stroke-dashoffset: 0; }
+}
+
 /* StPageFlip forces each page to its own fixed pixel box (like a real page) via inline styles -
    this fills that box and scrolls internally for a page whose content runs long, rather than
    trying to grow the page itself. */

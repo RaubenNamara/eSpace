@@ -41,6 +41,10 @@ export interface ENoteTopic {
    *  status, gating who can see it themselves via ownership (powers the "Create/Edit Assessment"
    *  button on the topic preview screen). Null if none in either case. */
   linked_assignment?: { id: number; title: string; due_date?: string | null; submission_status?: string; status?: string } | null
+  /** The curriculum-bank topic (enote_curriculum_topics) this eNote topic has been one-time
+   *  linked to by the teacher, if any - once set, every page's Learning Outcome Assessment
+   *  quick-create can list this topic's own outcomes without re-picking Theme/Branch/Topic. */
+  curriculum_topic_id?: number | null
 }
 
 export interface ENotePage {
@@ -57,6 +61,19 @@ export interface ENotePage {
   narrations?: ENotePageNarration[]
   /** The single currently-selected-voice narration URL - populated on student/preview show() responses. */
   narration_audio_path?: string | null
+  /** The Learning Outcome Assessment attached to this specific page, if any. Teacher's own
+   *  show() response includes `status` (any status, own authoring view); the student-facing
+   *  show() response includes `submission_status`/`due_date` instead, gated to a published
+   *  assignment currently visible to that student. Powers the per-page "Learning Outcome
+   *  Assessment" button (teacher) and the "Ignore/Attempt" page-turn prompt (student). */
+  linked_assignment?: {
+    id: number
+    title: string
+    status?: string
+    due_date?: string | null
+    submission_status?: string
+    learning_outcome_label?: string | null
+  } | null
 }
 
 export interface ENotePageNarration {

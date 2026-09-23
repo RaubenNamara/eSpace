@@ -64,6 +64,15 @@ class AssignmentController extends Controller
         return $subjectId !== false && $subjectId !== null ? (int) $subjectId : null;
     }
 
+    /** The assignment's current enote_topic_id, for re-validating an enote_page_id link in update() when enote_topic_id itself isn't part of this same request. */
+    private function getAssignmentEnoteTopicId($db, int $assignmentId): ?int
+    {
+        $stmt = $db->prepare('SELECT enote_topic_id FROM assignments WHERE id = :id');
+        $stmt->execute(['id' => $assignmentId]);
+        $topicId = $stmt->fetchColumn();
+        return $topicId !== false && $topicId !== null ? (int) $topicId : null;
+    }
+
     /**
      * Verify teacher owns the assignment a question belongs to.
      * Returns the owning assignment_id, or null if not owned/not found.
@@ -773,6 +782,29 @@ class AssignmentController extends Controller
             }
         }
 
+        // Optional page-level link, one step more specific than enote_topic_id - a Learning
+        // Outcome Assessment created from a single eNote page (ENoteBuilder.vue's per-page quick
+        // create). Requires enote_topic_id to already be set and valid; the page must belong to
+        // that same topic and to this teacher.
+        $enotePageId = (isset($data['enote_page_id']) && $data['enote_page_id'] !== '') ? (int) $data['enote_page_id'] : null;
+        if ($enotePageId !== null) {
+            if ($enoteTopicId === null) {
+                $this->validationError(['enote_page_id' => 'enote_topic_id is required when linking a page']);
+                return;
+            }
+            $stmt = $db->prepare(
+                'SELECT ep.id FROM enote_pages ep
+                 INNER JOIN enote_topics et ON ep.topic_id = et.id
+                 WHERE ep.id = :page_id AND et.id = :topic_id AND et.teacher_id = :teacher_id
+                   AND ep.deleted_at IS NULL AND et.deleted_at IS NULL'
+            );
+            $stmt->execute(['page_id' => $enotePageId, 'topic_id' => $enoteTopicId, 'teacher_id' => $teacherId]);
+            if (!$stmt->fetch()) {
+                $this->validationError(['enote_page_id' => 'That page does not belong to the given eNote topic']);
+                return;
+            }
+        }
+
         $assessmentCategory = $this->normalizeAssessmentCategory($data['assessment_category'] ?? null);
         if ($assessmentCategory === false) {
             $this->validationError(['assessment_category' => 'Must be one of LOA, AOI, or EOC']);
@@ -783,16 +815,16 @@ class AssignmentController extends Controller
             Database::beginTransaction();
 
             $sql = "INSERT INTO assignments (
-                teacher_id, subject_id, class_id, class_group_name, enote_topic_id, title, description, type,
+                teacher_id, subject_id, class_id, class_group_name, enote_topic_id, enote_page_id, title, description, type,
                 total_marks, due_date, instructions, attachments, rubric,
-                category, assessment_category, academic_year_id, term_id, open_at, deadline_at, duration_minutes, pass_mark,
+                category, assessment_category, weight, academic_year_id, term_id, open_at, deadline_at, duration_minutes, pass_mark,
                 allow_late_submission, attempts_allowed, shuffle_questions, shuffle_options,
                 show_marks_immediately, show_answers_after_submission, allow_save_resume, status,
                 is_published, academic_year, created_at, updated_at
             ) VALUES (
-                :teacher_id, :subject_id, :class_id, :class_group_name, :enote_topic_id, :title, :description, :type,
+                :teacher_id, :subject_id, :class_id, :class_group_name, :enote_topic_id, :enote_page_id, :title, :description, :type,
                 :total_marks, :due_date, :instructions, :attachments, :rubric,
-                :category, :assessment_category, :academic_year_id, :term_id, :open_at, :deadline_at, :duration_minutes, :pass_mark,
+                :category, :assessment_category, :weight, :academic_year_id, :term_id, :open_at, :deadline_at, :duration_minutes, :pass_mark,
                 :allow_late_submission, :attempts_allowed, :shuffle_questions, :shuffle_options,
                 :show_marks_immediately, :show_answers_after_submission, :allow_save_resume, :status,
                 :is_published, :academic_year, NOW(), NOW()
@@ -805,6 +837,7 @@ class AssignmentController extends Controller
                 'class_id' => $classTarget['class_id'],
                 'class_group_name' => $classTarget['class_group_name'],
                 'enote_topic_id' => $enoteTopicId,
+                'enote_page_id' => $enotePageId,
                 'title' => $data['title'],
                 'description' => $data['description'] ?? null,
                 'type' => $data['type'] ?? 'mixed',
@@ -815,6 +848,7 @@ class AssignmentController extends Controller
                 'rubric' => $data['rubric'] ?? null,
                 'category' => $data['category'] ?? null,
                 'assessment_category' => $assessmentCategory,
+                'weight' => (isset($data['weight']) && $data['weight'] !== '') ? (float) $data['weight'] : null,
                 'academic_year_id' => !empty($data['academic_year_id']) ? (int) $data['academic_year_id'] : null,
                 'term_id' => !empty($data['term_id']) ? (int) $data['term_id'] : null,
                 'open_at' => $data['open_at'] ?? null,
@@ -887,7 +921,7 @@ class AssignmentController extends Controller
                 'pass_mark', 'allow_late_submission', 'attempts_allowed', 'shuffle_questions',
                 'shuffle_options', 'show_marks_immediately', 'show_answers_after_submission',
                 'allow_save_resume', 'status', 'is_published', 'subject_id', 'academic_year',
-                'academic_year_id', 'term_id'
+                'academic_year_id', 'term_id', 'weight'
             ];
 
             if (array_key_exists('assessment_category', $data)) {
@@ -961,10 +995,40 @@ class AssignmentController extends Controller
                 $params['enote_topic_id'] = $enoteTopicId;
             }
 
+            // Optional page-level link - same re-validation shape as create(). Requires an
+            // effective enote_topic_id (either just set above, or already on the assignment).
+            if (array_key_exists('enote_page_id', $data)) {
+                $enotePageId = ($data['enote_page_id'] !== '' && $data['enote_page_id'] !== null) ? (int) $data['enote_page_id'] : null;
+                if ($enotePageId !== null) {
+                    $effectiveTopicId = array_key_exists('enote_topic_id', $data)
+                        ? $params['enote_topic_id']
+                        : $this->getAssignmentEnoteTopicId($db, $assignmentId);
+                    if ($effectiveTopicId === null) {
+                        Database::rollback();
+                        $this->validationError(['enote_page_id' => 'enote_topic_id is required when linking a page']);
+                        return;
+                    }
+                    $stmt = $db->prepare(
+                        'SELECT ep.id FROM enote_pages ep
+                         INNER JOIN enote_topics et ON ep.topic_id = et.id
+                         WHERE ep.id = :page_id AND et.id = :topic_id AND et.teacher_id = :teacher_id
+                           AND ep.deleted_at IS NULL AND et.deleted_at IS NULL'
+                    );
+                    $stmt->execute(['page_id' => $enotePageId, 'topic_id' => $effectiveTopicId, 'teacher_id' => $teacherId]);
+                    if (!$stmt->fetch()) {
+                        Database::rollback();
+                        $this->validationError(['enote_page_id' => 'That page does not belong to the given eNote topic']);
+                        return;
+                    }
+                }
+                $updateFields[] = 'enote_page_id = :enote_page_id';
+                $params['enote_page_id'] = $enotePageId;
+            }
+
             foreach ($allowedFields as $field) {
                 if (isset($data[$field])) {
                     // Convert empty strings to null for foreign key fields
-                    if (in_array($field, ['subject_id', 'academic_year_id', 'term_id'], true) && $data[$field] === '') {
+                    if (in_array($field, ['subject_id', 'academic_year_id', 'term_id', 'weight'], true) && $data[$field] === '') {
                         $data[$field] = null;
                     }
                     $updateFields[] = "$field = :$field";
