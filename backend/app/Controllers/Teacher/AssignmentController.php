@@ -55,6 +55,15 @@ class AssignmentController extends Controller
         return $stmt->fetch() !== false;
     }
 
+    /** The assignment's current subject_id, for re-validating an enote_topic_id link in update() when subject_id itself isn't part of this same request. */
+    private function getAssignmentSubjectId($db, int $assignmentId): ?int
+    {
+        $stmt = $db->prepare('SELECT subject_id FROM assignments WHERE id = :id');
+        $stmt->execute(['id' => $assignmentId]);
+        $subjectId = $stmt->fetchColumn();
+        return $subjectId !== false && $subjectId !== null ? (int) $subjectId : null;
+    }
+
     /**
      * Verify teacher owns the assignment a question belongs to.
      * Returns the owning assignment_id, or null if not owned/not found.
@@ -609,10 +618,12 @@ class AssignmentController extends Controller
         $sql = "SELECT a.*,
                 s.name as subject_name,
                 c.name as class_name,
-                c.stream_name as stream_name
+                c.stream_name as stream_name,
+                et.title as enote_topic_title
                 FROM assignments a
                 LEFT JOIN subjects s ON a.subject_id = s.id
                 LEFT JOIN classes c ON a.class_id = c.id
+                LEFT JOIN enote_topics et ON a.enote_topic_id = et.id
                 WHERE a.id = :assignment_id AND a.deleted_at IS NULL";
         
         $stmt = $db->prepare($sql);
@@ -744,6 +755,21 @@ class AssignmentController extends Controller
             return;
         }
 
+        // Optional link to the specific eNote topic this assignment assesses - lets the reader
+        // offer a direct "Attempt Assessment" quick-link once a student finishes that topic.
+        // Re-validated against this teacher's own topics (not just their department) since
+        // enote_topics has no department-level sharing the way subjects/classes do, and against
+        // the assignment's own subject so a Physics assignment can't get linked to a Math topic.
+        $enoteTopicId = (isset($data['enote_topic_id']) && $data['enote_topic_id'] !== '') ? (int) $data['enote_topic_id'] : null;
+        if ($enoteTopicId !== null) {
+            $stmt = $db->prepare('SELECT id FROM enote_topics WHERE id = :id AND teacher_id = :teacher_id AND deleted_at IS NULL AND (subject_id = :subject_id OR :subject_id IS NULL)');
+            $stmt->execute(['id' => $enoteTopicId, 'teacher_id' => $teacherId, 'subject_id' => $subjectId]);
+            if (!$stmt->fetch()) {
+                $this->validationError(['enote_topic_id' => 'That eNote topic does not belong to you or this assignment\'s subject']);
+                return;
+            }
+        }
+
         $assessmentCategory = $this->normalizeAssessmentCategory($data['assessment_category'] ?? null);
         if ($assessmentCategory === false) {
             $this->validationError(['assessment_category' => 'Must be one of LOA, AOI, or EOC']);
@@ -754,14 +780,14 @@ class AssignmentController extends Controller
             Database::beginTransaction();
 
             $sql = "INSERT INTO assignments (
-                teacher_id, subject_id, class_id, class_group_name, title, description, type,
+                teacher_id, subject_id, class_id, class_group_name, enote_topic_id, title, description, type,
                 total_marks, due_date, instructions, attachments, rubric,
                 category, assessment_category, academic_year_id, term_id, open_at, deadline_at, duration_minutes, pass_mark,
                 allow_late_submission, attempts_allowed, shuffle_questions, shuffle_options,
                 show_marks_immediately, show_answers_after_submission, allow_save_resume, status,
                 is_published, academic_year, created_at, updated_at
             ) VALUES (
-                :teacher_id, :subject_id, :class_id, :class_group_name, :title, :description, :type,
+                :teacher_id, :subject_id, :class_id, :class_group_name, :enote_topic_id, :title, :description, :type,
                 :total_marks, :due_date, :instructions, :attachments, :rubric,
                 :category, :assessment_category, :academic_year_id, :term_id, :open_at, :deadline_at, :duration_minutes, :pass_mark,
                 :allow_late_submission, :attempts_allowed, :shuffle_questions, :shuffle_options,
@@ -775,6 +801,7 @@ class AssignmentController extends Controller
                 'subject_id' => $subjectId,
                 'class_id' => $classTarget['class_id'],
                 'class_group_name' => $classTarget['class_group_name'],
+                'enote_topic_id' => $enoteTopicId,
                 'title' => $data['title'],
                 'description' => $data['description'] ?? null,
                 'type' => $data['type'] ?? 'mixed',
@@ -908,6 +935,26 @@ class AssignmentController extends Controller
                 $params['class_id'] = $classTarget['class_id'];
                 $updateFields[] = 'class_group_name = :class_group_name';
                 $params['class_group_name'] = $classTarget['class_group_name'];
+            }
+
+            // Optional eNote topic link - same re-validation as create(), against the assignment's
+            // own (possibly just-updated) subject. Empty string clears the link.
+            if (array_key_exists('enote_topic_id', $data)) {
+                $enoteTopicId = ($data['enote_topic_id'] !== '' && $data['enote_topic_id'] !== null) ? (int) $data['enote_topic_id'] : null;
+                if ($enoteTopicId !== null) {
+                    $effectiveSubjectId = isset($data['subject_id']) && $data['subject_id'] !== ''
+                        ? (int) $data['subject_id']
+                        : $this->getAssignmentSubjectId($db, $assignmentId);
+                    $stmt = $db->prepare('SELECT id FROM enote_topics WHERE id = :id AND teacher_id = :teacher_id AND deleted_at IS NULL AND (subject_id = :subject_id OR :subject_id IS NULL)');
+                    $stmt->execute(['id' => $enoteTopicId, 'teacher_id' => $teacherId, 'subject_id' => $effectiveSubjectId]);
+                    if (!$stmt->fetch()) {
+                        Database::rollback();
+                        $this->validationError(['enote_topic_id' => 'That eNote topic does not belong to you or this assignment\'s subject']);
+                        return;
+                    }
+                }
+                $updateFields[] = 'enote_topic_id = :enote_topic_id';
+                $params['enote_topic_id'] = $enoteTopicId;
             }
 
             foreach ($allowedFields as $field) {

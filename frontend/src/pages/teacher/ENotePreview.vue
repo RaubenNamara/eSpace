@@ -698,6 +698,19 @@
               <div class="text-xs text-gray-500 dark:text-gray-400">min invested</div>
             </div>
           </div>
+          <!-- Quick-link to the assignment the teacher linked to this topic, offered right while
+               the material is fresh rather than leaving the student to go find it themselves -
+               only when they haven't already attempted it. -->
+          <button
+            v-if="topic.linked_assignment && topic.linked_assignment.submission_status === 'new'"
+            @click="attemptLinkedAssignment"
+            class="w-full py-3 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl hover:shadow-md transition-all flex items-center justify-center gap-2"
+          >
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+            </svg>
+            <span>Attempt "{{ topic.linked_assignment.title }}" Now</span>
+          </button>
           <div class="flex gap-3 pt-2">
             <button
               @click="showCompletion = false"
@@ -1371,6 +1384,15 @@ const goBack = () => {
     return
   }
   router.push('/teacher/enotes')
+}
+
+// Navigating away for the assignment quick-link on topic completion - exits Read Mode first (if
+// active) the same way the dedicated Exit button does, so MainLayout's chrome/fullscreen state is
+// left clean rather than following the student into the assignment screen.
+const attemptLinkedAssignment = () => {
+  if (!topic.value?.linked_assignment) return
+  if (readMode.value) exitReadMode()
+  router.push(`/student/assignments/${topic.value.linked_assignment.id}/answer`)
 }
 
 // Content sometimes contains <img> tags with a missing/deleted source - hide those instead of

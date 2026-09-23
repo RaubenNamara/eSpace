@@ -189,6 +189,26 @@
                   </template>
                 </p>
               </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Link to an eNote Topic (optional)</label>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1.5">
+                  When a student finishes reading the linked topic, they'll see a quick-link to attempt this assignment right away.
+                </p>
+                <div v-if="!form.subject_id" class="text-sm text-gray-400 dark:text-gray-500">Select a Subject above first.</div>
+                <select
+                  v-else
+                  v-model="form.enote_topic_id"
+                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white transition-colors"
+                  :disabled="loadingEnoteTopics"
+                >
+                  <option :value="null">No topic linked</option>
+                  <option v-for="t in enoteTopics" :key="t.id" :value="t.id">{{ t.title }}</option>
+                </select>
+                <p v-if="form.subject_id && !loadingEnoteTopics && enoteTopics.length === 0" class="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                  No eNote topics found for this subject yet.
+                </p>
+              </div>
             </div>
           </div>
 
@@ -1285,7 +1305,8 @@ const form = ref({
   classTarget: { scope: 'stream', class_id: null, class_group_name: null } as ClassTarget,
   assessment_category: null as 'LOA' | 'AOI' | 'EOC' | null,
   academic_year_id: null as number | null,
-  term_id: null as number | null
+  term_id: null as number | null,
+  enote_topic_id: null as number | null
 })
 
 const questions = ref<AssignmentQuestion[]>([])
@@ -1299,6 +1320,29 @@ const subjects = ref<Subject[]>([])
 const academicYears = ref<any[]>([])
 const loadingSubjects = ref(false)
 const loadingAcademicYears = ref(false)
+
+// Optional eNote topic link - lets the reader offer a direct "Attempt Assessment" quick-link once
+// a student finishes reading that topic. Scoped to the assignment's own subject only (not also
+// class), since the assignment can target several class-streams at once and a topic set to "all
+// streams" of a subject already appears to every one of them anyway.
+const enoteTopics = ref<{ id: number; title: string }[]>([])
+const loadingEnoteTopics = ref(false)
+watch(() => form.value.subject_id, async (subjectId) => {
+  enoteTopics.value = []
+  if (!subjectId) return
+  loadingEnoteTopics.value = true
+  try {
+    const res = await axios.get(`${API_BASE}/teacher/enotes/topics`, { params: { subject_id: subjectId, limit: 200 } })
+    enoteTopics.value = res.data.data.topics
+    if (form.value.enote_topic_id && !enoteTopics.value.some(t => t.id === form.value.enote_topic_id)) {
+      form.value.enote_topic_id = null
+    }
+  } catch {
+    // Non-critical - the picker just shows empty; the teacher can still save without a link.
+  } finally {
+    loadingEnoteTopics.value = false
+  }
+}, { immediate: true })
 
 // Class-Stream is a checkbox multi-select (one assignment can be visible to more than one
 // stream) rather than the single/all-streams TeacherClassSelector - `form.classTarget` is kept in
@@ -1613,6 +1657,7 @@ const loadAssignment = async () => {
         classTarget: assignment.class_group_name
           ? { scope: 'all_streams', class_id: null, class_group_name: assignment.class_group_name }
           : { scope: 'stream', class_id: assignment.class_id || null, class_group_name: null },
+        enote_topic_id: assignment.enote_topic_id || null,
         assessment_category: assignment.assessment_category || null,
         academic_year_id: assignment.academic_year_id || null,
         term_id: assignment.term_id || null
@@ -2358,6 +2403,7 @@ const persistAssignment = async (): Promise<number | string | null> => {
     scope: form.value.classTarget.scope,
     class_id: form.value.classTarget.class_id,
     class_group_name: form.value.classTarget.class_group_name,
+    enote_topic_id: form.value.enote_topic_id || '',
     assessment_category: form.value.assessment_category,
     academic_year_id: curriculumSelection.value.academic_year_id || null,
     term_id: curriculumSelection.value.term_id || null

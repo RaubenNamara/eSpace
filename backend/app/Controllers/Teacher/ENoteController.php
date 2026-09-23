@@ -261,6 +261,7 @@ class ENoteController extends Controller
 
         $status = $this->query('status', '');
         $subjectId = $this->query('subject_id', '');
+        $classId = $this->query('class_id', '');
         $search = $this->query('search', '');
         $page = (int) $this->query('page', 1);
         $limit = (int) $this->query('limit', 20);
@@ -278,6 +279,15 @@ class ENoteController extends Controller
         if (!empty($subjectId)) {
             $where[] = 'et.subject_id = :subject_id';
             $params['subject_id'] = $subjectId;
+        }
+
+        // Used by AssignmentBuilder's "link to a topic" picker to narrow to the assignment's own
+        // class - a topic with no class set (class_id NULL, i.e. shared across every class taking
+        // the subject) still matches any class filter, the same way it already appears to every
+        // class's students in the reader.
+        if (!empty($classId)) {
+            $where[] = '(et.class_id = :class_id OR et.class_id IS NULL)';
+            $params['class_id'] = $classId;
         }
 
         if (!empty($search)) {

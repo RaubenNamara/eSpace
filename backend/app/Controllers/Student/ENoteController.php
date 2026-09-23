@@ -218,7 +218,62 @@ class ENoteController extends Controller
         $previewService = new \eSpace\App\Services\StudentModulePreviewService();
         $topic['pages'] = $previewService->attachNarrationAudio($pages, $topic['narration_voice']);
 
+        $topic['linked_assignment'] = $this->getLinkedAssignment($db, $id, $studentId);
+
         $this->success($topic);
+    }
+
+    /**
+     * A published assignment linked to this topic (Teacher\AssignmentController's
+     * enote_topic_id) that's currently visible to this student - same eligibility rule
+     * Student\AssignmentController::index() uses (enrolled in the assignment's department/class,
+     * within the enrollment's date window, not withdrawn from that teacher), scoped down to just
+     * this one topic instead of the student's whole list. Powers the "Attempt Assessment"
+     * quick-link the reader offers once a student finishes reading the topic. Null if there's no
+     * linked assignment, or one exists but isn't (yet, or any longer) visible to this student.
+     */
+    private function getLinkedAssignment($db, int $topicId, int $studentId): ?array
+    {
+        $sql = "SELECT a.id, a.title, a.due_date,
+                       COALESCE(sub.status, 'new') as submission_status
+                FROM assignments a
+                INNER JOIN subjects s ON a.subject_id = s.id
+                LEFT JOIN (
+                    SELECT * FROM assignment_submissions
+                    WHERE student_id = :student_id_sub
+                    ORDER BY attempt_number DESC
+                ) sub ON a.id = sub.assignment_id
+                WHERE a.enote_topic_id = :topic_id
+                AND a.status = 'published'
+                AND a.deleted_at IS NULL
+                AND EXISTS (
+                    SELECT 1 FROM student_department_enrollments sde
+                    LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
+                    WHERE sde.student_id = :student_id_enroll
+                      AND (
+                        sde.class_id = a.class_id
+                        OR (a.class_group_name IS NOT NULL AND sde_c.name = a.class_group_name)
+                        OR EXISTS (SELECT 1 FROM assignment_classes ac WHERE ac.assignment_id = a.id AND ac.class_id = sde.class_id)
+                      )
+                      AND sde.department_id = s.department_id
+                      AND sde.deleted_at IS NULL
+                      AND sde.status = 'active'
+                      AND COALESCE(a.published_at, a.created_at) BETWEEN sde.start_date AND COALESCE(sde.end_date, NOW())
+                )
+                AND NOT EXISTS (
+                    SELECT 1 FROM student_teacher_enrollments ste
+                    WHERE ste.student_id = :student_id_te
+                      AND ste.teacher_id = a.teacher_id
+                      AND ste.department_id = s.department_id
+                      AND ste.status = 'withdrawn'
+                )
+                ORDER BY a.created_at DESC
+                LIMIT 1";
+
+        $stmt = $db->prepare($sql);
+        $stmt->execute(['topic_id' => $topicId, 'student_id_sub' => $studentId, 'student_id_enroll' => $studentId, 'student_id_te' => $studentId]);
+        $assignment = $stmt->fetch();
+        return $assignment ?: null;
     }
 
     /**
