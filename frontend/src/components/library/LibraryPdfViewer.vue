@@ -191,7 +191,17 @@
 
         <div
           class="flex-1 p-0 lg:p-3 bg-gray-200 dark:bg-gray-900"
-          :class="zoomLevel > MIN_ZOOM ? 'overflow-auto' : 'overflow-hidden flex justify-center items-center'"
+          :class="[
+            zoomLevel > MIN_ZOOM ? 'overflow-auto' : 'overflow-hidden flex justify-center items-center',
+            // Read Mode fallback: the book is sized to fit the screen exactly, but a scrollbar
+            // (rather than a hard clip) means any edge case that still renders a touch taller than
+            // available height is just a short scroll away instead of unreachable content. Not
+            // wired into the zoom branch above since that already gets overflow-auto for its own
+            // reason (panning an enlarged page) - items-start (not the normal items-center) so the
+            // book's own top edge is always the scrolled-to-top resting position, not partially
+            // hidden above it.
+            readMode && zoomLevel <= MIN_ZOOM ? '!overflow-y-auto !items-start' : '',
+          ]"
           @contextmenu.prevent
         >
           <div v-if="loading" class="text-gray-500 dark:text-gray-300 py-20 text-sm">Loading document…</div>
