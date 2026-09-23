@@ -200,16 +200,14 @@ const routes: RouteRecordRaw[] = [
     ]
   },
   {
-    // Standalone (AuthLayout, not the full MainLayout sidebar) - deliberately outside the
-    // /teacher route record below so it's never itself subject to the must-change-password
-    // redirect it exists to satisfy. A teacher on a temporary password can only reach this
-    // page and logout - see the router guard's mustChangePassword check.
+    // Standalone (renders its own plain-white page, not AuthLayout or the MainLayout sidebar) -
+    // deliberately outside the /teacher route record below so it's never itself subject to the
+    // must-change-password redirect it exists to satisfy. A teacher on a temporary password can
+    // only reach this page and logout - see the router guard's mustChangePassword check.
     path: '/teacher/change-password',
-    component: AuthLayout,
-    meta: { requiresAuth: true, role: 'teacher' },
-    children: [
-      { path: '', name: 'TeacherChangePassword', component: TeacherChangePassword }
-    ]
+    name: 'TeacherChangePassword',
+    component: TeacherChangePassword,
+    meta: { requiresAuth: true, role: 'teacher' }
   },
   {
     path: '/teacher',
