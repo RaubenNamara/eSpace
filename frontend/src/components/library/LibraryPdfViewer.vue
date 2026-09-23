@@ -26,6 +26,17 @@
               </div>
               <span class="text-[11px] text-emerald-100 flex-shrink-0">{{ currentPage }}/{{ totalPages }}</span>
             </div>
+            <!-- Large books reveal a first batch of pages immediately rather than blocking on the
+                 whole document - this says the rest is still coming in the background, since a
+                 reader who flips past the revealed pages would otherwise see nothing and not know
+                 why. -->
+            <div v-if="bookImagesLoadingMore" class="flex items-center gap-1.5 mt-1 text-[11px] text-emerald-100">
+              <svg class="w-3 h-3 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+              </svg>
+              <span>Loading more pages… ({{ prepared }}/{{ totalPages }})</span>
+            </div>
           </div>
           <div class="flex items-center gap-2 flex-shrink-0">
             <!-- Read Mode - whole screen given over to the book, floating overlay controls
@@ -222,6 +233,7 @@
               :images="bookImages"
               :page-width="bookPageWidth"
               :page-height="bookPageHeight"
+              :start-page="currentPage - 1"
               :muted="isMuted"
               :prefer-single-page="preferSinglePage"
               class="max-w-full max-h-full transition-shadow duration-300 hover:drop-shadow-2xl"
@@ -475,12 +487,46 @@ watch(currentPage, (page) => {
 // to prepare a book without touching render scale or JPEG quality at all.
 const PREPARE_CONCURRENCY = 3
 
+// Some books run to hundreds of pages - blocking the whole "preparing" screen on every single one
+// turns what should be a few-second wait into minutes. Instead, reveal the book to the reader as
+// soon as a first small batch is ready, then keep rendering the rest in the background,
+// periodically growing the pages BookFlipbook can show. bookImagesLoadingMore stays true for as
+// long as that background work is still running, so the header can show a subtle indicator.
+const INITIAL_REVEAL_TARGET = 6
+const BACKGROUND_REVEAL_INTERVAL = 1500
+const bookImagesLoadingMore = ref(false)
+
 async function prepareBook() {
   preparing.value = true
   prepared.value = 0
+  bookImagesLoadingMore.value = false
   scale.value = BOOK_RENDER_SCALE
   const totalCount = totalPages.value
   const images: (string | undefined)[] = new Array(totalCount)
+  let revealedCount = 0
+  let revealTimer: ReturnType<typeof setInterval> | null = null
+
+  // Only a *leading, contiguous* run of pages can be revealed - concurrent workers don't
+  // necessarily finish in page order, and a gap (page 5 done, page 4 still pending) would leave a
+  // hole BookFlipbook can't render around.
+  const leadingReadyCount = () => {
+    let n = revealedCount
+    while (n < totalCount && images[n] !== undefined) n++
+    return n
+  }
+
+  const reveal = (force = false) => {
+    const ready = leadingReadyCount()
+    if (ready <= revealedCount) return
+    // Once the reader already has the first batch to read, don't rebuild the whole book for
+    // every trickle of newly-ready pages - only once a meaningful chunk more has accumulated, or
+    // this is the guaranteed final reveal once every page is done.
+    if (!force && revealedCount >= INITIAL_REVEAL_TARGET && ready - revealedCount < 15) return
+    revealedCount = ready
+    bookImages.value = images.slice(0, revealedCount) as string[]
+    if (preparing.value) preparing.value = false
+  }
+
   try {
     if (!totalCount) throw new Error('This document has no readable pages.')
 
@@ -512,6 +558,9 @@ async function prepareBook() {
         }
       }
       prepared.value++
+      // The first handful of pages: reveal each one as it lands, so the reader isn't stuck
+      // behind hundreds more pages just to see page 1.
+      if (revealedCount < INITIAL_REVEAL_TARGET) reveal()
     }
 
     const worker = async () => {
@@ -523,18 +572,22 @@ async function prepareBook() {
       }
     }
 
+    bookImagesLoadingMore.value = totalCount > INITIAL_REVEAL_TARGET
+    revealTimer = setInterval(() => reveal(), BACKGROUND_REVEAL_INTERVAL)
+
     await Promise.all(
       Array.from({ length: Math.min(PREPARE_CONCURRENCY, totalCount) }, () => worker())
     )
 
-    const finalImages = images.filter((img): img is string => !!img)
-    if (finalImages.length === 0) throw new Error('None of this document\'s pages could be rendered.')
-    bookImages.value = finalImages
+    reveal(true) // guaranteed final reveal, however few pages that last batch is
+    if (revealedCount === 0) throw new Error('None of this document\'s pages could be rendered.')
   } catch (err: any) {
     console.error('Library PDF: failed to prepare book', err)
     error.value = err?.message || 'Failed to prepare this document for reading. Please try again.'
   } finally {
+    if (revealTimer) clearInterval(revealTimer)
     preparing.value = false
+    bookImagesLoadingMore.value = false
   }
 }
 
