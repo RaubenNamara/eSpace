@@ -304,7 +304,13 @@ class SimpleUploadAdapter {
             }
           } else {
             console.error('Upload failed with status:', this.xhr?.status)
-            reject(new Error(`Upload failed with status ${this.xhr?.status}`))
+            // The backend sends a specific, actionable message on 400/413 (invalid type, file too
+            // large for the server's own limit, etc.) - surfacing it instead of a bare status code
+            // is the difference between a teacher knowing why an image failed and just assuming
+            // "images are broken" for whatever format happened to be too big that time.
+            const errorResponse = this.xhr?.response
+            const serverMessage = errorResponse && typeof errorResponse === 'object' ? errorResponse.error?.message : null
+            reject(new Error(serverMessage || `Upload failed with status ${this.xhr?.status}`))
           }
         }
 

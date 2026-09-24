@@ -1725,6 +1725,14 @@ const loadAssignment = async () => {
           if (curriculumResponse.data.success) {
             const { topics, learning_outcomes, construct_id } = curriculumResponse.data.data
             if (assignment.assessment_category === 'LOA' && topics.length > 0) {
+              // Re-applied (not just relied on from earlier in this function) - the
+              // loadCurriculumMeta() calls around this block each hand curriculumMeta.value a
+              // fresh array, and syncCurriculumAcademicYear()'s watcher reacts to that by
+              // clearing term_id/theme_branch/curriculum_topic_id whenever it judges the academic
+              // year "changed" - a false positive was silently wiping the term this same restore
+              // had just set. Setting it again here, once everything above has settled, is what
+              // actually survives.
+              curriculumSelection.value.term_id = assignment.term_id || ''
               curriculumSelection.value.theme_branch = topics[0].theme_branch
               curriculumSelection.value.curriculum_topic_id = topics[0].id
               await loadCurriculumMeta()
@@ -1819,7 +1827,14 @@ function syncCurriculumAcademicYear() {
   if (!years || years.length === 0) return
   const match = years.find(y => String(y.name) === String(form.value.academic_year))
   curriculumMissingYear.value = !match
-  if (match && curriculumSelection.value.academic_year_id !== match.id) {
+  // Compared as numbers, not with the raw !== below - the two sides can legitimately be a string
+  // and a number for the exact same id (curriculumSelection.academic_year_id gets set directly
+  // from a raw API value in loadAssignment(), match.id comes from a separate endpoint's JSON), and
+  // a spurious mismatch here used to wipe Term/Theme/Topic/outcomes every time this ran - which,
+  // since this watcher fires on every loadCurriculumMeta() call (a fresh array reference each
+  // time), silently reset the Term a teacher/the system had already picked moments after
+  // restoring it (see loadAssignment()'s LOA restore branch).
+  if (match && Number(curriculumSelection.value.academic_year_id) !== Number(match.id)) {
     curriculumSelection.value.academic_year_id = match.id
     curriculumSelection.value.term_id = ''
     curriculumSelection.value.theme_branch = ''

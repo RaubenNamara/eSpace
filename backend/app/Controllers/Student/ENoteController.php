@@ -252,6 +252,7 @@ class ENoteController extends Controller
                 AND a.enote_page_id IS NULL
                 AND a.status = 'published'
                 AND a.deleted_at IS NULL
+                AND (a.open_at IS NULL OR a.open_at <= NOW())
                 AND EXISTS (
                     SELECT 1 FROM student_department_enrollments sde
                     LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
@@ -314,6 +315,7 @@ class ENoteController extends Controller
                 WHERE a.enote_page_id IN ({$placeholders})
                 AND a.status = 'published'
                 AND a.deleted_at IS NULL
+                AND (a.open_at IS NULL OR a.open_at <= NOW())
                 AND EXISTS (
                     SELECT 1 FROM student_department_enrollments sde
                     LEFT JOIN classes sde_c ON sde_c.id = sde.class_id

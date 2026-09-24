@@ -50,13 +50,37 @@ class ENoteImageController extends Controller
         }
 
         try {
+            // A request bigger than the server's post_max_size gets silently emptied by PHP
+            // itself before this code ever runs - $_FILES/$_POST come back completely empty, with
+            // no per-file error code to explain why. This is easy to hit in production even for
+            // uploads well under this controller's own 15MB cap, if the host's PHP ini caps
+            // post_max_size lower (see backend/public/.user.ini) - and since large phone-camera
+            // JPEGs are typically the biggest files teachers upload, it surfaces as "some formats
+            // just don't work" rather than an obvious size error. Detected via Content-Length
+            // (still present even though PHP dropped the parsed body) so the real cause is
+            // reported instead of the generic fallback below.
+            if (!isset($_FILES['upload']) && empty($_POST)) {
+                $contentLength = (int) ($_SERVER['CONTENT_LENGTH'] ?? 0);
+                $postMaxBytes = $this->iniSizeToBytes(ini_get('post_max_size'));
+                if ($contentLength > 0 && $postMaxBytes > 0 && $contentLength > $postMaxBytes) {
+                    $this->json([
+                        'error' => [
+                            'message' => 'This image is too large for the server to accept right now (server limit: ' . ini_get('post_max_size') . '). Try a smaller image, or ask an admin to raise the server upload limit.'
+                        ]
+                    ], 413);
+                    return;
+                }
+            }
+
             // Check if file was uploaded
             if (!isset($_FILES['upload']) || $_FILES['upload']['error'] !== UPLOAD_ERR_OK) {
-                $this->json([
-                    'error' => [
-                        'message' => 'No file uploaded or upload error occurred'
-                    ]
-                ], 400);
+                $errorCode = $_FILES['upload']['error'] ?? null;
+                $message = match ($errorCode) {
+                    UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'This image is too large for the server to accept (server limit: ' . ini_get('upload_max_filesize') . '). Try a smaller image.',
+                    UPLOAD_ERR_PARTIAL => 'The image was only partially uploaded - check your connection and try again.',
+                    default => 'No file uploaded or upload error occurred',
+                };
+                $this->json(['error' => ['message' => $message]], $errorCode === UPLOAD_ERR_INI_SIZE || $errorCode === UPLOAD_ERR_FORM_SIZE ? 413 : 400);
                 return;
             }
 
@@ -173,6 +197,23 @@ class ENoteImageController extends Controller
     private function generateUniqueFilename(string $extension): string
     {
         return uniqid('enote_', true) . '_' . time() . '.' . $extension;
+    }
+
+    /** Parses a php.ini size shorthand (e.g. "8M", "512K", "1G") into a plain byte count. */
+    private function iniSizeToBytes(string $value): int
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return 0;
+        }
+        $unit = strtolower(substr($value, -1));
+        $number = (int) $value;
+        return match ($unit) {
+            'g' => $number * 1024 * 1024 * 1024,
+            'm' => $number * 1024 * 1024,
+            'k' => $number * 1024,
+            default => (int) $value,
+        };
     }
 
     // Resizes an oversized image down to a page-appropriate maximum dimension and re-encodes it

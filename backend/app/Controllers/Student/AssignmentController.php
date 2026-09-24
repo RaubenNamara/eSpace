@@ -57,6 +57,7 @@ class AssignmentController extends Controller
                 ) sub ON a.id = sub.assignment_id
                 WHERE a.status = 'published'
                 AND a.deleted_at IS NULL
+                AND (a.open_at IS NULL OR a.open_at <= NOW())
                 AND EXISTS (
                     SELECT 1 FROM student_department_enrollments sde
                     LEFT JOIN classes sde_c ON sde_c.id = sde.class_id

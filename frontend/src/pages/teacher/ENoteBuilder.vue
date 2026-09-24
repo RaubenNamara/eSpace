@@ -608,7 +608,26 @@
             </div>
           </div>
           <div>
-            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Due Date *</label>
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Starts</label>
+            <div class="flex items-center gap-4 mb-1.5">
+              <label class="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300 cursor-pointer">
+                <input type="radio" value="now" v-model="loaForm.startMode" class="text-indigo-600 focus:ring-indigo-500">
+                Now
+              </label>
+              <label class="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300 cursor-pointer">
+                <input type="radio" value="scheduled" v-model="loaForm.startMode" class="text-indigo-600 focus:ring-indigo-500">
+                Reschedule
+              </label>
+            </div>
+            <input
+              v-if="loaForm.startMode === 'scheduled'"
+              v-model="loaForm.open_at"
+              type="datetime-local"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+            >
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Deadline *</label>
             <input v-model="loaForm.due_date" type="date" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white">
           </div>
           <p v-if="loaError" class="text-xs text-red-600 dark:text-red-400">{{ loaError }}</p>
@@ -622,7 +641,7 @@
           </button>
           <button
             @click="createLoaAssessment"
-            :disabled="creatingLoa || !loaForm.learning_outcome_id || !loaForm.academic_year || !loaForm.due_date"
+            :disabled="creatingLoa || !loaForm.learning_outcome_id || !loaForm.academic_year || !loaForm.due_date || (loaForm.startMode === 'scheduled' && !loaForm.open_at)"
             class="flex-1 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {{ creatingLoa ? 'Creating...' : 'Create & Continue' }}
@@ -657,7 +676,26 @@
             </div>
           </div>
           <div>
-            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Due Date *</label>
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Starts</label>
+            <div class="flex items-center gap-4 mb-1.5">
+              <label class="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300 cursor-pointer">
+                <input type="radio" value="now" v-model="aoiForm.startMode" class="text-violet-600 focus:ring-violet-500">
+                Now
+              </label>
+              <label class="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300 cursor-pointer">
+                <input type="radio" value="scheduled" v-model="aoiForm.startMode" class="text-violet-600 focus:ring-violet-500">
+                Reschedule
+              </label>
+            </div>
+            <input
+              v-if="aoiForm.startMode === 'scheduled'"
+              v-model="aoiForm.open_at"
+              type="datetime-local"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-violet-500 dark:bg-gray-700 dark:text-white"
+            >
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Deadline *</label>
             <input v-model="aoiForm.due_date" type="date" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white">
           </div>
           <p v-if="aoiError" class="text-xs text-red-600 dark:text-red-400">{{ aoiError }}</p>
@@ -671,7 +709,7 @@
           </button>
           <button
             @click="createAoiAssessment"
-            :disabled="creatingAoi || !aoiForm.academic_year || !aoiForm.due_date"
+            :disabled="creatingAoi || !aoiForm.academic_year || !aoiForm.due_date || (aoiForm.startMode === 'scheduled' && !aoiForm.open_at)"
             class="flex-1 py-2.5 text-sm font-semibold text-white bg-violet-600 hover:bg-violet-700 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {{ creatingAoi ? 'Creating...' : 'Create & Continue' }}
@@ -1183,6 +1221,10 @@ interface CurriculumTopicDetail {
   competence: string
   learning_outcomes: string[]
   learning_outcome_ids: number[]
+  // Which term the admin scoped this curriculum entry to - the system already knows this once a
+  // topic is curriculum-linked, so LOA/AOI quick-create never asks for Term again; it's sent on
+  // the created assignment straight from here.
+  term_id: number
 }
 
 // Same "Year" options AssignmentBuilder.vue's Target Audience section uses, for the LOA/AOI
@@ -1314,20 +1356,30 @@ const saveCurriculumLink = async () => {
 // ENotePreview.vue's per-page Ignore/Attempt prompt). Reuses
 // Teacher\AssignmentController::create()/updateCurriculum() exactly as the full builder does. ---
 const showLoaModal = ref(false)
-const loaForm = ref<{ learning_outcome_id: number | ''; academic_year: string; weight: string; due_date: string }>({
-  learning_outcome_id: '', academic_year: '', weight: '', due_date: ''
+const loaForm = ref<{ learning_outcome_id: number | ''; academic_year: string; weight: string; startMode: 'now' | 'scheduled'; open_at: string; due_date: string }>({
+  learning_outcome_id: '', academic_year: '', weight: '', startMode: 'now', open_at: '', due_date: ''
 })
 const creatingLoa = ref(false)
 const loaError = ref('')
 
+// Defaults Year to the current calendar year when it's actually one of the options (same
+// no-op-if-absent pattern AssignmentBuilder.vue's own Target Audience section uses) - one less
+// thing to pick given the system already knows the term (via the topic's curriculum link) and
+// defaults the start time to right now.
+const defaultAcademicYear = (): string => {
+  const currentYear = new Date().getFullYear().toString()
+  return academicYears.value.some(y => y.academic_year === currentYear) ? currentYear : ''
+}
+
 const openLoaModal = () => {
   loaError.value = ''
-  loaForm.value = { learning_outcome_id: '', academic_year: '', weight: '', due_date: '' }
+  loaForm.value = { learning_outcome_id: '', academic_year: defaultAcademicYear(), weight: '', startMode: 'now', open_at: '', due_date: '' }
   showLoaModal.value = true
 }
 
 const createLoaAssessment = async () => {
   if (!topic.value || !currentPage.value || !loaForm.value.learning_outcome_id || !loaForm.value.academic_year || !loaForm.value.due_date) return
+  if (loaForm.value.startMode === 'scheduled' && !loaForm.value.open_at) return
   creatingLoa.value = true
   loaError.value = ''
   try {
@@ -1335,6 +1387,7 @@ const createLoaAssessment = async () => {
       title: `${topic.value.title} - Page ${currentPage.value.order_number} Learning Outcome Assessment`,
       total_marks: 0,
       due_date: loaForm.value.due_date,
+      open_at: loaForm.value.startMode === 'scheduled' ? loaForm.value.open_at : null,
       subject_id: topic.value.subject_id,
       scope: topic.value.class_group_name ? 'all_streams' : 'stream',
       class_id: topic.value.class_id,
@@ -1343,6 +1396,9 @@ const createLoaAssessment = async () => {
       enote_page_id: currentPage.value.id,
       assessment_category: 'LOA',
       academic_year: loaForm.value.academic_year,
+      // Term is never asked here - the system already knows it from the topic's own curriculum
+      // link (linkedCurriculumTopic.term_id), same admin-defined term the outcome itself belongs to.
+      term_id: linkedCurriculumTopic.value?.term_id ?? null,
       weight: loaForm.value.weight || null,
     })
     const assignmentId = response.data.data.id
@@ -1363,18 +1419,21 @@ const createLoaAssessment = async () => {
 // generic "Create Assessment" quick-link (ENotePreview.vue's header) also fills, just pre-set to
 // assessment_category: 'AOI' and linked to this topic's curriculum topic wholesale. ---
 const showAoiModal = ref(false)
-const aoiForm = ref<{ academic_year: string; weight: string; due_date: string }>({ academic_year: '', weight: '', due_date: '' })
+const aoiForm = ref<{ academic_year: string; weight: string; startMode: 'now' | 'scheduled'; open_at: string; due_date: string }>({
+  academic_year: '', weight: '', startMode: 'now', open_at: '', due_date: ''
+})
 const creatingAoi = ref(false)
 const aoiError = ref('')
 
 const openAoiModal = () => {
   aoiError.value = ''
-  aoiForm.value = { academic_year: '', weight: '', due_date: '' }
+  aoiForm.value = { academic_year: defaultAcademicYear(), weight: '', startMode: 'now', open_at: '', due_date: '' }
   showAoiModal.value = true
 }
 
 const createAoiAssessment = async () => {
   if (!topic.value || !aoiForm.value.academic_year || !aoiForm.value.due_date) return
+  if (aoiForm.value.startMode === 'scheduled' && !aoiForm.value.open_at) return
   creatingAoi.value = true
   aoiError.value = ''
   try {
@@ -1382,6 +1441,7 @@ const createAoiAssessment = async () => {
       title: `${topic.value.title} AOI Assessment`,
       total_marks: 0,
       due_date: aoiForm.value.due_date,
+      open_at: aoiForm.value.startMode === 'scheduled' ? aoiForm.value.open_at : null,
       subject_id: topic.value.subject_id,
       scope: topic.value.class_group_name ? 'all_streams' : 'stream',
       class_id: topic.value.class_id,
@@ -1389,6 +1449,8 @@ const createAoiAssessment = async () => {
       enote_topic_id: topic.value.id,
       assessment_category: 'AOI',
       academic_year: aoiForm.value.academic_year,
+      // Same as LOA - the system already knows the term from the topic's curriculum link.
+      term_id: linkedCurriculumTopic.value?.term_id ?? null,
       weight: aoiForm.value.weight || null,
     })
     const assignmentId = response.data.data.id

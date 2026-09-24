@@ -674,7 +674,7 @@
             </button>
             <button
               v-else-if="isStudentMode"
-              @click="showCompletion = true"
+              @click="handleFinishTopic"
               class="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2 text-sm sm:text-base font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
             >
               <span>Finish Topic</span>
@@ -716,7 +716,7 @@
       </button>
       <button
         v-else-if="isStudentMode"
-        @click="showCompletion = true"
+        @click="handleFinishTopic"
         class="fixed right-2 sm:right-4 top-1/2 -translate-y-1/2 z-50 flex items-center gap-1.5 pl-3 pr-4 py-3 rounded-full bg-emerald-600/90 hover:bg-emerald-600 text-white backdrop-blur-sm shadow-lg transition-colors"
         title="Finish topic"
       >
@@ -1354,20 +1354,37 @@ const handlePrevious = () => {
 // Already-attempted assignments (submission_status !== 'new') don't prompt again.
 const showLoaPrompt = ref(false)
 
-const handleNext = () => {
-  autoplayNarration.value = false
-  if (!hasNextPage.value) return
+// Shared by the "Next" button AND "Finish Topic" - a page-level LOA on a topic's last (or only)
+// page must still prompt, even though there's no next page to flip to afterward. Returns true
+// when it intercepted (caller should not advance yet).
+const checkLoaPromptBeforeAdvance = (): boolean => {
   const linked = currentPage.value?.linked_assignment
   if (isStudentMode.value && linked && linked.submission_status === 'new') {
     showLoaPrompt.value = true
-    return
+    return true
   }
+  return false
+}
+
+const handleNext = () => {
+  autoplayNarration.value = false
+  if (!hasNextPage.value) return
+  if (checkLoaPromptBeforeAdvance()) return
   flipbookRef.value?.flipNext()
+}
+
+const handleFinishTopic = () => {
+  if (checkLoaPromptBeforeAdvance()) return
+  showCompletion.value = true
 }
 
 const ignoreLoaPrompt = () => {
   showLoaPrompt.value = false
-  flipbookRef.value?.flipNext()
+  if (hasNextPage.value) {
+    flipbookRef.value?.flipNext()
+  } else if (isStudentMode.value) {
+    showCompletion.value = true
+  }
 }
 
 // Attempting straight from the prompt carries `nextPageId` so the completion screen
