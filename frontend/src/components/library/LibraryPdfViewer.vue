@@ -21,15 +21,15 @@
                  the AI Tutor widget in the eNotes reader, so it's visible without looking down at
                  the footer controls. -->
             <div v-if="bookImages.length > 0" class="hidden sm:flex items-center gap-2 mt-1.5 max-w-xs">
-              <div class="flex-1 h-1.5 rounded-full bg-white/20 overflow-hidden">
-                <div class="h-full bg-white rounded-full transition-all" :style="{ width: `${(currentPage / totalPages) * 100}%` }"></div>
+              <div class="relative flex-1 h-1.5 rounded-full bg-white/20 overflow-hidden">
+                <!-- lighter: how much of the book is ready; bright: where the reader is -->
+                <div class="absolute inset-y-0 left-0 bg-white/35 rounded-full transition-all" :style="{ width: `${(prepared / totalPages) * 100}%` }"></div>
+                <div class="absolute inset-y-0 left-0 bg-white rounded-full transition-all" :style="{ width: `${(currentPage / totalPages) * 100}%` }"></div>
               </div>
               <span class="text-[11px] text-emerald-100 flex-shrink-0">{{ currentPage }}/{{ totalPages }}</span>
             </div>
-            <!-- Large books reveal a first batch of pages immediately rather than blocking on the
-                 whole document - this says the rest is still coming in the background, since a
-                 reader who flips past the revealed pages would otherwise see nothing and not know
-                 why. -->
+            <!-- The book opens after page 1 with every other page as a loading placeholder - this says
+                 the rest is still being prepared in the background (pages near the reader first). -->
             <div v-if="bookImagesLoadingMore" class="flex items-center gap-1.5 mt-1 text-[11px] text-emerald-100">
               <svg class="w-3 h-3 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -506,20 +506,19 @@ watch(currentPage, (page) => {
   if (page > 0) loadPageNote(page)
 }, { immediate: true })
 
-// Pages used to render strictly one-at-a-time (await in a for loop) onto a single shared canvas -
-// simple, but the reused canvas is exactly what forced serialization. pdf.js supports safely
-// requesting several different pages concurrently (each gets its own canvas here instead), so a
-// small worker pool renders several pages in parallel, meaningfully cutting the wall-clock time
-// to prepare a book without touching render scale or JPEG quality at all.
+// Pages render in a small pool of parallel workers (pdf.js handles concurrent page requests; each
+// worker has its own canvas), which cuts the wall-clock time to prepare a book.
 const PREPARE_CONCURRENCY = 3
 
-// Some books run to hundreds of pages - blocking the whole "preparing" screen on every single one
-// turns what should be a few-second wait into minutes. Instead, reveal the book to the reader as
-// soon as a first small batch is ready, then keep rendering the rest in the background,
-// periodically growing the pages BookFlipbook can show. bookImagesLoadingMore stays true for as
-// long as that background work is still running, so the header can show a subtle indicator.
-const INITIAL_REVEAL_TARGET = 6
-const BACKGROUND_REVEAL_INTERVAL = 1500
+// A page that hasn't been rendered yet. An image that never loads makes page-flip draw its own
+// "loading" spinner on that page until the real picture is swapped in (BookFlipbook.setPageImage).
+const PENDING_PAGE = 'data:,'
+
+// The book opens at its full length as soon as page 1 is ready - every other page starts as a
+// loading placeholder and is swapped in as it finishes. Rendering always picks the unrendered page
+// nearest to where the reader is (ahead first), so flipping forward or jumping from the contents
+// straight to page 200 gets that page next instead of waiting for pages 2-199.
+// bookImagesLoadingMore stays true while background pages are still rendering (header indicator).
 const bookImagesLoadingMore = ref(false)
 
 async function prepareBook() {
@@ -528,90 +527,82 @@ async function prepareBook() {
   bookImagesLoadingMore.value = false
   scale.value = BOOK_RENDER_SCALE
   const totalCount = totalPages.value
-  const images: (string | undefined)[] = new Array(totalCount)
-  let revealedCount = 0
-  let revealTimer: ReturnType<typeof setInterval> | null = null
+  const done = new Array<boolean>(totalCount).fill(false)
 
-  // Only a *leading, contiguous* run of pages can be revealed - concurrent workers don't
-  // necessarily finish in page order, and a gap (page 5 done, page 4 still pending) would leave a
-  // hole BookFlipbook can't render around.
-  const leadingReadyCount = () => {
-    let n = revealedCount
-    while (n < totalCount && images[n] !== undefined) n++
-    return n
+  const blankPage = () => {
+    const placeholder = document.createElement('canvas')
+    placeholder.width = bookPageWidth.value || 600
+    placeholder.height = bookPageHeight.value || 800
+    const ctx = placeholder.getContext('2d')
+    if (ctx) {
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, placeholder.width, placeholder.height)
+    }
+    return placeholder.toDataURL('image/jpeg', 0.85)
   }
 
-  const reveal = (force = false) => {
-    const ready = leadingReadyCount()
-    if (ready <= revealedCount) return
-    // Once the reader already has the first batch to read, don't rebuild the whole book for
-    // every trickle of newly-ready pages - only once a meaningful chunk more has accumulated, or
-    // this is the guaranteed final reveal once every page is done.
-    if (!force && revealedCount >= INITIAL_REVEAL_TARGET && ready - revealedCount < 15) return
-    revealedCount = ready
-    bookImages.value = images.slice(0, revealedCount) as string[]
-    if (preparing.value) preparing.value = false
+  const renderToImage = async (pageNum: number, canvas: HTMLCanvasElement): Promise<string> => {
+    try {
+      await renderPage(pageNum, canvas)
+      if (!bookPageWidth.value) {
+        bookPageWidth.value = canvas.width
+        bookPageHeight.value = canvas.height
+      }
+      return canvas.toDataURL('image/jpeg', 0.92)
+    } catch (pageErr) {
+      // One bad page (a malformed embedded image, a canvas taint, ...) shouldn't take down the
+      // whole book - a blank page keeps the page count and flipping correct.
+      console.error(`Library PDF: failed to render page ${pageNum}`, pageErr)
+      return blankPage()
+    }
+  }
+
+  const place = (index: number, src: string) => {
+    done[index] = true
+    bookImages.value[index] = src
+    flipbookRef.value?.setPageImage(index, src)
+    prepared.value++
+  }
+
+  // Next page to render: the unrendered page closest to the reader, looking ahead first
+  const claimed = new Set<number>()
+  const claim = (): number | null => {
+    const here = Math.min(Math.max(currentPage.value - 1, 0), totalCount - 1)
+    for (let d = 0; d < totalCount; d++) {
+      for (const i of d === 0 ? [here] : [here + d, here - d]) {
+        if (i >= 0 && i < totalCount && !done[i] && !claimed.has(i)) {
+          claimed.add(i)
+          return i
+        }
+      }
+    }
+    return null
   }
 
   try {
     if (!totalCount) throw new Error('This document has no readable pages.')
 
-    let nextPageIndex = 0 // 0-based cursor into the shared page-number work queue
-
-    const renderOnePage = async (pageNum: number, canvas: HTMLCanvasElement) => {
-      try {
-        await renderPage(pageNum, canvas)
-        if (pageNum === 1) {
-          bookPageWidth.value = canvas.width
-          bookPageHeight.value = canvas.height
-        }
-        images[pageNum - 1] = canvas.toDataURL('image/jpeg', 0.92)
-      } catch (pageErr) {
-        // One bad page (a malformed embedded image, a canvas taint, ...) shouldn't take down the
-        // whole book - fall back to a blank placeholder at the right size so the page count and
-        // flip behavior stay correct, and keep going.
-        console.error(`Library PDF: failed to render page ${pageNum}`, pageErr)
-        if (bookPageWidth.value && bookPageHeight.value) {
-          const placeholder = document.createElement('canvas')
-          placeholder.width = bookPageWidth.value
-          placeholder.height = bookPageHeight.value
-          const ctx = placeholder.getContext('2d')
-          if (ctx) {
-            ctx.fillStyle = '#ffffff'
-            ctx.fillRect(0, 0, placeholder.width, placeholder.height)
-          }
-          images[pageNum - 1] = placeholder.toDataURL('image/jpeg', 0.85)
-        }
-      }
-      prepared.value++
-      // The first handful of pages: reveal each one as it lands, so the reader isn't stuck
-      // behind hundreds more pages just to see page 1.
-      if (revealedCount < INITIAL_REVEAL_TARGET) reveal()
-    }
+    // Page 1 first: it fixes the book's page size, then the whole book opens
+    const firstCanvas = document.createElement('canvas')
+    const first = await renderToImage(1, firstCanvas)
+    bookImages.value = [first, ...new Array(totalCount - 1).fill(PENDING_PAGE)]
+    done[0] = true
+    claimed.add(0)
+    prepared.value = 1
+    preparing.value = false
+    bookImagesLoadingMore.value = totalCount > 1
 
     const worker = async () => {
       const canvas = document.createElement('canvas')
-      while (true) {
-        const idx = nextPageIndex++
-        if (idx >= totalCount) break
-        await renderOnePage(idx + 1, canvas)
+      for (let i = claim(); i !== null; i = claim()) {
+        place(i, await renderToImage(i + 1, canvas))
       }
     }
-
-    bookImagesLoadingMore.value = totalCount > INITIAL_REVEAL_TARGET
-    revealTimer = setInterval(() => reveal(), BACKGROUND_REVEAL_INTERVAL)
-
-    await Promise.all(
-      Array.from({ length: Math.min(PREPARE_CONCURRENCY, totalCount) }, () => worker())
-    )
-
-    reveal(true) // guaranteed final reveal, however few pages that last batch is
-    if (revealedCount === 0) throw new Error('None of this document\'s pages could be rendered.')
+    await Promise.all(Array.from({ length: Math.min(PREPARE_CONCURRENCY, totalCount - 1) }, () => worker()))
   } catch (err: any) {
     console.error('Library PDF: failed to prepare book', err)
     error.value = err?.message || 'Failed to prepare this document for reading. Please try again.'
   } finally {
-    if (revealTimer) clearInterval(revealTimer)
     preparing.value = false
     bookImagesLoadingMore.value = false
   }
@@ -656,18 +647,16 @@ async function loadToc() {
   try {
     const outline = await pdfDoc.value.getOutline()
     if (!outline || outline.length === 0) {
-      // No embedded bookmarks - read the book's own printed "Contents" page instead
-      const printed = await extractPrintedToc(pdfDoc.value).catch(() => [])
-      if (printed.length) {
-        tocEntries.value = printed
-        return
-      }
-      // No contents page either - a flat page list is still a faster way to jump than flipping.
+      // No embedded bookmarks: offer a plain page list straight away (a faster way to jump than
+      // flipping), then swap in the book's own printed "Contents" page if one can be read - that
+      // scan reads the text of the first pages, which can take a moment on a slow device.
       tocEntries.value = Array.from({ length: totalPages.value }, (_, i) => ({
         title: `Page ${i + 1}`,
         page: i + 1,
         depth: 0,
       }))
+      const printed = await extractPrintedToc(pdfDoc.value).catch(() => [])
+      if (printed.length) tocEntries.value = printed
       return
     }
 
@@ -742,8 +731,8 @@ const onReadModeKeydown = (e: KeyboardEvent) => {
 onMounted(async () => {
   await loadPdf()
   if (!error.value) {
-    await prepareBook()
-    await loadToc()
+    // Contents are read alongside the page rendering, not after the whole book is ready
+    await Promise.all([prepareBook(), loadToc()])
   }
   document.addEventListener('fullscreenchange', onFullscreenChange)
   document.addEventListener('keydown', onReadModeKeydown)

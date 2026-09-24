@@ -117,16 +117,33 @@ function pointX(e: MouseEvent | TouchEvent): number | null {
   return e.clientX
 }
 
+// The book's visible page area in viewport coordinates. page-flip's own bounds are relative to its
+// drawing element - the <canvas> in image mode, the .stf__block in html mode - and in portrait
+// (single-page) mode the visible page is the right half of that rect.
+function bookBounds(): DOMRect | null {
+  const el = hostRef.value?.querySelector('.stf__canvas, .stf__block') as HTMLElement | null
+  if (!el || !flip) return null
+  try {
+    const base = el.getBoundingClientRect()
+    const r = (flip as any).getRender().getRect()
+    const portrait = flip.getOrientation() === 'portrait'
+    const left = base.left + r.left + (portrait ? r.pageWidth : 0)
+    const width = portrait ? r.pageWidth : r.pageWidth * 2
+    return new DOMRect(left, base.top + r.top, width, r.height)
+  } catch {
+    return el.getBoundingClientRect()
+  }
+}
+
 // Capture-phase guard on the host: page-flip's own mousedown/touchstart listeners live further
 // down the tree, so stopping a press here (anywhere but the outer edges) means page-flip never
 // registers it and can't start a drag or a click-to-flip from it. Not preventDefault - text
 // selection, focusing the summary box, links and buttons inside the page all still work.
 function guardFlipStart(e: MouseEvent | TouchEvent) {
   if (!props.edgeFlipOnly) return
-  const block = hostRef.value?.querySelector('.stf__block') as HTMLElement | null
+  const r = bookBounds()
   const x = pointX(e)
-  if (!block || x === null) return
-  const r = block.getBoundingClientRect()
+  if (!r || x === null) return
   const zone = edgeZone(r.width)
   if (x - r.left > zone && r.right - x > zone) e.stopPropagation()
 }
@@ -135,11 +152,11 @@ function guardFlipStart(e: MouseEvent | TouchEvent) {
 function markEdgeHover(e: MouseEvent) {
   const host = hostRef.value
   if (!host || !props.edgeFlipOnly) return
-  const block = host.querySelector('.stf__block') as HTMLElement | null
-  if (!block) return
-  const r = block.getBoundingClientRect()
+  const r = bookBounds()
+  if (!r) return
   const zone = edgeZone(r.width)
-  const nearEdge = e.clientY >= r.top && e.clientY <= r.bottom && (e.clientX - r.left <= zone || r.right - e.clientX <= zone)
+  const nearEdge = e.clientY >= r.top && e.clientY <= r.bottom && e.clientX >= r.left && e.clientX <= r.right &&
+    (e.clientX - r.left <= zone || r.right - e.clientX <= zone)
   host.classList.toggle('near-flip-edge', nearEdge)
 }
 
@@ -339,7 +356,26 @@ function turnToPage(page: number, opts?: { silent?: boolean }) {
 }
 function getCurrentPageIndex(): number { return flip?.getCurrentPageIndex() ?? 0 }
 
-defineExpose({ flipNext, flipPrev, turnToPage, getCurrentPageIndex, rebuild })
+/**
+ * Image mode: swap one page's picture in place (e.g. a page that was still a loading placeholder
+ * has finished rendering) without rebuilding the book or moving the reader. page-flip's ImagePage
+ * draws its own spinner until its image's onload fires, and its render loop repaints every frame,
+ * so resetting the image and its loaded flag is all it takes. Returns false if the page couldn't be
+ * updated in place (the caller's images array still has the new picture for the next rebuild).
+ */
+function setPageImage(index: number, src: string): boolean {
+  if (props.mode !== 'image' || !flip) return false
+  // getPage() exists at runtime (PageFlip.ts) but is missing from the published type definitions
+  const page = (() => { try { return (flip as any).getPage(index) } catch { return null } })()
+  const image: HTMLImageElement | undefined = page?.image
+  if (!image) return false
+  page.isLoad = false
+  image.onload = () => { page.isLoad = true }
+  image.src = src
+  return true
+}
+
+defineExpose({ flipNext, flipPrev, turnToPage, getCurrentPageIndex, rebuild, setPageImage })
 </script>
 
 <style scoped>
