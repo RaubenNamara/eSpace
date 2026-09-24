@@ -205,6 +205,16 @@
             :title="`Updated ${formatDate(book.updated_at || book.created_at)}`"
             @open="previewBook = book"
           >
+            <template #cover="{ size }">
+              <ShelfBook flat :size="size"
+              :title="book.title"
+              :seed="book.id"
+              :label="subjectTag(book.subject_name, book.subject_code)"
+              :cover-image="book.cover_image"
+              :author="book.author"
+              :pages="book.total_pages"
+             />
+            </template>
             <ShelfBook
               spine-out
               :selected="bulk.isSelected(book.id)"

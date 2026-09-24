@@ -33,6 +33,11 @@
       >
         <!-- Phones: a bottom sheet with a grab bar and a big Open button (no hover to lean on) -->
         <div v-if="!canHover" class="sheet-grab" aria-hidden="true"></div>
+        <!-- The book's cover, large and face-on: always above everything on the page (this card is
+             teleported to <body>), so it's readable however the shelf around it is laid out -->
+        <div v-if="$slots.cover" class="card-cover">
+          <slot name="cover" :size="coverSize" />
+        </div>
         <slot name="details" />
         <button v-if="!canHover" type="button" class="sheet-open" @click="openFromSheet">{{ openLabel }}</button>
         <p v-else class="card-hint">Click the book to open</p>
@@ -57,7 +62,10 @@ let hideTimer: ReturnType<typeof setTimeout> | null = null
 // details) and a second tap opens it; with a mouse, hovering already did that, so one click opens.
 const canHover = typeof window !== 'undefined' && !!window.matchMedia?.('(hover: hover)').matches
 
-const CARD_WIDTH = 220
+// Large face-on cover in the desktop card, medium in the phone sheet
+const coverSize: 'lg' | 'md' = canHover ? 'lg' : 'md'
+
+const CARD_WIDTH = 228
 // The pulled-out book's cover is about this wide (ShelfBook --book-w + the swing toward the reader)
 const COVER_REACH = 150
 
@@ -194,6 +202,12 @@ onBeforeUnmount(() => {
 .dark .shelf-slot-card {
   background: #1f2937;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.card-cover {
+  display: flex;
+  justify-content: center;
+  margin: 2px 0 12px;
 }
 
 .card-hint {

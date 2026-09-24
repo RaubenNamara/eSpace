@@ -1,7 +1,7 @@
 <template>
   <div
     class="shelf-book-scene"
-    :class="{ 'is-small': size === 'sm', 'is-large': size === 'lg', 'is-real': variant === 'book', 'is-spine-out': spineOut, 'is-selected': selected }"
+    :class="{ 'is-small': size === 'sm', 'is-large': size === 'lg', 'is-real': variant === 'book', 'is-spine-out': spineOut, 'is-selected': selected, 'is-flat': flat }"
     :style="sceneStyle"
   >
     <div class="shelf-book" :style="coverStyle">
@@ -123,6 +123,8 @@ const props = withDefaults(defineProps<{
   spineOut?: boolean
   // Highlights the spine (teacher bulk selection)
   selected?: boolean
+  // Face-on, untilted cover (the large readable copy in a ShelfSlot's details card)
+  flat?: boolean
 }>(), {
   label: '',
   footer: '',
@@ -133,7 +135,8 @@ const props = withDefaults(defineProps<{
   author: null,
   pages: null,
   spineOut: false,
-  selected: false
+  selected: false,
+  flat: false
 })
 
 // Book-cloth colours: [light, dark] ends of the cover gradient
@@ -711,6 +714,17 @@ const artStyle = computed(() => {
 .is-selected .spine-label {
   background: #6366f1;
   color: #fff;
+}
+
+/* Face-on cover for the details card - no shelf tilt, no hover motion */
+.is-flat .shelf-book,
+.is-flat.is-real .shelf-book {
+  transform: none !important;
+  transition: none;
+}
+
+.is-flat .book-shadow {
+  display: none;
 }
 
 /* ---------- Teacher-designed covers ---------- */

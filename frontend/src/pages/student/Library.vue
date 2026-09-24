@@ -56,6 +56,9 @@
           :label="book.title"
           @open="previewBook = book"
         >
+          <template #cover="{ size }">
+            <ShelfBook flat :size="size" :title="book.title" :seed="book.id" :label="shelfLabel(book)" :cover-image="book.cover_image" :author="book.author" :pages="book.total_pages"  />
+          </template>
           <ShelfBook spine-out :title="book.title" :seed="book.id" :label="shelfLabel(book)" :cover-image="book.cover_image" :author="book.author" :pages="book.total_pages" />
           <template #details>
             <p class="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug">{{ book.title }}</p>
@@ -78,6 +81,9 @@
           :label="book.title"
           @open="previewBook = book"
         >
+          <template #cover="{ size }">
+            <ShelfBook flat :size="size" :title="book.title" :seed="book.id" :label="shelfLabel(book)" :cover-image="book.cover_image" :author="book.author" :pages="book.total_pages"  />
+          </template>
           <ShelfBook spine-out :title="book.title" :seed="book.id" :label="shelfLabel(book)" :cover-image="book.cover_image" :author="book.author" :pages="book.total_pages" />
           <template #details>
           <p class="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug">{{ book.title }}</p>

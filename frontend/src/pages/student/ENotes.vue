@@ -63,6 +63,16 @@
           :label="topic.title"
           @open="router.push(`/student/enotes/${topic.id}`)"
         >
+          <template #cover="{ size }">
+            <ShelfBook flat :size="size"
+            variant="notes"
+            :title="topic.title"
+            :seed="topic.id"
+            :label="subjectTag(topic.subject_name, topic.subject_code)"
+            :footer="`${topic.total_pages} ${topic.total_pages === 1 ? 'page' : 'pages'}`"
+            :cover="parseCoverDesign(topic.cover_design)"
+           />
+          </template>
           <ShelfBook
             spine-out
             variant="notes"
