@@ -1328,7 +1328,9 @@ const loadTopic = async () => {
       // A student arriving back from a per-page Learning Outcome Assessment (see
       // attemptPageLoa()) resumes on the page after the one they attempted from, rather than
       // starting the topic over - resumePage is only ever set by that redirect.
-      const resumePageId = isStudentMode.value ? Number(route.query.resumePage) : NaN
+      // Students resume where they left off; a teacher previewing from the builder opens on the page
+      // they were just editing, so what they added is the first thing they see
+      const resumePageId = Number(route.query.resumePage)
       const resumeIndex = !isNaN(resumePageId) ? pages.value.findIndex(p => p.id === resumePageId) : -1
 
       if (resumeIndex >= 0) {
@@ -1342,10 +1344,10 @@ const loadTopic = async () => {
           showIntro.value = true
         }
         loadStudentPageData()
-        if (resumeIndex >= 0) {
-          await nextTick()
-          flipbookRef.value?.turnToPage(resumeIndex, { animate: false })
-        }
+      }
+      if (resumeIndex >= 0) {
+        await nextTick()
+        flipbookRef.value?.turnToPage(resumeIndex, { animate: false })
       }
     }
   } catch (error) {

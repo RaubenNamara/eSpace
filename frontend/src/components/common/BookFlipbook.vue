@@ -335,6 +335,14 @@ function build() {
       canvasResizeObserver.observe(canvasEl)
     }
   }
+  if (pendingPage !== null) {
+    const target = pendingPage
+    pendingPage = null
+    suppressNextFlipSound = true
+    flip.turnToPage(target)
+    emit('flip', target)
+  }
+
   flip.on('changeOrientation', measureSoon)
   measureSoon()
   setTimeout(measure, 400)
@@ -450,6 +458,12 @@ watch(() => props.images, () => {
 // separate reactivity flush (an awaited nextTick) before build() can use a genuinely fresh
 // hostRef.value, the same way destroy() needs its own flush before letting StPageFlip loose.
 async function rebuild() {
+  // Keep the reader's place: a rebuild (page-size change, resize, single/two-page toggle) would
+  // otherwise restart the book at `startPage`, undoing an "open on this page" jump made just before
+  if (flip && pendingPage === null) {
+    const current = flip.getCurrentPageIndex()
+    if (current > 0) pendingPage = current
+  }
   await destroy()
   showHost.value = true
   await nextTick()
@@ -469,8 +483,15 @@ function flipPrev(opts?: { silent?: boolean }) {
  * (bundleFlip), like thumbing a real book open further on; nearby jumps, `animate: false` (e.g.
  * resuming where a reader left off on open), or a reader who prefers reduced motion jump directly.
  */
+// A jump asked for before the book has finished building (e.g. "open on the page I was editing" /
+// "resume where I left off" right after load) - applied as soon as build() has the pages in place
+let pendingPage: number | null = null
+
 async function turnToPage(page: number, opts?: { silent?: boolean; animate?: boolean }) {
-  if (!flip) return
+  if (!flip) {
+    pendingPage = page
+    return
+  }
   const from = flip.getCurrentPageIndex()
   const spread = flip.getOrientation() === 'portrait' ? 1 : 2
   const far = Math.abs(page - from) > spread * 2

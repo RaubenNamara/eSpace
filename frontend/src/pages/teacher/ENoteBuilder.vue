@@ -1127,7 +1127,8 @@ const publishTopic = async () => {
 const openPreview = async () => {
   // Preview reads the saved topic from the server, so it must not open before the latest edit is in
   if (!await flushAutosave()) return
-  router.push(`/teacher/enotes/preview/${topicId.value}`)
+  // Open the preview on the page being edited, not page 1
+  router.push({ path: `/teacher/enotes/preview/${topicId.value}`, query: currentPage.value ? { resumePage: String(currentPage.value.id) } : {} })
 }
 
 const goBack = async () => {

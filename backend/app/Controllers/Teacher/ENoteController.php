@@ -1528,10 +1528,11 @@ class ENoteController extends Controller
             $params['title'] = htmlspecialchars(trim($data['title']), ENT_QUOTES, 'UTF-8');
         }
 
-        if (!empty($data['content'])) {
+        // array_key_exists, not !empty(): a teacher who clears a page's text must be able to save that
+        if (array_key_exists('content', $data)) {
             $updates[] = 'content = :content';
             // Sanitize HTML content to prevent XSS
-            $params['content'] = HtmlSanitizer::sanitize($data['content']);
+            $params['content'] = HtmlSanitizer::sanitize((string) ($data['content'] ?? ''));
         }
 
         if (isset($data['is_active'])) {
