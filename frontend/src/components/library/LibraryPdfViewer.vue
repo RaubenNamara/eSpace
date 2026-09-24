@@ -305,12 +305,14 @@
               @click="jumpToPage(entry.page)"
               :disabled="!entry.page"
               :style="{ paddingLeft: `${8 + entry.depth * 14}px` }"
-              class="w-full text-left py-1.5 pr-2 rounded-lg text-xs truncate transition-colors disabled:opacity-50 disabled:cursor-default"
+              :title="entry.page ? `${entry.title} - page ${entry.page}` : entry.title"
+              class="group w-full flex items-baseline gap-2 text-left py-1.5 pr-2 rounded-lg text-xs transition-colors disabled:opacity-50 disabled:cursor-default"
               :class="entry.page === currentPage
                 ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 font-medium'
-                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'"
+                : 'text-gray-600 dark:text-gray-300 enabled:hover:bg-blue-50 enabled:hover:text-blue-700 enabled:hover:underline dark:enabled:hover:bg-blue-900/30 dark:enabled:hover:text-blue-300'"
             >
-              {{ entry.title }}
+              <span class="flex-1 min-w-0 truncate">{{ entry.title }}</span>
+              <span v-if="entry.page" class="flex-shrink-0 text-[10px] tabular-nums text-gray-400 group-enabled:group-hover:text-blue-500">{{ entry.page }}</span>
             </button>
           </div>
         </div>
@@ -361,6 +363,7 @@
 </template>
 
 <script setup lang="ts">
+import { extractPrintedToc } from '@/utils/pdfPrintedToc'
 import SummaryColorPicker from '@/components/enotes/SummaryColorPicker.vue'
 import { useSummaryColor, summaryStyleOf, isSummaryColor, type SummaryColor } from '@/composables/useSummaryColor'
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
@@ -653,7 +656,13 @@ async function loadToc() {
   try {
     const outline = await pdfDoc.value.getOutline()
     if (!outline || outline.length === 0) {
-      // No embedded bookmarks - a flat page list is still a faster way to jump than flipping.
+      // No embedded bookmarks - read the book's own printed "Contents" page instead
+      const printed = await extractPrintedToc(pdfDoc.value).catch(() => [])
+      if (printed.length) {
+        tocEntries.value = printed
+        return
+      }
+      // No contents page either - a flat page list is still a faster way to jump than flipping.
       tocEntries.value = Array.from({ length: totalPages.value }, (_, i) => ({
         title: `Page ${i + 1}`,
         page: i + 1,
