@@ -54,4 +54,12 @@
   </FilesMatch>
 </IfModule>
 
+# Compress text responses. The live server was sending everything uncompressed - the ~1.4MB
+# CKEditor bundle the eNote builder needs went over the wire at full size, which made opening a
+# topic slow on school connections. gzip cuts JS/CSS/JSON to roughly a quarter.
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml image/svg+xml
+  AddOutputFilterByType DEFLATE application/javascript text/javascript application/json application/manifest+json
+</IfModule>
+
 Options -Indexes

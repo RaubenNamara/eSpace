@@ -202,6 +202,16 @@
           class="group relative bg-white dark:bg-gray-800 rounded-2xl shadow-md hover:shadow-xl border border-gray-100 dark:border-gray-700 hover:-translate-y-1 transition-all duration-200 cursor-pointer overflow-hidden"
           @click="openBuilder(topic.id)"
         >
+          <div
+            v-if="openingTopicId === topic.id"
+            class="absolute inset-0 z-20 flex items-center justify-center gap-2 bg-white/70 dark:bg-gray-800/70 text-sm font-medium text-gray-700 dark:text-gray-200"
+          >
+            <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+            Opening...
+          </div>
           <div class="h-2.5" :class="classPalette(activeClassName).solid"></div>
           <div
             class="absolute -right-8 top-6 w-24 h-24 rounded-full opacity-[0.07] transition-transform duration-300 group-hover:scale-125 pointer-events-none"
@@ -1206,8 +1216,18 @@ const deleteTopic = async (id: number) => {
   }
 }
 
-const openBuilder = (topicId: number) => {
-  router.push(`/teacher/enotes/builder/${topicId}`)
+// The builder route pulls in CKEditor (~1.4MB), so the first click used to sit silently while it
+// downloaded and teachers clicked again and again. openingTopicId shows a spinner on the clicked
+// card and ignores repeat clicks until the navigation finishes.
+const openingTopicId = ref<number | null>(null)
+const openBuilder = async (topicId: number) => {
+  if (openingTopicId.value !== null) return
+  openingTopicId.value = topicId
+  try {
+    await router.push(`/teacher/enotes/builder/${topicId}`)
+  } finally {
+    openingTopicId.value = null
+  }
 }
 
 // Duplicate-to-another-class/stream modal. Reuses assignments.value.classes (already loaded for
@@ -1290,6 +1310,10 @@ const confirmDuplicate = async () => {
 }
 
 onMounted(async () => {
+  // Warm the builder chunk (and the CKEditor bundle it imports) in the background while the
+  // teacher is still looking at the list, so opening a topic doesn't wait on the download.
+  import('./ENoteBuilder.vue').catch(() => {})
+
   await Promise.all([
     loadDashboard(),
     loadTopics(),

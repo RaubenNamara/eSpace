@@ -1,1 +1,0 @@
-import{_ as e}from"./MarksheetPage.vue_vue_type_script_setup_true_lang-BSUK4wyv.js";import{d as a,x as o,j as r}from"./index-BkD_30GW.js";const m=a({__name:"Marksheet",setup(t){return(s,_)=>(r(),o(e))}});export{m as default};

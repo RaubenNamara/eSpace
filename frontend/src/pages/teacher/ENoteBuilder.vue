@@ -1,5 +1,21 @@
 <template>
   <div class="h-screen flex flex-col">
+    <!-- Until the topic arrives the header and page list render empty, which read as "nothing
+         happened" and had teachers clicking again - show an explicit loading state instead. -->
+    <div
+      v-if="!topic"
+      class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300"
+    >
+      <svg class="animate-spin h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+      </svg>
+      <p v-if="!topicLoadFailed" class="text-sm">Loading topic...</p>
+      <div v-else class="text-center space-y-2">
+        <p class="text-sm">Couldn't load this topic. Check your connection.</p>
+        <button @click="loadTopic" class="px-3 py-1.5 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700">Try again</button>
+      </div>
+    </div>
     <!-- Header -->
     <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-3 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-between gap-2 sm:gap-3">
       <div class="flex items-center gap-2 sm:gap-4 min-w-0">
@@ -803,7 +819,9 @@ const hasNextPage = computed(() => {
   return currentIndex < pages.value.length - 1
 })
 
+const topicLoadFailed = ref(false)
 const loadTopic = async () => {
+  topicLoadFailed.value = false
   try {
     console.log('Loading topic:', topicId.value)
     const response = await axios.get(`${API_BASE}/teacher/enotes/topics/${topicId.value}`)
@@ -835,6 +853,7 @@ const loadTopic = async () => {
     }
   } catch (error) {
     console.error('Failed to load topic:', error)
+    topicLoadFailed.value = true
   }
 }
 
@@ -859,7 +878,13 @@ const selectPage = async (pageId: number) => {
   currentPage.value = pages.value.find(p => p.id === pageId) || null
 }
 
+// A slow connection made "Add Page" look unresponsive, so repeat clicks each created another
+// blank page (seen in the live access log as back-to-back POSTs). Ignore clicks while one is
+// already in flight.
+const addingPage = ref(false)
 const addPage = async () => {
+  if (addingPage.value) return
+  addingPage.value = true
   try {
     await flushAutosave()
 
@@ -882,6 +907,8 @@ const addPage = async () => {
     }
   } catch (error) {
     console.error('Failed to add page:', error)
+  } finally {
+    addingPage.value = false
   }
 }
 

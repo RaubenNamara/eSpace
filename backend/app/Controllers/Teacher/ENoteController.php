@@ -467,11 +467,6 @@ class ENoteController extends Controller
         $stmt->execute(['topic_id' => $id]);
         $pages = $stmt->fetchAll();
 
-        // Log page content for debugging
-        foreach ($pages as $index => $page) {
-            error_log("ENoteController: Page {$index} (ID: {$page['id']}) content: " . substr($page['content'], 0, 500));
-        }
-
         $topic['pages'] = $this->attachNarrations($pages);
         $topic['pages'] = $this->attachPageLinkedAssignments($topic['pages'], $teacherId);
 
@@ -1382,16 +1377,11 @@ class ENoteController extends Controller
         $nextOrder = ($result && $result['max_order']) ? (int) $result['max_order'] + 1 : 1;
 
         // Sanitize input
-        $originalContent = $data['content'] ?? '';
-        error_log('ENoteController: Original content before sanitization: ' . substr($originalContent, 0, 500));
-        
         $sanitizedData = [
             'title' => htmlspecialchars(trim($data['title']), ENT_QUOTES, 'UTF-8'),
             'content' => isset($data['content']) ? HtmlSanitizer::sanitize($data['content']) : '', // Sanitize HTML content
             'order_number' => $nextOrder
         ];
-        
-        error_log('ENoteController: Sanitized content: ' . substr($sanitizedData['content'], 0, 500));
 
         // Insert page
         $sql = "INSERT INTO enote_pages (topic_id, order_number, title, content, created_at, updated_at)
@@ -1480,11 +1470,7 @@ class ENoteController extends Controller
         if (!empty($data['content'])) {
             $updates[] = 'content = :content';
             // Sanitize HTML content to prevent XSS
-            $originalContent = $data['content'];
-            error_log('ENoteController: Original content before sanitization (update): ' . substr($originalContent, 0, 500));
-            $sanitizedContent = HtmlSanitizer::sanitize($data['content']);
-            error_log('ENoteController: Sanitized content (update): ' . substr($sanitizedContent, 0, 500));
-            $params['content'] = $sanitizedContent;
+            $params['content'] = HtmlSanitizer::sanitize($data['content']);
         }
 
         if (isset($data['is_active'])) {
