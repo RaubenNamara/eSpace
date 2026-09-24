@@ -215,6 +215,7 @@
                 :seed="topic.id"
                 :label="(topic.subject_code || topic.subject_name || '').slice(0, 10).toUpperCase()"
                 :footer="`${topic.total_pages} ${topic.total_pages === 1 ? 'page' : 'pages'}`"
+                :cover="parseCoverDesign(topic.cover_design)"
               >
                 <input
                   type="checkbox"
@@ -270,6 +271,15 @@
                   </svg>
                 </button>
                 <button
+                  @click.stop="coverTopic = topic"
+                  class="p-1.5 min-w-[34px] min-h-[34px] flex items-center justify-center hover:bg-amber-100 dark:hover:bg-amber-900/40 rounded-lg transition-colors"
+                  title="Design book cover"
+                >
+                  <svg class="w-4 h-4 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                  </svg>
+                </button>
+                <button
                   @click.stop="openDuplicateModal(topic)"
                   class="p-1.5 min-w-[34px] min-h-[34px] flex items-center justify-center hover:bg-indigo-100 dark:hover:bg-indigo-900 rounded-lg transition-colors"
                   title="Duplicate to another class/stream"
@@ -297,6 +307,13 @@
         <p class="text-gray-500 dark:text-gray-400">No eNotes topics in this class yet.</p>
       </div>
     </template>
+
+    <ENoteCoverEditor
+      v-if="coverTopic"
+      :topic="coverTopic"
+      @close="coverTopic = null"
+      @saved="onCoverSaved"
+    />
 
     <!-- Create/Edit Topic Modal -->
     <div v-if="showTopicModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -734,6 +751,8 @@ import type {
 import TeacherClassSelector from '@/components/teacher/TeacherClassSelector.vue'
 import BulkActionBar from '@/components/common/BulkActionBar.vue'
 import Bookshelf from '@/components/library/Bookshelf.vue'
+import ENoteCoverEditor from '@/components/enotes/ENoteCoverEditor.vue'
+import { parseCoverDesign } from '@/utils/enoteCover'
 import ShelfBook from '@/components/library/ShelfBook.vue'
 import { useToastStore } from '@/stores/toast'
 import { useConfirmStore } from '@/stores/confirm'
@@ -1216,6 +1235,14 @@ const deleteTopic = async (id: number) => {
 // downloaded and teachers clicked again and again. openingTopicId shows a spinner on the clicked
 // card and ignores repeat clicks until the navigation finishes.
 const openingTopicId = ref<number | null>(null)
+
+// Book cover designer - saving reloads the list since linked copies in other streams share the cover
+const coverTopic = ref<ENoteTopic | null>(null)
+const onCoverSaved = async () => {
+  coverTopic.value = null
+  toast.success('Book cover saved')
+  await loadTopics()
+}
 const openBuilder = async (topicId: number) => {
   if (openingTopicId.value !== null) return
   openingTopicId.value = topicId

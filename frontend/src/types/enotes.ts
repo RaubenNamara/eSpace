@@ -22,6 +22,8 @@ export interface ENoteTopic {
   total_pages: number
   estimated_reading_time: number | null
   narration_voice?: string | null
+  // JSON-encoded ENoteCoverDesign (see utils/enoteCover.ts), or null for the default look
+  cover_design?: string | null
   created_at: string
   updated_at: string
   deleted_at: string | null

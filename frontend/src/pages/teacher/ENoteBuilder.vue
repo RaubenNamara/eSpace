@@ -84,6 +84,18 @@
         </button>
 
         <button
+          v-if="topic"
+          @click="showCoverEditor = true"
+          class="px-2.5 sm:px-4 py-2 bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-colors flex items-center gap-1.5 sm:gap-2"
+          title="Design how this topic's book looks on the students' shelf"
+        >
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+          </svg>
+          <span class="hidden sm:inline">Book cover</span>
+        </button>
+
+        <button
           @click="publishTopic"
           :disabled="topic?.status === 'published'"
           class="px-2.5 sm:px-4 py-2 text-sm sm:text-base bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -755,6 +767,13 @@
         <div class="prose prose-sm sm:prose-base max-w-none" v-html="formatProbeContent(currentPage?.content || '')"></div>
       </div>
     </div>
+
+    <ENoteCoverEditor
+      v-if="showCoverEditor && topic"
+      :topic="topic"
+      @close="showCoverEditor = false"
+      @saved="onCoverSaved"
+    />
   </div>
 </template>
 
@@ -763,6 +782,7 @@ import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute, onBeforeRouteLeave } from 'vue-router'
 import axios from 'axios'
 import CKEditor from '@/components/teacher/CKEditor.vue'
+import ENoteCoverEditor from '@/components/enotes/ENoteCoverEditor.vue'
 import NarrationControls from '@/components/enotes/NarrationControls.vue'
 import { autoEmbedYoutube, resolveContentAssetUrls } from '@/utils/richContent'
 import type { ENoteTopic, ENotePage, ENotePageForm, ENotePageNarration } from '@/types/enotes'
@@ -818,6 +838,14 @@ const hasNextPage = computed(() => {
   const currentIndex = pages.value.findIndex(p => p.id === currentPage.value!.id)
   return currentIndex < pages.value.length - 1
 })
+
+// Book cover designer (how this topic looks on the eNotes shelves)
+const showCoverEditor = ref(false)
+const onCoverSaved = (coverDesign: string | null) => {
+  if (topic.value) topic.value.cover_design = coverDesign
+  showCoverEditor.value = false
+  toast.success('Book cover saved')
+}
 
 const topicLoadFailed = ref(false)
 const loadTopic = async () => {

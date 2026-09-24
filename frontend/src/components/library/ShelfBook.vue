@@ -1,5 +1,5 @@
 <template>
-  <div class="shelf-book-scene" :class="{ 'is-small': size === 'sm' }">
+  <div class="shelf-book-scene" :class="{ 'is-small': size === 'sm', 'is-large': size === 'lg' }">
     <div class="shelf-book" :style="coverStyle">
       <!-- Page block seen past the right edge of the cover and along the top - the book is
            turned a few degrees on the shelf, so its thickness shows like a real standing book. -->
@@ -7,11 +7,55 @@
       <div class="book-side" aria-hidden="true"></div>
       <div class="book-top" aria-hidden="true"></div>
 
-      <div class="book-front">
+      <div class="book-front" :class="{ 'has-cover': cover }">
         <!-- Spine hinge: the crease where a hardcover bends open -->
         <div class="book-hinge" aria-hidden="true"></div>
 
-        <template v-if="variant === 'notes'">
+        <!-- Teacher-designed cover (eNotes) - drawn edge to edge like a printed book -->
+        <div v-if="cover" class="cv" :class="`cv-${cover.template}`">
+          <template v-if="cover.template === 'portrait'">
+            <div class="cv-art" :style="artStyle">
+              <div class="cv-fade" aria-hidden="true"></div>
+              <p class="cv-bold-title">{{ coverTitle }}</p>
+            </div>
+            <div class="cv-strip">
+              <p class="cv-author">{{ cover.author }}</p>
+              <p class="cv-meta">{{ metaLine }}</p>
+            </div>
+          </template>
+
+          <template v-else-if="cover.template === 'classic'">
+            <div v-if="label" class="book-band">{{ label }}</div>
+            <div v-if="cover.image" class="cv-frame" :style="artStyle"></div>
+            <div v-else class="book-rule cv-rule" aria-hidden="true"></div>
+            <p class="book-title cv-serif-title">{{ coverTitle }}</p>
+            <p class="cv-gold-author">{{ cover.author }}</p>
+            <p v-if="cover.year" class="cv-gold-year">{{ cover.year }}</p>
+          </template>
+
+          <template v-else-if="cover.template === 'split'">
+            <div class="cv-top">
+              <p v-if="label" class="cv-kicker">{{ label }}</p>
+              <p class="cv-bold-title">{{ coverTitle }}</p>
+            </div>
+            <div class="cv-bottom" :style="artStyle">
+              <p class="cv-bar">{{ [cover.author, cover.year].filter(Boolean).join(' · ') }}</p>
+            </div>
+          </template>
+
+          <template v-else>
+            <div v-if="label" class="book-band">{{ label }}</div>
+            <div class="notes-label">
+              <p class="notes-title">{{ coverTitle }}</p>
+              <div class="notes-lines" aria-hidden="true"></div>
+              <p v-if="cover.author" class="notes-field">{{ cover.author }}</p>
+              <p v-if="cover.year" class="notes-field">{{ cover.year }}</p>
+            </div>
+            <div v-if="cover.image" class="cv-sticker" :style="artStyle"></div>
+          </template>
+        </div>
+
+        <template v-else-if="variant === 'notes'">
           <!-- Exercise-book look: coloured cover with a white name label, like a school notebook -->
           <div v-if="label" class="book-band">{{ label }}</div>
           <div class="notes-label">
@@ -26,7 +70,7 @@
           <div class="book-rule book-rule--bottom" aria-hidden="true"></div>
         </template>
 
-        <p v-if="footer" class="book-footer">{{ footer }}</p>
+        <p v-if="footer && !cover" class="book-footer">{{ footer }}</p>
 
         <!-- Corner overlays (status ribbon, checkbox, etc.) supplied by the page -->
         <slot />
@@ -38,6 +82,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { type ENoteCoverDesign, shadeColor, hexToRgba } from '@/utils/enoteCover'
+import { resolveAssetUrl } from '@/utils/url'
 
 const props = withDefaults(defineProps<{
   title: string
@@ -48,12 +94,15 @@ const props = withDefaults(defineProps<{
   // Any stable number (the record id) - picks the cover colour so a book keeps its colour
   seed: number
   variant?: 'book' | 'notes'
-  size?: 'sm' | 'md'
+  size?: 'sm' | 'md' | 'lg'
+  // A teacher-designed cover (eNotes) - replaces the default look when set
+  cover?: ENoteCoverDesign | null
 }>(), {
   label: '',
   footer: '',
   variant: 'book',
-  size: 'md'
+  size: 'md',
+  cover: null
 })
 
 // Book-cloth colours: [light, dark] ends of the cover gradient
@@ -70,13 +119,35 @@ const cloths: [string, string][] = [
   ['#566b2a', '#3a481b']  // olive
 ]
 
+const coverTitle = computed(() => props.cover?.title || props.title)
+const metaLine = computed(() => [props.cover?.year, props.label].filter(Boolean).join(' · '))
+
 // Longest single word in the title - the title font shrinks just enough for that word to fit on
 // one line, rather than being split mid-word ("Measureme/nts") on a narrow cover.
-const longestWord = computed(() => Math.max(6, ...props.title.split(/\s+/).map(w => w.length)))
+const longestWord = computed(() => Math.max(6, ...coverTitle.value.split(/\s+/).map(w => w.length)))
 
 const coverStyle = computed(() => {
-  const [light, dark] = cloths[Math.abs(props.seed) % cloths.length]
-  return { '--cloth-light': light, '--cloth-dark': dark, '--longest': String(longestWord.value) } as Record<string, string>
+  const [light, dark] = props.cover
+    ? [props.cover.color, shadeColor(props.cover.color, -0.4)]
+    : cloths[Math.abs(props.seed) % cloths.length]
+  return {
+    '--cloth-light': light,
+    '--cloth-dark': dark,
+    '--cloth-fade': hexToRgba(light, 0.92),
+    '--longest': String(longestWord.value)
+  } as Record<string, string>
+})
+
+// The cover picture, or (no picture chosen) a soft tint of the cover colour so the layout still
+// reads as a designed cover rather than an empty box.
+const artStyle = computed(() => {
+  if (props.cover?.image) {
+    return { backgroundImage: `url("${resolveAssetUrl(props.cover.image)}")` }
+  }
+  return {
+    backgroundImage: 'radial-gradient(circle at 70% 30%, rgba(255,255,255,0.28), transparent 55%), repeating-linear-gradient(135deg, rgba(255,255,255,0.06) 0 6px, transparent 6px 12px)',
+    backgroundColor: 'var(--cloth-dark)'
+  }
 })
 </script>
 
@@ -104,6 +175,14 @@ const coverStyle = computed(() => {
   --book-w: 92px;
   --book-h: 124px;
   --book-depth: 10px;
+}
+
+/* Big preview (cover designer) - every cover text size is a fraction of --book-w, so this stays
+   crisp instead of being a blurry scaled-up small book */
+.shelf-book-scene.is-large {
+  --book-w: 180px;
+  --book-h: 242px;
+  --book-depth: 18px;
 }
 
 .shelf-book {
@@ -212,7 +291,7 @@ const coverStyle = computed(() => {
 .book-band {
   align-self: stretch;
   text-align: center;
-  font-size: 9px;
+  font-size: calc(var(--book-w) * 0.08);
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -241,7 +320,7 @@ const coverStyle = computed(() => {
 .book-title {
   font-family: Georgia, 'Times New Roman', serif;
   font-weight: 700;
-  font-size: min(12px, calc(var(--book-w) * 0.72 / (var(--longest) * 0.6)));
+  font-size: min(calc(var(--book-w) * 0.105), calc(var(--book-w) * 0.72 / (var(--longest) * 0.6)));
   line-height: 1.25;
   text-align: center;
   color: #fbf3de;
@@ -264,7 +343,7 @@ const coverStyle = computed(() => {
 }
 
 .notes-title {
-  font-size: min(11px, calc((var(--book-w) * 0.75 - 14px) / (var(--longest) * 0.62)));
+  font-size: min(calc(var(--book-w) * 0.095), calc((var(--book-w) * 0.75 - 14px) / (var(--longest) * 0.62)));
   font-weight: 700;
   line-height: 1.25;
   color: #1f2937;
@@ -286,7 +365,7 @@ const coverStyle = computed(() => {
 
 .book-footer {
   margin-top: 6px;
-  font-size: 9px;
+  font-size: calc(var(--book-w) * 0.075);
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -295,11 +374,232 @@ const coverStyle = computed(() => {
 }
 
 @media (min-width: 640px) {
-  .book-title { font-size: min(13px, calc(var(--book-w) * 0.72 / (var(--longest) * 0.6))); }
-  .book-band { font-size: 10px; }
 }
 
 .is-small .book-title { -webkit-line-clamp: 3; }
+
+/* ---------- Teacher-designed covers ---------- */
+.book-front.has-cover {
+  padding: 0;
+  display: block;
+}
+
+.has-cover .book-hinge {
+  z-index: 3;
+}
+
+.cv {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cv-art,
+.cv-bottom,
+.cv-frame,
+.cv-sticker {
+  background-size: cover;
+  background-position: center;
+}
+
+.cv-bold-title {
+  font-family: Poppins, Inter, system-ui, sans-serif;
+  font-weight: 800;
+  text-transform: uppercase;
+  line-height: 1.02;
+  letter-spacing: 0.01em;
+  color: #fff;
+  font-size: min(calc(var(--book-w) * 0.14), calc(var(--book-w) * 0.66 / (var(--longest) * 0.8)));
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: break-word;
+}
+
+/* Portrait: photo fills the cover, title set bold on the left over a colour fade, white strip
+   along the bottom for the author - the classic modern paperback layout. */
+.cv-portrait .cv-art {
+  position: relative;
+  flex: 1 1 auto;
+}
+
+.cv-fade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--cloth-fade) 0%, var(--cloth-fade) 22%, transparent 72%);
+}
+
+.cv-portrait .cv-bold-title {
+  position: absolute;
+  top: 11%;
+  left: 15%;
+  right: 16%;
+}
+
+.cv-strip {
+  flex: 0 0 22%;
+  background: #f7f6f2;
+  padding: 0 7% 0 15%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  min-width: 0;
+}
+
+.cv-author {
+  font-family: Poppins, Inter, system-ui, sans-serif;
+  font-weight: 800;
+  font-size: calc(var(--book-w) * 0.074);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cv-meta {
+  font-weight: 700;
+  font-size: calc(var(--book-w) * 0.062);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--cloth-light);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Classic: cloth hardcover, gold lettering, picture in a round gilt frame */
+.cv-classic,
+.cv-exercise {
+  align-items: center;
+  padding: 10% 9% 8% 16%;
+}
+
+.cv-frame {
+  width: 46%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  margin: 7px 0 5px;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2px rgba(246, 223, 168, 0.85), 0 0 0 4px rgba(0, 0, 0, 0.25);
+}
+
+.cv-rule {
+  margin-top: 14px;
+}
+
+.cv-serif-title {
+  -webkit-line-clamp: 3;
+}
+
+.cv-frame + .cv-serif-title {
+  -webkit-line-clamp: 2;
+}
+
+.cv-gold-author {
+  margin-top: auto;
+  max-width: 100%;
+  font-weight: 700;
+  font-size: calc(var(--book-w) * 0.066);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #f6dfa8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cv-gold-year {
+  font-size: calc(var(--book-w) * 0.058);
+  color: rgba(246, 223, 168, 0.8);
+}
+
+/* Split: solid colour block with the title on top, picture filling the lower half */
+.cv-top {
+  /* grows for a long title; the picture below takes whatever is left (at least 28%) */
+  flex: 0 0 auto;
+  min-height: 50%;
+  max-height: 72%;
+  overflow: hidden;
+  padding: 10% 8% 7% 15%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 0;
+}
+
+.cv-kicker {
+  font-weight: 700;
+  font-size: calc(var(--book-w) * 0.058);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.75);
+  margin-bottom: 3px;
+}
+
+.cv-split .cv-bold-title {
+  -webkit-line-clamp: 4;
+}
+
+.cv-bottom {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 28%;
+  border-top: 2px solid rgba(255, 255, 255, 0.85);
+}
+
+.cv-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 3px 6px 3px 15%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-weight: 700;
+  font-size: calc(var(--book-w) * 0.064);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Exercise book: the name label gets filled-in author/year lines, plus an optional photo sticker */
+.cv-exercise .notes-label {
+  margin: 8% 0 auto;
+}
+
+.notes-field {
+  margin-top: 3px;
+  padding-bottom: 1px;
+  border-bottom: 1px solid #9fb6d6;
+  font-family: 'Segoe Print', 'Bradley Hand', 'Comic Sans MS', cursive;
+  font-size: calc(var(--book-w) * 0.068);
+  line-height: 1.2;
+  color: #1e3a8a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cv-sticker {
+  position: absolute;
+  right: 9%;
+  bottom: 6%;
+  width: 30%;
+  aspect-ratio: 1;
+  border-radius: 3px;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  transform: rotate(-4deg);
+  flex-shrink: 0;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .shelf-book,

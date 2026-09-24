@@ -826,6 +826,51 @@ class ENoteController extends Controller
     }
 
     /**
+     * Validates a client-supplied cover design and returns it as the JSON string to store, or
+     * null if anything is off. Every field is whitelisted/length-capped, and the image may only
+     * point at a file this app itself uploaded into uploads/enotes/ (never an arbitrary URL).
+     */
+    private function normalizeCoverDesign($cover): ?string
+    {
+        if (!is_array($cover)) {
+            return null;
+        }
+
+        $template = $cover['template'] ?? 'exercise';
+        if (!in_array($template, ['portrait', 'classic', 'split', 'exercise'], true)) {
+            return null;
+        }
+
+        $color = $cover['color'] ?? '';
+        if (!is_string($color) || !preg_match('/^#[0-9a-fA-F]{6}$/', $color)) {
+            return null;
+        }
+
+        $image = $cover['image'] ?? null;
+        if ($image !== null && $image !== '') {
+            if (!is_string($image) || !preg_match('#^/uploads/enotes/[A-Za-z0-9._-]+$#', $image)) {
+                return null;
+            }
+        } else {
+            $image = null;
+        }
+
+        $text = function ($value, int $max): string {
+            $value = is_string($value) ? trim(strip_tags($value)) : '';
+            return mb_substr($value, 0, $max);
+        };
+
+        return json_encode([
+            'template' => $template,
+            'color' => strtolower($color),
+            'image' => $image,
+            'title' => $text($cover['title'] ?? '', 120),
+            'author' => $text($cover['author'] ?? '', 80),
+            'year' => $text($cover['year'] ?? '', 10),
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    }
+
+    /**
      * Update a topic
      * PUT /teacher/enotes/topics/{id}
      */
@@ -926,6 +971,21 @@ class ENoteController extends Controller
             }
         }
 
+        // Book cover shown on the eNotes shelves - null resets to the default look
+        if (array_key_exists('cover_design', $data)) {
+            if ($data['cover_design'] === null) {
+                $updates[] = 'cover_design = NULL';
+            } else {
+                $cover = $this->normalizeCoverDesign($data['cover_design']);
+                if ($cover === null) {
+                    $this->validationError(['cover_design' => 'Invalid cover design']);
+                    return;
+                }
+                $updates[] = 'cover_design = :cover_design';
+                $params['cover_design'] = $cover;
+            }
+        }
+
         if (empty($updates)) {
             $this->error('No fields to update', 400);
             return;
@@ -952,7 +1012,7 @@ class ENoteController extends Controller
             // Mirror a title/competency/learning-outcomes edit onto every topic linked to this one
             // (see duplicateTopic()) - class assignment and publish status stay independent per
             // stream, but the content itself is meant to be the same lesson everywhere.
-            $syncFields = array_intersect_key($params, array_flip(['title', 'description', 'learning_outcomes']));
+            $syncFields = array_intersect_key($params, array_flip(['title', 'description', 'learning_outcomes', 'cover_design']));
             if (!empty($syncFields)) {
                 $linkedIds = $this->getLinkedTopicIds($id, $topic['content_group_id'] !== null ? (int) $topic['content_group_id'] : null, $teacherId);
                 if (!empty($linkedIds)) {
@@ -1878,8 +1938,8 @@ class ENoteController extends Controller
                 }
 
                 $insertTopic = $db->prepare(
-                    "INSERT INTO enote_topics (teacher_id, content_group_id, class_id, class_group_name, subject_id, department_id, title, description, learning_outcomes, status, total_pages, created_at, updated_at)
-                     VALUES (:teacher_id, :content_group_id, :class_id, :class_group_name, :subject_id, :department_id, :title, :description, :learning_outcomes, 'draft', :total_pages, NOW(), NOW())"
+                    "INSERT INTO enote_topics (teacher_id, content_group_id, class_id, class_group_name, subject_id, department_id, title, description, learning_outcomes, cover_design, status, total_pages, created_at, updated_at)
+                     VALUES (:teacher_id, :content_group_id, :class_id, :class_group_name, :subject_id, :department_id, :title, :description, :learning_outcomes, :cover_design, 'draft', :total_pages, NOW(), NOW())"
                 );
                 $insertTopic->execute([
                     'teacher_id' => $teacherId,
@@ -1891,6 +1951,7 @@ class ENoteController extends Controller
                     'title' => $topic['title'],
                     'description' => $topic['description'],
                     'learning_outcomes' => $topic['learning_outcomes'],
+                    'cover_design' => $topic['cover_design'] ?? null,
                     'total_pages' => count($pages)
                 ]);
                 $newTopicId = (int) $db->lastInsertId();

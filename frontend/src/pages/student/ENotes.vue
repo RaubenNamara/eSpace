@@ -67,6 +67,7 @@
             :seed="topic.id"
             :label="(topic.subject_code || topic.subject_name || '').slice(0, 10).toUpperCase()"
             :footer="`${topic.total_pages} ${topic.total_pages === 1 ? 'page' : 'pages'}`"
+            :cover="parseCoverDesign(topic.cover_design)"
           />
           <p class="mt-6 text-xs font-medium text-gray-800 dark:text-gray-200 line-clamp-2 leading-snug group-hover:text-amber-700 dark:group-hover:text-amber-400 transition-colors">{{ topic.title }}</p>
           <p v-if="topic.teacher_first_name" class="text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ topic.teacher_first_name }} {{ topic.teacher_last_name }}</p>
@@ -98,6 +99,7 @@ import axios from 'axios'
 import Bookshelf from '@/components/library/Bookshelf.vue'
 import ShelfBook from '@/components/library/ShelfBook.vue'
 import type { ENoteTopic } from '@/types/enotes'
+import { parseCoverDesign } from '@/utils/enoteCover'
 
 interface SubjectGroup {
   id: number

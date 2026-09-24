@@ -152,7 +152,7 @@ class ENoteController extends Controller
         $whereClause = implode(' AND ', $where);
 
         $sql = "SELECT et.id, et.title, et.description, et.learning_outcomes, et.subject_id, et.class_id, et.total_pages,
-                       et.estimated_reading_time, et.published_at, et.created_at,
+                       et.estimated_reading_time, et.published_at, et.created_at, et.cover_design,
                        s.name as subject_name, s.code as subject_code,
                        t.first_name as teacher_first_name, t.last_name as teacher_last_name
                 FROM enote_topics et
@@ -191,7 +191,7 @@ class ENoteController extends Controller
         $whereClause = $this->visibilityClause();
 
         $sql = "SELECT et.id, et.title, et.description, et.learning_outcomes, et.subject_id, et.class_id, et.total_pages,
-                       et.estimated_reading_time, et.published_at, et.created_at, et.narration_voice,
+                       et.estimated_reading_time, et.published_at, et.created_at, et.narration_voice, et.cover_design,
                        s.name as subject_name, s.code as subject_code,
                        t.first_name as teacher_first_name, t.last_name as teacher_last_name
                 FROM enote_topics et
