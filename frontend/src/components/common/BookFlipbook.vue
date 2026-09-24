@@ -48,8 +48,12 @@ const props = withDefaults(
      *  usePersistedRef() calls reading the same localStorage key are still two unrelated reactive
      *  values, and only re-sync on a fresh read (i.e. a reload) - they don't watch each other. */
     preferSinglePage?: boolean
+    /** Only a press near the book's outer left/right edge can start a page turn (drag or tap),
+     *  like reaching for the edge of a real page - a touch anywhere else on the page (reading,
+     *  scrolling, selecting text) never flips it. The Prev/Next buttons are unaffected. */
+    edgeFlipOnly?: boolean
   }>(),
-  { mode: 'image', images: () => [], startPage: 0, showCover: true, muted: false, preferSinglePage: false }
+  { mode: 'image', images: () => [], startPage: 0, showCover: true, muted: false, preferSinglePage: false, edgeFlipOnly: true }
 )
 
 const emit = defineEmits<{ flip: [page: number] }>()
@@ -103,6 +107,42 @@ const isMobile = ref(mq?.matches ?? false)
 // shrinking a phone's book down to a fraction of its actual screen width for no reason.
 const capWidthForToggle = computed(() => props.preferSinglePage && !isMobile.value)
 
+// Width of the strip along each outer edge of the book that can start a page turn
+function edgeZone(bookWidth: number) {
+  return Math.min(90, Math.max(36, bookWidth * 0.08))
+}
+
+function pointX(e: MouseEvent | TouchEvent): number | null {
+  if ('touches' in e) return e.touches[0]?.clientX ?? null
+  return e.clientX
+}
+
+// Capture-phase guard on the host: page-flip's own mousedown/touchstart listeners live further
+// down the tree, so stopping a press here (anywhere but the outer edges) means page-flip never
+// registers it and can't start a drag or a click-to-flip from it. Not preventDefault - text
+// selection, focusing the summary box, links and buttons inside the page all still work.
+function guardFlipStart(e: MouseEvent | TouchEvent) {
+  if (!props.edgeFlipOnly) return
+  const block = hostRef.value?.querySelector('.stf__block') as HTMLElement | null
+  const x = pointX(e)
+  if (!block || x === null) return
+  const r = block.getBoundingClientRect()
+  const zone = edgeZone(r.width)
+  if (x - r.left > zone && r.right - x > zone) e.stopPropagation()
+}
+
+// A pointer cursor near the turnable edges, so readers can find them
+function markEdgeHover(e: MouseEvent) {
+  const host = hostRef.value
+  if (!host || !props.edgeFlipOnly) return
+  const block = host.querySelector('.stf__block') as HTMLElement | null
+  if (!block) return
+  const r = block.getBoundingClientRect()
+  const zone = edgeZone(r.width)
+  const nearEdge = e.clientY >= r.top && e.clientY <= r.bottom && (e.clientX - r.left <= zone || r.right - e.clientX <= zone)
+  host.classList.toggle('near-flip-edge', nearEdge)
+}
+
 function build() {
   const host = hostRef.value
   if (!host || !props.pageWidth || !props.pageHeight) return
@@ -134,6 +174,10 @@ function build() {
   // purpose here - strip it back off unconditionally.
   host.style.minWidth = ''
   host.style.minHeight = ''
+
+  host.addEventListener('mousedown', guardFlipStart, true)
+  host.addEventListener('touchstart', guardFlipStart, { capture: true, passive: true })
+  host.addEventListener('mousemove', markEdgeHover)
 
   if (props.mode === 'html') {
     flip.loadFromHTML(Array.from(stagingRef.value!.children) as HTMLElement[])
@@ -313,6 +357,11 @@ defineExpose({ flipNext, flipPrev, turnToPage, getCurrentPageIndex, rebuild })
   width: 100%;
   height: 100%;
   box-sizing: border-box;
+}
+
+.book-flipbook-host.near-flip-edge,
+.book-flipbook-host.near-flip-edge :deep(*) {
+  cursor: pointer;
 }
 
 .book-flipbook-staging {

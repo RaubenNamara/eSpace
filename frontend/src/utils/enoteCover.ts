@@ -11,6 +11,8 @@ export interface ENoteCoverDesign {
   title: string
   author: string
   year: string
+  // Show a small "title · author" footer at the bottom of every page in the reader
+  page_footer?: boolean
 }
 
 export const COVER_TEMPLATES: { id: CoverTemplate; label: string; hint: string }[] = [
@@ -44,7 +46,8 @@ export function parseCoverDesign(raw: unknown): ENoteCoverDesign | null {
       image: value.image || null,
       title: value.title || '',
       author: value.author || '',
-      year: value.year || ''
+      year: value.year || '',
+      page_footer: !!value.page_footer
     }
   } catch {
     return null

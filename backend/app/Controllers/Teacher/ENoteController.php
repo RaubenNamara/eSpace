@@ -867,6 +867,7 @@ class ENoteController extends Controller
             'title' => $text($cover['title'] ?? '', 120),
             'author' => $text($cover['author'] ?? '', 80),
             'year' => $text($cover['year'] ?? '', 10),
+            'page_footer' => !empty($cover['page_footer']),
         ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     }
 

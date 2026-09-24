@@ -104,6 +104,14 @@
             </label>
           </div>
 
+          <label class="flex items-start gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer">
+            <input v-model="design.page_footer" type="checkbox" class="mt-0.5 w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+            <span>
+              <span class="block text-sm font-semibold text-gray-800 dark:text-gray-100">Show a footer on every page</span>
+              <span class="block text-xs text-gray-500 dark:text-gray-400">The title and author appear at the bottom of each page while students read, like a printed book.</span>
+            </span>
+          </label>
+
           <p v-if="errorMessage" class="text-sm text-red-600 dark:text-red-400">{{ errorMessage }}</p>
         </div>
       </div>
@@ -164,7 +172,8 @@ const design = ref<ENoteCoverDesign>(existing ?? {
   image: null,
   title: props.topic.title,
   author: teacherName,
-  year: String(new Date().getFullYear())
+  year: String(new Date().getFullYear()),
+  page_footer: false
 })
 
 const label = computed(() => subjectTag(props.topic.subject_name, props.topic.subject_code))

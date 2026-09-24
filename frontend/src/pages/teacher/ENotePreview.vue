@@ -530,14 +530,14 @@
                 @flip="onBookFlip"
               >
                 <template #pages>
-                  <!-- @touchstart.stop: page-flip's own touch handler (attached on an ancestor)
-                       starts its drag/flip state machine on *any* touch lasting past its internal
-                       250ms swipeTimeout, even a purely vertical one - it can't tell a sustained
-                       scroll gesture on a long page from an intentional flip. Stopping the touch
-                       from ever bubbling to that handler keeps it from registering the touch at
-                       all, so a real scroll just scrolls (no more white-screen mid-flip glitch);
-                       page navigation on mobile still works via the explicit prev/next buttons. -->
-                  <div v-for="page in pages" :key="page.id" class="enote-flip-page bg-white dark:bg-gray-800" @touchstart.stop>
+                  <!-- No blanket @touchstart.stop here any more: BookFlipbook's edge guard (edgeFlipOnly)
+                       already keeps every touch that doesn't start at the book's outer edge away from
+                       page-flip, so scrolling a long page can't start a flip, while a swipe from the
+                       edge now turns the page on phones too. -->
+                  <div v-for="page in pages" :key="page.id" class="enote-flip-page bg-white dark:bg-gray-800">
+                    <!-- page-flip sets display on the page element itself, so the column layout that
+                         pushes the footer to the foot of a short page lives on this inner wrapper -->
+                    <div class="enote-page-inner">
                     <div class="h-1.5 bg-indigo-600"></div>
                     <div class="p-5 sm:p-8">
                       <h2 v-if="hasMeaningfulTitle(page.title)" class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-3">
@@ -610,6 +610,13 @@
                           :class="pageSummaryStyle(page.id).box"
                         ></textarea>
                       </div>
+                    </div>
+
+                    <!-- Teacher-enabled running footer, like the foot of a printed book's page -->
+                    <div v-if="pageFooter" class="enote-page-footer">
+                      <span class="truncate">{{ pageFooter.title }}<template v-if="pageFooter.author"> &middot; {{ pageFooter.author }}</template></span>
+                      <span class="flex-shrink-0">{{ page.order_number }}</span>
+                    </div>
                     </div>
                   </div>
                 </template>
@@ -954,6 +961,7 @@ import { useReadModeStore } from '@/stores/readMode'
 import { applyHighlights, rangeToOffsets, removeHighlightMark, type StoredHighlight } from '@/utils/textHighlight'
 import AITutorPlayer from '@/components/enotes/AITutorPlayer.vue'
 import BookFlipbook from '@/components/common/BookFlipbook.vue'
+import { parseCoverDesign } from '@/utils/enoteCover'
 import SummaryColorPicker from '@/components/enotes/SummaryColorPicker.vue'
 import { useSummaryColor, summaryStyleOf, isSummaryColor, type SummaryColor } from '@/composables/useSummaryColor'
 
@@ -975,6 +983,14 @@ const isStudentMode = computed(() => route.meta.studentMode === true)
 const isReadOnly = computed(() => isPreviewMode.value || isStudentMode.value)
 
 const topic = ref<ENoteTopic | null>(null)
+
+// "Title · author" running footer on every page, when the teacher switched it on in the cover designer
+const pageFooter = computed(() => {
+  const cover = parseCoverDesign(topic.value?.cover_design)
+  if (!cover?.page_footer || !topic.value) return null
+  const teacher = [topic.value.teacher_first_name, topic.value.teacher_last_name].filter(Boolean).join(' ')
+  return { title: cover.title || topic.value.title, author: cover.author || teacher }
+})
 const pages = ref<ENotePage[]>([])
 const currentPage = ref<ENotePage | null>(null)
 const isFullscreen = ref(false)
@@ -1818,6 +1834,37 @@ onBeforeUnmount(() => {
   height: 100%;
   overflow-y: auto;
   box-sizing: border-box;
+}
+
+.enote-page-inner {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+/* Sits at the foot of the page (margin-top:auto in the page's flex column) and stays visible
+   while a long page scrolls (sticky) */
+.enote-page-footer {
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 20px;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: #6b7280;
+  /* solid page colour (the page is bg-white / dark:bg-gray-800) so scrolled text can't show through */
+  background: #fff;
+  border-top: 1px solid #e5e7eb;
+}
+
+.dark .enote-page-footer {
+  color: #9ca3af;
+  background: #1f2937;
+  border-top-color: #374151;
 }
 
 .prose {
