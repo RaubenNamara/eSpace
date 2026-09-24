@@ -252,6 +252,17 @@ const artStyle = computed(() => {
   transform: rotateY(-4deg) translateY(-10px) translateZ(18px);
 }
 
+/* Every face hides when turned away from the reader. Faces are otherwise painted in DOM order by
+   browsers that don't depth-sort a preserve-3d scene (seen on a real laptop: a spine-out book
+   showed its page edges instead of its spine), so this, not paint order, decides what shows. */
+.book-front,
+.book-spine,
+.book-side,
+.book-top {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
 .book-front {
   position: absolute;
   inset: 0;

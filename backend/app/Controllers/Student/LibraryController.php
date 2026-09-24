@@ -120,7 +120,7 @@ class LibraryController extends Controller
         $stmt->execute($params);
         $books = $stmt->fetchAll();
 
-        $this->success(['books' => $books]);
+        $this->success(['books' => $books, 'subjects' => $this->enrolledSubjects($db, $studentId)]);
     }
 
     /**
@@ -182,5 +182,22 @@ class LibraryController extends Controller
              ON DUPLICATE KEY UPDATE last_read_at = NOW()"
         );
         $stmt->execute(['book_id' => $bookId, 'student_id' => $studentId]);
+    }
+
+    /**
+     * Every subject the student is enrolled in (the subjects of their departments), so the shelf
+     * page can show an empty docket for a subject that has no books/topics yet.
+     */
+    private function enrolledSubjects($db, int $studentId): array
+    {
+        $stmt = $db->prepare(
+            "SELECT DISTINCT s.id, s.name, s.code
+             FROM subjects s
+             INNER JOIN student_department_enrollments sde ON sde.department_id = s.department_id
+             WHERE sde.student_id = :student_id AND sde.deleted_at IS NULL AND s.deleted_at IS NULL
+             ORDER BY s.name"
+        );
+        $stmt->execute(['student_id' => $studentId]);
+        return $stmt->fetchAll();
     }
 }

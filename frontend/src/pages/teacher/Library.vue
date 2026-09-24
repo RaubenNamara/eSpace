@@ -190,7 +190,7 @@
         <p class="text-gray-500 dark:text-gray-400">No books in this class match these filters.</p>
       </div>
 
-      <div v-else class="space-y-8">
+      <div v-else class="grid gap-x-5 gap-y-7 md:grid-cols-2 xl:grid-cols-3">
         <Bookshelf
           v-for="shelf in activeClassSubjectShelves"
           :key="shelf.name"
@@ -210,7 +210,7 @@
               :selected="bulk.isSelected(book.id)"
               :title="book.title"
               :seed="book.id"
-              :label="(book.subject_code || book.subject_name || '').slice(0, 10).toUpperCase()"
+              :label="subjectTag(book.subject_name, book.subject_code)"
               :cover-image="book.cover_image"
               :author="book.author"
               :pages="book.total_pages"
@@ -322,7 +322,7 @@
                 size="sm"
                 :title="bookForm.title || editingBook.title"
                 :seed="editingBook.id"
-                :label="(editingBook.subject_code || editingBook.subject_name || '').slice(0, 10).toUpperCase()"
+                :label="subjectTag(editingBook.subject_name, editingBook.subject_code)"
                 :cover-image="editingBook.cover_image"
                 :author="bookForm.author"
                 :pages="editingBook.total_pages"
@@ -487,6 +487,7 @@ import Bookshelf from '@/components/library/Bookshelf.vue'
 import ShelfBook from '@/components/library/ShelfBook.vue'
 import ShelfSlot from '@/components/library/ShelfSlot.vue'
 import { renderPdfCover } from '@/utils/pdfCover'
+import { subjectTag } from '@/utils/subjectTag'
 import { resolveAssetUrl } from '@/utils/url'
 import type { LibraryBook, LibraryBookForm } from '@/types/library'
 import type { ENoteAssignments } from '@/types/enotes'

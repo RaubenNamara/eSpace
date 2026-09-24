@@ -89,6 +89,15 @@ class PageNoteController extends Controller
     /**
      * GET /student/enotes/pages/{pageId}/note
      */
+    private const COLORS = ['yellow', 'blue', 'green', 'pink', 'purple', 'orange'];
+
+    /** The requested summary colour if it's one of the palette's, else null (student default). */
+    private function inputColor(): ?string
+    {
+        $color = $this->input('color');
+        return is_string($color) && in_array($color, self::COLORS, true) ? $color : null;
+    }
+
     public function getEnoteNote($pageId): void
     {
         if (!$this->isAuthenticated()) {
@@ -117,12 +126,12 @@ class PageNoteController extends Controller
         }
 
         $stmt = $db->prepare(
-            "SELECT content, updated_at FROM enote_page_notes WHERE page_id = :page_id AND student_id = :student_id"
+            "SELECT content, color, updated_at FROM enote_page_notes WHERE page_id = :page_id AND student_id = :student_id"
         );
         $stmt->execute(['page_id' => $pageId, 'student_id' => $studentId]);
         $note = $stmt->fetch();
 
-        $this->success(['content' => $note['content'] ?? '', 'updated_at' => $note['updated_at'] ?? null]);
+        $this->success(['content' => $note['content'] ?? '', 'color' => $note['color'] ?? null, 'updated_at' => $note['updated_at'] ?? null]);
     }
 
     /**
@@ -161,7 +170,9 @@ class PageNoteController extends Controller
             return;
         }
 
-        if ($content === '') {
+        $color = $this->inputColor();
+
+        if ($content === '' && $color === null) {
             $stmt = $db->prepare("DELETE FROM enote_page_notes WHERE page_id = :page_id AND student_id = :student_id");
             $stmt->execute(['page_id' => $pageId, 'student_id' => $studentId]);
             $this->success([], 'Note cleared');
@@ -169,11 +180,15 @@ class PageNoteController extends Controller
         }
 
         $stmt = $db->prepare(
-            "INSERT INTO enote_page_notes (page_id, student_id, content)
-             VALUES (:page_id, :student_id, :content)
-             ON DUPLICATE KEY UPDATE content = :content_update"
+            "INSERT INTO enote_page_notes (page_id, student_id, content, color)
+             VALUES (:page_id, :student_id, :content, :color)
+             ON DUPLICATE KEY UPDATE content = :content_update, color = :color_update"
         );
-        $stmt->execute(['page_id' => $pageId, 'student_id' => $studentId, 'content' => $content, 'content_update' => $content]);
+        $stmt->execute([
+            'page_id' => $pageId, 'student_id' => $studentId,
+            'content' => $content, 'content_update' => $content,
+            'color' => $color, 'color_update' => $color,
+        ]);
 
         $this->success([], 'Note saved');
     }
@@ -206,13 +221,13 @@ class PageNoteController extends Controller
         }
 
         $stmt = $db->prepare(
-            "SELECT content, updated_at FROM library_page_notes
+            "SELECT content, color, updated_at FROM library_page_notes
              WHERE book_id = :book_id AND page_number = :page_number AND student_id = :student_id"
         );
         $stmt->execute(['book_id' => $bookId, 'page_number' => $pageNumber, 'student_id' => $studentId]);
         $note = $stmt->fetch();
 
-        $this->success(['content' => $note['content'] ?? '', 'updated_at' => $note['updated_at'] ?? null]);
+        $this->success(['content' => $note['content'] ?? '', 'color' => $note['color'] ?? null, 'updated_at' => $note['updated_at'] ?? null]);
     }
 
     /**
@@ -248,7 +263,9 @@ class PageNoteController extends Controller
             return;
         }
 
-        if ($content === '') {
+        $color = $this->inputColor();
+
+        if ($content === '' && $color === null) {
             $stmt = $db->prepare(
                 "DELETE FROM library_page_notes WHERE book_id = :book_id AND page_number = :page_number AND student_id = :student_id"
             );
@@ -258,9 +275,9 @@ class PageNoteController extends Controller
         }
 
         $stmt = $db->prepare(
-            "INSERT INTO library_page_notes (book_id, page_number, student_id, content)
-             VALUES (:book_id, :page_number, :student_id, :content)
-             ON DUPLICATE KEY UPDATE content = :content_update"
+            "INSERT INTO library_page_notes (book_id, page_number, student_id, content, color)
+             VALUES (:book_id, :page_number, :student_id, :content, :color)
+             ON DUPLICATE KEY UPDATE content = :content_update, color = :color_update"
         );
         $stmt->execute([
             'book_id' => $bookId,
@@ -268,6 +285,8 @@ class PageNoteController extends Controller
             'student_id' => $studentId,
             'content' => $content,
             'content_update' => $content,
+            'color' => $color,
+            'color_update' => $color,
         ]);
 
         $this->success([], 'Note saved');

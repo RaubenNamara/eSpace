@@ -48,12 +48,13 @@
     </div>
 
     <!-- Bookcase: one shelf per subject, each topic an exercise book standing on it -->
-    <div v-else-if="filteredSubjectGroups.length > 0" class="space-y-8">
+    <div v-else-if="filteredSubjectGroups.length > 0" class="grid gap-x-5 gap-y-7 md:grid-cols-2 xl:grid-cols-3">
       <Bookshelf
         v-for="group in filteredSubjectGroups"
         :key="group.id"
         :title="group.name"
         :count="group.topics.length"
+        :empty="group.topics.length ? '' : 'No eNotes yet'"
         spines
       >
         <ShelfSlot
@@ -67,7 +68,7 @@
             variant="notes"
             :title="topic.title"
             :seed="topic.id"
-            :label="(topic.subject_code || topic.subject_name || '').slice(0, 10).toUpperCase()"
+            :label="subjectTag(topic.subject_name, topic.subject_code)"
             :footer="`${topic.total_pages} ${topic.total_pages === 1 ? 'page' : 'pages'}`"
             :cover="parseCoverDesign(topic.cover_design)"
           />
@@ -107,6 +108,7 @@ import ShelfSlot from '@/components/library/ShelfSlot.vue'
 import { useRouter } from 'vue-router'
 import type { ENoteTopic } from '@/types/enotes'
 import { parseCoverDesign } from '@/utils/enoteCover'
+import { subjectTag } from '@/utils/subjectTag'
 
 interface SubjectGroup {
   id: number
@@ -119,12 +121,17 @@ const API_BASE = '/api'
 const router = useRouter()
 
 const topics = ref<ENoteTopic[]>([])
+// Every subject the student is enrolled in - each gets a shelf, even before it has any topics
+const enrolledSubjects = ref<{ id: number; name: string; code?: string }[]>([])
 const searchQuery = ref('')
 const loading = ref(false)
 const error = ref<string | null>(null)
 
 const subjectGroups = computed<SubjectGroup[]>(() => {
   const map = new Map<number, SubjectGroup>()
+  enrolledSubjects.value.forEach(subj => {
+    map.set(subj.id, { id: subj.id, name: subj.name, code: subj.code, topics: [] })
+  })
   topics.value.forEach(topic => {
     const sid = topic.subject_id || 0
     if (!map.has(sid)) {
@@ -154,6 +161,7 @@ const loadTopics = async () => {
     const response = await axios.get(`${API_BASE}/student/enotes/topics`)
     if (response.data.success) {
       topics.value = response.data.data.topics || []
+      enrolledSubjects.value = response.data.data.subjects || []
     }
   } catch (err: any) {
     error.value = err.response?.data?.message || 'Failed to load eNotes'

@@ -51,8 +51,16 @@ export const SUMMARY_COLORS = [
 
 export type SummaryColor = typeof SUMMARY_COLORS[number]['value']
 
+export const isSummaryColor = (value: unknown): value is SummaryColor =>
+  SUMMARY_COLORS.some(c => c.value === value)
+
+export const summaryStyleOf = (value?: string | null) =>
+  SUMMARY_COLORS.find(c => c.value === value) ?? SUMMARY_COLORS[0]
+
+// Each page's summary can have its own colour (saved with the note); summaryColor is the
+// student's default - the colour they picked last - used for pages that don't have one yet.
 export function useSummaryColor() {
   const summaryColor = usePersistedRef<SummaryColor>('student-summary-color', 'yellow')
-  const summaryStyle = computed(() => SUMMARY_COLORS.find(c => c.value === summaryColor.value) ?? SUMMARY_COLORS[0])
+  const summaryStyle = computed(() => summaryStyleOf(summaryColor.value))
   return { summaryColor, summaryStyle }
 }

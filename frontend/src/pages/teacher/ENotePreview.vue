@@ -582,14 +582,14 @@
 
                       <!-- Student's own private summary of this page - never seen by the
                            teacher/HOD, just a small space to write what they understood. -->
-                      <div v-if="isStudentMode" class="mt-6 p-3 rounded-xl border border-dashed border-gray-200 dark:border-gray-700" :class="summaryStyle.panel">
+                      <div v-if="isStudentMode" class="mt-6 p-3 rounded-xl border border-dashed border-gray-200 dark:border-gray-700" :class="pageSummaryStyle(page.id).panel">
                         <div class="flex items-center justify-between gap-2 mb-1.5">
                           <p class="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide flex items-center gap-1.5">
                             <span>📝</span><span>My Summary</span>
                           </p>
                           <div class="flex items-center gap-2">
                             <span class="text-[11px] text-gray-400 dark:text-gray-500">{{ pageNoteStatus[page.id] === 'saving' ? 'Saving…' : pageNoteStatus[page.id] === 'saved' ? 'Saved' : '' }}</span>
-                            <SummaryColorPicker v-model="summaryColor" />
+                            <SummaryColorPicker :model-value="pageColor(page.id)" @update:model-value="setPageColor(page.id, $event)" />
                           </div>
                         </div>
                         <!-- .stop is load-bearing: this textarea lives inside StPageFlip's own
@@ -607,7 +607,7 @@
                           maxlength="2000"
                           placeholder="What did you understand from this page? (only you can see this)"
                           class="w-full text-sm px-3 py-2 rounded-lg border placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 resize-y"
-                          :class="summaryStyle.box"
+                          :class="pageSummaryStyle(page.id).box"
                         ></textarea>
                       </div>
                     </div>
@@ -955,7 +955,7 @@ import { applyHighlights, rangeToOffsets, removeHighlightMark, type StoredHighli
 import AITutorPlayer from '@/components/enotes/AITutorPlayer.vue'
 import BookFlipbook from '@/components/common/BookFlipbook.vue'
 import SummaryColorPicker from '@/components/enotes/SummaryColorPicker.vue'
-import { useSummaryColor } from '@/composables/useSummaryColor'
+import { useSummaryColor, summaryStyleOf, isSummaryColor, type SummaryColor } from '@/composables/useSummaryColor'
 
 const router = useRouter()
 const route = useRoute()
@@ -1067,8 +1067,12 @@ const READING_TINTS = [
   { value: 'rose', label: 'Warm Rose', class: 'bg-rose-500/10', swatchClass: 'bg-rose-200' },
 ]
 
-// Colour the student picked for their own summaries (remembered on this device)
-const { summaryColor, summaryStyle } = useSummaryColor()
+// Each page's summary has its own colour (saved with the note); pages without one use the colour
+// the student picked last
+const { summaryColor } = useSummaryColor()
+const pageNoteColors = ref<Record<number, SummaryColor | null>>({})
+const pageColor = (pageId: number): SummaryColor => pageNoteColors.value[pageId] ?? summaryColor.value
+const pageSummaryStyle = (pageId: number) => summaryStyleOf(pageColor(pageId))
 
 // Student's own private per-page summary ("what I understood from this page") - loaded/saved via
 // PageNoteController, never visible to the teacher/HOD.
@@ -1081,12 +1085,22 @@ const onPageNoteInput = (pageId: number) => {
   clearTimeout(noteSaveTimers[pageId])
   noteSaveTimers[pageId] = setTimeout(async () => {
     try {
-      await axios.put(`${API_BASE}/student/enotes/pages/${pageId}/note`, { content: pageNotes.value[pageId] || '' })
+      await axios.put(`${API_BASE}/student/enotes/pages/${pageId}/note`, {
+        content: pageNotes.value[pageId] || '',
+        color: pageNoteColors.value[pageId] ?? null
+      })
       pageNoteStatus.value[pageId] = 'saved'
     } catch {
       pageNoteStatus.value[pageId] = 'idle'
     }
   }, 800)
+}
+
+// Choosing a colour saves it for this page straight away and makes it the default for new pages
+const setPageColor = (pageId: number, color: SummaryColor) => {
+  pageNoteColors.value[pageId] = color
+  summaryColor.value = color
+  onPageNoteInput(pageId)
 }
 
 // Student's own private text highlights - stored as plain-text offsets (see textHighlight.ts),
@@ -1173,7 +1187,11 @@ const loadStudentPageData = async () => {
         axios.get(`${API_BASE}/student/enotes/pages/${page.id}/note`),
         axios.get(`${API_BASE}/student/enotes/pages/${page.id}/highlights`),
       ])
-      if (noteRes.data.success) pageNotes.value[page.id] = noteRes.data.data.content || ''
+      if (noteRes.data.success) {
+        pageNotes.value[page.id] = noteRes.data.data.content || ''
+        const color = noteRes.data.data.color
+        pageNoteColors.value[page.id] = isSummaryColor(color) ? color : null
+      }
       if (highlightRes.data.success) {
         pageHighlights.value[page.id] = highlightRes.data.data.highlights || []
         const el = pageContentRefs[page.id]

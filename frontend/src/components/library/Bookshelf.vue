@@ -15,7 +15,8 @@
           <!-- The plank sits exactly under the books' feet (see --shelf-book-h), so each page's
                item can put captions/actions underneath it without re-measuring anything. -->
           <div class="shelf-plank" aria-hidden="true"></div>
-          <p v-if="spines" class="shelf-hint">{{ hint }}</p>
+          <!-- An enrolled subject with nothing on it yet still gets its shelf, just empty -->
+          <p v-if="empty" class="shelf-empty">{{ empty }}</p>
           <slot />
         </div>
       </div>
@@ -27,14 +28,11 @@
 defineProps<{
   title: string
   count?: number | string
-  // Books stand spine-out (see ShelfSlot) - packed tightly, with room under the plank for the
-  // details card of whichever book is pulled out
+  // Books stand spine-out (see ShelfSlot), packed tightly side by side
   spines?: boolean
+  // Message shown resting on an empty shelf (e.g. "No books yet")
+  empty?: string
 }>()
-
-const hint = typeof window !== 'undefined' && window.matchMedia?.('(hover: hover)').matches
-  ? 'Point at a book to see its cover - click to open'
-  : 'Tap a book to see its cover - tap again to open'
 </script>
 
 <style scoped>
@@ -133,7 +131,7 @@ const hint = typeof window !== 'undefined' && window.matchMedia?.('(hover: hover
 }
 
 /* ShelfSlot manages its own stacking (it must rise above its neighbours when pulled out) */
-.shelf-track > :deep(*:not(.shelf-plank):not(.shelf-hint):not(.shelf-slot)) {
+.shelf-track > :deep(*:not(.shelf-plank):not(.shelf-slot)) {
   position: relative;
   z-index: 1;
   scroll-snap-align: start;
@@ -162,29 +160,24 @@ const hint = typeof window !== 'undefined' && window.matchMedia?.('(hover: hover
 
 .is-spines .shelf-track {
   gap: 3px;
-  padding-bottom: 150px;
   /* the last book swings its full cover out to the right */
-  padding-right: 130px;
+  padding-right: 110px;
 }
 
-.shelf-hint {
-  position: absolute;
-  left: 20px;
-  top: calc(var(--shelf-pad-top) + var(--shelf-book-h) + var(--plank-h) + 14px);
-  font-size: 11px;
+/* Empty shelf: the track keeps a book's height so the plank stays put, with a quiet note on it */
+.shelf-empty {
+  height: var(--shelf-book-h);
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: 10px;
+  font-size: 12px;
+  font-style: italic;
   color: rgba(90, 60, 25, 0.55);
   white-space: nowrap;
-  pointer-events: none;
 }
 
-.dark .shelf-hint {
-  color: rgba(246, 223, 168, 0.4);
-}
-
-@media (min-width: 640px) {
-  .shelf-hint {
-    left: 28px;
-  }
+.dark .shelf-empty {
+  color: rgba(246, 223, 168, 0.45);
 }
 
 .dark .shelf-plank {

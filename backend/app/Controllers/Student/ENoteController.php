@@ -165,7 +165,7 @@ class ENoteController extends Controller
         $stmt->execute($params);
         $topics = array_map([$this, 'decodeLearningOutcomes'], $stmt->fetchAll());
 
-        $this->success(['topics' => $topics]);
+        $this->success(['topics' => $topics, 'subjects' => $this->enrolledSubjects($db, $studentId)]);
     }
 
     /**
@@ -584,5 +584,22 @@ class ENoteController extends Controller
         $releaseLock();
 
         $this->success(['voice' => $voice, 'cached' => false, 'blocks' => $result]);
+    }
+
+    /**
+     * Every subject the student is enrolled in (the subjects of their departments), so the shelf
+     * page can show an empty docket for a subject that has no books/topics yet.
+     */
+    private function enrolledSubjects($db, int $studentId): array
+    {
+        $stmt = $db->prepare(
+            "SELECT DISTINCT s.id, s.name, s.code
+             FROM subjects s
+             INNER JOIN student_department_enrollments sde ON sde.department_id = s.department_id
+             WHERE sde.student_id = :student_id AND sde.deleted_at IS NULL AND s.deleted_at IS NULL
+             ORDER BY s.name"
+        );
+        $stmt->execute(['student_id' => $studentId]);
+        return $stmt->fetchAll();
     }
 }

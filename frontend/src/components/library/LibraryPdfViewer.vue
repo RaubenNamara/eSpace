@@ -254,7 +254,7 @@
           <div
             v-if="showNotesPanel && isStudentRole"
             class="absolute inset-x-0 bottom-0 z-40 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-2xl rounded-t-2xl p-3 max-h-[50%] flex flex-col"
-            :class="summaryStyle.panel"
+            :class="currentNoteStyle.panel"
           >
             <div class="flex items-center justify-between mb-1.5 flex-shrink-0">
               <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
@@ -262,7 +262,7 @@
               </p>
               <div class="flex items-center gap-2">
                 <span class="text-[11px] text-gray-400">{{ noteStatus === 'saving' ? 'Saving…' : noteStatus === 'saved' ? 'Saved' : '' }}</span>
-                <SummaryColorPicker v-model="summaryColor" />
+                <SummaryColorPicker :model-value="currentNoteColor" @update:model-value="setCurrentNoteColor" />
                 <button @click="showNotesPanel = false" class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
                   <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -277,7 +277,7 @@
               maxlength="2000"
               placeholder="What did you understand from this page? (only you can see this)"
               class="flex-1 w-full text-sm px-3 py-2 rounded-lg border placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 resize-none"
-              :class="summaryStyle.box"
+              :class="currentNoteStyle.box"
             ></textarea>
           </div>
         </div>
@@ -362,7 +362,7 @@
 
 <script setup lang="ts">
 import SummaryColorPicker from '@/components/enotes/SummaryColorPicker.vue'
-import { useSummaryColor } from '@/composables/useSummaryColor'
+import { useSummaryColor, summaryStyleOf, isSummaryColor, type SummaryColor } from '@/composables/useSummaryColor'
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { usePdfRenderer } from '@/composables/usePdfRenderer'
 import type { LibraryBook } from '@/types/library'
@@ -444,9 +444,13 @@ const READING_TINTS = [
 // page visit (unlike eNotes, a library book can run to hundreds of pages, so bulk-loading every
 // page's note upfront isn't worth it), never visible to the teacher/HOD.
 const showNotesPanel = ref(false)
-// Colour the student picked for their own notes (shared with the eNotes reader's My Summary)
-const { summaryColor, summaryStyle } = useSummaryColor()
+// Each page's note has its own colour (saved with it); pages without one use the colour the
+// student picked last (shared with the eNotes reader's My Summary)
+const { summaryColor } = useSummaryColor()
 const pageNotes = ref<Record<number, string>>({})
+const pageNoteColors = ref<Record<number, SummaryColor | null>>({})
+const currentNoteColor = computed<SummaryColor>(() => pageNoteColors.value[currentPage.value] ?? summaryColor.value)
+const currentNoteStyle = computed(() => summaryStyleOf(currentNoteColor.value))
 const noteStatus = ref<'idle' | 'saving' | 'saved'>('idle')
 const loadedNotePages = new Set<number>()
 let noteSaveTimer: ReturnType<typeof setTimeout> | null = null
@@ -461,7 +465,11 @@ async function loadPageNote(pageNumber: number) {
   loadedNotePages.add(pageNumber)
   try {
     const response = await axios.get(`${API_BASE}/student/library/books/${props.book.id}/pages/${pageNumber}/note`)
-    if (response.data.success) pageNotes.value[pageNumber] = response.data.data.content || ''
+    if (response.data.success) {
+      pageNotes.value[pageNumber] = response.data.data.content || ''
+      const color = response.data.data.color
+      pageNoteColors.value[pageNumber] = isSummaryColor(color) ? color : null
+    }
   } catch {
     // best-effort - a student can still read without their note loading
   }
@@ -475,12 +483,20 @@ function onNoteInput() {
     try {
       await axios.put(`${API_BASE}/student/library/books/${props.book.id}/pages/${pageNumber}/note`, {
         content: pageNotes.value[pageNumber] || '',
+        color: pageNoteColors.value[pageNumber] ?? null,
       })
       noteStatus.value = 'saved'
     } catch {
       noteStatus.value = 'idle'
     }
   }, 800)
+}
+
+// Choosing a colour saves it for this page straight away and makes it the default for new pages
+function setCurrentNoteColor(color: SummaryColor) {
+  pageNoteColors.value[currentPage.value] = color
+  summaryColor.value = color
+  onNoteInput()
 }
 
 watch(currentPage, (page) => {

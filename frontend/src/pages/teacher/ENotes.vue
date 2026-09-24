@@ -195,7 +195,7 @@
           <button @click="bulkDeleteSelected" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors">Delete</button>
         </BulkActionBar>
 
-        <div class="space-y-8">
+        <div class="grid gap-x-5 gap-y-7 md:grid-cols-2 xl:grid-cols-3">
           <Bookshelf
             v-for="shelf in activeClassSubjectShelves"
             :key="shelf.name"
@@ -216,7 +216,7 @@
                 variant="notes"
                 :title="topic.title"
                 :seed="topic.id"
-                :label="(topic.subject_code || topic.subject_name || '').slice(0, 10).toUpperCase()"
+                :label="subjectTag(topic.subject_name, topic.subject_code)"
                 :footer="`${topic.total_pages} ${topic.total_pages === 1 ? 'page' : 'pages'}`"
                 :cover="parseCoverDesign(topic.cover_design)"
               >
@@ -759,6 +759,7 @@ import BulkActionBar from '@/components/common/BulkActionBar.vue'
 import Bookshelf from '@/components/library/Bookshelf.vue'
 import ENoteCoverEditor from '@/components/enotes/ENoteCoverEditor.vue'
 import { parseCoverDesign } from '@/utils/enoteCover'
+import { subjectTag } from '@/utils/subjectTag'
 import ShelfBook from '@/components/library/ShelfBook.vue'
 import ShelfSlot from '@/components/library/ShelfSlot.vue'
 import { useToastStore } from '@/stores/toast'

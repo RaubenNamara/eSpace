@@ -142,6 +142,7 @@ import ShelfBook from '@/components/library/ShelfBook.vue'
 import { useAuthStore } from '@/stores/auth'
 import { COVER_TEMPLATES, COVER_COLORS, parseCoverDesign, type ENoteCoverDesign } from '@/utils/enoteCover'
 import { resolveAssetUrl } from '@/utils/url'
+import { subjectTag } from '@/utils/subjectTag'
 import type { ENoteTopic } from '@/types/enotes'
 
 const props = defineProps<{ topic: ENoteTopic }>()
@@ -166,7 +167,7 @@ const design = ref<ENoteCoverDesign>(existing ?? {
   year: String(new Date().getFullYear())
 })
 
-const label = computed(() => (props.topic.subject_code || props.topic.subject_name || '').slice(0, 10).toUpperCase())
+const label = computed(() => subjectTag(props.topic.subject_name, props.topic.subject_code))
 
 const fileInput = ref<HTMLInputElement | null>(null)
 const uploading = ref(false)

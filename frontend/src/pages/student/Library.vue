@@ -48,7 +48,7 @@
     </div>
 
     <!-- Bookcase: one shelf per subject, books standing on it -->
-    <div v-else-if="filteredSubjectGroups.length > 0" class="space-y-8">
+    <div v-else-if="filteredSubjectGroups.length > 0" class="grid gap-x-5 gap-y-7 md:grid-cols-2 xl:grid-cols-3">
       <Bookshelf v-if="!searchQuery && recentBooks.length > 0" title="Recently Added" spines>
         <ShelfSlot
           v-for="book in recentBooks"
@@ -70,6 +70,7 @@
         :key="group.id"
         :title="group.name"
         :count="group.books.length"
+        :empty="group.books.length ? '' : 'No books yet'"
         spines
       >
         <ShelfSlot
@@ -116,6 +117,7 @@ import Bookshelf from '@/components/library/Bookshelf.vue'
 import ShelfBook from '@/components/library/ShelfBook.vue'
 import ShelfSlot from '@/components/library/ShelfSlot.vue'
 import type { LibraryBook } from '@/types/library'
+import { subjectTag } from '@/utils/subjectTag'
 
 interface SubjectGroup {
   id: number
@@ -127,18 +129,22 @@ interface SubjectGroup {
 const API_BASE = '/api'
 
 const books = ref<LibraryBook[]>([])
+// Every subject the student is enrolled in - each gets a shelf, even before it has any books
+const enrolledSubjects = ref<{ id: number; name: string; code?: string }[]>([])
 const searchQuery = ref('')
 const loading = ref(false)
 const error = ref<string | null>(null)
 
 const previewBook = ref<LibraryBook | null>(null)
 
-const shelfLabel = (book: LibraryBook) =>
-  (book.subject_code || book.subject_name || '').slice(0, 10).toUpperCase()
+const shelfLabel = (book: LibraryBook) => subjectTag(book.subject_name, book.subject_code)
 const fileLabel = (book: LibraryBook) => (book.file_type || 'pdf').toUpperCase()
 
 const subjectGroups = computed<SubjectGroup[]>(() => {
   const map = new Map<number, SubjectGroup>()
+  enrolledSubjects.value.forEach(subj => {
+    map.set(subj.id, { id: subj.id, name: subj.name, code: subj.code, books: [] })
+  })
   books.value.forEach(book => {
     const sid = book.subject_id || 0
     if (!map.has(sid)) {
@@ -180,6 +186,7 @@ const loadLibrary = async () => {
     const response = await axios.get(`${API_BASE}/student/library`)
     if (response.data.success) {
       books.value = response.data.data.books || []
+      enrolledSubjects.value = response.data.data.subjects || []
     }
   } catch (err: any) {
     error.value = err.response?.data?.message || 'Failed to load library'
