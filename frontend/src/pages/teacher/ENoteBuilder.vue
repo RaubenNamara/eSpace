@@ -42,13 +42,37 @@
             </svg>
             Saving...
           </span>
+          <span v-else-if="autosaveStatus === 'error'" class="text-red-600 dark:text-red-400">
+            Not saved
+          </span>
+          <span v-else-if="hasUnsavedChanges" class="text-amber-600 dark:text-amber-400">
+            Unsaved changes
+          </span>
           <span v-else-if="autosaveStatus === 'saved'" class="text-green-600 dark:text-green-400">
             Saved
           </span>
           <span v-else class="text-gray-400">
-            Unsaved
+            All changes saved
           </span>
         </div>
+
+        <!-- Explicit save (also Ctrl/Cmd+S). Pages autosave too, but a teacher about to Preview wants
+             to know their latest edit is in - this reads the editor directly, skipping its debounce. -->
+        <button
+          v-if="currentPage"
+          @click="saveDraft"
+          :disabled="autosaveStatus === 'saving'"
+          class="px-2.5 sm:px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5 sm:gap-2 disabled:opacity-60"
+          :class="hasUnsavedChanges || autosaveStatus === 'error'
+            ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+            : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'"
+          title="Save draft (Ctrl+S)"
+        >
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
+          </svg>
+          <span class="hidden sm:inline">{{ autosaveStatus === 'saving' ? 'Saving...' : 'Save draft' }}</span>
+        </button>
 
         <button
           @click="showPagesPanel = !showPagesPanel"
@@ -802,7 +826,13 @@ const topic = ref<ENoteTopic | null>(null)
 const pages = ref<ENotePage[]>([])
 const currentPage = ref<ENotePage | null>(null)
 
-const autosaveStatus = ref<'idle' | 'saving' | 'saved'>('idle')
+const autosaveStatus = ref<'idle' | 'saving' | 'saved' | 'error'>('idle')
+// Set by any edit, cleared once that edit has actually reached the server
+const hasUnsavedChanges = ref(false)
+// The live CKEditor instance - read directly when saving, because the editor's Vue wrapper only
+// reports changes after a short debounce, so the very latest keystrokes can be missing from
+// currentPage.content if the teacher saves/previews straight after typing
+let editorInstance: any = null
 const autosaveTimeout = ref<number | null>(null)
 
 const draggedIndex = ref<number | null>(null)
@@ -855,6 +885,7 @@ const loadTopic = async () => {
     const response = await axios.get(`${API_BASE}/teacher/enotes/topics/${topicId.value}`)
     console.log('Topic response:', response.data)
     if (response.data.success) {
+      hasUnsavedChanges.value = false
       topic.value = response.data.data
       pages.value = (response.data.data.pages || []).map((page: ENotePage) => ({
         ...page,
@@ -940,11 +971,12 @@ const addPage = async () => {
   }
 }
 
-const updatePage = async () => {
-  if (!currentPage.value) return
+const updatePage = async (): Promise<boolean> => {
+  if (!currentPage.value) return true
 
   try {
     autosaveStatus.value = 'saving'
+    hasUnsavedChanges.value = false
 
     const updateData: Partial<ENotePageForm> = {
       title: currentPage.value.title,
@@ -961,9 +993,13 @@ const updatePage = async () => {
         autosaveStatus.value = 'idle'
       }
     }, 2000)
-  } catch (error) {
+    return true
+  } catch (error: any) {
     console.error('Failed to update page:', error)
-    autosaveStatus.value = 'idle'
+    autosaveStatus.value = 'error'
+    hasUnsavedChanges.value = true
+    toast.error(error?.response?.data?.message || 'Your changes could not be saved. Check your connection and try again.')
+    return false
   }
 }
 
@@ -972,6 +1008,7 @@ const scheduleAutosave = () => {
     clearTimeout(autosaveTimeout.value)
   }
 
+  hasUnsavedChanges.value = true
   autosaveStatus.value = 'idle'
 
   autosaveTimeout.value = window.setTimeout(() => {
@@ -982,11 +1019,45 @@ const scheduleAutosave = () => {
 // Navigating away or switching pages while a debounced autosave is still pending
 // used to just clearTimeout() it, silently discarding the edit (e.g. an inserted
 // image) instead of saving it. Anything that leaves the current page must flush first.
-const flushAutosave = async () => {
+// Pull the editor's current text into the page, catching edits its debounce hasn't reported yet
+const syncFromEditor = () => {
+  if (!editorInstance || !currentPage.value) return
+  try {
+    const data = editorInstance.getData()
+    if (data !== (currentPage.value.content || '')) {
+      currentPage.value.content = data
+      hasUnsavedChanges.value = true
+    }
+  } catch {
+    // editor mid-teardown - nothing newer to read
+  }
+}
+
+// Saves any pending or not-yet-reported edit now. Returns false if the save failed.
+const flushAutosave = async (): Promise<boolean> => {
+  syncFromEditor()
   if (autosaveTimeout.value) {
     clearTimeout(autosaveTimeout.value)
     autosaveTimeout.value = null
-    await updatePage()
+  }
+  if (!hasUnsavedChanges.value) return true
+  return updatePage()
+}
+
+// The "Save draft" button / Ctrl+S: always writes the page, so a teacher gets a clear "Saved"
+const saveDraft = async () => {
+  syncFromEditor()
+  if (autosaveTimeout.value) {
+    clearTimeout(autosaveTimeout.value)
+    autosaveTimeout.value = null
+  }
+  if (await updatePage()) toast.success('Draft saved')
+}
+
+const onSaveShortcut = (e: KeyboardEvent) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+    e.preventDefault()
+    saveDraft()
   }
 }
 
@@ -1039,7 +1110,7 @@ const publishTopic = async () => {
   if (!topic.value) return
 
   try {
-    await flushAutosave()
+    if (!await flushAutosave()) return
 
     if (topic.value.status === 'published') {
       await axios.post(`${API_BASE}/teacher/enotes/topics/${topic.value.id}/unpublish`)
@@ -1054,7 +1125,8 @@ const publishTopic = async () => {
 }
 
 const openPreview = async () => {
-  await flushAutosave()
+  // Preview reads the saved topic from the server, so it must not open before the latest edit is in
+  if (!await flushAutosave()) return
   router.push(`/teacher/enotes/preview/${topicId.value}`)
 }
 
@@ -1200,7 +1272,7 @@ const onDragEnd = () => {
 }
 
 const onEditorReady = (editor: any) => {
-  console.log('ENoteBuilder: CKEditor ready', editor)
+  editorInstance = editor
 }
 
 const onEditorError = (error: any) => {
@@ -1529,6 +1601,7 @@ onMounted(() => {
   loadAcademicYears()
   loadCurrentTermInfo()
   window.addEventListener('resize', applyResponsivePanels)
+  window.addEventListener('keydown', onSaveShortcut)
 })
 
 onBeforeRouteLeave(async () => {
@@ -1540,6 +1613,8 @@ onUnmounted(() => {
     clearTimeout(autosaveTimeout.value)
   }
   window.removeEventListener('resize', applyResponsivePanels)
+  window.removeEventListener('keydown', onSaveShortcut)
+  editorInstance = null
 })
 </script>
 
