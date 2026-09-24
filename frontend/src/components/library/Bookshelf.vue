@@ -1,5 +1,5 @@
 <template>
-  <section class="bookshelf" :class="{ 'is-spines': spines }">
+  <section class="bookshelf" :class="{ 'is-spines': spines, 'is-empty': !!empty }">
     <div class="flex items-center justify-between gap-3 mb-2 px-1">
       <!-- Brass name plate, like the label on a library shelf -->
       <div class="shelf-plate min-w-0">
@@ -164,7 +164,12 @@ defineProps<{
   padding-right: 110px;
 }
 
-/* Empty shelf: the track keeps a book's height so the plank stays put, with a quiet note on it */
+/* Empty shelf: a short shelf with a quiet note on it, instead of a book's height of bare wood */
+.bookshelf.is-empty {
+  --shelf-book-h: 34px;
+  --shelf-pad-top: 10px;
+}
+
 .shelf-empty {
   height: var(--shelf-book-h);
   display: flex;

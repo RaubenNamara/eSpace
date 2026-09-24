@@ -11,10 +11,10 @@
     :aria-label="label"
     @click="onClick"
     @keydown.enter.prevent="emit('open')"
-    @mouseenter="show"
-    @mouseleave="hideSoon"
-    @focus="show"
-    @blur="hideSoon"
+    @mouseenter="canHover && show()"
+    @mouseleave="canHover && hideSoon()"
+    @focus="canHover && show()"
+    @blur="canHover && hideSoon()"
   >
     <slot />
 
@@ -25,12 +25,17 @@
         v-if="active"
         ref="card"
         class="shelf-slot-card"
-        :style="cardStyle"
+        :class="{ 'is-sheet': !canHover }"
+        :style="canHover ? cardStyle : undefined"
         @mouseenter="show"
         @mouseleave="hideSoon"
         @click.stop
       >
+        <!-- Phones: a bottom sheet with a grab bar and a big Open button (no hover to lean on) -->
+        <div v-if="!canHover" class="sheet-grab" aria-hidden="true"></div>
         <slot name="details" />
+        <button v-if="!canHover" type="button" class="sheet-open" @click="openFromSheet">{{ openLabel }}</button>
+        <p v-else class="card-hint">Click the book to open</p>
       </div>
     </Teleport>
   </div>
@@ -39,7 +44,7 @@
 <script setup lang="ts">
 import { ref, nextTick, onBeforeUnmount } from 'vue'
 
-defineProps<{ label?: string }>()
+withDefaults(defineProps<{ label?: string; openLabel?: string }>(), { openLabel: 'Open' })
 const emit = defineEmits<{ open: [] }>()
 
 const root = ref<HTMLElement | null>(null)
@@ -72,6 +77,27 @@ const place = async () => {
   }
 }
 
+// On a phone the book is pulled out on the shelf and the sheet covers the bottom of the screen -
+// nudge the shelf sideways (so the swung-out cover isn't clipped) and the page up (so the book
+// isn't hidden behind the sheet).
+const revealOnPhone = async () => {
+  await nextTick()
+  const el = root.value
+  if (!el) return
+  const r = el.getBoundingClientRect()
+  const scroller = el.closest('.shelf-scroller') as HTMLElement | null
+  if (scroller) {
+    const overflow = r.left + COVER_REACH - scroller.getBoundingClientRect().right
+    if (overflow > 0) scroller.scrollBy({ left: overflow + 12, behavior: 'smooth' })
+  }
+  // Measured by height, not position: the sheet is still sliding up from off-screen right now
+  const sheetHeight = card.value?.offsetHeight ?? 0
+  // Room to scroll a book on the page's last shelf above the sheet (removed when it closes)
+  document.body.style.paddingBottom = `${sheetHeight}px`
+  const hidden = r.bottom + 16 - (window.innerHeight - sheetHeight)
+  if (hidden > 0) window.scrollBy({ top: hidden, behavior: 'smooth' })
+}
+
 const show = () => {
   if (hideTimer) {
     clearTimeout(hideTimer)
@@ -79,14 +105,21 @@ const show = () => {
   }
   if (!active.value) {
     active.value = true
-    place()
+    if (canHover) place()
+    else revealOnPhone()
     listen(true)
   }
+}
+
+const openFromSheet = () => {
+  hide()
+  emit('open')
 }
 
 const hide = () => {
   active.value = false
   listen(false)
+  if (!canHover) document.body.style.paddingBottom = ''
 }
 
 const hideSoon = () => {
@@ -114,8 +147,10 @@ const onScroll = () => hide()
 const listen = (on: boolean) => {
   if (on) {
     document.addEventListener('pointerdown', onOutsidePointer)
-    window.addEventListener('scroll', onScroll, true)
-    window.addEventListener('resize', onScroll)
+    if (canHover) {
+      window.addEventListener('scroll', onScroll, true)
+      window.addEventListener('resize', onScroll)
+    }
   } else {
     document.removeEventListener('pointerdown', onOutsidePointer)
     window.removeEventListener('scroll', onScroll, true)
@@ -126,6 +161,7 @@ const listen = (on: boolean) => {
 onBeforeUnmount(() => {
   if (hideTimer) clearTimeout(hideTimer)
   listen(false)
+  if (active.value && !canHover) document.body.style.paddingBottom = ''
 })
 </script>
 
@@ -158,6 +194,60 @@ onBeforeUnmount(() => {
 .dark .shelf-slot-card {
   background: #1f2937;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.card-hint {
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #4f46e5;
+}
+
+.dark .card-hint {
+  color: #818cf8;
+}
+
+/* Phones: bottom sheet */
+.shelf-slot-card.is-sheet {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 8px 18px calc(16px + env(safe-area-inset-bottom));
+  border-radius: 18px 18px 0 0;
+  animation-name: shelf-sheet-in;
+  animation-duration: 0.22s;
+}
+
+.sheet-grab {
+  width: 40px;
+  height: 4px;
+  margin: 0 auto 12px;
+  border-radius: 999px;
+  background: #d1d5db;
+}
+
+.sheet-open {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  background: #4f46e5;
+}
+
+.sheet-open:active {
+  background: #4338ca;
+}
+
+@keyframes shelf-sheet-in {
+  from {
+    transform: translateY(100%);
+  }
 }
 
 @keyframes shelf-card-in {

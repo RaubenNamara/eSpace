@@ -76,7 +76,6 @@
           <p class="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug">{{ topic.title }}</p>
           <p v-if="topic.teacher_first_name" class="text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ topic.teacher_first_name }} {{ topic.teacher_last_name }}</p>
           <p class="text-[11px] text-gray-400 dark:text-gray-500">{{ topic.total_pages }} {{ topic.total_pages === 1 ? 'page' : 'pages' }}<template v-if="topic.narration_voice"> &middot; <span class="text-purple-600 dark:text-purple-300">🔊 Audio</span></template></p>
-          <p class="mt-1 text-[11px] font-medium text-indigo-600 dark:text-indigo-400">Click the book to open</p>
           </template>
         </ShelfSlot>
       </Bookshelf>

@@ -60,7 +60,6 @@
           <template #details>
             <p class="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug">{{ book.title }}</p>
             <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ book.subject_name || 'General' }}<template v-if="book.author"> &middot; {{ book.author }}</template></p>
-            <p class="mt-1 text-[11px] font-medium text-indigo-600 dark:text-indigo-400">Click the book to open</p>
           </template>
         </ShelfSlot>
       </Bookshelf>
@@ -84,7 +83,6 @@
           <p class="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug">{{ book.title }}</p>
           <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ book.author || [book.teacher_first_name, book.teacher_last_name].filter(Boolean).join(' ') }}</p>
           <p class="text-[11px] text-gray-400 dark:text-gray-500">{{ fileLabel(book) }}<template v-if="book.total_pages"> &middot; {{ book.total_pages }} pages</template><template v-else-if="book.file_size"> &middot; {{ formatFileSize(book.file_size) }}</template></p>
-          <p class="mt-1 text-[11px] font-medium text-indigo-600 dark:text-indigo-400">Click the book to open</p>
           </template>
         </ShelfSlot>
       </Bookshelf>
