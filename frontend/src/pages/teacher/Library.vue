@@ -115,7 +115,57 @@
       </button>
     </div>
 
+    <!-- Browse by Class: one docket per class -->
+    <template v-else-if="!activeClassName">
+      <h2 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">Browse by Class</h2>
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+        <button
+          v-for="group in classGroups"
+          :key="group.name"
+          @click="activeClassName = group.name"
+          class="text-left bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 p-5 sm:p-6 group overflow-hidden relative"
+        >
+          <div
+            class="absolute -right-6 -top-6 w-28 h-28 rounded-full opacity-10 transition-transform duration-300 group-hover:scale-125"
+            :class="classPalette(group.name).solid"
+          ></div>
+          <div
+            class="relative w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-white shadow-sm flex-shrink-0 mb-3 sm:mb-4"
+            :class="classPalette(group.name).solid"
+          >
+            <svg class="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+            </svg>
+          </div>
+          <h3 class="relative text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+            {{ group.name }}
+          </h3>
+          <span
+            class="relative inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
+            :class="classPalette(group.name).softText"
+          >
+            {{ group.books.length }} {{ group.books.length === 1 ? 'book' : 'books' }}
+          </span>
+        </button>
+      </div>
+    </template>
+
+    <!-- Class bookcase: one shelf per subject -->
     <template v-else>
+      <div class="flex items-center gap-2 mb-4">
+        <button
+          @click="activeClassName = null"
+          class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+          </svg>
+          All Classes
+        </button>
+        <span class="text-gray-300 dark:text-gray-600">/</span>
+        <span class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ activeClassName }}</span>
+      </div>
+
       <div class="flex items-center gap-2 mb-3">
         <label class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none">
           <input
@@ -136,80 +186,77 @@
         <button @click="bulkDeleteSelected" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors">Delete</button>
       </BulkActionBar>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      <div
-        v-for="book in filteredBooks"
-        :key="book.id"
-        class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow cursor-pointer"
-        @click="previewBook = book"
-      >
-        <div class="p-6">
-          <div class="flex items-start justify-between mb-3 gap-2">
-            <div class="flex items-center gap-2 min-w-0">
+      <div v-if="activeClassSubjectShelves.length === 0" class="text-center py-16 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+        <p class="text-gray-500 dark:text-gray-400">No books in this class match these filters.</p>
+      </div>
+
+      <div v-else class="space-y-8">
+        <Bookshelf
+          v-for="shelf in activeClassSubjectShelves"
+          :key="shelf.name"
+          :title="shelf.name"
+          :count="shelf.books.length"
+        >
+          <div
+            v-for="book in shelf.books"
+            :key="book.id"
+            class="group relative w-[104px] sm:w-[122px] flex-shrink-0 cursor-pointer"
+            :title="`Updated ${formatDate(book.updated_at || book.created_at)}`"
+            @click="previewBook = book"
+          >
+            <ShelfBook
+              :title="book.title"
+              :seed="book.id"
+              :label="(book.subject_code || book.subject_name || '').slice(0, 10).toUpperCase()"
+              :footer="(book.file_type || 'pdf').toUpperCase()"
+            >
               <input
                 type="checkbox"
                 :checked="bulk.isSelected(book.id)"
                 @click.stop
                 @change="bulk.toggle(book.id)"
-                class="flex-shrink-0 w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                class="absolute top-1.5 right-1.5 z-10 w-4 h-4 rounded border-white/60 text-indigo-600 focus:ring-indigo-500"
+                :aria-label="`Select ${book.title}`"
               >
-              <div class="w-9 h-9 rounded-lg bg-emerald-600 flex items-center justify-center flex-shrink-0">
-                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                </svg>
-              </div>
-              <h3 class="text-base font-semibold text-gray-900 dark:text-white line-clamp-1">{{ book.title }}</h3>
+            </ShelfBook>
+
+            <div class="mt-6 flex items-center gap-1.5">
+              <span
+                class="px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
+                :class="book.status === 'published' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                  book.status === 'draft' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                  'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'"
+              >
+                {{ book.status.charAt(0).toUpperCase() + book.status.slice(1) }}
+              </span>
+              <span class="text-[10px] text-gray-400 dark:text-gray-500 truncate">{{ formatFileSize(book.file_size) }}</span>
             </div>
-            <span
-              class="px-2 py-1 rounded-full text-xs font-medium flex-shrink-0"
-              :class="book.status === 'published' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                book.status === 'draft' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'"
-            >
-              {{ book.status.charAt(0).toUpperCase() + book.status.slice(1) }}
-            </span>
-          </div>
-
-          <p v-if="book.description" class="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">{{ book.description }}</p>
-
-          <div class="flex flex-wrap items-center gap-2 mb-4">
-            <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
-              {{ book.subject_name || 'Unknown Subject' }}
-            </span>
-            <span v-if="book.class_group_name" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300">
-              {{ book.class_group_name }} (All Streams)
-            </span>
-            <span v-else-if="book.class_name" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-              {{ book.class_name }}{{ book.class_stream_name ? ' - ' + book.class_stream_name : '' }}
-            </span>
-            <span class="ml-auto text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">{{ formatFileSize(book.file_size) }}</span>
-          </div>
-
-          <div class="flex items-center justify-between">
-            <span class="text-xs text-gray-500 dark:text-gray-500">Updated {{ formatDate(book.updated_at || book.created_at) }}</span>
-            <div class="flex items-center space-x-2">
-              <button
-                @click.stop="editBook(book)"
-                class="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                title="Edit"
-              >
-                <svg class="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                </svg>
-              </button>
-              <button
-                @click.stop="deleteBook(book.id)"
-                class="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-900 rounded-lg transition-colors"
-                title="Delete"
-              >
-                <svg class="w-4 h-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                </svg>
-              </button>
+            <p class="mt-1 text-xs font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{{ book.title }}</p>
+            <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">
+              {{ book.class_group_name ? `${book.class_group_name} (All Streams)` : book.class_stream_name ? `${book.class_name} - ${book.class_stream_name}` : book.class_name }}
+            </p>
+            <div class="flex items-center -ml-1.5 mt-0.5">
+                  <button
+                    @click.stop="editBook(book)"
+                    class="p-1.5 min-w-[34px] min-h-[34px] flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                    title="Edit"
+                  >
+                    <svg class="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                    </svg>
+                  </button>
+                  <button
+                    @click.stop="deleteBook(book.id)"
+                    class="p-1.5 min-w-[34px] min-h-[34px] flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-900 rounded-lg transition-colors"
+                    title="Delete"
+                  >
+                    <svg class="w-4 h-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                  </button>
             </div>
           </div>
-        </div>
-      </div>
+        </Bookshelf>
       </div>
     </template>
 
@@ -383,6 +430,8 @@ import axios from 'axios'
 import LibraryDocumentViewer from '@/components/library/LibraryDocumentViewer.vue'
 import TeacherClassSelector from '@/components/teacher/TeacherClassSelector.vue'
 import BulkActionBar from '@/components/common/BulkActionBar.vue'
+import Bookshelf from '@/components/library/Bookshelf.vue'
+import ShelfBook from '@/components/library/ShelfBook.vue'
 import type { LibraryBook, LibraryBookForm } from '@/types/library'
 import type { ENoteAssignments } from '@/types/enotes'
 import { LIBRARY_FILE_ACCEPT, LIBRARY_FILE_ERROR, isAllowedLibraryFile } from '@/utils/libraryFileValidation'
@@ -443,7 +492,47 @@ const filteredBooks = computed(() => {
   })
 })
 
-const visibleIds = computed(() => filteredBooks.value.map(b => b.id))
+// Books are browsed class first (one docket per class, "All Streams" books under their class
+// group), then stand on one shelf per subject inside the class - same shape as teacher eNotes.
+const activeClassName = ref<string | null>(null)
+
+const classGroups = computed(() => {
+  const map = new Map<string, { name: string; books: LibraryBook[] }>()
+  for (const book of filteredBooks.value) {
+    const name = book.class_group_name || book.class_name || 'Unassigned'
+    if (!map.has(name)) map.set(name, { name, books: [] })
+    map.get(name)!.books.push(book)
+  }
+  return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
+})
+
+const activeClassBooks = computed(() => classGroups.value.find(g => g.name === activeClassName.value)?.books ?? [])
+
+const activeClassSubjectShelves = computed(() => {
+  const map = new Map<string, LibraryBook[]>()
+  activeClassBooks.value.forEach(book => {
+    const name = book.subject_name || 'Other'
+    if (!map.has(name)) map.set(name, [])
+    map.get(name)!.push(book)
+  })
+  return Array.from(map, ([name, books]) => ({ name, books })).sort((a, b) => a.name.localeCompare(b.name))
+})
+
+const classPalettes = [
+  { solid: 'bg-emerald-600', softText: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' },
+  { solid: 'bg-blue-600', softText: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
+  { solid: 'bg-indigo-600', softText: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' },
+  { solid: 'bg-amber-600', softText: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' },
+  { solid: 'bg-rose-600', softText: 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300' },
+  { solid: 'bg-violet-600', softText: 'bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300' }
+]
+const classPalette = (name: string) => {
+  let hash = 0
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0
+  return classPalettes[hash % classPalettes.length]
+}
+
+const visibleIds = computed(() => activeClassBooks.value.map(b => b.id))
 
 const bulkSetStatus = async (status: 'draft' | 'published' | 'archived') => {
   const ids = bulk.selectedArray()

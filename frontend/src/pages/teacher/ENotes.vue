@@ -195,89 +195,74 @@
           <button @click="bulkDeleteSelected" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors">Delete</button>
         </BulkActionBar>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-        <div
-          v-for="topic in activeClassTopics"
-          :key="topic.id"
-          class="group relative bg-white dark:bg-gray-800 rounded-2xl shadow-md hover:shadow-xl border border-gray-100 dark:border-gray-700 hover:-translate-y-1 transition-all duration-200 cursor-pointer overflow-hidden"
-          @click="openBuilder(topic.id)"
-        >
-          <div
-            v-if="openingTopicId === topic.id"
-            class="absolute inset-0 z-20 flex items-center justify-center gap-2 bg-white/70 dark:bg-gray-800/70 text-sm font-medium text-gray-700 dark:text-gray-200"
+        <div class="space-y-8">
+          <Bookshelf
+            v-for="shelf in activeClassSubjectShelves"
+            :key="shelf.name"
+            :title="shelf.name"
+            :count="shelf.topics.length"
           >
-            <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-            </svg>
-            Opening...
-          </div>
-          <div class="h-2.5" :class="classPalette(activeClassName).solid"></div>
-          <div
-            class="absolute -right-8 top-6 w-24 h-24 rounded-full opacity-[0.07] transition-transform duration-300 group-hover:scale-125 pointer-events-none"
-            :class="classPalette(activeClassName).solid"
-          ></div>
-
-          <div class="relative p-5 sm:p-6">
-            <div class="flex items-start justify-between gap-2 mb-3">
-              <input
-                type="checkbox"
-                :checked="bulk.isSelected(topic.id)"
-                @click.stop
-                @change="bulk.toggle(topic.id)"
-                class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+            <div
+              v-for="topic in shelf.topics"
+              :key="topic.id"
+              class="group relative w-[104px] sm:w-[122px] flex-shrink-0 cursor-pointer"
+              :title="`Updated ${formatDate(topic.updated_at)}`"
+              @click="openBuilder(topic.id)"
+            >
+              <ShelfBook
+                variant="notes"
+                :title="topic.title"
+                :seed="topic.id"
+                :label="(topic.subject_code || topic.subject_name || '').slice(0, 10).toUpperCase()"
+                :footer="`${topic.total_pages} ${topic.total_pages === 1 ? 'page' : 'pages'}`"
               >
-              <span
-                :class="[
-                  'px-2.5 py-1 rounded-full text-xs font-semibold',
-                  topic.status === 'published' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                  topic.status === 'draft' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                  'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                ]"
-              >
-                {{ topic.status.charAt(0).toUpperCase() + topic.status.slice(1) }}
-              </span>
-              <span class="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0 ml-auto">{{ topic.total_pages }} pages</span>
-            </div>
+                <input
+                  type="checkbox"
+                  :checked="bulk.isSelected(topic.id)"
+                  @click.stop
+                  @change="bulk.toggle(topic.id)"
+                  class="absolute top-1.5 right-1.5 z-10 w-4 h-4 rounded border-white/60 text-indigo-600 focus:ring-indigo-500"
+                  :aria-label="`Select ${topic.title}`"
+                >
+                <div
+                  v-if="openingTopicId === topic.id"
+                  class="absolute inset-0 z-20 flex flex-col items-center justify-center gap-1 bg-black/55 text-[11px] font-medium text-white"
+                >
+                  <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                  </svg>
+                  Opening...
+                </div>
+              </ShelfBook>
 
-            <h3 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-snug mb-2 line-clamp-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-              {{ topic.title }}
-            </h3>
-
-            <p v-if="topic.description" class="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mb-4">
-              {{ topic.description }}
-            </p>
-
-            <div class="flex flex-wrap items-center gap-1.5 mb-4">
-              <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
-                {{ topic.subject_name || 'Unknown Subject' }}
-              </span>
-              <span v-if="topic.class_group_name" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300">
-                {{ topic.class_group_name }} (All Streams)
-              </span>
-              <span v-else-if="topic.class_stream_name" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-                {{ topic.class_name }} - {{ topic.class_stream_name }}
-              </span>
-              <span
-                v-if="topic.content_group_id"
-                class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
-                :title="`Linked to ${linkedTopicCount(topic)} other class/stream cop${linkedTopicCount(topic) === 1 ? 'y' : 'ies'} - editing content here updates them too`"
-              >
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 010 5.656l-3 3a4 4 0 01-5.656-5.656l1.5-1.5m5.656-5.656l1.5-1.5a4 4 0 115.656 5.656l-3 3a4 4 0 01-5.656 0"></path>
-                </svg>
-                Linked
-              </span>
-            </div>
-
-            <div class="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700">
-              <span class="text-xs text-gray-400 dark:text-gray-500">
-                Updated {{ formatDate(topic.updated_at) }}
-              </span>
-              <div class="flex items-center gap-1">
+              <div class="mt-6 flex items-center gap-1.5">
+                <span
+                  :class="[
+                    'px-1.5 py-0.5 rounded-full text-[10px] font-semibold',
+                    topic.status === 'published' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                    topic.status === 'draft' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                    'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                  ]"
+                >
+                  {{ topic.status.charAt(0).toUpperCase() + topic.status.slice(1) }}
+                </span>
+                <span
+                  v-if="topic.content_group_id"
+                  class="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
+                  :title="`Linked to ${linkedTopicCount(topic)} other class/stream cop${linkedTopicCount(topic) === 1 ? 'y' : 'ies'} - editing content here updates them too`"
+                >
+                  Linked
+                </span>
+              </div>
+              <p class="mt-1 text-xs font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{{ topic.title }}</p>
+              <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">
+                {{ topic.class_group_name ? `${topic.class_group_name} (All Streams)` : topic.class_stream_name ? `${topic.class_name} - ${topic.class_stream_name}` : topic.class_name }}
+              </p>
+              <div class="flex items-center -ml-1.5 mt-0.5">
                 <button
                   @click.stop="editTopic(topic)"
-                  class="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  class="p-1.5 min-w-[34px] min-h-[34px] flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                   title="Edit"
                 >
                   <svg class="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -286,7 +271,7 @@
                 </button>
                 <button
                   @click.stop="openDuplicateModal(topic)"
-                  class="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center hover:bg-indigo-100 dark:hover:bg-indigo-900 rounded-lg transition-colors"
+                  class="p-1.5 min-w-[34px] min-h-[34px] flex items-center justify-center hover:bg-indigo-100 dark:hover:bg-indigo-900 rounded-lg transition-colors"
                   title="Duplicate to another class/stream"
                 >
                   <svg class="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -295,7 +280,7 @@
                 </button>
                 <button
                   @click.stop="deleteTopic(topic.id)"
-                  class="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-900 rounded-lg transition-colors"
+                  class="p-1.5 min-w-[34px] min-h-[34px] flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-900 rounded-lg transition-colors"
                   title="Delete"
                 >
                   <svg class="w-4 h-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -304,9 +289,8 @@
                 </button>
               </div>
             </div>
-          </div>
+          </Bookshelf>
         </div>
-      </div>
       </template>
 
       <div v-else class="text-center py-16 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
@@ -749,6 +733,8 @@ import type {
 } from '@/types/enotes'
 import TeacherClassSelector from '@/components/teacher/TeacherClassSelector.vue'
 import BulkActionBar from '@/components/common/BulkActionBar.vue'
+import Bookshelf from '@/components/library/Bookshelf.vue'
+import ShelfBook from '@/components/library/ShelfBook.vue'
 import { useToastStore } from '@/stores/toast'
 import { useConfirmStore } from '@/stores/confirm'
 import { useBulkSelection } from '@/composables/useBulkSelection'
@@ -966,6 +952,16 @@ const classGroups = computed<ClassTopicGroup[]>(() => {
 })
 
 const activeClassTopics = computed(() => classGroups.value.find(g => g.name === activeClassName.value)?.topics ?? [])
+// Inside a class, topics stand on one shelf per subject
+const activeClassSubjectShelves = computed(() => {
+  const map = new Map<string, ENoteTopic[]>()
+  activeClassTopics.value.forEach(topic => {
+    const name = topic.subject_name || 'Other'
+    if (!map.has(name)) map.set(name, [])
+    map.get(name)!.push(topic)
+  })
+  return Array.from(map, ([name, topics]) => ({ name, topics })).sort((a, b) => a.name.localeCompare(b.name))
+})
 const visibleTopicIds = computed(() => activeClassTopics.value.map(t => t.id))
 
 const bulkSetStatus = async (status: 'draft' | 'published' | 'archived') => {
