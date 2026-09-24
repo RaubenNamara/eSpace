@@ -488,6 +488,7 @@ import ShelfBook from '@/components/library/ShelfBook.vue'
 import ShelfSlot from '@/components/library/ShelfSlot.vue'
 import { renderPdfCover } from '@/utils/pdfCover'
 import { subjectTag } from '@/utils/subjectTag'
+import { orderShelves } from '@/utils/shelfOrder'
 import { resolveAssetUrl } from '@/utils/url'
 import type { LibraryBook, LibraryBookForm } from '@/types/library'
 import type { ENoteAssignments } from '@/types/enotes'
@@ -573,7 +574,7 @@ const activeClassSubjectShelves = computed(() => {
     if (!map.has(name)) map.set(name, [])
     map.get(name)!.push(book)
   })
-  return Array.from(map, ([name, books]) => ({ name, books })).sort((a, b) => a.name.localeCompare(b.name))
+  return orderShelves(Array.from(map, ([name, books]) => ({ name, books })), g => g.books)
 })
 
 const classPalettes = [

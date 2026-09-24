@@ -116,6 +116,7 @@ import ShelfBook from '@/components/library/ShelfBook.vue'
 import ShelfSlot from '@/components/library/ShelfSlot.vue'
 import type { LibraryBook } from '@/types/library'
 import { subjectTag } from '@/utils/subjectTag'
+import { orderShelves } from '@/utils/shelfOrder'
 
 interface SubjectGroup {
   id: number
@@ -150,7 +151,7 @@ const subjectGroups = computed<SubjectGroup[]>(() => {
     }
     map.get(sid)!.books.push(book)
   })
-  return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name))
+  return orderShelves(Array.from(map.values()), g => g.books)
 })
 
 // Search narrows each shelf to its matching books (a subject-name match keeps the whole shelf),

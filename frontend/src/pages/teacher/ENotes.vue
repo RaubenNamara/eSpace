@@ -760,6 +760,7 @@ import Bookshelf from '@/components/library/Bookshelf.vue'
 import ENoteCoverEditor from '@/components/enotes/ENoteCoverEditor.vue'
 import { parseCoverDesign } from '@/utils/enoteCover'
 import { subjectTag } from '@/utils/subjectTag'
+import { orderShelves } from '@/utils/shelfOrder'
 import ShelfBook from '@/components/library/ShelfBook.vue'
 import ShelfSlot from '@/components/library/ShelfSlot.vue'
 import { useToastStore } from '@/stores/toast'
@@ -987,7 +988,7 @@ const activeClassSubjectShelves = computed(() => {
     if (!map.has(name)) map.set(name, [])
     map.get(name)!.push(topic)
   })
-  return Array.from(map, ([name, topics]) => ({ name, topics })).sort((a, b) => a.name.localeCompare(b.name))
+  return orderShelves(Array.from(map, ([name, topics]) => ({ name, topics })), g => g.topics)
 })
 const visibleTopicIds = computed(() => activeClassTopics.value.map(t => t.id))
 

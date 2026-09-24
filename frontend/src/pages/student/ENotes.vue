@@ -108,6 +108,7 @@ import { useRouter } from 'vue-router'
 import type { ENoteTopic } from '@/types/enotes'
 import { parseCoverDesign } from '@/utils/enoteCover'
 import { subjectTag } from '@/utils/subjectTag'
+import { orderShelves } from '@/utils/shelfOrder'
 
 interface SubjectGroup {
   id: number
@@ -138,7 +139,7 @@ const subjectGroups = computed<SubjectGroup[]>(() => {
     }
     map.get(sid)!.topics.push(topic)
   })
-  return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name))
+  return orderShelves(Array.from(map.values()), g => g.topics)
 })
 
 // Search narrows each shelf to its matching topics (a subject-name match keeps the whole shelf),
