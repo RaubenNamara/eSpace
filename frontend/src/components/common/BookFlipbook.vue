@@ -267,6 +267,17 @@ async function bundleFlip(from: number, target: number) {
   return true
 }
 
+// html mode: pages' own scroll positions across a rebuild (see destroy()). Restored once page-flip
+// has shown them again - a hidden (display:none) page can't hold a scrollTop.
+const savedScroll = new Map<HTMLElement, number>()
+function restoreScroll() {
+  if (!savedScroll.size) return
+  const entries = Array.from(savedScroll.entries())
+  savedScroll.clear()
+  const apply = () => entries.forEach(([el, top]) => { if (el.isConnected) el.scrollTop = top })
+  requestAnimationFrame(() => requestAnimationFrame(apply))
+}
+
 function build() {
   const host = hostRef.value
   if (!host || !props.pageWidth || !props.pageHeight) return
@@ -305,6 +316,7 @@ function build() {
 
   if (props.mode === 'html') {
     flip.loadFromHTML(Array.from(stagingRef.value!.children) as HTMLElement[])
+    restoreScroll()
   } else {
     flip.loadFromImages(props.images)
     // Image mode draws every page onto one <canvas>, and page-flip only ever sets that canvas's
@@ -387,7 +399,11 @@ async function destroy() {
   if (flip && props.mode === 'html' && stagingRef.value) {
     const block = hostRef.value?.querySelector(':scope > .stf__wrapper > .stf__block')
     if (block) {
-      Array.from(block.children).forEach((el) => stagingRef.value!.appendChild(el))
+      Array.from(block.children).forEach((el) => {
+        // Remember how far each page was scrolled - the rebuild re-parents it, which resets it
+        if ((el as HTMLElement).scrollTop > 0) savedScroll.set(el as HTMLElement, (el as HTMLElement).scrollTop)
+        stagingRef.value!.appendChild(el)
+      })
     }
   }
 

@@ -1044,9 +1044,19 @@ let bookWrapResizeObserver: ResizeObserver | null = null
 // measurement and waiting for a real one.
 const MIN_PLAUSIBLE_CONTAINER_SIZE = 50
 
+// A height-only change smaller than this doesn't resize the book. On phones, scrolling hides this
+// reader's header and the browser's address bar, each nudging the container's height by a few
+// dozen pixels - and every size change rebuilds the whole book, which snapped the page being read
+// back to its top mid-scroll. The book just keeps its size (stretch mode still fits it) until the
+// width changes or the height changes for real (rotating the phone, entering Read Mode).
+const HEIGHT_CHANGE_TO_RESIZE = 140
+
 const updateDynamicAspect = () => {
   const el = bookWrapRef.value
   if (!el || el.clientWidth < MIN_PLAUSIBLE_CONTAINER_SIZE || el.clientHeight < MIN_PLAUSIBLE_CONTAINER_SIZE) return
+  const widthChanged = el.clientWidth !== dynamicPageWidth.value
+  const heightJump = Math.abs(el.clientHeight - dynamicPageHeight.value)
+  if (!widthChanged && heightJump < HEIGHT_CHANGE_TO_RESIZE) return
   dynamicPageWidth.value = el.clientWidth
   dynamicPageHeight.value = el.clientHeight
 }
