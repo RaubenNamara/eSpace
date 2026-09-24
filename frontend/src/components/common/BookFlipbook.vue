@@ -1,5 +1,5 @@
 <template>
-  <div class="relative w-full h-full" :class="{ 'mx-auto max-w-[560px]': capWidthForToggle }">
+  <div ref="rootRef" class="relative w-full h-full" :class="{ 'mx-auto max-w-[560px]': capWidthForToggle }">
     <!-- v-if (not just a :key bump) forces Vue to fully unmount and later remount this element on
          every rebuild - StPageFlip's own destroy() calls `this.block.remove()` on this exact node
          (raw DOM removal, entirely outside Vue's reconciliation), permanently detaching it from
@@ -11,6 +11,26 @@
          same pass as StPageFlip's own removal, which raced Vue's own patch for the same node and
          threw ("insertBefore" on the now-parentless old element) rather than reliably recovering. -->
     <div v-if="showHost" ref="hostRef" class="book-flipbook-host w-full h-full"></div>
+
+    <!-- Page edges along the book's outer edges (drawn just inside them, over the page margins, since
+         the book usually fills its space), thick where most of the pages are - thin on the left and
+         thick on the right near the start, the other way round near the end. Click-through. -->
+    <template v-if="box && pageTotal > 1">
+      <div v-if="stackLeft" class="page-stack page-stack--left" :style="{ left: `${box.left}px`, top: `${box.top}px`, height: `${box.height}px`, width: `${stackLeft}px` }"></div>
+      <div v-if="stackRight" class="page-stack page-stack--right" :style="{ left: `${box.left + box.width - stackRight}px`, top: `${box.top}px`, height: `${box.height}px`, width: `${stackRight}px` }"></div>
+    </template>
+
+    <!-- A far jump turns a whole bundle of pages at once: several sheets hinged at the spine swing
+         over together, slightly fanned, instead of the new page just appearing. -->
+    <div v-if="bundle" class="page-bundle" :style="bundle.frame">
+      <div
+        v-for="i in bundle.sheets"
+        :key="i"
+        ref="bundleSheetRefs"
+        class="bundle-sheet"
+        :style="{ transformOrigin: bundle.origin, zIndex: bundle.sheets - i }"
+      ></div>
+    </div>
     <!-- HTML mode's staging area: the parent renders one element per page into this slot, and
          `loadFromHTML` physically moves (not clones) each one into the host above - Vue keeps
          patching them normally afterward since they're still the same DOM nodes, just relocated. -->
@@ -58,6 +78,7 @@ const props = withDefaults(
 
 const emit = defineEmits<{ flip: [page: number] }>()
 
+const rootRef = ref<HTMLElement | null>(null)
 const hostRef = ref<HTMLElement | null>(null)
 const showHost = ref(true)
 const stagingRef = ref<HTMLElement | null>(null)
@@ -160,6 +181,92 @@ function markEdgeHover(e: MouseEvent) {
   host.classList.toggle('near-flip-edge', nearEdge)
 }
 
+// ---- Real-book touches: side page stacks and bundle flips for far jumps ----
+
+// Where the book sits inside this component (not the viewport), for the overlays above
+const box = ref<{ left: number; top: number; width: number; height: number } | null>(null)
+const pageTotal = ref(0)
+const pageCurrent = ref(0)
+const MAX_STACK = 14
+
+function measure() {
+  const root = rootRef.value
+  const b = bookBounds()
+  if (!root || !b || !b.width) {
+    box.value = null
+    return
+  }
+  const rr = root.getBoundingClientRect()
+  box.value = { left: b.left - rr.left, top: b.top - rr.top, width: b.width, height: b.height }
+  try {
+    pageTotal.value = flip?.getPageCount() ?? 0
+    pageCurrent.value = flip?.getCurrentPageIndex() ?? 0
+  } catch {
+    // not ready yet
+  }
+}
+const measureSoon = () => requestAnimationFrame(() => requestAnimationFrame(measure))
+
+const stackWidth = (share: number) => (!box.value || share <= 0 ? 0 : Math.max(2, Math.round(share * MAX_STACK)))
+const stackLeft = computed(() => pageTotal.value ? stackWidth(pageCurrent.value / pageTotal.value) : 0)
+const stackRight = computed(() => pageTotal.value ? stackWidth((pageTotal.value - 1 - pageCurrent.value) / pageTotal.value) : 0)
+
+interface Bundle {
+  frame: Record<string, string>
+  origin: string
+  sheets: number
+}
+const bundle = ref<Bundle | null>(null)
+const bundleSheetRefs = ref<HTMLElement[]>([])
+const BUNDLE_TIME = 720
+const reducedMotion = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+
+// Swing a fanned bundle of sheets over the spine, landing the reader on `target` underneath it
+async function bundleFlip(from: number, target: number) {
+  const b = box.value
+  if (!b || !flip) return false
+  const forward = target > from
+  const portrait = flip.getOrientation() === 'portrait'
+  const pw = portrait ? b.width : b.width / 2
+  // Landscape: the bundle lifts off the right page (forward) or the left page (back), hinged at
+  // the spine. Portrait: hinged at the page's left edge, swinging away (forward) or back in.
+  const left = portrait ? b.left : forward ? b.left + pw : b.left
+  const origin = portrait || forward ? 'left center' : 'right center'
+  const distance = Math.abs(target - from)
+  bundle.value = {
+    frame: { left: `${left}px`, top: `${b.top}px`, width: `${pw}px`, height: `${b.height}px` },
+    origin,
+    sheets: Math.min(8, Math.max(3, Math.ceil(distance / 12)))
+  }
+  await nextTick()
+  const sheets = bundleSheetRefs.value
+  const endAngle = forward ? -180 : 180
+  const [a0, a1] = portrait && !forward ? [-180, 0] : [0, endAngle]
+  if (!props.muted) {
+    playPageFlipSound()
+    setTimeout(() => playPageFlipSound(0.4), 140)
+  }
+  const animations = sheets.map((sheet, i) =>
+    sheet.animate(
+      [
+        { transform: `rotateY(${a0}deg)` },
+        { transform: `rotateY(${a1}deg)` }
+      ],
+      { duration: BUNDLE_TIME, delay: i * 22, easing: 'cubic-bezier(0.45, 0.05, 0.25, 1)', fill: 'forwards' }
+    )
+  )
+  // Put the destination underneath while the bundle is up in the air, so it's there as it lands
+  setTimeout(() => {
+    suppressNextFlipSound = true
+    lastFlipSoundAt = Date.now()
+    flip?.turnToPage(target)
+    measureSoon()
+  }, BUNDLE_TIME * 0.45)
+  await Promise.all(animations.map(a => a.finished.catch(() => undefined)))
+  bundle.value = null
+  return true
+}
+
 function build() {
   const host = hostRef.value
   if (!host || !props.pageWidth || !props.pageHeight) return
@@ -228,6 +335,9 @@ function build() {
       canvasResizeObserver.observe(canvasEl)
     }
   }
+  flip.on('changeOrientation', measureSoon)
+  measureSoon()
+  setTimeout(measure, 400)
   flip.on('flip', (e) => {
     const now = Date.now()
     if (!props.muted && !suppressNextFlipSound && now - lastFlipSoundAt >= FLIPPING_TIME) {
@@ -235,6 +345,7 @@ function build() {
       lastFlipSoundAt = now
     }
     suppressNextFlipSound = false
+    pageCurrent.value = e.data as number
     emit('flip', e.data)
   })
 
@@ -244,7 +355,10 @@ function build() {
   // recomputes) always reads the container's live CSS size, so a plain update() - no rebuild
   // needed - keeps it correctly positioned; image mode's separate canvas-bitmap staleness (see
   // the canvasResizeObserver above) is a different problem, handled independently of this.
-  resizeObserver = new ResizeObserver(() => flip?.update())
+  resizeObserver = new ResizeObserver(() => {
+    flip?.update()
+    measureSoon()
+  })
   resizeObserver.observe(host)
 }
 
@@ -350,9 +464,23 @@ function flipPrev(opts?: { silent?: boolean }) {
   if (opts?.silent) suppressNextFlipSound = true
   flip?.flipPrev()
 }
-function turnToPage(page: number, opts?: { silent?: boolean }) {
-  if (opts?.silent) suppressNextFlipSound = true
-  flip?.turnToPage(page)
+/**
+ * Jump to a page. A jump of more than a couple of spreads turns a fanned bundle of pages at once
+ * (bundleFlip), like thumbing a real book open further on; nearby jumps, `animate: false` (e.g.
+ * resuming where a reader left off on open), or a reader who prefers reduced motion jump directly.
+ */
+async function turnToPage(page: number, opts?: { silent?: boolean; animate?: boolean }) {
+  if (!flip) return
+  const from = flip.getCurrentPageIndex()
+  const spread = flip.getOrientation() === 'portrait' ? 1 : 2
+  const far = Math.abs(page - from) > spread * 2
+  if (far && opts?.animate !== false && !reducedMotion && !bundle.value && box.value) {
+    if (opts?.silent) suppressNextFlipSound = true
+    if (await bundleFlip(from, page)) return
+  }
+  if (opts?.silent || opts?.animate === false) suppressNextFlipSound = true
+  flip.turnToPage(page)
+  measureSoon()
 }
 function getCurrentPageIndex(): number { return flip?.getCurrentPageIndex() ?? 0 }
 
@@ -398,6 +526,54 @@ defineExpose({ flipNext, flipPrev, turnToPage, getCurrentPageIndex, rebuild, set
 .book-flipbook-host.near-flip-edge,
 .book-flipbook-host.near-flip-edge :deep(*) {
   cursor: pointer;
+}
+
+/* Page edges beside the book: fine cream lines, shaded toward the book */
+.page-stack {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+  background: repeating-linear-gradient(to right, #f5f1e6 0 1px, #d8d0bc 1px 2px);
+  transition: width 0.4s ease, left 0.4s ease;
+}
+
+.page-stack--left {
+  border-radius: 3px 0 0 3px;
+  box-shadow: inset -3px 0 4px rgba(0, 0, 0, 0.18), -1px 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.page-stack--right {
+  border-radius: 0 3px 3px 0;
+  box-shadow: inset 3px 0 4px rgba(0, 0, 0, 0.18), 1px 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.dark .page-stack {
+  background: repeating-linear-gradient(to right, #9a978c 0 1px, #6b6858 1px 2px);
+}
+
+/* The bundle of sheets turning over on a far jump */
+.page-bundle {
+  position: absolute;
+  z-index: 30;
+  pointer-events: none;
+  perspective: 1800px;
+}
+
+.bundle-sheet {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  background:
+    linear-gradient(to right, rgba(0, 0, 0, 0.08), transparent 12%, transparent 88%, rgba(0, 0, 0, 0.06)),
+    #fbf9f3;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+}
+
+.dark .bundle-sheet {
+  background:
+    linear-gradient(to right, rgba(0, 0, 0, 0.3), transparent 12%, transparent 88%, rgba(0, 0, 0, 0.2)),
+    #2a2a2e;
 }
 
 .book-flipbook-staging {

@@ -1344,7 +1344,7 @@ const loadTopic = async () => {
         loadStudentPageData()
         if (resumeIndex >= 0) {
           await nextTick()
-          flipbookRef.value?.turnToPage(resumeIndex)
+          flipbookRef.value?.turnToPage(resumeIndex, { animate: false })
         }
       }
     }
