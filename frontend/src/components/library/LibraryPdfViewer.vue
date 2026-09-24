@@ -254,6 +254,7 @@
           <div
             v-if="showNotesPanel && isStudentRole"
             class="absolute inset-x-0 bottom-0 z-40 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-2xl rounded-t-2xl p-3 max-h-[50%] flex flex-col"
+            :class="summaryStyle.panel"
           >
             <div class="flex items-center justify-between mb-1.5 flex-shrink-0">
               <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
@@ -261,6 +262,7 @@
               </p>
               <div class="flex items-center gap-2">
                 <span class="text-[11px] text-gray-400">{{ noteStatus === 'saving' ? 'Saving…' : noteStatus === 'saved' ? 'Saved' : '' }}</span>
+                <SummaryColorPicker v-model="summaryColor" />
                 <button @click="showNotesPanel = false" class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
                   <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -274,7 +276,8 @@
               rows="3"
               maxlength="2000"
               placeholder="What did you understand from this page? (only you can see this)"
-              class="flex-1 w-full text-sm px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 text-gray-700 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+              class="flex-1 w-full text-sm px-3 py-2 rounded-lg border placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 resize-none"
+              :class="summaryStyle.box"
             ></textarea>
           </div>
         </div>
@@ -358,6 +361,8 @@
 </template>
 
 <script setup lang="ts">
+import SummaryColorPicker from '@/components/enotes/SummaryColorPicker.vue'
+import { useSummaryColor } from '@/composables/useSummaryColor'
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { usePdfRenderer } from '@/composables/usePdfRenderer'
 import type { LibraryBook } from '@/types/library'
@@ -439,6 +444,8 @@ const READING_TINTS = [
 // page visit (unlike eNotes, a library book can run to hundreds of pages, so bulk-loading every
 // page's note upfront isn't worth it), never visible to the teacher/HOD.
 const showNotesPanel = ref(false)
+// Colour the student picked for their own notes (shared with the eNotes reader's My Summary)
+const { summaryColor, summaryStyle } = useSummaryColor()
 const pageNotes = ref<Record<number, string>>({})
 const noteStatus = ref<'idle' | 'saving' | 'saved'>('idle')
 const loadedNotePages = new Set<number>()

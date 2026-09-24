@@ -582,12 +582,15 @@
 
                       <!-- Student's own private summary of this page - never seen by the
                            teacher/HOD, just a small space to write what they understood. -->
-                      <div v-if="isStudentMode" class="mt-6 pt-4 border-t border-dashed border-gray-200 dark:border-gray-700">
-                        <div class="flex items-center justify-between mb-1.5">
-                          <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
+                      <div v-if="isStudentMode" class="mt-6 p-3 rounded-xl border border-dashed border-gray-200 dark:border-gray-700" :class="summaryStyle.panel">
+                        <div class="flex items-center justify-between gap-2 mb-1.5">
+                          <p class="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide flex items-center gap-1.5">
                             <span>📝</span><span>My Summary</span>
                           </p>
-                          <span class="text-[11px] text-gray-400 dark:text-gray-500">{{ pageNoteStatus[page.id] === 'saving' ? 'Saving…' : pageNoteStatus[page.id] === 'saved' ? 'Saved' : '' }}</span>
+                          <div class="flex items-center gap-2">
+                            <span class="text-[11px] text-gray-400 dark:text-gray-500">{{ pageNoteStatus[page.id] === 'saving' ? 'Saving…' : pageNoteStatus[page.id] === 'saved' ? 'Saved' : '' }}</span>
+                            <SummaryColorPicker v-model="summaryColor" />
+                          </div>
                         </div>
                         <!-- .stop is load-bearing: this textarea lives inside StPageFlip's own
                              ".stf__block" (html mode physically moves page content in there), and
@@ -603,7 +606,8 @@
                           rows="2"
                           maxlength="2000"
                           placeholder="What did you understand from this page? (only you can see this)"
-                          class="w-full text-sm px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 text-gray-700 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y"
+                          class="w-full text-sm px-3 py-2 rounded-lg border placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 resize-y"
+                          :class="summaryStyle.box"
                         ></textarea>
                       </div>
                     </div>
@@ -950,6 +954,8 @@ import { useReadModeStore } from '@/stores/readMode'
 import { applyHighlights, rangeToOffsets, removeHighlightMark, type StoredHighlight } from '@/utils/textHighlight'
 import AITutorPlayer from '@/components/enotes/AITutorPlayer.vue'
 import BookFlipbook from '@/components/common/BookFlipbook.vue'
+import SummaryColorPicker from '@/components/enotes/SummaryColorPicker.vue'
+import { useSummaryColor } from '@/composables/useSummaryColor'
 
 const router = useRouter()
 const route = useRoute()
@@ -1060,6 +1066,9 @@ const READING_TINTS = [
   { value: 'green', label: 'Soft Green', class: 'bg-emerald-500/10', swatchClass: 'bg-emerald-200' },
   { value: 'rose', label: 'Warm Rose', class: 'bg-rose-500/10', swatchClass: 'bg-rose-200' },
 ]
+
+// Colour the student picked for their own summaries (remembered on this device)
+const { summaryColor, summaryStyle } = useSummaryColor()
 
 // Student's own private per-page summary ("what I understood from this page") - loaded/saved via
 // PageNoteController, never visible to the teacher/HOD.

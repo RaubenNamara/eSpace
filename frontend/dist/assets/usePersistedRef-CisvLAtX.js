@@ -1,1 +1,0 @@
-import{O as o,r as c}from"./index-CzUpwzJX.js";function l(e,s){let r=s;try{const t=localStorage.getItem(e);t!==null&&(r=JSON.parse(t))}catch{}const a=c(r);return o(a,t=>{try{localStorage.setItem(e,JSON.stringify(t))}catch{}}),a}export{l as u};
