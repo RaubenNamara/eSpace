@@ -1,9 +1,12 @@
 <template>
-  <div class="shelf-book-scene" :class="{ 'is-small': size === 'sm', 'is-large': size === 'lg' }">
+  <div class="shelf-book-scene" :class="{ 'is-small': size === 'sm', 'is-large': size === 'lg', 'is-real': variant === 'book' }">
     <div class="shelf-book" :style="coverStyle">
       <!-- Page block seen past the right edge of the cover and along the top - the book is
            turned a few degrees on the shelf, so its thickness shows like a real standing book. -->
-      <div class="book-spine" aria-hidden="true"></div>
+      <div class="book-spine" aria-hidden="true">
+        <!-- Library books stand spine-out, so the spine carries the title like a printed book -->
+        <span v-if="variant === 'book'" class="rb-spine-title">{{ title }}</span>
+      </div>
       <div class="book-side" aria-hidden="true"></div>
       <div class="book-top" aria-hidden="true"></div>
 
@@ -63,14 +66,23 @@
             <div class="notes-lines" aria-hidden="true"></div>
           </div>
         </template>
+        <!-- eLibrary: a real published book - its actual first page as the cover, or a printed
+             dust-jacket design when there's no picture -->
         <template v-else>
-          <div v-if="label" class="book-band">{{ label }}</div>
-          <div class="book-rule" aria-hidden="true"></div>
-          <p class="book-title">{{ title }}</p>
-          <div class="book-rule book-rule--bottom" aria-hidden="true"></div>
+          <img v-if="coverImage" class="rb-photo" :src="resolveAssetUrl(coverImage)" alt="" loading="lazy" draggable="false">
+          <template v-else>
+            <p v-if="label" class="rb-kicker">{{ label }}</p>
+            <div class="rb-ornament" aria-hidden="true"></div>
+            <p class="book-title rb-title">{{ title }}</p>
+            <div class="rb-ornament" aria-hidden="true"></div>
+            <p v-if="author" class="rb-author">{{ author }}</p>
+            <p class="rb-imprint">St. Mark eLibrary</p>
+          </template>
+          <div class="rb-groove" aria-hidden="true"></div>
+          <div class="rb-sheen" aria-hidden="true"></div>
         </template>
 
-        <p v-if="footer && !cover" class="book-footer">{{ footer }}</p>
+        <p v-if="footer && !cover && variant === 'notes'" class="book-footer">{{ footer }}</p>
 
         <!-- Corner overlays (status ribbon, checkbox, etc.) supplied by the page -->
         <slot />
@@ -97,12 +109,19 @@ const props = withDefaults(defineProps<{
   size?: 'sm' | 'md' | 'lg'
   // A teacher-designed cover (eNotes) - replaces the default look when set
   cover?: ENoteCoverDesign | null
+  // eLibrary: cover picture (root-relative upload path), author, and page count (thickness)
+  coverImage?: string | null
+  author?: string | null
+  pages?: number | null
 }>(), {
   label: '',
   footer: '',
   variant: 'book',
   size: 'md',
-  cover: null
+  cover: null,
+  coverImage: null,
+  author: null,
+  pages: null
 })
 
 // Book-cloth colours: [light, dark] ends of the cover gradient
@@ -130,12 +149,19 @@ const coverStyle = computed(() => {
   const [light, dark] = props.cover
     ? [props.cover.color, shadeColor(props.cover.color, -0.4)]
     : cloths[Math.abs(props.seed) % cloths.length]
-  return {
+  const style: Record<string, string> = {
     '--cloth-light': light,
     '--cloth-dark': dark,
     '--cloth-fade': hexToRgba(light, 0.92),
     '--longest': String(longestWord.value)
-  } as Record<string, string>
+  }
+  // A library book is as thick as it is long: ~8px for a handout up to ~26px for a 600+ page
+  // textbook (16px when the page count isn't known yet)
+  if (props.variant === 'book' && props.size !== 'sm') {
+    const depth = props.pages ? 8 + Math.min(props.pages, 600) / 600 * 18 : 16
+    style['--book-depth'] = `${Math.round(depth)}px`
+  }
+  return style
 })
 
 // The cover picture, or (no picture chosen) a soft tint of the cover colour so the layout still
@@ -377,6 +403,158 @@ const artStyle = computed(() => {
 }
 
 .is-small .book-title { -webkit-line-clamp: 3; }
+
+/* ---------- eLibrary: real published books ----------
+   Turned the other way from eNotes so the reader sees a rounded, banded spine carrying the title
+   (a printed book on a library shelf) instead of an exercise book's page edges. */
+.is-real .shelf-book {
+  transform: rotateX(7deg) rotateY(24deg);
+}
+
+.group:hover .is-real .shelf-book,
+.group:focus-visible .is-real .shelf-book {
+  transform: rotateX(4deg) rotateY(8deg) translateY(-10px) translateZ(18px);
+}
+
+.is-real .book-spine {
+  border-radius: 4px 0 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background:
+    /* raised bands near the head and tail, like a sewn hardcover */
+    linear-gradient(to bottom,
+      transparent 7%, rgba(246, 223, 168, 0.75) 7%, rgba(246, 223, 168, 0.75) 8.2%, transparent 8.2%,
+      transparent 10%, rgba(246, 223, 168, 0.75) 10%, rgba(246, 223, 168, 0.75) 11.2%, transparent 11.2%,
+      transparent 88.8%, rgba(246, 223, 168, 0.75) 88.8%, rgba(246, 223, 168, 0.75) 90%, transparent 90%,
+      transparent 91.8%, rgba(246, 223, 168, 0.75) 91.8%, rgba(246, 223, 168, 0.75) 93%, transparent 93%),
+    /* rounded spine: dark at the edges, lit along the middle */
+    linear-gradient(to right, rgba(0, 0, 0, 0.5), rgba(255, 255, 255, 0.16) 45%, rgba(0, 0, 0, 0.1) 60%, rgba(0, 0, 0, 0.45)),
+    var(--cloth-light);
+}
+
+.rb-spine-title {
+  writing-mode: vertical-rl;
+  max-height: 72%;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-weight: 700;
+  font-size: min(9px, calc(var(--book-depth) * 0.58));
+  letter-spacing: 0.04em;
+  color: #f6dfa8;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.is-real .book-front {
+  border-radius: 1px 4px 4px 1px;
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.3),
+    inset -3px 0 4px rgba(0, 0, 0, 0.2);
+}
+
+/* The cover board overhangs the page block by a hair at head and tail */
+.is-real .book-side {
+  top: 3px;
+  bottom: 3px;
+}
+
+.rb-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+}
+
+/* Crease where the jacket folds around the front board */
+.rb-groove {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 6%;
+  width: 3px;
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.28), rgba(255, 255, 255, 0.25), rgba(0, 0, 0, 0.12));
+  pointer-events: none;
+}
+
+/* Glossy dust-jacket highlight */
+.rb-sheen {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, 0.22) 42%, rgba(255, 255, 255, 0.05) 50%, transparent 58%),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.12), transparent 25%, transparent 80%, rgba(0, 0, 0, 0.15));
+  pointer-events: none;
+}
+
+/* The shelf-book's own hinge strip reads as a jacket flap edge on real books - hide it */
+.is-real .book-hinge {
+  display: none;
+}
+
+.rb-kicker {
+  font-size: calc(var(--book-w) * 0.062);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #f6dfa8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.rb-ornament {
+  position: relative;
+  width: 52%;
+  height: 7px;
+  margin: 5px 0;
+  flex-shrink: 0;
+  background: linear-gradient(to right, transparent, rgba(246, 223, 168, 0.85), transparent) center / 100% 1px no-repeat;
+}
+
+.rb-ornament::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  background: #f6dfa8;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.rb-title {
+  margin: auto 0;
+  font-size: min(calc(var(--book-w) * 0.12), calc(var(--book-w) * 0.72 / (var(--longest) * 0.6)));
+  -webkit-line-clamp: 5;
+}
+
+.rb-author {
+  margin-top: auto;
+  max-width: 100%;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-size: calc(var(--book-w) * 0.075);
+  color: #fbf3de;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rb-imprint {
+  margin-top: 2px;
+  font-size: calc(var(--book-w) * 0.045);
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(246, 223, 168, 0.7);
+  white-space: nowrap;
+}
 
 /* ---------- Teacher-designed covers ---------- */
 .book-front.has-cover {

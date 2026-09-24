@@ -18,6 +18,10 @@ export interface LibraryBook {
   file_size: number | null
   allow_download?: boolean | number
   total_pages: number | null
+  author?: string | null
+  // Root-relative cover picture ('/uploads/library/covers/...'): the PDF's first page captured
+  // automatically ('auto_' files) or an image the teacher uploaded. Null = printed jacket design.
+  cover_image?: string | null
   uploaded_by?: number
   status: 'draft' | 'published' | 'archived'
   published_at: string | null
@@ -40,5 +44,6 @@ export interface LibraryBookForm {
   classTarget: ClassTarget
   status: 'draft' | 'published' | 'archived'
   allow_download: boolean
+  author: string
   file: File | null
 }

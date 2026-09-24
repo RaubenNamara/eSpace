@@ -106,7 +106,7 @@ class LibraryController extends Controller
 
         $whereClause = implode(' AND ', $where);
 
-        $sql = "SELECT lb.id, lb.title, lb.description, lb.subject_id, lb.class_id, lb.class_group_name, lb.file_path,
+        $sql = "SELECT lb.id, lb.title, lb.description, lb.author, lb.cover_image, lb.subject_id, lb.class_id, lb.class_group_name, lb.file_path,
                        lb.file_type, lb.file_size, lb.allow_download, lb.total_pages, lb.published_at, lb.created_at,
                        s.name as subject_name, s.code as subject_code,
                        t.first_name as teacher_first_name, t.last_name as teacher_last_name
@@ -145,7 +145,7 @@ class LibraryController extends Controller
 
         $whereClause = $this->visibilityClause();
 
-        $sql = "SELECT lb.id, lb.title, lb.description, lb.subject_id, lb.class_id, lb.class_group_name, lb.file_path,
+        $sql = "SELECT lb.id, lb.title, lb.description, lb.author, lb.cover_image, lb.subject_id, lb.class_id, lb.class_group_name, lb.file_path,
                        lb.file_type, lb.file_size, lb.allow_download, lb.total_pages, lb.published_at, lb.created_at,
                        s.name as subject_name, s.code as subject_code,
                        t.first_name as teacher_first_name, t.last_name as teacher_last_name

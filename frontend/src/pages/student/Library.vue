@@ -56,7 +56,7 @@
           @click="previewBook = book"
           class="group text-left w-[104px] sm:w-[122px] flex-shrink-0"
         >
-          <ShelfBook :title="book.title" :seed="book.id" :label="shelfLabel(book)" :footer="fileLabel(book)" />
+          <ShelfBook :title="book.title" :seed="book.id" :label="shelfLabel(book)" :cover-image="book.cover_image" :author="book.author" :pages="book.total_pages" />
           <p class="mt-6 text-xs font-medium text-gray-800 dark:text-gray-200 line-clamp-2 leading-snug">{{ book.title }}</p>
           <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ book.subject_name || 'General' }}</p>
         </button>
@@ -74,10 +74,10 @@
           @click="previewBook = book"
           class="group text-left w-[104px] sm:w-[122px] flex-shrink-0"
         >
-          <ShelfBook :title="book.title" :seed="book.id" :label="shelfLabel(book)" :footer="fileLabel(book)" />
+          <ShelfBook :title="book.title" :seed="book.id" :label="shelfLabel(book)" :cover-image="book.cover_image" :author="book.author" :pages="book.total_pages" />
           <p class="mt-6 text-xs font-medium text-gray-800 dark:text-gray-200 line-clamp-2 leading-snug">{{ book.title }}</p>
-          <p v-if="book.teacher_first_name" class="text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ book.teacher_first_name }} {{ book.teacher_last_name }}</p>
-          <p class="text-[11px] text-gray-400 dark:text-gray-500">{{ formatFileSize(book.file_size) }}</p>
+          <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ book.author || [book.teacher_first_name, book.teacher_last_name].filter(Boolean).join(' ') }}</p>
+          <p class="text-[11px] text-gray-400 dark:text-gray-500">{{ fileLabel(book) }}<template v-if="book.total_pages"> &middot; {{ book.total_pages }} pages</template><template v-else-if="book.file_size"> &middot; {{ formatFileSize(book.file_size) }}</template></p>
         </button>
       </Bookshelf>
     </div>

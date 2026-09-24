@@ -266,14 +266,15 @@ class LibraryController extends Controller
             'class_id' => $classTarget['class_id'],
             'class_group_name' => $classTarget['class_group_name'],
             'department_id' => $departmentId,
-            'status' => $status
+            'status' => $status,
+            'author' => mb_substr(trim(strip_tags((string) ($data['author'] ?? ''))), 0, 100) ?: null
         ];
 
         $sql = "INSERT INTO library_books
-                    (title, description, subject_id, class_id, class_group_name, department_id, file_path, file_type, file_size,
+                    (title, description, author, subject_id, class_id, class_group_name, department_id, file_path, file_type, file_size,
                      allow_download, uploaded_by, is_approved, status, published_at, created_at, updated_at)
                 VALUES
-                    (:title, :description, :subject_id, :class_id, :class_group_name, :department_id, :file_path, :file_type, :file_size,
+                    (:title, :description, :author, :subject_id, :class_id, :class_group_name, :department_id, :file_path, :file_type, :file_size,
                      :allow_download, :uploaded_by, 1, :status, :published_at, NOW(), NOW())";
 
         $stmt = $db->prepare($sql);
@@ -390,6 +391,12 @@ class LibraryController extends Controller
             $params['status'] = $data['status'];
         }
 
+        if (array_key_exists('author', $data)) {
+            $author = mb_substr(trim(strip_tags((string) $data['author'])), 0, 100);
+            $updates[] = 'author = :author';
+            $params['author'] = $author !== '' ? $author : null;
+        }
+
         if (array_key_exists('allow_download', $data)) {
             $updates[] = 'allow_download = :allow_download';
             $params['allow_download'] = $this->toBool($data['allow_download']) ? 1 : 0;
@@ -456,7 +463,7 @@ class LibraryController extends Controller
         $id = (int) $id;
         $db = $this->getDb();
 
-        $stmt = $db->prepare("SELECT id, file_path FROM library_books WHERE id = :id AND uploaded_by = :teacher_id AND deleted_at IS NULL");
+        $stmt = $db->prepare("SELECT id, file_path, cover_image FROM library_books WHERE id = :id AND uploaded_by = :teacher_id AND deleted_at IS NULL");
         $stmt->execute(['id' => $id, 'teacher_id' => $teacherId]);
         $book = $stmt->fetch();
 
@@ -481,6 +488,14 @@ class LibraryController extends Controller
                 'id' => $id
             ]);
 
+            // An automatic cover was a picture of the OLD file's first page - drop it so the
+            // teacher's library page regenerates it from the new file. A cover the teacher
+            // uploaded themselves is kept.
+            if ($this->isAutoCover($book['cover_image'] ?? null)) {
+                $this->deleteCoverFile($book['cover_image']);
+                $db->prepare("UPDATE library_books SET cover_image = NULL WHERE id = :id")->execute(['id' => $id]);
+            }
+
             // Old file's path is root-relative (e.g. '/uploads/library/xyz.pdf') - resolve it back
             // to a real filesystem path the same way handleUpload() builds new ones, then remove
             // it now that the new file is safely referenced by the DB row.
@@ -502,6 +517,182 @@ class LibraryController extends Controller
             error_log('Failed to replace library book file: ' . $e->getMessage());
             $this->error('Failed to replace file', 500);
         }
+    }
+
+    private const COVER_SUBDIR = 'library/covers';
+    private const MAX_COVER_SIZE = 8 * 1024 * 1024; // 8MB
+
+    /** Covers generated in the browser from the PDF's first page are saved with this prefix. */
+    private function isAutoCover(?string $coverPath): bool
+    {
+        return $coverPath !== null && str_starts_with(basename($coverPath), 'auto_');
+    }
+
+    private function deleteCoverFile(?string $coverPath): void
+    {
+        $relative = ltrim((string) $coverPath, '/');
+        if ($relative !== '' && str_starts_with($relative, 'uploads/' . self::COVER_SUBDIR . '/')) {
+            $path = __DIR__ . '/../../../public/' . $relative;
+            if (is_file($path)) {
+                @unlink($path);
+            }
+        }
+    }
+
+    /**
+     * Set a book's cover picture - either the PDF's first page rendered in the teacher's browser
+     * (auto=1) or an image the teacher chose. Stored under uploads/library/covers/, downscaled to
+     * shelf size when GD is available.
+     * POST /teacher/library/{id}/cover   (multipart: cover, auto)
+     */
+    public function uploadCover($id): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+
+        $teacherId = $this->getTeacherId();
+        if (!$teacherId) {
+            $this->error('Teacher not found', 403);
+            return;
+        }
+
+        $id = (int) $id;
+        $db = $this->getDb();
+        $stmt = $db->prepare("SELECT id, cover_image FROM library_books WHERE id = :id AND uploaded_by = :teacher_id AND deleted_at IS NULL");
+        $stmt->execute(['id' => $id, 'teacher_id' => $teacherId]);
+        $book = $stmt->fetch();
+        if (!$book) {
+            $this->notFound('Book not found');
+            return;
+        }
+
+        $file = $_FILES['cover'] ?? null;
+        if (!$file || $file['error'] !== UPLOAD_ERR_OK) {
+            $this->error('No cover image uploaded', 400);
+            return;
+        }
+        if ($file['size'] > self::MAX_COVER_SIZE) {
+            $this->error('Cover image must be under 8MB', 400);
+            return;
+        }
+
+        $mimeType = MimeType::detect($file['tmp_name'], $file['name'] ?? null);
+        $extensions = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
+        if (!isset($extensions[$mimeType]) || @getimagesize($file['tmp_name']) === false) {
+            $this->error('Cover must be a JPEG, PNG or WebP image', 400);
+            return;
+        }
+
+        $auto = $this->toBool($_POST['auto'] ?? false);
+        // A background auto-cover must never overwrite a cover the teacher chose themselves
+        // (e.g. a stale auto-generation finishing after they uploaded their own).
+        if ($auto && !empty($book['cover_image']) && !$this->isAutoCover($book['cover_image'])) {
+            $this->success(['cover_image' => $book['cover_image']], 'Custom cover kept');
+            return;
+        }
+
+        $dir = __DIR__ . '/../../../public/uploads/' . self::COVER_SUBDIR . '/';
+        if (!is_dir($dir) && !mkdir($dir, 0755, true)) {
+            $this->error('Could not save cover image', 500);
+            return;
+        }
+
+        $filename = ($auto ? 'auto_' : 'cover_') . $id . '_' . bin2hex(random_bytes(6)) . '.' . $extensions[$mimeType];
+        $path = $dir . $filename;
+        if (!move_uploaded_file($file['tmp_name'], $path)) {
+            $this->error('Could not save cover image', 500);
+            return;
+        }
+
+        try {
+            $this->shrinkCover($path, $mimeType);
+        } catch (\Throwable $e) {
+            error_log('Library cover resize skipped: ' . $e->getMessage());
+        }
+
+        $url = '/uploads/' . self::COVER_SUBDIR . '/' . $filename;
+        $db->prepare("UPDATE library_books SET cover_image = :cover, updated_at = NOW() WHERE id = :id")
+            ->execute(['cover' => $url, 'id' => $id]);
+
+        // The browser that rendered an auto-cover also learned the PDF's page count - the shelf
+        // uses it for the book's thickness.
+        $totalPages = (int) ($_POST['total_pages'] ?? 0);
+        if ($auto && $totalPages > 0 && $totalPages < 100000) {
+            $db->prepare("UPDATE library_books SET total_pages = :pages WHERE id = :id")
+                ->execute(['pages' => $totalPages, 'id' => $id]);
+        }
+        $this->deleteCoverFile($book['cover_image'] ?? null);
+
+        $this->success(['cover_image' => $url], 'Cover saved');
+    }
+
+    /**
+     * Remove a book's cover picture (the shelf falls back to a printed jacket design).
+     * DELETE /teacher/library/{id}/cover
+     */
+    public function deleteCover($id): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+
+        $teacherId = $this->getTeacherId();
+        if (!$teacherId) {
+            $this->error('Teacher not found', 403);
+            return;
+        }
+
+        $id = (int) $id;
+        $db = $this->getDb();
+        $stmt = $db->prepare("SELECT id, cover_image FROM library_books WHERE id = :id AND uploaded_by = :teacher_id AND deleted_at IS NULL");
+        $stmt->execute(['id' => $id, 'teacher_id' => $teacherId]);
+        $book = $stmt->fetch();
+        if (!$book) {
+            $this->notFound('Book not found');
+            return;
+        }
+
+        $db->prepare("UPDATE library_books SET cover_image = NULL, updated_at = NOW() WHERE id = :id")->execute(['id' => $id]);
+        $this->deleteCoverFile($book['cover_image'] ?? null);
+        $this->success([], 'Cover removed');
+    }
+
+    /** Downscales a cover to at most 600px wide - it's only ever shown at shelf size. */
+    private function shrinkCover(string $path, string $mimeType): void
+    {
+        if (!extension_loaded('gd')) {
+            return;
+        }
+        [$width, $height] = getimagesize($path) ?: [0, 0];
+        $maxWidth = 600;
+        if ($width <= $maxWidth || $height <= 0) {
+            return;
+        }
+        $source = match ($mimeType) {
+            'image/jpeg' => imagecreatefromjpeg($path),
+            'image/png' => imagecreatefrompng($path),
+            'image/webp' => function_exists('imagecreatefromwebp') ? imagecreatefromwebp($path) : false,
+            default => false,
+        };
+        if (!$source) {
+            return;
+        }
+        $newHeight = (int) round($height * $maxWidth / $width);
+        $resized = imagecreatetruecolor($maxWidth, $newHeight);
+        imagealphablending($resized, false);
+        imagesavealpha($resized, true);
+        imagecopyresampled($resized, $source, 0, 0, 0, 0, $maxWidth, $newHeight, $width, $height);
+        match ($mimeType) {
+            'image/jpeg' => imagejpeg($resized, $path, 85),
+            'image/png' => imagepng($resized, $path, 6),
+            'image/webp' => function_exists('imagewebp') ? imagewebp($resized, $path, 85) : null,
+            default => null,
+        };
+        imagedestroy($source);
+        imagedestroy($resized);
     }
 
     /**

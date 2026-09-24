@@ -208,7 +208,9 @@
               :title="book.title"
               :seed="book.id"
               :label="(book.subject_code || book.subject_name || '').slice(0, 10).toUpperCase()"
-              :footer="(book.file_type || 'pdf').toUpperCase()"
+              :cover-image="book.cover_image"
+              :author="book.author"
+              :pages="book.total_pages"
             >
               <input
                 type="checkbox"
@@ -229,7 +231,7 @@
               >
                 {{ book.status.charAt(0).toUpperCase() + book.status.slice(1) }}
               </span>
-              <span class="text-[10px] text-gray-400 dark:text-gray-500 truncate">{{ formatFileSize(book.file_size) }}</span>
+              <span class="text-[10px] text-gray-400 dark:text-gray-500 truncate">{{ (book.file_type || 'pdf').toUpperCase() }} &middot; {{ formatFileSize(book.file_size) }}</span>
             </div>
             <p class="mt-1 text-xs font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{{ book.title }}</p>
             <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">
@@ -295,6 +297,51 @@
                 placeholder="Enter a short description..."
                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
               ></textarea>
+            </div>
+
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Author</label>
+              <input
+                v-model="bookForm.author"
+                type="text"
+                maxlength="100"
+                placeholder="e.g. M. Nelkon (printed on the book's cover)"
+                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+              >
+            </div>
+
+            <!-- Book cover (existing books) - the shelf shows this like a real book's cover -->
+            <div v-if="editingBook" class="mb-4 border border-gray-200 dark:border-gray-700 rounded-lg p-3 flex items-center gap-4">
+              <ShelfBook
+                size="sm"
+                :title="bookForm.title || editingBook.title"
+                :seed="editingBook.id"
+                :label="(editingBook.subject_code || editingBook.subject_name || '').slice(0, 10).toUpperCase()"
+                :cover-image="editingBook.cover_image"
+                :author="bookForm.author"
+                :pages="editingBook.total_pages"
+              />
+              <div class="min-w-0 flex-1 space-y-2">
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Book cover</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                  {{ editingBook.cover_image
+                    ? (isAutoCover(editingBook.cover_image) ? 'Using the first page of the file.' : 'Using your own picture.')
+                    : 'No picture - a printed jacket with the title and author is shown.' }}
+                </p>
+                <div class="flex flex-wrap gap-2">
+                  <button type="button" @click="coverFileInput?.click()" :disabled="coverBusy" class="px-2.5 py-1.5 text-xs font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">
+                    Upload picture
+                  </button>
+                  <button v-if="editingBook.file_type === 'pdf'" type="button" @click="useFirstPageCover" :disabled="coverBusy" class="px-2.5 py-1.5 text-xs font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">
+                    Use first page
+                  </button>
+                  <button v-if="editingBook.cover_image" type="button" @click="removeCover" :disabled="coverBusy" class="px-2.5 py-1.5 text-xs font-medium rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-50">
+                    Remove
+                  </button>
+                  <span v-if="coverBusy" class="text-xs text-gray-400 self-center">Working&hellip;</span>
+                </div>
+                <input ref="coverFileInput" type="file" accept="image/jpeg,image/png,image/webp" class="hidden" @change="onCoverFileSelected">
+              </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -432,6 +479,8 @@ import TeacherClassSelector from '@/components/teacher/TeacherClassSelector.vue'
 import BulkActionBar from '@/components/common/BulkActionBar.vue'
 import Bookshelf from '@/components/library/Bookshelf.vue'
 import ShelfBook from '@/components/library/ShelfBook.vue'
+import { renderPdfCover } from '@/utils/pdfCover'
+import { resolveAssetUrl } from '@/utils/url'
 import type { LibraryBook, LibraryBookForm } from '@/types/library'
 import type { ENoteAssignments } from '@/types/enotes'
 import { LIBRARY_FILE_ACCEPT, LIBRARY_FILE_ERROR, isAllowedLibraryFile } from '@/utils/libraryFileValidation'
@@ -473,6 +522,7 @@ const bookForm = ref<LibraryBookForm>({
   classTarget: { scope: 'stream', class_id: null, class_group_name: null },
   status: 'draft',
   allow_download: false,
+  author: '',
   file: null
 })
 
@@ -600,11 +650,110 @@ const loadBooks = async () => {
     const response = await axios.get(`${API_BASE}/teacher/library`)
     if (response.data.success) {
       books.value = response.data.data.books || []
+      generateMissingCovers()
     }
   } catch (error) {
     console.error('Failed to load library:', error)
   } finally {
     loading.value = false
+  }
+}
+
+// ---- Book covers ----
+// Every PDF gets its real first page as its shelf cover, rendered here in the teacher's browser
+// (the server has no PDF renderer) and uploaded once. Runs quietly in the background, one book at
+// a time, only for PDFs that don't have a cover yet; each book is tried at most once per visit.
+const isAutoCover = (path?: string | null) => !!path && /\/auto_[^/]*$/.test(path)
+const coverAttempted = new Set<number>()
+let generatingCovers = false
+
+const uploadCover = async (bookId: number, blob: Blob, auto: boolean, totalPages?: number) => {
+  const data = new FormData()
+  data.append('cover', blob, auto ? 'first-page.jpg' : 'cover')
+  data.append('auto', auto ? '1' : '0')
+  if (totalPages) data.append('total_pages', String(totalPages))
+  const response = await axios.post(`${API_BASE}/teacher/library/${bookId}/cover`, data)
+  const coverImage: string = response.data.data.cover_image
+  for (const target of [books.value.find(b => b.id === bookId), editingBook.value?.id === bookId ? editingBook.value : null]) {
+    if (!target) continue
+    target.cover_image = coverImage
+    if (auto && totalPages) target.total_pages = totalPages
+  }
+}
+
+const generateMissingCovers = async () => {
+  if (generatingCovers) return
+  generatingCovers = true
+  try {
+    for (;;) {
+      const book = books.value.find(b => b.file_type === 'pdf' && !b.cover_image && !coverAttempted.has(b.id))
+      if (!book) break
+      coverAttempted.add(book.id)
+      try {
+        const { blob, totalPages } = await renderPdfCover(resolveAssetUrl(book.file_path))
+        await uploadCover(book.id, blob, true, totalPages)
+      } catch (error) {
+        console.warn(`Could not create a cover for book ${book.id}:`, error)
+      }
+    }
+  } finally {
+    generatingCovers = false
+  }
+}
+
+const coverFileInput = ref<HTMLInputElement | null>(null)
+const coverBusy = ref(false)
+
+const onCoverFileSelected = async (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file || !editingBook.value) return
+  coverBusy.value = true
+  try {
+    await uploadCover(editingBook.value.id, file, false)
+    toast.success('Cover updated')
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Could not upload that picture')
+  } finally {
+    coverBusy.value = false
+  }
+}
+
+const useFirstPageCover = async () => {
+  if (!editingBook.value) return
+  coverBusy.value = true
+  try {
+    const { blob, totalPages } = await renderPdfCover(resolveAssetUrl(editingBook.value.file_path))
+    // A deliberate choice, so it replaces a custom picture too: clear first, then upload as auto
+    if (editingBook.value.cover_image && !isAutoCover(editingBook.value.cover_image)) {
+      await axios.delete(`${API_BASE}/teacher/library/${editingBook.value.id}/cover`)
+    }
+    await uploadCover(editingBook.value.id, blob, true, totalPages)
+    toast.success('Cover set to the first page')
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Could not read the first page of this file')
+  } finally {
+    coverBusy.value = false
+  }
+}
+
+const removeCover = async () => {
+  if (!editingBook.value) return
+  coverBusy.value = true
+  try {
+    await axios.delete(`${API_BASE}/teacher/library/${editingBook.value.id}/cover`)
+    const id = editingBook.value.id
+    editingBook.value.cover_image = null
+    const listed = books.value.find(b => b.id === id)
+    if (listed) listed.cover_image = null
+    // Don't let the background generator immediately put the first page back
+    coverAttempted.add(id)
+    toast.success('Cover removed')
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Could not remove the cover')
+  } finally {
+    coverBusy.value = false
   }
 }
 
@@ -627,7 +776,7 @@ const openCreateModal = () => {
   fileError.value = ''
   showReplaceFile.value = false
   replaceFileInput.value = null
-  bookForm.value = { title: '', description: '', subject_id: '', classTarget: { scope: 'stream', class_id: null, class_group_name: null }, status: 'draft', allow_download: false, file: null }
+  bookForm.value = { title: '', description: '', subject_id: '', classTarget: { scope: 'stream', class_id: null, class_group_name: null }, status: 'draft', allow_download: false, author: '', file: null }
   showBookModal.value = true
 }
 
@@ -645,6 +794,7 @@ const editBook = (book: LibraryBook) => {
       : { scope: 'stream', class_id: book.class_id, class_group_name: null },
     status: book.status,
     allow_download: !!book.allow_download,
+    author: book.author || '',
     file: null
   }
   showBookModal.value = true
@@ -700,7 +850,10 @@ const replaceFile = async () => {
       editingBook.value = { ...editingBook.value, ...response.data.data }
       showReplaceFile.value = false
       replaceFileInput.value = null
+      coverAttempted.delete(editingBook.value!.id)
       await loadBooks()
+      const refreshed = books.value.find(b => b.id === editingBook.value?.id)
+      if (refreshed && editingBook.value) editingBook.value.cover_image = refreshed.cover_image
     }
   } catch (error: any) {
     console.error('Failed to replace file:', error)
@@ -725,7 +878,8 @@ const saveBook = async () => {
         class_id: bookForm.value.classTarget.class_id,
         class_group_name: bookForm.value.classTarget.class_group_name,
         status: bookForm.value.status,
-        allow_download: bookForm.value.allow_download
+        allow_download: bookForm.value.allow_download,
+        author: bookForm.value.author
       })
     } else {
       if (!bookForm.value.file) {
@@ -741,6 +895,7 @@ const saveBook = async () => {
       if (bookForm.value.classTarget.class_group_name !== null) formData.append('class_group_name', bookForm.value.classTarget.class_group_name)
       formData.append('status', bookForm.value.status)
       formData.append('allow_download', bookForm.value.allow_download ? '1' : '0')
+      formData.append('author', bookForm.value.author)
       formData.append('file', bookForm.value.file)
 
       await axios.post(`${API_BASE}/teacher/library`, formData, {

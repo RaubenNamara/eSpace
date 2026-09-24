@@ -267,6 +267,8 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/library/{id}', 'eSpace\App\Controllers\Teacher\LibraryController@show');
         Router::put('/library/{id}', 'eSpace\App\Controllers\Teacher\LibraryController@update');
         Router::post('/library/{id}/replace-file', 'eSpace\App\Controllers\Teacher\LibraryController@replaceFile');
+        Router::post('/library/{id}/cover', 'eSpace\App\Controllers\Teacher\LibraryController@uploadCover');
+        Router::delete('/library/{id}/cover', 'eSpace\App\Controllers\Teacher\LibraryController@deleteCover');
         Router::delete('/library/{id}', 'eSpace\App\Controllers\Teacher\LibraryController@delete');
 
         // Videos
