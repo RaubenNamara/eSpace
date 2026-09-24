@@ -196,33 +196,37 @@
           :key="shelf.name"
           :title="shelf.name"
           :count="shelf.books.length"
+          spines
         >
-          <div
+          <ShelfSlot
             v-for="book in shelf.books"
             :key="book.id"
-            class="group relative w-[104px] sm:w-[122px] flex-shrink-0 cursor-pointer"
+            :label="book.title"
             :title="`Updated ${formatDate(book.updated_at || book.created_at)}`"
-            @click="previewBook = book"
+            @open="previewBook = book"
           >
             <ShelfBook
+              spine-out
+              :selected="bulk.isSelected(book.id)"
               :title="book.title"
               :seed="book.id"
               :label="(book.subject_code || book.subject_name || '').slice(0, 10).toUpperCase()"
               :cover-image="book.cover_image"
               :author="book.author"
               :pages="book.total_pages"
-            >
-              <input
-                type="checkbox"
-                :checked="bulk.isSelected(book.id)"
-                @click.stop
-                @change="bulk.toggle(book.id)"
-                class="absolute top-1.5 right-1.5 z-10 w-4 h-4 rounded border-white/60 text-indigo-600 focus:ring-indigo-500"
-                :aria-label="`Select ${book.title}`"
-              >
-            </ShelfBook>
+            />
 
-            <div class="mt-6 flex items-center gap-1.5">
+            <template #details>
+              <label class="flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400 cursor-pointer select-none mb-1.5">
+                <input
+                  type="checkbox"
+                  :checked="bulk.isSelected(book.id)"
+                  @change="bulk.toggle(book.id)"
+                  class="w-3.5 h-3.5 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                >
+                Select
+              </label>
+            <div class="flex items-center gap-1.5">
               <span
                 class="px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
                 :class="book.status === 'published' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
@@ -233,7 +237,8 @@
               </span>
               <span class="text-[10px] text-gray-400 dark:text-gray-500 truncate">{{ (book.file_type || 'pdf').toUpperCase() }} &middot; {{ formatFileSize(book.file_size) }}</span>
             </div>
-            <p class="mt-1 text-xs font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{{ book.title }}</p>
+            <p class="mt-1 text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug">{{ book.title }}</p>
+            <p v-if="book.author" class="text-[11px] italic text-gray-500 dark:text-gray-400 truncate">{{ book.author }}</p>
             <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">
               {{ book.class_group_name ? `${book.class_group_name} (All Streams)` : book.class_stream_name ? `${book.class_name} - ${book.class_stream_name}` : book.class_name }}
             </p>
@@ -257,7 +262,8 @@
                     </svg>
                   </button>
             </div>
-          </div>
+            </template>
+          </ShelfSlot>
         </Bookshelf>
       </div>
     </template>
@@ -479,6 +485,7 @@ import TeacherClassSelector from '@/components/teacher/TeacherClassSelector.vue'
 import BulkActionBar from '@/components/common/BulkActionBar.vue'
 import Bookshelf from '@/components/library/Bookshelf.vue'
 import ShelfBook from '@/components/library/ShelfBook.vue'
+import ShelfSlot from '@/components/library/ShelfSlot.vue'
 import { renderPdfCover } from '@/utils/pdfCover'
 import { resolveAssetUrl } from '@/utils/url'
 import type { LibraryBook, LibraryBookForm } from '@/types/library'

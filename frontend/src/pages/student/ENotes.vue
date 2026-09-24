@@ -54,14 +54,16 @@
         :key="group.id"
         :title="group.name"
         :count="group.topics.length"
+        spines
       >
-        <RouterLink
+        <ShelfSlot
           v-for="topic in group.topics"
           :key="topic.id"
-          :to="`/student/enotes/${topic.id}`"
-          class="group text-left w-[104px] sm:w-[122px] flex-shrink-0"
+          :label="topic.title"
+          @open="router.push(`/student/enotes/${topic.id}`)"
         >
           <ShelfBook
+            spine-out
             variant="notes"
             :title="topic.title"
             :seed="topic.id"
@@ -69,10 +71,13 @@
             :footer="`${topic.total_pages} ${topic.total_pages === 1 ? 'page' : 'pages'}`"
             :cover="parseCoverDesign(topic.cover_design)"
           />
-          <p class="mt-6 text-xs font-medium text-gray-800 dark:text-gray-200 line-clamp-2 leading-snug group-hover:text-amber-700 dark:group-hover:text-amber-400 transition-colors">{{ topic.title }}</p>
+          <template #details>
+          <p class="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug">{{ topic.title }}</p>
           <p v-if="topic.teacher_first_name" class="text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ topic.teacher_first_name }} {{ topic.teacher_last_name }}</p>
-          <p v-if="topic.narration_voice" class="text-[11px] text-purple-600 dark:text-purple-300" title="Voice narration available">🔊 Audio</p>
-        </RouterLink>
+          <p class="text-[11px] text-gray-400 dark:text-gray-500">{{ topic.total_pages }} {{ topic.total_pages === 1 ? 'page' : 'pages' }}<template v-if="topic.narration_voice"> &middot; <span class="text-purple-600 dark:text-purple-300">🔊 Audio</span></template></p>
+          <p class="mt-1 text-[11px] font-medium text-indigo-600 dark:text-indigo-400">Click the book to open</p>
+          </template>
+        </ShelfSlot>
       </Bookshelf>
     </div>
 
@@ -98,6 +103,8 @@ import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import Bookshelf from '@/components/library/Bookshelf.vue'
 import ShelfBook from '@/components/library/ShelfBook.vue'
+import ShelfSlot from '@/components/library/ShelfSlot.vue'
+import { useRouter } from 'vue-router'
 import type { ENoteTopic } from '@/types/enotes'
 import { parseCoverDesign } from '@/utils/enoteCover'
 
@@ -109,6 +116,7 @@ interface SubjectGroup {
 }
 
 const API_BASE = '/api'
+const router = useRouter()
 
 const topics = ref<ENoteTopic[]>([])
 const searchQuery = ref('')

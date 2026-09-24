@@ -1,5 +1,5 @@
 <template>
-  <section class="bookshelf">
+  <section class="bookshelf" :class="{ 'is-spines': spines }">
     <div class="flex items-center justify-between gap-3 mb-2 px-1">
       <!-- Brass name plate, like the label on a library shelf -->
       <div class="shelf-plate min-w-0">
@@ -15,6 +15,7 @@
           <!-- The plank sits exactly under the books' feet (see --shelf-book-h), so each page's
                item can put captions/actions underneath it without re-measuring anything. -->
           <div class="shelf-plank" aria-hidden="true"></div>
+          <p v-if="spines" class="shelf-hint">{{ hint }}</p>
           <slot />
         </div>
       </div>
@@ -26,7 +27,14 @@
 defineProps<{
   title: string
   count?: number | string
+  // Books stand spine-out (see ShelfSlot) - packed tightly, with room under the plank for the
+  // details card of whichever book is pulled out
+  spines?: boolean
 }>()
+
+const hint = typeof window !== 'undefined' && window.matchMedia?.('(hover: hover)').matches
+  ? 'Point at a book to see its cover - click to open'
+  : 'Tap a book to see its cover - tap again to open'
 </script>
 
 <style scoped>
@@ -83,7 +91,7 @@ defineProps<{
   border: 1px solid rgba(120, 85, 40, 0.18);
 }
 
-:global(.dark) .shelf-cabinet {
+.dark .shelf-cabinet {
   background:
     linear-gradient(to bottom, rgba(0, 0, 0, 0.3), transparent 30%),
     linear-gradient(180deg, #2b2620, #221e19);
@@ -124,7 +132,8 @@ defineProps<{
   }
 }
 
-.shelf-track > :deep(*:not(.shelf-plank)) {
+/* ShelfSlot manages its own stacking (it must rise above its neighbours when pulled out) */
+.shelf-track > :deep(*:not(.shelf-plank):not(.shelf-hint):not(.shelf-slot)) {
   position: relative;
   z-index: 1;
   scroll-snap-align: start;
@@ -145,7 +154,40 @@ defineProps<{
   box-shadow: 0 6px 8px -2px rgba(0, 0, 0, 0.35);
 }
 
-:global(.dark) .shelf-plank {
+/* ---- Spines mode: books packed spine-out, room above for a pulled-out book to rise into and
+   below the plank for its details card ---- */
+.bookshelf.is-spines {
+  --shelf-pad-top: 36px;
+}
+
+.is-spines .shelf-track {
+  gap: 3px;
+  padding-bottom: 150px;
+  /* the last book swings its full cover out to the right */
+  padding-right: 130px;
+}
+
+.shelf-hint {
+  position: absolute;
+  left: 20px;
+  top: calc(var(--shelf-pad-top) + var(--shelf-book-h) + var(--plank-h) + 14px);
+  font-size: 11px;
+  color: rgba(90, 60, 25, 0.55);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.dark .shelf-hint {
+  color: rgba(246, 223, 168, 0.4);
+}
+
+@media (min-width: 640px) {
+  .shelf-hint {
+    left: 28px;
+  }
+}
+
+.dark .shelf-plank {
   background:
     linear-gradient(to bottom, rgba(255, 255, 255, 0.18) 0, rgba(255, 255, 255, 0.18) 3px, transparent 3px),
     repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.08) 0 3px, transparent 3px 11px, rgba(255, 255, 255, 0.04) 11px 13px, transparent 13px 29px),

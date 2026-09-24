@@ -201,15 +201,18 @@
             :key="shelf.name"
             :title="shelf.name"
             :count="shelf.topics.length"
+            spines
           >
-            <div
+            <ShelfSlot
               v-for="topic in shelf.topics"
               :key="topic.id"
-              class="group relative w-[104px] sm:w-[122px] flex-shrink-0 cursor-pointer"
+              :label="topic.title"
               :title="`Updated ${formatDate(topic.updated_at)}`"
-              @click="openBuilder(topic.id)"
+              @open="openBuilder(topic.id)"
             >
               <ShelfBook
+                spine-out
+                :selected="bulk.isSelected(topic.id)"
                 variant="notes"
                 :title="topic.title"
                 :seed="topic.id"
@@ -217,14 +220,6 @@
                 :footer="`${topic.total_pages} ${topic.total_pages === 1 ? 'page' : 'pages'}`"
                 :cover="parseCoverDesign(topic.cover_design)"
               >
-                <input
-                  type="checkbox"
-                  :checked="bulk.isSelected(topic.id)"
-                  @click.stop
-                  @change="bulk.toggle(topic.id)"
-                  class="absolute top-1.5 right-1.5 z-10 w-4 h-4 rounded border-white/60 text-indigo-600 focus:ring-indigo-500"
-                  :aria-label="`Select ${topic.title}`"
-                >
                 <div
                   v-if="openingTopicId === topic.id"
                   class="absolute inset-0 z-20 flex flex-col items-center justify-center gap-1 bg-black/55 text-[11px] font-medium text-white"
@@ -237,7 +232,17 @@
                 </div>
               </ShelfBook>
 
-              <div class="mt-6 flex items-center gap-1.5">
+              <template #details>
+                <label class="flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400 cursor-pointer select-none mb-1.5">
+                  <input
+                    type="checkbox"
+                    :checked="bulk.isSelected(topic.id)"
+                    @change="bulk.toggle(topic.id)"
+                    class="w-3.5 h-3.5 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                  >
+                  Select
+                </label>
+              <div class="flex items-center gap-1.5">
                 <span
                   :class="[
                     'px-1.5 py-0.5 rounded-full text-[10px] font-semibold',
@@ -256,7 +261,7 @@
                   Linked
                 </span>
               </div>
-              <p class="mt-1 text-xs font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{{ topic.title }}</p>
+              <p class="mt-1 text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug">{{ topic.title }}</p>
               <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">
                 {{ topic.class_group_name ? `${topic.class_group_name} (All Streams)` : topic.class_stream_name ? `${topic.class_name} - ${topic.class_stream_name}` : topic.class_name }}
               </p>
@@ -298,7 +303,8 @@
                   </svg>
                 </button>
               </div>
-            </div>
+              </template>
+            </ShelfSlot>
           </Bookshelf>
         </div>
       </template>
@@ -754,6 +760,7 @@ import Bookshelf from '@/components/library/Bookshelf.vue'
 import ENoteCoverEditor from '@/components/enotes/ENoteCoverEditor.vue'
 import { parseCoverDesign } from '@/utils/enoteCover'
 import ShelfBook from '@/components/library/ShelfBook.vue'
+import ShelfSlot from '@/components/library/ShelfSlot.vue'
 import { useToastStore } from '@/stores/toast'
 import { useConfirmStore } from '@/stores/confirm'
 import { useBulkSelection } from '@/composables/useBulkSelection'

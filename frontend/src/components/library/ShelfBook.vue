@@ -1,11 +1,16 @@
 <template>
-  <div class="shelf-book-scene" :class="{ 'is-small': size === 'sm', 'is-large': size === 'lg', 'is-real': variant === 'book' }">
+  <div
+    class="shelf-book-scene"
+    :class="{ 'is-small': size === 'sm', 'is-large': size === 'lg', 'is-real': variant === 'book', 'is-spine-out': spineOut, 'is-selected': selected }"
+    :style="sceneStyle"
+  >
     <div class="shelf-book" :style="coverStyle">
-      <!-- Page block seen past the right edge of the cover and along the top - the book is
-           turned a few degrees on the shelf, so its thickness shows like a real standing book. -->
+      <!-- The spine - the only face showing while a book stands spine-out on the shelf, so it
+           carries the title the way a printed book's spine does. -->
       <div class="book-spine" aria-hidden="true">
-        <!-- Library books stand spine-out, so the spine carries the title like a printed book -->
-        <span v-if="variant === 'book'" class="rb-spine-title">{{ title }}</span>
+        <span v-if="spineOut && label" class="spine-label">{{ label }}</span>
+        <span v-if="spineOut || variant === 'book'" class="rb-spine-title">{{ coverTitle }}</span>
+        <span v-if="spineOut" class="spine-foot" :class="variant === 'book' ? 'spine-foot--imprint' : 'spine-foot--notes'"></span>
       </div>
       <div class="book-side" aria-hidden="true"></div>
       <div class="book-top" aria-hidden="true"></div>
@@ -113,6 +118,11 @@ const props = withDefaults(defineProps<{
   coverImage?: string | null
   author?: string | null
   pages?: number | null
+  // Stand spine-out on the shelf (only the spine shows); hovering/activating the surrounding
+  // ShelfSlot pulls it out and turns it to show the front cover
+  spineOut?: boolean
+  // Highlights the spine (teacher bulk selection)
+  selected?: boolean
 }>(), {
   label: '',
   footer: '',
@@ -121,7 +131,9 @@ const props = withDefaults(defineProps<{
   cover: null,
   coverImage: null,
   author: null,
-  pages: null
+  pages: null,
+  spineOut: false,
+  selected: false
 })
 
 // Book-cloth colours: [light, dark] ends of the cover gradient
@@ -155,9 +167,23 @@ const coverStyle = computed(() => {
     '--cloth-fade': hexToRgba(light, 0.92),
     '--longest': String(longestWord.value)
   }
-  // A library book is as thick as it is long: ~8px for a handout up to ~26px for a 600+ page
-  // textbook (16px when the page count isn't known yet)
-  if (props.variant === 'book' && props.size !== 'sm') {
+  return style
+})
+
+const sceneStyle = computed(() => {
+  const style: Record<string, string> = {}
+  if (props.spineOut) {
+    // Spines are drawn wider than a real book's thickness so the title is readable: eNotes are
+    // uniform exercise books; library books get thicker with page count (unknown = middling)
+    if (props.variant === 'book') {
+      const depth = props.pages ? 28 + Math.min(props.pages, 600) / 600 * 20 : 36
+      style['--book-depth'] = `${Math.round(depth)}px`
+      // Real books on a shelf are never all the same height
+      style['--h-factor'] = String(0.86 + (Math.abs(props.seed * 37) % 15) / 100)
+    }
+  } else if (props.variant === 'book' && props.size !== 'sm') {
+    // A library book is as thick as it is long: ~8px for a handout up to ~26px for a 600+ page
+    // textbook (16px when the page count isn't known yet)
     const depth = props.pages ? 8 + Math.min(props.pages, 600) / 600 * 18 : 16
     style['--book-depth'] = `${Math.round(depth)}px`
   }
@@ -266,7 +292,8 @@ const artStyle = computed(() => {
   left: 0;
   width: var(--book-depth);
   transform-origin: left center;
-  transform: translateZ(calc(var(--book-depth) / 2)) rotateY(90deg); /* folds back from the left edge */
+  /* folds back from the left edge, facing outward (-x) so its lettering reads correctly */
+  transform: translateZ(calc(var(--book-depth) / -2)) rotateY(-90deg);
   border-radius: 3px 0 0 3px;
   background:
     linear-gradient(to bottom, transparent 8%, rgba(246, 223, 168, 0.6) 8%, rgba(246, 223, 168, 0.6) 9.5%, transparent 9.5%, transparent 90.5%, rgba(246, 223, 168, 0.6) 90.5%, rgba(246, 223, 168, 0.6) 92%, transparent 92%),
@@ -281,7 +308,7 @@ const artStyle = computed(() => {
   right: 0;
   width: var(--book-depth);
   transform-origin: right center;
-  transform: translateZ(calc(var(--book-depth) / 2)) rotateY(-90deg);
+  transform: translateZ(calc(var(--book-depth) / -2)) rotateY(90deg);
   background:
     linear-gradient(to right, rgba(0, 0, 0, 0.25), transparent 40%),
     repeating-linear-gradient(to right, #f4efe2 0 1px, #d9d1bd 1px 2px);
@@ -294,7 +321,7 @@ const artStyle = computed(() => {
   right: 2px;
   height: var(--book-depth);
   transform-origin: center top;
-  transform: translateZ(calc(var(--book-depth) / 2)) rotateX(-90deg);
+  transform: translateZ(calc(var(--book-depth) / -2)) rotateX(90deg);
   background: repeating-linear-gradient(to bottom, #f4efe2 0 1px, #d9d1bd 1px 2px);
 }
 
@@ -554,6 +581,125 @@ const artStyle = computed(() => {
   text-transform: uppercase;
   color: rgba(246, 223, 168, 0.7);
   white-space: nowrap;
+}
+
+/* ---------- Spine-out on the shelf ----------
+   The scene is only as wide as the spine. The 3D book (full cover width) is turned 90deg about
+   its left edge so just the spine faces the reader; hovering/activating its ShelfSlot swings it
+   back round to show the front cover, pulled toward the reader and over its neighbours. */
+.shelf-book-scene.is-spine-out {
+  --book-depth: 30px;
+  --h-factor: 1;
+  width: var(--book-depth);
+  height: calc(var(--book-h) * var(--h-factor));
+  margin-top: calc(var(--book-h) * (1 - var(--h-factor)));
+  perspective: 900px;
+  perspective-origin: 50% 40%;
+}
+
+@media (min-width: 640px) {
+  .shelf-book-scene.is-spine-out {
+    --book-depth: 34px;
+  }
+}
+
+.is-spine-out .shelf-book,
+.is-spine-out.is-real .shelf-book {
+  inset: 0 auto 0 0;
+  width: var(--book-w);
+  transform-origin: 0 50%;
+  transform: translateX(calc(var(--book-depth) / 2)) rotateY(90deg);
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.shelf-slot:hover .is-spine-out .shelf-book,
+.shelf-slot.is-active .is-spine-out .shelf-book,
+.shelf-slot:focus-visible .is-spine-out .shelf-book {
+  transform: translateY(-12px) translateZ(70px) rotateY(-10deg);
+}
+
+.is-spine-out .book-shadow {
+  left: -2px;
+  right: -2px;
+}
+
+.is-spine-out .book-spine {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 0 8px;
+  overflow: hidden;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+}
+
+/* eNotes: a school exercise book's cloth spine in the cover colour */
+.is-spine-out:not(.is-real) .book-spine {
+  background:
+    linear-gradient(to right, rgba(0, 0, 0, 0.35), rgba(255, 255, 255, 0.14) 45%, rgba(0, 0, 0, 0.1) 60%, rgba(0, 0, 0, 0.35)),
+    var(--cloth-light);
+}
+
+.is-spine-out .rb-spine-title {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  font-size: min(12px, calc(var(--book-depth) * 0.36));
+  line-height: 1.1;
+}
+
+.is-spine-out:not(.is-real) .rb-spine-title {
+  font-family: Poppins, Inter, system-ui, sans-serif;
+  font-weight: 700;
+  color: #fff;
+}
+
+.spine-label {
+  flex-shrink: 0;
+  max-width: calc(100% - 4px);
+  padding: 1px 3px;
+  border-radius: 2px;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  color: #3b2a10;
+  background: #f1dea6;
+  overflow: hidden;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+.spine-foot {
+  flex-shrink: 0;
+  width: 55%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+}
+
+/* Library books: a small publisher's roundel at the foot of the spine */
+.spine-foot--imprint {
+  border: 1.5px solid rgba(246, 223, 168, 0.85);
+  background: radial-gradient(circle, rgba(246, 223, 168, 0.85) 0 22%, transparent 24%);
+}
+
+/* eNotes: a white label patch like the one on an exercise book's spine */
+.spine-foot--notes {
+  border-radius: 2px;
+  aspect-ratio: 1 / 1.4;
+  background: repeating-linear-gradient(to bottom, #fbf8ef 0 3px, #9fb6d6 3px 4px);
+  opacity: 0.9;
+}
+
+/* Teacher bulk selection: a clear ring and tick on the spine */
+.is-selected .book-spine {
+  box-shadow: inset 0 0 0 2px #6366f1, 0 0 0 2px #6366f1;
+}
+
+.is-selected .spine-label {
+  background: #6366f1;
+  color: #fff;
 }
 
 /* ---------- Teacher-designed covers ---------- */

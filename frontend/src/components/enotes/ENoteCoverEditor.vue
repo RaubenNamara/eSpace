@@ -230,7 +230,7 @@ const save = async (reset: boolean) => {
   overflow: hidden;
 }
 
-:global(.dark) .preview-stage {
+.dark .preview-stage {
   background: linear-gradient(180deg, #2b2620, #221e19);
 }
 

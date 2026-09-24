@@ -49,17 +49,20 @@
 
     <!-- Bookcase: one shelf per subject, books standing on it -->
     <div v-else-if="filteredSubjectGroups.length > 0" class="space-y-8">
-      <Bookshelf v-if="!searchQuery && recentBooks.length > 0" title="Recently Added">
-        <button
+      <Bookshelf v-if="!searchQuery && recentBooks.length > 0" title="Recently Added" spines>
+        <ShelfSlot
           v-for="book in recentBooks"
           :key="'recent-' + book.id"
-          @click="previewBook = book"
-          class="group text-left w-[104px] sm:w-[122px] flex-shrink-0"
+          :label="book.title"
+          @open="previewBook = book"
         >
-          <ShelfBook :title="book.title" :seed="book.id" :label="shelfLabel(book)" :cover-image="book.cover_image" :author="book.author" :pages="book.total_pages" />
-          <p class="mt-6 text-xs font-medium text-gray-800 dark:text-gray-200 line-clamp-2 leading-snug">{{ book.title }}</p>
-          <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ book.subject_name || 'General' }}</p>
-        </button>
+          <ShelfBook spine-out :title="book.title" :seed="book.id" :label="shelfLabel(book)" :cover-image="book.cover_image" :author="book.author" :pages="book.total_pages" />
+          <template #details>
+            <p class="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug">{{ book.title }}</p>
+            <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ book.subject_name || 'General' }}<template v-if="book.author"> &middot; {{ book.author }}</template></p>
+            <p class="mt-1 text-[11px] font-medium text-indigo-600 dark:text-indigo-400">Click the book to open</p>
+          </template>
+        </ShelfSlot>
       </Bookshelf>
 
       <Bookshelf
@@ -67,18 +70,22 @@
         :key="group.id"
         :title="group.name"
         :count="group.books.length"
+        spines
       >
-        <button
+        <ShelfSlot
           v-for="book in group.books"
           :key="book.id"
-          @click="previewBook = book"
-          class="group text-left w-[104px] sm:w-[122px] flex-shrink-0"
+          :label="book.title"
+          @open="previewBook = book"
         >
-          <ShelfBook :title="book.title" :seed="book.id" :label="shelfLabel(book)" :cover-image="book.cover_image" :author="book.author" :pages="book.total_pages" />
-          <p class="mt-6 text-xs font-medium text-gray-800 dark:text-gray-200 line-clamp-2 leading-snug">{{ book.title }}</p>
+          <ShelfBook spine-out :title="book.title" :seed="book.id" :label="shelfLabel(book)" :cover-image="book.cover_image" :author="book.author" :pages="book.total_pages" />
+          <template #details>
+          <p class="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug">{{ book.title }}</p>
           <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ book.author || [book.teacher_first_name, book.teacher_last_name].filter(Boolean).join(' ') }}</p>
           <p class="text-[11px] text-gray-400 dark:text-gray-500">{{ fileLabel(book) }}<template v-if="book.total_pages"> &middot; {{ book.total_pages }} pages</template><template v-else-if="book.file_size"> &middot; {{ formatFileSize(book.file_size) }}</template></p>
-        </button>
+          <p class="mt-1 text-[11px] font-medium text-indigo-600 dark:text-indigo-400">Click the book to open</p>
+          </template>
+        </ShelfSlot>
       </Bookshelf>
     </div>
 
@@ -107,6 +114,7 @@ import axios from 'axios'
 import LibraryDocumentViewer from '@/components/library/LibraryDocumentViewer.vue'
 import Bookshelf from '@/components/library/Bookshelf.vue'
 import ShelfBook from '@/components/library/ShelfBook.vue'
+import ShelfSlot from '@/components/library/ShelfSlot.vue'
 import type { LibraryBook } from '@/types/library'
 
 interface SubjectGroup {
