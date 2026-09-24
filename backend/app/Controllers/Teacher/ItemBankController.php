@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace eSpace\App\Controllers\Teacher;
 
+use eSpace\App\Utils\MimeType;
 use eSpace\App\Controllers\Controller;
 use eSpace\App\Services\NotificationService;
 
@@ -647,9 +648,7 @@ class ItemBankController extends Controller
             return null;
         }
 
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mimeType = finfo_file($finfo, $file['tmp_name']);
-        finfo_close($finfo);
+        $mimeType = MimeType::detect($file['tmp_name'], $file['name'] ?? null);
 
         if ($mimeType !== 'application/pdf') {
             $this->error('Invalid file type. Only PDF documents are allowed', 400);

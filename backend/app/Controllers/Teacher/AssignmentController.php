@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace eSpace\App\Controllers\Teacher;
 
+use eSpace\App\Utils\MimeType;
 use eSpace\App\Controllers\Controller;
 USE eSpace\Config\Database;
 use eSpace\App\Services\NotificationService;
@@ -875,9 +876,9 @@ class AssignmentController extends Controller
 
         } catch (Exception $e) {
             Database::rollback();
-            $this->serverError('Failed to create assignment: ' . $e->getMessage());
             error_log('Assignment creation failed: ' . $e->getMessage());
             error_log('Stack trace: ' . $e->getTraceAsString());
+            $this->serverError('Failed to create assignment: ' . $e->getMessage());
         }
     }
 
@@ -1031,6 +1032,20 @@ class AssignmentController extends Controller
                     if (in_array($field, ['subject_id', 'academic_year_id', 'term_id', 'weight'], true) && $data[$field] === '') {
                         $data[$field] = null;
                     }
+                    // Numeric/date columns: '' means "not set". Booleans: PDO binds false as '',
+                    // not 0 - both break MySQL strict mode.
+                    // NOT NULL columns just keep their current value.
+                    if ($data[$field] === '') {
+                        if (in_array($field, ['total_marks', 'due_date', 'attempts_allowed'], true)) {
+                            continue;
+                        }
+                        if (in_array($field, ['open_at', 'deadline_at', 'duration_minutes', 'pass_mark'], true)) {
+                            $data[$field] = null;
+                        }
+                    }
+                    if (is_bool($data[$field])) {
+                        $data[$field] = (int) $data[$field];
+                    }
                     $updateFields[] = "$field = :$field";
                     $params[$field] = $data[$field];
                 }
@@ -1049,8 +1064,8 @@ class AssignmentController extends Controller
 
         } catch (Exception $e) {
             Database::rollback();
-            $this->serverError('Failed to update assignment');
             error_log('Assignment update failed: ' . $e->getMessage());
+            $this->serverError('Failed to update assignment');
         }
     }
 
@@ -1093,8 +1108,8 @@ class AssignmentController extends Controller
 
         } catch (Exception $e) {
             Database::rollback();
-            $this->serverError('Failed to delete assignment');
             error_log('Assignment deletion failed: ' . $e->getMessage());
+            $this->serverError('Failed to delete assignment');
         }
     }
 
@@ -1299,8 +1314,8 @@ class AssignmentController extends Controller
 
         } catch (Exception $e) {
             Database::rollback();
-            $this->serverError('Failed to publish assignment');
             error_log('Assignment publish failed: ' . $e->getMessage());
+            $this->serverError('Failed to publish assignment');
         }
     }
 
@@ -1457,8 +1472,8 @@ class AssignmentController extends Controller
 
         } catch (Exception $e) {
             Database::rollback();
-            $this->serverError('Failed to duplicate assignment: ' . $e->getMessage());
             error_log('Assignment duplication failed: ' . $e->getMessage());
+            $this->serverError('Failed to duplicate assignment: ' . $e->getMessage());
         }
     }
 
@@ -1606,8 +1621,8 @@ class AssignmentController extends Controller
 
         } catch (Exception $e) {
             Database::rollback();
-            $this->serverError('Failed to add question');
             error_log('Question addition failed: ' . $e->getMessage());
+            $this->serverError('Failed to add question');
         }
     }
 
@@ -1724,8 +1739,8 @@ class AssignmentController extends Controller
 
         } catch (Exception $e) {
             Database::rollback();
-            $this->serverError('Failed to update question');
             error_log('Question update failed: ' . $e->getMessage());
+            $this->serverError('Failed to update question');
         }
     }
 
@@ -1769,8 +1784,8 @@ class AssignmentController extends Controller
 
         } catch (Exception $e) {
             Database::rollback();
-            $this->serverError('Failed to delete question');
             error_log('Question deletion failed: ' . $e->getMessage());
+            $this->serverError('Failed to delete question');
         }
     }
 
@@ -1956,8 +1971,8 @@ class AssignmentController extends Controller
 
         } catch (Exception $e) {
             Database::rollback();
-            $this->serverError('Failed to grade submission');
             error_log('Submission grading failed: ' . $e->getMessage());
+            $this->serverError('Failed to grade submission');
         }
     }
 
@@ -2009,8 +2024,8 @@ class AssignmentController extends Controller
 
         } catch (Exception $e) {
             Database::rollback();
-            $this->serverError('Failed to add feedback');
             error_log('Feedback addition failed: ' . $e->getMessage());
+            $this->serverError('Failed to add feedback');
         }
     }
 
@@ -2041,8 +2056,8 @@ class AssignmentController extends Controller
             $this->success($subjects);
 
         } catch (Exception $e) {
-            $this->serverError('Failed to load subjects');
             error_log('Subjects loading failed: ' . $e->getMessage());
+            $this->serverError('Failed to load subjects');
         }
     }
 
@@ -2071,8 +2086,8 @@ class AssignmentController extends Controller
             $this->success($classes);
 
         } catch (Exception $e) {
-            $this->serverError('Failed to load classes');
             error_log('Classes loading failed: ' . $e->getMessage());
+            $this->serverError('Failed to load classes');
         }
     }
 
@@ -2105,8 +2120,8 @@ class AssignmentController extends Controller
             $this->success($streams);
 
         } catch (Exception $e) {
-            $this->serverError('Failed to load streams');
             error_log('Streams loading failed: ' . $e->getMessage());
+            $this->serverError('Failed to load streams');
         }
     }
 
@@ -2148,9 +2163,7 @@ class AssignmentController extends Controller
             'application/pdf' => ['type' => 'pdf', 'ext' => 'pdf'],
         ];
 
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mimeType = finfo_file($finfo, $file['tmp_name']);
-        finfo_close($finfo);
+        $mimeType = MimeType::detect($file['tmp_name'], $file['name'] ?? null);
 
         if (!isset($allowedMime[$mimeType])) {
             $this->error('Invalid file type. Only JPEG, PNG, GIF, WebP images or PDF documents are allowed', 400);
@@ -2199,8 +2212,8 @@ class AssignmentController extends Controller
             $this->success(['attachment_path' => $url, 'attachment_type' => $attachmentType], 'Attachment uploaded successfully');
         } catch (Exception $e) {
             unlink($filepath);
-            $this->serverError('Failed to save attachment reference');
             error_log('Attachment save failed: ' . $e->getMessage());
+            $this->serverError('Failed to save attachment reference');
         }
     }
 
@@ -2234,8 +2247,8 @@ class AssignmentController extends Controller
 
             $this->success(['pages' => $pages]);
         } catch (Exception $e) {
-            $this->serverError('Failed to load question annotations');
             error_log('Question annotations load failed: ' . $e->getMessage());
+            $this->serverError('Failed to load question annotations');
         }
     }
 
@@ -2284,8 +2297,8 @@ class AssignmentController extends Controller
 
             $this->success([],'Annotations saved successfully');
         } catch (Exception $e) {
-            $this->serverError('Failed to save question annotations');
             error_log('Question annotations save failed: ' . $e->getMessage());
+            $this->serverError('Failed to save question annotations');
         }
     }
 }

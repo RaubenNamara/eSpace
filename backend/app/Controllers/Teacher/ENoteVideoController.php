@@ -2,6 +2,7 @@
 
 namespace eSpace\App\Controllers\Teacher;
 
+use eSpace\App\Utils\MimeType;
 use eSpace\App\Controllers\Controller;
 
 /**
@@ -62,9 +63,7 @@ class ENoteVideoController extends Controller
             return;
         }
 
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mimeType = finfo_file($finfo, $file['tmp_name']);
-        finfo_close($finfo);
+        $mimeType = MimeType::detect($file['tmp_name'], $file['name'] ?? null);
 
         if (!in_array($mimeType, $this->allowedMimeTypes)) {
             $this->json(['error' => ['message' => 'Invalid file type. Only MP4, WebM, OGG and MOV videos are allowed']], 400);

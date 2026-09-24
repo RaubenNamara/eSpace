@@ -2,6 +2,7 @@
 
 namespace eSpace\App\Controllers\Student;
 
+use eSpace\App\Utils\MimeType;
 use eSpace\App\Controllers\Controller;
 use eSpace\Config\Database;
 use eSpace\App\Utils\Grading;
@@ -1010,9 +1011,7 @@ class AssignmentController extends Controller
             return null;
         }
 
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mimeType = finfo_file($finfo, $file['tmp_name']);
-        finfo_close($finfo);
+        $mimeType = MimeType::detect($file['tmp_name'], $file['name'] ?? null);
 
         $imageExtensions = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
         $isPdf = $mimeType === 'application/pdf';

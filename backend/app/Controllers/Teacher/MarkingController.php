@@ -207,8 +207,8 @@ class MarkingController extends Controller
                 'questions' => $questions,
             ]);
         } catch (Exception $e) {
-            $this->serverError('Failed to load submission for marking');
             error_log('getSubmissionForMarking failed: ' . $e->getMessage());
+            $this->serverError('Failed to load submission for marking');
         }
     }
 
@@ -273,8 +273,8 @@ class MarkingController extends Controller
 
             $this->success([], 'Marking annotations saved successfully');
         } catch (Exception $e) {
-            $this->serverError('Failed to save marking annotations');
             error_log('saveMarkingAnnotations failed: ' . $e->getMessage());
+            $this->serverError('Failed to save marking annotations');
         }
     }
 
@@ -336,8 +336,8 @@ class MarkingController extends Controller
 
             $this->success([], 'Marks saved successfully');
         } catch (Exception $e) {
-            $this->serverError('Failed to save marks');
             error_log('saveQuestionMarks failed: ' . $e->getMessage());
+            $this->serverError('Failed to save marks');
         }
     }
 
@@ -368,8 +368,8 @@ class MarkingController extends Controller
 
             $this->success([], 'Feedback saved successfully');
         } catch (Exception $e) {
-            $this->serverError('Failed to save feedback');
             error_log('saveGeneralFeedback failed: ' . $e->getMessage());
+            $this->serverError('Failed to save feedback');
         }
     }
 
@@ -421,8 +421,8 @@ class MarkingController extends Controller
 
             $this->success($summary, 'Marking completed successfully');
         } catch (Exception $e) {
-            $this->serverError('Failed to complete marking');
             error_log('completeMarking failed: ' . $e->getMessage());
+            $this->serverError('Failed to complete marking');
         }
     }
 
@@ -483,8 +483,8 @@ class MarkingController extends Controller
 
             $this->success([], 'Submission returned to student');
         } catch (Exception $e) {
-            $this->serverError('Failed to return submission');
             error_log('returnToStudent failed: ' . $e->getMessage());
+            $this->serverError('Failed to return submission');
         }
     }
 
@@ -513,8 +513,8 @@ class MarkingController extends Controller
 
             $this->success([], 'Submission reopened for marking');
         } catch (Exception $e) {
-            $this->serverError('Failed to reopen submission');
             error_log('reopenSubmission failed: ' . $e->getMessage());
+            $this->serverError('Failed to reopen submission');
         }
     }
 }

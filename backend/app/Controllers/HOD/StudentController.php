@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace eSpace\App\Controllers\HOD;
 
+use eSpace\App\Utils\MimeType;
 use eSpace\App\Controllers\Controller;
 use eSpace\Config\Database;
 
@@ -445,9 +446,7 @@ class StudentController extends Controller
             return;
         }
 
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mimeType = finfo_file($finfo, $file['tmp_name']);
-        finfo_close($finfo);
+        $mimeType = MimeType::detect($file['tmp_name'], $file['name'] ?? null);
 
         if (!isset($allowedMime[$mimeType]) || getimagesize($file['tmp_name']) === false) {
             $this->error('Invalid file type. Only JPEG, PNG, and WebP images are allowed', 400);

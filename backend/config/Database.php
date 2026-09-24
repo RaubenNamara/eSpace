@@ -66,6 +66,12 @@ class Database
 
             // Set collation
             self::$instance->exec("SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci");
+
+            // Pin the SQL mode so production behaves like local XAMPP. cPanel's MySQL enables
+            // STRICT_TRANS_TABLES by default, which rejects the '' PDO binds for false/empty
+            // values (e.g. shuffle_questions=false, open_at='') and turned every assignment
+            // save into a 500 on the live server only.
+            self::$instance->exec("SET SESSION sql_mode = 'NO_ZERO_IN_DATE,NO_ZERO_DATE,NO_ENGINE_SUBSTITUTION'");
         } catch (PDOException $e) {
             if (Config::isDebug()) {
                 throw new PDOException(
