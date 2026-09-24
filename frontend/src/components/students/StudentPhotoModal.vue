@@ -13,7 +13,8 @@
           autoplay
           playsinline
           muted
-          class="w-28 h-28 rounded-lg object-cover ring-2 ring-indigo-400 bg-black -scale-x-100"
+          class="w-28 h-28 rounded-lg object-cover ring-2 ring-indigo-400 bg-black"
+          :class="{ '-scale-x-100': facingMode === 'user' }"
         ></video>
         <img v-else-if="preview" :src="preview" alt="" class="w-28 h-28 rounded-lg object-cover ring-2 ring-gray-200 dark:ring-gray-600">
         <div v-else class="w-28 h-28 rounded-lg flex items-center justify-center bg-indigo-600 text-white text-2xl font-bold">{{ initials }}</div>
@@ -22,6 +23,7 @@
 
         <div v-if="cameraActive" class="flex items-center gap-3">
           <button @click="capturePhoto" class="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">Capture</button>
+          <button v-if="hasMultipleCameras" @click="switchCamera" class="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">Switch camera</button>
           <button @click="stopCamera" class="text-xs font-medium text-gray-500 dark:text-gray-400 hover:underline">Cancel</button>
         </div>
         <div v-else class="flex items-center gap-3">
@@ -82,13 +84,21 @@ const onFileSelected = (e: Event) => {
 const videoRef = ref<HTMLVideoElement | null>(null)
 const captureCanvasRef = ref<HTMLCanvasElement | null>(null)
 const cameraActive = ref(false)
+// Starts on the back camera: on a phone the admin is photographing the student, not themselves.
+// facingMode is only "ideal", so a laptop with a single webcam still just uses that webcam.
+const facingMode = ref<'environment' | 'user'>('environment')
+const hasMultipleCameras = ref(false)
 let mediaStream: MediaStream | null = null
 
 const startCamera = async () => {
   message.value = ''
   isError.value = false
+  mediaStream?.getTracks().forEach((track) => track.stop())
   try {
-    mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+    mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: facingMode.value } } })
+    // Device labels/count are only reliable after permission is granted, hence checked here.
+    const devices = await navigator.mediaDevices.enumerateDevices()
+    hasMultipleCameras.value = devices.filter((d) => d.kind === 'videoinput').length > 1
     cameraActive.value = true
     // The <video> element only mounts once cameraActive flips true, so the stream can't be
     // attached until after that reactive update has actually patched the DOM.
@@ -100,6 +110,11 @@ const startCamera = async () => {
       ? 'Camera access was denied. Allow camera access in your browser and try again.'
       : 'Could not access a camera on this device.'
   }
+}
+
+const switchCamera = () => {
+  facingMode.value = facingMode.value === 'environment' ? 'user' : 'environment'
+  startCamera()
 }
 
 const stopCamera = () => {
