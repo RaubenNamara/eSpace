@@ -239,15 +239,16 @@ class ENoteController extends Controller
      */
     private function getLinkedAssignment($db, int $topicId, int $studentId): ?array
     {
-        $sql = "SELECT a.id, a.title, a.due_date,
-                       COALESCE(sub.status, 'new') as submission_status
+        $sql = "SELECT a.id, a.title, a.due_date, a.assessment_category,
+                       COALESCE(NULLIF(sub.status, ''), 'new') as submission_status, sub.id AS submission_id
                 FROM assignments a
                 INNER JOIN subjects s ON a.subject_id = s.id
-                LEFT JOIN (
-                    SELECT * FROM assignment_submissions
-                    WHERE student_id = :student_id_sub
-                    ORDER BY attempt_number DESC
-                ) sub ON a.id = sub.assignment_id
+                LEFT JOIN assignment_submissions sub ON sub.id = (
+                    SELECT s2.id FROM assignment_submissions s2
+                    WHERE s2.assignment_id = a.id AND s2.student_id = :student_id_sub
+                    ORDER BY s2.attempt_number DESC, s2.id DESC
+                    LIMIT 1
+                )
                 WHERE a.enote_topic_id = :topic_id
                 AND a.enote_page_id IS NULL
                 AND a.status = 'published'
@@ -302,16 +303,17 @@ class ENoteController extends Controller
 
         $sql = "SELECT a.id, a.title, a.due_date, a.enote_page_id,
                        elo.learning_outcome_id, elo2.learning_outcome AS learning_outcome_label,
-                       COALESCE(sub.status, 'new') as submission_status
+                       COALESCE(NULLIF(sub.status, ''), 'new') as submission_status, sub.id AS submission_id
                 FROM assignments a
                 INNER JOIN subjects s ON a.subject_id = s.id
                 LEFT JOIN assignment_learning_outcomes elo ON elo.assignment_id = a.id
                 LEFT JOIN enote_learning_outcomes elo2 ON elo2.id = elo.learning_outcome_id
-                LEFT JOIN (
-                    SELECT * FROM assignment_submissions
-                    WHERE student_id = ?
-                    ORDER BY attempt_number DESC
-                ) sub ON a.id = sub.assignment_id
+                LEFT JOIN assignment_submissions sub ON sub.id = (
+                    SELECT s2.id FROM assignment_submissions s2
+                    WHERE s2.assignment_id = a.id AND s2.student_id = ?
+                    ORDER BY s2.attempt_number DESC, s2.id DESC
+                    LIMIT 1
+                )
                 WHERE a.enote_page_id IN ({$placeholders})
                 AND a.status = 'published'
                 AND a.deleted_at IS NULL
@@ -349,6 +351,7 @@ class ENoteController extends Controller
                 'due_date' => $row['due_date'],
                 'learning_outcome_label' => $row['learning_outcome_label'],
                 'submission_status' => $row['submission_status'],
+                'submission_id' => $row['submission_id'] !== null ? (int) $row['submission_id'] : null,
             ];
         }
 

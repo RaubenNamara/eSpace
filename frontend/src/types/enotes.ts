@@ -42,7 +42,7 @@ export interface ENoteTopic {
    *  quick-link); the teacher's own show() response includes status instead and returns any
    *  status, gating who can see it themselves via ownership (powers the "Create/Edit Assessment"
    *  button on the topic preview screen). Null if none in either case. */
-  linked_assignment?: { id: number; title: string; due_date?: string | null; submission_status?: string; status?: string } | null
+  linked_assignment?: { id: number; title: string; due_date?: string | null; submission_status?: string; status?: string; submission_id?: number | null; assessment_category?: string | null } | null
   /** The curriculum-bank topic (enote_curriculum_topics) this eNote topic has been one-time
    *  linked to by the teacher, if any - once set, every page's Learning Outcome Assessment
    *  quick-create can list this topic's own outcomes without re-picking Theme/Branch/Topic. */
@@ -75,6 +75,8 @@ export interface ENotePage {
     due_date?: string | null
     submission_status?: string
     learning_outcome_label?: string | null
+    /** The student's latest attempt, for "View my answers" / "View results" */
+    submission_id?: number | null
   } | null
 }
 

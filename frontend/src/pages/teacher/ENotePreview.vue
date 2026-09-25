@@ -581,6 +581,48 @@
                         ></div>
                       </div>
 
+                      <!-- The assessments attached here, always reachable from the page: this page's
+                           Learning Outcome Assessment, and on the last page the topic's Activity of
+                           Integration. Not attempted yet (or skipped at the prompt) -> Attempt /
+                           Continue; already submitted -> view the answers read-only, or the results
+                           once the teacher has returned them (no second submission). -->
+                      <div v-if="isStudentMode && pageAssessments(page).length" class="mt-6 space-y-2">
+                        <div
+                          v-for="item in pageAssessments(page)"
+                          :key="item.kind + item.assignment.id"
+                          class="page-assessment flex items-center gap-3 p-3 rounded-xl border"
+                          :class="item.kind === 'loa'
+                            ? 'border-indigo-200 bg-indigo-50/70 dark:border-indigo-800 dark:bg-indigo-900/20'
+                            : 'border-teal-200 bg-teal-50/70 dark:border-teal-800 dark:bg-teal-900/20'"
+                        >
+                          <span
+                            class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 text-white"
+                            :class="item.kind === 'loa' ? 'bg-indigo-600' : 'bg-teal-600'"
+                          >
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                            </svg>
+                          </span>
+                          <div class="min-w-0 flex-1">
+                            <p class="text-[10px] font-semibold uppercase tracking-wide" :class="item.kind === 'loa' ? 'text-indigo-700 dark:text-indigo-300' : 'text-teal-700 dark:text-teal-300'">
+                              {{ item.kind === 'loa' ? 'Learning Outcome Assessment' : 'Activity of Integration' }}
+                            </p>
+                            <p class="text-sm font-medium text-gray-900 dark:text-white leading-snug line-clamp-2">
+                              {{ item.kind === 'loa' ? (item.assignment.learning_outcome_label || item.assignment.title) : item.assignment.title }}
+                            </p>
+                            <p class="text-[11px] text-gray-500 dark:text-gray-400">{{ assessmentState(item.assignment).note }}</p>
+                          </div>
+                          <button
+                            type="button"
+                            class="flex-shrink-0 px-3 py-2 rounded-lg text-xs font-semibold transition-colors"
+                            :class="assessmentState(item.assignment).buttonClass"
+                            @click="openPageAssessment(item.assignment, item.kind === 'loa' ? page : null)"
+                          >
+                            {{ assessmentState(item.assignment).label }}
+                          </button>
+                        </div>
+                      </div>
+
                       <!-- Student's own private summary of this page - never seen by the teacher/HOD.
                            Folded away as a tab at the foot of the page ("My summary" when there is
                            one, "Add my summary" when not); clicking it unfolds the note. -->
@@ -1504,6 +1546,47 @@ const attemptPageLoa = () => {
   if (nextPageInBook) params.set('nextPageId', String(nextPageInBook.id))
   if (readMode.value) exitReadMode()
   router.push(`/student/assignments/${linked.id}/answer?${params.toString()}`)
+}
+
+// ---- Assessments on the page (see the page-assessment block in the template) ----
+type PageAssignment = NonNullable<ENotePage['linked_assignment']> & { assessment_category?: string | null }
+const pageAssessments = (page: ENotePage) => {
+  const items: { kind: 'loa' | 'aoi'; assignment: PageAssignment }[] = []
+  if (page.linked_assignment) items.push({ kind: 'loa', assignment: page.linked_assignment })
+  const topicAssessment = topic.value?.linked_assignment
+  const isLastPage = pages.value.length > 0 && pages.value[pages.value.length - 1].id === page.id
+  if (topicAssessment && isLastPage) items.push({ kind: 'aoi', assignment: topicAssessment as PageAssignment })
+  return items
+}
+
+// What the student can do with an assessment now: submission_status is their latest attempt
+// ('new' = never started). Submitted work is locked - it can be looked at, not sent again.
+const assessmentState = (a: PageAssignment) => {
+  const status = a.submission_status || 'new'
+  if (status === 'new') {
+    return { action: 'attempt', label: 'Attempt', note: 'Not attempted yet', buttonClass: 'bg-indigo-600 text-white hover:bg-indigo-700' }
+  }
+  if (status === 'in_progress') {
+    return { action: 'attempt', label: 'Continue', note: 'Started - not submitted yet', buttonClass: 'bg-indigo-600 text-white hover:bg-indigo-700' }
+  }
+  if (status === 'returned') {
+    return { action: 'result', label: 'View results', note: 'Marked - your results are ready', buttonClass: 'bg-emerald-600 text-white hover:bg-emerald-700' }
+  }
+  return { action: 'answers', label: 'View my answers', note: 'Submitted - waiting for your teacher to mark it', buttonClass: 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700' }
+}
+
+// Attempting from the page brings the student back to this same page afterwards
+const openPageAssessment = (a: PageAssignment, page: ENotePage | null) => {
+  if (!topic.value) return
+  const state = assessmentState(a)
+  if (readMode.value) exitReadMode()
+  if (state.action !== 'attempt' && a.submission_id) {
+    router.push(`/student/assignments/${a.id}/${state.action === 'result' ? 'result' : 'submission'}/${a.submission_id}`)
+    return
+  }
+  const params = new URLSearchParams({ origin: 'enote', topicId: String(topic.value.id) })
+  if (page) params.set('nextPageId', String(page.id))
+  router.push(`/student/assignments/${a.id}/answer?${params.toString()}`)
 }
 
 const formatContent = (content: string): string => {
