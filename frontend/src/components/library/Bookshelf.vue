@@ -12,9 +12,8 @@
     <div class="shelf-cabinet">
       <div class="shelf-scroller">
         <div class="shelf-track">
-          <!-- The plank sits exactly under the books' feet (see --shelf-book-h), so each page's
-               item can put captions/actions underneath it without re-measuring anything. -->
-          <div class="shelf-plank" aria-hidden="true"></div>
+          <!-- The boards are drawn under every row of books (see .shelf-track's background), so a
+               shelf that wraps onto a second or third row gets a board under each. -->
           <!-- An enrolled subject with nothing on it yet still gets its shelf, just empty -->
           <p v-if="empty" class="shelf-empty">{{ empty }}</p>
           <slot />
@@ -36,6 +35,17 @@ defineProps<{
 </script>
 
 <style scoped>
+/* Elastic: a shelf is as wide as the books on it (an empty one is just its name plate and a short
+   board), grows wider as books are added up to the full width of the page, then wraps onto more
+   boards - taller instead of scrolling sideways. Pages lay shelves out in a wrapping row, so
+   small shelves share a line. */
+.bookshelf {
+  flex: 0 1 auto;
+  width: fit-content;
+  max-width: 100%;
+  min-width: 0;
+}
+
 .bookshelf {
   /* Must match ShelfBook.vue's --book-h at each breakpoint */
   --shelf-book-h: 140px;
@@ -115,41 +125,49 @@ defineProps<{
 .shelf-track {
   position: relative;
   display: flex;
+  /* Phones: one board that swipes sideways (still only as wide as its books) - wrapping would stack
+     a big subject into a tall column of half-empty boards. Wider screens wrap onto more boards. */
+  flex-wrap: nowrap;
+  width: max-content;
+  max-width: none;
   align-items: flex-start;
   gap: 18px;
-  width: max-content;
-  min-width: 100%;
-  padding: var(--shelf-pad-top) 20px 14px;
+  /* A row's books sit on a board; the next row needs the board plus the room a pulled-out book
+     rises into */
+  row-gap: calc(var(--plank-h) + var(--shelf-pad-top));
+  padding: var(--shelf-pad-top) 20px var(--plank-h);
+  /* One board per row: its top is right under the books' feet, and the pattern repeats every row */
+  --plank-top: calc(var(--shelf-pad-top) + var(--shelf-book-h));
+  --row-pitch: calc(var(--shelf-book-h) + var(--plank-h) + var(--shelf-pad-top));
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent var(--plank-top),
+    #d19a5f var(--plank-top),
+    #b27a43 calc(var(--plank-top) + 3px),
+    #8a5a2b calc(var(--plank-top) + 9px),
+    #6e4520 calc(var(--plank-top) + var(--plank-h)),
+    rgba(0, 0, 0, 0.22) calc(var(--plank-top) + var(--plank-h)),
+    transparent calc(var(--plank-top) + var(--plank-h) + 7px),
+    transparent var(--row-pitch)
+  );
 }
 
 @media (min-width: 640px) {
   .shelf-track {
-    gap: 26px;
+    flex-wrap: wrap;
+    width: auto;
+    column-gap: 26px;
     padding-left: 28px;
     padding-right: 28px;
   }
 }
 
 /* ShelfSlot manages its own stacking (it must rise above its neighbours when pulled out) */
-.shelf-track > :deep(*:not(.shelf-plank):not(.shelf-slot)) {
+.shelf-track > :deep(*:not(.shelf-slot)) {
   position: relative;
   z-index: 1;
   scroll-snap-align: start;
-}
-
-.shelf-plank {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: calc(var(--shelf-pad-top) + var(--shelf-book-h));
-  height: var(--plank-h);
-  background:
-    /* lit top surface of the board */
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.35) 0, rgba(255, 255, 255, 0.35) 3px, transparent 3px),
-    /* wood grain */
-    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.05) 0 3px, transparent 3px 11px, rgba(255, 255, 255, 0.05) 11px 13px, transparent 13px 29px),
-    linear-gradient(180deg, #b27a43, #8a5a2b 60%, #6e4520);
-  box-shadow: 0 6px 8px -2px rgba(0, 0, 0, 0.35);
 }
 
 /* ---- Spines mode: books packed spine-out, room above for a pulled-out book to rise into and
@@ -159,8 +177,8 @@ defineProps<{
 }
 
 .is-spines .shelf-track {
-  gap: 3px;
-  /* the last book swings its full cover out to the right */
+  column-gap: 3px;
+  /* a book at the end of a row swings its full cover out to the right */
   padding-right: 110px;
 }
 
@@ -185,10 +203,18 @@ defineProps<{
   color: rgba(246, 223, 168, 0.45);
 }
 
-.dark .shelf-plank {
-  background:
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.18) 0, rgba(255, 255, 255, 0.18) 3px, transparent 3px),
-    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.08) 0 3px, transparent 3px 11px, rgba(255, 255, 255, 0.04) 11px 13px, transparent 13px 29px),
-    linear-gradient(180deg, #7a5230, #5a3b20 60%, #452c17);
+.dark .shelf-track {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent var(--plank-top),
+    #8f6139 var(--plank-top),
+    #7a5230 calc(var(--plank-top) + 3px),
+    #5a3b20 calc(var(--plank-top) + 9px),
+    #452c17 calc(var(--plank-top) + var(--plank-h)),
+    rgba(0, 0, 0, 0.35) calc(var(--plank-top) + var(--plank-h)),
+    transparent calc(var(--plank-top) + var(--plank-h) + 7px),
+    transparent var(--row-pitch)
+  );
 }
 </style>

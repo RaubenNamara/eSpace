@@ -48,7 +48,7 @@
     </div>
 
     <!-- Bookcase: one shelf per subject, each topic an exercise book standing on it -->
-    <div v-else-if="filteredSubjectGroups.length > 0" class="grid gap-x-5 gap-y-7 md:grid-cols-2 xl:grid-cols-3">
+    <div v-else-if="filteredSubjectGroups.length > 0" class="shelf-row flex flex-wrap items-start gap-x-5 gap-y-7">
       <Bookshelf
         v-for="group in filteredSubjectGroups"
         :key="group.id"

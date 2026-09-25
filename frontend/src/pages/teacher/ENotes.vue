@@ -195,7 +195,7 @@
           <button @click="bulkDeleteSelected" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors">Delete</button>
         </BulkActionBar>
 
-        <div class="grid gap-x-5 gap-y-7 md:grid-cols-2 xl:grid-cols-3">
+        <div class="shelf-row flex flex-wrap items-start gap-x-5 gap-y-7">
           <Bookshelf
             v-for="shelf in activeClassSubjectShelves"
             :key="shelf.name"

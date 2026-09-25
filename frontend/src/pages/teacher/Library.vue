@@ -190,7 +190,7 @@
         <p class="text-gray-500 dark:text-gray-400">No books in this class match these filters.</p>
       </div>
 
-      <div v-else class="grid gap-x-5 gap-y-7 md:grid-cols-2 xl:grid-cols-3">
+      <div v-else class="shelf-row flex flex-wrap items-start gap-x-5 gap-y-7">
         <Bookshelf
           v-for="shelf in activeClassSubjectShelves"
           :key="shelf.name"
