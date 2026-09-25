@@ -8,7 +8,7 @@
        drag-to-flip listener would otherwise swallow focusing the textarea. -->
   <div
     class="unfolding-note"
-    :class="floating ? 'is-floating absolute left-3 bottom-3 z-40' : 'is-inline relative mt-6'"
+    :class="floating ? 'is-floating absolute left-3 bottom-3 z-40 pointer-events-none' : 'is-inline relative mt-6'"
     @mousedown.stop
     @touchstart.stop
   >
@@ -16,7 +16,7 @@
       <button
         v-if="!open && (hasText || showAdd)"
         type="button"
-        class="note-tab flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-full shadow-lg ring-1 ring-black/5 dark:ring-white/10 text-xs font-semibold hover:shadow-xl hover:-translate-y-0.5 transition-all"
+        class="note-tab pointer-events-auto inline-flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-full shadow-lg ring-1 ring-black/5 dark:ring-white/10 text-xs font-semibold hover:shadow-xl hover:-translate-y-0.5 transition-all"
         :class="hasText ? 'bg-white/95 dark:bg-gray-800/95 text-gray-700 dark:text-gray-100' : 'bg-white/80 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400'"
         :title="hasText ? 'Open my note on this page' : 'Write a note on this page'"
         @click="emit('update:open', true)"
@@ -40,8 +40,8 @@
     <Transition name="note-unfold">
       <div
         v-if="open"
-        class="note-card rounded-2xl bg-white dark:bg-gray-800 shadow-2xl ring-1 ring-black/5 dark:ring-white/10 overflow-hidden flex flex-col"
-        :class="floating ? 'w-[22rem] max-w-[calc(100vw-3rem)]' : 'w-full max-w-md'"
+        class="note-card pointer-events-auto rounded-2xl bg-white dark:bg-gray-800 shadow-2xl ring-1 ring-black/5 dark:ring-white/10 overflow-hidden flex flex-col"
+        :class="floating ? 'w-[22rem] max-w-full' : 'w-full max-w-md'"
       >
         <div class="note-card-body flex-1 min-h-0 p-3 flex flex-col" :class="style.panel">
           <div class="flex items-center justify-between gap-2 mb-1.5 flex-shrink-0">

@@ -76,7 +76,9 @@ const props = withDefaults(
   { mode: 'image', images: () => [], startPage: 0, showCover: true, muted: false, preferSinglePage: false, edgeFlipOnly: true }
 )
 
-const emit = defineEmits<{ flip: [page: number] }>()
+// orientation: 'portrait' shows one page at a time, 'landscape' a two-page spread - readers
+// place things per visible page (e.g. each page's note tab)
+const emit = defineEmits<{ flip: [page: number]; orientation: [value: 'portrait' | 'landscape'] }>()
 
 const rootRef = ref<HTMLElement | null>(null)
 const hostRef = ref<HTMLElement | null>(null)
@@ -356,7 +358,11 @@ function build() {
     emit('flip', target)
   }
 
-  flip.on('changeOrientation', measureSoon)
+  emit('orientation', flip.getOrientation() === 'portrait' ? 'portrait' : 'landscape')
+  flip.on('changeOrientation', (e) => {
+    emit('orientation', e.data === 'portrait' ? 'portrait' : 'landscape')
+    measureSoon()
+  })
   measureSoon()
   setTimeout(measure, 400)
   flip.on('flip', (e) => {

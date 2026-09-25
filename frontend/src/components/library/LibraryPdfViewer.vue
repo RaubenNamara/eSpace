@@ -151,9 +151,9 @@
             <!-- Student's own private per-page summary. -->
             <button
               v-if="bookImages.length > 0 && notesEnabled"
-              @click="showNotesPanel = !showNotesPanel"
+              @click="toggleFirstNote"
               class="p-2 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
-              :class="{ 'ring-2 ring-white/50': showNotesPanel }"
+              :class="{ 'ring-2 ring-white/50': anyNoteOpen }"
               title="My notes for this page"
             >
               <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -201,7 +201,7 @@
         <div v-if="showToc" @click="showToc = false" class="absolute inset-0 bg-black/50 z-30 lg:hidden"></div>
 
         <div
-          class="flex-1 p-0 lg:p-3 bg-gray-200 dark:bg-gray-900"
+          class="relative flex-1 p-0 lg:p-3 bg-gray-200 dark:bg-gray-900"
           :class="[
             zoomLevel > MIN_ZOOM ? 'overflow-auto' : 'overflow-hidden flex justify-center items-center',
             // Read Mode fallback: the book is sized to fit the screen exactly, but a scrollbar
@@ -238,6 +238,7 @@
               :prefer-single-page="preferSinglePage"
               class="max-w-full max-h-full transition-shadow duration-300 hover:drop-shadow-2xl"
               @flip="onFlip"
+              @orientation="bookOrientation = $event"
             />
           </div>
 
@@ -248,21 +249,28 @@
             :class="READING_TINTS.find(t => t.value === readingTint)?.class"
           ></div>
 
-          <!-- A page the student has written a note on shows a "My note" tab at the bottom of the
-               book as they flip to it; clicking it unfolds the note to the right (UnfoldingNote).
-               The header's notes button opens the same note to write on a page without one. -->
-          <UnfoldingNote
-            v-if="notesEnabled"
-            :key="currentPage"
-            floating
-            v-model="currentPageNote"
-            v-model:open="showNotesPanel"
-            :color="currentNoteColor"
-            :status="noteStatus"
-            :heading="`My Note — Page ${currentPage}`"
-            @update:color="setCurrentNoteColor"
-            @input="onNoteInput"
-          />
+          <!-- Each page on show has its own note, folded away as a tab at the foot of that page:
+               "My note" where the student has written one, "Add my note" where not. In the two-page
+               view the left and right pages each get one (the book is centred, so the spine is the
+               middle of this area); clicking a tab unfolds that page's note (UnfoldingNote). -->
+          <template v-if="notesEnabled && !preparing && bookImages.length">
+            <UnfoldingNote
+              v-for="slot in noteSlots"
+              :key="`${slot.side}-${slot.page}`"
+              floating
+              show-add
+              :style="slot.style"
+              :model-value="pageNotes[slot.page] ?? ''"
+              @update:model-value="pageNotes[slot.page] = $event"
+              :open="!!openNotes[slot.page]"
+              @update:open="openNotes[slot.page] = $event"
+              :color="noteColorOf(slot.page)"
+              :status="noteStatus[slot.page] ?? 'idle'"
+              :heading="`My Note — Page ${slot.page}`"
+              @update:color="setNoteColor(slot.page, $event)"
+              @input="onNoteInput(slot.page)"
+            />
+          </template>
         </div>
 
         <!-- Right-side contents panel - the PDF's own bookmarks/outline when it has one, else a
@@ -433,21 +441,45 @@ const READING_TINTS = [
 // Student's own private per-page summary ("what I understood from this page") - lazy-loaded per
 // page visit (unlike eNotes, a library book can run to hundreds of pages, so bulk-loading every
 // page's note upfront isn't worth it), never visible to the teacher/HOD.
-const showNotesPanel = ref(false)
+// Each visible page's note: which are unfolded, their save status, their own save timers
+const openNotes = ref<Record<number, boolean>>({})
+const anyNoteOpen = computed(() => Object.values(openNotes.value).some(Boolean))
 // Each page's note has its own colour (saved with it); pages without one use the colour the
 // student picked last (shared with the eNotes reader's My Summary)
 const { summaryColor } = useSummaryColor()
 const pageNotes = ref<Record<number, string>>({})
 const pageNoteColors = ref<Record<number, SummaryColor | null>>({})
-const currentNoteColor = computed<SummaryColor>(() => pageNoteColors.value[currentPage.value] ?? summaryColor.value)
-const noteStatus = ref<'idle' | 'saving' | 'saved'>('idle')
+const noteColorOf = (page: number): SummaryColor => pageNoteColors.value[page] ?? summaryColor.value
+const noteStatus = ref<Record<number, 'idle' | 'saving' | 'saved'>>({})
 const loadedNotePages = new Set<number>()
-let noteSaveTimer: ReturnType<typeof setTimeout> | null = null
+const noteSaveTimers: Record<number, ReturnType<typeof setTimeout>> = {}
 
-const currentPageNote = computed({
-  get: () => pageNotes.value[currentPage.value] ?? '',
-  set: (val: string) => { pageNotes.value[currentPage.value] = val },
+// The pages on show and where each one's note tab sits: the whole width in the one-page view; in
+// the two-page view the left page and the right page (the cover and a lone last page show on
+// just one side). page-flip reports the left page of a spread as the current page.
+const bookOrientation = ref<'portrait' | 'landscape'>('landscape')
+const NOTE_GAP = '12px'
+const noteSlots = computed(() => {
+  const page = currentPage.value
+  const total = totalPages.value
+  if (!page) return []
+  const whole = { left: NOTE_GAP, right: NOTE_GAP }
+  const leftHalf = { left: NOTE_GAP, right: `calc(50% + ${NOTE_GAP})` }
+  const rightHalf = { left: `calc(50% + ${NOTE_GAP})`, right: NOTE_GAP }
+  if (bookOrientation.value === 'portrait') return [{ page, side: 'single', style: whole }]
+  // The cover stands alone on the right; a lone back page on the left
+  if (page === 1) return [{ page, side: 'right', style: rightHalf }]
+  if (page + 1 > total) return [{ page, side: 'left', style: leftHalf }]
+  return [
+    { page, side: 'left', style: leftHalf },
+    { page: page + 1, side: 'right', style: rightHalf }
+  ]
 })
+
+function toggleFirstNote() {
+  const first = noteSlots.value[0]?.page
+  if (first) openNotes.value[first] = !openNotes.value[first]
+}
 
 async function loadPageNote(pageNumber: number) {
   if (!notesEnabled.value || loadedNotePages.has(pageNumber)) return
@@ -464,34 +496,33 @@ async function loadPageNote(pageNumber: number) {
   }
 }
 
-function onNoteInput() {
-  noteStatus.value = 'saving'
-  const pageNumber = currentPage.value
-  if (noteSaveTimer) clearTimeout(noteSaveTimer)
-  noteSaveTimer = setTimeout(async () => {
+function onNoteInput(pageNumber: number) {
+  noteStatus.value[pageNumber] = 'saving'
+  clearTimeout(noteSaveTimers[pageNumber])
+  noteSaveTimers[pageNumber] = setTimeout(async () => {
     try {
       await axios.put(`${notesBase.value}/pages/${pageNumber}/note`, {
         content: pageNotes.value[pageNumber] || '',
         color: pageNoteColors.value[pageNumber] ?? null,
       })
-      noteStatus.value = 'saved'
+      noteStatus.value[pageNumber] = 'saved'
     } catch {
-      noteStatus.value = 'idle'
+      noteStatus.value[pageNumber] = 'idle'
     }
   }, 800)
 }
 
-// Choosing a colour saves it for this page straight away and makes it the default for new pages
-function setCurrentNoteColor(color: SummaryColor) {
-  pageNoteColors.value[currentPage.value] = color
+// Choosing a colour saves it for that page straight away and makes it the default for new pages
+function setNoteColor(pageNumber: number, color: SummaryColor) {
+  pageNoteColors.value[pageNumber] = color
   summaryColor.value = color
-  onNoteInput()
+  onNoteInput(pageNumber)
 }
 
-watch(currentPage, (page, previous) => {
-  if (page > 0) loadPageNote(page)
-  // Flipping on folds the open note away (the next page's own note shows as its marker)
-  if (previous && page !== previous) showNotesPanel.value = false
+// Turning the page folds any open note away and loads the notes of the pages now on show
+watch(noteSlots, (slots, previous) => {
+  slots.forEach(slot => loadPageNote(slot.page))
+  if (previous && slots.map(s => s.page).join() !== previous.map(s => s.page).join()) openNotes.value = {}
 }, { immediate: true })
 
 // Every page the student has already written on, in one request, so the note marker appears the
