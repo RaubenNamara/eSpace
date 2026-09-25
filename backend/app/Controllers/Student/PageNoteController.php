@@ -231,6 +231,44 @@ class PageNoteController extends Controller
     }
 
     /**
+     * Every page of a book the student has written a note on (page number, colour and text), so
+     * the reader can show a note marker on those pages as the student flips to them.
+     * GET /student/library/books/{bookId}/notes
+     */
+    public function listLibraryNotes($bookId): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+        $studentId = $this->getStudentId();
+        if (!$studentId) {
+            $this->error('Student not found', 403);
+            return;
+        }
+
+        $bookId = (int) $bookId;
+        $db = $this->getDb();
+        $whereClause = $this->libraryVisibilityClause();
+
+        $stmt = $db->prepare("SELECT lb.id FROM library_books lb WHERE lb.id = :id AND {$whereClause}");
+        $stmt->execute(['id' => $bookId, 'student_id' => $studentId, 'student_id_te' => $studentId]);
+        if (!$stmt->fetch()) {
+            $this->notFound('Book not found or not accessible');
+            return;
+        }
+
+        $stmt = $db->prepare(
+            "SELECT page_number, content, color FROM library_page_notes
+             WHERE book_id = :book_id AND student_id = :student_id AND TRIM(content) <> ''
+             ORDER BY page_number"
+        );
+        $stmt->execute(['book_id' => $bookId, 'student_id' => $studentId]);
+
+        $this->success(['notes' => $stmt->fetchAll()]);
+    }
+
+    /**
      * PUT /student/library/books/{bookId}/pages/{pageNumber}/note
      */
     public function saveLibraryNote($bookId, $pageNumber): void

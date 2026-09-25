@@ -77,6 +77,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/library/{id}', 'eSpace\App\Controllers\Student\LibraryController@show');
         Router::post('/library/{id}/progress', 'eSpace\App\Controllers\Student\LibraryController@updateProgress');
         Router::post('/library/{id}/bookmark', 'eSpace\App\Controllers\Student\LibraryController@toggleBookmark');
+        Router::get('/library/books/{bookId}/notes', 'eSpace\App\Controllers\Student\PageNoteController@listLibraryNotes');
         Router::get('/library/books/{bookId}/pages/{pageNumber}/note', 'eSpace\App\Controllers\Student\PageNoteController@getLibraryNote');
         Router::put('/library/books/{bookId}/pages/{pageNumber}/note', 'eSpace\App\Controllers\Student\PageNoteController@saveLibraryNote');
 
