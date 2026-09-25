@@ -825,61 +825,105 @@ onBeforeUnmount(() => {
   60% { transform: rotate(8deg); }
 }
 
-/* The note unfolds to the right from the marker like a folded slip of paper opening: it swings
-   open on its left edge (the fold), the paper's crease shadow fades as it flattens, and the
-   writing appears once it's open. Folding away plays the same thing in reverse, quicker. */
+/* The note opens like a folded slip of paper: it starts as a small folded square sitting on the
+   marker, opens out to the right into a long strip, then opens upward to its full size. The
+   fold creases show while it opens and flatten away; a shadow runs along the edge that is still
+   unfolding; the writing appears once the paper is open. Folding away runs it in reverse. */
 .note-card {
   transform-origin: left bottom;
 }
 .note-unfold-enter-active {
-  animation: note-unfold 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: note-unfold 1.05s cubic-bezier(0.65, 0, 0.35, 1) both;
 }
 .note-unfold-leave-active {
-  animation: note-unfold 0.3s cubic-bezier(0.55, 0, 0.8, 0.2) reverse both;
+  animation: note-unfold 0.6s cubic-bezier(0.65, 0, 0.35, 1) reverse both;
 }
-.note-unfold-enter-active .note-card-body {
-  animation: note-writing 0.6s ease both;
+/* The paper keeps its colour the whole time (so its shape reads against a white page); only the
+   writing on it waits until it's open */
+.note-unfold-enter-active .note-card-body > * {
+  animation: note-writing 1.05s ease both;
 }
+/* Fold creases: two vertical folds (the strip's three panels) and one horizontal fold */
 .note-card::after {
   content: '';
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(90deg, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0) 35%, rgba(255, 255, 255, 0.25) 50%, rgba(0, 0, 0, 0) 65%);
+  opacity: 0;
+  background:
+    linear-gradient(90deg, transparent calc(33.3% - 6px), rgba(0, 0, 0, 0.16) 33.3%, rgba(255, 255, 255, 0.5) calc(33.3% + 1px), transparent calc(33.3% + 7px)),
+    linear-gradient(90deg, transparent calc(66.6% - 6px), rgba(0, 0, 0, 0.16) 66.6%, rgba(255, 255, 255, 0.5) calc(66.6% + 1px), transparent calc(66.6% + 7px)),
+    linear-gradient(180deg, transparent calc(50% - 6px), rgba(0, 0, 0, 0.14) 50%, rgba(255, 255, 255, 0.5) calc(50% + 1px), transparent calc(50% + 7px));
+}
+.note-unfold-enter-active::after,
+.note-unfold-leave-active::after {
+  animation: note-crease 1.05s ease both;
+}
+.note-unfold-leave-active::after {
+  animation-duration: 0.6s;
+  animation-direction: reverse;
+}
+/* Shading on the flap that is still turning open */
+.note-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
   opacity: 0;
 }
-.note-unfold-enter-active::after {
-  animation: note-crease 0.6s ease both;
+.note-unfold-enter-active::before {
+  animation: note-flap 1.05s cubic-bezier(0.65, 0, 0.35, 1) both;
 }
 @keyframes note-unfold {
   0% {
     opacity: 0;
-    transform: perspective(900px) rotateY(-100deg) scale(0.35, 0.2);
+    clip-path: inset(calc(100% - 46px) calc(100% - 46px) 0 0 round 10px);
+    transform: translateY(8px) rotate(-6deg) scale(0.9);
   }
-  35% {
+  12% {
     opacity: 1;
-    transform: perspective(900px) rotateY(-70deg) scale(0.7, 1);
+    clip-path: inset(calc(100% - 46px) calc(100% - 46px) 0 0 round 10px);
+    transform: translateY(0) rotate(0) scale(1);
   }
-  75% {
-    transform: perspective(900px) rotateY(8deg) scale(1);
+  50% {
+    clip-path: inset(calc(100% - 46px) 0 0 0 round 10px);
+    transform: none;
+  }
+  56% {
+    clip-path: inset(calc(100% - 46px) 0 0 0 round 10px);
   }
   100% {
     opacity: 1;
-    transform: perspective(900px) rotateY(0) scale(1);
+    clip-path: inset(0 0 0 0 round 16px);
+    transform: none;
+  }
+}
+@keyframes note-flap {
+  0%, 12% {
+    opacity: 1;
+    box-shadow: inset -34px 0 22px -20px rgba(0, 0, 0, 0.45);
+  }
+  50%, 56% {
+    opacity: 1;
+    box-shadow: inset 0 34px 22px -20px rgba(0, 0, 0, 0.45);
+  }
+  100% {
+    opacity: 1;
+    box-shadow: inset 0 0 0 0 rgba(0, 0, 0, 0);
   }
 }
 @keyframes note-crease {
-  0% { opacity: 1; }
+  0%, 55% { opacity: 1; }
   100% { opacity: 0; }
 }
 @keyframes note-writing {
-  0%, 45% { opacity: 0; }
+  0%, 70% { opacity: 0; }
   100% { opacity: 1; }
 }
+/* Windows' "Animation effects" off (reduced motion): still unfold, just without the tilt/flap */
 @media (prefers-reduced-motion: reduce) {
-  .note-unfold-enter-active,
-  .note-unfold-leave-active,
-  .note-unfold-enter-active .note-card-body,
+  .note-unfold-enter-active::before,
   .note-tab-icon {
     animation: none;
   }
