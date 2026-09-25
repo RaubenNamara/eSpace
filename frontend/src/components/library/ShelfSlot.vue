@@ -34,13 +34,23 @@
         <!-- Phones: a bottom sheet with a grab bar and a big Open button (no hover to lean on) -->
         <div v-if="!canHover" class="sheet-grab" aria-hidden="true"></div>
         <!-- The book's cover, large and face-on: always above everything on the page (this card is
-             teleported to <body>), so it's readable however the shelf around it is laid out -->
-        <div v-if="$slots.cover" class="card-cover">
+             teleported to <body>), so it's readable however the shelf around it is laid out. Clicking
+             it opens the book, same as clicking the book on the shelf. -->
+        <div
+          v-if="$slots.cover"
+          class="card-cover"
+          role="button"
+          tabindex="0"
+          :aria-label="label ? `Open ${label}` : 'Open'"
+          :title="label ? `Open ${label}` : 'Open'"
+          @click="openFromSheet"
+          @keydown.enter.prevent="openFromSheet"
+        >
           <slot name="cover" :size="coverSize" />
         </div>
         <slot name="details" />
         <button v-if="!canHover" type="button" class="sheet-open" @click="openFromSheet">{{ openLabel }}</button>
-        <p v-else class="card-hint">Click the book to open</p>
+        <p v-else class="card-hint">Click the book or its cover to open</p>
       </div>
     </Teleport>
   </div>
@@ -208,6 +218,19 @@ onBeforeUnmount(() => {
   display: flex;
   justify-content: center;
   margin: 2px 0 12px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.card-cover:hover {
+  transform: translateY(-2px) scale(1.02);
+  filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.25));
+}
+
+.card-cover:focus-visible {
+  outline: 2px solid #4f46e5;
+  outline-offset: 3px;
 }
 
 .card-hint {
