@@ -151,7 +151,7 @@
               class="relative inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
               :class="classPalette(group.name).softText"
             >
-              {{ group.topics.length }} {{ group.topics.length === 1 ? 'topic' : 'topics' }}
+              {{ bookCount(group.topics) }} {{ bookCount(group.topics) === 1 ? 'topic' : 'topics' }}
             </span>
           </button>
         </div>
@@ -200,11 +200,14 @@
             v-for="shelf in activeClassSubjectShelves"
             :key="shelf.name"
             :title="shelf.name"
-            :count="shelf.topics.length"
+            :count="shelf.books.length"
             spines
           >
+            <!-- A topic duplicated to other streams of this class is one book here (its copies are
+                 linked - editing the content updates them all); its card lists every class/stream
+                 it's in with each copy's status, and Select/Delete cover all the copies. -->
             <ShelfSlot
-              v-for="topic in shelf.topics"
+              v-for="{ topic, copies } in shelf.books"
               :key="topic.id"
               :label="topic.title"
               :title="`Updated ${formatDate(topic.updated_at)}`"
@@ -222,7 +225,7 @@
               </template>
               <ShelfBook
                 spine-out
-                :selected="bulk.isSelected(topic.id)"
+                :selected="bulk.allSelected(copies.map(c => c.id))"
                 variant="notes"
                 :title="topic.title"
                 :seed="topic.id"
@@ -246,25 +249,20 @@
                 <label class="flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400 cursor-pointer select-none mb-1.5">
                   <input
                     type="checkbox"
-                    :checked="bulk.isSelected(topic.id)"
-                    @change="bulk.toggle(topic.id)"
+                    :checked="bulk.allSelected(copies.map(c => c.id))"
+                    @change="bulk.toggleAll(copies.map(c => c.id))"
                     class="w-3.5 h-3.5 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
                   >
-                  Select
+                  Select{{ copies.length > 1 ? ` (all ${copies.length} classes)` : '' }}
                 </label>
-              <div class="flex items-center gap-1.5">
+              <div v-if="copies.length === 1" class="flex items-center gap-1.5">
                 <span
-                  :class="[
-                    'px-1.5 py-0.5 rounded-full text-[10px] font-semibold',
-                    topic.status === 'published' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                    topic.status === 'draft' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                    'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                  ]"
+                  :class="['px-1.5 py-0.5 rounded-full text-[10px] font-semibold', statusChip(topic.status)]"
                 >
-                  {{ topic.status.charAt(0).toUpperCase() + topic.status.slice(1) }}
+                  {{ statusLabel(topic.status) }}
                 </span>
                 <span
-                  v-if="topic.content_group_id"
+                  v-if="topic.content_group_id && linkedTopicCount(topic) > 0"
                   class="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
                   :title="`Linked to ${linkedTopicCount(topic)} other class/stream cop${linkedTopicCount(topic) === 1 ? 'y' : 'ies'} - editing content here updates them too`"
                 >
@@ -272,9 +270,17 @@
                 </span>
               </div>
               <p class="mt-1 text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug">{{ topic.title }}</p>
-              <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">
-                {{ topic.class_group_name ? `${topic.class_group_name} (All Streams)` : topic.class_stream_name ? `${topic.class_name} - ${topic.class_stream_name}` : topic.class_name }}
-              </p>
+              <p v-if="copies.length === 1" class="text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ classLabel(topic) }}</p>
+              <!-- Duplicated: every class/stream this topic is in, each with its own status -->
+              <div v-else class="mt-1">
+                <p class="text-[10px] font-semibold uppercase tracking-wide text-purple-700 dark:text-purple-300">Duplicated to {{ copies.length }} classes</p>
+                <ul class="mt-1 space-y-0.5 max-h-28 overflow-y-auto">
+                  <li v-for="copy in copies" :key="copy.id" class="flex items-center justify-between gap-2 text-[11px] text-gray-600 dark:text-gray-300">
+                    <span class="truncate">{{ classLabel(copy) }}</span>
+                    <span :class="['flex-shrink-0 px-1.5 py-px rounded-full text-[9px] font-semibold', statusChip(copy.status)]">{{ statusLabel(copy.status) }}</span>
+                  </li>
+                </ul>
+              </div>
               <div class="flex items-center -ml-1.5 mt-0.5">
                 <button
                   @click.stop="editTopic(topic)"
@@ -304,7 +310,7 @@
                   </svg>
                 </button>
                 <button
-                  @click.stop="deleteTopic(topic.id)"
+                  @click.stop="deleteBook(copies)"
                   class="p-1.5 min-w-[34px] min-h-[34px] flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-900 rounded-lg transition-colors"
                   title="Delete"
                 >
@@ -991,6 +997,32 @@ const classGroups = computed<ClassTopicGroup[]>(() => {
 
 const activeClassTopics = computed(() => classGroups.value.find(g => g.name === activeClassName.value)?.topics ?? [])
 // Inside a class, topics stand on one shelf per subject
+// Copies of one topic (linked by content_group_id when it was duplicated to other streams) are one
+// book on the shelf: the original (earliest) copy stands for them, `copies` holds them all.
+interface TopicBook {
+  topic: ENoteTopic
+  copies: ENoteTopic[]
+}
+const toBooks = (list: ENoteTopic[]): TopicBook[] => {
+  const books: TopicBook[] = []
+  const byGroup = new Map<number, TopicBook>()
+  for (const topic of list) {
+    const gid = topic.content_group_id
+    const existing = gid ? byGroup.get(gid) : undefined
+    if (existing) {
+      existing.copies.push(topic)
+      if (topic.id < existing.topic.id) existing.topic = topic
+      continue
+    }
+    const book = { topic, copies: [topic] }
+    books.push(book)
+    if (gid) byGroup.set(gid, book)
+  }
+  books.forEach(book => book.copies.sort((a, b) => classLabel(a).localeCompare(classLabel(b), undefined, { numeric: true })))
+  return books
+}
+const bookCount = (list: ENoteTopic[]) => toBooks(list).length
+
 const activeClassSubjectShelves = computed(() => {
   const map = new Map<string, ENoteTopic[]>()
   activeClassTopics.value.forEach(topic => {
@@ -998,8 +1030,41 @@ const activeClassSubjectShelves = computed(() => {
     if (!map.has(name)) map.set(name, [])
     map.get(name)!.push(topic)
   })
+  // Shelf order (newest first) looks at each book's newest copy
   return orderShelves(Array.from(map, ([name, topics]) => ({ name, topics })), g => g.topics)
+    .map(shelf => ({ name: shelf.name, books: toBooks(shelf.topics) }))
 })
+
+const classLabel = (topic: ENoteTopic) => topic.class_group_name
+  ? `${topic.class_group_name} (All Streams)`
+  : topic.class_stream_name ? `${topic.class_name} - ${topic.class_stream_name}` : (topic.class_name || 'Unassigned')
+const statusLabel = (status: string) => status.charAt(0).toUpperCase() + status.slice(1)
+const statusChip = (status: string) => status === 'published'
+  ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+  : status === 'draft'
+    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+    : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+
+// Deleting a duplicated book removes it from every class/stream it's in here
+const deleteBook = async (copies: ENoteTopic[]) => {
+  if (copies.length === 1) return deleteTopic(copies[0].id)
+  const ids = copies.map(c => c.id)
+  if (!await confirmDialog.open({
+    title: 'Delete topic',
+    message: `This topic is in ${copies.length} classes (${copies.map(classLabel).join(', ')}). Delete it from all of them? This cannot be undone.`,
+    confirmLabel: 'Delete from all',
+    danger: true
+  })) return
+  try {
+    await axios.post(`${API_BASE}/teacher/enotes/topics/bulk-delete`, { ids })
+    bulk.clear()
+    await loadTopics()
+    await loadDashboard()
+    toast.success('Topic deleted')
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Failed to delete topic. Please try again.')
+  }
+}
 const visibleTopicIds = computed(() => activeClassTopics.value.map(t => t.id))
 
 const bulkSetStatus = async (status: 'draft' | 'published' | 'archived') => {
