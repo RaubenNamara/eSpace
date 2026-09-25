@@ -528,6 +528,7 @@
                 :prefer-single-page="preferSinglePage"
                 class="transition-shadow duration-300 hover:drop-shadow-2xl"
                 @flip="onBookFlip"
+                @orientation="bookOrientation = $event"
               >
                 <template #pages>
                   <!-- No blanket @touchstart.stop here any more: BookFlipbook's edge guard (edgeFlipOnly)
@@ -737,11 +738,11 @@
       </button>
     </template>
 
-    <!-- Learning Outcome Assessment prompt - interrupts manual "Next" when the page just read has
-         its own linked assessment, naming the outcome and letting the student ignore it (keep
-         reading) or attempt it right away. -->
+    <!-- Learning Outcome Assessment prompt - stops the student moving on past a page that has its
+         own linked assessment (however they turn the page), naming the outcome and letting them
+         attempt it right away or ignore it and keep reading. -->
     <div
-      v-if="isStudentMode && showLoaPrompt && currentPage?.linked_assignment"
+      v-if="isStudentMode && showLoaPrompt && loaPromptPage?.linked_assignment"
       class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
     >
       <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden text-center">
@@ -753,7 +754,7 @@
           </span>
           <h2 class="text-base font-bold text-gray-900 dark:text-white mb-1">Learning Outcome Complete</h2>
           <p class="text-sm text-gray-600 dark:text-gray-400">
-            You've finished a page covering <span class="font-medium text-gray-900 dark:text-white">{{ currentPage.linked_assignment.learning_outcome_label || currentPage.linked_assignment.title }}</span>. Want to attempt a quick assessment on it now?
+            You've finished a page covering <span class="font-medium text-gray-900 dark:text-white">{{ loaPromptPage.linked_assignment.learning_outcome_label || loaPromptPage.linked_assignment.title }}</span>. Attempt its quick assessment now, then carry on reading.
           </p>
         </div>
         <div class="flex gap-3 p-5 pt-0">
@@ -1347,6 +1348,7 @@ const loadTopic = async () => {
       }
       if (resumeIndex >= 0) {
         await nextTick()
+        lastBookIndex = resumeIndex
         flipbookRef.value?.turnToPage(resumeIndex, { animate: false })
       }
     }
@@ -1367,7 +1369,27 @@ const selectPage = (pageId: number) => {
 // Fired by the book itself once a turn completes (StPageFlip is 0-indexed) - this is the single
 // source of truth for "which page is current" now, whichever triggered the turn (buttons, ToC,
 // or the reader just dragging a corner directly).
+// Where the book was before this turn (0-indexed), and its layout - to know which pages the
+// student is moving on from (a two-page spread shows the left page's index and the one after it)
+let lastBookIndex = 0
+const bookOrientation = ref<'portrait' | 'landscape'>('landscape')
+
 const onBookFlip = (index: number) => {
+  const from = lastBookIndex
+  // Moving forward past a page with a Learning Outcome Assessment the student hasn't attempted
+  // (or chosen to skip) - by any means: Next, dragging or clicking the page edge, the keyboard,
+  // the contents list, Read Aloud moving on - turns back to that page and asks first.
+  if (isStudentMode.value && index > from) {
+    const blocking = loaPageLeaving(from)
+    if (blocking) {
+      loaResumeIndex = index
+      flipbookRef.value?.turnToPage(from, { animate: false, silent: true })
+      currentPage.value = pages.value[from] ?? null
+      openLoaPrompt(blocking)
+      return
+    }
+  }
+  lastBookIndex = index
   currentPage.value = pages.value[index] ?? null
 }
 
@@ -1393,22 +1415,45 @@ const handlePrevious = () => {
 }
 
 // A page that has its own Learning Outcome Assessment (see ENoteBuilder.vue's per-page quick
-// create) interrupts manual forward navigation with an Ignore/Attempt prompt instead of flipping
-// straight away - only on manual Next (this handler), not narration auto-advance
-// (onNarrationEnded above), so finishing an audio narration never gets unexpectedly interrupted.
-// Already-attempted assignments (submission_status !== 'new') don't prompt again.
+// create) asks the student to attempt it before they move on past that page: Attempt opens the
+// assessment (and brings them back to the next page afterwards), Ignore carries on reading.
+// Already-attempted assessments (submission_status !== 'new') and ones the student chose to skip
+// in this sitting don't ask again. The topic's end-of-topic assessment (AOI) is separate: it's
+// offered on the completion screen once every page has been read.
 const showLoaPrompt = ref(false)
+const loaPromptPage = ref<ENotePage | null>(null)
+const skippedLoa = new Set<number>()
+// Where the student was heading when the prompt stopped them (a book index), or null for "the
+// next page" / "finish the topic"
+let loaResumeIndex: number | null = null
+
+const hasPendingLoa = (page?: ENotePage | null) => {
+  const linked = page?.linked_assignment
+  return !!linked && linked.submission_status === 'new' && !skippedLoa.has(linked.id)
+}
+
+// The first page on show at `index` (both pages of a two-page spread) with an assessment still
+// waiting for this student
+const loaPageLeaving = (index: number): ENotePage | null => {
+  const onShow = bookOrientation.value === 'landscape' ? [index, index + 1] : [index]
+  return onShow.map(i => pages.value[i]).find(page => hasPendingLoa(page)) ?? null
+}
+
+const openLoaPrompt = (page: ENotePage) => {
+  loaPromptPage.value = page
+  showLoaPrompt.value = true
+}
 
 // Shared by the "Next" button AND "Finish Topic" - a page-level LOA on a topic's last (or only)
 // page must still prompt, even though there's no next page to flip to afterward. Returns true
 // when it intercepted (caller should not advance yet).
 const checkLoaPromptBeforeAdvance = (): boolean => {
-  const linked = currentPage.value?.linked_assignment
-  if (isStudentMode.value && linked && linked.submission_status === 'new') {
-    showLoaPrompt.value = true
-    return true
-  }
-  return false
+  if (!isStudentMode.value) return false
+  const blocking = loaPageLeaving(lastBookIndex)
+  if (!blocking) return false
+  loaResumeIndex = null
+  openLoaPrompt(blocking)
+  return true
 }
 
 const handleNext = () => {
@@ -1424,8 +1469,20 @@ const handleFinishTopic = () => {
 }
 
 const ignoreLoaPrompt = () => {
+  const linked = loaPromptPage.value?.linked_assignment
+  if (linked) skippedLoa.add(linked.id)
   showLoaPrompt.value = false
-  if (hasNextPage.value) {
+  // Another page on show may still have its own assessment waiting
+  const another = loaPageLeaving(lastBookIndex)
+  if (another) {
+    openLoaPrompt(another)
+    return
+  }
+  const target = loaResumeIndex
+  loaResumeIndex = null
+  if (target !== null) {
+    flipbookRef.value?.turnToPage(target)
+  } else if (hasNextPage.value) {
     flipbookRef.value?.flipNext()
   } else if (isStudentMode.value) {
     showCompletion.value = true
@@ -1436,11 +1493,13 @@ const ignoreLoaPrompt = () => {
 // (AssignmentAnswer.vue) knows which page to resume on afterward - omitted if this was the last
 // page (nothing to resume to but the topic itself).
 const attemptPageLoa = () => {
-  const linked = currentPage.value?.linked_assignment
-  if (!linked || !topic.value || !currentPage.value) return
+  const page = loaPromptPage.value
+  const linked = page?.linked_assignment
+  if (!page || !linked || !topic.value) return
   showLoaPrompt.value = false
-  const currentIndex = pages.value.findIndex(p => p.id === currentPage.value!.id)
-  const nextPageInBook = pages.value[currentIndex + 1]
+  loaResumeIndex = null
+  const pageIndex = pages.value.findIndex(p => p.id === page.id)
+  const nextPageInBook = pages.value[pageIndex + 1]
   const params = new URLSearchParams({ origin: 'enote', topicId: String(topic.value.id) })
   if (nextPageInBook) params.set('nextPageId', String(nextPageInBook.id))
   if (readMode.value) exitReadMode()
