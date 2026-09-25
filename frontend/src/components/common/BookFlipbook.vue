@@ -95,10 +95,14 @@ let pageSizeRebuildTimer: ReturnType<typeof setTimeout> | null = null
 // setting below, so the two stay in sync.
 const FLIPPING_TIME = 700
 
-// Set right before a programmatic (not drag/click) page turn - e.g. Read Aloud auto-advancing to
-// the next page once narration ends - so the flip sound only ever plays for an actual reader
-// gesture, not a turn the app triggered on its own. Consumed and reset by the next 'flip' event.
-let suppressNextFlipSound = false
+// The flip sound only plays when a page is actually seen turning - a drag, a click on the page's
+// edge, the Prev/Next buttons, or a bundle of pages turning on a far jump. Page changes with no
+// turning paper (a direct jump, reopening at a saved page, the book rebuilding after a resize)
+// stay quiet: page-flip only reports 'flipping'/'user_fold' while a turn is animating.
+// silentUntil: a programmatic turn the app asked to keep quiet (e.g. Read Aloud auto-advancing to
+// the next page) - any turn landing before this time makes no sound.
+let silentUntil = 0
+const keepQuiet = () => { silentUntil = Date.now() + FLIPPING_TIME + 300 }
 
 // StPageFlip fires its own 'flip' event twice per single page turn - once as the turn starts and
 // again when the page finishes landing on the other side - so playing a sound on every event
@@ -222,7 +226,7 @@ const BUNDLE_TIME = 720
 const reducedMotion = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
 // Swing a fanned bundle of sheets over the spine, landing the reader on `target` underneath it
-async function bundleFlip(from: number, target: number) {
+async function bundleFlip(from: number, target: number, quiet = false) {
   const b = box.value
   if (!b || !flip) return false
   const forward = target > from
@@ -242,7 +246,7 @@ async function bundleFlip(from: number, target: number) {
   const sheets = bundleSheetRefs.value
   const endAngle = forward ? -180 : 180
   const [a0, a1] = portrait && !forward ? [-180, 0] : [0, endAngle]
-  if (!props.muted) {
+  if (!props.muted && !quiet) {
     playPageFlipSound()
     setTimeout(() => playPageFlipSound(0.4), 140)
   }
@@ -257,8 +261,6 @@ async function bundleFlip(from: number, target: number) {
   )
   // Put the destination underneath while the bundle is up in the air, so it's there as it lands
   setTimeout(() => {
-    suppressNextFlipSound = true
-    lastFlipSoundAt = Date.now()
     flip?.turnToPage(target)
     measureSoon()
   }, BUNDLE_TIME * 0.45)
@@ -350,7 +352,6 @@ function build() {
   if (pendingPage !== null) {
     const target = pendingPage
     pendingPage = null
-    suppressNextFlipSound = true
     flip.turnToPage(target)
     emit('flip', target)
   }
@@ -360,11 +361,12 @@ function build() {
   setTimeout(measure, 400)
   flip.on('flip', (e) => {
     const now = Date.now()
-    if (!props.muted && !suppressNextFlipSound && now - lastFlipSoundAt >= FLIPPING_TIME) {
+    const state = flip?.getState()
+    const paperTurning = state === 'flipping' || state === 'user_fold'
+    if (paperTurning && !props.muted && now >= silentUntil && now - lastFlipSoundAt >= FLIPPING_TIME) {
       playPageFlipSound()
       lastFlipSoundAt = now
     }
-    suppressNextFlipSound = false
     pageCurrent.value = e.data as number
     emit('flip', e.data)
   })
@@ -487,11 +489,11 @@ async function rebuild() {
 }
 
 function flipNext(opts?: { silent?: boolean }) {
-  if (opts?.silent) suppressNextFlipSound = true
+  if (opts?.silent) keepQuiet()
   flip?.flipNext()
 }
 function flipPrev(opts?: { silent?: boolean }) {
-  if (opts?.silent) suppressNextFlipSound = true
+  if (opts?.silent) keepQuiet()
   flip?.flipPrev()
 }
 /**
@@ -512,10 +514,8 @@ async function turnToPage(page: number, opts?: { silent?: boolean; animate?: boo
   const spread = flip.getOrientation() === 'portrait' ? 1 : 2
   const far = Math.abs(page - from) > spread * 2
   if (far && opts?.animate !== false && !reducedMotion && !bundle.value && box.value) {
-    if (opts?.silent) suppressNextFlipSound = true
-    if (await bundleFlip(from, page)) return
+    if (await bundleFlip(from, page, !!opts?.silent)) return
   }
-  if (opts?.silent || opts?.animate === false) suppressNextFlipSound = true
   flip.turnToPage(page)
   measureSoon()
 }
