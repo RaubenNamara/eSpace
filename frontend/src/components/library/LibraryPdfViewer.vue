@@ -150,7 +150,7 @@
             </div>
             <!-- Student's own private per-page summary. -->
             <button
-              v-if="bookImages.length > 0 && isStudentRole"
+              v-if="bookImages.length > 0 && notesEnabled"
               @click="showNotesPanel = !showNotesPanel"
               class="p-2 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
               :class="{ 'ring-2 ring-white/50': showNotesPanel }"
@@ -252,7 +252,7 @@
                something embedded in the page itself, since eLibrary pages are rendered images
                (no DOM to inject a textarea into, unlike the eNotes reader). -->
           <div
-            v-if="showNotesPanel && isStudentRole"
+            v-if="showNotesPanel && notesEnabled"
             class="absolute inset-x-0 bottom-0 z-40 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-2xl rounded-t-2xl p-3 max-h-[50%] flex flex-col"
             :class="currentNoteStyle.panel"
           >
@@ -376,12 +376,14 @@ import { useReadModeStore } from '@/stores/readMode'
 import axios from 'axios'
 import BookFlipbook from '@/components/common/BookFlipbook.vue'
 
-const props = defineProps<{ book: LibraryBook }>()
+// withNotes: the student's private per-page notes (off for readers with no notes store, e.g. Item Bank)
+const props = withDefaults(defineProps<{ book: LibraryBook; withNotes?: boolean }>(), { withNotes: true })
 defineEmits(['close'])
 
 const API_BASE = '/api'
 const authStore = useAuthStore()
 const isStudentRole = computed(() => authStore.userRole === 'student')
+const notesEnabled = computed(() => isStudentRole.value && props.withNotes)
 
 // Shared with the eNotes reader too - muting the page-turn sound in one place should mean it
 // stays muted everywhere, since it's a preference about the sound itself, not this one book.
@@ -464,7 +466,7 @@ const currentPageNote = computed({
 })
 
 async function loadPageNote(pageNumber: number) {
-  if (!isStudentRole.value || loadedNotePages.has(pageNumber)) return
+  if (!notesEnabled.value || loadedNotePages.has(pageNumber)) return
   loadedNotePages.add(pageNumber)
   try {
     const response = await axios.get(`${API_BASE}/student/library/books/${props.book.id}/pages/${pageNumber}/note`)

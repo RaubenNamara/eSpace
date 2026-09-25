@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace eSpace\App\Controllers\Student;
 
 use eSpace\App\Controllers\Controller;
+use eSpace\App\Utils\ItemBankCover;
 
 /**
  * Student Item Bank Controller
@@ -105,8 +106,9 @@ class ItemBankController extends Controller
 
         $whereClause = implode(' AND ', $where);
 
+        $cover = ItemBankCover::select($db);
         $sql = "SELECT q.id, q.subject_id, q.class_id, q.question_text as title, q.explanation as description,
-                       q.file_path, q.file_type, q.file_size, q.published_at, q.created_at,
+                       q.file_path, q.file_type, q.file_size, {$cover}, q.published_at, q.created_at,
                        s.name as subject_name, s.code as subject_code,
                        t.first_name as teacher_first_name, t.last_name as teacher_last_name
                 FROM item_bank_questions q
@@ -119,7 +121,7 @@ class ItemBankController extends Controller
         $stmt->execute($params);
         $resources = $stmt->fetchAll();
 
-        $this->success(['resources' => $resources]);
+        $this->success(['resources' => $resources, 'subjects' => $this->enrolledSubjects($db, $studentId)]);
     }
 
     /**
@@ -144,8 +146,9 @@ class ItemBankController extends Controller
 
         $whereClause = $this->visibilityClause();
 
+        $cover = ItemBankCover::select($db);
         $sql = "SELECT q.id, q.subject_id, q.class_id, q.question_text as title, q.explanation as description,
-                       q.file_path, q.file_type, q.file_size, q.published_at, q.created_at,
+                       q.file_path, q.file_type, q.file_size, {$cover}, q.published_at, q.created_at,
                        s.name as subject_name, s.code as subject_code,
                        t.first_name as teacher_first_name, t.last_name as teacher_last_name
                 FROM item_bank_questions q
@@ -190,5 +193,22 @@ class ItemBankController extends Controller
              VALUES (:question_id, :student_id, 'practice', NOW())"
         );
         $stmt->execute(['question_id' => $questionId, 'student_id' => $studentId]);
+    }
+
+    /**
+     * Every subject the student is enrolled in (the subjects of their departments), so the shelf
+     * page can show an empty docket for a subject that has no resources yet.
+     */
+    private function enrolledSubjects($db, int $studentId): array
+    {
+        $stmt = $db->prepare(
+            "SELECT DISTINCT s.id, s.name, s.code
+             FROM subjects s
+             INNER JOIN student_department_enrollments sde ON sde.department_id = s.department_id
+             WHERE sde.student_id = :student_id AND sde.deleted_at IS NULL AND s.deleted_at IS NULL
+             ORDER BY s.name"
+        );
+        $stmt->execute(['student_id' => $studentId]);
+        return $stmt->fetchAll();
     }
 }

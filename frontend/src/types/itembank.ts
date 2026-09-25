@@ -16,6 +16,10 @@ export interface ItemBankResource {
   file_path: string
   file_type: string
   file_size: number | null
+  // Same as LibraryBook: the PDF's first page captured automatically ('auto_' files) or a picture
+  // the teacher uploaded; null = printed cover. total_pages gives the shelf book its thickness.
+  cover_image?: string | null
+  total_pages?: number | null
   status: 'draft' | 'published' | 'archived'
   published_at: string | null
   created_at: string

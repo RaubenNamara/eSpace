@@ -337,6 +337,8 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::post('/itembank/bulk-delete', 'eSpace\App\Controllers\Teacher\ItemBankController@bulkDelete');
         Router::post('/itembank/bulk-export', 'eSpace\App\Controllers\Teacher\ItemBankController@bulkExport');
         Router::get('/itembank/{id}', 'eSpace\App\Controllers\Teacher\ItemBankController@show');
+        Router::post('/itembank/{id}/cover', 'eSpace\App\Controllers\Teacher\ItemBankController@uploadCover');
+        Router::delete('/itembank/{id}/cover', 'eSpace\App\Controllers\Teacher\ItemBankController@deleteCover');
         Router::put('/itembank/{id}', 'eSpace\App\Controllers\Teacher\ItemBankController@update');
         Router::delete('/itembank/{id}', 'eSpace\App\Controllers\Teacher\ItemBankController@delete');
         
