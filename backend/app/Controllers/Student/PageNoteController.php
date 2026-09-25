@@ -329,4 +329,146 @@ class PageNoteController extends Controller
 
         $this->success([], 'Note saved');
     }
+
+    // Mirrors Student\ItemBankController::visibilityClause().
+    private function itemBankVisibilityClause(): string
+    {
+        return "q.status = 'published' AND q.deleted_at IS NULL AND EXISTS (
+            SELECT 1 FROM student_department_enrollments sde
+            LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
+            WHERE sde.student_id = :student_id
+              AND sde.department_id = q.department_id
+              AND sde.deleted_at IS NULL
+              AND sde.status = 'active'
+              AND (
+                (q.class_id IS NULL AND q.class_group_name IS NULL)
+                OR sde.class_id = q.class_id
+                OR (q.class_group_name IS NOT NULL AND sde_c.name = q.class_group_name)
+              )
+              AND q.published_at <= COALESCE(sde.end_date, NOW())
+        ) AND NOT EXISTS (
+            SELECT 1 FROM student_teacher_enrollments ste
+            WHERE ste.student_id = :student_id_te
+              AND ste.teacher_id = q.created_by
+              AND ste.department_id = q.department_id
+              AND ste.status = 'withdrawn'
+        )";
+    }
+
+    /** The student id when the student may open this Item Bank resource, else null (response sent). */
+    private function itemBankAccess($questionId): ?int
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return null;
+        }
+        $studentId = $this->getStudentId();
+        if (!$studentId) {
+            $this->error('Student not found', 403);
+            return null;
+        }
+        $whereClause = $this->itemBankVisibilityClause();
+        $stmt = $this->getDb()->prepare("SELECT q.id FROM item_bank_questions q WHERE q.id = :id AND {$whereClause}");
+        $stmt->execute(['id' => (int) $questionId, 'student_id' => $studentId, 'student_id_te' => $studentId]);
+        if (!$stmt->fetch()) {
+            $this->notFound('Resource not found or not accessible');
+            return null;
+        }
+        return $studentId;
+    }
+
+    /**
+     * Every page of an Item Bank resource the student has written a note on.
+     * GET /student/itembank/{id}/notes
+     */
+    public function listItemBankNotes($questionId): void
+    {
+        $studentId = $this->itemBankAccess($questionId);
+        if ($studentId === null) {
+            return;
+        }
+        try {
+            $stmt = $this->getDb()->prepare(
+                "SELECT page_number, content, color FROM item_bank_page_notes
+                 WHERE question_id = :question_id AND student_id = :student_id AND TRIM(content) <> ''
+                 ORDER BY page_number"
+            );
+            $stmt->execute(['question_id' => (int) $questionId, 'student_id' => $studentId]);
+            $notes = $stmt->fetchAll();
+        } catch (\PDOException $e) {
+            // item_bank_page_notes not created yet (migration 096) - no notes to show
+            $notes = [];
+        }
+        $this->success(['notes' => $notes]);
+    }
+
+    /**
+     * GET /student/itembank/{id}/pages/{pageNumber}/note
+     */
+    public function getItemBankNote($questionId, $pageNumber): void
+    {
+        $studentId = $this->itemBankAccess($questionId);
+        if ($studentId === null) {
+            return;
+        }
+        $note = false;
+        try {
+            $stmt = $this->getDb()->prepare(
+                "SELECT content, color, updated_at FROM item_bank_page_notes
+                 WHERE question_id = :question_id AND page_number = :page_number AND student_id = :student_id"
+            );
+            $stmt->execute(['question_id' => (int) $questionId, 'page_number' => (int) $pageNumber, 'student_id' => $studentId]);
+            $note = $stmt->fetch();
+        } catch (\PDOException $e) {
+            // table not created yet (migration 096)
+        }
+        $this->success(['content' => $note['content'] ?? '', 'color' => $note['color'] ?? null, 'updated_at' => $note['updated_at'] ?? null]);
+    }
+
+    /**
+     * PUT /student/itembank/{id}/pages/{pageNumber}/note
+     */
+    public function saveItemBankNote($questionId, $pageNumber): void
+    {
+        $content = trim((string) ($this->input('content') ?? ''));
+        if (mb_strlen($content) > self::MAX_LENGTH) {
+            $this->error('Note is too long (max ' . self::MAX_LENGTH . ' characters)', 422);
+            return;
+        }
+        $studentId = $this->itemBankAccess($questionId);
+        if ($studentId === null) {
+            return;
+        }
+
+        $db = $this->getDb();
+        $params = ['question_id' => (int) $questionId, 'page_number' => (int) $pageNumber, 'student_id' => $studentId];
+        $color = $this->inputColor();
+
+        try {
+            if ($content === '' && $color === null) {
+                $db->prepare(
+                    "DELETE FROM item_bank_page_notes WHERE question_id = :question_id AND page_number = :page_number AND student_id = :student_id"
+                )->execute($params);
+                $this->success([], 'Note cleared');
+                return;
+            }
+
+            $db->prepare(
+                "INSERT INTO item_bank_page_notes (question_id, page_number, student_id, content, color)
+                 VALUES (:question_id, :page_number, :student_id, :content, :color)
+                 ON DUPLICATE KEY UPDATE content = :content_update, color = :color_update"
+            )->execute($params + [
+                'content' => $content,
+                'content_update' => $content,
+                'color' => $color,
+                'color_update' => $color,
+            ]);
+        } catch (\PDOException $e) {
+            error_log('Item bank page note save failed: ' . $e->getMessage());
+            $this->error('Notes on Item Bank pages need database migration 096 to be run first', 409);
+            return;
+        }
+
+        $this->success([], 'Note saved');
+    }
 }

@@ -108,6 +108,9 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
 
         // Item Bank
         Router::get('/itembank', 'eSpace\App\Controllers\Student\ItemBankController@index');
+        Router::get('/itembank/{id}/notes', 'eSpace\App\Controllers\Student\PageNoteController@listItemBankNotes');
+        Router::get('/itembank/{id}/pages/{pageNumber}/note', 'eSpace\App\Controllers\Student\PageNoteController@getItemBankNote');
+        Router::put('/itembank/{id}/pages/{pageNumber}/note', 'eSpace\App\Controllers\Student\PageNoteController@saveItemBankNote');
         Router::get('/itembank/{id}', 'eSpace\App\Controllers\Student\ItemBankController@show');
         
         // Chat

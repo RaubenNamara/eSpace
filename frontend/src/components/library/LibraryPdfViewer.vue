@@ -248,66 +248,21 @@
             :class="READING_TINTS.find(t => t.value === readingTint)?.class"
           ></div>
 
-          <!-- A page the student has written a note on shows a small note marker at the bottom of the
-               book as they flip to it; clicking it unfolds the note to the right. The note is theirs
-               alone (eLibrary pages are rendered images, so it lives beside the page, not in it). -->
-          <Transition name="note-tab">
-            <button
-              v-if="notesEnabled && currentHasNote && !showNotesPanel"
-              :key="currentPage"
-              type="button"
-              class="note-tab absolute left-3 bottom-3 z-30 flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-full bg-white/95 dark:bg-gray-800/95 shadow-lg ring-1 ring-black/5 dark:ring-white/10 text-xs font-semibold text-gray-700 dark:text-gray-100 hover:shadow-xl hover:-translate-y-0.5 transition-all"
-              :title="`Open my note on page ${currentPage}`"
-              @click="showNotesPanel = true"
-            >
-              <span class="note-tab-icon w-7 h-7 rounded-md flex items-center justify-center shadow-sm" :class="currentNoteStyle.swatch">
-                <svg class="w-4 h-4 text-white drop-shadow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                </svg>
-              </span>
-              <span>My note</span>
-              <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-              </svg>
-            </button>
-          </Transition>
-
-          <!-- The note itself: folded up at the marker, it opens out to the right like a folded slip
-               of paper being opened (see the note-unfold styles). Also opened from the header's
-               notes button to write a note on a page that doesn't have one yet. -->
-          <Transition name="note-unfold">
-            <div
-              v-if="showNotesPanel && notesEnabled"
-              :key="currentPage"
-              class="note-card absolute left-3 bottom-3 z-40 w-[22rem] max-w-[calc(100%-1.5rem)] max-h-[60%] rounded-2xl bg-white dark:bg-gray-800 shadow-2xl ring-1 ring-black/5 dark:ring-white/10 overflow-hidden flex flex-col"
-            >
-              <div class="note-card-body flex-1 min-h-0 p-3 flex flex-col" :class="currentNoteStyle.panel">
-                <div class="flex items-center justify-between mb-1.5 flex-shrink-0">
-                  <p class="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide flex items-center gap-1.5">
-                    <span class="w-2.5 h-2.5 rounded-full" :class="currentNoteStyle.swatch"></span><span>My Note — Page {{ currentPage }}</span>
-                  </p>
-                  <div class="flex items-center gap-2">
-                    <span class="text-[11px] text-gray-400">{{ noteStatus === 'saving' ? 'Saving…' : noteStatus === 'saved' ? 'Saved' : '' }}</span>
-                    <SummaryColorPicker :model-value="currentNoteColor" @update:model-value="setCurrentNoteColor" />
-                    <button @click="showNotesPanel = false" class="p-1 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-colors" title="Fold the note away">
-                      <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-                <textarea
-                  v-model="currentPageNote"
-                  @input="onNoteInput"
-                  rows="5"
-                  maxlength="2000"
-                  placeholder="What did you understand from this page? (only you can see this)"
-                  class="flex-1 w-full text-sm px-3 py-2 rounded-lg border placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 resize-none"
-                  :class="currentNoteStyle.box"
-                ></textarea>
-              </div>
-            </div>
-          </Transition>
+          <!-- A page the student has written a note on shows a "My note" tab at the bottom of the
+               book as they flip to it; clicking it unfolds the note to the right (UnfoldingNote).
+               The header's notes button opens the same note to write on a page without one. -->
+          <UnfoldingNote
+            v-if="notesEnabled"
+            :key="currentPage"
+            floating
+            v-model="currentPageNote"
+            v-model:open="showNotesPanel"
+            :color="currentNoteColor"
+            :status="noteStatus"
+            :heading="`My Note — Page ${currentPage}`"
+            @update:color="setCurrentNoteColor"
+            @input="onNoteInput"
+          />
         </div>
 
         <!-- Right-side contents panel - the PDF's own bookmarks/outline when it has one, else a
@@ -392,8 +347,8 @@
 
 <script setup lang="ts">
 import { extractPrintedToc } from '@/utils/pdfPrintedToc'
-import SummaryColorPicker from '@/components/enotes/SummaryColorPicker.vue'
-import { useSummaryColor, summaryStyleOf, isSummaryColor, type SummaryColor } from '@/composables/useSummaryColor'
+import UnfoldingNote from '@/components/common/UnfoldingNote.vue'
+import { useSummaryColor, isSummaryColor, type SummaryColor } from '@/composables/useSummaryColor'
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { usePdfRenderer } from '@/composables/usePdfRenderer'
 import type { LibraryBook } from '@/types/library'
@@ -404,14 +359,16 @@ import { useReadModeStore } from '@/stores/readMode'
 import axios from 'axios'
 import BookFlipbook from '@/components/common/BookFlipbook.vue'
 
-// withNotes: the student's private per-page notes (off for readers with no notes store, e.g. Item Bank)
-const props = withDefaults(defineProps<{ book: LibraryBook; withNotes?: boolean }>(), { withNotes: true })
+// withNotes: the student's private per-page notes. notesBase: where they're stored - the eLibrary's
+// by default; the Item Bank reader passes its own (/student/itembank/{id}).
+const props = withDefaults(defineProps<{ book: LibraryBook; withNotes?: boolean; notesBase?: string }>(), { withNotes: true })
 defineEmits(['close'])
 
 const API_BASE = '/api'
 const authStore = useAuthStore()
 const isStudentRole = computed(() => authStore.userRole === 'student')
 const notesEnabled = computed(() => isStudentRole.value && props.withNotes)
+const notesBase = computed(() => `${API_BASE}${props.notesBase ?? `/student/library/books/${props.book.id}`}`)
 
 // Shared with the eNotes reader too - muting the page-turn sound in one place should mean it
 // stays muted everywhere, since it's a preference about the sound itself, not this one book.
@@ -483,10 +440,6 @@ const { summaryColor } = useSummaryColor()
 const pageNotes = ref<Record<number, string>>({})
 const pageNoteColors = ref<Record<number, SummaryColor | null>>({})
 const currentNoteColor = computed<SummaryColor>(() => pageNoteColors.value[currentPage.value] ?? summaryColor.value)
-const currentNoteStyle = computed(() => summaryStyleOf(currentNoteColor.value))
-// Pages with a note get the note marker - worked out from what's loaded (listed up front on open,
-// then kept up to date as the student writes or clears a note)
-const currentHasNote = computed(() => !!(pageNotes.value[currentPage.value] ?? '').trim())
 const noteStatus = ref<'idle' | 'saving' | 'saved'>('idle')
 const loadedNotePages = new Set<number>()
 let noteSaveTimer: ReturnType<typeof setTimeout> | null = null
@@ -500,7 +453,7 @@ async function loadPageNote(pageNumber: number) {
   if (!notesEnabled.value || loadedNotePages.has(pageNumber)) return
   loadedNotePages.add(pageNumber)
   try {
-    const response = await axios.get(`${API_BASE}/student/library/books/${props.book.id}/pages/${pageNumber}/note`)
+    const response = await axios.get(`${notesBase.value}/pages/${pageNumber}/note`)
     if (response.data.success) {
       pageNotes.value[pageNumber] = response.data.data.content || ''
       const color = response.data.data.color
@@ -517,7 +470,7 @@ function onNoteInput() {
   if (noteSaveTimer) clearTimeout(noteSaveTimer)
   noteSaveTimer = setTimeout(async () => {
     try {
-      await axios.put(`${API_BASE}/student/library/books/${props.book.id}/pages/${pageNumber}/note`, {
+      await axios.put(`${notesBase.value}/pages/${pageNumber}/note`, {
         content: pageNotes.value[pageNumber] || '',
         color: pageNoteColors.value[pageNumber] ?? null,
       })
@@ -546,7 +499,7 @@ watch(currentPage, (page, previous) => {
 async function loadNotedPages() {
   if (!notesEnabled.value) return
   try {
-    const response = await axios.get(`${API_BASE}/student/library/books/${props.book.id}/notes`)
+    const response = await axios.get(`${notesBase.value}/notes`)
     for (const note of response.data?.data?.notes ?? []) {
       const page = Number(note.page_number)
       if (!page || loadedNotePages.has(page)) continue
@@ -804,131 +757,6 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-/* The note marker pops up from the bottom edge when a page with a note turns into view */
-.note-tab-enter-active {
-  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease;
-}
-.note-tab-leave-active {
-  transition: transform 0.15s ease, opacity 0.15s ease;
-}
-.note-tab-enter-from,
-.note-tab-leave-to {
-  opacity: 0;
-  transform: translateY(12px) scale(0.85);
-}
-.note-tab-icon {
-  animation: note-wiggle 0.6s ease 0.35s 1;
-}
-@keyframes note-wiggle {
-  0%, 100% { transform: rotate(0); }
-  30% { transform: rotate(-10deg); }
-  60% { transform: rotate(8deg); }
-}
-
-/* The note opens like a folded slip of paper: it starts as a small folded square sitting on the
-   marker, opens out to the right into a long strip, then opens upward to its full size. The
-   fold creases show while it opens and flatten away; a shadow runs along the edge that is still
-   unfolding; the writing appears once the paper is open. Folding away runs it in reverse. */
-.note-card {
-  transform-origin: left bottom;
-}
-.note-unfold-enter-active {
-  animation: note-unfold 1.05s cubic-bezier(0.65, 0, 0.35, 1) both;
-}
-.note-unfold-leave-active {
-  animation: note-unfold 0.6s cubic-bezier(0.65, 0, 0.35, 1) reverse both;
-}
-/* The paper keeps its colour the whole time (so its shape reads against a white page); only the
-   writing on it waits until it's open */
-.note-unfold-enter-active .note-card-body > * {
-  animation: note-writing 1.05s ease both;
-}
-/* Fold creases: two vertical folds (the strip's three panels) and one horizontal fold */
-.note-card::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0;
-  background:
-    linear-gradient(90deg, transparent calc(33.3% - 6px), rgba(0, 0, 0, 0.16) 33.3%, rgba(255, 255, 255, 0.5) calc(33.3% + 1px), transparent calc(33.3% + 7px)),
-    linear-gradient(90deg, transparent calc(66.6% - 6px), rgba(0, 0, 0, 0.16) 66.6%, rgba(255, 255, 255, 0.5) calc(66.6% + 1px), transparent calc(66.6% + 7px)),
-    linear-gradient(180deg, transparent calc(50% - 6px), rgba(0, 0, 0, 0.14) 50%, rgba(255, 255, 255, 0.5) calc(50% + 1px), transparent calc(50% + 7px));
-}
-.note-unfold-enter-active::after,
-.note-unfold-leave-active::after {
-  animation: note-crease 1.05s ease both;
-}
-.note-unfold-leave-active::after {
-  animation-duration: 0.6s;
-  animation-direction: reverse;
-}
-/* Shading on the flap that is still turning open */
-.note-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  opacity: 0;
-}
-.note-unfold-enter-active::before {
-  animation: note-flap 1.05s cubic-bezier(0.65, 0, 0.35, 1) both;
-}
-@keyframes note-unfold {
-  0% {
-    opacity: 0;
-    clip-path: inset(calc(100% - 46px) calc(100% - 46px) 0 0 round 10px);
-    transform: translateY(8px) rotate(-6deg) scale(0.9);
-  }
-  12% {
-    opacity: 1;
-    clip-path: inset(calc(100% - 46px) calc(100% - 46px) 0 0 round 10px);
-    transform: translateY(0) rotate(0) scale(1);
-  }
-  50% {
-    clip-path: inset(calc(100% - 46px) 0 0 0 round 10px);
-    transform: none;
-  }
-  56% {
-    clip-path: inset(calc(100% - 46px) 0 0 0 round 10px);
-  }
-  100% {
-    opacity: 1;
-    clip-path: inset(0 0 0 0 round 16px);
-    transform: none;
-  }
-}
-@keyframes note-flap {
-  0%, 12% {
-    opacity: 1;
-    box-shadow: inset -34px 0 22px -20px rgba(0, 0, 0, 0.45);
-  }
-  50%, 56% {
-    opacity: 1;
-    box-shadow: inset 0 34px 22px -20px rgba(0, 0, 0, 0.45);
-  }
-  100% {
-    opacity: 1;
-    box-shadow: inset 0 0 0 0 rgba(0, 0, 0, 0);
-  }
-}
-@keyframes note-crease {
-  0%, 55% { opacity: 1; }
-  100% { opacity: 0; }
-}
-@keyframes note-writing {
-  0%, 70% { opacity: 0; }
-  100% { opacity: 1; }
-}
-/* Windows' "Animation effects" off (reduced motion): still unfold, just without the tilt/flap */
-@media (prefers-reduced-motion: reduce) {
-  .note-unfold-enter-active::before,
-  .note-tab-icon {
-    animation: none;
-  }
-}
-
 .nav-btn {
   padding: 6px 10px;
   font-size: 13px;

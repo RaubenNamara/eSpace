@@ -580,36 +580,24 @@
                         ></div>
                       </div>
 
-                      <!-- Student's own private summary of this page - never seen by the
-                           teacher/HOD, just a small space to write what they understood. -->
-                      <div v-if="isStudentMode" class="mt-6 p-3 rounded-xl border border-dashed border-gray-200 dark:border-gray-700" :class="pageSummaryStyle(page.id).panel">
-                        <div class="flex items-center justify-between gap-2 mb-1.5">
-                          <p class="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide flex items-center gap-1.5">
-                            <span>📝</span><span>My Summary</span>
-                          </p>
-                          <div class="flex items-center gap-2">
-                            <span class="text-[11px] text-gray-400 dark:text-gray-500">{{ pageNoteStatus[page.id] === 'saving' ? 'Saving…' : pageNoteStatus[page.id] === 'saved' ? 'Saved' : '' }}</span>
-                            <SummaryColorPicker :model-value="pageColor(page.id)" @update:model-value="setPageColor(page.id, $event)" />
-                          </div>
-                        </div>
-                        <!-- .stop is load-bearing: this textarea lives inside StPageFlip's own
-                             ".stf__block" (html mode physically moves page content in there), and
-                             StPageFlip attaches a mousedown/touchstart listener on that block for
-                             its own drag-to-flip gesture which calls preventDefault() on every
-                             target except <a>/<button> - silently blocking the browser's native
-                             "focus this textarea" behavior, so nothing typed ever registered. -->
-                        <textarea
-                          v-model="pageNotes[page.id]"
-                          @input="onPageNoteInput(page.id)"
-                          @mousedown.stop
-                          @touchstart.stop
-                          rows="2"
-                          maxlength="2000"
-                          placeholder="What did you understand from this page? (only you can see this)"
-                          class="w-full text-sm px-3 py-2 rounded-lg border placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 resize-y"
-                          :class="pageSummaryStyle(page.id).box"
-                        ></textarea>
-                      </div>
+                      <!-- Student's own private summary of this page - never seen by the teacher/HOD.
+                           Folded away as a tab at the foot of the page ("My summary" when there is
+                           one, "Add my summary" when not); clicking it unfolds the note. -->
+                      <UnfoldingNote
+                        v-if="isStudentMode"
+                        :model-value="pageNotes[page.id] || ''"
+                        @update:model-value="pageNotes[page.id] = $event"
+                        :open="!!openSummaries[page.id]"
+                        @update:open="openSummaries[page.id] = $event"
+                        :color="pageColor(page.id)"
+                        @update:color="setPageColor(page.id, $event)"
+                        :status="pageNoteStatus[page.id]"
+                        heading="My Summary"
+                        tab-label="My summary"
+                        add-label="Add my summary"
+                        show-add
+                        @input="onPageNoteInput(page.id)"
+                      />
                     </div>
 
                     <!-- Teacher-enabled running footer, like the foot of a printed book's page -->
@@ -962,8 +950,8 @@ import { applyHighlights, rangeToOffsets, removeHighlightMark, type StoredHighli
 import AITutorPlayer from '@/components/enotes/AITutorPlayer.vue'
 import BookFlipbook from '@/components/common/BookFlipbook.vue'
 import { parseCoverDesign } from '@/utils/enoteCover'
-import SummaryColorPicker from '@/components/enotes/SummaryColorPicker.vue'
-import { useSummaryColor, summaryStyleOf, isSummaryColor, type SummaryColor } from '@/composables/useSummaryColor'
+import UnfoldingNote from '@/components/common/UnfoldingNote.vue'
+import { useSummaryColor, isSummaryColor, type SummaryColor } from '@/composables/useSummaryColor'
 
 const router = useRouter()
 const route = useRoute()
@@ -1098,7 +1086,9 @@ const READING_TINTS = [
 const { summaryColor } = useSummaryColor()
 const pageNoteColors = ref<Record<number, SummaryColor | null>>({})
 const pageColor = (pageId: number): SummaryColor => pageNoteColors.value[pageId] ?? summaryColor.value
-const pageSummaryStyle = (pageId: number) => summaryStyleOf(pageColor(pageId))
+// Which pages' summaries are unfolded - all fold away again when the reader turns the page
+const openSummaries = ref<Record<number, boolean>>({})
+watch(() => currentPage.value?.id, () => { openSummaries.value = {} })
 
 // Student's own private per-page summary ("what I understood from this page") - loaded/saved via
 // PageNoteController, never visible to the teacher/HOD.

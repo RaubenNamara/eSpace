@@ -1,11 +1,11 @@
 <template>
-  <LibraryPdfViewer :book="book" :with-notes="false" @close="$emit('close')" />
+  <LibraryPdfViewer :book="book" :notes-base="`/student/itembank/${resource.id}`" @close="$emit('close')" />
 </template>
 
 <script setup lang="ts">
 // Item Bank PDFs open in the same reader as eLibrary books - flip from the page edges, contents
 // linked to pages, pages loaded nearest-first, bundle flips for far jumps - so the two read alike.
-// Item Bank has no per-page notes store, so the student's private notes are left out.
+// A student's page notes are kept in the Item Bank's own notes store (notes-base).
 import { computed } from 'vue'
 import LibraryPdfViewer from '@/components/library/LibraryPdfViewer.vue'
 import type { ItemBankResource } from '@/types/itembank'
