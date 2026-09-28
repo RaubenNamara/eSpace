@@ -20,6 +20,8 @@ export interface ItemBankResource {
   // the teacher uploaded; null = printed cover. total_pages gives the shelf book its thickness.
   cover_image?: string | null
   total_pages?: number | null
+  // Students may download it / save it for offline reading (off unless the teacher allows it)
+  allow_download?: boolean | number
   status: 'draft' | 'published' | 'archived'
   published_at: string | null
   created_at: string
@@ -40,5 +42,6 @@ export interface ItemBankResourceForm {
   subject_id: string
   classTarget: ClassTarget
   status: 'draft' | 'published' | 'archived'
+  allow_download: boolean
   file: File | null
 }

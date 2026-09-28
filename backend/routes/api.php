@@ -268,6 +268,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::post('/library', 'eSpace\App\Controllers\Teacher\LibraryController@create');
         Router::get('/library/preview', 'eSpace\App\Controllers\Teacher\LibraryController@previewIndex');
         Router::post('/library/bulk-status', 'eSpace\App\Controllers\Teacher\LibraryController@bulkStatus');
+        Router::post('/library/bulk-download', 'eSpace\App\Controllers\Teacher\LibraryController@bulkDownload');
         Router::post('/library/bulk-delete', 'eSpace\App\Controllers\Teacher\LibraryController@bulkDelete');
         Router::post('/library/bulk-export', 'eSpace\App\Controllers\Teacher\LibraryController@bulkExport');
         Router::get('/library/{id}', 'eSpace\App\Controllers\Teacher\LibraryController@show');
@@ -340,6 +341,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::post('/itembank', 'eSpace\App\Controllers\Teacher\ItemBankController@create');
         Router::get('/itembank/preview', 'eSpace\App\Controllers\Teacher\ItemBankController@previewIndex');
         Router::post('/itembank/bulk-status', 'eSpace\App\Controllers\Teacher\ItemBankController@bulkStatus');
+        Router::post('/itembank/bulk-download', 'eSpace\App\Controllers\Teacher\ItemBankController@bulkDownload');
         Router::post('/itembank/bulk-delete', 'eSpace\App\Controllers\Teacher\ItemBankController@bulkDelete');
         Router::post('/itembank/bulk-export', 'eSpace\App\Controllers\Teacher\ItemBankController@bulkExport');
         Router::get('/itembank/{id}', 'eSpace\App\Controllers\Teacher\ItemBankController@show');

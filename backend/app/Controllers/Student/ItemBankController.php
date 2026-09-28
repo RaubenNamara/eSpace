@@ -6,6 +6,7 @@ namespace eSpace\App\Controllers\Student;
 
 use eSpace\App\Controllers\Controller;
 use eSpace\App\Utils\ItemBankCover;
+use eSpace\App\Utils\ItemBankDownload;
 
 /**
  * Student Item Bank Controller
@@ -107,8 +108,9 @@ class ItemBankController extends Controller
         $whereClause = implode(' AND ', $where);
 
         $cover = ItemBankCover::select($db);
+        $download = ItemBankDownload::select($db);
         $sql = "SELECT q.id, q.subject_id, q.class_id, q.question_text as title, q.explanation as description,
-                       q.file_path, q.file_type, q.file_size, {$cover}, q.published_at, q.created_at,
+                       q.file_path, q.file_type, q.file_size, {$cover}, {$download}, q.published_at, q.created_at,
                        s.name as subject_name, s.code as subject_code,
                        t.first_name as teacher_first_name, t.last_name as teacher_last_name
                 FROM item_bank_questions q
@@ -147,8 +149,9 @@ class ItemBankController extends Controller
         $whereClause = $this->visibilityClause();
 
         $cover = ItemBankCover::select($db);
+        $download = ItemBankDownload::select($db);
         $sql = "SELECT q.id, q.subject_id, q.class_id, q.question_text as title, q.explanation as description,
-                       q.file_path, q.file_type, q.file_size, {$cover}, q.published_at, q.created_at,
+                       q.file_path, q.file_type, q.file_size, {$cover}, {$download}, q.published_at, q.created_at,
                        s.name as subject_name, s.code as subject_code,
                        t.first_name as teacher_first_name, t.last_name as teacher_last_name
                 FROM item_bank_questions q

@@ -182,6 +182,8 @@
         <button @click="bulkSetStatus('published')" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Publish</button>
         <button @click="bulkSetStatus('draft')" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Draft</button>
         <button @click="bulkSetStatus('archived')" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Archive</button>
+        <button @click="bulkSetDownload(true)" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" title="Students can download these and save them for offline reading">Allow download</button>
+        <button @click="bulkSetDownload(false)" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" title="Students can only read these inside eSpace">No download</button>
         <button @click="bulkExport" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Export CSV</button>
         <button @click="bulkDeleteSelected" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors">Delete</button>
       </BulkActionBar>
@@ -609,6 +611,20 @@ const bulkSetStatus = async (status: 'draft' | 'published' | 'archived') => {
   try {
     await axios.post(`${API_BASE}/teacher/library/bulk-status`, { ids, status })
     toast.success(`${ids.length} resource(s) updated`)
+    bulk.clear()
+    await loadBooks()
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Failed to update resources')
+  }
+}
+
+// Downloading (and saving for offline reading) is off unless the teacher allows it
+const bulkSetDownload = async (allow: boolean) => {
+  const ids = bulk.selectedArray()
+  if (ids.length === 0) return
+  try {
+    await axios.post(`${API_BASE}/teacher/library/bulk-download`, { ids, allow })
+    toast.success(`${ids.length} resource(s) ${allow ? 'can now be downloaded' : 'no longer downloadable'}`)
     bulk.clear()
     await loadBooks()
   } catch (error: any) {

@@ -17,6 +17,7 @@ defineEmits(['close'])
 const book = computed<LibraryBook>(() => ({
   ...props.resource,
   total_pages: props.resource.total_pages ?? null,
-  allow_download: false
+  // Download button only when the teacher allowed it
+  allow_download: !!Number(props.resource.allow_download)
 }))
 </script>

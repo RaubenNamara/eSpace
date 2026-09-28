@@ -8,8 +8,8 @@ import {
 // Offline copies of eLibrary books and Item Bank resources (PDFs). Saving one keeps the PDF file
 // and its cover picture on this device (Cache Storage), its row from the shelf, and the student's
 // page notes for it. The PDF reader (usePdfRenderer) opens the kept file first, so a saved book
-// reads the same with or without a network. eLibrary books can only be saved when the teacher
-// allowed downloading; copies are renewed, updated or removed whenever the shelf loads online,
+// reads the same with or without a network. Books can only be saved when the teacher allowed
+// downloading; copies are renewed, updated or removed whenever the shelf loads online,
 // like the eNotes (offline/enotes.ts).
 
 export type DocKind = 'library' | 'itembank'
@@ -43,10 +43,10 @@ const notesKey = (uid: number, kind: DocKind, id: number) => `pdfnotes:${uid}:${
 const versionOf = (row: any) => `${row?.file_path || ''}|${row?.file_size || ''}`
 
 /** Whether this shelf item may be kept on the device */
-export function canSaveOffline(kind: DocKind, row: any): boolean {
+export function canSaveOffline(row: any): boolean {
   if (String(row?.file_type || 'pdf').toLowerCase() !== 'pdf' || !row?.file_path) return false
-  // Item Bank has no download setting of its own; the copy stays inside eSpace either way
-  return kind === 'itembank' || !!Number(row.allow_download)
+  // Both the eLibrary and the Item Bank follow the teacher's "Allow download" (off by default)
+  return !!Number(row.allow_download)
 }
 
 const metaOf = (r: DocRecord): DocMeta => {
@@ -113,7 +113,7 @@ export async function downloadDoc(kind: DocKind, row: any) {
   const uid = currentUserId()
   const key = docKey(kind, Number(row.id))
   if (!uid || offline.docProgress[key] !== undefined || typeof caches === 'undefined') return
-  if (!canSaveOffline(kind, row)) throw new Error('This book cannot be saved')
+  if (!canSaveOffline(row)) throw new Error('This book cannot be saved')
   row = plain(row)
   offline.docProgress[key] = 0
   try {
@@ -191,7 +191,7 @@ export async function reconcileDocs(kind: DocKind, rows: any[]) {
   for (const meta of Object.values(offline.docs) as DocMeta[]) {
     if (meta.kind !== kind) continue
     const row = rows.find(r => Number(r.id) === meta.docId)
-    if (!row || !canSaveOffline(kind, row)) {
+    if (!row || !canSaveOffline(row)) {
       // Unpublished, no longer on the student's shelf, or the teacher turned downloading off
       await removeDoc(kind, meta.docId)
     } else if (versionOf(row) !== meta.version) {

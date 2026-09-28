@@ -57,7 +57,7 @@
         </button>
       </div>
     </div>
-    <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Upload PDF resources for your classes - students preview them in the browser, no downloads.</p>
+    <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Upload PDF resources for your classes - students read them in the browser, and can download them only where you allow it.</p>
 
     <!-- Stats - clickable to filter the list below; the count sits as a corner badge so each
          card is shorter and the label can be centered. -->
@@ -182,6 +182,8 @@
         <button @click="bulkSetStatus('published')" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Publish</button>
         <button @click="bulkSetStatus('draft')" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Draft</button>
         <button @click="bulkSetStatus('archived')" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Archive</button>
+        <button @click="bulkSetDownload(true)" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" title="Students can download these and save them for offline reading">Allow download</button>
+        <button @click="bulkSetDownload(false)" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" title="Students can only read these inside eSpace">No download</button>
         <button @click="bulkExport" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Export CSV</button>
         <button @click="bulkDeleteSelected" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors">Delete</button>
       </BulkActionBar>
@@ -380,6 +382,11 @@
               </select>
             </div>
 
+            <label class="flex items-center gap-2 mb-4 px-3 py-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer">
+              <input v-model="resourceForm.allow_download" type="checkbox" class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+              <span class="text-sm text-gray-700 dark:text-gray-300">Allow students to download this file</span>
+            </label>
+
             <div v-if="!editingResource" class="mb-4">
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">PDF File *</label>
               <input
@@ -389,7 +396,7 @@
                 @change="handleFileSelect"
                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
               >
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">PDF only, up to 50MB. Students preview it in-browser - there's no download option.</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">PDF only, up to 50MB. Students read it in the browser - they can download it only if you tick Allow above.</p>
               <div v-if="saving && uploadProgress > 0" class="mt-2">
                 <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
                   <span>Uploading&hellip;</span>
@@ -477,6 +484,7 @@ const resourceForm = ref<ItemBankResourceForm>({
   subject_id: '',
   classTarget: { scope: 'stream', class_id: null, class_group_name: null },
   status: 'draft',
+  allow_download: false,
   file: null
 })
 
@@ -544,6 +552,20 @@ const bulkSetStatus = async (status: 'draft' | 'published' | 'archived') => {
   try {
     await axios.post(`${API_BASE}/teacher/itembank/bulk-status`, { ids, status })
     toast.success(`${ids.length} resource(s) updated`)
+    bulk.clear()
+    await loadResources()
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Failed to update resources')
+  }
+}
+
+// Downloading (and saving for offline reading) is off unless the teacher allows it
+const bulkSetDownload = async (allow: boolean) => {
+  const ids = bulk.selectedArray()
+  if (ids.length === 0) return
+  try {
+    await axios.post(`${API_BASE}/teacher/itembank/bulk-download`, { ids, allow })
+    toast.success(`${ids.length} resource(s) ${allow ? 'can now be downloaded' : 'no longer downloadable'}`)
     bulk.clear()
     await loadResources()
   } catch (error: any) {
@@ -729,7 +751,7 @@ const loadAssignments = async () => {
 
 const openCreateModal = () => {
   editingResource.value = null
-  resourceForm.value = { title: '', description: '', subject_id: '', classTarget: { scope: 'stream', class_id: null, class_group_name: null }, status: 'draft', file: null }
+  resourceForm.value = { title: '', description: '', subject_id: '', classTarget: { scope: 'stream', class_id: null, class_group_name: null }, status: 'draft', allow_download: false, file: null }
   showResourceModal.value = true
 }
 
@@ -743,6 +765,7 @@ const editResource = (resource: ItemBankResource) => {
       ? { scope: 'all_streams', class_id: null, class_group_name: resource.class_group_name }
       : { scope: 'stream', class_id: resource.class_id, class_group_name: null },
     status: resource.status,
+    allow_download: !!Number(resource.allow_download),
     file: null
   }
   showResourceModal.value = true
@@ -771,7 +794,8 @@ const saveResource = async () => {
         scope: resourceForm.value.classTarget.scope,
         class_id: resourceForm.value.classTarget.class_id,
         class_group_name: resourceForm.value.classTarget.class_group_name,
-        status: resourceForm.value.status
+        status: resourceForm.value.status,
+        allow_download: resourceForm.value.allow_download
       })
     } else {
       if (!resourceForm.value.file) {
@@ -786,6 +810,7 @@ const saveResource = async () => {
       if (resourceForm.value.classTarget.class_id !== null) formData.append('class_id', String(resourceForm.value.classTarget.class_id))
       if (resourceForm.value.classTarget.class_group_name !== null) formData.append('class_group_name', resourceForm.value.classTarget.class_group_name)
       formData.append('status', resourceForm.value.status)
+      formData.append('allow_download', resourceForm.value.allow_download ? '1' : '0')
       formData.append('file', resourceForm.value.file)
 
       await axios.post(`${API_BASE}/teacher/itembank`, formData, {

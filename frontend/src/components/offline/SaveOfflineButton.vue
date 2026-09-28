@@ -35,7 +35,7 @@
       <p v-if="failed" class="mt-1 text-[11px] text-red-600 dark:text-red-400">{{ failed }}</p>
     </template>
   </div>
-  <p v-else-if="kind === 'library' && isPdf" class="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 text-[11px] text-gray-400 dark:text-gray-500">Your teacher hasn't allowed saving this book offline</p>
+  <p v-else-if="kind !== 'enote' && isPdf" class="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 text-[11px] text-gray-400 dark:text-gray-500">Your teacher hasn't allowed saving this book offline</p>
 </template>
 
 <script setup lang="ts">
@@ -49,7 +49,7 @@ const props = withDefaults(defineProps<{ item: any; kind?: 'enote' | 'library' |
 const id = computed(() => Number(props.item.id))
 const key = computed(() => props.kind === 'enote' ? null : docKey(props.kind, id.value))
 const isPdf = computed(() => String(props.item.file_type || '').toLowerCase() === 'pdf')
-const savable = computed(() => props.kind === 'enote' || canSaveOffline(props.kind, props.item))
+const savable = computed(() => props.kind === 'enote' || canSaveOffline(props.item))
 const saved = computed(() => key.value ? offline.docs[key.value] : offline.downloads[id.value])
 const progress = computed<number | undefined>(() => key.value ? offline.docProgress[key.value] : offline.progress[id.value])
 const hasAudio = computed(() => !!props.item.narration_voice)

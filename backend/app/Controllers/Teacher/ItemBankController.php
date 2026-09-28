@@ -6,6 +6,7 @@ namespace eSpace\App\Controllers\Teacher;
 
 use eSpace\App\Utils\MimeType;
 use eSpace\App\Utils\ItemBankCover;
+use eSpace\App\Utils\ItemBankDownload;
 use eSpace\App\Controllers\Controller;
 use eSpace\App\Services\NotificationService;
 
@@ -89,8 +90,9 @@ class ItemBankController extends Controller
         $whereClause = implode(' AND ', $where);
 
         $cover = ItemBankCover::select($db);
+        $download = ItemBankDownload::select($db);
         $sql = "SELECT q.id, q.subject_id, q.class_id, q.class_group_name, q.department_id, q.question_text as title,
-                       q.explanation as description, q.file_path, q.file_type, q.file_size, {$cover},
+                       q.explanation as description, q.file_path, q.file_type, q.file_size, {$cover}, {$download},
                        q.status, q.published_at, q.created_at, q.updated_at,
                        s.name as subject_name,
                        s.code as subject_code,
@@ -172,8 +174,9 @@ class ItemBankController extends Controller
         $db = $this->getDb();
 
         $cover = ItemBankCover::select($db);
+        $download = ItemBankDownload::select($db);
         $sql = "SELECT q.id, q.subject_id, q.class_id, q.class_group_name, q.department_id, q.question_text as title,
-                       q.explanation as description, q.file_path, q.file_type, q.file_size, {$cover},
+                       q.explanation as description, q.file_path, q.file_type, q.file_size, {$cover}, {$download},
                        q.status, q.published_at, q.created_at, q.updated_at,
                        s.name as subject_name,
                        s.code as subject_code,
@@ -263,19 +266,23 @@ class ItemBankController extends Controller
             'status' => $status
         ];
 
+        // Students may download / save it offline only when the teacher ticked it (off by default)
+        $withDownload = ItemBankDownload::available($db);
+        $downloadColumn = $withDownload ? ', allow_download' : '';
+        $downloadValue = $withDownload ? ', :allow_download' : '';
         $sql = "INSERT INTO item_bank_questions
                     (subject_id, class_id, class_group_name, department_id, question_text, question_type, difficulty,
-                     file_path, file_type, file_size, explanation, correct_answer, created_by,
+                     file_path, file_type, file_size{$downloadColumn}, explanation, correct_answer, created_by,
                      is_approved, status, published_at, created_at, updated_at)
                 VALUES
                     (:subject_id, :class_id, :class_group_name, :department_id, :title, 'pdf', 'medium',
-                     :file_path, :file_type, :file_size, :description, NULL, :created_by,
+                     :file_path, :file_type, :file_size{$downloadValue}, :description, NULL, :created_by,
                      1, :status, :published_at, NOW(), NOW())";
 
         $stmt = $db->prepare($sql);
 
         try {
-            $stmt->execute([
+            $insertParams = [
                 'subject_id' => $sanitizedData['subject_id'],
                 'class_id' => $sanitizedData['class_id'],
                 'class_group_name' => $sanitizedData['class_group_name'],
@@ -288,7 +295,11 @@ class ItemBankController extends Controller
                 'created_by' => $teacherId,
                 'status' => $sanitizedData['status'],
                 'published_at' => $status === 'published' ? date('Y-m-d H:i:s') : null
-            ]);
+            ];
+            if ($withDownload) {
+                $insertParams['allow_download'] = ItemBankDownload::toBool($data['allow_download'] ?? false) ? 1 : 0;
+            }
+            $stmt->execute($insertParams);
 
             $resourceId = (int) $db->lastInsertId();
 
@@ -390,6 +401,11 @@ class ItemBankController extends Controller
         if (!empty($data['status']) && in_array($data['status'], ['draft', 'published', 'archived'], true)) {
             $updates[] = 'status = :status';
             $params['status'] = $data['status'];
+        }
+
+        if (array_key_exists('allow_download', $data) && ItemBankDownload::available($db)) {
+            $updates[] = 'allow_download = :allow_download';
+            $params['allow_download'] = ItemBankDownload::toBool($data['allow_download']) ? 1 : 0;
         }
 
         if (empty($updates)) {
@@ -679,6 +695,49 @@ class ItemBankController extends Controller
         $stmt = $db->prepare("SELECT id FROM item_bank_questions WHERE id IN ($placeholders) AND created_by = ? AND deleted_at IS NULL");
         $stmt->execute([...$ids, $teacherId]);
         return array_map('intval', array_column($stmt->fetchAll(), 'id'));
+    }
+
+    /**
+     * Turn students' downloading (and saving for offline reading) on or off across selected resources.
+     * POST /teacher/itembank/bulk-download  { ids: [...], allow: true|false }
+     */
+    public function bulkDownload(): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+
+        $teacherId = $this->getTeacherId();
+        if (!$teacherId) {
+            $this->error('Teacher not found', 403);
+            return;
+        }
+
+        $db = $this->getDb();
+        if (!ItemBankDownload::available($db)) {
+            $this->error('Downloads are not set up yet - run migration 097', 409);
+            return;
+        }
+
+        $data = $this->input();
+        $ids = $this->filterOwnedIds($this->sanitizeIds($data['ids'] ?? []), $teacherId);
+        if (empty($ids)) {
+            $this->validationError(['ids' => 'No valid resources selected']);
+            return;
+        }
+
+        $allow = ItemBankDownload::toBool($data['allow'] ?? false) ? 1 : 0;
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+        try {
+            $stmt = $db->prepare("UPDATE item_bank_questions SET allow_download = ?, updated_at = NOW() WHERE id IN ($placeholders)");
+            $stmt->execute([$allow, ...$ids]);
+            $this->success(['updated' => count($ids)], count($ids) . ' resource(s) updated');
+        } catch (\PDOException $e) {
+            error_log('Failed to bulk update item bank downloads: ' . $e->getMessage());
+            $this->error('Failed to update resources', 500);
+        }
     }
 
     /**

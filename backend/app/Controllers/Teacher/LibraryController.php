@@ -763,6 +763,44 @@ class LibraryController extends Controller
     }
 
     /**
+     * Turn students' downloading (and saving for offline reading) on or off across selected books.
+     * POST /teacher/library/bulk-download  { ids: [...], allow: true|false }
+     */
+    public function bulkDownload(): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+
+        $teacherId = $this->getTeacherId();
+        if (!$teacherId) {
+            $this->error('Teacher not found', 403);
+            return;
+        }
+
+        $data = $this->input();
+        $ids = $this->filterOwnedIds($this->sanitizeIds($data['ids'] ?? []), $teacherId);
+        if (empty($ids)) {
+            $this->validationError(['ids' => 'No valid resources selected']);
+            return;
+        }
+
+        $allow = $this->toBool($data['allow'] ?? false) ? 1 : 0;
+        $db = $this->getDb();
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+        try {
+            $stmt = $db->prepare("UPDATE library_books SET allow_download = ?, updated_at = NOW() WHERE id IN ($placeholders)");
+            $stmt->execute([$allow, ...$ids]);
+            $this->success(['updated' => count($ids)], count($ids) . ' resource(s) updated');
+        } catch (\PDOException $e) {
+            error_log('Failed to bulk update library downloads: ' . $e->getMessage());
+            $this->error('Failed to update resources', 500);
+        }
+    }
+
+    /**
      * Bulk status change (draft/published/archived) across selected books.
      * POST /teacher/library/bulk-status
      */
