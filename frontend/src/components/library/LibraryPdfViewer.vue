@@ -55,7 +55,9 @@
             <!-- Zoom controls - scale the whole book area via CSS transform (see the wrapping
                  div around BookFlipbook below), so the reader can pan around an enlarged page
                  when the base size isn't big enough. -->
-            <div v-if="bookImages.length > 0" class="flex items-center bg-white/10 rounded-lg">
+            <!-- Zoom and fullscreen are left off phones so the title and the close button fit
+                 (Read Mode gives the whole screen there) -->
+            <div v-if="bookImages.length > 0" class="hidden sm:flex items-center bg-white/10 rounded-lg">
               <button
                 @click="zoomOut"
                 :disabled="zoomLevel <= MIN_ZOOM"
@@ -113,7 +115,7 @@
             <button
               v-if="bookImages.length > 0"
               @click="toggleFullscreen"
-              class="p-2 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
+              class="hidden sm:flex p-2 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
               title="Fullscreen"
             >
               <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -409,6 +411,24 @@ const teacherName = computed(() => {
 // resolution rather than per-zoom-level like the old single-page view, since re-rendering dozens
 // of pages on every zoom click would be far too slow.
 const BOOK_RENDER_SCALE = 2.2
+const MAX_RENDER_SCALE = 3
+
+// How finely to render the pages: at least BOOK_RENDER_SCALE, more when a page will be shown at
+// more real pixels than that gives - a small-page PDF (A5, a handout) on a sharp phone screen -
+// capped so a long book doesn't run a phone out of memory
+async function renderScaleFor(): Promise<number> {
+  try {
+    const firstPage = await pdfDoc.value.getPage(1)
+    const pageWidth = firstPage.getViewport({ scale: 1 }).width
+    const ratio = Math.min(3, Math.max(1, window.devicePixelRatio || 1))
+    // One page takes about the width of a phone screen, or about half of a wide one
+    const shownWidth = window.innerWidth < 1024 ? window.innerWidth : window.innerWidth / 2
+    const needed = (Math.min(shownWidth, 900) * ratio) / pageWidth
+    return Math.min(MAX_RENDER_SCALE, Math.max(BOOK_RENDER_SCALE, needed))
+  } catch {
+    return BOOK_RENDER_SCALE
+  }
+}
 const preparing = ref(false)
 const prepared = ref(0)
 const bookImages = ref<string[]>([])
@@ -563,7 +583,7 @@ async function prepareBook() {
   preparing.value = true
   prepared.value = 0
   bookImagesLoadingMore.value = false
-  scale.value = BOOK_RENDER_SCALE
+  scale.value = await renderScaleFor()
   const totalCount = totalPages.value
   const done = new Array<boolean>(totalCount).fill(false)
 

@@ -341,14 +341,46 @@ function build() {
     // book being gapped, cut off, or both, depending on which way the two sizes disagree.
     const canvasEl = host.querySelector('.stf__canvas') as HTMLCanvasElement | null
     if (canvasEl) {
-      canvasResizeObserver = new ResizeObserver(() => {
-        if (canvasEl.width !== canvasEl.clientWidth || canvasEl.height !== canvasEl.clientHeight) {
-          canvasEl.width = canvasEl.clientWidth
-          canvasEl.height = canvasEl.clientHeight
-          flip?.update()
+      // Sharp on phones: the canvas's bitmap has as many pixels as the screen really shows
+      // (devicePixelRatio - 2 to 3 on phones), not one per CSS pixel, which left pages drawn at a
+      // third of the phone's resolution and stretched up blurry. page-flip keeps working in CSS
+      // pixels (its layout and pointer maths read the element's CSS size), so every frame is
+      // drawn through a matching scale, with high-quality smoothing for the page pictures.
+      const pixelRatio = () => Math.min(3, Math.max(1, window.devicePixelRatio || 1))
+      const wantedSize = () => ({
+        w: Math.round(canvasEl.clientWidth * pixelRatio()),
+        h: Math.round(canvasEl.clientHeight * pixelRatio())
+      })
+      // page-flip re-sizes the canvas to its CSS size on every update(); on this book it sizes it
+      // at the screen's real pixel density instead
+      const ui = (flip as any).getUI()
+      if (ui) {
+        ui.resizeCanvas = () => {
+          const { w, h } = wantedSize()
+          if (w && h) {
+            canvasEl.width = w
+            canvasEl.height = h
+          }
         }
+        ui.resizeCanvas()
+      }
+      canvasResizeObserver = new ResizeObserver(() => {
+        const { w, h } = wantedSize()
+        if (canvasEl.width !== w || canvasEl.height !== h) flip?.update()
       })
       canvasResizeObserver.observe(canvasEl)
+      const ctx = canvasEl.getContext('2d')
+      const render = (flip as any).getRender() as { drawFrame: () => void }
+      const drawFrame = render.drawFrame.bind(render)
+      render.drawFrame = () => {
+        if (ctx) {
+          const scale = canvasEl.clientWidth ? canvasEl.width / canvasEl.clientWidth : 1
+          ctx.setTransform(scale, 0, 0, scale, 0, 0)
+          ctx.imageSmoothingEnabled = true
+          ctx.imageSmoothingQuality = 'high'
+        }
+        drawFrame()
+      }
     }
   }
   if (pendingPage !== null) {
