@@ -537,21 +537,32 @@
                        already keeps every touch that doesn't start at the book's outer edge away from
                        page-flip, so scrolling a long page can't start a flip, while a swipe from the
                        edge now turns the page on phones too. -->
-                  <div v-for="page in pages" :key="page.id" class="enote-flip-page bg-white dark:bg-gray-800">
+                  <!-- Pages look like the pages of the book that opened on the shelf: cream paper, a
+                       serif title over a gold rule, the page number as a small label -->
+                  <div v-for="page in pages" :key="page.id" class="enote-flip-page enote-paper">
                     <!-- page-flip sets display on the page element itself, so the column layout that
                          pushes the footer to the foot of a short page lives on this inner wrapper -->
                     <div class="enote-page-inner">
-                    <div class="h-1.5 bg-indigo-600"></div>
                     <div class="p-5 sm:p-8">
-                      <h2 v-if="hasMeaningfulTitle(page.title)" class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-3">
+                      <div class="paper-meta">
+                        <span class="paper-label">Page {{ page.order_number }} of {{ pages.length }}</span>
+                        <span>{{ getPageWordCount(page.content) }} words</span>
+                        <span>{{ getReadingTime(page.content) }} min read</span>
+                      </div>
+                      <h2 v-if="hasMeaningfulTitle(page.title)" class="paper-title">
                         {{ page.title }}
                       </h2>
-                      <div class="flex flex-wrap items-center gap-3 text-xs mb-5">
-                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-600 text-white font-semibold shadow-sm">
-                          Page {{ page.order_number }} of {{ pages.length }}
-                        </span>
-                        <span class="text-gray-500 dark:text-gray-400">{{ getPageWordCount(page.content) }} words</span>
-                        <span class="text-gray-500 dark:text-gray-400">{{ getReadingTime(page.content) }} min read</span>
+                      <!-- First page: the topic's learning outcomes, as on the book's opening page -->
+                      <div v-if="page.id === pages[0]?.id && topic?.learning_outcomes?.length" class="paper-outcomes">
+                        <p class="paper-outcomes-head">In this topic you will</p>
+                        <ul>
+                          <li v-for="(outcome, i) in topic.learning_outcomes" :key="i">
+                            <span class="paper-tick" aria-hidden="true">
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
+                            </span>
+                            <span>{{ outcome }}</span>
+                          </li>
+                        </ul>
                       </div>
                       <div class="prose prose-sm sm:prose-base dark:prose-invert max-w-none">
                         <template v-if="isStudentMode && page.id === currentPage?.id && contentBlocks.length">
@@ -739,7 +750,7 @@
       <button
         @click="handlePrevious"
         :disabled="!hasPreviousPage"
-        class="fixed left-2 sm:left-4 top-1/2 -translate-y-1/2 z-50 p-3 sm:p-4 rounded-full bg-gray-900/40 hover:bg-gray-900/60 text-white backdrop-blur-sm shadow-lg transition-colors disabled:opacity-0 disabled:pointer-events-none"
+        class="fixed left-3 sm:left-5 bottom-5 z-50 p-2.5 sm:p-4 rounded-full bg-gray-900/40 hover:bg-gray-900/60 text-white backdrop-blur-sm shadow-lg transition-colors disabled:opacity-0 disabled:pointer-events-none"
         title="Previous page"
       >
         <svg class="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -751,7 +762,7 @@
         v-if="!(isStudentMode && !hasNextPage)"
         @click="handleNext"
         :disabled="!hasNextPage"
-        class="fixed right-2 sm:right-4 top-1/2 -translate-y-1/2 z-50 p-3 sm:p-4 rounded-full bg-gray-900/40 hover:bg-gray-900/60 text-white backdrop-blur-sm shadow-lg transition-colors disabled:opacity-0 disabled:pointer-events-none"
+        class="fixed right-3 sm:right-5 bottom-5 z-50 p-2.5 sm:p-4 rounded-full bg-gray-900/40 hover:bg-gray-900/60 text-white backdrop-blur-sm shadow-lg transition-colors disabled:opacity-0 disabled:pointer-events-none"
         title="Next page"
       >
         <svg class="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1397,6 +1408,8 @@ const loadTopic = async () => {
         }
         // "Start from the beginning" on the shelf: page 1 becomes their place straight away
         if (resumeIndex < 0 && route.query.opened === '1') saveReadingPlace()
+        // Chose to read from the shelf: straight into Read Mode (the whole screen for the notes)
+        if (route.query.opened === '1') enterReadMode()
         loadStudentPageData()
       }
       if (resumeIndex >= 0) {
@@ -2025,9 +2038,185 @@ onBeforeUnmount(() => {
   font-size: 11px;
   letter-spacing: 0.02em;
   color: #6b7280;
-  /* solid page colour (the page is bg-white / dark:bg-gray-800) so scrolled text can't show through */
-  background: #fff;
-  border-top: 1px solid #e5e7eb;
+  /* the paper's colour (nearly solid) so scrolled text can't show through */
+  background: rgba(242, 233, 214, 0.97);
+  border-top: 1px solid #e2d3b3;
+}
+
+/* ---- Book-page look (as on the opening page of the book on the shelf) ---- */
+/* Paper: a faint grain (fractal noise, like the fibres of real paper), light falling on the middle
+   of the page, a warm edge, and the curve down into the spine - on whichever side the spine is
+   (page-flip marks each page --left or --right as it lays out the spread) - with the outer corners
+   softened like a real leaf */
+.enote-paper {
+  --paper-grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.36  0 0 0 0 0.27  0 0 0 0 0.15  0 0 0 0.075 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  --paper-light: radial-gradient(ellipse 80% 70% at 50% 42%, rgba(255, 253, 246, 0.55), rgba(255, 253, 246, 0) 70%);
+  --paper-base: linear-gradient(180deg, #fbf5e7, #f1e6cf);
+  background-color: #f6eedb;
+  background-image: var(--paper-grain), var(--paper-light), var(--paper-base);
+  box-shadow: inset 0 0 38px rgba(140, 105, 50, 0.13);
+  color: #2a2016;
+}
+
+/* Right-hand page: spine on its left */
+.enote-paper.\-\-right {
+  background-image:
+    var(--paper-grain),
+    linear-gradient(90deg, rgba(70, 45, 15, 0.22) 0, rgba(70, 45, 15, 0.09) 2.5%, rgba(70, 45, 15, 0.03) 6%, rgba(70, 45, 15, 0) 11%),
+    var(--paper-light),
+    var(--paper-base);
+  border-radius: 0 16px 16px 0;
+}
+
+/* Left-hand page: spine on its right */
+.enote-paper.\-\-left {
+  background-image:
+    var(--paper-grain),
+    linear-gradient(270deg, rgba(70, 45, 15, 0.22) 0, rgba(70, 45, 15, 0.09) 2.5%, rgba(70, 45, 15, 0.03) 6%, rgba(70, 45, 15, 0) 11%),
+    var(--paper-light),
+    var(--paper-base);
+  border-radius: 16px 0 0 16px;
+}
+
+.dark .enote-paper,
+.dark .enote-paper.\-\-left,
+.dark .enote-paper.\-\-right {
+  background: #1f2937;
+  box-shadow: none;
+  color: #e5e7eb;
+}
+
+.paper-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 14px;
+  margin-bottom: 10px;
+  font-size: 11px;
+  color: #9c8057;
+}
+
+.paper-label {
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8a6a3a;
+}
+
+.paper-title {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(22px, 2.6vw, 30px);
+  font-weight: 700;
+  line-height: 1.2;
+  color: #2b2116;
+  padding-bottom: 10px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid #d9c49c;
+}
+
+.paper-outcomes {
+  margin-bottom: 22px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.45);
+  box-shadow: inset 0 0 0 1px #e6d7b8;
+}
+
+.paper-outcomes-head {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-size: 17px;
+  color: #6b4f24;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #d9c49c;
+}
+
+.paper-outcomes ul {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.paper-outcomes li {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #2b2116;
+}
+
+.paper-tick {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: #3f7d4e;
+}
+
+.paper-tick svg {
+  width: 11px;
+  height: 11px;
+}
+
+.enote-paper .prose {
+  color: #2b2116;
+}
+
+/* Lists written like a book's: bullets and numbers in the page's gold ink */
+.enote-paper .prose :deep(ul) {
+  list-style: disc;
+  padding-left: 1.4em;
+}
+
+.enote-paper .prose :deep(ol) {
+  list-style: decimal;
+  padding-left: 1.5em;
+}
+
+.enote-paper .prose :deep(li)::marker {
+  color: #a07c3e;
+}
+
+.enote-paper .prose :deep(h1),
+.enote-paper .prose :deep(h2),
+.enote-paper .prose :deep(h3) {
+  font-family: Georgia, 'Times New Roman', serif;
+  color: #2b2116;
+}
+
+.dark .paper-meta,
+.dark .paper-label {
+  color: #c9a96b;
+}
+
+.dark .paper-title,
+.dark .enote-paper .prose,
+.dark .enote-paper .prose :deep(h1),
+.dark .enote-paper .prose :deep(h2),
+.dark .enote-paper .prose :deep(h3),
+.dark .paper-outcomes li {
+  color: #f3f4f6;
+}
+
+.dark .paper-title,
+.dark .paper-outcomes-head {
+  border-bottom-color: #4b5563;
+}
+
+.dark .paper-outcomes {
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 0 0 1px #374151;
+}
+
+.dark .paper-outcomes-head {
+  color: #e5c78d;
 }
 
 .dark .enote-page-footer {

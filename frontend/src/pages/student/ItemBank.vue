@@ -92,7 +92,7 @@
     </div>
 
     <!-- PDF Preview -->
-    <ItemBankPdfViewer v-if="previewResource" :resource="previewResource" @close="previewResource = null" />
+    <ItemBankPdfViewer v-if="previewResource" :resource="previewResource" :start-in-read-mode="readFromShelf" @close="previewResource = null; readFromShelf = false" />
 
     <!-- Opening a book: it comes off the shelf, waits with Start reading / Cancel, then opens into
          the reader (or goes back to its place) -->
@@ -147,8 +147,11 @@ const openItem = (item: ItemBankResource, el: HTMLElement | null) => {
   if (opening.value || previewResource.value) return
   opening.value = { item, el }
 }
+// Opened with "Start reading" on the shelf: the reader starts in Read Mode
+const readFromShelf = ref(false)
 const finishOpening = async () => {
   if (!opening.value) return
+  readFromShelf.value = true
   previewResource.value = opening.value.item
   await nextTick()
   opening.value = null

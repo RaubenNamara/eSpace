@@ -91,7 +91,8 @@
       </p>
     </div>
     <!-- Document Preview -->
-    <LibraryDocumentViewer v-if="previewBook" :book="previewBook" @close="previewBook = null" />
+    <LibraryPdfViewer v-if="previewBook && previewBook.file_type === 'pdf'" :book="previewBook" :start-in-read-mode="readFromShelf" @close="previewBook = null; readFromShelf = false" />
+    <LibraryDocumentViewer v-else-if="previewBook" :book="previewBook" @close="previewBook = null; readFromShelf = false" />
 
     <!-- Opening a book: it comes off the shelf, waits with Start reading / Cancel, then opens into
          the reader (or goes back to its place) -->
@@ -113,6 +114,7 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import axios from 'axios'
 import LibraryDocumentViewer from '@/components/library/LibraryDocumentViewer.vue'
+import LibraryPdfViewer from '@/components/library/LibraryPdfViewer.vue'
 import Bookshelf from '@/components/library/Bookshelf.vue'
 import ShelfBook from '@/components/library/ShelfBook.vue'
 import ShelfSlot from '@/components/library/ShelfSlot.vue'
@@ -146,8 +148,11 @@ const openItem = (item: LibraryBook, el: HTMLElement | null) => {
   if (opening.value || previewBook.value) return
   opening.value = { item, el }
 }
+// Opened with "Start reading" on the shelf: the reader starts in Read Mode
+const readFromShelf = ref(false)
 const finishOpening = async () => {
   if (!opening.value) return
+  readFromShelf.value = true
   previewBook.value = opening.value.item
   await nextTick()
   opening.value = null

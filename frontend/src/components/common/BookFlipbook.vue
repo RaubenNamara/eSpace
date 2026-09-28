@@ -613,12 +613,12 @@ defineExpose({ flipNext, flipPrev, turnToPage, getCurrentPageIndex, rebuild, set
 }
 
 .page-stack--left {
-  border-radius: 3px 0 0 3px;
+  border-radius: 10px 0 0 10px;
   box-shadow: inset -3px 0 4px rgba(0, 0, 0, 0.18), -1px 1px 3px rgba(0, 0, 0, 0.15);
 }
 
 .page-stack--right {
-  border-radius: 0 3px 3px 0;
+  border-radius: 0 10px 10px 0;
   box-shadow: inset 3px 0 4px rgba(0, 0, 0, 0.18), 1px 1px 3px rgba(0, 0, 0, 0.15);
 }
 

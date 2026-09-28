@@ -372,7 +372,8 @@ import BookFlipbook from '@/components/common/BookFlipbook.vue'
 
 // withNotes: the student's private per-page notes. notesBase: where they're stored - the eLibrary's
 // by default; the Item Bank reader passes its own (/student/itembank/{id}).
-const props = withDefaults(defineProps<{ book: LibraryBook; withNotes?: boolean; notesBase?: string }>(), { withNotes: true })
+// startInReadMode: opened with "Start reading" on the shelf - goes into Read Mode once the book is up
+const props = withDefaults(defineProps<{ book: LibraryBook; withNotes?: boolean; notesBase?: string; startInReadMode?: boolean }>(), { withNotes: true })
 defineEmits(['close'])
 
 const API_BASE = '/api'
@@ -786,6 +787,12 @@ const enterReadMode = () => {
   readModeStore.enter()
   viewerRef.value?.requestFullscreen?.().catch(() => {})
 }
+
+const stopWaitingForBook = watch(() => bookImages.value.length, (count) => {
+  if (!count) return
+  if (props.startInReadMode && isStudentRole.value && !readMode.value) enterReadMode()
+  stopWaitingForBook()
+})
 
 const exitReadMode = () => {
   readMode.value = false

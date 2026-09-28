@@ -21,14 +21,14 @@
                 <span class="bot-page-rule"></span>
                 <p class="bot-page-sub">Picking up where you left off</p>
               </div>
-              <div v-else-if="outcomeList.length" class="bot-outcomes">
-                <p ref="headEl" class="bot-outcomes-head">In this topic you will<span v-if="pageIndex > 0" class="bot-outcomes-cont"> (continued)</span></p>
+              <div v-else-if="outcomeList.length && rightIdx < pageCount" class="bot-outcomes">
+                <p ref="headEl" class="bot-outcomes-head">In this topic you will<span v-if="rightIdx > 0" class="bot-outcomes-cont"> (continued)</span></p>
                 <ul class="bot-outcomes-list">
                   <li
-                    v-for="(outcome, i) in currentChunk"
-                    :key="`${pageIndex}-${i}`"
+                    v-for="(outcome, i) in chunks[rightIdx]"
+                    :key="`${rightIdx}-${i}`"
                     class="bot-outcome"
-                    :class="{ 'is-shown': i < revealed }"
+                    :class="{ 'is-shown': i < (revealedBy[rightIdx] || 0) }"
                   >
                     <span class="bot-outcome-tick" aria-hidden="true">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
@@ -36,7 +36,7 @@
                     <span class="bot-outcome-text">{{ outcome }}</span>
                   </li>
                 </ul>
-                <p v-if="pageCount > 1" class="bot-page-count">{{ pageIndex + 1 }} / {{ pageCount }}</p>
+                <p v-if="pageCount > 1" class="bot-page-count">{{ rightIdx + 1 }} / {{ pageCount }}</p>
               </div>
               <!-- Sizes every outcome at the page's width (hidden), to know how many fit on a page -->
               <ul v-if="outcomeList.length" ref="measureEl" class="bot-outcomes-list bot-measure" aria-hidden="true">
@@ -45,7 +45,7 @@
                   <span class="bot-outcome-text">{{ outcome }}</span>
                 </li>
               </ul>
-              <div v-else class="bot-page-inner">
+              <div v-else-if="!outcomeList.length && mode !== 'resume'" class="bot-page-inner">
                 <p v-if="label" class="bot-page-label">{{ label }}</p>
                 <p class="bot-page-title">{{ title }}</p>
                 <span class="bot-page-rule"></span>
@@ -61,19 +61,38 @@
             <div v-for="(leaf, i) in leaves" :key="`leaf-${i}`" :ref="el => setLeafRef(el as HTMLElement | null, i)" class="bot-leaf">
               <div class="bot-leaf-front bot-page">
                 <div class="bot-outcomes">
-                  <p class="bot-outcomes-head">In this topic you will<span v-if="leaf.page > 0" class="bot-outcomes-cont"> (continued)</span></p>
+                  <p class="bot-outcomes-head">In this topic you will<span v-if="leaf.front > 0" class="bot-outcomes-cont"> (continued)</span></p>
                   <ul class="bot-outcomes-list">
-                    <li v-for="(outcome, j) in leaf.items" :key="j" class="bot-outcome is-shown">
+                    <li v-for="(outcome, j) in chunks[leaf.front]" :key="j" class="bot-outcome is-shown">
                       <span class="bot-outcome-tick" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
-                      </span>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
+                    </span>
                       <span class="bot-outcome-text">{{ outcome }}</span>
                     </li>
                   </ul>
-                  <p class="bot-page-count">{{ leaf.page + 1 }} / {{ pageCount }}</p>
+                  <p class="bot-page-count">{{ leaf.front + 1 }} / {{ pageCount }}</p>
                 </div>
               </div>
-              <div class="bot-leaf-back"></div>
+              <!-- The back of the turned page - now the left page - carries on with the list -->
+              <div class="bot-leaf-back">
+                <div v-if="leaf.back < pageCount" class="bot-outcomes">
+                  <p class="bot-outcomes-head">In this topic you will<span class="bot-outcomes-cont"> (continued)</span></p>
+                  <ul class="bot-outcomes-list">
+                    <li
+                      v-for="(outcome, j) in chunks[leaf.back]"
+                      :key="j"
+                      class="bot-outcome"
+                      :class="{ 'is-shown': j < (revealedBy[leaf.back] || 0) }"
+                    >
+                      <span class="bot-outcome-tick" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
+                    </span>
+                      <span class="bot-outcome-text">{{ outcome }}</span>
+                    </li>
+                  </ul>
+                  <p class="bot-page-count bot-page-count-left">{{ leaf.back + 1 }} / {{ pageCount }}</p>
+                </div>
+              </div>
             </div>
             <!-- The cover: front face is the book's own cover, back face the inside of the board -->
             <div ref="cover" class="bot-cover">
@@ -185,12 +204,13 @@ const TURN_TIME = 1100
 const FINAL_HOLD = 2600 // the last page stays up this long before the notes open
 const outcomeList = computed(() => (props.outcomes ?? []).map(o => String(o).trim()).filter(Boolean))
 const chunks = ref<string[][]>([])
-const pageIndex = ref(0)
 const pageCount = computed(() => chunks.value.length)
-const currentChunk = computed(() => chunks.value[pageIndex.value] ?? [])
-const revealed = ref(0)
+// Which page of outcomes is on the right, and how many of each page's outcomes are ticked in
+const rightIdx = ref(0)
+const revealedBy = ref<Record<number, number>>({})
 const prepared = ref(false)
-const leaves = ref<{ page: number; items: string[] }[]>([])
+// Turned pages: the page of outcomes on the front, and the one written on the back (the left page)
+const leaves = ref<{ front: number; back: number }[]>([])
 const leafEls: HTMLElement[] = []
 const setLeafRef = (el: HTMLElement | null, i: number) => { if (el) leafEls[i] = el }
 const pageEl = ref<HTMLElement | null>(null)
@@ -258,35 +278,40 @@ function paginate() {
   chunks.value = pages
 }
 
-// Ticks in each outcome of the page on show, then turns full pages over until all are listed
+// Ticks in each outcome of a page in turn
+async function revealPage(page: number) {
+  const count = chunks.value[page]?.length ?? 0
+  for (let i = 1; i <= count && !stopped; i++) {
+    revealedBy.value = { ...revealedBy.value, [page]: i }
+    await wait(reduced ? 0 : OUTCOME_STEP)
+  }
+}
+
+// Fills the right page; when there are more, turns it over - the list carries on on the back of
+// the turned page (now the left page), then on the new right page - and so on, like a real book
 async function listOutcomes() {
   listing.value = true
   await nextTick()
   pauseButton.value?.focus()
-  for (let pg = 0; pg < chunks.value.length && !stopped; pg++) {
-    pageIndex.value = pg
-    revealed.value = 0
-    const count = chunks.value[pg].length
-    for (let i = 1; i <= count && !stopped; i++) {
-      revealed.value = i
-      await wait(reduced ? 0 : OUTCOME_STEP)
-    }
-    if (pg < chunks.value.length - 1 && !stopped) {
-      await wait(reduced ? 0 : PAGE_HOLD)
-      await turnPage(pg)
-    }
+  rightIdx.value = 0
+  await revealPage(0)
+  for (let next = 1; next < chunks.value.length && !stopped; next += 2) {
+    await wait(reduced ? 0 : PAGE_HOLD)
+    await turnPage(rightIdx.value, next)
+    await revealPage(next)
+    if (next + 1 < chunks.value.length) await revealPage(next + 1)
   }
   if (!stopped) await wait(reduced ? 0 : FINAL_HOLD)
   listing.value = false
   paused.value = false
 }
 
-// A full page turns over to the left, showing the next (still empty) page under it
-async function turnPage(pg: number) {
-  leaves.value.push({ page: pg, items: chunks.value[pg] })
+// The full right page turns over to the left; its back carries the next outcomes, and the page
+// after that becomes the right page
+async function turnPage(front: number, back: number) {
+  leaves.value.push({ front, back })
   const i = leaves.value.length - 1
-  pageIndex.value = pg + 1
-  revealed.value = 0
+  rightIdx.value = back + 1
   await nextTick()
   const el = leafEls[i]
   if (!el) return
@@ -317,6 +342,7 @@ const FLY_AT = 150
 const FLY_TIME = 1500
 const OPEN_TIME = 1500
 const HOLD_OPEN = 450
+const CANCEL_SPEED = 3.5
 
 // The animations that bring the book out, played backwards to put it back
 const outward: Animation[] = []
@@ -412,11 +438,15 @@ function startReading(how: 'resume' | 'fresh' = 'fresh') {
 function cancel() {
   if (phase.value !== 'ready' && phase.value !== 'arriving') return
   phase.value = 'closing'
-  outward.forEach(a => a.reverse())
+  // Played back several times faster than it came out - a student who cancels wants the shelf back
+  outward.forEach(a => {
+    a.reverse()
+    a.updatePlaybackRate(-CANCEL_SPEED)
+  })
   // The book's own place fills again just as it lands back in it
   if (slotFade) {
     slotFade.cancel()
-    slotFade = props.from?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 250, delay: reduced ? 0 : FLY_TIME - 200, fill: 'both' }) ?? null
+    slotFade = props.from?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 150, delay: reduced ? 0 : Math.max(0, FLY_TIME / CANCEL_SPEED - 120), fill: 'both' }) ?? null
   }
   Promise.all(outward.map(a => a.finished)).catch(() => {}).then(() => emit('closed'))
 }
@@ -608,6 +638,12 @@ onBeforeUnmount(() => {
   color: #9c8057;
 }
 
+.bot-page-count-left {
+  right: auto;
+  left: 12%;
+  bottom: 6%;
+}
+
 /* Hidden copy of every outcome at the page's width, for measuring */
 .bot-measure {
   position: absolute;
@@ -639,6 +675,10 @@ onBeforeUnmount(() => {
 .bot-leaf-back {
   position: absolute;
   inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12%;
   transform: rotateY(180deg);
   border-radius: 6px 2px 2px 6px;
   background:

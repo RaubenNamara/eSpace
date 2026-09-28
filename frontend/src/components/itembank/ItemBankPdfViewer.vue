@@ -1,5 +1,5 @@
 <template>
-  <LibraryPdfViewer :book="book" :notes-base="`/student/itembank/${resource.id}`" @close="$emit('close')" />
+  <LibraryPdfViewer :book="book" :notes-base="`/student/itembank/${resource.id}`" :start-in-read-mode="startInReadMode" @close="$emit('close')" />
 </template>
 
 <script setup lang="ts">
@@ -11,7 +11,7 @@ import LibraryPdfViewer from '@/components/library/LibraryPdfViewer.vue'
 import type { ItemBankResource } from '@/types/itembank'
 import type { LibraryBook } from '@/types/library'
 
-const props = defineProps<{ resource: ItemBankResource }>()
+const props = defineProps<{ resource: ItemBankResource; startInReadMode?: boolean }>()
 defineEmits(['close'])
 
 const book = computed<LibraryBook>(() => ({

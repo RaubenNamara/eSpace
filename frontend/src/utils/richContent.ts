@@ -120,6 +120,11 @@ export function splitContentBlocks(html: string): ContentBlock[] {
       blocks.push({ html: el.outerHTML, narrationIndex: narrationIndex++ })
     } else if (isMediaElement(el)) {
       blocks.push({ html: el.outerHTML, narrationIndex: null })
+    } else if ((el.textContent || '').trim() || el.querySelector('img, svg, canvas') || el.tagName === 'HR') {
+      // Anything else - headings, horizontal rules, plain divs - is shown as written, just not
+      // narrated (these used to be dropped, so a page's section headings vanished while it was
+      // the page being read)
+      blocks.push({ html: el.outerHTML, narrationIndex: null })
     }
   }
 
