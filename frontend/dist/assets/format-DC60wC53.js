@@ -1,0 +1,1 @@
+function t(n){return n?n<1024*1024?`${Math.max(1,Math.round(n/1024))} KB`:n<1024*1024*1024?`${(n/(1024*1024)).toFixed(1)} MB`:`${(n/(1024*1024*1024)).toFixed(2)} GB`:"0 KB"}function a(n){const r=Math.ceil((n-Date.now())/864e5);return r<=0?"today":r===1?"in 1 day":`in ${r} days`}export{a as d,t as f};

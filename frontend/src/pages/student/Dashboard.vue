@@ -52,6 +52,8 @@
         <StatTile label="Upcoming Live Classes" :value="data.upcoming_live_classes.length" icon="live" color="red" to="/student/live-classes" />
       </div>
 
+      <LearningMapCard />
+
       <!-- Quick links -->
       <div class="mb-6">
         <h2 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Quick Links</h2>
@@ -120,6 +122,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useLiveRefresh } from '@/composables/useLiveRefresh'
+import LearningMapCard from '@/components/dashboard/LearningMapCard.vue'
 import axios from 'axios'
 import { useAuthStore } from '@/stores/auth'
 import StatTile from '@/components/dashboard/StatTile.vue'
@@ -165,20 +169,26 @@ const greeting = computed(() => {
   return 'Good evening'
 })
 
-const loadDashboard = async () => {
-  loading.value = true
-  error.value = ''
+// silent: the live refresh - the numbers just count to their new values, no loading state, and a
+// failed refresh leaves the dashboard as it was
+const loadDashboard = async (silent = false) => {
+  if (!silent) {
+    loading.value = true
+    error.value = ''
+  }
   try {
     const response = await axios.get(`${API_BASE}/student/dashboard`)
     if (response.data.success) {
       data.value = response.data.data
     }
   } catch (err: any) {
-    error.value = err.response?.data?.message || 'Failed to load dashboard'
+    if (!silent) error.value = err.response?.data?.message || 'Failed to load dashboard'
   } finally {
-    loading.value = false
+    if (!silent) loading.value = false
   }
 }
+
+useLiveRefresh(() => loadDashboard(true))
 
 onMounted(() => {
   loadDashboard()

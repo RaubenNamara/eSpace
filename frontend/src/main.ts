@@ -4,6 +4,7 @@ import axios from 'axios'
 import { useRegisterSW } from 'virtual:pwa-register/vue'
 import App from './App.vue'
 import router from './router'
+import { installOfflineSupport } from './utils/offline/adapter'
 import './assets/style.css'
 
 // Actively checks for a new deployment every 60s (rather than only whenever the browser
@@ -35,6 +36,9 @@ const baseUrl = import.meta.env.BASE_URL.replace(/\/$/, '')
 if (baseUrl) {
   axios.defaults.baseURL = baseUrl
 }
+
+// Downloaded eNotes keep working without a network (see utils/offline)
+installOfflineSupport()
 
 // Create Vue app
 const app = createApp(App)

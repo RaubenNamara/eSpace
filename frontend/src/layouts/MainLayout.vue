@@ -1,18 +1,17 @@
 <template>
   <div class="min-h-screen bg-gray-50 dark:bg-gray-950">
     <!-- Sidebar -->
-    <!-- Floats as a frosted-glass card off the page edges on desktop (flush on mobile, where an
-         inset drawer just wastes thumb-reach) - semi-transparent + backdrop-blur over the page's
-         own background, in both themes (light glass on light-gray-50, dark glass on
-         dark-slate-950). Flat, no gradients or glow blobs. -->
+    <!-- Floats as a framed card off the page edges on desktop (flush on mobile, where an inset
+         drawer just wastes thumb-reach), framed like the eNotes / eLibrary bookcase - warm paper,
+         a gold border and a recessed edge (.app-frame-sidebar in assets/style.css). -->
     <aside
       v-if="!shouldHideAppChrome"
-      class="overflow-hidden fixed left-0 top-3 bottom-3 lg:left-3 lg:top-3 lg:bottom-3 rounded-r-2xl lg:rounded-2xl bg-slate-100/80 dark:bg-slate-900/70 backdrop-blur-xl shadow-lg lg:shadow-2xl lg:shadow-slate-900/10 dark:lg:shadow-black/50 border border-slate-400/80 dark:border-white/10 transform transition-all duration-300 z-50 flex flex-col"
+      class="overflow-hidden fixed left-0 top-3 bottom-3 lg:left-3 lg:top-3 lg:bottom-3 rounded-r-2xl lg:rounded-2xl app-frame-sidebar backdrop-blur-xl transform transition-all duration-300 z-50 flex flex-col"
       :class="[isIconOnly ? 'w-16' : 'w-48 md:w-56', { '-translate-x-full': !sidebarOpen, 'translate-x-0': sidebarOpen }]"
     >
 
       <!-- Logo/brand header - desktop/tablet only; the mobile drawer skips straight to nav. -->
-      <div class="relative hidden lg:block px-4 py-4 border-b border-slate-400/80 dark:border-white/10 flex-shrink-0">
+      <div class="relative hidden lg:block px-4 py-4 border-b app-frame-divider flex-shrink-0">
         <div class="flex items-center gap-3" :class="{ 'justify-center': isIconOnly }">
           <div class="relative w-9 h-9 flex-shrink-0 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/25">
             <svg class="w-[18px] h-[18px] text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -139,7 +138,7 @@
       </nav>
 
       <!-- Footer -->
-      <div class="relative border-t border-slate-400/80 dark:border-white/10 flex-shrink-0">
+      <div class="relative border-t app-frame-divider flex-shrink-0">
         <div class="p-2.5">
           <button
             @click="handleLogout"
@@ -397,6 +396,16 @@
       <ProfileSettingsModal v-if="showProfileModal" :focus-section="profileModalFocusSection" @close="showProfileModal = false" />
 
       <!-- Page Content -->
+      <!-- No network: say so, and (students) point at what still works -->
+      <div v-if="!offline.online && !shouldHideAppChrome" class="flex items-center justify-center gap-2 px-4 py-1.5 bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-100 text-xs font-medium">
+        <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728M5.636 18.364a9 9 0 010-12.728M3 3l18 18" /></svg>
+        <span>You're offline<template v-if="authStore.userRole === 'student'"> - your saved eNotes still open.</template></span>
+        <router-link v-if="authStore.userRole === 'student' && route.path !== '/student/downloads'" to="/student/downloads" class="underline font-semibold">Downloads</router-link>
+      </div>
+      <div v-else-if="offline.pending > 0 && authStore.userRole === 'student' && !shouldHideAppChrome" class="px-4 py-1 text-center bg-indigo-50 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-200 text-[11px]">
+        Sending {{ offline.pending }} {{ offline.pending === 1 ? 'change' : 'changes' }} you made offline…
+      </div>
+
       <main class="flex-1" :class="shouldHideAppChrome ? 'p-0' : (isImmersiveReader ? 'p-0 lg:p-6' : 'p-4 sm:p-6')">
         <router-view />
       </main>
@@ -416,6 +425,7 @@ import ProfileSettingsModal from '../components/profile/ProfileSettingsModal.vue
 import NotificationPanel from '../components/notifications/NotificationPanel.vue'
 import GlobalSearchBar from '../components/search/GlobalSearchBar.vue'
 import { resolveAssetUrl } from '@/utils/url'
+import { offline } from '@/utils/offline/enotes'
 
 const router = useRouter()
 const route = useRoute()
@@ -594,7 +604,8 @@ const academicMenu = computed(() => {
   if (role === 'student') {
     return [
       { path: '/student/live-classes', label: 'Live Classes', icon: 'VideoCameraIcon' },
-      { path: '/student/enotes', label: 'eNotes', icon: 'NoteIcon' }
+      { path: '/student/enotes', label: 'eNotes', icon: 'NoteIcon' },
+      { path: '/student/downloads', label: 'Downloads', icon: 'CloudArrowDownIcon' }
     ]
   } else if (role === 'teacher') {
     return [
@@ -671,6 +682,7 @@ const assessmentMenu = computed(() => {
   if (role === 'student') {
     return [
       { path: '/student/assignments', label: 'Assessments', icon: 'DocumentTextIcon' },
+      { path: '/student/learning-map', label: 'Learning Map', icon: 'MapIcon' },
       { path: '/student/virtual-lab', label: 'Virtual Lab', icon: 'FlaskIcon' },
       { path: '/student/reports', label: 'Reports', icon: 'ChartBarIcon' },
       { path: '/student/achievements', label: 'Achievements', icon: 'TrophyIcon' },
@@ -860,13 +872,16 @@ const CalendarDaysIcon = icon(['M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0
 
 const KeyIcon = icon(['M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z'])
 
+const CloudArrowDownIcon = icon(['M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10'])
 const CloudArrowUpIcon = icon(['M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12'])
 
 const DocumentIcon = icon(['M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'])
 
 const TableCellsIcon = icon(['M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5M8.25 4.5v15M15.75 4.5v15'], '0 0 24 24')
 
-export { DashboardIcon, BookOpenIcon, DocumentTextIcon, LibraryIcon, NoteIcon, QuestionMarkCircleIcon, ChatIcon, ChartBarIcon, CogIcon, UsersIcon, VideoCameraIcon, ChartIcon, AcademicCapIcon, BookIcon, CheckCircleIcon, BriefcaseIcon, UserGroupIcon, BuildingOfficeIcon, BuildingLibraryIcon, CalendarIcon, CalendarDaysIcon, KeyIcon, CloudArrowUpIcon, DocumentIcon, TrophyIcon, FlaskIcon, TableCellsIcon }
+const MapIcon = icon(['M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7'])
+
+export { MapIcon, DashboardIcon, BookOpenIcon, DocumentTextIcon, LibraryIcon, NoteIcon, QuestionMarkCircleIcon, ChatIcon, ChartBarIcon, CogIcon, UsersIcon, VideoCameraIcon, ChartIcon, AcademicCapIcon, BookIcon, CheckCircleIcon, BriefcaseIcon, UserGroupIcon, BuildingOfficeIcon, BuildingLibraryIcon, CalendarIcon, CalendarDaysIcon, KeyIcon, CloudArrowUpIcon, CloudArrowDownIcon, DocumentIcon, TrophyIcon, FlaskIcon, TableCellsIcon }
 
 // Sidebar menu items reference icons by name (e.g. icon: 'BookOpenIcon') so the menu arrays stay
 // plain, serialisable data - <component :is="item.icon"> can't resolve a local script-setup
@@ -876,8 +891,8 @@ const iconMap: Record<string, any> = {
   DashboardIcon, BookOpenIcon, DocumentTextIcon, LibraryIcon, NoteIcon, QuestionMarkCircleIcon,
   ChatIcon, ChartBarIcon, CogIcon, UsersIcon, VideoCameraIcon, ChartIcon, AcademicCapIcon, BookIcon,
   CheckCircleIcon, BriefcaseIcon, UserGroupIcon, BuildingOfficeIcon, BuildingLibraryIcon,
-  CalendarIcon, CalendarDaysIcon, KeyIcon, CloudArrowUpIcon, DocumentIcon, TrophyIcon, FlaskIcon,
-  TableCellsIcon
+  CalendarIcon, CalendarDaysIcon, KeyIcon, CloudArrowUpIcon, CloudArrowDownIcon, DocumentIcon, TrophyIcon, FlaskIcon,
+  TableCellsIcon, MapIcon
 }
 </script>
 

@@ -153,6 +153,7 @@ class ENoteController extends Controller
 
         $sql = "SELECT et.id, et.title, et.description, et.learning_outcomes, et.subject_id, et.class_id, et.total_pages,
                        et.estimated_reading_time, et.published_at, et.created_at, et.cover_design,
+                       GREATEST(et.updated_at, COALESCE((SELECT MAX(vp.updated_at) FROM enote_pages vp WHERE vp.topic_id = et.id), et.updated_at)) AS content_version,
                        s.name as subject_name, s.code as subject_code,
                        t.first_name as teacher_first_name, t.last_name as teacher_last_name,
                        prog.current_page_id AS resume_page_id,
@@ -263,6 +264,7 @@ class ENoteController extends Controller
 
         $sql = "SELECT et.id, et.title, et.description, et.learning_outcomes, et.subject_id, et.class_id, et.total_pages,
                        et.estimated_reading_time, et.published_at, et.created_at, et.narration_voice, et.cover_design,
+                       GREATEST(et.updated_at, COALESCE((SELECT MAX(vp.updated_at) FROM enote_pages vp WHERE vp.topic_id = et.id), et.updated_at)) AS content_version,
                        s.name as subject_name, s.code as subject_code,
                        t.first_name as teacher_first_name, t.last_name as teacher_last_name
                 FROM enote_topics et

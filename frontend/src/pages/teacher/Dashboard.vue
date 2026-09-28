@@ -67,7 +67,7 @@
           <template v-else>
             <div>
               <p class="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">Total Enrollments</p>
-              <p class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{{ analytics.total_enrollments }}</p>
+              <p class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400"><CountUp :value="analytics.total_enrollments" /></p>
             </div>
             <div class="w-10 h-10 sm:w-12 sm:h-12 bg-indigo-100 dark:bg-indigo-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
               <svg class="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -91,7 +91,7 @@
           <template v-else>
             <div>
               <p class="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">Recent (7 days)</p>
-              <p class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{{ analytics.recent_enrollments }}</p>
+              <p class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400"><CountUp :value="analytics.recent_enrollments" /></p>
             </div>
             <div class="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 dark:bg-green-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
               <svg class="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -113,7 +113,7 @@
           <template v-else>
             <div>
               <p class="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">Classes</p>
-              <p class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{{ uniqueClassCount }}</p>
+              <p class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400"><CountUp :value="uniqueClassCount" /></p>
             </div>
             <div class="w-10 h-10 sm:w-12 sm:h-12 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
               <svg class="w-5 h-5 sm:w-6 sm:h-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -137,7 +137,7 @@
           <template v-else>
             <div>
               <p class="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">Class-Streams</p>
-              <p class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{{ analytics.by_class.length }}</p>
+              <p class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400"><CountUp :value="analytics.by_class.length" /></p>
             </div>
             <div class="w-10 h-10 sm:w-12 sm:h-12 bg-purple-100 dark:bg-purple-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
               <svg class="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -355,6 +355,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import CountUp from '@/components/common/CountUp.vue'
+import { useLiveRefresh } from '@/composables/useLiveRefresh'
 import { Bar, Doughnut } from 'vue-chartjs'
 import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ArcElement } from 'chart.js'
 import apiService from '@/services/api'
@@ -479,19 +481,22 @@ const doughnutOptions = {
   }
 }
 
-const loadAnalytics = async () => {
-  loadingAnalytics.value = true
+// silent: the live refresh (no loading state; the counters just move to the new numbers)
+const loadAnalytics = async (silent = false) => {
+  if (!silent) loadingAnalytics.value = true
   try {
     const response = await apiService.get('/teacher/dashboard')
     if (response.data?.success && response.data?.data) {
       analytics.value = response.data.data
     }
   } catch (error) {
-    console.error('Failed to load analytics:', error)
+    if (!silent) console.error('Failed to load analytics:', error)
   } finally {
-    loadingAnalytics.value = false
+    if (!silent) loadingAnalytics.value = false
   }
 }
+
+useLiveRefresh(() => loadAnalytics(true))
 
 const loadMyDepartments = async () => {
   try {

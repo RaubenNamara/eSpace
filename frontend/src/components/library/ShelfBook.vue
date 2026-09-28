@@ -9,6 +9,9 @@
            carries the title the way a printed book's spine does. -->
       <div class="book-spine" aria-hidden="true">
         <span v-if="spineOut && isNew" class="spine-new">NEW</span>
+        <span v-if="spineOut && saved" class="spine-saved" title="Saved for offline reading">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0l-5-5m5 5l5-5M5 20h14" /></svg>
+        </span>
         <span v-if="spineOut && label" class="spine-label">{{ label }}</span>
         <span v-if="spineOut || variant === 'book'" class="rb-spine-title">{{ coverTitle }}</span>
         <span v-if="spineOut" class="spine-foot" :class="variant === 'book' ? 'spine-foot--imprint' : 'spine-foot--notes'"></span>
@@ -128,6 +131,8 @@ const props = withDefaults(defineProps<{
   flat?: boolean
   // Recently added - a small NEW tag at the top of the spine
   isNew?: boolean
+  // Kept on this device for offline reading - a small green mark on the spine
+  saved?: boolean
 }>(), {
   label: '',
   footer: '',
@@ -669,6 +674,24 @@ const artStyle = computed(() => {
   font-family: Poppins, Inter, system-ui, sans-serif;
   font-weight: 700;
   color: #fff;
+}
+
+/* Saved offline - a small green disc on the spine */
+.spine-saved {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  border-radius: 9999px;
+  color: #fff;
+  background: #059669;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+.spine-saved svg {
+  width: 8px;
+  height: 8px;
 }
 
 /* NEW tag - a bright slip tucked in at the top of the spine */

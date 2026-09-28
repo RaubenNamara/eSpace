@@ -2,6 +2,7 @@ import { nextTick, ref, shallowRef, type Ref } from 'vue'
 import * as pdfjsLib from 'pdfjs-dist'
 // eslint-disable-next-line import/no-unresolved
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
+import { offlinePdfData } from '@/utils/offline/docs'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl
 
@@ -101,8 +102,11 @@ export function usePdfRenderer(pdfUrl: Ref<string>, options: UsePdfRendererOptio
       // standardFontDataUrl/cMapUrl let pdf.js substitute the 14 standard PDF fonts (Helvetica,
       // Times, etc.) and render non-Latin/embedded-cmap text; without them pdf.js can render the
       // page but silently omit text using those fonts.
+      // A copy saved for offline reading (see utils/offline/docs.ts) opens from this device -
+      // with or without a network - instead of being fetched again
+      const saved = await offlinePdfData(pdfUrl.value)
       const loadingTask = pdfjsLib.getDocument({
-        url: pdfUrl.value,
+        ...(saved ? { data: saved } : { url: pdfUrl.value }),
         standardFontDataUrl: '/pdfjs/standard_fonts/',
         cMapUrl: '/pdfjs/cmaps/',
         cMapPacked: true,

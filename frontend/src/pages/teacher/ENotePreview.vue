@@ -415,7 +415,7 @@
 
         <div v-show="!sidebarCollapsed" class="flex-1 overflow-y-auto p-2 space-y-1">
           <div
-            v-for="page in pages"
+            v-for="(page, pageIdx) in pages"
             :key="page.id"
             @click="selectPage(page.id)"
             :class="[
@@ -440,13 +440,13 @@
                 ? 'bg-indigo-600 text-white'
                 : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300'"
             >
-              {{ page.order_number }}
+              {{ pageIdx + 1 }}
             </span>
             <p
               class="text-sm font-medium truncate"
               :class="currentPage?.id === page.id ? 'text-indigo-900 dark:text-indigo-100' : 'text-gray-700 dark:text-gray-200'"
             >
-              Page {{ page.order_number }}<span v-if="hasMeaningfulTitle(page.title)"> · {{ page.title }}</span>
+              Page {{ pageIdx + 1 }}<span v-if="hasMeaningfulTitle(page.title)"> · {{ page.title }}</span>
             </p>
           </div>
         </div>
@@ -539,13 +539,13 @@
                        edge now turns the page on phones too. -->
                   <!-- Pages look like the pages of the book that opened on the shelf: cream paper, a
                        serif title over a gold rule, the page number as a small label -->
-                  <div v-for="page in pages" :key="page.id" class="enote-flip-page enote-paper">
+                  <div v-for="(page, pageIdx) in pages" :key="page.id" class="enote-flip-page enote-paper">
                     <!-- page-flip sets display on the page element itself, so the column layout that
                          pushes the footer to the foot of a short page lives on this inner wrapper -->
                     <div class="enote-page-inner">
                     <div class="p-5 sm:p-8">
                       <div class="paper-meta">
-                        <span class="paper-label">Page {{ page.order_number }} of {{ pages.length }}</span>
+                        <span class="paper-label">Page {{ pageIdx + 1 }} of {{ pages.length }}</span>
                         <span>{{ getPageWordCount(page.content) }} words</span>
                         <span>{{ getReadingTime(page.content) }} min read</span>
                       </div>
@@ -659,7 +659,7 @@
                     <!-- Teacher-enabled running footer, like the foot of a printed book's page -->
                     <div v-if="pageFooter" class="enote-page-footer">
                       <span class="truncate">{{ pageFooter.title }}<template v-if="pageFooter.author"> &middot; {{ pageFooter.author }}</template></span>
-                      <span class="flex-shrink-0">{{ page.order_number }}</span>
+                      <span class="flex-shrink-0">{{ pageIdx + 1 }}</span>
                     </div>
                     </div>
                   </div>
@@ -727,16 +727,6 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
               </svg>
             </button>
-            <button
-              v-else-if="isStudentMode"
-              @click="handleFinishTopic"
-              class="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2 text-sm sm:text-base font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
-            >
-              <span>Finish Topic</span>
-              <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-              </svg>
-            </button>
           </div>
         </div>
       </div>
@@ -768,17 +758,6 @@
         <svg class="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
         </svg>
-      </button>
-      <button
-        v-else-if="isStudentMode"
-        @click="handleFinishTopic"
-        class="fixed right-2 sm:right-4 top-1/2 -translate-y-1/2 z-50 flex items-center gap-1.5 pl-3 pr-4 py-3 rounded-full bg-emerald-600/90 hover:bg-emerald-600 text-white backdrop-blur-sm shadow-lg transition-colors"
-        title="Finish topic"
-      >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-        </svg>
-        <span class="text-sm font-medium hidden sm:inline">Finish</span>
       </button>
 
       <button
@@ -1290,7 +1269,10 @@ const hasPreviousPage = computed(() => {
 const hasNextPage = computed(() => {
   if (!currentPage.value) return false
   const currentIndex = pages.value.findIndex(p => p.id === currentPage.value!.id)
-  return currentIndex < pages.value.length - 1
+  // A two-page spread shows the current (left) page and the one after it - when that's the last
+  // page, the book is already at its end
+  const lastOnShow = bookOrientation.value === 'landscape' ? currentIndex + 1 : currentIndex
+  return lastOnShow < pages.value.length - 1
 })
 
 const visitedCount = computed(() => pages.value.filter(p => visitedPageIds.value.has(p.id)).length)
@@ -1441,6 +1423,8 @@ let lastBookIndex = 0
 const bookOrientation = ref<'portrait' | 'landscape'>('landscape')
 
 const onBookFlip = (index: number) => {
+  // Turning past the last spread can report a page beyond the end - stay where we are
+  if (index < 0 || index >= pages.value.length) return
   const from = lastBookIndex
   // Moving forward past a page with a Learning Outcome Assessment the student hasn't attempted
   // (or chosen to skip) - by any means: Next, dragging or clicking the page edge, the keyboard,
@@ -1458,6 +1442,7 @@ const onBookFlip = (index: number) => {
   lastBookIndex = index
   currentPage.value = pages.value[index] ?? null
   saveReadingPlace()
+  celebrateIfAtEnd(index)
 }
 
 // The student's place in the topic, saved (a moment after they stop turning pages) so the shelf
@@ -1524,8 +1509,8 @@ const openLoaPrompt = (page: ENotePage) => {
   showLoaPrompt.value = true
 }
 
-// Shared by the "Next" button AND "Finish Topic" - a page-level LOA on a topic's last (or only)
-// page must still prompt, even though there's no next page to flip to afterward. Returns true
+// Shared by the "Next" button and reaching the end (celebrateIfAtEnd) - a page-level LOA on a
+// topic's last (or only) page must still prompt, even though there's no next page to flip to. Returns true
 // when it intercepted (caller should not advance yet).
 const checkLoaPromptBeforeAdvance = (): boolean => {
   if (!isStudentMode.value) return false
@@ -1543,9 +1528,24 @@ const handleNext = () => {
   flipbookRef.value?.flipNext()
 }
 
-const handleFinishTopic = () => {
-  if (checkLoaPromptBeforeAdvance()) return
-  showCompletion.value = true
+// No Finish button: turning onto the last page is finishing. A moment after it comes on show the
+// celebration appears by itself (once per sitting) - or, if a page on show still has a Learning
+// Outcome Assessment waiting, its prompt first (Ignore then carries on to the celebration).
+let completionShown = false
+let completionTimer: ReturnType<typeof setTimeout> | null = null
+const celebrateIfAtEnd = (index: number) => {
+  if (!isStudentMode.value || completionShown || !pages.value.length) return
+  const onShow = bookOrientation.value === 'landscape' ? [index, index + 1] : [index]
+  if (!onShow.includes(pages.value.length - 1)) return
+  if (completionTimer) clearTimeout(completionTimer)
+  completionTimer = setTimeout(() => {
+    completionTimer = null
+    // Moved away again in the meantime
+    if (completionShown || lastBookIndex !== index) return
+    if (checkLoaPromptBeforeAdvance()) return
+    completionShown = true
+    showCompletion.value = true
+  }, 1800)
 }
 
 const ignoreLoaPrompt = () => {
@@ -1901,6 +1901,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  if (completionTimer) clearTimeout(completionTimer)
   document.removeEventListener('error', hideBrokenImages, true)
   document.removeEventListener('fullscreenchange', onFullscreenChange)
   document.removeEventListener('keydown', onReadModeKeydown)

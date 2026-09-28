@@ -230,9 +230,10 @@ export const useAuthStore = defineStore('auth', () => {
         // Update localStorage with fresh user data
         localStorage.setItem('user', JSON.stringify(payload.user))
       }
-    } catch (err) {
-      // If refresh fails, logout
-      await logout()
+    } catch (err: any) {
+      // Only a session the server rejected signs the user out - no network (reading downloaded
+      // eNotes offline) or a server hiccup keeps them signed in
+      if (err?.response?.status === 401) await logout()
     }
   }
 

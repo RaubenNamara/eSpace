@@ -9,7 +9,7 @@
     <div class="relative flex items-center justify-between gap-2">
       <div class="min-w-0">
         <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">{{ label }}</p>
-        <p class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mt-1">{{ value }}</p>
+        <p class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mt-1"><CountUp :value="value" /></p>
       </div>
 
       <!-- Icon pops with a little spring bounce on hover, with a matching-color ring pulsing
@@ -35,6 +35,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { dashboardIcons, dashboardColors } from './icons'
+import CountUp from '@/components/common/CountUp.vue'
 
 const props = defineProps<{ label: string; value: string | number; icon: string; color: string; to?: string }>()
 

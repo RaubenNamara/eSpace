@@ -112,3 +112,93 @@
   transform: translateX(20px);
   opacity: 0;
 }
+
+/* ---------------------------------------------------------------------------------------------
+   Framed cards - the bookcase look used across the app
+   The bordered white cards everywhere (bg-white + border + rounded-lg/xl/2xl on a container)
+   get the same finish as the eNotes / eLibrary bookcase: a warm paper tint, a soft gold border,
+   a light catching the top edge and a gentle shadow beneath. Card-shaped buttons (rounded-xl /
+   2xl, e.g. clickable stat cards) are framed too; ordinary buttons, inputs and other controls are
+   left as they are, and so is a card showing its own state with a coloured border (e.g. the
+   selected filter card) - only the plain grey-bordered ones are reframed. Tailwind rings (hover
+   rings, selection rings) still show on top of the frame's shadow. Applied here once so every
+   page picks it up.
+   --------------------------------------------------------------------------------------------- */
+:root {
+  --frame-border: rgba(150, 110, 55, 0.24);
+  --frame-paper-top: #fffdf9;
+  --frame-paper-bottom: #fbf6ec;
+  --frame-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 0 rgba(150, 110, 55, 0.06),
+    0 1px 2px rgba(80, 55, 20, 0.07), 0 6px 16px -8px rgba(80, 55, 20, 0.16);
+  --frame-shadow-hover: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 2px 4px rgba(80, 55, 20, 0.08),
+    0 12px 26px -10px rgba(80, 55, 20, 0.24);
+}
+
+html:not(.dark) :is(div, section, article, li, form, details, a, label).bg-white.border:is(.rounded-lg, .rounded-xl, .rounded-2xl):is([class*="border-gray-"], [class*="border-slate-"]),
+html:not(.dark) button.bg-white.border:is(.rounded-xl, .rounded-2xl):is([class*="border-gray-"], [class*="border-slate-"]) {
+  background-image: linear-gradient(180deg, var(--frame-paper-top), var(--frame-paper-bottom));
+  border-color: var(--frame-border);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--frame-shadow);
+}
+
+html:not(.dark) :is(div, section, article, li, a, label).bg-white.border:is(.rounded-lg, .rounded-xl, .rounded-2xl):is([class*="border-gray-"], [class*="border-slate-"]):is([class*="hover:shadow"]):hover,
+html:not(.dark) button.bg-white.border:is(.rounded-xl, .rounded-2xl):is([class*="border-gray-"], [class*="border-slate-"]):hover {
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--frame-shadow-hover);
+}
+
+html.dark :is(div, section, article, li, form, details, a, label).bg-white.border:is(.rounded-lg, .rounded-xl, .rounded-2xl):is([class*="border-gray-"], [class*="border-slate-"]),
+html.dark button.bg-white.border:is(.rounded-xl, .rounded-2xl):is([class*="border-gray-"], [class*="border-slate-"]) {
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(0, 0, 0, 0.05));
+  border-color: rgba(212, 175, 110, 0.16);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 18px -10px rgba(0, 0, 0, 0.6);
+}
+
+/* The sidebar, framed like the bookcase: warm paper, gold border, a recessed edge */
+.app-frame-sidebar {
+  background: linear-gradient(180deg, rgba(248, 242, 230, 0.94), rgba(236, 225, 204, 0.94));
+  border: 1px solid rgba(150, 110, 55, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), inset 0 2px 8px rgba(120, 85, 40, 0.08),
+    0 10px 30px -12px rgba(60, 40, 15, 0.3);
+}
+
+.app-frame-sidebar .app-frame-divider {
+  border-color: rgba(150, 110, 55, 0.22);
+}
+
+html.dark .app-frame-sidebar {
+  background: linear-gradient(180deg, rgba(43, 38, 32, 0.92), rgba(30, 26, 22, 0.92));
+  border-color: rgba(212, 175, 110, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 10px 30px -12px rgba(0, 0, 0, 0.7);
+}
+
+html.dark .app-frame-sidebar .app-frame-divider {
+  border-color: rgba(212, 175, 110, 0.12);
+}
+
+/* ---------------------------------------------------------------------------------------------
+   Clearer words: the light greys used for labels and captions are a shade darker (lighter in dark
+   mode), and text on the framed cards is a touch heavier, so it reads well on the warm paper
+   --------------------------------------------------------------------------------------------- */
+html:not(.dark) .text-gray-400 {
+  color: #6b7280;
+}
+
+html:not(.dark) .text-gray-500 {
+  color: #4b5563;
+}
+
+html.dark .dark\:text-gray-400 {
+  color: #c4cad3;
+}
+
+html.dark .dark\:text-gray-500 {
+  color: #a3abb8;
+}
+
+:is(div, section, article, li, form, details, a, label, button).bg-white.border:is(.rounded-lg, .rounded-xl, .rounded-2xl) :is(.text-gray-500, .text-gray-600, .text-gray-700):not(.font-medium, .font-semibold, .font-bold) {
+  font-weight: 500;
+}
+
+:is(div, section, article, li, form, details, a, label, button).bg-white.border:is(.rounded-lg, .rounded-xl, .rounded-2xl) .font-medium {
+  font-weight: 600;
+}

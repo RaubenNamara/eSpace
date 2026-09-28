@@ -49,6 +49,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
     Router::group(['prefix' => '/student', 'middleware' => ['role:student']], function () {
         // Dashboard
         Router::get('/dashboard', 'eSpace\App\Controllers\Student\DashboardController@index');
+        Router::get('/mastery', 'eSpace\App\Controllers\Student\MasteryController@index');
 
         // Academic History
         Router::get('/academic-history', 'eSpace\App\Controllers\Student\AcademicHistoryController@index');

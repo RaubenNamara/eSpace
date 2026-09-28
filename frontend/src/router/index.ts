@@ -25,6 +25,8 @@ const StudentNotes = () => import('../pages/student/Notes.vue')
 const StudentItemBank = () => import('../pages/student/ItemBank.vue')
 const StudentChat = () => import('../pages/student/Chat.vue')
 const StudentReports = () => import('../pages/student/Reports.vue')
+const StudentLearningMap = () => import('../pages/student/LearningMap.vue')
+const StudentDownloads = () => import('../pages/student/Downloads.vue')
 const StudentSettings = () => import('../pages/student/Settings.vue')
 const StudentSearch = () => import('../pages/student/Search.vue')
 const StudentAchievements = () => import('../pages/student/Achievements.vue')
@@ -189,6 +191,8 @@ const routes: RouteRecordRaw[] = [
       { path: 'itembank', name: 'StudentItemBank', component: StudentItemBank },
       { path: 'chat', name: 'StudentChat', component: StudentChat },
       { path: 'reports', name: 'StudentReports', component: StudentReports },
+      { path: 'learning-map', name: 'StudentLearningMap', component: StudentLearningMap },
+      { path: 'downloads', name: 'StudentDownloads', component: StudentDownloads },
       { path: 'settings', name: 'StudentSettings', component: StudentSettings },
       { path: 'search', name: 'StudentSearch', component: StudentSearch },
       { path: 'achievements', name: 'StudentAchievements', component: StudentAchievements },

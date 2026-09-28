@@ -31,6 +31,12 @@
       Study notes from your teachers, with AI voice narration<span v-if="!loading && subjectGroups.length > 0"> &middot; {{ topics.length }} {{ topics.length === 1 ? 'topic' : 'topics' }} &middot; {{ subjectGroups.length }} {{ subjectGroups.length === 1 ? 'subject' : 'subjects' }}</span>
     </p>
 
+    <!-- Offline: only the topics saved on this device are on the shelf -->
+    <div v-if="showingOffline" class="mb-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-100">
+      <svg class="w-4 h-4 flex-shrink-0 mt-px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728M5.636 18.364a9 9 0 010-12.728M3 3l18 18" /></svg>
+      <p>Only the eNotes saved on this device are shown. Notes and highlights you make now are sent when you're back online.</p>
+    </div>
+
     <!-- Loading: an empty shelf while topics arrive -->
     <div v-if="loading" class="space-y-8">
       <div v-for="i in 2" :key="i" class="animate-pulse">
@@ -76,6 +82,7 @@
           <ShelfBook
             spine-out
             :is-new="isRecent(topic)"
+            :saved="!!offline.downloads[topic.id]"
             variant="notes"
             :title="topic.title"
             :seed="topic.id"
@@ -87,6 +94,7 @@
           <p class="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug">{{ topic.title }}</p>
           <p v-if="topic.teacher_first_name" class="text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ topic.teacher_first_name }} {{ topic.teacher_last_name }}</p>
           <p class="text-[11px] text-gray-400 dark:text-gray-500">{{ topic.total_pages }} {{ topic.total_pages === 1 ? 'page' : 'pages' }}<template v-if="topic.narration_voice"> &middot; <span class="text-purple-600 dark:text-purple-300">🔊 Audio</span></template></p>
+          <SaveOfflineButton :item="topic" />
           </template>
         </ShelfSlot>
       </Bookshelf>
@@ -100,7 +108,7 @@
         </svg>
       </div>
       <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
-        {{ subjectGroups.length === 0 ? 'No eNotes yet' : 'No topics match your search' }}
+        {{ subjectGroups.length === 0 ? (showingOffline ? 'No eNotes saved on this device' : 'No eNotes yet') : 'No topics match your search' }}
       </h3>
       <p class="text-gray-500 dark:text-gray-400">
         {{ subjectGroups.length === 0 ? 'Your teachers haven\'t published any eNotes topics yet.' : 'Try a different search.' }}
@@ -148,6 +156,8 @@ import type { ENoteTopic } from '@/types/enotes'
 import { parseCoverDesign } from '@/utils/enoteCover'
 import { subjectTag } from '@/utils/subjectTag'
 import { orderShelves, isRecent } from '@/utils/shelfOrder'
+import SaveOfflineButton from '@/components/offline/SaveOfflineButton.vue'
+import { offline } from '@/utils/offline/enotes'
 
 interface SubjectGroup {
   id: number
@@ -165,6 +175,8 @@ const enrolledSubjects = ref<{ id: number; name: string; code?: string }[]>([])
 const searchQuery = ref('')
 const loading = ref(false)
 const error = ref<string | null>(null)
+// The list came from this device's saved copies (no network)
+const showingOffline = ref(false)
 
 const subjectGroups = computed<SubjectGroup[]>(() => {
   const map = new Map<number, SubjectGroup>()
@@ -223,6 +235,7 @@ const loadTopics = async () => {
   try {
     const response = await axios.get(`${API_BASE}/student/enotes/topics`)
     if (response.data.success) {
+      showingOffline.value = !!response.data.offline
       topics.value = response.data.data.topics || []
       enrolledSubjects.value = response.data.data.subjects || []
     }

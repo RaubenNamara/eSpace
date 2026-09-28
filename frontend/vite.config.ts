@@ -50,8 +50,19 @@ export default defineConfig(() => ({
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // .mjs and the standard fonts are the PDF reader's own (pdf.js worker) - kept so a PDF saved
+        // for offline reading (utils/offline/docs.ts) opens with no network
+        globPatterns: ['**/*.{js,mjs,css,html,ico,png,svg,woff2}', 'pdfjs/standard_fonts/*'],
         runtimeCaching: [
+          {
+            // Character maps pdf.js loads only for some scripts (e.g. Chinese) - kept once used
+            urlPattern: /\/pdfjs\/cmaps\//,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'pdfjs-cmaps',
+              expiration: { maxEntries: 200 }
+            }
+          },
           {
             urlPattern: /^https:\/\/api\.espace\.com\/.*/i,
             handler: 'NetworkFirst',

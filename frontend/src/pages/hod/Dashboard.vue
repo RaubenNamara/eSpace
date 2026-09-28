@@ -71,6 +71,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useLiveRefresh } from '@/composables/useLiveRefresh'
 import apiService from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import StatTile from '@/components/dashboard/StatTile.vue'
@@ -113,19 +114,22 @@ const departmentInfo = ref<DepartmentInfo | null>(null)
 const recentApprovals = ref<Approval[]>([])
 const loading = ref(false)
 
-const fetchStats = async () => {
-  loading.value = true
+// silent: the live refresh (no loading state; the counters just move to the new numbers)
+const fetchStats = async (silent = false) => {
+  if (!silent) loading.value = true
   try {
     const response = await apiService.get('/hod/department/stats')
     if (response.data.success) {
       stats.value = response.data.data
     }
   } catch (error) {
-    console.error('Failed to fetch stats:', error)
+    if (!silent) console.error('Failed to fetch stats:', error)
   } finally {
-    loading.value = false
+    if (!silent) loading.value = false
   }
 }
+
+useLiveRefresh(() => fetchStats(true))
 
 const fetchDepartmentInfo = async () => {
   try {
