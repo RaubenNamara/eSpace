@@ -143,20 +143,37 @@ class DashboardController extends Controller
             $trend = $trendDelta > 1 ? 'improving' : ($trendDelta < -1 ? 'declining' : 'steady');
         }
 
-        // Live classes
-        $where = $departmentIds
-            ? "lc.deleted_at IS NULL AND lc.department_id IN (" . implode(',', array_fill(0, count($departmentIds), '?')) . ")"
-            : "1=0";
+        // Live classes - visibility rule mirrors Student\LiveClassController::visibilityClause()
+        // so this dashboard widget never counts/shows a class the Live Classes page itself would hide.
+        $liveClassVisibility = "lc.deleted_at IS NULL AND EXISTS (
+                 SELECT 1 FROM student_department_enrollments sde
+                 LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
+                 WHERE sde.student_id = :student_id
+                   AND sde.department_id = lc.department_id
+                   AND sde.deleted_at IS NULL
+                   AND sde.status = 'active'
+                   AND (
+                     (lc.class_id IS NULL AND lc.class_group_name IS NULL)
+                     OR sde.class_id = lc.class_id
+                     OR (lc.class_group_name IS NOT NULL AND sde_c.name = lc.class_group_name)
+                   )
+             ) AND NOT EXISTS (
+                 SELECT 1 FROM student_teacher_enrollments ste
+                 WHERE ste.student_id = :student_id_te
+                   AND ste.teacher_id = lc.created_by
+                   AND ste.department_id = lc.department_id
+                   AND ste.status = 'withdrawn'
+             )";
         $stmt = $db->prepare(
             "SELECT lc.id, lc.title, lc.status, lc.scheduled_start, s.name as subject_name,
                     t.first_name as teacher_first_name, t.last_name as teacher_last_name
              FROM live_classes lc
              LEFT JOIN subjects s ON lc.subject_id = s.id
              LEFT JOIN teachers t ON lc.created_by = t.id
-             WHERE {$where}
+             WHERE {$liveClassVisibility}
              ORDER BY lc.scheduled_start ASC"
         );
-        $stmt->execute($departmentIds);
+        $stmt->execute(['student_id' => $studentId, 'student_id_te' => $studentId]);
         $liveClassRows = $stmt->fetchAll();
 
         $liveNow = array_values(array_filter($liveClassRows, fn($c) => $c['status'] === 'started'));
