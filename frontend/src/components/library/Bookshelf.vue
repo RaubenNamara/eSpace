@@ -5,6 +5,7 @@
       <div class="shelf-plate min-w-0">
         <span class="truncate">{{ title }}</span>
         <span v-if="count !== undefined" class="shelf-plate-count">{{ count }}</span>
+        <span v-if="fresh" class="shelf-plate-new" :title="`${fresh} added in the last week`">{{ fresh }} new</span>
       </div>
       <slot name="actions" />
     </div>
@@ -31,6 +32,8 @@ defineProps<{
   spines?: boolean
   // Message shown resting on an empty shelf (e.g. "No books yet")
   empty?: string
+  // How many on this shelf were added recently - shown as "N new" on the name plate
+  fresh?: number
 }>()
 </script>
 
@@ -76,6 +79,30 @@ defineProps<{
     0 1px 3px rgba(0, 0, 0, 0.25);
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
   max-width: 100%;
+}
+
+.shelf-plate-new {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 1px 7px;
+  border-radius: 999px;
+  color: #fff;
+  background: #dc2626;
+  text-shadow: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  animation: shelf-new-pulse 2s ease-in-out 3;
+}
+
+@keyframes shelf-new-pulse {
+  0%, 100% { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 0 0 rgba(220, 38, 38, 0.5); }
+  50% { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 0 5px rgba(220, 38, 38, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shelf-plate-new {
+    animation: none;
+  }
 }
 
 .shelf-plate-count {

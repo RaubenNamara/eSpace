@@ -8,6 +8,7 @@
       <!-- The spine - the only face showing while a book stands spine-out on the shelf, so it
            carries the title the way a printed book's spine does. -->
       <div class="book-spine" aria-hidden="true">
+        <span v-if="spineOut && isNew" class="spine-new">NEW</span>
         <span v-if="spineOut && label" class="spine-label">{{ label }}</span>
         <span v-if="spineOut || variant === 'book'" class="rb-spine-title">{{ coverTitle }}</span>
         <span v-if="spineOut" class="spine-foot" :class="variant === 'book' ? 'spine-foot--imprint' : 'spine-foot--notes'"></span>
@@ -125,6 +126,8 @@ const props = withDefaults(defineProps<{
   selected?: boolean
   // Face-on, untilted cover (the large readable copy in a ShelfSlot's details card)
   flat?: boolean
+  // Recently added - a small NEW tag at the top of the spine
+  isNew?: boolean
 }>(), {
   label: '',
   footer: '',
@@ -181,8 +184,7 @@ const sceneStyle = computed(() => {
     if (props.variant === 'book') {
       const depth = props.pages ? 28 + Math.min(props.pages, 600) / 600 * 20 : 36
       style['--book-depth'] = `${Math.round(depth)}px`
-      // Real books on a shelf are never all the same height
-      style['--h-factor'] = String(0.86 + (Math.abs(props.seed * 37) % 15) / 100)
+      // Every book on a shelf stands the same height (only the thickness follows the page count)
     }
   } else if (props.variant === 'book' && props.size !== 'sm') {
     // A library book is as thick as it is long: ~8px for a handout up to ~26px for a 600+ page
@@ -667,6 +669,20 @@ const artStyle = computed(() => {
   font-family: Poppins, Inter, system-ui, sans-serif;
   font-weight: 700;
   color: #fff;
+}
+
+/* NEW tag - a bright slip tucked in at the top of the spine */
+.spine-new {
+  flex-shrink: 0;
+  padding: 1px 3px;
+  border-radius: 2px;
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  color: #fff;
+  background: #dc2626;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
 .spine-label {

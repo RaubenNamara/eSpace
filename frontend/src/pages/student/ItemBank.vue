@@ -49,30 +49,12 @@
 
     <!-- Bookcase: one shelf per subject, resources standing on it -->
     <div v-else-if="filteredSubjectGroups.length > 0" class="shelf-row flex flex-wrap items-start gap-x-5 gap-y-7">
-      <Bookshelf v-if="!searchQuery && recentResources.length > 0" title="Recently Added" spines>
-        <ShelfSlot
-          v-for="resource in recentResources"
-          :key="'recent-' + resource.id"
-          :label="resource.title"
-          @open="previewResource = resource"
-        >
-          <template #cover="{ size }">
-            <ShelfBook flat :size="size" :title="resource.title" :seed="resource.id" :label="shelfLabel(resource)" :cover-image="resource.cover_image" :pages="resource.total_pages" />
-          </template>
-          <ShelfBook spine-out :title="resource.title" :seed="resource.id" :label="shelfLabel(resource)" :cover-image="resource.cover_image" :pages="resource.total_pages" />
-          <template #details>
-            <p class="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug">{{ resource.title }}</p>
-            <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ resource.subject_name || 'General' }}</p>
-          </template>
-        </ShelfSlot>
-      </Bookshelf>
-
       <Bookshelf
         v-for="group in filteredSubjectGroups"
         :key="group.id"
         :title="group.name"
         :count="group.resources.length"
-        :empty="group.resources.length ? '' : 'No resources yet'"
+        :fresh="group.resources.filter(item => isRecent(item)).length"
         spines
       >
         <ShelfSlot
@@ -84,7 +66,7 @@
           <template #cover="{ size }">
             <ShelfBook flat :size="size" :title="resource.title" :seed="resource.id" :label="shelfLabel(resource)" :cover-image="resource.cover_image" :pages="resource.total_pages" />
           </template>
-          <ShelfBook spine-out :title="resource.title" :seed="resource.id" :label="shelfLabel(resource)" :cover-image="resource.cover_image" :pages="resource.total_pages" />
+          <ShelfBook spine-out :is-new="isRecent(resource)" :title="resource.title" :seed="resource.id" :label="shelfLabel(resource)" :cover-image="resource.cover_image" :pages="resource.total_pages" />
           <template #details>
             <p class="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug">{{ resource.title }}</p>
             <p v-if="resource.teacher_first_name" class="text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ resource.teacher_first_name }} {{ resource.teacher_last_name }}</p>
@@ -123,7 +105,7 @@ import ShelfBook from '@/components/library/ShelfBook.vue'
 import ShelfSlot from '@/components/library/ShelfSlot.vue'
 import type { ItemBankResource } from '@/types/itembank'
 import { subjectTag } from '@/utils/subjectTag'
-import { orderShelves } from '@/utils/shelfOrder'
+import { orderShelves, isRecent } from '@/utils/shelfOrder'
 
 interface SubjectGroup {
   id: number
@@ -157,7 +139,8 @@ const subjectGroups = computed<SubjectGroup[]>(() => {
     }
     map.get(sid)!.resources.push(resource)
   })
-  return orderShelves(Array.from(map.values()), g => g.resources)
+  // Only subjects with something on them get a shelf
+  return orderShelves(Array.from(map.values()).filter(g => g.resources.length > 0), g => g.resources)
 })
 
 // Search narrows each shelf to its matching resources (a subject-name match keeps the whole
@@ -172,11 +155,6 @@ const filteredSubjectGroups = computed(() => {
     .filter(group => group.resources.length > 0)
 })
 
-const recentResources = computed(() => {
-  return [...resources.value]
-    .sort((a, b) => new Date(b.published_at || b.created_at).getTime() - new Date(a.published_at || a.created_at).getTime())
-    .slice(0, 10)
-})
 
 const formatFileSize = (bytes: number | null) => {
   if (!bytes) return ''

@@ -19,3 +19,8 @@ export function orderShelves<G extends { name: string }, T extends Dated>(
   }
   return groups.sort((a, b) => latest(b) - latest(a) || a.name.localeCompare(b.name))
 }
+
+/** Added in the last `days` days - marked NEW on the shelf */
+export const NEW_FOR_DAYS = 7
+export const isRecent = (item: Dated, days = NEW_FOR_DAYS): boolean =>
+  addedAt(item) > Date.now() - days * 24 * 60 * 60 * 1000

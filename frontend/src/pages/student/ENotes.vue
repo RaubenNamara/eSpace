@@ -54,7 +54,7 @@
         :key="group.id"
         :title="group.name"
         :count="group.topics.length"
-        :empty="group.topics.length ? '' : 'No eNotes yet'"
+        :fresh="group.topics.filter(item => isRecent(item)).length"
         spines
       >
         <ShelfSlot
@@ -75,6 +75,7 @@
           </template>
           <ShelfBook
             spine-out
+            :is-new="isRecent(topic)"
             variant="notes"
             :title="topic.title"
             :seed="topic.id"
@@ -118,7 +119,7 @@ import { useRouter } from 'vue-router'
 import type { ENoteTopic } from '@/types/enotes'
 import { parseCoverDesign } from '@/utils/enoteCover'
 import { subjectTag } from '@/utils/subjectTag'
-import { orderShelves } from '@/utils/shelfOrder'
+import { orderShelves, isRecent } from '@/utils/shelfOrder'
 
 interface SubjectGroup {
   id: number
@@ -149,7 +150,8 @@ const subjectGroups = computed<SubjectGroup[]>(() => {
     }
     map.get(sid)!.topics.push(topic)
   })
-  return orderShelves(Array.from(map.values()), g => g.topics)
+  // Only subjects with something on them get a shelf
+  return orderShelves(Array.from(map.values()).filter(g => g.topics.length > 0), g => g.topics)
 })
 
 // Search narrows each shelf to its matching topics (a subject-name match keeps the whole shelf),

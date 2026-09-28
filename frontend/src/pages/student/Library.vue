@@ -49,30 +49,12 @@
 
     <!-- Bookcase: one shelf per subject, books standing on it -->
     <div v-else-if="filteredSubjectGroups.length > 0" class="shelf-row flex flex-wrap items-start gap-x-5 gap-y-7">
-      <Bookshelf v-if="!searchQuery && recentBooks.length > 0" title="Recently Added" spines>
-        <ShelfSlot
-          v-for="book in recentBooks"
-          :key="'recent-' + book.id"
-          :label="book.title"
-          @open="previewBook = book"
-        >
-          <template #cover="{ size }">
-            <ShelfBook flat :size="size" :title="book.title" :seed="book.id" :label="shelfLabel(book)" :cover-image="book.cover_image" :author="book.author" :pages="book.total_pages"  />
-          </template>
-          <ShelfBook spine-out :title="book.title" :seed="book.id" :label="shelfLabel(book)" :cover-image="book.cover_image" :author="book.author" :pages="book.total_pages" />
-          <template #details>
-            <p class="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug">{{ book.title }}</p>
-            <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ book.subject_name || 'General' }}<template v-if="book.author"> &middot; {{ book.author }}</template></p>
-          </template>
-        </ShelfSlot>
-      </Bookshelf>
-
       <Bookshelf
         v-for="group in filteredSubjectGroups"
         :key="group.id"
         :title="group.name"
         :count="group.books.length"
-        :empty="group.books.length ? '' : 'No books yet'"
+        :fresh="group.books.filter(item => isRecent(item)).length"
         spines
       >
         <ShelfSlot
@@ -84,7 +66,7 @@
           <template #cover="{ size }">
             <ShelfBook flat :size="size" :title="book.title" :seed="book.id" :label="shelfLabel(book)" :cover-image="book.cover_image" :author="book.author" :pages="book.total_pages"  />
           </template>
-          <ShelfBook spine-out :title="book.title" :seed="book.id" :label="shelfLabel(book)" :cover-image="book.cover_image" :author="book.author" :pages="book.total_pages" />
+          <ShelfBook spine-out :is-new="isRecent(book)" :title="book.title" :seed="book.id" :label="shelfLabel(book)" :cover-image="book.cover_image" :author="book.author" :pages="book.total_pages" />
           <template #details>
           <p class="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug">{{ book.title }}</p>
           <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ book.author || [book.teacher_first_name, book.teacher_last_name].filter(Boolean).join(' ') }}</p>
@@ -122,7 +104,7 @@ import ShelfBook from '@/components/library/ShelfBook.vue'
 import ShelfSlot from '@/components/library/ShelfSlot.vue'
 import type { LibraryBook } from '@/types/library'
 import { subjectTag } from '@/utils/subjectTag'
-import { orderShelves } from '@/utils/shelfOrder'
+import { orderShelves, isRecent } from '@/utils/shelfOrder'
 
 interface SubjectGroup {
   id: number
@@ -157,7 +139,8 @@ const subjectGroups = computed<SubjectGroup[]>(() => {
     }
     map.get(sid)!.books.push(book)
   })
-  return orderShelves(Array.from(map.values()), g => g.books)
+  // Only subjects with something on them get a shelf
+  return orderShelves(Array.from(map.values()).filter(g => g.books.length > 0), g => g.books)
 })
 
 // Search narrows each shelf to its matching books (a subject-name match keeps the whole shelf),
@@ -172,11 +155,6 @@ const filteredSubjectGroups = computed(() => {
     .filter(group => group.books.length > 0)
 })
 
-const recentBooks = computed(() => {
-  return [...books.value]
-    .sort((a, b) => new Date(b.published_at || b.created_at).getTime() - new Date(a.published_at || a.created_at).getTime())
-    .slice(0, 10)
-})
 
 const formatFileSize = (bytes: number | null) => {
   if (!bytes) return ''
