@@ -61,7 +61,7 @@
           v-for="book in group.books"
           :key="book.id"
           :label="book.title"
-          @open="previewBook = book"
+          @open="(el) => openItem(book, el)"
         >
           <template #cover="{ size }">
             <ShelfBook flat :size="size" :title="book.title" :seed="book.id" :label="shelfLabel(book)" :cover-image="book.cover_image" :author="book.author" :pages="book.total_pages"  />
@@ -92,16 +92,31 @@
     </div>
     <!-- Document Preview -->
     <LibraryDocumentViewer v-if="previewBook" :book="previewBook" @close="previewBook = null" />
+
+    <!-- Opening a book: it comes off the shelf, waits with Start reading / Cancel, then opens into
+         the reader (or goes back to its place) -->
+    <BookOpenTransition
+      v-if="opening"
+      :from="opening.el"
+      :title="opening.item.title"
+      :label="shelfLabel(opening.item)"
+      :subtitle="opening.item.author || [opening.item.teacher_first_name, opening.item.teacher_last_name].filter(Boolean).join(' ')"
+      @opened="finishOpening"
+      @closed="opening = null"
+    >
+      <ShelfBook flat size="lg" :title="opening.item.title" :seed="opening.item.id" :label="shelfLabel(opening.item)" :cover-image="opening.item.cover_image" :author="opening.item.author" :pages="opening.item.total_pages" />
+    </BookOpenTransition>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import axios from 'axios'
 import LibraryDocumentViewer from '@/components/library/LibraryDocumentViewer.vue'
 import Bookshelf from '@/components/library/Bookshelf.vue'
 import ShelfBook from '@/components/library/ShelfBook.vue'
 import ShelfSlot from '@/components/library/ShelfSlot.vue'
+import BookOpenTransition from '@/components/library/BookOpenTransition.vue'
 import type { LibraryBook } from '@/types/library'
 import { subjectTag } from '@/utils/subjectTag'
 import { orderShelves, isRecent } from '@/utils/shelfOrder'
@@ -123,6 +138,20 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 
 const previewBook = ref<LibraryBook | null>(null)
+
+// The book being opened (BookOpenTransition plays first). Once it has opened, the reader is put up
+// underneath and the animation cleared off the top of it.
+const opening = ref<{ item: LibraryBook; el: HTMLElement | null } | null>(null)
+const openItem = (item: LibraryBook, el: HTMLElement | null) => {
+  if (opening.value || previewBook.value) return
+  opening.value = { item, el }
+}
+const finishOpening = async () => {
+  if (!opening.value) return
+  previewBook.value = opening.value.item
+  await nextTick()
+  opening.value = null
+}
 
 const shelfLabel = (book: LibraryBook) => subjectTag(book.subject_name, book.subject_code)
 const fileLabel = (book: LibraryBook) => (book.file_type || 'pdf').toUpperCase()

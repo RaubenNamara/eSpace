@@ -61,7 +61,7 @@
           v-for="resource in group.resources"
           :key="resource.id"
           :label="resource.title"
-          @open="previewResource = resource"
+          @open="(el) => openItem(resource, el)"
         >
           <template #cover="{ size }">
             <ShelfBook flat :size="size" :title="resource.title" :seed="resource.id" :label="shelfLabel(resource)" :cover-image="resource.cover_image" :pages="resource.total_pages" />
@@ -93,16 +93,31 @@
 
     <!-- PDF Preview -->
     <ItemBankPdfViewer v-if="previewResource" :resource="previewResource" @close="previewResource = null" />
+
+    <!-- Opening a book: it comes off the shelf, waits with Start reading / Cancel, then opens into
+         the reader (or goes back to its place) -->
+    <BookOpenTransition
+      v-if="opening"
+      :from="opening.el"
+      :title="opening.item.title"
+      :label="shelfLabel(opening.item)"
+      :subtitle="[opening.item.teacher_first_name, opening.item.teacher_last_name].filter(Boolean).join(' ')"
+      @opened="finishOpening"
+      @closed="opening = null"
+    >
+      <ShelfBook flat size="lg" :title="opening.item.title" :seed="opening.item.id" :label="shelfLabel(opening.item)" :cover-image="opening.item.cover_image" :pages="opening.item.total_pages" />
+    </BookOpenTransition>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import axios from 'axios'
 import ItemBankPdfViewer from '@/components/itembank/ItemBankPdfViewer.vue'
 import Bookshelf from '@/components/library/Bookshelf.vue'
 import ShelfBook from '@/components/library/ShelfBook.vue'
 import ShelfSlot from '@/components/library/ShelfSlot.vue'
+import BookOpenTransition from '@/components/library/BookOpenTransition.vue'
 import type { ItemBankResource } from '@/types/itembank'
 import { subjectTag } from '@/utils/subjectTag'
 import { orderShelves, isRecent } from '@/utils/shelfOrder'
@@ -124,6 +139,20 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 
 const previewResource = ref<ItemBankResource | null>(null)
+
+// The book being opened (BookOpenTransition plays first). Once it has opened, the reader is put up
+// underneath and the animation cleared off the top of it.
+const opening = ref<{ item: ItemBankResource; el: HTMLElement | null } | null>(null)
+const openItem = (item: ItemBankResource, el: HTMLElement | null) => {
+  if (opening.value || previewResource.value) return
+  opening.value = { item, el }
+}
+const finishOpening = async () => {
+  if (!opening.value) return
+  previewResource.value = opening.value.item
+  await nextTick()
+  opening.value = null
+}
 
 const shelfLabel = (resource: ItemBankResource) => subjectTag(resource.subject_name, resource.subject_code)
 

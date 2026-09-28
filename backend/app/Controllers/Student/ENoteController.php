@@ -133,7 +133,7 @@ class ENoteController extends Controller
         $db = $this->getDb();
 
         $where = [$this->visibilityClause()];
-        $params = ['student_id' => $studentId, 'student_id_te' => $studentId];
+        $params = ['student_id' => $studentId, 'student_id_te' => $studentId, 'student_id_prog' => $studentId];
 
         if (!empty($search)) {
             // Non-emulated PDO prepares (this app's ATTR_EMULATE_PREPARES => false) can't reuse
@@ -154,10 +154,18 @@ class ENoteController extends Controller
         $sql = "SELECT et.id, et.title, et.description, et.learning_outcomes, et.subject_id, et.class_id, et.total_pages,
                        et.estimated_reading_time, et.published_at, et.created_at, et.cover_design,
                        s.name as subject_name, s.code as subject_code,
-                       t.first_name as teacher_first_name, t.last_name as teacher_last_name
+                       t.first_name as teacher_first_name, t.last_name as teacher_last_name,
+                       prog.current_page_id AS resume_page_id,
+                       (SELECT COUNT(*) FROM enote_pages rp
+                         INNER JOIN enote_pages cp ON cp.id = prog.current_page_id
+                         WHERE rp.topic_id = et.id AND rp.is_active = 1 AND rp.deleted_at IS NULL
+                           AND rp.order_number <= cp.order_number) AS resume_page_number,
+                       (SELECT COUNT(*) FROM enote_pages ap
+                         WHERE ap.topic_id = et.id AND ap.is_active = 1 AND ap.deleted_at IS NULL) AS active_pages
                 FROM enote_topics et
                 LEFT JOIN subjects s ON et.subject_id = s.id
                 LEFT JOIN teachers t ON et.teacher_id = t.id
+                LEFT JOIN enote_progress prog ON prog.topic_id = et.id AND prog.student_id = :student_id_prog
                 WHERE {$whereClause}
                 ORDER BY et.published_at DESC";
 
@@ -166,6 +174,69 @@ class ENoteController extends Controller
         $topics = array_map([$this, 'decodeLearningOutcomes'], $stmt->fetchAll());
 
         $this->success(['topics' => $topics, 'subjects' => $this->enrolledSubjects($db, $studentId)]);
+    }
+
+    /**
+     * Where the student is in a topic - the page they're on, saved as they turn pages, so the
+     * shelf can offer "Continue reading" next time instead of starting over.
+     * POST /student/enotes/topics/{id}/progress   { page_id }
+     */
+    public function saveProgress($id): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+        $studentId = $this->getStudentId();
+        if (!$studentId) {
+            $this->error('Student not found', 403);
+            return;
+        }
+
+        $id = (int) $id;
+        $pageId = (int) ($this->input('page_id') ?? 0);
+        $db = $this->getDb();
+
+        $whereClause = $this->visibilityClause();
+        $stmt = $db->prepare("SELECT et.id FROM enote_topics et WHERE et.id = :id AND {$whereClause}");
+        $stmt->execute(['id' => $id, 'student_id' => $studentId, 'student_id_te' => $studentId]);
+        if (!$stmt->fetch()) {
+            $this->notFound('Topic not found or not accessible');
+            return;
+        }
+
+        $stmt = $db->prepare(
+            "SELECT p.id,
+                    (SELECT COUNT(*) FROM enote_pages rp
+                      WHERE rp.topic_id = p.topic_id AND rp.is_active = 1 AND rp.deleted_at IS NULL
+                        AND rp.order_number <= p.order_number) AS page_number
+             FROM enote_pages p
+             WHERE p.id = :page_id AND p.topic_id = :topic_id AND p.is_active = 1 AND p.deleted_at IS NULL"
+        );
+        $stmt->execute(['page_id' => $pageId, 'topic_id' => $id]);
+        $page = $stmt->fetch();
+        if (!$page) {
+            $this->validationError(['page_id' => 'Not a page of this topic']);
+            return;
+        }
+
+        $number = (int) $page['page_number'];
+        $db->prepare(
+            "INSERT INTO enote_progress (topic_id, student_id, current_page_id, pages_completed, last_read_at)
+             VALUES (:topic_id, :student_id, :page_id, :pages, NOW())
+             ON DUPLICATE KEY UPDATE current_page_id = :page_id_update,
+                                     pages_completed = GREATEST(pages_completed, :pages_update),
+                                     last_read_at = NOW()"
+        )->execute([
+            'topic_id' => $id,
+            'student_id' => $studentId,
+            'page_id' => $pageId,
+            'pages' => $number,
+            'page_id_update' => $pageId,
+            'pages_update' => $number,
+        ]);
+
+        $this->success(['page_id' => $pageId, 'page_number' => $number], 'Progress saved');
     }
 
     /**

@@ -95,6 +95,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         // eNotes Module (Professional - topics and pages)
         Router::get('/enotes/topics', 'eSpace\App\Controllers\Student\ENoteController@index');
         Router::get('/enotes/topics/{id}', 'eSpace\App\Controllers\Student\ENoteController@show');
+        Router::post('/enotes/topics/{id}/progress', 'eSpace\App\Controllers\Student\ENoteController@saveProgress');
         Router::post('/enotes/pages/{pageId}/tutor-explain', 'eSpace\App\Controllers\Student\ENoteController@tutorExplain');
         Router::get('/enotes/pages/{pageId}/note', 'eSpace\App\Controllers\Student\PageNoteController@getEnoteNote');
         Router::put('/enotes/pages/{pageId}/note', 'eSpace\App\Controllers\Student\PageNoteController@saveEnoteNote');

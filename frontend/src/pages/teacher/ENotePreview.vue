@@ -110,7 +110,9 @@
         <!-- Zoom controls - scale the whole book area via CSS transform (see the wrapping div
              around BookFlipbook below), so the reader can pan around an enlarged page when the
              base size isn't big enough, without page-flip itself needing any zoom support. -->
-        <div v-if="currentPage" class="flex items-center bg-white/10 rounded-lg">
+        <!-- Zoom and fullscreen are left off phones, where the title needs the room (Read Mode
+             already gives the whole screen there) -->
+        <div v-if="currentPage" class="hidden sm:flex items-center bg-white/10 rounded-lg">
           <button
             @click="zoomOut"
             :disabled="zoomLevel <= MIN_ZOOM"
@@ -167,7 +169,7 @@
         </button>
         <button
           @click="toggleFullscreen"
-          class="p-1.5 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
+          class="hidden sm:flex p-1.5 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
           title="Toggle Fullscreen"
         >
           <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -994,6 +996,7 @@ import AITutorPlayer from '@/components/enotes/AITutorPlayer.vue'
 import BookFlipbook from '@/components/common/BookFlipbook.vue'
 import { parseCoverDesign } from '@/utils/enoteCover'
 import UnfoldingNote from '@/components/common/UnfoldingNote.vue'
+import { takePrefetchedTopic } from '@/utils/enotePrefetch'
 import { useSummaryColor, isSummaryColor, type SummaryColor } from '@/composables/useSummaryColor'
 
 const router = useRouter()
@@ -1363,7 +1366,11 @@ const loadTopic = async () => {
       url = `${API_BASE}/teacher/enotes/topics/${topicId.value}`
       config = undefined
     }
-    const response = await axios.get(url, config)
+    // Opened from the shelf's book animation, which fetched the topic while it listed the outcomes
+    const prefetched = isStudentMode.value ? takePrefetchedTopic(Number(topicId.value)) : null
+    const response = prefetched
+      ? await prefetched.catch(() => axios.get(url, config))
+      : await axios.get(url, config)
     if (response.data.success) {
       topic.value = response.data.data
       pages.value = response.data.data.pages || []
@@ -1383,9 +1390,13 @@ const loadTopic = async () => {
       }
 
       if (isStudentMode.value) {
-        if (resumeIndex < 0) {
+        // No intro when the student has just opened the book from the shelf - its animation has
+        // already shown the topic's learning outcomes and they chose Start reading there
+        if (resumeIndex < 0 && route.query.opened !== '1') {
           showIntro.value = true
         }
+        // "Start from the beginning" on the shelf: page 1 becomes their place straight away
+        if (resumeIndex < 0 && route.query.opened === '1') saveReadingPlace()
         loadStudentPageData()
       }
       if (resumeIndex >= 0) {
@@ -1433,6 +1444,20 @@ const onBookFlip = (index: number) => {
   }
   lastBookIndex = index
   currentPage.value = pages.value[index] ?? null
+  saveReadingPlace()
+}
+
+// The student's place in the topic, saved (a moment after they stop turning pages) so the shelf
+// can offer to continue from here next time
+let placeTimer: ReturnType<typeof setTimeout> | null = null
+const saveReadingPlace = () => {
+  if (!isStudentMode.value || !topic.value || !currentPage.value) return
+  const topicIdNow = topic.value.id
+  const pageId = currentPage.value.id
+  if (placeTimer) clearTimeout(placeTimer)
+  placeTimer = setTimeout(() => {
+    axios.post(`${API_BASE}/student/enotes/topics/${topicIdNow}/progress`, { page_id: pageId }).catch(() => {})
+  }, 1200)
 }
 
 // Whether the *next* page's Read Aloud audio should autoplay the instant it mounts - only true

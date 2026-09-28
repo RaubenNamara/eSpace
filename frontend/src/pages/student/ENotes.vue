@@ -61,7 +61,7 @@
           v-for="topic in group.topics"
           :key="topic.id"
           :label="topic.title"
-          @open="router.push(`/student/enotes/${topic.id}`)"
+          @open="(el) => openTopic(topic, el)"
         >
           <template #cover="{ size }">
             <ShelfBook flat :size="size"
@@ -106,6 +106,32 @@
         {{ subjectGroups.length === 0 ? 'Your teachers haven\'t published any eNotes topics yet.' : 'Try a different search.' }}
       </p>
     </div>
+
+    <!-- Opening a book: it comes off the shelf, waits with Start reading / Cancel, then opens before
+         the reader loads (or goes back to its place) -->
+    <BookOpenTransition
+      v-if="opening"
+      :from="opening.el"
+      :title="opening.topic.title"
+      :label="subjectTag(opening.topic.subject_name, opening.topic.subject_code)"
+      :subtitle="opening.topic.teacher_first_name ? `${opening.topic.teacher_first_name} ${opening.topic.teacher_last_name || ''}`.trim() : ''"
+      :outcomes="opening.topic.learning_outcomes"
+      :prepare="() => prepareReader(opening!.topic.id)"
+      :resume="resumeOf(opening.topic)"
+      @opened="(how) => openReader(opening!.topic, how)"
+      @closed="opening = null"
+    >
+      <ShelfBook
+        flat
+        size="lg"
+        variant="notes"
+        :title="opening.topic.title"
+        :seed="opening.topic.id"
+        :label="subjectTag(opening.topic.subject_name, opening.topic.subject_code)"
+        :footer="`${opening.topic.total_pages} ${opening.topic.total_pages === 1 ? 'page' : 'pages'}`"
+        :cover="parseCoverDesign(opening.topic.cover_design)"
+      />
+    </BookOpenTransition>
   </div>
 </template>
 
@@ -115,6 +141,8 @@ import axios from 'axios'
 import Bookshelf from '@/components/library/Bookshelf.vue'
 import ShelfBook from '@/components/library/ShelfBook.vue'
 import ShelfSlot from '@/components/library/ShelfSlot.vue'
+import BookOpenTransition from '@/components/library/BookOpenTransition.vue'
+import { prefetchStudentTopic } from '@/utils/enotePrefetch'
 import { useRouter } from 'vue-router'
 import type { ENoteTopic } from '@/types/enotes'
 import { parseCoverDesign } from '@/utils/enoteCover'
@@ -165,6 +193,29 @@ const filteredSubjectGroups = computed(() => {
       : { ...group, topics: group.topics.filter(topic => topic.title.toLowerCase().includes(q) || (topic.description || '').toLowerCase().includes(q)) })
     .filter(group => group.topics.length > 0)
 })
+
+// The book being opened (BookOpenTransition plays, then the reader loads)
+const opening = ref<{ topic: ENoteTopic; el: HTMLElement | null } | null>(null)
+// While the book lists the topic's learning outcomes, load the reader and the topic's pages so it
+// opens straight onto them
+const prepareReader = (id: number) => Promise.all([
+  import('@/pages/teacher/ENotePreview.vue'),
+  prefetchStudentTopic(id)
+])
+// A topic the student has read before (their place is past the first page) offers to continue
+const resumeOf = (topic: ENoteTopic) => {
+  const page = Number(topic.resume_page_number || 0)
+  const total = Number(topic.active_pages || topic.total_pages || 0)
+  return topic.resume_page_id && page > 1 ? { page, total: Math.max(total, page) } : null
+}
+const openReader = (topic: ENoteTopic, how: 'resume' | 'fresh') => {
+  const query = how === 'resume' && topic.resume_page_id ? `resumePage=${topic.resume_page_id}&opened=1` : 'opened=1'
+  router.push(`/student/enotes/${topic.id}?${query}`)
+}
+const openTopic = (topic: ENoteTopic, el: HTMLElement | null) => {
+  if (opening.value) return
+  opening.value = { topic, el }
+}
 
 const loadTopics = async () => {
   loading.value = true

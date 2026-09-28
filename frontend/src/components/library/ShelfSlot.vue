@@ -10,7 +10,7 @@
     tabindex="0"
     :aria-label="label"
     @click="onClick"
-    @keydown.enter.prevent="emit('open')"
+    @keydown.enter.prevent="openNow"
     @mouseenter="canHover && show()"
     @mouseleave="canHover && hideSoon()"
     @focus="canHover && show()"
@@ -60,7 +60,9 @@
 import { ref, nextTick, onBeforeUnmount } from 'vue'
 
 withDefaults(defineProps<{ label?: string; openLabel?: string }>(), { openLabel: 'Open' })
-const emit = defineEmits<{ open: [] }>()
+// open carries the book's own element on the shelf, so a page can animate the book out of its
+// place (see BookOpenTransition)
+const emit = defineEmits<{ open: [el: HTMLElement | null] }>()
 
 const root = ref<HTMLElement | null>(null)
 const card = ref<HTMLElement | null>(null)
@@ -129,10 +131,11 @@ const show = () => {
   }
 }
 
-const openFromSheet = () => {
+const openNow = () => {
   hide()
-  emit('open')
+  emit('open', root.value)
 }
+const openFromSheet = openNow
 
 const hide = () => {
   active.value = false
@@ -150,7 +153,7 @@ const onClick = () => {
     show()
     return
   }
-  emit('open')
+  openNow()
 }
 
 const onOutsidePointer = (e: PointerEvent) => {

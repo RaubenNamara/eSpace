@@ -24,6 +24,11 @@ export interface ENoteTopic {
   narration_voice?: string | null
   // JSON-encoded ENoteCoverDesign (see utils/enoteCover.ts), or null for the default look
   cover_design?: string | null
+  /** Student list: the page the student was last on (saved as they read), its number among the
+   *  topic's pages, and how many pages there are - for "Continue reading" on the shelf */
+  resume_page_id?: number | null
+  resume_page_number?: number | null
+  active_pages?: number | null
   created_at: string
   updated_at: string
   deleted_at: string | null
