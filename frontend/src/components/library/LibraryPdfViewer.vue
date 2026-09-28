@@ -357,6 +357,7 @@
 
 <script setup lang="ts">
 import { extractPrintedToc } from '@/utils/pdfPrintedToc'
+import { measurePageTrim } from '@/utils/pdfMargins'
 import UnfoldingNote from '@/components/common/UnfoldingNote.vue'
 import { useSummaryColor, isSummaryColor, type SummaryColor } from '@/composables/useSummaryColor'
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
@@ -584,6 +585,13 @@ async function prepareBook() {
   prepared.value = 0
   bookImagesLoadingMore.value = false
   scale.value = await renderScaleFor()
+
+  // Phones: trim the book's empty white margins so its printed text fills the screen's width
+  // (a whole page shrunk to a phone is otherwise mostly margin). Pages are drawn that much finer
+  // and then cut to the printed area, so the trimmed page keeps its sharpness.
+  const trim = window.innerWidth < 768 ? await measurePageTrim(pdfDoc.value, totalPages.value).catch(() => null) : null
+  if (trim) scale.value = Math.min(4, scale.value / (1 - trim.left - trim.right))
+  const fullPages = new WeakMap<HTMLCanvasElement, HTMLCanvasElement>()
   const totalCount = totalPages.value
   const done = new Array<boolean>(totalCount).fill(false)
 
@@ -601,7 +609,24 @@ async function prepareBook() {
 
   const renderToImage = async (pageNum: number, canvas: HTMLCanvasElement): Promise<string> => {
     try {
-      await renderPage(pageNum, canvas)
+      if (trim) {
+        // Draw the whole page, then keep just the printed area
+        let full = fullPages.get(canvas)
+        if (!full) {
+          full = document.createElement('canvas')
+          fullPages.set(canvas, full)
+        }
+        await renderPage(pageNum, full)
+        const sx = Math.round(full.width * trim.left)
+        const sy = Math.round(full.height * trim.top)
+        const sw = Math.round(full.width * (1 - trim.left - trim.right))
+        const sh = Math.round(full.height * (1 - trim.top - trim.bottom))
+        canvas.width = sw
+        canvas.height = sh
+        canvas.getContext('2d')?.drawImage(full, sx, sy, sw, sh, 0, 0, sw, sh)
+      } else {
+        await renderPage(pageNum, canvas)
+      }
       if (!bookPageWidth.value) {
         bookPageWidth.value = canvas.width
         bookPageHeight.value = canvas.height
