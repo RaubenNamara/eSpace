@@ -96,6 +96,44 @@ class LiveClassService
     }
 
     /**
+     * Verify a live class still marked 'started' is actually still running on the BBB server, and
+     * correct it to 'ended' if not. Nothing else in the app watches for a meeting ending without
+     * anyone clicking the app's own End button - a dropped teacher connection, everyone just
+     * closing the tab, BBB's own empty-meeting timeout - so without this, such a class stays
+     * "live" in eSpace forever. Called on read (list/dashboard/join) rather than via a cron or BBB
+     * webhook, neither of which exists in this app. Fails open (leaves status alone) on any BBB
+     * error, same as the rest of this service.
+     */
+    public function reconcileStatus(int $liveClassId, string $meetingId, ?string $actualStart): string
+    {
+        $bbb = new BBBService();
+        if (!$bbb->isConfigured()) {
+            return 'started';
+        }
+
+        try {
+            if ($bbb->isMeetingRunning($meetingId)) {
+                return 'started';
+            }
+        } catch (RuntimeException $e) {
+            error_log("BBB isMeetingRunning check failed for live class {$liveClassId}: " . $e->getMessage());
+            return 'started';
+        }
+
+        $db = $this->getDb();
+        $actualEnd = date('Y-m-d H:i:s');
+        $stmt = $db->prepare(
+            "UPDATE live_classes SET status = 'ended', actual_end = :actual_end, updated_at = NOW()
+             WHERE id = :id AND status = 'started'"
+        );
+        $stmt->execute(['id' => $liveClassId, 'actual_end' => $actualEnd]);
+
+        $this->closeAttendance($liveClassId, $actualStart ?? $actualEnd, $actualEnd);
+
+        return 'ended';
+    }
+
+    /**
      * Fetch recordings for a live class from BBB and upsert them into live_class_recordings, then
      * return what's stored locally. Recordings are cached rather than fetched live on every page
      * view - a school-wide "recorded sessions" count (Admin dashboard) would otherwise mean one

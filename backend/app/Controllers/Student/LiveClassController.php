@@ -87,6 +87,31 @@ class LiveClassController extends Controller
     }
 
     /**
+     * Check every class this student would see as 'started' against BBB's actual meeting state,
+     * and correct any that have silently ended (see LiveClassService::reconcileStatus()) before
+     * the class list below is read - so a stale row never reaches the student as "live now".
+     */
+    private function reconcileStartedClasses(int $studentId): void
+    {
+        $db = $this->getDb();
+        $stmt = $db->prepare(
+            "SELECT lc.id, lc.meeting_id, lc.actual_start FROM live_classes lc
+             WHERE lc.status = 'started' AND " . $this->visibilityClause()
+        );
+        $stmt->execute(['student_id' => $studentId, 'student_id_te' => $studentId]);
+        $started = $stmt->fetchAll();
+
+        if (empty($started)) {
+            return;
+        }
+
+        $service = new LiveClassService();
+        foreach ($started as $row) {
+            $service->reconcileStatus((int) $row['id'], $row['meeting_id'], $row['actual_start']);
+        }
+    }
+
+    /**
      * Get live classes visible to the student
      * GET /student/live-classes
      */
@@ -106,6 +131,8 @@ class LiveClassController extends Controller
         $status = $this->query('status', '');
 
         $db = $this->getDb();
+        $this->reconcileStartedClasses($studentId);
+
         $where = [$this->visibilityClause()];
         $params = ['student_id' => $studentId, 'attendance_student_id' => $studentId, 'student_id_te' => $studentId];
 
@@ -159,6 +186,10 @@ class LiveClassController extends Controller
         if (!$class) {
             $this->notFound('Live class not found or not accessible');
             return;
+        }
+
+        if ($class['status'] === 'started') {
+            $class['status'] = (new LiveClassService())->reconcileStatus((int) $class['id'], $class['meeting_id'], $class['actual_start']);
         }
 
         if ($class['status'] !== 'started') {

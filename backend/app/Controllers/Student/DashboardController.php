@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace eSpace\App\Controllers\Student;
 
 use eSpace\App\Controllers\Controller;
+use eSpace\App\Services\LiveClassService;
 
 /**
  * Student Dashboard Controller
@@ -164,6 +165,24 @@ class DashboardController extends Controller
                    AND ste.department_id = lc.department_id
                    AND ste.status = 'withdrawn'
              )";
+
+        // Correct any 'started' row against BBB's actual meeting state before reading below - see
+        // LiveClassService::reconcileStatus(). Without this, a meeting that ended without anyone
+        // clicking the app's End button (dropped connection, BBB's own empty-meeting timeout)
+        // would keep showing as "live now" here even after the Live Classes page itself corrects it.
+        $stmt = $db->prepare(
+            "SELECT lc.id, lc.meeting_id, lc.actual_start FROM live_classes lc
+             WHERE lc.status = 'started' AND {$liveClassVisibility}"
+        );
+        $stmt->execute(['student_id' => $studentId, 'student_id_te' => $studentId]);
+        $startedLiveClasses = $stmt->fetchAll();
+        if (!empty($startedLiveClasses)) {
+            $liveClassService = new LiveClassService();
+            foreach ($startedLiveClasses as $row) {
+                $liveClassService->reconcileStatus((int) $row['id'], $row['meeting_id'], $row['actual_start']);
+            }
+        }
+
         $stmt = $db->prepare(
             "SELECT lc.id, lc.title, lc.status, lc.scheduled_start, s.name as subject_name,
                     t.first_name as teacher_first_name, t.last_name as teacher_last_name
