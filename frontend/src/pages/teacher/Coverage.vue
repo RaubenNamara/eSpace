@@ -3,15 +3,17 @@
        outcomes with an assessment, the Activity of Integration, Elements of Construct with an End of
        Chapter, eNotes and Item Bank practice - and the assessments that need fixing. It's what makes
        students' Learning Maps fill in. -->
-  <div class="max-w-5xl mx-auto">
+  <div class="w-full">
     <div class="flex flex-wrap items-center gap-2 mb-1">
       <div class="hidden sm:flex w-7 h-7 rounded-lg bg-emerald-600 items-center justify-center flex-shrink-0">
         <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
       </div>
       <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white mr-auto">Curriculum coverage</h1>
       <!-- One class at a time (or all of them), in the chosen subject -->
-      <PickerDropdown v-if="data && data.subjects.length > 1" v-model="subjectId" label="Subject" :options="subjectOptions" align="right" />
-      <PickerDropdown v-if="data && data.classes.length" v-model="classFilter" label="Class" :options="classOptions" align="right" />
+      <div class="flex flex-wrap gap-2 w-full sm:w-auto">
+        <PickerDropdown class="flex-1 sm:flex-none" v-if="data && data.subjects.length > 1" v-model="subjectId" label="Subject" :options="subjectOptions" align="right" />
+        <PickerDropdown class="flex-1 sm:flex-none" v-if="data && data.classes.length" v-model="classFilter" label="Class" :options="classOptions" align="right" />
+      </div>
     </div>
     <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">What's linked to each topic this year. Students' Learning Maps only fill in for outcomes, topics and constructs that have an assessment linked.</p>
 
@@ -69,7 +71,43 @@
       <!-- Per class, per topic -->
       <div v-for="cls in shownClasses" :key="cls.class_name" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-4">
         <p class="text-sm font-bold text-gray-900 dark:text-white mb-2">{{ cls.class_name }}</p>
-        <div class="overflow-x-auto -mx-1">
+        <!-- Phones: each topic as a small card (the table's five columns don't fit) -->
+        <div class="sm:hidden divide-y divide-gray-100 dark:divide-gray-700">
+          <div v-for="t in cls.topics" :key="t.id" class="py-3">
+            <p class="font-semibold text-sm text-gray-900 dark:text-white leading-snug">{{ t.topic }}</p>
+            <p class="text-[11px] text-gray-500 dark:text-gray-400 mb-2">{{ [t.term_name, t.theme].filter(Boolean).join(' · ') }}</p>
+            <div class="grid grid-cols-2 gap-x-3 gap-y-2">
+              <div>
+                <p class="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400">Outcomes (LOA)</p>
+                <div class="flex items-center gap-2">
+                  <div class="h-1.5 flex-1 max-w-[4rem] rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+                    <div class="h-full rounded-full bg-emerald-500" :style="{ width: `${t.outcomes ? t.outcomes_covered / t.outcomes * 100 : 0}%` }"></div>
+                  </div>
+                  <span class="text-xs" :class="t.outcomes && t.outcomes_covered === t.outcomes ? 'text-emerald-700 dark:text-emerald-300 font-semibold' : 'text-gray-600 dark:text-gray-300'">{{ t.outcomes_covered }}/{{ t.outcomes }}</span>
+                </div>
+              </div>
+              <div class="min-w-0">
+                <p class="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400">AOI</p>
+                <p v-if="t.aoi.length" class="text-xs font-semibold text-emerald-700 dark:text-emerald-300 truncate">✓ {{ t.aoi.length === 1 ? t.aoi[0].title : `${t.aoi.length} set` }}</p>
+                <p v-else class="text-xs font-semibold text-amber-700 dark:text-amber-300">Missing</p>
+              </div>
+              <div class="min-w-0">
+                <p class="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400">Construct (EOC)</p>
+                <p v-if="!t.constructs.length" class="text-xs text-gray-400 dark:text-gray-500">-</p>
+                <p v-for="c in t.constructs" :key="c.id" class="text-xs leading-snug">
+                  <span class="font-semibold text-gray-700 dark:text-gray-200">{{ c.assessment_objective }}</span>
+                  <span :class="c.has_eoc ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'"> {{ c.has_eoc ? '✓ EOC' : 'no EOC' }}</span>
+                </p>
+              </div>
+              <div class="text-xs">
+                <p class="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400">Notes · practice</p>
+                <p :class="t.enotes.length ? 'text-gray-700 dark:text-gray-200' : 'text-gray-400 dark:text-gray-500'">{{ t.enotes.length ? `${t.enotes.length} eNote${t.enotes.length === 1 ? '' : 's'}` : 'No eNotes' }}</p>
+                <p :class="t.practice ? 'text-gray-700 dark:text-gray-200' : 'text-gray-400 dark:text-gray-500'">{{ t.practice ? `${t.practice} practice` : 'No practice' }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="hidden sm:block overflow-x-auto -mx-1">
           <table class="w-full text-sm min-w-[640px] table-fixed">
             <colgroup><col class="w-[34%]"><col class="w-[16%]"><col class="w-[18%]"><col class="w-[14%]"><col class="w-[18%]"></colgroup>
             <thead>

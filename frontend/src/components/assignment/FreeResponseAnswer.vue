@@ -153,6 +153,32 @@
       </template>
     </div>
 
+
+    <!-- One answer from several methods: every part the student made (typed text, the page they
+         wrote on, each uploaded file), in the order their teacher will mark them - which they can
+         change. Saved with the answer and handed in with it. -->
+    <div v-if="orderedParts.length > 1" class="rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-900/10 p-3 sm:p-4">
+      <p class="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-1.5"><AppIcon name="clipboard" class="w-4 h-4" /> {{ readonly ? 'Your answer, in order' : 'Arrange your answer' }}</p>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mb-2.5">{{ readonly ? 'Your teacher marked these parts in this order.' : 'Your teacher sees these parts in this order, as one answer. Move them to the order you want.' }}</p>
+      <ol class="space-y-1.5">
+        <li v-for="(part, i) in orderedParts" :key="part.key" class="flex items-center gap-2.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2.5 py-2">
+          <span class="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">{{ i + 1 }}</span>
+          <AppIcon :name="part.icon" class="w-4 h-4 text-gray-500 dark:text-gray-400" />
+          <span class="flex-1 min-w-0">
+            <span class="block text-sm font-medium text-gray-900 dark:text-white truncate">{{ part.label }}</span>
+            <span v-if="part.detail" class="block text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ part.detail }}</span>
+          </span>
+          <template v-if="!readonly">
+            <button type="button" class="p-1 rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-900 disabled:opacity-30 dark:hover:bg-gray-700" :disabled="i === 0" :title="`Move ${part.label} up`" @click="movePart(i, -1)">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
+            </button>
+            <button type="button" class="p-1 rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-900 disabled:opacity-30 dark:hover:bg-gray-700" :disabled="i === orderedParts.length - 1" :title="`Move ${part.label} down`" @click="movePart(i, 1)">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </button>
+          </template>
+        </li>
+      </ol>
+    </div>
     <FilePreviewModal
       v-if="previewFile"
       :url="resolveAssetUrl(previewFile.path)"
@@ -199,6 +225,8 @@ interface Props {
   readonly?: boolean
   rows?: number
   placeholder?: string
+  // The order the student arranged their answer's parts in ('typed', 'primary', 'af-<id>')
+  partsOrder?: string[]
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -207,7 +235,8 @@ const props = withDefaults(defineProps<Props>(), {
   initialAdditionalFiles: () => [],
   readonly: false,
   rows: 6,
-  placeholder: 'Type your answer here...'
+  placeholder: 'Type your answer here...',
+  partsOrder: () => []
 })
 
 const emit = defineEmits<{
@@ -219,6 +248,7 @@ const emit = defineEmits<{
   // the next full page load re-fetches answerAttachmentByQuestion from the server.
   (e: 'update:attachment', value: { path: string; originalName?: string } | null): void
   (e: 'update:additional-files', value: AdditionalAnswerFile[]): void
+  (e: 'update:parts-order', value: string[]): void
 }>()
 
 const API_BASE = '/api'
@@ -263,6 +293,39 @@ const galleryFiles = computed<GalleryFile[]>(() => {
   }
   return files
 })
+
+// The parts of this answer - typed text, the page written on (or the uploaded file it was written
+// on), each extra file - in the student's chosen order; parts not yet placed follow in the default
+// order
+const hasWriting = computed(() => Object.values(pdfLayers.value || {}).some(layer => (layer?.objects?.length || 0) > 0))
+const answerParts = computed(() => {
+  const parts: { key: string; label: string; detail: string; icon: string }[] = []
+  const text = (props.modelValue || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()
+  if (text) parts.push({ key: 'typed', label: 'Typed answer', detail: text.length > 70 ? `${text.slice(0, 70)}…` : text, icon: 'keyboard' })
+  if (attachment.value) {
+    const uploaded = !!attachment.value.originalName && !isPlaceholderAttachmentName(attachment.value.originalName)
+    if (uploaded) parts.push({ key: 'primary', label: attachment.value.originalName!, detail: hasWriting.value ? 'With your writing on it' : 'Uploaded file', icon: isImageAttachment.value ? 'photo' : 'document' })
+    else if (hasWriting.value) parts.push({ key: 'primary', label: 'Written page', detail: 'What you wrote or drew', icon: 'pencil' })
+  }
+  for (const f of additionalFiles.value) {
+    parts.push({ key: `af-${f.id}`, label: f.originalName, detail: 'Uploaded file', icon: f.fileType === 'image' ? 'photo' : 'document' })
+  }
+  return parts
+})
+const orderedParts = computed(() => {
+  const rank = (key: string, fallback: number) => {
+    const i = props.partsOrder.indexOf(key)
+    return i < 0 ? 1000 + fallback : i
+  }
+  return answerParts.value.map((p, i) => ({ p, r: rank(p.key, i) })).sort((a, b) => a.r - b.r).map(x => x.p)
+})
+function movePart(index: number, step: number) {
+  const keys = orderedParts.value.map(p => p.key)
+  const target = index + step
+  if (target < 0 || target >= keys.length) return
+  ;[keys[index], keys[target]] = [keys[target], keys[index]]
+  emit('update:parts-order', keys)
+}
 
 function openPreview(file: { path: string; originalName: string; fileType: 'pdf' | 'image' }) {
   previewFile.value = file
@@ -462,7 +525,9 @@ async function addFiles(files: File[]) {
   try {
     for (const file of files) {
       const hasRealPrimary = attachment.value?.originalName && !isPlaceholderAttachmentName(attachment.value.originalName)
-      if (!hasRealPrimary) {
+      // A page the student has already written on stays - the upload is added alongside it, so
+      // one answer can combine writing and uploaded work
+      if (!hasRealPrimary && !hasWriting.value) {
         await uploadFile(file)
       } else {
         await uploadAdditionalFile(file)

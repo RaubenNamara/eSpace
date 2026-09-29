@@ -378,6 +378,21 @@ class AssignmentController extends Controller
         return $result;
     }
 
+    /** Whether assignment_answers.parts_order exists yet (migration 101) */
+    private ?bool $partsOrderColumn = null;
+
+    private function hasPartsOrder(): bool
+    {
+        if ($this->partsOrderColumn === null) {
+            try {
+                $this->partsOrderColumn = (bool) $this->pdo->query("SHOW COLUMNS FROM assignment_answers LIKE 'parts_order'")->fetch();
+            } catch (\Throwable $e) {
+                $this->partsOrderColumn = false;
+            }
+        }
+        return $this->partsOrderColumn;
+    }
+
     /**
      * Submit or update assignment answers
      */
@@ -521,7 +536,9 @@ class AssignmentController extends Controller
                     $existingStmt->execute(['submission_id' => $submissionId, 'question_id' => $questionId]);
                     $existingAnswer = $existingStmt->fetch();
 
-                    if ($existingAnswer) {
+                    if (!array_key_exists('answer_text', $answer)) {
+                        // Only the arranged order was sent (the answer is written/uploaded, not typed)
+                    } elseif ($existingAnswer) {
                         $updateStmt->execute(['answer_text' => $answer['answer_text'], 'id' => $existingAnswer['id']]);
                     } else {
                         $insertStmt->execute([
@@ -529,6 +546,15 @@ class AssignmentController extends Controller
                             'question_id' => $questionId,
                             'answer_text' => $answer['answer_text']
                         ]);
+                    }
+
+                    // The order the student arranged their answer's parts in (typed text, the page
+                    // they wrote on, uploaded files) - only part keys are kept
+                    if (array_key_exists('parts_order', $answer) && $this->hasPartsOrder()) {
+                        $order = is_array($answer['parts_order']) ? $answer['parts_order'] : [];
+                        $order = array_values(array_filter(array_map('strval', $order), fn($k) => preg_match('/^(typed|primary|af-\d+)$/', $k)));
+                        $this->pdo->prepare("UPDATE assignment_answers SET parts_order = :order WHERE submission_id = :submission_id AND question_id = :question_id")
+                            ->execute(['order' => $order ? json_encode($order) : null, 'submission_id' => $submissionId, 'question_id' => $questionId]);
                     }
                 }
             }

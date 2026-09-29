@@ -2,16 +2,18 @@
   <!-- The class Learning Map: how one class stream is doing on every learning outcome and topic
        competency of a subject, who needs support on each, and every student's progress - so a
        teacher can see what to reteach and to whom. -->
-  <div class="max-w-5xl mx-auto">
+  <div class="w-full">
     <div class="flex flex-wrap items-center gap-2 mb-1">
       <div class="hidden sm:flex w-7 h-7 rounded-lg bg-emerald-600 items-center justify-center flex-shrink-0">
         <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
       </div>
       <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white mr-auto">Class Learning Map</h1>
       <!-- Subject, then the class level, then one stream - or all its streams together -->
-      <PickerDropdown v-if="options.length > 1" v-model="subjectId" label="Subject" :options="options.map(s => ({ value: s.id, label: s.name }))" align="right" />
-      <PickerDropdown v-if="levelOptions.length" v-model="level" label="Class" :options="levelOptions" align="right" />
-      <PickerDropdown v-if="streamOptions.length" v-model="stream" label="Stream" :options="streamOptions" align="right" />
+      <div class="flex flex-wrap gap-2 w-full sm:w-auto">
+        <PickerDropdown class="flex-1 sm:flex-none" v-if="options.length > 1" v-model="subjectId" label="Subject" :options="options.map(s => ({ value: s.id, label: s.name }))" align="right" />
+        <PickerDropdown class="flex-1 sm:flex-none" v-if="levelOptions.length" v-model="level" label="Class" :options="levelOptions" align="right" />
+        <PickerDropdown class="flex-1 sm:flex-none" v-if="streamOptions.length" v-model="stream" label="Stream" :options="streamOptions" align="right" />
+      </div>
     </div>
     <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">How the class is doing on each learning outcome and topic competency - from returned assessments only. Tap a row to see who needs support.</p>
 

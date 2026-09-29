@@ -122,6 +122,10 @@
               <svg v-else class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"></path></svg>
               {{ paused ? 'Continue' : 'Pause' }}
             </button>
+            <button type="button" class="bot-btn bot-btn-cancel" @click="skipOutcomes">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M5 5v14l9-7zM15 5h3v14h-3z"></path></svg>
+              Skip
+            </button>
             <span v-if="paused" class="bot-paused-note">Paused - take your time to read</span>
           </div>
         </Transition>
@@ -227,7 +231,7 @@ const wait = (ms: number) => new Promise<void>(resolve => {
   let left = ms
   let last = performance.now()
   const tick = () => {
-    if (stopped) return resolve()
+    if (stopped || skipped) return resolve()
     const now = performance.now()
     if (!paused.value) left -= now - last
     last = now
@@ -236,6 +240,15 @@ const wait = (ms: number) => new Promise<void>(resolve => {
   }
   tick()
 })
+
+// Skip: the student doesn't want to read the outcomes - the list finishes at once and the book goes
+// on into the notes as soon as they're ready
+let skipped = false
+function skipOutcomes() {
+  skipped = true
+  paused.value = false
+  turning?.finish()
+}
 
 function togglePause() {
   paused.value = !paused.value
@@ -318,7 +331,7 @@ async function turnPage(front: number, back: number) {
   // Each turned page rests a touch above the one before, so they stack on the left
   const rest = -(170 - i * 1.5)
   const turn = el.animate([{ transform: 'rotateY(0deg)' }, { transform: `rotateY(${rest}deg)` }], {
-    duration: reduced ? 1 : TURN_TIME,
+    duration: reduced || skipped ? 1 : TURN_TIME,
     easing: EASE_IN_OUT,
     fill: 'both'
   })

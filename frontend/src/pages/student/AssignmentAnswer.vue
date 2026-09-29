@@ -282,6 +282,8 @@
                       @update:model-value="answers[subQ.id] = $event; triggerAutoSave()"
                       @update:attachment="answerAttachmentByQuestion[subQ.id] = $event"
                       @update:additional-files="answerAdditionalFilesByQuestion[subQ.id] = $event"
+                  :parts-order="partsOrderByQuestion[subQ.id] || []"
+                  @update:parts-order="partsOrderByQuestion[subQ.id] = $event; triggerAutoSave()"
                       @submission-id="submissionId = $event"
                       @locked="submissionStatus = 'submitted'"
                     />
@@ -302,6 +304,8 @@
                   @update:model-value="answers[entry.question.id] = $event; triggerAutoSave()"
                   @update:attachment="answerAttachmentByQuestion[entry.question.id] = $event"
                   @update:additional-files="answerAdditionalFilesByQuestion[entry.question.id] = $event"
+                  :parts-order="partsOrderByQuestion[entry.question.id] || []"
+                  @update:parts-order="partsOrderByQuestion[entry.question.id] = $event; triggerAutoSave()"
                   @submission-id="submissionId = $event"
                   @locked="submissionStatus = 'submitted'"
                 />
@@ -401,6 +405,8 @@
                   @update:model-value="answers[entry.question.id] = $event; triggerAutoSave()"
                   @update:attachment="answerAttachmentByQuestion[entry.question.id] = $event"
                   @update:additional-files="answerAdditionalFilesByQuestion[entry.question.id] = $event"
+                  :parts-order="partsOrderByQuestion[entry.question.id] || []"
+                  @update:parts-order="partsOrderByQuestion[entry.question.id] = $event; triggerAutoSave()"
                   @submission-id="submissionId = $event"
                   @locked="submissionStatus = 'submitted'"
                 />
@@ -717,6 +723,9 @@ const toggleOffline = async () => {
   }
 }
 
+// The order a student arranged each written answer's parts in (see FreeResponseAnswer)
+const partsOrderByQuestion = ref<Record<number, string[]>>({})
+
 const loadAssignment = async () => {
   loading.value = true
   error.value = null
@@ -747,6 +756,12 @@ const loadAssignment = async () => {
         response.data.data.answers.forEach((answer: any) => {
           if (answer.answer_text !== null && answer.answer_text !== undefined) {
             answers.value[answer.question_id] = answer.answer_text
+          }
+          if (answer.parts_order) {
+            try {
+              const order = JSON.parse(answer.parts_order)
+              if (Array.isArray(order)) partsOrderByQuestion.value[answer.question_id] = order.map(String)
+            } catch { /* keep the default order */ }
           }
           answerAttachmentByQuestion.value[answer.question_id] = answer.student_attachment_path
             ? { path: answer.student_attachment_path, originalName: answer.student_attachment_original_name }
@@ -876,6 +891,15 @@ const prepareAnswers = () => {
     }
   })
   
+  // The arranged order of each written answer - also for questions answered only by writing on
+  // the page or uploading (no typed text, so no entry above)
+  Object.entries(partsOrderByQuestion.value).forEach(([questionId, order]) => {
+    const qId = Number(questionId)
+    const entry = prepared.find(a => a.question_id === qId)
+    if (entry) entry.parts_order = order
+    else prepared.push({ question_id: qId, parts_order: order })
+  })
+
   return prepared
 }
 

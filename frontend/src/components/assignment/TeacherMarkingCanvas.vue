@@ -1,63 +1,44 @@
 <template>
   <div class="teacher-marking-canvas">
-    <!-- Typed answer, rendered as a read-only text layer so the teacher can circle/underline/
-         comment directly on it with the same marking tools used everywhere else, instead of it
-         being inert plain text with no annotation surface. -->
-    <template v-if="typedAnswerLayerInfo">
-      <p class="teacher-marking-canvas__section-label">Typed answer</p>
-      <AnnotationToolbar
-        variant="marking"
-        :tool="typedTool"
-        :color="typedColor"
-        :stroke-width="typedStrokeWidth"
-        @update:tool="typedTool = $event"
-        @update:color="typedColor = $event"
-        @update:stroke-width="typedStrokeWidth = $event"
-        @undo="typedRef?.undo()"
-        @redo="typedRef?.redo()"
-        @clear-all="typedRef?.clearAll()"
-        @clear-selected="typedRef?.clearSelected()"
-      />
-      <div v-if="typedSaveStatus" class="teacher-marking-canvas__status">{{ typedSaveStatus }}</div>
-      <div class="teacher-marking-canvas__workspace teacher-marking-canvas__workspace--typed">
-        <AnnotationCanvas
-          ref="typedRef"
-          :width="800"
-          :height="typedAnswerLayerInfo.height"
-          :readonly-layers="typedAnswerReadonlyLayers"
-          :editable-layer="markingLayer[TYPED_ANSWER_PAGE] || { objects: [] }"
-          mode="teacher-marking"
+    <!-- The student's answer as one document, in the order they arranged it (typed answer, the
+         page they wrote on, each uploaded file). Every part keeps its own marking surface; a file
+         part opens for marking where it sits (one open at a time, so only one heavy canvas is
+         mounted). -->
+    <template v-for="(part, index) in orderedParts" :key="part.key">
+      <p class="teacher-marking-canvas__section-label" :class="{ 'teacher-marking-canvas__section-label--spaced': index > 0 }">
+        <template v-if="orderedParts.length > 1">Part {{ index + 1 }} of {{ orderedParts.length }} · </template>{{ part.label }}
+      </p>
+      <template v-if="part.key === 'typed' && typedAnswerLayerInfo">
+        <AnnotationToolbar
+          variant="marking"
           :tool="typedTool"
           :color="typedColor"
           :stroke-width="typedStrokeWidth"
-          @update:editable-layer="onTypedAnswerLayerChange"
+          @update:tool="typedTool = $event"
+          @update:color="typedColor = $event"
+          @update:stroke-width="typedStrokeWidth = $event"
+          @undo="typedRef?.undo()"
+          @redo="typedRef?.redo()"
+          @clear-all="typedRef?.clearAll()"
+          @clear-selected="typedRef?.clearSelected()"
         />
-      </div>
-    </template>
-
-    <!-- Submitted evidence: every file the student provided (the primary upload plus any
-         additional files) shown as one thumbnail strip, all viewed/marked in the same single
-         canvas below - only the selected file's canvas is ever mounted at a time. -->
-    <template v-if="allFiles.length">
-      <p class="teacher-marking-canvas__section-label" :class="{ 'teacher-marking-canvas__section-label--spaced': typedAnswerLayerInfo }">Submitted evidence</p>
-
-      <div v-if="allFiles.length > 1" class="teacher-marking-canvas__gallery">
-        <button
-          v-for="file in allFiles"
-          :key="file.key"
-          type="button"
-          class="teacher-marking-canvas__gallery-thumb"
-          :class="{ 'teacher-marking-canvas__gallery-thumb--active': file.key === selectedKey }"
-          :title="`View ${file.label}`"
-          @click="selectedKey = file.key"
-        >
-          <img v-if="file.fileType === 'image'" :src="file.url" alt="" class="teacher-marking-canvas__gallery-thumb-img">
-          <span v-else class="teacher-marking-canvas__gallery-thumb-icon" aria-hidden="true"><AppIcon name="document" class="w-6 h-6" /></span>
-          <span class="teacher-marking-canvas__gallery-thumb-name">{{ file.label }}</span>
-        </button>
-      </div>
-
-      <template v-if="selectedFile">
+        <div v-if="typedSaveStatus" class="teacher-marking-canvas__status">{{ typedSaveStatus }}</div>
+        <div class="teacher-marking-canvas__workspace teacher-marking-canvas__workspace--typed">
+          <AnnotationCanvas
+            :ref="(el: any) => { typedRef = el }"
+            :width="800"
+            :height="typedAnswerLayerInfo.height"
+            :readonly-layers="typedAnswerReadonlyLayers"
+            :editable-layer="markingLayer[TYPED_ANSWER_PAGE] || { objects: [] }"
+            mode="teacher-marking"
+            :tool="typedTool"
+            :color="typedColor"
+            :stroke-width="typedStrokeWidth"
+            @update:editable-layer="onTypedAnswerLayerChange"
+          />
+        </div>
+      </template>
+      <template v-else-if="part.file && part.key === selectedKey && selectedFile">
         <AnnotationToolbar
           variant="marking"
           :tool="evidenceTool"
@@ -76,7 +57,7 @@
           <AnnotationCanvas
             v-if="selectedFile.fileType === 'image'"
             :key="selectedFile.key"
-            ref="evidenceRef"
+            :ref="(el: any) => { evidenceRef = el }"
             :background="selectedFile.url"
             :width="evidenceImageDims.width"
             :height="evidenceImageDims.height"
@@ -91,7 +72,7 @@
           <PdfAnnotationViewer
             v-else
             :key="selectedFile.key"
-            ref="evidenceRef"
+            :ref="(el: any) => { evidenceRef = el }"
             :pdf-url="selectedFile.url"
             :readonly-layers-by-page="selectedFile.isPrimary ? pdfReadonlyLayersByPage : {}"
             :editable-layer-by-page="markingLayersByKey[selectedFile.key] || {}"
@@ -103,6 +84,17 @@
           />
         </div>
       </template>
+      <button
+        v-else-if="part.file"
+        type="button"
+        class="teacher-marking-canvas__part-closed"
+        @click="selectedKey = part.key"
+      >
+        <img v-if="part.file.fileType === 'image'" :src="part.file.url" alt="" class="teacher-marking-canvas__gallery-thumb-img">
+        <span v-else class="teacher-marking-canvas__gallery-thumb-icon" aria-hidden="true"><AppIcon name="document" class="w-6 h-6" /></span>
+        <span class="teacher-marking-canvas__part-closed-label">{{ part.label }}</span>
+        <span class="teacher-marking-canvas__part-closed-action">Open to mark</span>
+      </button>
     </template>
   </div>
 </template>
@@ -127,7 +119,7 @@ interface Props {
     question_annotations?: Record<number, AnnotationLayerJSON>
     answer_annotations?: Record<number, AnnotationLayerJSON>
     marking_annotations?: Record<number, AnnotationLayerJSON>
-    answer?: { answer_mode?: 'typed' | 'canvas' | 'pdf_upload' | 'image_upload'; student_attachment_path?: string; student_attachment_original_name?: string; answer_text?: string } | null
+    answer?: { answer_mode?: 'typed' | 'canvas' | 'pdf_upload' | 'image_upload'; student_attachment_path?: string; student_attachment_original_name?: string; answer_text?: string; parts_order?: string | null } | null
     answer_attachments?: { id: number; path: string; original_name: string; file_type: 'pdf' | 'image'; marking_annotations?: Record<number, AnnotationLayerJSON> }[]
   }
   assignmentId: number
@@ -260,7 +252,32 @@ const allFiles = computed<EvidenceFile[]>(() => {
   return files
 })
 
-const selectedKey = ref<string | null>(allFiles.value[0]?.key ?? null)
+// The order the student arranged their answer in (answer.parts_order: part keys - 'typed',
+// 'primary', 'af-<id>'); parts they didn't place keep the default order after the placed ones
+const partsOrder = computed<string[]>(() => {
+  try {
+    const value = JSON.parse(String(props.question.answer?.parts_order || '[]'))
+    return Array.isArray(value) ? value.map(String) : []
+  } catch {
+    return []
+  }
+})
+const orderedParts = computed(() => {
+  const parts: { key: string; label: string; file: EvidenceFile | null }[] = []
+  if (typedAnswerLayerInfo.value) parts.push({ key: 'typed', label: 'Typed answer', file: null })
+  for (const f of allFiles.value) {
+    const written = f.isPrimary && isPlaceholderAttachmentName(props.question.answer?.student_attachment_original_name)
+    parts.push({ key: f.key, label: written ? 'Written page' : f.label, file: f })
+  }
+  const rank = (key: string, fallback: number) => {
+    const i = partsOrder.value.indexOf(key)
+    return i < 0 ? 1000 + fallback : i
+  }
+  return parts.map((p, i) => ({ p, r: rank(p.key, i) })).sort((a, b) => a.r - b.r).map(x => x.p)
+})
+
+// The file part open for marking - the first one in the student's order to begin with
+const selectedKey = ref<string | null>(orderedParts.value.find(p => p.file)?.key ?? null)
 const selectedFile = computed(() => allFiles.value.find(f => f.key === selectedKey.value) || null)
 
 const evidenceRef = ref<any>(null)
@@ -337,6 +354,7 @@ function onEvidencePdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
   text-transform: uppercase;
   letter-spacing: 0.03em;
   color: #6b7280;
+  overflow-wrap: anywhere;
 }
 
 .teacher-marking-canvas__section-label--spaced {
@@ -385,6 +403,52 @@ function onEvidencePdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
   height: auto;
   min-height: 0;
   overflow: visible;
+}
+
+.teacher-marking-canvas__part-closed {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  background: #fff;
+  text-align: left;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+.teacher-marking-canvas__part-closed:hover {
+  border-color: #a5b4fc;
+  background: #eef2ff;
+}
+:global(.dark) .teacher-marking-canvas__part-closed {
+  border-color: #374151;
+  background: #1f2937;
+}
+.teacher-marking-canvas__part-closed .teacher-marking-canvas__gallery-thumb-img,
+.teacher-marking-canvas__part-closed .teacher-marking-canvas__gallery-thumb-icon {
+  width: 3.5rem;
+  height: 3.5rem;
+  flex-shrink: 0;
+}
+.teacher-marking-canvas__part-closed-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #111827;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+:global(.dark) .teacher-marking-canvas__part-closed-label {
+  color: #f3f4f6;
+}
+.teacher-marking-canvas__part-closed-action {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #4f46e5;
 }
 
 .teacher-marking-canvas__gallery {

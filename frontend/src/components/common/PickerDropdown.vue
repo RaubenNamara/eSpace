@@ -4,7 +4,7 @@
   <div ref="root" class="relative">
     <button
       type="button"
-      class="flex items-center gap-2 min-w-[9rem] pl-3 pr-2.5 py-1.5 rounded-xl border bg-white dark:bg-gray-800 text-left transition-colors"
+      class="w-full flex items-center gap-2 min-w-[7rem] sm:min-w-[9rem] pl-3 pr-2.5 py-1.5 rounded-xl border bg-white dark:bg-gray-800 text-left transition-colors"
       :class="open ? 'border-indigo-400 ring-2 ring-indigo-100 dark:ring-indigo-900' : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'"
       :aria-expanded="open"
       aria-haspopup="listbox"
@@ -25,8 +25,10 @@
     >
       <ul
         v-if="open"
+        ref="menu"
         role="listbox"
-        class="absolute z-30 mt-1.5 min-w-full w-max max-w-[18rem] max-h-72 overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg p-1"
+        :style="{ transform: nudge ? `translateX(${nudge}px)` : undefined }"
+        class="absolute z-30 mt-1.5 min-w-full w-max max-w-[min(18rem,calc(100vw-2rem))] max-h-72 overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg p-1"
         :class="align === 'right' ? 'right-0' : 'left-0'"
       >
         <li v-for="o in options" :key="String(o.value)">
@@ -49,7 +51,7 @@
 </template>
 
 <script setup lang="ts" generic="T extends string | number">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 
 export interface PickerOption<V> { value: V; label: string; hint?: string; hintClass?: string }
 
@@ -63,7 +65,10 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{ 'update:modelValue': [value: T] }>()
 
 const root = ref<HTMLElement | null>(null)
+const menu = ref<HTMLElement | null>(null)
 const open = ref(false)
+// On a narrow screen the menu can run past the screen's edge - it's moved back inside
+const nudge = ref(0)
 const current = computed(() => props.options.find(o => o.value === props.modelValue) ?? null)
 
 const choose = (value: T) => {
@@ -76,6 +81,15 @@ const onPointer = (e: PointerEvent) => { if (!root.value?.contains(e.target as N
 const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') open.value = false }
 watch(open, (isOpen) => {
   if (isOpen) {
+    nudge.value = 0
+    nextTick(() => {
+      const box = menu.value?.getBoundingClientRect()
+      if (!box) return
+      const edge = 8
+      const width = document.documentElement.clientWidth
+      if (box.right > width - edge) nudge.value = width - edge - box.right
+      else if (box.left < edge) nudge.value = edge - box.left
+    })
     document.addEventListener('pointerdown', onPointer)
     document.addEventListener('keydown', onKey)
   } else {
