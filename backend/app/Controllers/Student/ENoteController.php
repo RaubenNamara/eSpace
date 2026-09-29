@@ -237,6 +237,8 @@ class ENoteController extends Controller
             'pages_update' => $number,
         ]);
 
+        // Reading counts towards the student's learning streak
+        \eSpace\App\Services\RewardService::recordLearningDay($studentId);
         $this->success(['page_id' => $pageId, 'page_number' => $number], 'Progress saved');
     }
 

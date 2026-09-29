@@ -16,7 +16,7 @@
       ]"
       @click="!readonly && $emit('update:modelValue', option.value)"
     >
-      <span class="text-2xl sm:text-3xl" aria-hidden="true">{{ option.icon }}</span>
+      <span class="text-2xl sm:text-3xl" aria-hidden="true"><AppIcon v-if="option.icon.startsWith('@')" :name="option.icon.slice(1)" class="w-7 h-7" /><template v-else>{{ option.icon }}</template></span>
       <span class="text-sm sm:text-base font-semibold" :class="modelValue === option.value ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-900 dark:text-white'">
         {{ option.label }}
       </span>
@@ -26,6 +26,7 @@
 </template>
 
 <script setup lang="ts">
+import AppIcon from '@/components/common/AppIcon.vue'
 export type AnswerMode = 'type' | 'write' | 'upload'
 
 defineProps<{
@@ -38,8 +39,8 @@ defineEmits<{
 }>()
 
 const options: { value: AnswerMode; icon: string; label: string; description: string }[] = [
-  { value: 'type', icon: '⌨️', label: 'Type', description: 'Type your answer' },
-  { value: 'write', icon: '✍️', label: 'Write', description: 'Write on the page' },
-  { value: 'upload', icon: '📎', label: 'Upload', description: 'Upload your work' }
+  { value: 'type', icon: '@keyboard', label: 'Type', description: 'Type your answer' },
+  { value: 'write', icon: '@pencil', label: 'Write', description: 'Write on the page' },
+  { value: 'upload', icon: '@paperclip', label: 'Upload', description: 'Upload your work' }
 ]
 </script>

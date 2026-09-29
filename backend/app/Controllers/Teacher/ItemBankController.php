@@ -698,6 +698,144 @@ class ItemBankController extends Controller
     }
 
     /**
+     * The curriculum topics this year for the resource's subject and class, grouped the way a
+     * teacher thinks of them (one entry per topic, whichever streams it's set for), and which
+     * ones the resource is tagged with.
+     * GET /teacher/itembank/{id}/curriculum
+     */
+    public function getCurriculum($id): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+        $teacherId = $this->getTeacherId();
+        $db = $this->getDb();
+        $resource = $this->ownedResource($db, (int) $id, (int) $teacherId);
+        if (!$resource) {
+            $this->notFound('Resource not found');
+            return;
+        }
+        if (!$this->curriculumLinksAvailable($db)) {
+            $this->success(['available' => false, 'topics' => []]);
+            return;
+        }
+        $groups = $this->curriculumGroups($db, $resource);
+        $stmt = $db->prepare("SELECT curriculum_topic_id FROM item_bank_curriculum_topics WHERE question_id = ?");
+        $stmt->execute([(int) $id]);
+        $linked = array_map('intval', array_column($stmt->fetchAll(), 'curriculum_topic_id'));
+        foreach ($groups as &$g) {
+            $g['linked'] = (bool) array_intersect($g['topic_ids'], $linked);
+        }
+        unset($g);
+        $this->success(['available' => true, 'topics' => array_values($groups)]);
+    }
+
+    /**
+     * Tag the resource with curriculum topics (the group ids from getCurriculum) - every stream's
+     * copy of each chosen topic is linked, so students in any of them see it as practice.
+     * PUT /teacher/itembank/{id}/curriculum  { topic_ids: [...] }
+     */
+    public function updateCurriculum($id): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+        $teacherId = $this->getTeacherId();
+        $db = $this->getDb();
+        $resource = $this->ownedResource($db, (int) $id, (int) $teacherId);
+        if (!$resource) {
+            $this->notFound('Resource not found');
+            return;
+        }
+        if (!$this->curriculumLinksAvailable($db)) {
+            $this->error('Curriculum links are not set up yet - run migration 098', 409);
+            return;
+        }
+        $chosen = array_map('intval', (array) ($this->input('topic_ids') ?? []));
+        $groups = $this->curriculumGroups($db, $resource);
+        $ids = [];
+        foreach ($chosen as $groupId) {
+            if (isset($groups[$groupId])) {
+                $ids = array_merge($ids, $groups[$groupId]['topic_ids']);
+            }
+        }
+        $ids = array_values(array_unique($ids));
+
+        try {
+            $db->beginTransaction();
+            $db->prepare("DELETE FROM item_bank_curriculum_topics WHERE question_id = ?")->execute([(int) $id]);
+            $insert = $db->prepare("INSERT INTO item_bank_curriculum_topics (question_id, curriculum_topic_id) VALUES (?, ?)");
+            foreach ($ids as $topicId) {
+                $insert->execute([(int) $id, $topicId]);
+            }
+            $db->commit();
+        } catch (\PDOException $e) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            error_log('Failed to save item bank curriculum links: ' . $e->getMessage());
+            $this->error('Failed to save the topics', 500);
+            return;
+        }
+        $this->success(['linked' => count(array_intersect_key($groups, array_flip($chosen)))], 'Topics saved');
+    }
+
+    private function ownedResource($db, int $id, int $teacherId): ?array
+    {
+        $stmt = $db->prepare(
+            "SELECT id, subject_id, class_id, class_group_name FROM item_bank_questions
+             WHERE id = ? AND created_by = ? AND deleted_at IS NULL"
+        );
+        $stmt->execute([$id, $teacherId]);
+        return $stmt->fetch() ?: null;
+    }
+
+    private function curriculumLinksAvailable($db): bool
+    {
+        try {
+            return (bool) $db->query("SHOW TABLES LIKE 'item_bank_curriculum_topics'")->fetch();
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    /** This year's curriculum topics for the resource's subject and class(es), one group per topic */
+    private function curriculumGroups($db, array $resource): array
+    {
+        $stmt = $db->prepare(
+            "SELECT ct.id, ct.topic, ct.theme_branch, ct.term_id, t.name AS term_name
+             FROM enote_curriculum_topics ct
+             INNER JOIN academic_years ay ON ay.id = ct.academic_year_id AND ay.is_current = 1
+             LEFT JOIN terms t ON t.id = ct.term_id
+             LEFT JOIN classes c ON c.id = ct.class_id
+             WHERE ct.deleted_at IS NULL AND ct.subject_id = ?
+               AND (ct.class_id = ? OR (? IS NOT NULL AND c.name = ?))
+             ORDER BY ct.term_id, ct.theme_branch, ct.id"
+        );
+        $group = $resource['class_group_name'];
+        $stmt->execute([(int) $resource['subject_id'], $resource['class_id'], $group, $group]);
+        $groups = [];
+        $keyToId = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $key = mb_strtolower(trim((string) $row['theme_branch'])) . '|' . mb_strtolower(trim((string) $row['topic'])) . '|' . $row['term_id'];
+            if (!isset($keyToId[$key])) {
+                $keyToId[$key] = (int) $row['id'];
+                $groups[(int) $row['id']] = [
+                    'id' => (int) $row['id'],
+                    'topic' => $row['topic'],
+                    'theme_branch' => $row['theme_branch'],
+                    'term_name' => $row['term_name'],
+                    'topic_ids' => [],
+                ];
+            }
+            $groups[$keyToId[$key]]['topic_ids'][] = (int) $row['id'];
+        }
+        return $groups;
+    }
+
+    /**
      * Turn students' downloading (and saving for offline reading) on or off across selected resources.
      * POST /teacher/itembank/bulk-download  { ids: [...], allow: true|false }
      */

@@ -105,6 +105,16 @@ export interface ContentBlock {
  * HtmlBlockSplitter::split() so narrationIndex lines up with the backend's paragraph_index, plus
  * media blocks (figure/iframe/YouTube embed) interleaved in document order for display only.
  */
+/**
+ * The narrated paragraphs of an already-rendered page, in narration order - the same rule as
+ * splitContentBlocks (and so HtmlBlockSplitter::split()), applied to the page as it's shown, so the
+ * AI Tutor can mark a paragraph on the page itself instead of re-drawing it block by block.
+ */
+export function narratedElements(container: Element): HTMLElement[] {
+  return Array.from(container.children).filter((el): el is HTMLElement =>
+    BLOCK_TAGS.has(el.tagName) && (el.textContent || '').replace(/\s+/g, ' ').trim().length >= 3)
+}
+
 export function splitContentBlocks(html: string): ContentBlock[] {
   if (!html || !html.trim()) return []
 

@@ -46,6 +46,8 @@ export const offline = reactive({
   progress: {} as Record<number, number>,
   // Saved eLibrary / Item Bank PDFs (see offline/docs.ts), keyed 'library:12' / 'itembank:7'
   docs: {} as Record<string, any>,
+  // Assessments saved to answer offline (see offline/assessments.ts), by assignment id
+  assessments: {} as Record<number, any>,
   docProgress: {} as Record<string, number>,
   // Changes made offline that haven't reached the server yet
   pending: 0
@@ -151,7 +153,7 @@ export function parseMaybeJson(raw: unknown): any {
   try { return JSON.parse(String(raw)) } catch { return null }
 }
 
-async function fetchAssets(paths: string[], onEach: () => void): Promise<{ kept: string[]; bytes: number }> {
+export async function fetchAssets(paths: string[], onEach: () => void): Promise<{ kept: string[]; bytes: number }> {
   if (typeof caches === 'undefined') return { kept: [], bytes: 0 }
   const cache = await caches.open(ASSET_CACHE)
   const kept: string[] = []

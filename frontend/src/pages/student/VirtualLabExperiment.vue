@@ -29,7 +29,7 @@
 
       <div class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         <div v-if="attempt.experiment.safety_precautions" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3 sm:p-4 mb-4 flex items-start gap-3">
-          <span class="w-8 h-8 flex-shrink-0 rounded-full bg-red-100 dark:bg-red-900/50 flex items-center justify-center text-base">⚠️</span>
+          <span class="w-8 h-8 flex-shrink-0 rounded-full bg-red-100 dark:bg-red-900/50 flex items-center justify-center text-red-600 dark:text-red-300"><AppIcon name="warning" class="w-4 h-4" /></span>
           <p class="text-sm text-red-700 dark:text-red-300"><strong>Safety:</strong> {{ attempt.experiment.safety_precautions }}</p>
         </div>
 
@@ -104,7 +104,7 @@
 
                   <div v-if="hintLevels.length && !previewStep.is_safety_check" class="mt-2">
                     <button v-if="hintLevel < hintLevels.length" @click="requestHint" class="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
-                      <span>💡</span> {{ hintLevel === 0 ? 'Need a hint?' : 'Show me more' }}
+                      <AppIcon name="bulb" class="w-4 h-4" /> {{ hintLevel === 0 ? 'Need a hint?' : 'Show me more' }}
                     </button>
                     <div v-for="(h, i) in hintLevels.slice(0, hintLevel)" :key="i" class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 italic bg-gray-50 dark:bg-gray-950/40 rounded-lg p-2.5">{{ h }}</div>
                   </div>
@@ -123,7 +123,7 @@
                 leave-to-class="opacity-0"
               >
                 <div v-if="toast" class="mb-3 text-xs font-semibold rounded-xl px-3.5 py-2.5 flex items-center gap-2" :class="toast.correct ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300'">
-                  <span>{{ toast.correct ? '✅' : '⚠️' }}</span> {{ toast.text }}
+                  <AppIcon :name="toast.correct ? 'check-circle' : 'warning'" class="w-4 h-4" /> {{ toast.text }}
                 </div>
               </transition>
 
@@ -140,8 +140,8 @@
               <div class="flex items-center gap-3 pt-2 border-t border-gray-100 dark:border-gray-700 text-xs">
                 <span class="inline-flex items-center gap-1 text-green-600 dark:text-green-400 font-medium">✓ {{ attempt.correct_actions }} correct</span>
                 <span class="inline-flex items-center gap-1 text-red-500 dark:text-red-400 font-medium">✕ {{ attempt.wrong_actions }} wrong</span>
-                <span v-if="attempt.hints_used > 0" class="inline-flex items-center gap-1 text-amber-500 dark:text-amber-400 font-medium">💡 {{ attempt.hints_used }}</span>
-                <span v-if="attempt.safety_mistakes > 0" class="inline-flex items-center gap-1 text-red-600 dark:text-red-400 font-bold">⚠️ {{ attempt.safety_mistakes }} safety</span>
+                <span v-if="attempt.hints_used > 0" class="inline-flex items-center gap-1 text-amber-500 dark:text-amber-400 font-medium"><AppIcon name="bulb" class="w-3.5 h-3.5" /> {{ attempt.hints_used }}</span>
+                <span v-if="attempt.safety_mistakes > 0" class="inline-flex items-center gap-1 text-red-600 dark:text-red-400 font-bold"><AppIcon name="warning" class="w-3.5 h-3.5" /> {{ attempt.safety_mistakes }} safety</span>
               </div>
               </template>
             </template>
@@ -173,7 +173,7 @@
 
         <!-- Practical Notebook -->
         <div v-if="allStepsDone || attempt.status !== 'in_progress'" class="mt-5 sm:mt-6 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 sm:p-6 space-y-5">
-          <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2"><span>📔</span> Practical Notebook</h2>
+          <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2"><AppIcon name="book" class="w-5 h-5" /> Practical Notebook</h2>
 
           <div v-if="measurementEntries.length > 0">
             <p class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Measurements</p>
@@ -297,6 +297,7 @@
 </template>
 
 <script setup lang="ts">
+import AppIcon from '@/components/common/AppIcon.vue'
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'

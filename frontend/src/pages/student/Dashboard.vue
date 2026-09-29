@@ -52,6 +52,8 @@
         <StatTile label="Upcoming Live Classes" :value="data.upcoming_live_classes.length" icon="live" color="red" to="/student/live-classes" />
       </div>
 
+      <!-- The most useful things to do next, then the Learning Map at a glance -->
+      <NextStepsCard />
       <LearningMapCard />
 
       <!-- Quick links -->
@@ -124,6 +126,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useLiveRefresh } from '@/composables/useLiveRefresh'
 import LearningMapCard from '@/components/dashboard/LearningMapCard.vue'
+import NextStepsCard from '@/components/dashboard/NextStepsCard.vue'
 import axios from 'axios'
 import { useAuthStore } from '@/stores/auth'
 import StatTile from '@/components/dashboard/StatTile.vue'

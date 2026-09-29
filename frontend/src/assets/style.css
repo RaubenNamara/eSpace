@@ -153,6 +153,41 @@ html.dark button.bg-white.border:is(.rounded-xl, .rounded-2xl):is([class*="borde
   box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 18px -10px rgba(0, 0, 0, 0.6);
 }
 
+/* The shared .card (class and stream cards, dashboard cards, panels) and the white cards drawn
+   with only a shadow get the same frame. A card with its own background colour keeps it, and one
+   with its own ring (e.g. a selected card) keeps that ring; its border (selection outlines) is
+   untouched either way. */
+html:not(.dark) .card:not([class^="bg-"], [class*=" bg-"]),
+html:not(.dark) :is(div, section, article, li).bg-white:is(.rounded-lg, .rounded-xl, .rounded-2xl):is(.shadow, .shadow-sm, .shadow-md):not(.border, [class*="border-"]) {
+  background-image: linear-gradient(180deg, var(--frame-paper-top), var(--frame-paper-bottom));
+}
+
+html:not(.dark) .card:not([class*="ring-"]) {
+  --tw-ring-color: var(--frame-border);
+}
+
+html:not(.dark) .card,
+html:not(.dark) :is(div, section, article, li).bg-white:is(.rounded-lg, .rounded-xl, .rounded-2xl):is(.shadow, .shadow-sm, .shadow-md):not(.border, [class*="border-"]) {
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--frame-shadow);
+}
+
+html:not(.dark) :is(div, section, article, li).bg-white:is(.rounded-lg, .rounded-xl, .rounded-2xl):is(.shadow, .shadow-sm, .shadow-md):not(.border, [class*="border-"]) {
+  --tw-ring-shadow: 0 0 0 1px var(--frame-border);
+}
+
+/* Cards that lift on hover lift a little further */
+html:not(.dark) .card:is([class*="hover:shadow"], [class*="hover:-translate"]):hover {
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--frame-shadow-hover);
+}
+
+html.dark .card:not([class^="bg-"], [class*=" bg-"]) {
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(0, 0, 0, 0.05));
+}
+
+html.dark .card:not([class*="ring-"]) {
+  --tw-ring-color: rgba(212, 175, 110, 0.16);
+}
+
 /* The sidebar, framed like the bookcase: warm paper, gold border, a recessed edge */
 .app-frame-sidebar {
   background: linear-gradient(180deg, rgba(248, 242, 230, 0.94), rgba(236, 225, 204, 0.94));
@@ -195,7 +230,8 @@ html.dark .dark\:text-gray-500 {
   color: #a3abb8;
 }
 
-:is(div, section, article, li, form, details, a, label, button).bg-white.border:is(.rounded-lg, .rounded-xl, .rounded-2xl) :is(.text-gray-500, .text-gray-600, .text-gray-700):not(.font-medium, .font-semibold, .font-bold) {
+:is(div, section, article, li, form, details, a, label, button).bg-white.border:is(.rounded-lg, .rounded-xl, .rounded-2xl) :is(.text-gray-500, .text-gray-600, .text-gray-700):not(.font-medium, .font-semibold, .font-bold),
+.card :is(.text-gray-500, .text-gray-600, .text-gray-700):not(.font-medium, .font-semibold, .font-bold) {
   font-weight: 500;
 }
 

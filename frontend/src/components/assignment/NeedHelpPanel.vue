@@ -1,7 +1,7 @@
 <template>
   <details class="group rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30 open:bg-white dark:open:bg-gray-800">
     <summary class="flex items-center gap-2 px-4 py-2.5 cursor-pointer select-none text-sm font-medium text-indigo-700 dark:text-indigo-300 list-none">
-      <span aria-hidden="true">💡</span>
+      <AppIcon name="bulb" class="w-4 h-4" />
       Need Help?
       <svg class="w-4 h-4 ml-auto transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
@@ -20,6 +20,7 @@
 </template>
 
 <script setup lang="ts">
+import AppIcon from '@/components/common/AppIcon.vue'
 import { computed } from 'vue'
 
 const DEFAULT_HINTS = [

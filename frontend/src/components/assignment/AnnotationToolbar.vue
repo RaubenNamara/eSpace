@@ -7,20 +7,20 @@
           <span class="tool-btn__icon">↖</span><span class="answer-toolbar__label">Select</span>
         </button>
         <button type="button" :class="['tool-btn', 'answer-toolbar__btn', { active: tool === 'pan' }]" title="Pan" :disabled="disabled" @click="selectTool('pan')">
-          <span class="tool-btn__icon">✋</span><span class="answer-toolbar__label">Pan</span>
+          <span class="tool-btn__icon"><AppIcon name="hand" class="w-4 h-4" /></span><span class="answer-toolbar__label">Pan</span>
         </button>
       </template>
       <button type="button" :class="['tool-btn', 'answer-toolbar__btn', { active: tool === 'pen' && !pencilActive }]" title="Pen" :disabled="disabled" @click="selectPen">
-        <span class="tool-btn__icon">✏️</span><span class="answer-toolbar__label">Pen</span>
+        <span class="tool-btn__icon"><AppIcon name="pencil" class="w-4 h-4" /></span><span class="answer-toolbar__label">Pen</span>
       </button>
       <button v-if="!simplified || moreToolsOpen" type="button" :class="['tool-btn', 'answer-toolbar__btn', { active: tool === 'pen' && pencilActive }]" title="Pencil" :disabled="disabled" @click="selectPencil">
         <span class="tool-btn__icon">✎</span><span class="answer-toolbar__label">Pencil</span>
       </button>
       <button type="button" :class="['tool-btn', 'answer-toolbar__btn', { active: tool === 'highlighter' }]" title="Highlighter" :disabled="disabled" @click="selectTool('highlighter')">
-        <span class="tool-btn__icon">🖍️</span><span class="answer-toolbar__label">Highlighter</span>
+        <span class="tool-btn__icon"><AppIcon name="highlighter" class="w-4 h-4" /></span><span class="answer-toolbar__label">Highlighter</span>
       </button>
       <button type="button" :class="['tool-btn', 'answer-toolbar__btn', { active: tool === 'eraser' }]" title="Eraser" :disabled="disabled" @click="selectTool('eraser')">
-        <span class="tool-btn__icon">🧽</span><span class="answer-toolbar__label">Eraser</span>
+        <span class="tool-btn__icon"><AppIcon name="eraser" class="w-4 h-4" /></span><span class="answer-toolbar__label">Eraser</span>
       </button>
 
       <button
@@ -63,16 +63,16 @@
         </div>
 
         <button type="button" :class="['tool-btn', 'answer-toolbar__btn', { active: tool === 'image' }]" title="Add media" :disabled="disabled" @click="selectTool('image')">
-          <span class="tool-btn__icon">🖼️</span><span class="answer-toolbar__label">Add media</span>
+          <span class="tool-btn__icon"><AppIcon name="photo" class="w-4 h-4" /></span><span class="answer-toolbar__label">Add media</span>
         </button>
         <button type="button" :class="['tool-btn', 'answer-toolbar__btn', { active: tool === 'equation' }]" title="Equation" :disabled="disabled" @click="selectTool('equation')">
           <span class="tool-btn__icon">∑</span><span class="answer-toolbar__label">Equation</span>
         </button>
         <button type="button" :class="['tool-btn', 'answer-toolbar__btn', { active: tool === 'signature' }]" title="Signature" :disabled="disabled" @click="selectTool('signature')">
-          <span class="tool-btn__icon">✒️</span><span class="answer-toolbar__label">Signature</span>
+          <span class="tool-btn__icon"><AppIcon name="pencil" class="w-4 h-4" /></span><span class="answer-toolbar__label">Signature</span>
         </button>
         <button type="button" :class="['tool-btn', 'answer-toolbar__btn', { active: tool === 'comment' }]" title="Comment" :disabled="disabled" @click="selectTool('comment')">
-          <span class="tool-btn__icon">💬</span><span class="answer-toolbar__label">Comment</span>
+          <span class="tool-btn__icon"><AppIcon name="chat" class="w-4 h-4" /></span><span class="answer-toolbar__label">Comment</span>
         </button>
       </template>
 
@@ -123,7 +123,7 @@
         :disabled="disabled"
         @click="$emit('update:tool', t.value)"
       >
-        <span class="tool-btn__icon">{{ t.icon }}</span>
+        <span class="tool-btn__icon"><AppIcon v-if="t.icon.startsWith('@')" :name="t.icon.slice(1)" class="w-4 h-4" /><template v-else>{{ t.icon }}</template></span>
       </button>
     </div>
 
@@ -159,12 +159,13 @@
       <button type="button" class="tool-btn" title="Undo" :disabled="disabled" @click="$emit('undo')">↶</button>
       <button type="button" class="tool-btn" title="Redo" :disabled="disabled" @click="$emit('redo')">↷</button>
       <button type="button" class="tool-btn" title="Clear Selected" :disabled="disabled" @click="$emit('clear-selected')">⌫</button>
-      <button type="button" class="tool-btn tool-btn--danger" title="Clear All" :disabled="disabled" @click="$emit('clear-all')">🗑</button>
+      <button type="button" class="tool-btn tool-btn--danger" title="Clear All" :disabled="disabled" @click="$emit('clear-all')"><AppIcon name="trash" class="w-4 h-4" /></button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import AppIcon from '@/components/common/AppIcon.vue'
 import { ref, computed, watch } from 'vue'
 import type { AnnotationTool } from '@/types'
 
@@ -208,22 +209,22 @@ const colors = ['#000000', '#ff0000', '#0000ff', '#16a34a', '#f59e0b', '#a855f7'
 
 const BASE_TOOLS: { value: AnnotationTool; label: string; icon: string }[] = [
   { value: 'select', label: 'Select', icon: '↖' },
-  { value: 'pan', label: 'Pan', icon: '✋' },
-  { value: 'pen', label: 'Pen', icon: '✏️' },
+  { value: 'pan', label: 'Pan', icon: '@hand' },
+  { value: 'pen', label: 'Pen', icon: '@pencil' },
   { value: 'pencil', label: 'Pencil', icon: '✎' },
-  { value: 'highlighter', label: 'Highlighter', icon: '🖍️' },
-  { value: 'eraser', label: 'Eraser', icon: '🧽' },
+  { value: 'highlighter', label: 'Highlighter', icon: '@highlighter' },
+  { value: 'eraser', label: 'Eraser', icon: '@eraser' },
   { value: 'line', label: 'Line', icon: '／' },
   { value: 'arrow', label: 'Arrow', icon: '➜' },
   { value: 'rectangle', label: 'Rectangle', icon: '▭' },
   { value: 'circle', label: 'Circle', icon: '◯' },
   { value: 'text', label: 'Text', icon: 'T' },
-  { value: 'image', label: 'Insert Image', icon: '🖼️' },
+  { value: 'image', label: 'Insert Image', icon: '@photo' },
   { value: 'equation', label: 'Equation', icon: '∑' },
-  { value: 'signature', label: 'Signature', icon: '✒️' }
+  { value: 'signature', label: 'Signature', icon: '@pencil' }
 ]
 
-const COMMENT_TOOL: { value: AnnotationTool; label: string; icon: string } = { value: 'comment', label: 'Comment', icon: '💬' }
+const COMMENT_TOOL: { value: AnnotationTool; label: string; icon: string } = { value: 'comment', label: 'Comment', icon: '@chat' }
 const MARKING_TOOLS: { value: AnnotationTool; label: string; icon: string }[] = [
   { value: 'tick', label: 'Tick / Correct', icon: '✓' },
   { value: 'cross', label: 'Cross / Incorrect', icon: '✕' },

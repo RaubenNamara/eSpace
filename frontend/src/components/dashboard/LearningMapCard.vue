@@ -1,6 +1,6 @@
 <template>
-  <!-- The student's Learning Map at a glance: share of learning outcomes achieved this year and
-       what's waiting to be done, linking through to the full map -->
+  <!-- The student's Learning Map at a glance: share of learning outcomes achieved this year, the
+       topic competencies and Elements of Construct reached, and what's waiting to be done, linking through to the full map -->
   <RouterLink
     v-if="summary && summary.outcomes > 0"
     to="/student/learning-map"
@@ -18,6 +18,12 @@
       <p class="text-xs text-gray-600 dark:text-gray-300">
         <CountUp :value="summary.achieved" /> of {{ summary.outcomes }} learning outcomes achieved this year
       </p>
+      <p v-if="competencies && competencies.competencies > 0" class="text-xs text-gray-600 dark:text-gray-300">
+        <span class="font-semibold text-violet-700 dark:text-violet-300"><CountUp :value="competencies.achieved" /> of {{ competencies.competencies }}</span> topic competencies achieved
+      </p>
+      <p v-if="constructs && constructs.constructs > 0" class="text-xs text-gray-600 dark:text-gray-300">
+        <span class="font-semibold text-amber-700 dark:text-amber-300"><CountUp :value="constructs.achieved" /> of {{ constructs.constructs }}</span> Elements of Construct achieved
+      </p>
       <p v-if="toDo" class="text-xs font-semibold text-indigo-600 dark:text-indigo-300 mt-0.5">{{ toDo }} {{ toDo === 1 ? 'outcome needs' : 'outcomes need' }} your attention</p>
       <p v-else-if="summary.awaiting" class="text-xs text-sky-600 dark:text-sky-300 mt-0.5">{{ summary.awaiting }} awaiting marking</p>
     </div>
@@ -34,15 +40,23 @@ import axios from 'axios'
 import CountUp from '@/components/common/CountUp.vue'
 
 interface Summary { outcomes: number; achieved: number; developing: number; needs_support: number; awaiting: number; available: number; percent: number }
+interface CompetencySummary { competencies: number; achieved: number; percent: number }
+interface ConstructSummary { constructs: number; achieved: number; percent: number }
 
 const summary = ref<Summary | null>(null)
+const competencies = ref<CompetencySummary | null>(null)
+const constructs = ref<ConstructSummary | null>(null)
 const ringFill = computed(() => ((summary.value?.percent ?? 0) / 100) * 2 * Math.PI * 27)
 const toDo = computed(() => (summary.value ? summary.value.available + summary.value.developing + summary.value.needs_support : 0))
 
 onMounted(async () => {
   try {
     const response = await axios.get('/api/student/mastery')
-    if (response.data.success) summary.value = response.data.data.overall
+    if (response.data.success) {
+      summary.value = response.data.data.overall
+      competencies.value = response.data.data.competencies ?? null
+      constructs.value = response.data.data.constructs ?? null
+    }
   } catch {
     // the card simply doesn't show
   }

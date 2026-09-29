@@ -91,6 +91,66 @@ class PageNoteController extends Controller
      */
     private const COLORS = ['yellow', 'blue', 'green', 'pink', 'purple', 'orange'];
 
+    /**
+     * The student's own notes and highlights on every page of a topic, in one request - the
+     * reader used to fetch them page by page (two requests a page), slow on a weak connection.
+     * GET /student/enotes/topics/{topicId}/my-pages
+     */
+    public function topicPageData($topicId): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+        $studentId = $this->getStudentId();
+        if (!$studentId) {
+            $this->error('Student not found', 403);
+            return;
+        }
+
+        $db = $this->getDb();
+        $whereClause = $this->enoteVisibilityClause();
+        $stmt = $db->prepare(
+            "SELECT ep.id FROM enote_pages ep
+             INNER JOIN enote_topics et ON ep.topic_id = et.id
+             WHERE et.id = :topic_id AND ep.is_active = 1 AND ep.deleted_at IS NULL AND {$whereClause}"
+        );
+        $stmt->execute(['topic_id' => (int) $topicId, 'student_id' => $studentId, 'student_id_te' => $studentId]);
+        $pageIds = array_map(fn($r) => (int) $r['id'], $stmt->fetchAll());
+        if (!$pageIds) {
+            $this->notFound('Topic not found or not accessible');
+            return;
+        }
+
+        $in = implode(',', array_fill(0, count($pageIds), '?'));
+        $notes = [];
+        $stmt = $db->prepare("SELECT page_id, content, color FROM enote_page_notes WHERE student_id = ? AND page_id IN ($in)");
+        $stmt->execute(array_merge([$studentId], $pageIds));
+        foreach ($stmt->fetchAll() as $n) {
+            $notes[(int) $n['page_id']] = ['content' => $n['content'] ?? '', 'color' => $n['color']];
+        }
+        $highlights = [];
+        $stmt = $db->prepare(
+            "SELECT id, page_id, start_offset, end_offset, color FROM enote_page_highlights
+             WHERE student_id = ? AND page_id IN ($in) ORDER BY page_id, start_offset"
+        );
+        $stmt->execute(array_merge([$studentId], $pageIds));
+        foreach ($stmt->fetchAll() as $h) {
+            $highlights[(int) $h['page_id']][] = [
+                'id' => (int) $h['id'],
+                'start_offset' => (int) $h['start_offset'],
+                'end_offset' => (int) $h['end_offset'],
+                'color' => $h['color'],
+            ];
+        }
+
+        $this->success(['pages' => array_map(fn($id) => [
+            'page_id' => $id,
+            'note' => $notes[$id] ?? ['content' => '', 'color' => null],
+            'highlights' => $highlights[$id] ?? [],
+        ], $pageIds)]);
+    }
+
     /** The requested summary colour if it's one of the palette's, else null (student default). */
     private function inputColor(): ?string
     {
@@ -190,6 +250,8 @@ class PageNoteController extends Controller
             'color' => $color, 'color_update' => $color,
         ]);
 
+        // Writing a page note counts towards the student's learning streak
+        \eSpace\App\Services\RewardService::recordLearningDay($studentId);
         $this->success([], 'Note saved');
     }
 
@@ -327,6 +389,8 @@ class PageNoteController extends Controller
             'color_update' => $color,
         ]);
 
+        // Writing a page note counts towards the student's learning streak
+        \eSpace\App\Services\RewardService::recordLearningDay($studentId);
         $this->success([], 'Note saved');
     }
 
@@ -469,6 +533,8 @@ class PageNoteController extends Controller
             return;
         }
 
+        // Writing a page note counts towards the student's learning streak
+        \eSpace\App\Services\RewardService::recordLearningDay($studentId);
         $this->success([], 'Note saved');
     }
 }

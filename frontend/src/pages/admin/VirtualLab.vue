@@ -31,7 +31,7 @@
           </tr></thead>
           <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
             <tr v-for="c in analytics.by_category" :key="c.category">
-              <td class="px-4 py-2 text-gray-800 dark:text-gray-200">{{ CATEGORY_ICONS[c.category] }} {{ CATEGORY_LABELS[c.category] }}</td>
+              <td class="px-4 py-2 text-gray-800 dark:text-gray-200"><AppIcon :name="CATEGORY_ICONS[c.category]" class="w-4 h-4 inline-block align-[-2px]" /> {{ CATEGORY_LABELS[c.category] }}</td>
               <td class="px-4 py-2 text-gray-500">{{ c.experiment_count }}</td>
               <td class="px-4 py-2 text-gray-500">{{ c.attempt_count }}</td>
               <td class="px-4 py-2 text-gray-500">{{ c.average_percentage !== null ? c.average_percentage + '%' : '-' }}</td>
@@ -62,7 +62,7 @@
           </tr></thead>
           <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
             <tr v-for="e in filteredExperiments" :key="e.id">
-              <td class="px-4 py-2 font-medium text-gray-900 dark:text-white">{{ CATEGORY_ICONS[e.category] }} {{ e.title }}{{ e.is_template ? ' (template)' : '' }}</td>
+              <td class="px-4 py-2 font-medium text-gray-900 dark:text-white"><AppIcon :name="CATEGORY_ICONS[e.category]" class="w-4 h-4 inline-block align-[-2px]" /> {{ e.title }}{{ e.is_template ? ' (template)' : '' }}</td>
               <td class="px-4 py-2 text-gray-500">{{ e.creator_name || 'System' }}</td>
               <td class="px-4 py-2 text-gray-500">{{ e.assignment_count }} classes &middot; {{ e.attempt_count }} attempts</td>
               <td class="px-4 py-2"><span class="px-2 py-0.5 text-xs rounded-full" :class="e.status === 'published' ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' : e.status === 'disabled' ? 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'">{{ e.status }}</span></td>
@@ -108,6 +108,7 @@
 </template>
 
 <script setup lang="ts">
+import AppIcon from '@/components/common/AppIcon.vue'
 import { ref, computed, onMounted, watch } from 'vue'
 import axios from 'axios'
 import { CATEGORY_ICONS, CATEGORY_LABELS } from '@/types/virtualLab'

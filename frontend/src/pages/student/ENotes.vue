@@ -93,7 +93,7 @@
           <template #details>
           <p class="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug">{{ topic.title }}</p>
           <p v-if="topic.teacher_first_name" class="text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ topic.teacher_first_name }} {{ topic.teacher_last_name }}</p>
-          <p class="text-[11px] text-gray-400 dark:text-gray-500">{{ topic.total_pages }} {{ topic.total_pages === 1 ? 'page' : 'pages' }}<template v-if="topic.narration_voice"> &middot; <span class="text-purple-600 dark:text-purple-300">🔊 Audio</span></template></p>
+          <p class="text-[11px] text-gray-400 dark:text-gray-500">{{ topic.total_pages }} {{ topic.total_pages === 1 ? 'page' : 'pages' }}<template v-if="topic.narration_voice"> &middot; <span class="inline-flex items-center gap-0.5 text-purple-600 dark:text-purple-300 align-bottom"><AppIcon name="speaker" class="w-3 h-3" /> Audio</span></template></p>
           <SaveOfflineButton :item="topic" />
           </template>
         </ShelfSlot>
@@ -144,6 +144,7 @@
 </template>
 
 <script setup lang="ts">
+import AppIcon from '@/components/common/AppIcon.vue'
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import Bookshelf from '@/components/library/Bookshelf.vue'

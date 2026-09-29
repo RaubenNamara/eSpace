@@ -133,7 +133,7 @@ const filteredConversations = computed(() => {
 const initials = (name: string) => name.split(/\s+/).filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?'
 
 const previewAttachment = (type: string | null) => {
-  const labels: Record<string, string> = { image: '📷 Photo', audio: '🎤 Voice message', video: '🎥 Video', file: '📄 File' }
+  const labels: Record<string, string> = { image: 'Photo', audio: 'Voice message', video: 'Video', file: 'File' }
   return type ? labels[type] || 'Attachment' : ''
 }
 

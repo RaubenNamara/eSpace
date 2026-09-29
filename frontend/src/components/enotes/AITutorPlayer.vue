@@ -4,7 +4,7 @@
        has actually been requested. -->
   <div v-if="status !== 'idle'" class="rounded-xl border border-purple-100 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/20 p-4 shadow-xl">
       <div class="flex items-center gap-2 mb-3">
-        <span class="text-lg">🧑‍🏫</span>
+        <AppIcon name="teacher" class="w-5 h-5" />
         <h4 class="text-sm font-semibold text-purple-900 dark:text-purple-200">AI Tutor Walkthrough</h4>
         <span v-if="status === 'ready' && blocks.length" class="text-[11px] text-purple-500 dark:text-purple-400 ml-auto">
           {{ currentIndex >= 0 ? `Paragraph ${currentIndex + 1} of ${blocks.length}` : `${blocks.length} paragraphs` }}
@@ -120,6 +120,7 @@
 </template>
 
 <script setup lang="ts">
+import AppIcon from '@/components/common/AppIcon.vue'
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import axios from 'axios'
 import type { ENoteTutorBlock } from '@/types/enotes'

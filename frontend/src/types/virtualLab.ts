@@ -322,10 +322,10 @@ export interface LabSummary {
 }
 
 export const CATEGORY_ICONS: Record<LabCategory, string> = {
-  physics: '⚡',
-  chemistry: '🧪',
-  biology: '🧬',
-  agriculture: '🌾',
+  physics: 'bolt',
+  chemistry: 'beaker',
+  biology: 'leaf',
+  agriculture: 'sprout',
 }
 
 export const CATEGORY_LABELS: Record<LabCategory, string> = {

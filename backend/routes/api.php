@@ -50,6 +50,10 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         // Dashboard
         Router::get('/dashboard', 'eSpace\App\Controllers\Student\DashboardController@index');
         Router::get('/mastery', 'eSpace\App\Controllers\Student\MasteryController@index');
+        Router::get('/next-steps', 'eSpace\App\Controllers\Student\NextStepsController@index');
+        Router::get('/evidence', 'eSpace\App\Controllers\Student\EvidenceController@index');
+        Router::post('/evidence', 'eSpace\App\Controllers\Student\EvidenceController@store');
+        Router::delete('/evidence/{id}', 'eSpace\App\Controllers\Student\EvidenceController@destroy');
 
         // Academic History
         Router::get('/academic-history', 'eSpace\App\Controllers\Student\AcademicHistoryController@index');
@@ -97,6 +101,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/enotes/topics', 'eSpace\App\Controllers\Student\ENoteController@index');
         Router::get('/enotes/topics/{id}', 'eSpace\App\Controllers\Student\ENoteController@show');
         Router::post('/enotes/topics/{id}/progress', 'eSpace\App\Controllers\Student\ENoteController@saveProgress');
+        Router::get('/enotes/topics/{topicId}/my-pages', 'eSpace\App\Controllers\Student\PageNoteController@topicPageData');
         Router::post('/enotes/pages/{pageId}/tutor-explain', 'eSpace\App\Controllers\Student\ENoteController@tutorExplain');
         Router::get('/enotes/pages/{pageId}/note', 'eSpace\App\Controllers\Student\PageNoteController@getEnoteNote');
         Router::put('/enotes/pages/{pageId}/note', 'eSpace\App\Controllers\Student\PageNoteController@saveEnoteNote');
@@ -345,6 +350,14 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::post('/itembank/bulk-delete', 'eSpace\App\Controllers\Teacher\ItemBankController@bulkDelete');
         Router::post('/itembank/bulk-export', 'eSpace\App\Controllers\Teacher\ItemBankController@bulkExport');
         Router::get('/itembank/{id}', 'eSpace\App\Controllers\Teacher\ItemBankController@show');
+        Router::get('/class-map/options', 'eSpace\App\Controllers\Teacher\ClassMapController@options');
+        Router::get('/class-map', 'eSpace\App\Controllers\Teacher\ClassMapController@index');
+        Router::get('/coverage', 'eSpace\App\Controllers\Teacher\CoverageController@index');
+        Router::post('/coverage/relink', 'eSpace\App\Controllers\Teacher\CoverageController@relink');
+        Router::get('/evidence', 'eSpace\App\Controllers\Teacher\EvidenceController@index');
+        Router::put('/evidence/{id}', 'eSpace\App\Controllers\Teacher\EvidenceController@review');
+        Router::get('/itembank/{id}/curriculum', 'eSpace\App\Controllers\Teacher\ItemBankController@getCurriculum');
+        Router::put('/itembank/{id}/curriculum', 'eSpace\App\Controllers\Teacher\ItemBankController@updateCurriculum');
         Router::post('/itembank/{id}/cover', 'eSpace\App\Controllers\Teacher\ItemBankController@uploadCover');
         Router::delete('/itembank/{id}/cover', 'eSpace\App\Controllers\Teacher\ItemBankController@deleteCover');
         Router::put('/itembank/{id}', 'eSpace\App\Controllers\Teacher\ItemBankController@update');
@@ -428,6 +441,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
     Router::group(['prefix' => '/hod', 'middleware' => ['role:hod']], function () {
         // Dashboard
         Router::get('/dashboard', 'eSpace\App\Controllers\HOD\DashboardController@index');
+        Router::get('/mastery-overview', 'eSpace\App\Controllers\HOD\MasteryOverviewController@index');
         
         // Department Management
         Router::get('/department/info', 'eSpace\App\Controllers\HOD\DepartmentController@getDepartmentInfo');
@@ -559,6 +573,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
     Router::group(['prefix' => '/admin', 'middleware' => ['role:admin,super_admin']], function () {
         // Dashboard
         Router::get('/dashboard', 'eSpace\App\Controllers\Admin\DashboardController@index');
+        Router::get('/mastery-overview', 'eSpace\App\Controllers\Admin\MasteryOverviewController@index');
 
         // Live Classes (BigBlueButton) - school-wide oversight + moderation
         Router::get('/live-classes', 'eSpace\App\Controllers\Admin\LiveClassController@index');

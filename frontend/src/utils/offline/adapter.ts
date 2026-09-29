@@ -7,6 +7,7 @@ import {
 import {
   type DocKind, offlineDocList, reconcileDocs, localDocNotes, storeDocNotes, setLocalDocNote
 } from './docs'
+import { isAssessmentSaved, offlineAssessment, keepAnswers, markSent, refreshSaved } from './assessments'
 
 // Sits in front of axios's own adapter for the student eNotes, eLibrary and Item Bank requests. Online, requests go to the
 // server as usual (and keep downloaded copies current). When the network isn't there, reads are
@@ -31,11 +32,24 @@ const ROUTES = {
   highlights: /^\/api\/student\/enotes\/pages\/(\d+)\/highlights$/,
   highlight: /^\/api\/student\/enotes\/highlights\/(-?\d+)$/,
   progress: /^\/api\/student\/enotes\/topics\/(\d+)\/progress$/,
+  myPages: /^\/api\/student\/enotes\/topics\/(\d+)\/my-pages$/,
   // eLibrary / Item Bank (PDFs - see offline/docs.ts)
   docList: /^\/api\/student\/(library|itembank)$/,
   docNotes: /^\/api\/student\/(library\/books|itembank)\/(\d+)\/notes$/,
   docNote: /^\/api\/student\/(library\/books|itembank)\/(\d+)\/pages\/(\d+)\/note$/,
-  docProgress: /^\/api\/student\/library\/(\d+)\/progress$/
+  docProgress: /^\/api\/student\/library\/(\d+)\/progress$/,
+  // Assessments saved to answer offline (see offline/assessments.ts)
+  assessment: /^\/api\/student\/assignments\/(\d+)$/,
+  assessmentSubmit: /^\/api\/student\/assignments\/(\d+)\/submit$/,
+  assessmentUpdate: /^\/api\/student\/assignments\/submissions\/(-?\d+)$/
+}
+
+/** The assessment a draft/submission request belongs to */
+const assessmentOf = (path: string, body: any): number | null => {
+  const m = path.match(ROUTES.assessmentSubmit)
+  if (m) return Number(m[1])
+  if (ROUTES.assessmentUpdate.test(path) && body?.assignment_id) return Number(body.assignment_id)
+  return null
 }
 
 const kindOf = (segment: string): DocKind => segment === 'itembank' ? 'itembank' : 'library'
@@ -91,6 +105,23 @@ async function offlineRead(config: InternalAxiosRequestConfig, path: string): Pr
     const topic = await offlineTopic(Number(m[1]))
     return topic ? reply(config, { success: true, offline: true, data: topic }) : null
   }
+  if ((m = path.match(ROUTES.assessment))) {
+    const data = await offlineAssessment(Number(m[1]))
+    return data ? reply(config, { success: true, offline: true, data }) : null
+  }
+  if ((m = path.match(ROUTES.myPages))) {
+    const pageIds = downloadedPageIds().filter(p => topicOfPage(p) === Number(m![1]))
+    if (!pageIds.length) return null
+    const pages = []
+    for (const pageId of pageIds) {
+      pages.push({
+        page_id: pageId,
+        note: (await idbGet<any>('kv', kvKey('note', pageId))) || { content: '', color: null },
+        highlights: (await idbGet<any[]>('kv', kvKey('hl', pageId))) || []
+      })
+    }
+    return reply(config, { success: true, offline: true, data: { pages } })
+  }
   if ((m = path.match(ROUTES.docList))) {
     const kind = kindOf(m[1])
     const saved = await idbGet<any>('kv', docListKey(kind))
@@ -140,6 +171,20 @@ async function keepLocal(method: string, path: string, body: any, data: any) {
     await removeLocalHighlight(Number(m[1]))
   } else if (method === 'post' && (m = path.match(ROUTES.progress))) {
     await setLocalPlace(Number(m[1]), Number(body.page_id))
+  } else if (method === 'get' && (m = path.match(ROUTES.assessment)) && data?.success) {
+    if (isAssessmentSaved(Number(m[1]))) await refreshSaved(Number(m[1]), data.data)
+  } else if ((method === 'post' || method === 'put') && assessmentOf(path, body) !== null) {
+    const id = assessmentOf(path, body)!
+    if (isAssessmentSaved(id) && data?.success) {
+      await keepAnswers(id, body, body.status === 'submitted')
+      await markSent(id, true, null)
+    }
+  } else if (method === 'get' && ROUTES.myPages.test(path) && data?.success) {
+    for (const p of data.data?.pages || []) {
+      if (topicOfPage(Number(p.page_id)) === null) continue
+      await idbPut('kv', p.note, kvKey('note', Number(p.page_id)))
+      await idbPut('kv', p.highlights || [], kvKey('hl', Number(p.page_id)))
+    }
   } else if (method === 'get' && (m = path.match(ROUTES.docList)) && data?.success) {
     const kind = kindOf(m[1])
     await idbPut('kv', { subjects: data.data?.subjects || [] }, docListKey(kind))
@@ -175,7 +220,7 @@ async function refreshPending() {
 async function enqueue(change: QueuedChange) {
   const all = await idbAll<QueuedChange>('queue')
   // Only the latest note text / reading place matters
-  if (change.method === 'put' || ROUTES.progress.test(change.url) || ROUTES.docProgress.test(change.url)) {
+  if (change.method === 'put' || ROUTES.progress.test(change.url) || ROUTES.docProgress.test(change.url) || ROUTES.assessmentSubmit.test(change.url)) {
     for (const c of all) if (c.url === change.url && c.userId === change.userId && c.seq) await idbDelete('queue', c.seq)
   }
   await idbPut('queue', change)
@@ -213,6 +258,15 @@ async function offlineWrite(config: InternalAxiosRequestConfig, method: string, 
     }
     return reply(config, { success: true, offline: true })
   }
+  const assessmentId = (method === 'post' || method === 'put') ? assessmentOf(path, body) : null
+  if (assessmentId !== null) {
+    if (!isAssessmentSaved(assessmentId)) return null
+    const submitted = body.status === 'submitted'
+    await keepAnswers(assessmentId, body, submitted)
+    await enqueue({ userId: uid, method: 'post', url: `/api/student/assignments/${assessmentId}/submit`, data: body })
+    const routeId = path.match(ROUTES.assessmentUpdate)?.[1]
+    return reply(config, { success: true, offline: true, data: { id: routeId ? Number(routeId) : null, submission_timing: null } })
+  }
   if (method === 'put' && (m = path.match(ROUTES.docNote))) {
     const kind = kindOf(m[1])
     if (!(await localDocNotes(kind, Number(m[2])))) return null
@@ -243,6 +297,8 @@ export function flushQueue(): Promise<void> {
       for (const change of changes) {
         try {
           const response = await axios.request({ method: change.method, url: change.url, data: change.data, offlineBypass: true } as any)
+          const sentAssessment = change.url.match(ROUTES.assessmentSubmit)
+          if (sentAssessment) await markSent(Number(sentAssessment[1]), !!response.data?.success, null)
           if (change.tempId && response.data?.data?.id) {
             const realId = Number(response.data.data.id)
             realIds.set(change.tempId, realId)
@@ -250,7 +306,10 @@ export function flushQueue(): Promise<void> {
           }
         } catch (err: any) {
           if (unreachable(err)) break
-          // Refused by the server (e.g. the page was deleted) - nothing to retry
+          // Refused by the server (e.g. the page was deleted) - nothing to retry. An assessment
+          // keeps its answers on the device, with the reason, so they aren't lost.
+          const refused = change.url.match(ROUTES.assessmentSubmit)
+          if (refused) await markSent(Number(refused[1]), false, err.response?.data?.message || 'Your teacher\'s server refused it')
         }
         if (change.seq) await idbDelete('queue', change.seq)
       }

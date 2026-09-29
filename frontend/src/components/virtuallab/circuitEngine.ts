@@ -52,7 +52,7 @@ export function circuitDiagnosis(
   const switchOn = switchStates.get(switchObj.key) === 'on'
 
   if (hasSwitch && switchOn && !hasResistor) {
-    return { value: 0, reason: '⚠️ Short circuit! Connect a resistor into the circuit before closing the switch.' }
+    return { value: 0, reason: 'Short circuit! Connect a resistor into the circuit before closing the switch.' }
   }
   if (!hasSwitch || !hasResistor) {
     return { value: 0, reason: 'The circuit is incomplete. Check your connections.' }

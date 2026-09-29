@@ -21,7 +21,7 @@
           class="group flex items-center justify-between gap-3 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-5 mb-6 hover:shadow-md hover:border-emerald-300 dark:hover:border-emerald-700 transition-all"
         >
           <div class="flex items-center gap-3 min-w-0">
-            <span class="w-10 h-10 flex-shrink-0 rounded-xl bg-emerald-600 flex items-center justify-center text-lg print-color-exact">🧰</span>
+            <span class="w-10 h-10 flex-shrink-0 rounded-xl bg-emerald-600 flex items-center justify-center text-lg print-color-exact text-white"><AppIcon name="kit" class="w-5 h-5" /></span>
             <div class="min-w-0">
               <p class="font-bold text-gray-900 dark:text-white text-sm">Apparatus Playground</p>
               <p class="text-xs text-gray-500 dark:text-gray-400 truncate">Not graded &mdash; pick any equipment and get familiar with it before your next practical.</p>
@@ -67,7 +67,7 @@
               ? `${CATEGORY_COLORS[cat]} text-white border-transparent shadow-md scale-[1.03]`
               : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'"
           >
-            <span>{{ CATEGORY_ICONS[cat] }}</span> {{ CATEGORY_LABELS[cat] }}
+            <span><AppIcon :name="CATEGORY_ICONS[cat]" class="w-4 h-4" /></span> {{ CATEGORY_LABELS[cat] }}
           </button>
           <button v-if="activeCategory" @click="activeCategory = null" class="inline-flex items-center gap-1 px-3 py-2 text-xs font-medium rounded-full text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">Clear filter ✕</button>
         </div>
@@ -90,7 +90,7 @@
 
         <!-- Empty state -->
         <div v-else-if="filteredAssignments.length === 0" class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-10 sm:p-16 text-center">
-          <span class="text-4xl sm:text-5xl block mb-3">🔬</span>
+          <span class="block mb-3"><AppIcon name="beaker" class="w-12 h-12 mx-auto" /></span>
           <p class="text-gray-500 dark:text-gray-400 text-sm sm:text-base">
             {{ assignments.length === 0 ? 'No experiments have been published to your class yet.' : 'No experiments match your filters.' }}
           </p>
@@ -108,13 +108,13 @@
             <div class="p-5 flex-1 flex flex-col">
               <div class="flex items-start justify-between gap-2 mb-2">
                 <h3 class="font-bold text-gray-900 dark:text-white leading-snug">{{ a.experiment_title }}</h3>
-                <span class="w-9 h-9 flex-shrink-0 rounded-xl flex items-center justify-center text-lg print-color-exact" :class="CATEGORY_COLORS[a.category]">{{ CATEGORY_ICONS[a.category] }}</span>
+                <span class="w-9 h-9 flex-shrink-0 rounded-xl flex items-center justify-center text-lg print-color-exact" :class="CATEGORY_COLORS[a.category]"><AppIcon :name="CATEGORY_ICONS[a.category]" class="w-4 h-4" /></span>
               </div>
               <p class="text-xs font-medium text-gray-400 dark:text-gray-500 mb-2 uppercase tracking-wide">{{ a.subject_name || CATEGORY_LABELS[a.category] }}<span v-if="a.topic"> · {{ a.topic }}</span></p>
 
               <div class="flex items-center gap-1.5 flex-wrap text-[11px] mb-3">
                 <span class="px-2 py-0.5 rounded-full font-semibold capitalize" :class="DIFFICULTY_BADGE[a.difficulty]">{{ a.difficulty }}</span>
-                <span v-if="a.estimated_duration_minutes" class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">⏱ {{ a.estimated_duration_minutes }} min</span>
+                <span v-if="a.estimated_duration_minutes" class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 inline-flex items-center gap-1"><AppIcon name="clock" class="w-3 h-3" /> {{ a.estimated_duration_minutes }} min</span>
                 <span v-if="a.due_date" class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">Due {{ formatDate(a.due_date) }}</span>
               </div>
 
@@ -149,7 +149,7 @@
               <template v-else-if="previewDetail">
                 <div class="flex items-center gap-1.5 flex-wrap text-xs">
                   <span class="px-2 py-0.5 rounded-full font-semibold capitalize" :class="DIFFICULTY_BADGE[previewDetail.difficulty]">{{ previewDetail.difficulty }}</span>
-                  <span v-if="previewDetail.estimated_duration_minutes" class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">⏱ {{ previewDetail.estimated_duration_minutes }} min</span>
+                  <span v-if="previewDetail.estimated_duration_minutes" class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 inline-flex items-center gap-1"><AppIcon name="clock" class="w-3 h-3" /> {{ previewDetail.estimated_duration_minutes }} min</span>
                   <span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">{{ previewAssignment.marks }} marks</span>
                   <span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">{{ previewDetail.steps.length }} steps</span>
                 </div>
@@ -158,7 +158,7 @@
                 <div v-if="previewDetail.learning_outcomes"><p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Learning Outcomes</p><p class="text-sm text-gray-700 dark:text-gray-300">{{ previewDetail.learning_outcomes }}</p></div>
                 <div v-if="previewDetail.apparatus"><p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Apparatus</p><p class="text-sm text-gray-700 dark:text-gray-300">{{ previewDetail.apparatus }}</p></div>
                 <div v-if="previewDetail.safety_precautions" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3">
-                  <p class="text-xs font-semibold text-red-600 dark:text-red-400 mb-1">⚠️ Safety</p>
+                  <p class="text-xs font-semibold text-red-600 dark:text-red-400 mb-1 flex items-center gap-1"><AppIcon name="warning" class="w-3.5 h-3.5" /> Safety</p>
                   <p class="text-sm text-red-700 dark:text-red-300">{{ previewDetail.safety_precautions }}</p>
                 </div>
 
@@ -186,6 +186,7 @@
 </template>
 
 <script setup lang="ts">
+import AppIcon from '@/components/common/AppIcon.vue'
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'

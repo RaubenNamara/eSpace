@@ -65,7 +65,7 @@
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
             </svg>
-            <span v-else>🧑‍🏫</span>
+            <AppIcon v-else name="teacher" class="w-4 h-4" />
             <span>
               AI Tutor<template v-if="tutorStatus === 'ready' && tutorProgress.total > 0"> · {{ tutorProgress.current }}/{{ tutorProgress.total }}</template>
             </span>
@@ -488,7 +488,7 @@
                  not a specific page object being turned. -->
             <div v-if="narrationAudioUrl" class="mx-3 mt-2 mb-2 lg:mx-0 lg:mt-0 lg:mb-3 flex-shrink-0">
               <p class="text-xs font-medium text-indigo-600 dark:text-indigo-400 mb-1.5 flex items-center gap-1">
-                <span>🔊</span><span>Read Aloud</span>
+                <AppIcon name="speaker" class="w-4 h-4" /><span>Read Aloud</span>
               </p>
               <div class="flex items-center gap-3 px-4 py-3 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800">
                 <svg class="w-5 h-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -565,16 +565,9 @@
                         </ul>
                       </div>
                       <div class="prose prose-sm sm:prose-base dark:prose-invert max-w-none">
-                        <template v-if="isStudentMode && page.id === currentPage?.id && contentBlocks.length">
-                          <div
-                            v-for="(block, i) in contentBlocks"
-                            :key="i"
-                            :ref="el => block.narrationIndex !== null && setBlockRef(el, block.narrationIndex)"
-                            class="ai-tutor-block"
-                            :class="{ 'ai-tutor-active': block.narrationIndex !== null && tutorActiveBlockIndex === block.narrationIndex }"
-                            v-html="block.html"
-                          ></div>
-                        </template>
+                        <!-- Every page, the one being read included, is drawn the same way, so a
+                             highlight lands on the same words wherever it was made; the AI Tutor
+                             marks its paragraph on this drawn page (see markTutorBlocks) -->
                         <!-- .stop on mousedown/touchstart is the same fix as the summary textarea
                              below: without it, StPageFlip's own drag-to-flip listener on this
                              element's ".stf__block" ancestor calls preventDefault() on every
@@ -584,7 +577,6 @@
                              possible via the page's own margins or the corner-drag/Prev-Next
                              controls) for selection actually working. -->
                         <div
-                          v-else
                           :ref="el => setPageContentRef(el, page.id)"
                           @mousedown.stop
                           @touchstart.stop
@@ -972,12 +964,13 @@
 </template>
 
 <script setup lang="ts">
+import AppIcon from '@/components/common/AppIcon.vue'
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
 import type { ENoteTopic, ENotePage } from '@/types/enotes'
 import { AI_VOICES } from '@/types/enotes'
-import { autoEmbedYoutube, resolveContentAssetUrls, splitContentBlocks } from '@/utils/richContent'
+import { autoEmbedYoutube, resolveContentAssetUrls, narratedElements } from '@/utils/richContent'
 import { resolveAssetUrl } from '@/utils/url'
 import { usePersistedRef } from '@/composables/usePersistedRef'
 import { useReadModeStore } from '@/stores/readMode'
@@ -1008,12 +1001,13 @@ const isReadOnly = computed(() => isPreviewMode.value || isStudentMode.value)
 
 const topic = ref<ENoteTopic | null>(null)
 
-// "Title · author" running footer on every page, when the teacher switched it on in the cover designer
+// "Title · author" running footer on every page, like a printed book - on for every topic (with or
+// without a designed cover) unless the teacher switched it off in the cover designer
 const pageFooter = computed(() => {
   const cover = parseCoverDesign(topic.value?.cover_design)
-  if (!cover?.page_footer || !topic.value) return null
+  if (!topic.value || (cover && !cover.page_footer)) return null
   const teacher = [topic.value.teacher_first_name, topic.value.teacher_last_name].filter(Boolean).join(' ')
-  return { title: cover.title || topic.value.title, author: cover.author || teacher }
+  return { title: cover?.title || topic.value.title, author: cover?.author || teacher }
 })
 const pages = ref<ENotePage[]>([])
 const currentPage = ref<ENotePage | null>(null)
@@ -1169,9 +1163,11 @@ const highlightPopup = ref<{ pageId: number; x: number; y: number; range: Range 
 const setPageContentRef = (el: Element | { $el?: Element } | null, pageId: number) => {
   const node = el && '$el' in el ? el.$el : el
   if (node instanceof HTMLElement) {
+    const fresh = pageContentRefs[pageId] !== node
     pageContentRefs[pageId] = node
     const highlights = pageHighlights.value[pageId]
-    if (highlights?.length) applyHighlights(node, highlights)
+    if (fresh && highlights?.length) applyHighlights(node, highlights)
+    if (fresh && pageId === currentPage.value?.id) nextTick(markTutorBlocks)
   }
 }
 
@@ -1230,9 +1226,27 @@ const onContentClick = async (pageId: number, event: MouseEvent) => {
   if (container) removeHighlightMark(container, highlightId)
 }
 
-// Loaded once per topic open (student mode only) - a handful of small requests per page rather
-// than a bulk endpoint, since eNote topics are typically well under 20 pages.
+// The student's notes and highlights on every page, loaded once per topic open (student mode
+// only) - in one request, or page by page from a server that doesn't have it yet
+const applyStudentPageData = (pageId: number, note: { content?: string; color?: string | null } | null, highlights: StoredHighlight[]) => {
+  pageNotes.value[pageId] = note?.content || ''
+  pageNoteColors.value[pageId] = isSummaryColor(note?.color) ? note!.color as SummaryColor : null
+  pageHighlights.value[pageId] = highlights
+  const el = pageContentRefs[pageId]
+  if (el && highlights.length) applyHighlights(el, highlights)
+}
+
 const loadStudentPageData = async () => {
+  if (!topic.value) return
+  try {
+    const response = await axios.get(`${API_BASE}/student/enotes/topics/${topic.value.id}/my-pages`)
+    if (response.data.success) {
+      for (const p of response.data.data.pages || []) applyStudentPageData(Number(p.page_id), p.note, p.highlights || [])
+      return
+    }
+  } catch {
+    // fall through to page by page
+  }
   await Promise.all(pages.value.map(async (page) => {
     try {
       const [noteRes, highlightRes] = await Promise.all([
@@ -1657,17 +1671,27 @@ const formatContent = (content: string): string => {
   return formatted
 }
 
-// AI Tutor walkthrough: the content is split into the same "paragraph" blocks the backend
-// generated narration for (see richContent.ts::splitContentBlocks, which mirrors
-// HtmlBlockSplitter::split() on the backend), rendered as individually highlightable elements
-// instead of one big v-html blob, so the currently-narrated paragraph can be visually marked.
-const contentBlocks = computed(() => {
-  if (!isStudentMode.value || !currentPage.value) return []
-  return splitContentBlocks(formatContent(currentPage.value.content))
-})
-
+// AI Tutor walkthrough: the paragraphs the backend generated narration for (richContent.ts::
+// narratedElements, which mirrors HtmlBlockSplitter::split()) are found on the page as it's drawn
+// and marked there, so the paragraph being narrated can be lit up without re-drawing the page
 const tutorActiveBlockIndex = ref<number | null>(null)
 const blockEls = ref<Record<number, HTMLElement | null>>({})
+
+const markTutorBlocks = () => {
+  const container = currentPage.value ? pageContentRefs[currentPage.value.id] : null
+  const marked: Record<number, HTMLElement | null> = {}
+  if (isStudentMode.value && container) {
+    narratedElements(container).forEach((el, i) => {
+      el.classList.add('ai-tutor-block')
+      el.classList.toggle('ai-tutor-active', tutorActiveBlockIndex.value === i)
+      marked[i] = el
+    })
+  }
+  Object.values(blockEls.value).forEach(el => { if (el && !Object.values(marked).includes(el)) el.classList.remove('ai-tutor-active') })
+  blockEls.value = marked
+}
+watch(() => currentPage.value?.id, () => nextTick(markTutorBlocks))
+watch(tutorActiveBlockIndex, markTutorBlocks)
 const aiTutorRef = ref<InstanceType<typeof AITutorPlayer> | null>(null)
 const tutorStatus = ref<'idle' | 'loading' | 'ready' | 'error'>('idle')
 const tutorProgress = ref<{ current: number; total: number }>({ current: 0, total: 0 })
@@ -1678,10 +1702,6 @@ const onTutorHeaderClick = () => {
   if (showTutorPanel.value && tutorStatus.value === 'idle') {
     aiTutorRef.value?.start()
   }
-}
-
-const setBlockRef = (el: unknown, i: number) => {
-  blockEls.value[i] = (el as HTMLElement) || null
 }
 
 const onTutorBlockActive = (paragraphIndex: number) => {
@@ -2388,18 +2408,18 @@ onBeforeUnmount(() => {
 
 /* AI Tutor walkthrough: a soft highlighter glow plus a dashed underline that "draws" itself
    left-to-right as the paragraph is narrated, like a pen following along. */
-.ai-tutor-block {
+.prose :deep(.ai-tutor-block) {
   position: relative;
   border-radius: 8px;
   transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-.ai-tutor-active {
+.prose :deep(.ai-tutor-active) {
   background-color: rgba(250, 204, 21, 0.16);
   box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.16);
 }
 
-.dark .ai-tutor-active {
+.dark .prose :deep(.ai-tutor-active) {
   background-color: rgba(250, 204, 21, 0.09);
   box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.09);
 }
@@ -2418,7 +2438,7 @@ onBeforeUnmount(() => {
 .prose :deep(mark.student-highlight-blue) { background-color: rgba(56, 189, 248, 0.4); }
 .prose :deep(mark.student-highlight-pink) { background-color: rgba(244, 114, 182, 0.4); }
 
-.ai-tutor-active::after {
+.prose :deep(.ai-tutor-active)::after {
   content: '';
   position: absolute;
   left: 0;

@@ -1,7 +1,7 @@
 <template>
   <div class="relative w-full h-full rounded-xl overflow-hidden bg-gradient-to-b from-slate-200 to-slate-300 dark:from-slate-800 dark:to-slate-900">
     <div v-if="renderError" class="w-full h-full flex flex-col items-center justify-center gap-2 text-center px-6">
-      <span class="text-3xl">🔬</span>
+      <AppIcon name="beaker" class="w-8 h-8" />
       <p class="text-sm text-gray-600 dark:text-gray-300">The 3D view couldn't start on this device.</p>
       <button @click="retryBuildScene" class="mt-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">Try Again</button>
     </div>
@@ -194,6 +194,7 @@
 </template>
 
 <script setup lang="ts">
+import AppIcon from '@/components/common/AppIcon.vue'
 import { ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
@@ -426,7 +427,7 @@ function circuitDiagnosis(instrumentKey: string): { value: number; reason: strin
   const switchOn = switchStates.get(switchObj.key) === 'on'
 
   if (hasSwitch && switchOn && !hasResistor) {
-    return { value: 0, reason: '⚠️ Short circuit! Connect a resistor into the circuit before closing the switch.' }
+    return { value: 0, reason: 'Short circuit! Connect a resistor into the circuit before closing the switch.' }
   }
   if (!hasSwitch || !hasResistor) {
     return { value: 0, reason: 'The circuit is incomplete. Check your connections.' }

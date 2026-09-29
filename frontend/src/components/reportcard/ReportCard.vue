@@ -189,7 +189,7 @@
             class="award-pill px-3 py-1.5 rounded-full text-xs font-medium text-white print-color-exact"
             :class="awardColor(award.badge_type)"
           >
-            <span class="award-pill-icon">{{ award.badge_type === 'special' ? '⭐' : { platinum: '💎', gold: '🥇', silver: '🥈', bronze: '🥉' }[award.badge_type] }}</span>
+            <span class="award-pill-icon"><BadgeIcon :type="award.badge_type" class="w-4 h-4" /></span>
             <span>{{ award.award_title }}</span>
             <span v-if="award.average !== null" class="opacity-80">&middot; {{ award.average }}%</span>
             <span v-else-if="award.score !== null" class="opacity-80">&middot; {{ award.score }}%</span>
@@ -214,7 +214,7 @@
             <tbody>
               <tr v-for="lab in report.virtual_lab" :key="lab.id" class="odd:bg-gray-50 dark:odd:bg-gray-900/30">
                 <td class="border border-gray-300 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">
-                  <span>{{ { physics: '⚡', chemistry: '🧪', biology: '🧬', agriculture: '🌾' }[lab.category] }}</span>
+                  <span><AppIcon :name="({ physics: 'bolt', chemistry: 'beaker', biology: 'leaf', agriculture: 'sprout' } as Record<string, string>)[lab.category] || 'beaker'" class="w-4 h-4" /></span>
                   {{ lab.subject_name ? lab.subject_name + ' Practical: ' : '' }}{{ lab.experiment_title }}
                 </td>
                 <td class="border border-gray-300 dark:border-gray-700 px-2 py-2 text-center font-semibold text-gray-900 dark:text-white whitespace-nowrap">
@@ -312,6 +312,8 @@
 </template>
 
 <script setup lang="ts">
+import BadgeIcon from '@/components/common/BadgeIcon.vue'
+import AppIcon from '@/components/common/AppIcon.vue'
 import { computed, ref, watch, onMounted } from 'vue'
 import QRCode from 'qrcode'
 import type { ReportCard } from '@/types/reportCard'

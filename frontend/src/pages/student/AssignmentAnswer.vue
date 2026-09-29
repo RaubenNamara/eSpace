@@ -14,6 +14,7 @@
         </h1>
         <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
           You've completed "{{ assignment?.title }}"{{ completionTimingLabel }}.
+          <template v-if="submittedOffline"><br>It's saved on this device and will be sent to your teacher as soon as you're online.</template>
         </p>
         <button
           v-if="completionOrigin === 'enote' && completionNextPageId"
@@ -116,12 +117,42 @@
           </p>
         </div>
 
+        <!-- Submitted on this device, waiting to be sent -->
+        <div v-else-if="savedOffline?.state === 'submitted'" class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 mb-4">
+          <p class="text-amber-900 dark:text-amber-100 text-sm"><span class="font-semibold">Submitted on this device.</span> It will be sent to your teacher as soon as you're online.</p>
+        </div>
+
         <!-- Locked banner: attempt already submitted -->
         <div v-else-if="isLocked" class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
           <p class="text-blue-800 dark:text-blue-200 text-sm">
             You have already submitted this assignment. Your work is shown below in read-only mode.
             <span v-if="submissionStatus === 'returned' || submissionStatus === 'graded'">It has been marked by your teacher.</span>
           </p>
+        </div>
+
+        <!-- Answering without internet: saved on this device, or refused when it was sent -->
+        <div v-if="!isPreview && savedOffline?.state === 'failed'" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
+          <p class="text-red-800 dark:text-red-200 text-sm"><span class="font-semibold">Your answers couldn't be sent:</span> {{ savedOffline.message }} They're still kept on this device - please tell your teacher.</p>
+        </div>
+        <div v-else-if="!isPreview && !isLocked && loadedOffline" class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 mb-4">
+          <p class="text-amber-900 dark:text-amber-100 text-sm">
+            <span class="font-semibold">You're answering offline.</span> Your answers are kept on this device and sent when you're back online.
+            <template v-if="savedOffline?.uploads"> Answers with photos or drawings need a connection.</template>
+          </p>
+        </div>
+        <div v-else-if="!isPreview && !isLocked && offline.online" class="flex flex-wrap items-center gap-2 mb-4 text-xs">
+          <template v-if="savedOffline">
+            <span class="inline-flex items-center gap-1 font-semibold text-emerald-700 dark:text-emerald-300">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+              Saved to answer offline
+            </span>
+            <button type="button" class="text-gray-500 hover:text-red-600 dark:text-gray-400" @click="toggleOffline">Remove</button>
+          </template>
+          <button v-else-if="!offlineBlockReason" type="button" :disabled="savingOffline" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-200 disabled:opacity-50" @click="toggleOffline">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            {{ savingOffline ? 'Saving…' : 'Save to answer offline' }}
+          </button>
+          <span v-else class="text-gray-400 dark:text-gray-500">{{ offlineBlockReason }} - can't be answered offline</span>
         </div>
 
         <!-- Assignment Info -->
@@ -216,7 +247,7 @@
             <div v-if="entry.question.question_type === 'scenario'">
               <div class="mb-4">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                  <span aria-hidden="true">📖</span> Scenario
+                  <AppIcon name="book" class="w-4 h-4" /> Scenario
                 </h3>
                 <div v-if="entry.question.scenario_text" class="bg-indigo-50/50 dark:bg-indigo-900/10 border-l-4 border-indigo-300 dark:border-indigo-700 p-3 sm:p-4 rounded-lg mb-4 overflow-x-auto">
                   <p class="text-gray-700 dark:text-gray-300 whitespace-pre-line break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="entry.question.scenario_text"></p>
@@ -285,7 +316,7 @@
               </div>
               <div class="mb-4">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                  <span aria-hidden="true">🎯</span> Your Task
+                  <AppIcon name="target" class="w-4 h-4" /> Your Task
                 </h3>
                 <p class="text-gray-900 dark:text-white break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="entry.question.question_text"></p>
               </div>
@@ -382,7 +413,7 @@
       <!-- Sticky bottom action bar -->
       <div v-if="!isLocked" class="sticky bottom-0 -mx-3 sm:-mx-6 px-3 sm:px-6 py-3 mt-6 bg-white/95 dark:bg-gray-800/95 backdrop-blur border-t border-gray-200 dark:border-gray-700 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 z-10">
         <p v-if="autoSaveStatus === 'saving'" class="text-sm text-gray-500 dark:text-gray-400">Saving...</p>
-        <p v-else-if="autoSaveStatus === 'saved'" class="text-sm text-green-700 dark:text-green-400">✓ Saved</p>
+        <p v-else-if="autoSaveStatus === 'saved'" class="text-sm text-green-700 dark:text-green-400">✓ {{ loadedOffline || !offline.online ? 'Saved on this device' : 'Saved' }}</p>
         <p v-else-if="autoSaveStatus === 'failed'" class="text-sm text-red-600 dark:text-red-400">We couldn't save your work. Please try again.</p>
         <p v-else class="text-sm text-gray-500 dark:text-gray-400">Unsaved changes</p>
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 shrink-0">
@@ -391,7 +422,7 @@
             :disabled="saving"
             class="w-full sm:w-auto px-4 py-2.5 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
           >
-            {{ saving ? 'Saving...' : '💾 Save Progress' }}
+            {{ saving ? 'Saving...' : 'Save Progress' }}
           </button>
           <button
             @click="showSubmitConfirm = true"
@@ -418,6 +449,7 @@
 </template>
 
 <script setup lang="ts">
+import AppIcon from '@/components/common/AppIcon.vue'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
@@ -428,6 +460,8 @@ import SubmitConfirmDialog from '@/components/assignment/SubmitConfirmDialog.vue
 import NeedHelpPanel from '@/components/assignment/NeedHelpPanel.vue'
 import { isPlaceholderAttachmentName } from '@/utils/answerAttachment'
 import { useToastStore } from '@/stores/toast'
+import { offline } from '@/utils/offline/enotes'
+import { saveAssessment, removeAssessment, offlineBlocker } from '@/utils/offline/assessments'
 
 const toast = useToastStore()
 
@@ -658,6 +692,31 @@ const getPlaceholder = (type: string) => {
   return placeholders[type] || 'Type your answer here...'
 }
 
+// Answering offline (see utils/offline/assessments.ts): loaded from this device, whether it's saved
+// to answer offline, and why it can't be when it can't
+const loadedOffline = ref(false)
+const submittedOffline = ref(false)
+const lastLoad = ref<any>(null)
+const savingOffline = ref(false)
+const savedOffline = computed(() => offline.assessments[Number(route.params.id)] ?? null)
+const offlineBlockReason = computed(() => (lastLoad.value ? offlineBlocker(lastLoad.value) : 'Not loaded'))
+const toggleOffline = async () => {
+  const id = Number(route.params.id)
+  if (savedOffline.value) {
+    await removeAssessment(id)
+    return
+  }
+  savingOffline.value = true
+  try {
+    await saveAssessment(id, lastLoad.value)
+    toast.success('Saved - you can answer this without internet')
+  } catch (err: any) {
+    toast.error(err?.message || 'Could not save it for offline')
+  } finally {
+    savingOffline.value = false
+  }
+}
+
 const loadAssignment = async () => {
   loading.value = true
   error.value = null
@@ -666,6 +725,8 @@ const loadAssignment = async () => {
   try {
     const response = await axios.get(loadUrl.value)
     if (response.data.success) {
+      loadedOffline.value = !!response.data.offline
+      lastLoad.value = response.data.data
       assignment.value = response.data.data.assignment
       questions.value = response.data.data.questions
       curriculum.value = response.data.data.curriculum || null
@@ -847,7 +908,8 @@ const submitAssignment = async () => {
       submissionTiming.value = response.data.data?.submission_timing || null
       if (timerInterval) clearInterval(timerInterval)
       const timingLabel = submissionTiming.value === 'late' ? ' (late)' : submissionTiming.value === 'early' ? ' (early)' : ''
-      toast.success(`Assignment submitted successfully${timingLabel}`)
+      submittedOffline.value = !!response.data.offline
+      toast.success(submittedOffline.value ? 'Submitted on this device - it will be sent when you\'re online' : `Assignment submitted successfully${timingLabel}`)
       showCompletionScreen.value = true
     }
   } catch (err: any) {

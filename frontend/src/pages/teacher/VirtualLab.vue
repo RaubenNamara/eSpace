@@ -5,7 +5,7 @@
       <div class="absolute inset-0 opacity-20" style="background-image: radial-gradient(circle at 20% 20%, white 1px, transparent 1px), radial-gradient(circle at 80% 60%, white 1px, transparent 1px); background-size: 48px 48px;"></div>
       <div class="relative px-4 py-8 sm:px-8 sm:py-10">
         <div class="flex items-center gap-3 mb-2">
-          <span class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center text-2xl flex-shrink-0">🧪</span>
+          <span class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center text-2xl flex-shrink-0 text-white"><AppIcon name="beaker" class="w-6 h-6" /></span>
           <h1 class="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight">Virtual Lab</h1>
         </div>
         <p class="text-sm sm:text-base text-indigo-100 max-w-2xl">Create 3D practical experiments, publish them to your classes, and mark what students submit.</p>
@@ -19,7 +19,7 @@
         enter-to-class="opacity-100 translate-y-0"
       >
         <div v-if="error" class="mb-4 flex items-start gap-2.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl px-4 py-3">
-          <span class="text-base leading-none">⚠️</span>
+          <AppIcon name="warning" class="w-4 h-4" />
           <p class="flex-1 text-sm text-red-700 dark:text-red-300">{{ error }}</p>
           <button @click="error = null" class="flex-shrink-0 text-red-400 hover:text-red-600 text-xs">✕</button>
         </div>
@@ -53,7 +53,7 @@
         </div>
 
         <div v-if="templates.length > 0" class="mb-7">
-          <p class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-1.5"><span>✨</span> Experiment Catalogue</p>
+          <p class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-1.5"><AppIcon name="sparkles" class="w-4 h-4" /> Experiment Catalogue</p>
 
           <div class="flex flex-wrap items-center gap-2 mb-3.5">
             <input v-model="catalogueSearch" type="text" placeholder="Search experiments..." class="input-field flex-1 min-w-[10rem] text-sm">
@@ -77,7 +77,7 @@
           <div v-else class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
             <div v-for="t in filteredTemplates" :key="t.id" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col">
               <div class="flex items-start gap-2.5">
-                <span class="w-9 h-9 flex-shrink-0 rounded-xl flex items-center justify-center text-base print-color-exact" :class="CATEGORY_COLORS[t.category]">{{ CATEGORY_ICONS[t.category] }}</span>
+                <span class="w-9 h-9 flex-shrink-0 rounded-xl flex items-center justify-center text-base print-color-exact" :class="CATEGORY_COLORS[t.category]"><AppIcon :name="CATEGORY_ICONS[t.category]" class="w-4 h-4" /></span>
                 <div class="min-w-0 flex-1">
                   <p class="font-semibold text-gray-900 dark:text-white text-sm leading-snug truncate">{{ t.title }}</p>
                   <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5 truncate">{{ t.subject_name || CATEGORY_LABELS[t.category] }}<span v-if="t.topic"> · {{ t.topic }}</span></p>
@@ -86,7 +86,7 @@
 
               <div class="flex items-center gap-1.5 flex-wrap mt-2.5">
                 <span class="px-2 py-0.5 text-[10px] font-semibold rounded-full capitalize" :class="DIFFICULTY_BADGE[t.difficulty]">{{ t.difficulty }}</span>
-                <span v-if="t.estimated_duration_minutes" class="px-2 py-0.5 text-[10px] font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">⏱ {{ t.estimated_duration_minutes }} min</span>
+                <span v-if="t.estimated_duration_minutes" class="px-2 py-0.5 text-[10px] font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 inline-flex items-center gap-1"><AppIcon name="clock" class="w-3 h-3" /> {{ t.estimated_duration_minutes }} min</span>
                 <span v-if="t.template_version" class="px-2 py-0.5 text-[10px] font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">v{{ t.template_version }}</span>
               </div>
 
@@ -118,7 +118,7 @@
 
               <div class="flex items-center gap-1.5 flex-wrap text-xs">
                 <span class="px-2 py-0.5 rounded-full font-semibold capitalize" :class="DIFFICULTY_BADGE[previewExperiment.difficulty]">{{ previewExperiment.difficulty }}</span>
-                <span v-if="previewExperiment.estimated_duration_minutes" class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">⏱ {{ previewExperiment.estimated_duration_minutes }} min</span>
+                <span v-if="previewExperiment.estimated_duration_minutes" class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 inline-flex items-center gap-1"><AppIcon name="clock" class="w-3 h-3" /> {{ previewExperiment.estimated_duration_minutes }} min</span>
                 <span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">{{ previewExperiment.marks }} marks</span>
                 <span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">{{ previewExperiment.steps.length }} steps</span>
               </div>
@@ -162,7 +162,7 @@
           </div>
         </div>
         <div v-else-if="experiments.length === 0" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-10 sm:p-14 text-center">
-          <span class="text-4xl block mb-2">🧫</span>
+          <span class="block mb-2"><AppIcon name="beaker" class="w-10 h-10 mx-auto" /></span>
           <p class="text-gray-400 dark:text-gray-500 text-sm">No experiments yet &mdash; start from a template above or create your own.</p>
         </div>
         <div v-else class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -171,7 +171,7 @@
             <div class="p-4 flex-1 flex flex-col">
               <div class="flex items-start justify-between gap-2 mb-1.5">
                 <h3 class="font-semibold text-gray-900 dark:text-white text-sm leading-snug">{{ e.title }}</h3>
-                <span class="text-lg flex-shrink-0">{{ CATEGORY_ICONS[e.category] }}</span>
+                <span class="text-lg flex-shrink-0"><AppIcon :name="CATEGORY_ICONS[e.category]" class="w-4 h-4" /></span>
               </div>
               <p class="text-xs text-gray-400 dark:text-gray-500 mb-3">{{ e.subject_name || CATEGORY_LABELS[e.category] }}</p>
 
@@ -195,14 +195,14 @@
       <div v-else-if="activeTab === 'assignments'">
         <div v-if="loadingAssignments" class="py-10 text-center"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div></div>
         <div v-else-if="assignments.length === 0" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-10 sm:p-14 text-center">
-          <span class="text-4xl block mb-2">📋</span>
+          <span class="block mb-2"><AppIcon name="clipboard" class="w-10 h-10 mx-auto" /></span>
           <p class="text-gray-400 dark:text-gray-500 text-sm">Nothing published yet.</p>
         </div>
         <div v-else class="space-y-3">
           <div v-for="a in assignments" :key="a.id" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
             <button class="w-full flex items-center justify-between gap-3 p-4 text-left" @click="toggleAssignment(a.id)">
               <div class="flex items-center gap-3 min-w-0">
-                <span class="w-9 h-9 flex-shrink-0 rounded-xl flex items-center justify-center text-base print-color-exact" :class="CATEGORY_COLORS[a.category]">{{ CATEGORY_ICONS[a.category] }}</span>
+                <span class="w-9 h-9 flex-shrink-0 rounded-xl flex items-center justify-center text-base print-color-exact" :class="CATEGORY_COLORS[a.category]"><AppIcon :name="CATEGORY_ICONS[a.category]" class="w-4 h-4" /></span>
                 <div class="min-w-0">
                   <p class="font-semibold text-gray-900 dark:text-white text-sm truncate">
                     {{ a.experiment_title }} &middot;
@@ -273,7 +273,7 @@
         </div>
 
         <div v-if="!skillsStudentId" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-10 sm:p-14 text-center">
-          <span class="text-4xl block mb-2">🧭</span>
+          <span class="block mb-2"><AppIcon name="map" class="w-10 h-10 mx-auto" /></span>
           <p class="text-gray-400 dark:text-gray-500 text-sm">Select a class and student to view their practical skills.</p>
         </div>
         <VirtualLabSkillsPanel v-else :key="skillsStudentId" viewer="teacher" :student-id="skillsStudentId" />
@@ -482,7 +482,7 @@
     <div v-if="publishTarget" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-3 sm:p-4" @click.self="publishTarget = null">
       <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm p-5 sm:p-6 space-y-3.5">
         <div class="flex items-start justify-between gap-2">
-          <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2"><span>🚀</span> Publish "{{ publishTarget.title }}"</h2>
+          <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2"><AppIcon name="send" class="w-5 h-5" /> Publish "{{ publishTarget.title }}"</h2>
           <button @click="publishTarget = null" class="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">✕</button>
         </div>
         <div><label class="text-xs font-medium text-gray-500 dark:text-gray-400">Class</label>
@@ -611,7 +611,7 @@
           <div v-else class="space-y-2 max-h-72 overflow-y-auto">
             <div v-for="(l, i) in gradingAttempt.action_log" :key="i" class="flex items-start gap-2 text-xs">
               <span class="flex-shrink-0 w-14 text-gray-400 dark:text-gray-500 tabular-nums">{{ formatTime(l.created_at) }}</span>
-              <span class="flex-shrink-0">{{ l.is_correct ? '✅' : '⚪' }}</span>
+              <AppIcon :name="l.is_correct ? 'check-circle' : 'circle'" class="w-4 h-4 flex-shrink-0" :class="l.is_correct ? 'text-emerald-600' : 'text-gray-400'" />
               <span class="text-gray-700 dark:text-gray-200">
                 <span class="font-medium capitalize">{{ l.action.replace('_', ' ') }}</span>
                 <span v-if="l.object_key" class="text-gray-400"> &middot; {{ l.object_key }}</span>
@@ -634,6 +634,7 @@
 </template>
 
 <script setup lang="ts">
+import AppIcon from '@/components/common/AppIcon.vue'
 import { ref, computed, watch, onMounted } from 'vue'
 import axios from 'axios'
 import { CATEGORY_ICONS, CATEGORY_LABELS, CATEGORY_COLORS } from '@/types/virtualLab'

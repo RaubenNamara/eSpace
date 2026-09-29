@@ -382,6 +382,8 @@
               </select>
             </div>
 
+            <ItemBankTopicsPicker v-if="editingResource" ref="topicsPicker" :key="editingResource.id" :resource-id="editingResource.id" />
+
             <label class="flex items-center gap-2 mb-4 px-3 py-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer">
               <input v-model="resourceForm.allow_download" type="checkbox" class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
               <span class="text-sm text-gray-700 dark:text-gray-300">Allow students to download this file</span>
@@ -443,6 +445,7 @@ import axios from 'axios'
 import ItemBankPdfViewer from '@/components/itembank/ItemBankPdfViewer.vue'
 import TeacherClassSelector from '@/components/teacher/TeacherClassSelector.vue'
 import BulkActionBar from '@/components/common/BulkActionBar.vue'
+import ItemBankTopicsPicker from '@/components/itembank/ItemBankTopicsPicker.vue'
 import Bookshelf from '@/components/library/Bookshelf.vue'
 import ShelfBook from '@/components/library/ShelfBook.vue'
 import ShelfSlot from '@/components/library/ShelfSlot.vue'
@@ -477,6 +480,7 @@ const classFilter = usePersistedRef('teacher-itembank-class-filter', '')
 
 const showResourceModal = ref(false)
 const editingResource = ref<ItemBankResource | null>(null)
+const topicsPicker = ref<InstanceType<typeof ItemBankTopicsPicker> | null>(null)
 const previewResource = ref<ItemBankResource | null>(null)
 const resourceForm = ref<ItemBankResourceForm>({
   title: '',
@@ -797,6 +801,7 @@ const saveResource = async () => {
         status: resourceForm.value.status,
         allow_download: resourceForm.value.allow_download
       })
+      if (!(await topicsPicker.value?.save() ?? true)) toast.warning('Saved, but the topics could not be saved - try again')
     } else {
       if (!resourceForm.value.file) {
         toast.warning('Please select a PDF file')

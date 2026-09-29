@@ -36,6 +36,9 @@
          duplicated the four stat tiles above (same four destinations) and the department strip
          (same name/code) - removed rather than kept as redundant chrome. -->
 
+    <!-- How the department's curriculum is covered by assessments, and how students do -->
+    <MasteryOverviewCard endpoint="/api/hod/mastery-overview" />
+
     <!-- Pending Approvals Preview -->
     <div v-if="recentApprovals.length > 0" class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
       <div class="flex items-center justify-between mb-4">
@@ -75,6 +78,7 @@ import { useLiveRefresh } from '@/composables/useLiveRefresh'
 import apiService from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import StatTile from '@/components/dashboard/StatTile.vue'
+import MasteryOverviewCard from '@/components/dashboard/MasteryOverviewCard.vue'
 
 interface Stats {
   teachers_count: number

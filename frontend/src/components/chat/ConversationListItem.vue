@@ -65,7 +65,7 @@ const previewText = computed(() => {
   const lm = props.conversation.last_message
   if (!lm) return ''
   if (lm.message) return lm.message
-  const labels: Record<string, string> = { image: '📷 Photo', audio: '🎤 Voice message', video: '🎥 Video', file: '📄 File' }
+  const labels: Record<string, string> = { image: 'Photo', audio: 'Voice message', video: 'Video', file: 'File' }
   return lm.attachment_type ? labels[lm.attachment_type] || 'Attachment' : ''
 })
 

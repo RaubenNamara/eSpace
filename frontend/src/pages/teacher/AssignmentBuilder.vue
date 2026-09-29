@@ -960,7 +960,7 @@
           <!-- Upload a PDF instead of typing the question out -->
           <div v-if="questionForm.question_type !== 'scenario'" class="border-2 border-dashed border-indigo-300 dark:border-indigo-700 rounded-lg p-4 bg-indigo-50/50 dark:bg-indigo-900/10">
             <label class="block text-sm font-semibold text-indigo-900 dark:text-indigo-300 mb-2">
-              📄 Upload a PDF question paper instead
+              Upload a PDF question paper instead
             </label>
             <div v-if="!hasQuestionPdf">
               <input
@@ -973,7 +973,7 @@
             <div v-else>
               <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 mb-2">
                 <a :href="questionPdfPreviewUrl || undefined" target="_blank" rel="noopener" class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline truncate min-w-0">
-                  📄 {{ questionForm.pdfFile ? questionForm.pdfFile.name : 'View attached PDF' }} (opens in new tab)
+                  {{ questionForm.pdfFile ? questionForm.pdfFile.name : 'View attached PDF' }} (opens in new tab)
                 </a>
                 <div class="flex items-center gap-3 flex-shrink-0">
                   <label class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer">

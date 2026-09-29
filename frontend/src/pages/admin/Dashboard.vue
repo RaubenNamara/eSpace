@@ -133,6 +133,16 @@
       </RouterLink>
     </div>
 
+    <!-- Curriculum mastery across the school (or one department) -->
+    <MasteryOverviewCard endpoint="/api/admin/mastery-overview" :params="masteryDepartment ? { department_id: masteryDepartment } : {}" show-department>
+      <template #filter>
+        <select v-model="masteryDepartment" class="px-2.5 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white">
+          <option :value="0">All departments</option>
+          <option v-for="dept in departments" :key="dept.id" :value="dept.id">{{ dept.name }}</option>
+        </select>
+      </template>
+    </MasteryOverviewCard>
+
     <!-- Analytics Charts -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
       <!-- Enrollments by Department -->
@@ -653,6 +663,7 @@ import { useLiveRefresh } from '@/composables/useLiveRefresh'
 import apiService from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import QuickLink from '@/components/dashboard/QuickLink.vue'
+import MasteryOverviewCard from '@/components/dashboard/MasteryOverviewCard.vue'
 import { Bar } from 'vue-chartjs'
 import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ArcElement } from 'chart.js'
 import { useToastStore } from '@/stores/toast'
@@ -716,6 +727,8 @@ const greeting = computed(() => {
 
 const loadingAnalytics = ref(false)
 const departments = ref<Department[]>([])
+// Curriculum mastery panel filter (0 = every department)
+const masteryDepartment = ref(0)
 const academicYears = ref<AcademicYear[]>([])
 const classes = ref<Class[]>([])
 // Ordered S.1..S.6 (numeric, so "S.10" would still sort after "S.2"), then alphabetically by
@@ -1341,6 +1354,7 @@ const chartOptions = {
 
 onMounted(() => {
   fetchAnalytics()
+  fetchDepartments()
 })
 </script>
 

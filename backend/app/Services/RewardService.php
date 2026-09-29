@@ -101,8 +101,159 @@ class RewardService
                 return $subjectId ? $this->virtualLabService()->studentLabAverage($studentId, $termId, $subjectId) : null;
             case 'lab_experiments_completed':
                 return (float) $this->virtualLabService()->studentLabExperimentsCompleted($studentId, $termId);
+            // Real learning (migration 100) - the Learning Map, evidence and learning streaks
+            case 'outcomes_achieved':
+                return (float) ($this->learningMap($studentId)['overall']['achieved'] ?? 0);
+            case 'competencies_achieved':
+                return (float) ($this->learningMap($studentId)['competencies']['achieved'] ?? 0);
+            case 'evidence_confirmed':
+                return (float) $this->getConfirmedEvidence($studentId, $termId);
+            case 'learning_streak':
+                return (float) $this->longestStreak($studentId, $termId);
             default:
                 return null;
+        }
+    }
+
+    /** The student's Learning Map, worked out once per evaluation */
+    private array $learningMaps = [];
+
+    private function learningMap(int $studentId): array
+    {
+        if (!isset($this->learningMaps[$studentId])) {
+            try {
+                $this->learningMaps[$studentId] = (new \eSpace\App\Controllers\Student\MasteryController())->compute($studentId);
+            } catch (\Throwable $e) {
+                error_log('Rewards: learning map unavailable: ' . $e->getMessage());
+                $this->learningMaps[$studentId] = [];
+            }
+        }
+        return $this->learningMaps[$studentId];
+    }
+
+    private function getConfirmedEvidence(int $studentId, int $termId): int
+    {
+        $term = $this->getTermRange($termId);
+        if (!$term) {
+            return 0;
+        }
+        try {
+            $stmt = $this->getDb()->prepare(
+                "SELECT COUNT(*) AS c FROM competency_evidence
+                 WHERE student_id = ? AND status = 'confirmed' AND deleted_at IS NULL
+                   AND reviewed_at >= ? AND reviewed_at < DATE_ADD(?, INTERVAL 1 DAY)"
+            );
+            $stmt->execute([$studentId, $term['start_date'], $term['end_date']]);
+            return (int) $stmt->fetch()['c'];
+        } catch (\PDOException $e) {
+            return 0; // migration 099 not run yet
+        }
+    }
+
+    /** The student's learning days (learning_activity_days) between two dates, oldest first */
+    private static function learningDays($db, int $studentId, ?string $from = null, ?string $to = null): array
+    {
+        try {
+            $sql = "SELECT day FROM learning_activity_days WHERE student_id = ?";
+            $params = [$studentId];
+            if ($from) {
+                $sql .= " AND day >= ?";
+                $params[] = $from;
+            }
+            if ($to) {
+                $sql .= " AND day <= ?";
+                $params[] = $to;
+            }
+            $stmt = $db->prepare($sql . " ORDER BY day");
+            $stmt->execute($params);
+            return array_column($stmt->fetchAll(), 'day');
+        } catch (\PDOException $e) {
+            return []; // migration 100 not run yet
+        }
+    }
+
+    /** The longest run of consecutive learning days within the term */
+    private function longestStreak(int $studentId, int $termId): int
+    {
+        $term = $this->getTermRange($termId);
+        if (!$term) {
+            return 0;
+        }
+        $longest = 0;
+        $run = 0;
+        $previous = null;
+        foreach (self::learningDays($this->getDb(), $studentId, $term['start_date'], $term['end_date']) as $day) {
+            $run = ($previous !== null && strtotime($day) - strtotime($previous) === 86400) ? $run + 1 : 1;
+            $longest = max($longest, $run);
+            $previous = $day;
+        }
+        return $longest;
+    }
+
+    /**
+     * The streak the student is on now: consecutive learning days ending today (or yesterday, so
+     * it isn't lost before they've had a chance to learn today), and whether today counts yet.
+     *
+     * @return array{days: int, today: bool}
+     */
+    public static function currentStreak(int $studentId): array
+    {
+        $db = \eSpace\Config\Database::getInstance();
+        $days = array_reverse(self::learningDays($db, $studentId, date('Y-m-d', strtotime('-400 days'))));
+        $today = date('Y-m-d');
+        $learnedToday = ($days[0] ?? null) === $today;
+        $expected = $learnedToday ? $today : date('Y-m-d', strtotime('-1 day'));
+        $count = 0;
+        foreach ($days as $day) {
+            if ($day !== $expected) {
+                break;
+            }
+            $count++;
+            $expected = date('Y-m-d', strtotime($expected . ' -1 day'));
+        }
+        return ['days' => $count, 'today' => $learnedToday];
+    }
+
+    /**
+     * The student learned something today (read notes, answered an assessment, added evidence).
+     * The first time each day it's recorded, their learning awards are looked at again.
+     */
+    public static function recordLearningDay(int $studentId): void
+    {
+        try {
+            $db = \eSpace\Config\Database::getInstance();
+            $stmt = $db->prepare("INSERT IGNORE INTO learning_activity_days (student_id, day) VALUES (?, CURDATE())");
+            $stmt->execute([$studentId]);
+            if ($stmt->rowCount() === 0) {
+                return; // already counted today
+            }
+            $term = $db->query("SELECT id FROM terms WHERE is_current = 1 ORDER BY id DESC LIMIT 1")->fetch();
+            if ($term) {
+                (new self())->evaluateLearningRules($studentId, (int) $term['id']);
+            }
+        } catch (\Throwable $e) {
+            // never let a streak get in the way of the learning itself
+            error_log('Rewards: could not record a learning day: ' . $e->getMessage());
+        }
+    }
+
+    /** Re-checks only the learning awards (outcomes, competencies, evidence, streak) */
+    public function evaluateLearningRules(int $studentId, int $termId): void
+    {
+        $learning = ['outcomes_achieved', 'competencies_achieved', 'evidence_confirmed', 'learning_streak'];
+        foreach ($this->getActiveRules(['individual']) as $rule) {
+            if (!in_array($rule['metric'], $learning, true)) {
+                continue;
+            }
+            $value = $this->computeMetric($rule['metric'], $studentId, $termId, null);
+            $qualifies = $value !== null
+                && ($rule['min_value'] === null || $value >= (float) $rule['min_value'])
+                && ($rule['max_value'] === null || $value <= (float) $rule['max_value']);
+            if ($qualifies) {
+                $this->upsertAutoAward($studentId, (int) $rule['id'], $rule, $termId, $value, null, null);
+            } else {
+                $this->autoRevokeIfExists($studentId, (int) $rule['id'], $termId, 0);
+            }
         }
     }
 

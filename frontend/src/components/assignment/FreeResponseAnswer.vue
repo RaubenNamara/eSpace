@@ -13,7 +13,7 @@
     <!-- Answer method selector -->
     <div>
       <p class="text-sm font-semibold text-gray-900 dark:text-white mb-1 flex items-center gap-1.5">
-        <span aria-hidden="true">✏️</span> Answer the Question
+        <AppIcon name="pencil" class="w-4 h-4" /> Answer the Question
       </p>
       <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Choose how you want to answer:</p>
       <AnswerModeSelector v-model="answerMode" :readonly="readonly" />
@@ -36,7 +36,7 @@
 
       <template v-else-if="answerMode === 'write'">
         <p class="text-sm font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-1.5">
-          <span aria-hidden="true">✍️</span> Write
+          <AppIcon name="pencil" class="w-4 h-4" /> Write
         </p>
         <p v-if="autoCreating" class="text-sm text-gray-500 dark:text-gray-400">Preparing your workspace…</p>
         <div v-else-if="attachment" class="free-response-answer__panel">
@@ -97,7 +97,7 @@
 
       <template v-else>
         <p class="text-sm font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-1.5">
-          <span aria-hidden="true">📎</span> Upload your completed work
+          <AppIcon name="paperclip" class="w-4 h-4" /> Upload your completed work
         </p>
         <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Upload one or more files - photos, scans, or documents.</p>
 
@@ -113,7 +113,7 @@
               @click="openPreview(file)"
             >
               <img v-if="file.fileType === 'image'" :src="resolveAssetUrl(file.path)" alt="" class="free-response-answer__thumb-img">
-              <span v-else class="free-response-answer__thumb-icon" aria-hidden="true">📄</span>
+              <span v-else class="free-response-answer__thumb-icon" aria-hidden="true"><AppIcon name="document" class="w-6 h-6" /></span>
             </button>
             <p class="mt-1 text-xs text-gray-600 dark:text-gray-400 truncate" :title="file.originalName">{{ file.originalName }}</p>
             <button
@@ -145,7 +145,7 @@
           @drop.prevent="onDrop"
         >
           <input ref="fileInputRef" type="file" multiple accept="application/pdf,image/jpeg,image/png,image/webp" class="hidden" :disabled="uploading" @change="onFilesSelected">
-          <span class="free-response-answer__dropzone-icon">⬆</span>
+          <span class="free-response-answer__dropzone-icon"><AppIcon name="upload" class="w-6 h-6" /></span>
           <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Choose Files</span>
           <span class="text-xs text-gray-500 dark:text-gray-400">PDF, JPG, PNG, or WEBP files are supported.</span>
         </div>
@@ -164,6 +164,7 @@
 </template>
 
 <script setup lang="ts">
+import AppIcon from '@/components/common/AppIcon.vue'
 import { ref, computed, watch, onMounted } from 'vue'
 import axios from 'axios'
 import type { AnnotationLayerJSON, AnnotationTool, AssignmentQuestion } from '@/types'

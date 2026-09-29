@@ -558,6 +558,8 @@ class AssignmentController extends Controller
                 }
             }
 
+            // Answering counts towards the student's learning streak
+            \eSpace\App\Services\RewardService::recordLearningDay((int) $studentId);
             $this->success([
                 'id' => $submissionId,
                 'status' => $status,

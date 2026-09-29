@@ -173,7 +173,7 @@ const design = ref<ENoteCoverDesign>(existing ?? {
   title: props.topic.title,
   author: teacherName,
   year: String(new Date().getFullYear()),
-  page_footer: false
+  page_footer: true
 })
 
 const label = computed(() => subjectTag(props.topic.subject_name, props.topic.subject_code))
@@ -212,7 +212,7 @@ const onPickImage = async (e: Event) => {
 const save = async (reset: boolean) => {
   saving.value = true
   errorMessage.value = ''
-  const payload = reset ? null : { ...design.value, title: design.value.title.trim() || props.topic.title }
+  const payload = reset ? null : { ...design.value, title: design.value.title.trim() || props.topic.title, page_footer_off: !design.value.page_footer }
   try {
     await axios.put(`/api/teacher/enotes/topics/${props.topic.id}`, { cover_design: payload })
     emit('saved', payload ? JSON.stringify(payload) : null)

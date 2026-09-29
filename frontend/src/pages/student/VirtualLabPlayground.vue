@@ -8,7 +8,7 @@
           <span>&larr;</span> Back to Virtual Lab
         </router-link>
         <div class="flex items-center gap-3 mb-2">
-          <span class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center text-2xl flex-shrink-0">🧰</span>
+          <span class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center text-2xl flex-shrink-0 text-white"><AppIcon name="kit" class="w-6 h-6" /></span>
           <h1 class="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight">Apparatus Playground</h1>
         </div>
         <p class="text-sm sm:text-base text-emerald-100 max-w-2xl">
@@ -29,7 +29,7 @@
             ? 'bg-emerald-600 text-white border-transparent shadow-md'
             : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'"
         >
-          <span>{{ cat.icon }}</span> {{ cat.label }}
+          <AppIcon :name="cat.icon" class="w-4 h-4" /> {{ cat.label }}
         </button>
       </div>
 
@@ -54,7 +54,7 @@
         <!-- 3D scene -->
         <div class="order-2 lg:order-2 lg:col-span-2 h-[320px] sm:h-[440px] lg:h-[600px] rounded-2xl overflow-hidden shadow-lg ring-1 ring-gray-900/5">
           <div v-if="sceneObjects.length === 0" class="w-full h-full flex flex-col items-center justify-center gap-2 bg-slate-200 dark:bg-slate-800 text-center px-6">
-            <span class="text-4xl">🧪</span>
+            <AppIcon name="beaker" class="w-10 h-10" />
             <p class="text-sm text-gray-500 dark:text-gray-400">Pick a piece of apparatus from the left to add it to your workbench.</p>
           </div>
           <VirtualLabScene
@@ -156,6 +156,7 @@
 </template>
 
 <script setup lang="ts">
+import AppIcon from '@/components/common/AppIcon.vue'
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import VirtualLabScene from '@/components/virtuallab/VirtualLabScene.vue'
@@ -173,11 +174,11 @@ type CategoryFilter = LabCategory | 'general' | 'all'
 const activeCategory = ref<CategoryFilter>('all')
 
 const categoryOptions: { value: CategoryFilter; label: string; icon: string }[] = [
-  { value: 'all', label: 'All', icon: '🧰' },
-  { value: 'physics', label: 'Physics', icon: '⚡' },
-  { value: 'chemistry', label: 'Chemistry', icon: '🧪' },
-  { value: 'biology', label: 'Biology', icon: '🧬' },
-  { value: 'general', label: 'General', icon: '🔧' },
+  { value: 'all', label: 'All', icon: 'kit' },
+  { value: 'physics', label: 'Physics', icon: 'bolt' },
+  { value: 'chemistry', label: 'Chemistry', icon: 'beaker' },
+  { value: 'biology', label: 'Biology', icon: 'leaf' },
+  { value: 'general', label: 'General', icon: 'wrench' },
 ]
 
 const catalogByType = computed(() => new Map(catalog.value.map(o => [o.object_type, o])))

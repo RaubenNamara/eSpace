@@ -27,7 +27,7 @@
             class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-sm mb-4"
             :class="CATEGORY_COLORS[group.category]"
           >
-            {{ CATEGORY_ICONS[group.category] }}
+            <AppIcon :name="CATEGORY_ICONS[group.category]" class="w-4 h-4" />
           </div>
           <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">{{ CATEGORY_LABELS[group.category] }}</h3>
           <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-cyan-50 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300">
@@ -47,7 +47,7 @@
           class="text-left bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 overflow-hidden"
         >
           <div class="h-24 flex items-center justify-center text-4xl" :class="CATEGORY_COLORS[a.category]">
-            {{ CATEGORY_ICONS[a.category] }}
+            <AppIcon :name="CATEGORY_ICONS[a.category]" class="w-4 h-4" />
           </div>
           <div class="p-4">
             <h3 class="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 mb-2">{{ a.experiment_title }}</h3>
@@ -71,7 +71,7 @@
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 sm:p-6">
           <div class="flex items-start gap-4">
             <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0" :class="CATEGORY_COLORS[detail.category]">
-              {{ CATEGORY_ICONS[detail.category] }}
+              <AppIcon :name="CATEGORY_ICONS[detail.category]" class="w-4 h-4" />
             </div>
             <div class="min-w-0">
               <h1 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{{ detail.title }}</h1>
@@ -127,6 +127,7 @@
 </template>
 
 <script setup lang="ts">
+import AppIcon from '@/components/common/AppIcon.vue'
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'

@@ -5,7 +5,7 @@
   >
     <div class="flex items-center justify-between mb-4">
       <div>
-        <h2 class="text-lg font-bold text-gray-900 dark:text-white">🏆 My Achievements</h2>
+        <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2"><AppIcon name="trophy" class="w-5 h-5" /> My Achievements</h2>
         <p class="text-xs text-gray-400 dark:text-gray-500">Automatically awarded based on your performance</p>
       </div>
       <span class="text-xs font-medium text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
@@ -26,7 +26,7 @@
           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-white"
           :class="BADGE_COLORS[type]"
         >
-          {{ BADGE_ICONS[type] }} {{ BADGE_LABELS[type] }}: {{ summary?.[type] ?? 0 }}
+          <BadgeIcon :type="type" plain class="w-4 h-4 inline-block align-[-3px]" /> {{ BADGE_LABELS[type] }}: {{ summary?.[type] ?? 0 }}
         </span>
       </div>
 
@@ -42,7 +42,7 @@
           :class="BADGE_COLORS[a.badge_type]"
         >
           <div class="flex items-start justify-between gap-2">
-            <span class="text-2xl">{{ a.badge_type === 'special' ? '⭐' : BADGE_ICONS[a.badge_type] }}</span>
+            <BadgeIcon :type="a.badge_type" class="w-7 h-7" />
             <span class="text-[10px] uppercase tracking-wide font-semibold bg-white/20 px-2 py-0.5 rounded-full">{{ BADGE_LABELS[a.badge_type] }}</span>
           </div>
           <p class="font-bold mt-2 leading-tight">{{ a.award_title }}</p>
@@ -58,9 +58,11 @@
 </template>
 
 <script setup lang="ts">
+import BadgeIcon from '@/components/common/BadgeIcon.vue'
+import AppIcon from '@/components/common/AppIcon.vue'
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
-import { BADGE_ICONS, BADGE_LABELS, BADGE_COLORS } from '@/types/reward'
+import { BADGE_LABELS, BADGE_COLORS } from '@/types/reward'
 import type { StudentAward, AwardSummary, BadgeType } from '@/types/reward'
 
 const awards = ref<StudentAward[]>([])

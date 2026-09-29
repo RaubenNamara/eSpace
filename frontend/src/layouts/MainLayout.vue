@@ -692,6 +692,9 @@ const assessmentMenu = computed(() => {
   } else if (role === 'teacher') {
     return [
       { path: '/teacher/assignments', label: 'Assessments', icon: 'DocumentTextIcon' },
+      { path: '/teacher/evidence', label: 'Evidence', icon: 'CheckCircleIcon' },
+      { path: '/teacher/class-map', label: 'Class Learning Map', icon: 'MapIcon' },
+      { path: '/teacher/coverage', label: 'Coverage', icon: 'ChartBarIcon' },
       { path: '/teacher/virtual-lab', label: 'Virtual Lab', icon: 'FlaskIcon' },
       { path: '/teacher/reports', label: 'Reports', icon: 'ChartBarIcon' },
       { path: '/teacher/engagement', label: 'Engagement', icon: 'ChartIcon' },

@@ -53,7 +53,7 @@
             </button>
             <div class="relative flex-shrink-0">
               <div class="w-9 h-9 rounded-full bg-emerald-600 flex items-center justify-center text-white text-sm font-semibold">
-                {{ activeConversation.type === 'class' ? '👥' : initials(activeConversation.name) }}
+                <AppIcon v-if="activeConversation.type === 'class'" name="users" class="w-5 h-5" /><template v-else>{{ initials(activeConversation.name) }}</template>
               </div>
               <span
                 v-if="activeConversation.type === 'direct' && activeConversation.is_online"
@@ -136,6 +136,7 @@
 </template>
 
 <script setup lang="ts">
+import AppIcon from '@/components/common/AppIcon.vue'
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import axios from 'axios'
 import ConversationListItem from '@/components/chat/ConversationListItem.vue'

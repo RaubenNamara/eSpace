@@ -867,7 +867,9 @@ class ENoteController extends Controller
             'title' => $text($cover['title'] ?? '', 120),
             'author' => $text($cover['author'] ?? '', 80),
             'year' => $text($cover['year'] ?? '', 10),
-            'page_footer' => !empty($cover['page_footer']),
+            // The page footer is on unless switched off (page_footer kept for older readers)
+            'page_footer' => empty($cover['page_footer_off']),
+            'page_footer_off' => !empty($cover['page_footer_off']),
         ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     }
 

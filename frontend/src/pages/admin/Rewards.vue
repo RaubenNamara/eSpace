@@ -50,11 +50,11 @@
             <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Badge Level</label>
             <select v-model="filters.badge_type" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white min-w-[130px]">
               <option value="">All</option>
-              <option value="platinum">💎 Platinum</option>
-              <option value="gold">🥇 Gold</option>
-              <option value="silver">🥈 Silver</option>
-              <option value="bronze">🥉 Bronze</option>
-              <option value="special">⭐ Special</option>
+              <option value="platinum">Platinum</option>
+              <option value="gold">Gold</option>
+              <option value="silver">Silver</option>
+              <option value="bronze">Bronze</option>
+              <option value="special">Special</option>
             </select>
           </div>
           <div>
@@ -114,7 +114,7 @@
                   <p class="text-xs text-gray-400 dark:text-gray-500">{{ a.admission_number }}</p>
                 </td>
                 <td class="px-4 py-3">
-                  <p class="whitespace-nowrap"><span>{{ BADGE_ICONS[a.badge_type] }}</span> {{ a.award_title }}</p>
+                  <p class="whitespace-nowrap"><span><BadgeIcon :type="a.badge_type" class="w-4 h-4 inline-block align-[-2px]" /></span> {{ a.award_title }}</p>
                   <p class="text-xs text-gray-400 dark:text-gray-500">{{ BADGE_LABELS[a.badge_type] }}</p>
                 </td>
                 <td class="px-4 py-3 text-gray-700 dark:text-gray-300 whitespace-nowrap">
@@ -171,7 +171,7 @@
             </thead>
             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
               <tr v-for="r in rules" :key="r.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/40">
-                <td class="px-4 py-3 whitespace-nowrap">{{ BADGE_ICONS[r.badge_type] }} {{ BADGE_LABELS[r.badge_type] }}</td>
+                <td class="px-4 py-3 whitespace-nowrap"><BadgeIcon :type="r.badge_type" class="w-4 h-4 inline-block align-[-2px]" /> {{ BADGE_LABELS[r.badge_type] }}</td>
                 <td class="px-4 py-3">
                   <p class="text-gray-900 dark:text-white whitespace-nowrap">{{ r.award_title }}</p>
                   <p class="text-xs text-gray-400 dark:text-gray-500">{{ r.description }}</p>
@@ -205,7 +205,7 @@
     <div v-if="activeAward" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4" @click.self="activeAward = null">
       <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto">
         <div class="bg-indigo-600 px-6 py-4 flex items-center justify-between sticky top-0">
-          <h2 class="text-lg font-bold text-white">{{ BADGE_ICONS[activeAward.badge_type] }} {{ activeAward.award_title }}</h2>
+          <h2 class="text-lg font-bold text-white"><BadgeIcon :type="activeAward.badge_type" class="w-4 h-4 inline-block align-[-2px]" /> {{ activeAward.award_title }}</h2>
           <button @click="activeAward = null" class="text-white/80 hover:text-white">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
           </button>
@@ -255,11 +255,11 @@
             <div>
               <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Badge Level</label>
               <select v-model="overrideForm.badge_type" class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
-                <option value="platinum">💎 Platinum</option>
-                <option value="gold">🥇 Gold</option>
-                <option value="silver">🥈 Silver</option>
-                <option value="bronze">🥉 Bronze</option>
-                <option value="special">⭐ Special</option>
+                <option value="platinum">Platinum</option>
+                <option value="gold">Gold</option>
+                <option value="silver">Silver</option>
+                <option value="bronze">Bronze</option>
+                <option value="special">Special</option>
               </select>
             </div>
             <div>
@@ -296,11 +296,11 @@
         <div>
           <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Badge Level</label>
           <select v-model="ruleForm.badge_type" class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
-            <option value="platinum">💎 Platinum</option>
-            <option value="gold">🥇 Gold</option>
-            <option value="silver">🥈 Silver</option>
-            <option value="bronze">🥉 Bronze</option>
-            <option value="special">⭐ Special</option>
+            <option value="platinum">Platinum</option>
+            <option value="gold">Gold</option>
+            <option value="silver">Silver</option>
+            <option value="bronze">Bronze</option>
+            <option value="special">Special</option>
           </select>
         </div>
         <div>
@@ -323,6 +323,10 @@
               <option value="lab_average">Virtual Lab Average (any subject)</option>
               <option value="lab_subject_average">Virtual Lab Average (specific subject)</option>
               <option value="lab_experiments_completed">Virtual Lab Experiments Completed</option>
+              <option value="outcomes_achieved">Learning Outcomes Achieved (Learning Map)</option>
+              <option value="competencies_achieved">Topic Competencies Achieved (Activities of Integration)</option>
+              <option value="evidence_confirmed">Competency Evidence Confirmed by Teachers</option>
+              <option value="learning_streak">Learning Streak (consecutive days learning)</option>
             </select>
           </div>
           <div>
@@ -366,9 +370,10 @@
 </template>
 
 <script setup lang="ts">
+import BadgeIcon from '@/components/common/BadgeIcon.vue'
 import { ref, computed, watch, onMounted } from 'vue'
 import axios from 'axios'
-import { BADGE_ICONS, BADGE_LABELS } from '@/types/reward'
+import { BADGE_LABELS } from '@/types/reward'
 import type { StudentAward, AwardDetail, RewardRule, BadgeType } from '@/types/reward'
 
 const API_BASE = '/api/admin'

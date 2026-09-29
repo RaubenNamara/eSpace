@@ -52,7 +52,7 @@
           @click="selectedKey = file.key"
         >
           <img v-if="file.fileType === 'image'" :src="file.url" alt="" class="teacher-marking-canvas__gallery-thumb-img">
-          <span v-else class="teacher-marking-canvas__gallery-thumb-icon" aria-hidden="true">📄</span>
+          <span v-else class="teacher-marking-canvas__gallery-thumb-icon" aria-hidden="true"><AppIcon name="document" class="w-6 h-6" /></span>
           <span class="teacher-marking-canvas__gallery-thumb-name">{{ file.label }}</span>
         </button>
       </div>
@@ -108,6 +108,7 @@
 </template>
 
 <script setup lang="ts">
+import AppIcon from '@/components/common/AppIcon.vue'
 import { ref, computed, watch } from 'vue'
 import axios from 'axios'
 import type { AnnotationLayerJSON, AnnotationTool, AssignmentQuestion } from '@/types'

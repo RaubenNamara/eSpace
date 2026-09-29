@@ -11,7 +11,9 @@ export interface ENoteCoverDesign {
   title: string
   author: string
   year: string
-  // Show a small "title · author" footer at the bottom of every page in the reader
+  // Show a small "title · author" footer at the bottom of every page in the reader. On unless the
+  // teacher switched it off (stored as page_footer_off, since covers saved before footers were on
+  // by default all carry page_footer: false without the teacher having chosen it)
   page_footer?: boolean
 }
 
@@ -47,7 +49,7 @@ export function parseCoverDesign(raw: unknown): ENoteCoverDesign | null {
       title: value.title || '',
       author: value.author || '',
       year: value.year || '',
-      page_footer: !!value.page_footer
+      page_footer: !value.page_footer_off
     }
   } catch {
     return null

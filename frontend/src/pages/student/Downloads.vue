@@ -42,16 +42,17 @@
         <div class="flex-1 min-w-0">
           <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ item.title }}</p>
           <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">
-            <span class="font-semibold">{{ KIND_LABEL[item.kind] }}</span><template v-if="item.subject_name"> · {{ item.subject_name }}</template><template v-if="item.pages"> · {{ item.pages }} {{ item.pages === 1 ? 'page' : 'pages' }}</template> · {{ formatBytes(item.bytes) }}
-            <template v-if="item.audio"> · 🔊 audio</template>
+            <span class="font-semibold">{{ KIND_LABEL[item.kind] }}</span><template v-if="item.subject_name"> · {{ item.subject_name }}</template><template v-if="item.pages"> · {{ item.pages }} {{ item.pages === 1 ? 'page' : 'pages' }}</template><template v-if="item.bytes"> · {{ formatBytes(item.bytes) }}</template>
+            <template v-if="item.audio"> · with audio</template>
           </p>
           <p class="text-[11px]" :class="expiringSoon(item) ? 'text-amber-700 dark:text-amber-300 font-semibold' : 'text-gray-400 dark:text-gray-500'">
             <template v-if="item.progress !== undefined">Updating… {{ Math.round(item.progress * 100) }}%</template>
+            <template v-else-if="item.note"><span :class="item.noteClass">{{ item.note }}</span></template>
             <template v-else>Saved {{ new Date(item.downloadedAt).toLocaleDateString() }} · expires {{ daysLeft(item.expiresAt) }}<template v-if="expiringSoon(item)"> - go online to renew</template></template>
           </p>
         </div>
         <div class="flex items-center gap-1.5 flex-shrink-0">
-          <router-link :to="item.readTo" class="px-2.5 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700">Read</router-link>
+          <router-link :to="item.readTo" class="px-2.5 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700">{{ item.kind === 'assessment' ? 'Open' : 'Read' }}</router-link>
           <button type="button" class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20" title="Remove from this device" @click="remove(item)">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
           </button>
@@ -65,6 +66,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { offline, removeTopic, DAYS_KEPT, type DownloadMeta } from '@/utils/offline/enotes'
 import { removeDoc, type DocMeta } from '@/utils/offline/docs'
+import { removeAssessment, type SavedAssessmentMeta } from '@/utils/offline/assessments'
 import { formatBytes, daysLeft } from '@/utils/offline/format'
 import { parseCoverDesign } from '@/utils/enoteCover'
 import { subjectTag } from '@/utils/subjectTag'
@@ -77,11 +79,21 @@ const SHELVES = [
   { to: '/student/library', label: 'eLibrary' },
   { to: '/student/itembank', label: 'Item Bank' }
 ]
-const KIND_LABEL: Record<string, string> = { enote: 'eNotes', library: 'eLibrary', itembank: 'Item Bank' }
+const KIND_LABEL: Record<string, string> = { enote: 'eNotes', library: 'eLibrary', itembank: 'Item Bank', assessment: 'Assessment' }
+// Where an assessment answered offline stands
+const ASSESSMENT_STATE: Record<string, { note: string; cls: string } | null> = {
+  saved: null,
+  draft: { note: "Answers waiting to be sent when you're online", cls: 'text-amber-700 dark:text-amber-300 font-semibold' },
+  submitted: { note: 'Submitted on this device - waiting to be sent', cls: 'text-amber-700 dark:text-amber-300 font-semibold' },
+  sent: { note: 'Sent to your teacher', cls: 'text-emerald-700 dark:text-emerald-300 font-semibold' },
+  failed: { note: "Couldn't be sent - open it to see why", cls: 'text-red-600 dark:text-red-400 font-semibold' }
+}
 
 interface Item {
   key: string
-  kind: 'enote' | 'library' | 'itembank'
+  kind: 'enote' | 'library' | 'itembank' | 'assessment'
+  note?: string
+  noteClass?: string
   id: number
   title: string
   subject_name?: string
@@ -129,6 +141,22 @@ const items = computed<Item[]>(() => [
     color: d.kind === 'library' ? '#7c3aed' : '#0f766e',
     readTo: `/student/${d.kind}?open=${d.docId}`,
     progress: offline.docProgress[d.key]
+  })),
+  ...(Object.values(offline.assessments) as SavedAssessmentMeta[]).map((a): Item => ({
+    key: `assessment:${a.id}`,
+    kind: 'assessment',
+    id: a.id,
+    title: a.title,
+    subject_name: a.subject_name ?? undefined,
+    pages: 0,
+    bytes: 0,
+    audio: false,
+    downloadedAt: a.savedAt,
+    expiresAt: a.expiresAt,
+    color: '#0369a1',
+    readTo: `/student/assignments/${a.id}/answer`,
+    note: ASSESSMENT_STATE[a.state]?.note,
+    noteClass: ASSESSMENT_STATE[a.state]?.cls
   }))
 ].sort((a, b) => b.downloadedAt - a.downloadedAt))
 const totalBytes = computed(() => items.value.reduce((sum, i) => sum + i.bytes, 0))
@@ -156,6 +184,7 @@ const remove = async (item: Item) => {
   })
   if (!ok) return
   if (item.kind === 'enote') await removeTopic(item.id)
+  else if (item.kind === 'assessment') await removeAssessment(item.id)
   else await removeDoc(item.kind, item.id)
 }
 </script>

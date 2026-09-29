@@ -181,7 +181,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, shallowRef, computed, onMounted } from 'vue'
 import apiService from '@/services/api'
 import { useToastStore } from '@/stores/toast'
 import { useConfirmStore } from '@/stores/confirm'
@@ -193,8 +193,11 @@ const loadingClasses = ref(false)
 const loadingStudents = ref(false)
 const classes = ref<any[]>([])
 const students = ref<any[]>([])
-const selectedGroup = ref<any>(null)
-const selectedClass = ref<any>(null)
+// shallowRef: kept as the very objects the cards render from, so `selectedGroup === group` (the
+// highlight, and clicking a selected class again to close it) compares like with like - a plain
+// ref would hold a reactive copy that never equals the card's own object
+const selectedGroup = shallowRef<any>(null)
+const selectedClass = shallowRef<any>(null)
 const studentSearch = ref('')
 
 // The backend returns one row per class+stream combination (e.g. "S.1" appears once per

@@ -26,7 +26,7 @@
         </div>
       </template>
       <template v-else>
-        <h2 class="text-lg sm:text-xl font-semibold text-amber-700 dark:text-amber-400 mb-2">⚠️ Some questions are unanswered</h2>
+        <h2 class="text-lg sm:text-xl font-semibold text-amber-700 dark:text-amber-400 mb-2 flex items-center gap-2"><AppIcon name="warning" class="w-5 h-5" /> Some questions are unanswered</h2>
         <p class="text-gray-600 dark:text-gray-400 mb-6">
           You have answered {{ answeredCount }} of {{ totalCount }} questions. Would you like to review them before submitting?
         </p>
@@ -51,6 +51,7 @@
 </template>
 
 <script setup lang="ts">
+import AppIcon from '@/components/common/AppIcon.vue'
 import { computed } from 'vue'
 
 const props = defineProps<{

@@ -1,7 +1,7 @@
 <template>
   <div class="p-4 sm:p-6">
     <div class="mb-6">
-      <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1">🏆 My Achievements</h1>
+      <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1 flex items-center gap-2"><AppIcon name="trophy" class="w-7 h-7" /> My Achievements</h1>
       <p class="text-sm text-gray-500 dark:text-gray-400">Your full badge history, automatically awarded based on performance.</p>
     </div>
 
@@ -12,7 +12,7 @@
         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-white"
         :class="BADGE_COLORS[type]"
       >
-        {{ BADGE_ICONS[type] }} {{ BADGE_LABELS[type] }}: {{ summary?.[type] ?? 0 }}
+        <BadgeIcon :type="type" plain class="w-4 h-4 inline-block align-[-3px]" /> {{ BADGE_LABELS[type] }}: {{ summary?.[type] ?? 0 }}
       </span>
     </div>
 
@@ -50,7 +50,7 @@
       >
         <span v-if="a.status === 'revoked'" class="absolute top-2 right-2 text-[10px] font-semibold bg-black/40 px-2 py-0.5 rounded-full">Revoked</span>
         <div class="flex items-start justify-between gap-2">
-          <span class="text-3xl">{{ BADGE_ICONS[a.badge_type] }}</span>
+          <BadgeIcon :type="a.badge_type" class="w-8 h-8" />
           <span class="text-[10px] uppercase tracking-wide font-semibold bg-white/20 px-2 py-0.5 rounded-full">{{ BADGE_LABELS[a.badge_type] }}</span>
         </div>
         <p class="font-bold mt-2 leading-tight">{{ a.award_title }}</p>
@@ -66,9 +66,11 @@
 </template>
 
 <script setup lang="ts">
+import BadgeIcon from '@/components/common/BadgeIcon.vue'
+import AppIcon from '@/components/common/AppIcon.vue'
 import { ref, computed, onMounted, watch } from 'vue'
 import axios from 'axios'
-import { BADGE_ICONS, BADGE_LABELS, BADGE_COLORS } from '@/types/reward'
+import { BADGE_LABELS, BADGE_COLORS } from '@/types/reward'
 import type { StudentAward, AwardSummary, BadgeType } from '@/types/reward'
 
 const awards = ref<StudentAward[]>([])

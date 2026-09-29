@@ -10,7 +10,7 @@
 
     <template v-else>
       <div v-if="skillsWithEvidence.length === 0" class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-10 sm:p-14 text-center">
-        <span class="text-4xl block mb-3">📊</span>
+        <span class="block mb-3"><AppIcon name="chart" class="w-10 h-10 mx-auto" /></span>
         <p class="text-gray-500 dark:text-gray-400 text-sm sm:text-base max-w-md mx-auto">No practical skills assessed yet. Complete a Virtual Lab experiment to begin building {{ viewer === 'student' ? 'your' : 'a' }} skills profile.</p>
       </div>
 
@@ -91,6 +91,7 @@
 </template>
 
 <script setup lang="ts">
+import AppIcon from '@/components/common/AppIcon.vue'
 import { ref, computed, onMounted, watch } from 'vue'
 import axios from 'axios'
 import type { SkillScore, SkillsOverview, SkillEvidenceSummary, RecommendedTemplate } from '@/types/virtualLab'

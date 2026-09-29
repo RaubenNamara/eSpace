@@ -49,7 +49,7 @@
             {{ currentPage.title }}
           </h3>
           <div v-if="currentPage?.narration_audio_path" class="mb-6 flex items-center gap-3 p-3 rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800">
-            <span class="text-lg flex-shrink-0">🔊</span>
+            <AppIcon name="speaker" class="w-5 h-5" />
             <audio :key="currentPage.narration_audio_path" :src="resolveAssetUrl(currentPage.narration_audio_path)" controls class="flex-1 h-9"></audio>
           </div>
           <div
@@ -93,6 +93,7 @@
 </template>
 
 <script setup lang="ts">
+import AppIcon from '@/components/common/AppIcon.vue'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { autoEmbedYoutube, injectLazyLoading } from '@/utils/richContent'
 import { resolveAssetUrl } from '@/utils/url'

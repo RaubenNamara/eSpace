@@ -5,7 +5,7 @@
   >
     <div class="flex items-center justify-between mb-4 gap-3">
       <div>
-        <h2 class="text-lg font-bold text-gray-900 dark:text-white">📈 Performance Trend</h2>
+        <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2"><AppIcon name="trend" class="w-5 h-5" /> Performance Trend</h2>
         <p class="text-xs text-gray-400 dark:text-gray-500">Your own scores over time in this class</p>
       </div>
       <span
@@ -33,6 +33,7 @@
 </template>
 
 <script setup lang="ts">
+import AppIcon from '@/components/common/AppIcon.vue'
 import { computed } from 'vue'
 import { Line } from 'vue-chartjs'
 import { Chart as ChartJS, Title, Tooltip, LineElement, PointElement, LinearScale, CategoryScale } from 'chart.js'
