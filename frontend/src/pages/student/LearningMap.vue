@@ -275,7 +275,6 @@
                 <!-- What the level means -->
                 <p v-if="topic.competency.grade" class="text-xs p-2.5 rounded-lg border" :class="gradeStyle(topic.competency.grade)!.note">
                   You demonstrate <span class="font-semibold">{{ topic.competency.level!.toLowerCase() }}</span> competence<template v-if="topic.competency.text"> in {{ asGerund(topic.competency.text) }}</template>.
-                  <template v-if="gradeUp(topic.competency.grade)"> Next level: <span class="font-semibold">{{ gradeUp(topic.competency.grade) }}</span>.</template>
                 </p>
 
                 <!-- The Activity of Integration(s) that assess it -->
@@ -384,7 +383,6 @@
               <div v-if="openConstructs[c.id]" class="px-3 sm:px-4 pb-3 sm:pb-4 space-y-3">
                 <p v-if="c.grade" class="text-xs p-2.5 rounded-lg border" :class="gradeStyle(c.grade)!.note">
                   You demonstrate <span class="font-semibold">{{ EOC_CLAUSE[c.grade as Grade] }}</span> {{ c.name.toLowerCase() }}.
-                  <template v-if="gradeUp(c.grade)"> Next level: <span class="font-semibold">{{ gradeUp(c.grade) }}</span>.</template>
                 </p>
 
                 <div>
@@ -530,10 +528,6 @@ const gradeStyle = (g: string | null) => (g && g in GRADE ? GRADE[g as Grade] : 
 // Left to right on the ladder: Elementary up to Exceptional
 const LADDER: Grade[] = ['E', 'D', 'C', 'B', 'A']
 const reached = (t: Topic, g: Grade) => !!t.competency.grade && LADDER.indexOf(g) <= LADDER.indexOf(t.competency.grade as Grade)
-const gradeUp = (g: string | null) => {
-  const i = g ? LADDER.indexOf(g as Grade) : -1
-  return i >= 0 && i < LADDER.length - 1 ? `${GRADE[LADDER[i + 1]].label} (${LADDER[i + 1]})` : null
-}
 const competencyStatusLabel = (s: Status) => s === 'available' ? 'Activity of Integration ready to attempt' : statusStyle(s).label
 const ASSESSMENT_STATE: Record<Assessment['state'], string> = { marked: 'Marked', awaiting: 'Awaiting marking', started: 'Started', available: 'Not attempted' }
 // "Understand the concept..." -> "understanding the concept..." to follow "competence in", the way
