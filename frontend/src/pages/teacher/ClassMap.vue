@@ -83,13 +83,25 @@
 
       <!-- By student -->
       <div v-else class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-        <input v-model="search" type="text" placeholder="Search students..." class="w-full sm:w-64 mb-3 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">
+          <input v-model="search" type="text" placeholder="Search students..." class="w-full sm:w-64 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+          <!-- Growth, not rank: who is improving most, or achieved most this term -->
+          <div class="sm:ml-auto flex gap-1 p-1 rounded-lg bg-gray-100 dark:bg-gray-700 self-start max-w-full overflow-x-auto [scrollbar-width:none]">
+            <button v-for="o in SORTS" :key="o.key" type="button" class="px-2.5 py-1 rounded-md text-xs font-semibold whitespace-nowrap" :class="studentSort === o.key ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-300'" @click="studentSort = o.key">{{ o.label }}</button>
+          </div>
+        </div>
         <ul class="divide-y divide-gray-100 dark:divide-gray-700">
           <li v-for="s in studentRows" :key="s.id" class="py-2 flex items-center gap-3">
             <div class="min-w-0 flex-1">
               <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ s.name }}</p>
               <p class="text-[11px] text-gray-500 dark:text-gray-400">{{ s.admission_number }}<template v-if="stream === 'all'"> · {{ s.class_name }}</template> · {{ s.results }} of {{ data.outcome_count }} outcomes assessed</p>
             </div>
+            <button type="button" class="flex-shrink-0 p-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-indigo-700 dark:hover:bg-gray-700 dark:hover:text-indigo-300" :title="`${s.name}: what I can do report`" @click="reportFor = s.id">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+            </button>
+            <span v-if="studentSort !== 'support'" class="flex-shrink-0 w-16 text-right text-xs font-semibold" :class="growthValue(s) === null ? 'text-gray-400 dark:text-gray-500' : growthValue(s)! < 0 ? 'text-rose-700 dark:text-rose-300' : 'text-emerald-700 dark:text-emerald-300'" :title="studentSort === 'improved' ? 'Recent results against earlier ones, in this subject' : 'Learning outcomes achieved this term'">
+              {{ growthLabel(s) }}
+            </span>
             <span v-if="!s.results" class="text-[11px] text-gray-400 dark:text-gray-500 w-44 text-right">No results yet</span>
             <span v-else class="w-44 flex items-center gap-2">
               <span class="flex h-2.5 flex-1 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-700">
@@ -103,6 +115,8 @@
         </ul>
       </div>
     </template>
+
+    <CompetencyReportDialog v-if="reportFor" :url="`/api/teacher/students/${reportFor}/competency-report`" @close="reportFor = null" />
 
     <SupportGroupModal
       v-if="supportRow && subjectId"
@@ -121,12 +135,13 @@ import axios from 'axios'
 import PickerDropdown, { type PickerOption } from '@/components/common/PickerDropdown.vue'
 import SupportGroupModal, { type SupportRow } from '@/components/classmap/SupportGroupModal.vue'
 import SupportGroupList, { type SupportGroup } from '@/components/classmap/SupportGroupList.vue'
+import CompetencyReportDialog from '@/components/learningmap/CompetencyReportDialog.vue'
 
 type Key = 'achieved' | 'developing' | 'needs_support' | 'not_assessed'
 interface Summary { assessed: boolean; counts: Record<Key, number>; support: { student_id: number; name: string; percentage: number; status: 'developing' | 'needs_support' }[] }
 // ids: every stream's copy of the outcome / topic (the class level's streams each have their own)
 interface Topic { id: number; ids: number[]; topic: string; theme: string | null; term_name: string | null; competence: string | null; outcomes: (Summary & { id: number; ids: number[]; text: string })[]; competency: Summary }
-interface StudentRow { id: number; name: string; admission_number: string; class_name: string | null; achieved: number; developing: number; needs_support: number; results: number }
+interface StudentRow { id: number; name: string; admission_number: string; class_name: string | null; achieved: number; developing: number; needs_support: number; results: number; improvement: number | null; outcomes_term: number }
 interface ClassMap { subject: { id: number; name: string }; student_count: number; topics: Topic[]; students: StudentRow[]; outcome_count: number }
 
 const KEYS: Key[] = ['achieved', 'developing', 'needs_support', 'not_assessed']
@@ -197,12 +212,29 @@ const share = (counts: Record<Key, number>, k: Key) => {
 }
 const toggle = (key: string) => { open.value = { ...open.value, [key]: !open.value[key] } }
 
-// Who's furthest behind first
+// Who's furthest behind first - or growth: most improved, most outcomes achieved this term
+const SORTS = [
+  { key: 'support' as const, label: 'Needs support' },
+  { key: 'improved' as const, label: 'Most improved' },
+  { key: 'term' as const, label: 'Outcomes this term' }
+]
+const studentSort = ref<'support' | 'improved' | 'term'>('support')
+// The student whose "what I can do" report is open
+const reportFor = ref<number | null>(null)
+const growthValue = (s: StudentRow) => (studentSort.value === 'improved' ? s.improvement : s.outcomes_term || null)
+const growthLabel = (s: StudentRow) => {
+  const v = growthValue(s)
+  if (v === null) return '–'
+  return studentSort.value === 'improved' ? `${v > 0 ? '+' : ''}${v}%` : `${v}`
+}
 const studentRows = computed(() => {
   const q = search.value.trim().toLowerCase()
-  return [...(data.value?.students ?? [])]
+  const rows = [...(data.value?.students ?? [])]
     .filter(s => !q || s.name.toLowerCase().includes(q) || s.admission_number.toLowerCase().includes(q))
-    .sort((a, b) => b.needs_support - a.needs_support || (a.results ? a.achieved / a.results : 1) - (b.results ? b.achieved / b.results : 1) || a.name.localeCompare(b.name))
+  if (studentSort.value !== 'support') {
+    return rows.sort((a, b) => (growthValue(b) ?? -Infinity) - (growthValue(a) ?? -Infinity) || a.name.localeCompare(b.name))
+  }
+  return rows.sort((a, b) => b.needs_support - a.needs_support || (a.results ? a.achieved / a.results : 1) - (b.results ? b.achieved / b.results : 1) || a.name.localeCompare(b.name))
 })
 
 const load = async () => {

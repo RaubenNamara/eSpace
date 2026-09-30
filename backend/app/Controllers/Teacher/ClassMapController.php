@@ -327,6 +327,11 @@ class ClassMapController extends Controller
             ];
         }
 
+        // Growth in this subject: recent results against earlier ones, and outcomes achieved this term
+        $growth = \eSpace\App\Services\GrowthService::forStudents(
+            $db, $studentIds, \eSpace\App\Services\GrowthService::currentTermId($db), (int) $subject['id']
+        );
+
         $studentsOut = [];
         foreach ($students as $s) {
             $sid = (int) $s['id'];
@@ -335,6 +340,8 @@ class ClassMapController extends Controller
                 'name' => $names[$sid],
                 'admission_number' => $s['admission_number'],
                 'class_name' => $s['class_name'],
+                'improvement' => $growth[$sid]['improvement'],
+                'outcomes_term' => $growth[$sid]['outcomes_term'],
             ] + $perStudent[$sid];
         }
 

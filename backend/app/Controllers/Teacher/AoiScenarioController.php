@@ -12,7 +12,7 @@ use eSpace\App\Services\GeminiAoiScenarioService;
  * topics' competency and learning outcomes (see GeminiAoiScenarioService). The teacher picks one
  * in the Assignment Builder, where it fills the scenario question and the marking guide.
  *
- * POST /teacher/aoi-scenarios  { curriculum_topic_ids: number[] }
+ * POST /teacher/aoi-scenarios  { curriculum_topic_ids: number[], count?: 1-3, avoid?: string[] (titles already shown) }
  */
 class AoiScenarioController extends Controller
 {
@@ -79,7 +79,8 @@ class AoiScenarioController extends Controller
         ];
 
         try {
-            $suggestions = (new GeminiAoiScenarioService())->suggest($context);
+            $avoid = array_values(array_filter(array_map(fn($t) => trim(strip_tags((string) $t)), (array) $this->input('avoid', []))));
+            $suggestions = (new GeminiAoiScenarioService())->suggest($context, (int) ($this->input('count') ?? 3), $avoid);
         } catch (\RuntimeException $e) {
             $this->error($e->getMessage(), 503);
             return;

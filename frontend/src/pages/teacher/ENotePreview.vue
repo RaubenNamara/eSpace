@@ -1476,13 +1476,22 @@ const onBookFlip = (index: number) => {
 // The student's place in the topic, saved (a moment after they stop turning pages) so the shelf
 // can offer to continue from here next time
 let placeTimer: ReturnType<typeof setTimeout> | null = null
+// For reading analytics: the page last saved, and when the student settled on it
+let savedPage: { id: number; at: number } | null = null
 const saveReadingPlace = () => {
   if (!isStudentMode.value || !topic.value || !currentPage.value) return
   const topicIdNow = topic.value.id
   const pageId = currentPage.value.id
   if (placeTimer) clearTimeout(placeTimer)
   placeTimer = setTimeout(() => {
-    axios.post(`${API_BASE}/student/enotes/topics/${topicIdNow}/progress`, { page_id: pageId }).catch(() => {})
+    if (savedPage?.id === pageId) return
+    const prev = savedPage
+    savedPage = { id: pageId, at: Date.now() }
+    axios.post(`${API_BASE}/student/enotes/topics/${topicIdNow}/progress`, {
+      page_id: pageId,
+      prev_page_id: prev?.id,
+      prev_seconds: prev ? Math.round((Date.now() - prev.at) / 1000) : undefined
+    }).catch(() => {})
   }, 1200)
 }
 

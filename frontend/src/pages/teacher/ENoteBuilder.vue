@@ -750,8 +750,31 @@
             <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Deadline *</label>
             <input v-model="aoiForm.due_date" type="date" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white">
           </div>
+          <!-- Start from a suggested scenario (needs the topic's curriculum link: its competency
+               and outcomes are what the scenarios are drafted from) -->
+          <div v-if="topic?.curriculum_topic_id" class="rounded-lg border border-violet-200 dark:border-violet-800 bg-violet-50/60 dark:bg-violet-900/15 p-3">
+            <template v-if="aoiScenario">
+              <p class="text-[11px] font-bold uppercase tracking-wider text-violet-700 dark:text-violet-300">Scenario</p>
+              <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ aoiScenario.title }}</p>
+              <p class="text-[11px] text-gray-500 dark:text-gray-400">{{ aoiScenario.tasks.length }} task{{ aoiScenario.tasks.length === 1 ? '' : 's' }} · {{ aoiScenarioMarks }} marks · with a marking guide</p>
+              <div class="mt-1.5 flex gap-3 text-xs font-semibold">
+                <button type="button" class="text-violet-700 dark:text-violet-300" @click="showAoiSuggest = true">Change</button>
+                <button type="button" class="text-gray-500 dark:text-gray-400" @click="aoiScenario = null">Remove</button>
+              </div>
+            </template>
+            <template v-else>
+              <p class="text-xs text-violet-900 dark:text-violet-100"><span class="font-semibold">Start from a suggested scenario?</span> Drafted from this topic's competency and outcomes, with tasks and a marking guide.</p>
+              <button type="button" class="mt-2 px-3 py-1.5 rounded-lg bg-violet-600 text-white text-xs font-semibold hover:bg-violet-700" @click="showAoiSuggest = true">Suggest scenarios</button>
+            </template>
+          </div>
           <p v-if="aoiError" class="text-xs text-red-600 dark:text-red-400">{{ aoiError }}</p>
         </div>
+        <AoiScenarioSuggest
+          v-if="showAoiSuggest && topic?.curriculum_topic_id"
+          :topic-ids="[topic.curriculum_topic_id]"
+          @close="showAoiSuggest = false"
+          @use="aoiScenario = $event; showAoiSuggest = false"
+        />
         <div class="flex gap-3 p-5 pt-0">
           <button
             @click="showAoiModal = false"
@@ -808,6 +831,8 @@ import axios from 'axios'
 import CKEditor from '@/components/teacher/CKEditor.vue'
 import ENoteCoverEditor from '@/components/enotes/ENoteCoverEditor.vue'
 import NarrationControls from '@/components/enotes/NarrationControls.vue'
+import AoiScenarioSuggest from '@/components/assignment/AoiScenarioSuggest.vue'
+import { addScenarioQuestion, markingGuideJson, totalMarks, type AoiSuggestion } from '@/utils/aoiDraft'
 import { autoEmbedYoutube, resolveContentAssetUrls } from '@/utils/richContent'
 import type { ENoteTopic, ENotePage, ENotePageForm, ENotePageNarration } from '@/types/enotes'
 import { useToastStore } from '@/stores/toast'
@@ -898,7 +923,9 @@ const loadTopic = async () => {
       console.log('Pages loaded:', pages.value.length)
 
       if (pages.value.length > 0) {
-        currentPage.value = pages.value[0]
+        // ?page=<id> (from Reading insights) opens on that page
+        const wanted = Number(route.query.page)
+        currentPage.value = pages.value.find(p => p.id === wanted) ?? pages.value[0]
         console.log('Current page set:', currentPage.value)
       } else {
         // A topic with zero pages (freshly created, or every page deleted) has nothing for the
@@ -1553,8 +1580,14 @@ const aoiForm = ref<{ academic_year: string; weight: string; startMode: 'now' | 
 const creatingAoi = ref(false)
 const aoiError = ref('')
 
+// A suggested scenario to start the AOI from (optional)
+const aoiScenario = ref<AoiSuggestion | null>(null)
+const showAoiSuggest = ref(false)
+const aoiScenarioMarks = computed(() => (aoiScenario.value ? totalMarks(aoiScenario.value) : 0))
+
 const openAoiModal = () => {
   aoiError.value = ''
+  aoiScenario.value = null
   aoiForm.value = { academic_year: defaultAcademicYear(), weight: '', startMode: 'now', open_at: '', due_date: '' }
   showAoiModal.value = true
 }
@@ -1567,7 +1600,8 @@ const createAoiAssessment = async () => {
   try {
     const response = await axios.post(`${API_BASE}/teacher/assignments`, {
       title: `${topic.value.title} AOI Assessment`,
-      total_marks: 0,
+      total_marks: aoiScenarioMarks.value,
+      rubric: aoiScenario.value ? markingGuideJson(aoiScenario.value) : null,
       due_date: aoiForm.value.due_date,
       open_at: aoiForm.value.startMode === 'scheduled' ? aoiForm.value.open_at : null,
       subject_id: topic.value.subject_id,
@@ -1586,6 +1620,10 @@ const createAoiAssessment = async () => {
       await axios.put(`${API_BASE}/teacher/assignments/${assignmentId}/curriculum`, {
         topic_ids: [topic.value.curriculum_topic_id]
       })
+    }
+    // The chosen scenario becomes the AOI's question, its tasks the sub-questions
+    if (aoiScenario.value) {
+      await addScenarioQuestion(assignmentId, aoiScenario.value, topic.value.curriculum_topic_id ?? null)
     }
     showAoiModal.value = false
     router.push(`/teacher/assignments/${assignmentId}/edit`)

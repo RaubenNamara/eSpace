@@ -350,7 +350,7 @@ class ChatService
 
     /**
      * Total unread message count across every conversation this participant is in - a single
-     * lean query for the header's WhatsApp-style badge, rather than the heavier per-conversation
+     * lean query for the header's Messages badge, rather than the heavier per-conversation
      * breakdown listConversations() computes (N+1 queries for previews/presence it doesn't need).
      */
     public function totalUnreadCount(int $userId, string $userRole): int
@@ -376,7 +376,7 @@ class ChatService
     {
         $db = $this->getDb();
 
-        // Read receipts (WhatsApp-style ticks) only make sense for a direct (1:1) chat, where
+        // Read receipts (ticks) only make sense for a direct (1:1) chat, where
         // "the other person" is unambiguous - if there's more than one other participant (a
         // group/class chat), read status per-member isn't tracked and messages just show as sent.
         $stmt = $db->prepare(

@@ -28,12 +28,16 @@ class GeminiAoiScenarioService
         . 'assessment at the end of a topic: a real-life SCENARIO that presents a problem, and a TASK in which the '
         . 'learner integrates what the topic taught to solve it and produce something (a report, plan, letter, '
         . 'design, poster, calculation, advice...). Given a topic, its competency and learning outcomes, the '
-        . 'subject and class, write THREE different AOIs. Each scenario must be set in a familiar Ugandan context '
+        . 'subject and class, write the number of different AOIs asked for. Each scenario must be set in a familiar Ugandan context '
         . '(for example a village, market, school, farm, boda-boda stage, borehole, health centre, family '
         . 'business), name realistic people and places, include the facts or figures the learner needs, and be '
-        . 'solvable by a learner at that class level using this topic. Keep the language simple (80 to 150 words '
-        . 'per scenario). Give 1 to 3 tasks per AOI, each with marks, totalling 10 to 20 marks; tasks start with '
-        . 'an action verb and say what the learner must produce. The marking guide scores each of the four '
+        . 'solvable by a learner at that class level using this topic - pitch the difficulty and vocabulary to that '
+        . 'class (S.1 simpler, S.4 more demanding). Keep the language simple (80 to 150 words per scenario). SUPPORT '
+        . 'lists what the learner is given to work with (materials, data, a table, a map, instructions) in one to '
+        . 'three short lines; leave it empty if nothing extra is needed. Give 1 to 3 tasks per AOI, each with marks, '
+        . 'totalling 10 to 20 marks; tasks start with an action verb and say what the learner must produce. '
+        . 'EXPECTED_ANSWER is a short outline for the teacher only (3 to 6 points) of what a good response '
+        . 'contains, including any key calculations or facts. The marking guide scores each of the four '
         . 'criteria from 0 to 3: Relevance (the response addresses the scenario and task), Accuracy (correct '
         . 'subject knowledge, facts and working), Coherence (logical, well-organised, clearly communicated), '
         . 'Excellence (creativity, extra insight, practical value). For each criterion say concretely what a '
@@ -53,10 +57,13 @@ class GeminiAoiScenarioService
 
     /**
      * @param array{subject: string, class_name: string, topic: string, theme: ?string, competence: ?string, outcomes: string[]} $topic
-     * @return array<int, array{title: string, scenario: string, tasks: array<int, array{text: string, marks: int}>, marking_guide: array<int, array{criterion: string, look_for: string}>}>
+     * @param int $count how many to draft (1 to redraft one, 3 for a set)
+     * @param string[] $avoid titles already shown, so new drafts differ from them
+     * @return array<int, array{title: string, scenario: string, support: string, tasks: array<int, array{text: string, marks: int}>, expected_answer: string, marking_guide: array<int, array{criterion: string, look_for: string}>}>
      */
-    public function suggest(array $topic): array
+    public function suggest(array $topic, int $count = 3, array $avoid = []): array
     {
+        $count = max(1, min(3, $count));
         if (!$this->isConfigured()) {
             throw new RuntimeException('AI suggestions are not set up yet. Set GEMINI_API_KEY in backend/.env.');
         }
@@ -74,6 +81,11 @@ class GeminiAoiScenarioService
         ];
         foreach ($topic['outcomes'] as $outcome) {
             $lines[] = '- ' . $outcome;
+        }
+        $lines[] = '';
+        $lines[] = "Write {$count} AOI" . ($count === 1 ? '' : 's') . '.';
+        if ($avoid) {
+            $lines[] = 'Make them clearly different from these, already suggested: ' . implode('; ', array_slice($avoid, 0, 10));
         }
 
         $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . self::MODEL
@@ -103,6 +115,7 @@ class GeminiAoiScenarioService
                             'properties' => [
                                 'title' => ['type' => 'STRING'],
                                 'scenario' => ['type' => 'STRING'],
+                                'support' => ['type' => 'STRING'],
                                 'tasks' => [
                                     'type' => 'ARRAY',
                                     'items' => [
@@ -114,6 +127,7 @@ class GeminiAoiScenarioService
                                         'required' => ['text', 'marks'],
                                     ],
                                 ],
+                                'expected_answer' => ['type' => 'STRING'],
                                 'marking_guide' => [
                                     'type' => 'ARRAY',
                                     'items' => [
@@ -148,7 +162,7 @@ class GeminiAoiScenarioService
 
         $text = $decoded['candidates'][0]['content']['parts'][0]['text'] ?? null;
         $items = is_string($text) ? json_decode($text, true) : null;
-        $clean = is_array($items) ? self::clean($items) : [];
+        $clean = is_array($items) ? array_slice(self::clean($items), 0, $count) : [];
         if (!$clean) {
             throw new RuntimeException('Could not draft scenarios. Please try again.');
         }
@@ -184,7 +198,9 @@ class GeminiAoiScenarioService
             $out[] = [
                 'title' => trim((string) ($item['title'] ?? '')) ?: 'Activity of Integration',
                 'scenario' => $scenario,
+                'support' => trim((string) ($item['support'] ?? '')),
                 'tasks' => array_slice($tasks, 0, 4),
+                'expected_answer' => trim((string) ($item['expected_answer'] ?? '')),
                 'marking_guide' => $guide,
             ];
         }

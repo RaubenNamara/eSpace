@@ -4,7 +4,7 @@ import axios from 'axios'
 import { useAuthStore } from './auth'
 
 /**
- * Shared unread-message count for the WhatsApp-style header icon. Kept in its own small store
+ * Shared unread-message count for the header Messages icon. Kept in its own small store
  * (rather than local state inside MainLayout) so a chat page - a routed child, not a descendant
  * MainLayout can prop/emit to directly - can force an immediate refresh right after opening a
  * conversation (which the backend marks read server-side), instead of the badge sitting stale

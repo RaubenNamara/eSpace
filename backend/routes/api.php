@@ -52,6 +52,8 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/mastery', 'eSpace\App\Controllers\Student\MasteryController@index');
         Router::get('/next-steps', 'eSpace\App\Controllers\Student\NextStepsController@index');
         Router::post('/support-groups/{id}/revised', 'eSpace\App\Controllers\Student\NextStepsController@revised');
+        Router::get('/growth', 'eSpace\App\Controllers\Student\GrowthController@index');
+        Router::get('/competency-report', 'eSpace\App\Controllers\CompetencyReportController@mine');
 
         // Academic History
         Router::get('/academic-history', 'eSpace\App\Controllers\Student\AcademicHistoryController@index');
@@ -311,6 +313,10 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/enotes/preview', 'eSpace\App\Controllers\Teacher\ENoteController@previewIndex');
         Router::get('/enotes/preview/topics/{id}', 'eSpace\App\Controllers\Teacher\ENoteController@previewShow');
         Router::get('/enotes/topics/{id}', 'eSpace\App\Controllers\Teacher\ENoteController@show');
+        Router::get('/enotes/topics/{id}/insights', 'eSpace\App\Controllers\Teacher\ENoteInsightsController@show');
+        Router::put('/enotes/topics/{id}/share', 'eSpace\App\Controllers\Teacher\ENoteController@share');
+        Router::get('/enotes/shared', 'eSpace\App\Controllers\Teacher\ENoteController@sharedIndex');
+        Router::post('/enotes/shared/{id}/copy', 'eSpace\App\Controllers\Teacher\ENoteController@copyShared');
         Router::put('/enotes/topics/{id}', 'eSpace\App\Controllers\Teacher\ENoteController@update');
         Router::delete('/enotes/topics/{id}', 'eSpace\App\Controllers\Teacher\ENoteController@delete');
         Router::post('/enotes/topics/{id}/publish', 'eSpace\App\Controllers\Teacher\ENoteController@publish');
@@ -351,6 +357,8 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/class-map/options', 'eSpace\App\Controllers\Teacher\ClassMapController@options');
         Router::get('/class-map', 'eSpace\App\Controllers\Teacher\ClassMapController@index');
         Router::post('/aoi-scenarios', 'eSpace\App\Controllers\Teacher\AoiScenarioController@suggest');
+        Router::get('/question-bank', 'eSpace\App\Controllers\Teacher\QuestionBankController@index');
+        Router::get('/students/{id}/competency-report', 'eSpace\App\Controllers\CompetencyReportController@forStudent');
         Router::get('/support-groups', 'eSpace\App\Controllers\Teacher\SupportGroupController@index');
         Router::post('/support-groups', 'eSpace\App\Controllers\Teacher\SupportGroupController@store');
         Router::post('/support-groups/{id}/remind', 'eSpace\App\Controllers\Teacher\SupportGroupController@remind');

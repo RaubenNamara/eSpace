@@ -271,18 +271,18 @@
               </svg>
             </button>
 
-            <!-- Messages (WhatsApp-style) -->
+            <!-- Messages (eSpace's own chat) -->
             <router-link
               :to="`/${userRole}/chat`"
               class="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               title="Messages"
             >
-              <svg class="w-6 h-6 text-green-500" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C6.477 2 2 6.477 2 12c0 1.821.487 3.53 1.338 5.003L2 22l5.157-1.316A9.933 9.933 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm5.29 14.146c-.223.626-1.276 1.226-1.767 1.279-.452.05-.995.093-3.201-.688-2.697-.996-4.42-3.723-4.556-3.897-.13-.174-1.09-1.45-1.09-2.766 0-1.316.69-1.963.936-2.234.222-.244.483-.305.644-.305.16 0 .322 0 .462.007.148.008.348-.056.545.417.223.532.756 1.848.822 1.983.066.135.11.293.022.47-.088.176-.132.284-.26.44-.13.156-.276.348-.394.468-.13.13-.267.271-.115.53.153.26.68 1.13 1.462 1.83 1.007.9 1.855 1.18 2.116 1.31.26.13.412.11.564-.066.153-.176.652-.762.826-1.024.174-.26.348-.216.588-.13.24.088 1.53.72 1.792.85.26.13.435.196.5.305.065.11.065.635-.157 1.26z"></path>
+              <svg class="w-6 h-6 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
               </svg>
               <span
                 v-if="chatBadge.unreadCount > 0"
-                class="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 bg-green-500 rounded-full text-[10px] leading-4 text-white font-semibold text-center"
+                class="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 bg-indigo-600 rounded-full text-[10px] leading-4 text-white font-semibold text-center"
               >
                 {{ chatBadge.unreadCount > 9 ? '9+' : chatBadge.unreadCount }}
               </span>
@@ -497,7 +497,7 @@ const handleHeaderScroll = () => {
 }
 
 // Presence heartbeat: while any authenticated page (not just chat) is open, periodically tell
-// the backend this user is active - lets chat show a WhatsApp-style online dot for everyone,
+// the backend this user is active - lets chat show an online dot for everyone,
 // not just people currently viewing the chat screen itself.
 const PRESENCE_PING_INTERVAL_MS = 30000
 let presenceTimer: ReturnType<typeof setInterval> | null = null
@@ -538,7 +538,7 @@ const handleOutsideProfileDropdownClick = (event: MouseEvent) => {
   }
 }
 
-// Messages badge (WhatsApp-style icon): backed by the shared chatBadge store (see
+// Messages badge (header chat icon): backed by the shared chatBadge store (see
 // stores/chatBadge.ts) rather than local state, so a chat page can force an immediate refresh
 // right after marking a conversation read instead of the badge sitting stale until the next
 // poll tick. Only student/teacher are real chat participants with a personal unread count -

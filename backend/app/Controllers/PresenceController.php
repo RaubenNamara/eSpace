@@ -10,7 +10,7 @@ use eSpace\App\Repositories\UserRepository;
  * Presence Controller
  *
  * Shared across every role (student/teacher/hod/admin) - a single heartbeat endpoint the
- * frontend calls periodically while the app is open, so chat can show a WhatsApp-style "online"
+ * frontend calls periodically while the app is open, so chat can show an "online"
  * indicator. Not chat-specific itself: it just stamps last_active_at on whichever role table the
  * current session belongs to (see UserRepository::updateLastActive).
  */

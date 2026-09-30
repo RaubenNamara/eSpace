@@ -5,6 +5,8 @@
       <p class="text-sm text-gray-500 dark:text-gray-400">Your full badge history, automatically awarded based on performance.</p>
     </div>
 
+    <GrowthBoard />
+
     <div class="flex flex-wrap gap-2 mb-6">
       <span
         v-for="type in (['platinum', 'gold', 'silver', 'bronze'] as BadgeType[])"
@@ -68,6 +70,7 @@
 <script setup lang="ts">
 import BadgeIcon from '@/components/common/BadgeIcon.vue'
 import AppIcon from '@/components/common/AppIcon.vue'
+import GrowthBoard from '@/components/dashboard/GrowthBoard.vue'
 import { ref, computed, onMounted, watch } from 'vue'
 import axios from 'axios'
 import { BADGE_LABELS, BADGE_COLORS } from '@/types/reward'

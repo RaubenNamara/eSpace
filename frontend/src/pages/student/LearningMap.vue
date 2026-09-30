@@ -7,7 +7,13 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
         </svg>
       </div>
-      <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight">My Learning Map</h1>
+      <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight mr-auto">My Learning Map</h1>
+      <!-- One-page "what I can do" report, to print or download -->
+      <button type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700" @click="showReport = true">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+        My report
+      </button>
+      <CompetencyReportDialog v-if="showReport" url="/api/student/competency-report" @close="showReport = false" />
     </div>
     <p class="text-xs text-gray-500 dark:text-gray-400 mb-5">
       <template v-if="view === 'outcomes'">Every learning outcome for your class<template v-if="data?.year"> in {{ data.year }}</template>, and where you stand on each</template>
@@ -435,6 +441,7 @@ import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch, h, defineCo
 import axios from 'axios'
 import { useRoute, useRouter } from 'vue-router'
 import CountUp from '@/components/common/CountUp.vue'
+import CompetencyReportDialog from '@/components/learningmap/CompetencyReportDialog.vue'
 
 type Status = 'achieved' | 'developing' | 'needs_support' | 'awaiting' | 'available' | 'not_assessed'
 interface Assessment { id: number; title: string; category: string | null; state: 'marked' | 'awaiting' | 'started' | 'available'; percentage: number | null; submission_id: number | null }
@@ -590,6 +597,7 @@ const activeSubjectId = ref<number | null>(null)
 const activeTerm = ref<'all' | number>('all')
 const onlyToDo = ref(false)
 const open = ref<Record<number, boolean>>({})
+const showReport = ref(false)
 
 const activeSubject = computed(() => data.value?.subjects.find(s => s.id === activeSubjectId.value) ?? null)
 

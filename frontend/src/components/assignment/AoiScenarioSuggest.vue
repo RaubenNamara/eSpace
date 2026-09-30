@@ -39,21 +39,29 @@
                 <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400 flex-shrink-0">{{ totalMarks(s) }} marks</span>
               </div>
               <p class="text-sm text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-line">{{ s.scenario }}</p>
+              <p v-if="s.support" class="mt-2 text-xs text-gray-700 dark:text-gray-200 rounded-lg bg-gray-50 dark:bg-gray-700/50 px-2.5 py-1.5 whitespace-pre-line"><span class="font-bold">Support:</span> {{ s.support }}</p>
               <p class="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mt-3 mb-1">Task{{ s.tasks.length === 1 ? '' : 's' }}</p>
               <ol class="list-[lower-alpha] pl-5 space-y-0.5 text-sm text-gray-800 dark:text-gray-100">
                 <li v-for="(t, j) in s.tasks" :key="j">{{ t.text }} <span class="text-gray-500 dark:text-gray-400">({{ t.marks }})</span></li>
               </ol>
               <button type="button" class="mt-3 text-xs font-semibold text-violet-700 dark:text-violet-300" @click="openGuide[i] = !openGuide[i]">
-                {{ openGuide[i] ? 'Hide marking guide' : 'Show marking guide' }}
+                {{ openGuide[i] ? 'Hide marking guide' : 'Show marking guide and expected answer' }}
               </button>
+              <div v-if="openGuide[i] && s.expected_answer" class="mt-2 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50/60 dark:bg-emerald-900/15 p-2.5">
+                <p class="text-[11px] font-bold text-emerald-800 dark:text-emerald-200">Expected answer <span class="font-medium">· for you, not the learners</span></p>
+                <p class="text-xs text-gray-700 dark:text-gray-200 mt-0.5 whitespace-pre-line">{{ s.expected_answer }}</p>
+              </div>
               <dl v-if="openGuide[i]" class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div v-for="g in s.marking_guide" :key="g.criterion" class="rounded-lg bg-violet-50/60 dark:bg-violet-900/15 p-2.5">
                   <dt class="text-[11px] font-bold text-violet-800 dark:text-violet-200">{{ g.criterion }} <span class="font-medium text-violet-600 dark:text-violet-300">· 0–3</span></dt>
                   <dd class="text-xs text-gray-700 dark:text-gray-200 mt-0.5">{{ g.look_for }}</dd>
                 </div>
               </dl>
-              <div class="mt-3 flex justify-end">
-                <button type="button" class="px-4 py-2 text-sm font-semibold rounded-lg bg-violet-600 text-white hover:bg-violet-700" @click="$emit('use', s)">Use this scenario</button>
+              <div class="mt-3 flex items-center justify-end gap-2">
+                <button type="button" class="px-3 py-2 text-xs font-semibold rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50" :disabled="redrafting !== null" @click="redraft(i)">
+                  {{ redrafting === i ? 'Redrafting…' : 'Redraft this one' }}
+                </button>
+                <button type="button" class="px-4 py-2 text-sm font-semibold rounded-lg bg-violet-600 text-white hover:bg-violet-700" :disabled="redrafting === i" @click="$emit('use', s)">{{ useLabel }}</button>
               </div>
             </div>
           </div>
@@ -71,21 +79,18 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import axios from 'axios'
+import type { AoiSuggestion } from '@/utils/aoiDraft'
+import { useToastStore } from '@/stores/toast'
 
-export interface AoiSuggestion {
-  title: string
-  scenario: string
-  tasks: { text: string; marks: number }[]
-  marking_guide: { criterion: string; look_for: string }[]
-}
-
-const props = defineProps<{ topicIds: number[] }>()
+const props = withDefaults(defineProps<{ topicIds: number[]; useLabel?: string }>(), { useLabel: 'Use this scenario' })
+const toast = useToastStore()
 defineEmits<{ close: []; use: [suggestion: AoiSuggestion] }>()
 
 const suggestions = ref<AoiSuggestion[]>([])
 const loading = ref(true)
 const error = ref('')
 const openGuide = ref<Record<number, boolean>>({})
+const redrafting = ref<number | null>(null)
 
 const totalMarks = (s: AoiSuggestion) => s.tasks.reduce((n, t) => n + t.marks, 0)
 
@@ -94,7 +99,7 @@ const load = async () => {
   error.value = ''
   openGuide.value = {}
   try {
-    const response = await axios.post('/api/teacher/aoi-scenarios', { curriculum_topic_ids: props.topicIds })
+    const response = await axios.post('/api/teacher/aoi-scenarios', { curriculum_topic_ids: props.topicIds, avoid: suggestions.value.map(s => s.title) })
     suggestions.value = response.data.data.suggestions || []
     if (!suggestions.value.length) error.value = 'No scenarios came back. Please try again.'
   } catch (e: any) {
@@ -103,5 +108,26 @@ const load = async () => {
     loading.value = false
   }
 }
+// Replaces one suggestion with a fresh one, different from those on screen
+const redraft = async (i: number) => {
+  redrafting.value = i
+  try {
+    const response = await axios.post('/api/teacher/aoi-scenarios', {
+      curriculum_topic_ids: props.topicIds,
+      count: 1,
+      avoid: suggestions.value.map(s => s.title)
+    })
+    const fresh = response.data.data.suggestions?.[0]
+    if (fresh) {
+      suggestions.value.splice(i, 1, fresh)
+      openGuide.value = { ...openGuide.value, [i]: false }
+    }
+  } catch (e: any) {
+    toast.error(e?.response?.data?.message || 'Could not redraft it - please try again')
+  } finally {
+    redrafting.value = null
+  }
+}
+
 onMounted(load)
 </script>

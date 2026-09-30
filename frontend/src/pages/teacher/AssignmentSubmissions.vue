@@ -162,6 +162,10 @@
                 </span>
                 <svg class="w-4 h-4 text-gray-400 transition-transform" :class="{ 'rotate-180': guideOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
               </button>
+              <div v-if="guideOpen && markingGuide.expected_answer" class="mt-2 rounded-md border border-emerald-200 dark:border-emerald-800 bg-emerald-50/70 dark:bg-emerald-900/15 p-2">
+                <p class="text-xs font-bold text-emerald-800 dark:text-emerald-200">Expected answer</p>
+                <p class="text-xs text-gray-700 dark:text-gray-200 mt-0.5 whitespace-pre-line">{{ markingGuide.expected_answer }}</p>
+              </div>
               <dl v-if="guideOpen" class="mt-2 space-y-2 max-h-[40vh] overflow-y-auto">
                 <div v-for="c in markingGuide.criteria" :key="c.criterion" class="rounded-md bg-violet-50/70 dark:bg-violet-900/15 p-2">
                   <dt class="text-xs font-bold text-violet-800 dark:text-violet-200">{{ c.criterion }}</dt>
@@ -210,7 +214,7 @@ const error = ref<string | null>(null)
 
 // An AOI's marking guide, saved from a suggested scenario (AssignmentBuilder's useAoiScenario)
 const guideOpen = ref(true)
-const markingGuide = computed<{ title: string; criteria: { criterion: string; look_for: string }[] } | null>(() => {
+const markingGuide = computed<{ title: string; criteria: { criterion: string; look_for: string }[]; expected_answer?: string | null } | null>(() => {
   const raw = assignment.value?.rubric
   if (!raw) return null
   try {

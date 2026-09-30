@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 
 /**
- * Thin wrapper around MediaRecorder for recording WhatsApp-style voice notes in the browser.
+ * Thin wrapper around MediaRecorder for recording chat voice notes in the browser.
  * No server-side transcoding - whatever container the browser records in (webm/opus in
  * Chrome/Firefox) is uploaded as-is and played back with a native &lt;audio&gt; element.
  */

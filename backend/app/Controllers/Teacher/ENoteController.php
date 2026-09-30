@@ -2060,4 +2060,165 @@ class ENoteController extends Controller
             $this->error('Failed to load assignments: ' . $e->getMessage(), 500);
         }
     }
+
+    // ---- Sharing with colleagues (migration 104) --------------------------------------------------
+
+    /**
+     * Share one of the teacher's topics with their department, or stop sharing it
+     * PUT /teacher/enotes/topics/{id}/share  { shared: bool }
+     */
+    public function share($id): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+        $teacherId = $this->getTeacherId();
+        $db = $this->getDb();
+        $stmt = $db->prepare("SELECT id FROM enote_topics WHERE id = ? AND teacher_id = ? AND deleted_at IS NULL");
+        $stmt->execute([(int) $id, $teacherId]);
+        if (!$teacherId || !$stmt->fetch()) {
+            $this->notFound('Topic not found');
+            return;
+        }
+        $shared = (bool) $this->input('shared', true);
+        $db->prepare("UPDATE enote_topics SET shared_at = " . ($shared ? 'NOW()' : 'NULL') . " WHERE id = ?")->execute([(int) $id]);
+        $this->success(['id' => (int) $id, 'shared' => $shared], $shared ? 'Shared with your department' : 'No longer shared');
+    }
+
+    /**
+     * Topics colleagues in the teacher's department have shared (and the teacher's own shared ones)
+     * GET /teacher/enotes/shared
+     */
+    public function sharedIndex(): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+        $teacherId = $this->getTeacherId();
+        $departmentId = $this->getTeacherDepartmentId();
+        if (!$teacherId || !$departmentId) {
+            $this->success(['topics' => []]);
+            return;
+        }
+        $stmt = $this->getDb()->prepare(
+            "SELECT et.id, et.title, et.description, et.learning_outcomes, et.cover_design, et.shared_at, et.teacher_id,
+                    et.class_group_name, s.name AS subject_name, c.name AS class_name, c.stream_name,
+                    t.first_name, t.last_name,
+                    (SELECT COUNT(*) FROM enote_pages p WHERE p.topic_id = et.id AND p.deleted_at IS NULL AND p.is_active = 1) AS pages,
+                    (SELECT COUNT(DISTINCT cp.teacher_id) FROM enote_topics cp WHERE cp.shared_from_id = et.id AND cp.deleted_at IS NULL) AS copied_by,
+                    (SELECT COUNT(*) FROM enote_topics mine WHERE mine.shared_from_id = et.id AND mine.teacher_id = ? AND mine.deleted_at IS NULL) AS my_copies
+             FROM enote_topics et
+             LEFT JOIN subjects s ON s.id = et.subject_id
+             LEFT JOIN classes c ON c.id = et.class_id
+             LEFT JOIN teachers t ON t.id = et.teacher_id
+             WHERE et.shared_at IS NOT NULL AND et.deleted_at IS NULL AND et.department_id = ?
+             ORDER BY et.shared_at DESC
+             LIMIT 200"
+        );
+        $stmt->execute([$teacherId, $departmentId]);
+        $topics = array_map(function ($t) use ($teacherId) {
+            $outcomes = !empty($t['learning_outcomes']) ? (json_decode($t['learning_outcomes'], true) ?: []) : [];
+            return [
+                'id' => (int) $t['id'],
+                'title' => $t['title'],
+                'description' => $t['description'],
+                'outcomes' => count($outcomes),
+                'cover_design' => $t['cover_design'],
+                'subject_name' => $t['subject_name'],
+                'class_label' => $t['class_group_name'] ?: trim(($t['class_name'] ?? '') . ($t['stream_name'] ? '-' . $t['stream_name'] : '')),
+                'author' => trim(($t['first_name'] ?? '') . ' ' . ($t['last_name'] ?? '')),
+                'mine' => (int) $t['teacher_id'] === $teacherId,
+                'pages' => (int) $t['pages'],
+                'copied_by' => (int) $t['copied_by'],
+                'my_copies' => (int) $t['my_copies'],
+                'shared_at' => $t['shared_at'],
+            ];
+        }, $stmt->fetchAll());
+        $this->success(['topics' => $topics]);
+    }
+
+    /**
+     * Copy a colleague's shared topic - all its pages - into the teacher's own class(es), as
+     * independent drafts to adapt (not linked to the original, unlike duplicateTopic())
+     * POST /teacher/enotes/shared/{id}/copy  { targets: [{ scope, class_id, class_group_name }] }
+     */
+    public function copyShared($id): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+        $teacherId = $this->getTeacherId();
+        $departmentId = $this->getTeacherDepartmentId();
+        if (!$teacherId || !$departmentId) {
+            $this->error('Teacher must be assigned to a department', 403);
+            return;
+        }
+        $db = $this->getDb();
+        $stmt = $db->prepare("SELECT * FROM enote_topics WHERE id = ? AND shared_at IS NOT NULL AND department_id = ? AND deleted_at IS NULL");
+        $stmt->execute([(int) $id, $departmentId]);
+        $topic = $stmt->fetch();
+        if (!$topic) {
+            $this->notFound('Shared topic not found');
+            return;
+        }
+        $targets = $this->input('targets');
+        if (!is_array($targets) || !$targets) {
+            $this->validationError(['targets' => 'Select at least one class/stream to copy to']);
+            return;
+        }
+        $pagesStmt = $db->prepare("SELECT * FROM enote_pages WHERE topic_id = ? AND deleted_at IS NULL ORDER BY order_number ASC");
+        $pagesStmt->execute([(int) $id]);
+        $pages = $pagesStmt->fetchAll();
+
+        $created = [];
+        $skipped = [];
+        foreach ($targets as $target) {
+            $classTarget = is_array($target) ? $this->resolveClassTargetForNotes($target, $departmentId) : ['ok' => false, 'message' => 'Invalid target'];
+            if (!$classTarget['ok']) {
+                $skipped[] = ['message' => $classTarget['message']];
+                continue;
+            }
+            try {
+                $db->beginTransaction();
+                $db->prepare(
+                    "INSERT INTO enote_topics (teacher_id, class_id, class_group_name, subject_id, department_id, title, description, learning_outcomes, cover_design, status, total_pages, shared_from_id, created_at, updated_at)
+                     VALUES (:teacher_id, :class_id, :class_group_name, :subject_id, :department_id, :title, :description, :learning_outcomes, :cover_design, 'draft', :total_pages, :shared_from_id, NOW(), NOW())"
+                )->execute([
+                    'teacher_id' => $teacherId,
+                    'class_id' => $classTarget['class_id'],
+                    'class_group_name' => $classTarget['class_group_name'],
+                    'subject_id' => $topic['subject_id'],
+                    'department_id' => $departmentId,
+                    'title' => $topic['title'],
+                    'description' => $topic['description'],
+                    'learning_outcomes' => $topic['learning_outcomes'],
+                    'cover_design' => $topic['cover_design'] ?? null,
+                    'total_pages' => count($pages),
+                    'shared_from_id' => (int) $id,
+                ]);
+                $newTopicId = (int) $db->lastInsertId();
+                $insertPage = $db->prepare(
+                    "INSERT INTO enote_pages (topic_id, order_number, title, content, is_active, created_at, updated_at)
+                     VALUES (?, ?, ?, ?, ?, NOW(), NOW())"
+                );
+                foreach ($pages as $page) {
+                    $insertPage->execute([$newTopicId, $page['order_number'], $page['title'], $page['content'], $page['is_active']]);
+                }
+                $db->commit();
+                $created[] = ['id' => $newTopicId, 'class_id' => $classTarget['class_id'], 'class_group_name' => $classTarget['class_group_name']];
+            } catch (\PDOException $e) {
+                $db->rollBack();
+                error_log('Failed to copy shared topic: ' . $e->getMessage());
+                $skipped[] = ['message' => 'Failed to copy to this class/stream'];
+            }
+        }
+        if (!$created) {
+            $this->error('Could not copy to any of the selected classes/streams', 422, ['skipped' => $skipped]);
+            return;
+        }
+        $this->success(['created' => $created, 'skipped' => $skipped], count($created) . ' cop' . (count($created) === 1 ? 'y' : 'ies') . ' added to your eNotes as drafts');
+    }
 }

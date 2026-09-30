@@ -89,7 +89,13 @@
               <div class="min-w-0">
                 <p class="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400">AOI</p>
                 <p v-if="t.aoi.length" class="text-xs font-semibold text-emerald-700 dark:text-emerald-300 truncate">✓ {{ t.aoi.length === 1 ? t.aoi[0].title : `${t.aoi.length} set` }}</p>
-                <p v-else class="text-xs font-semibold text-amber-700 dark:text-amber-300">Missing</p>
+                <template v-else>
+                  <p class="text-xs font-semibold text-amber-700 dark:text-amber-300">Missing</p>
+                  <button type="button" class="mt-0.5 inline-flex items-center gap-1 text-[11px] font-semibold text-violet-700 dark:text-violet-300 hover:underline" @click="aoiFor = { topic: t, className: cls.class_name }">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                  Suggest an AOI
+                </button>
+                </template>
               </div>
               <div class="min-w-0">
                 <p class="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400">Construct (EOC)</p>
@@ -135,7 +141,13 @@
                 </td>
                 <td class="px-1 py-2">
                   <span v-if="t.aoi.length" class="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300">✓ {{ t.aoi.length === 1 ? t.aoi[0].title : `${t.aoi.length} set` }}</span>
-                  <span v-else class="text-xs font-semibold text-amber-700 dark:text-amber-300">Missing</span>
+                  <template v-else>
+                    <span class="block text-xs font-semibold text-amber-700 dark:text-amber-300">Missing</span>
+                    <button type="button" class="mt-0.5 inline-flex items-center gap-1 text-[11px] font-semibold text-violet-700 dark:text-violet-300 hover:underline" @click="aoiFor = { topic: t, className: cls.class_name }">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                  Suggest an AOI
+                </button>
+                  </template>
                 </td>
                 <td class="px-1 py-2">
                   <span v-if="!t.constructs.length" class="text-xs text-gray-400 dark:text-gray-500">-</span>
@@ -154,6 +166,16 @@
         </div>
       </div>
     </template>
+    <AoiQuickCreate
+      v-if="aoiFor && subjectId"
+      :topic-ids="aoiFor.topic.ids"
+      :topic-name="aoiFor.topic.topic"
+      :subject-id="subjectId"
+      :class-label="aoiFor.className"
+      :academic-year="aoiFor.topic.academic_year || ''"
+      :term-id="aoiFor.topic.term_id"
+      @close="aoiFor = null"
+    />
   </div>
 </template>
 
@@ -163,6 +185,7 @@ import axios from 'axios'
 import CountUp from '@/components/common/CountUp.vue'
 import PickerDropdown, { type PickerOption } from '@/components/common/PickerDropdown.vue'
 import { useToastStore } from '@/stores/toast'
+import AoiQuickCreate from '@/components/assignment/AoiQuickCreate.vue'
 
 interface Topic {
   id: number
@@ -175,6 +198,10 @@ interface Topic {
   constructs: { id: number; name: string; assessment_objective: string; has_eoc: boolean }[]
   enotes: { id: number; title: string; status: string }[]
   practice: number
+  // Every stream's copy of the topic, its term and year - for drafting an AOI for the class level
+  ids: number[]
+  term_id: number | null
+  academic_year: string | null
 }
 interface Broken {
   assignment_id: number
@@ -199,6 +226,8 @@ const data = ref<Coverage | null>(null)
 const loading = ref(true)
 const busy = ref(false)
 const subjectId = ref<number | null>(null)
+// The topic an AOI is being drafted for (Suggest an AOI)
+const aoiFor = ref<{ topic: Topic; className: string } | null>(null)
 
 const load = async () => {
   loading.value = true

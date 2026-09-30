@@ -53,6 +53,17 @@
         </div>
 
         <button
+          @click="showShared = true"
+          class="flex-shrink-0 px-2.5 py-1 text-xs border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors flex items-center gap-1.5 whitespace-nowrap"
+          title="eNotes shared by colleagues in your department"
+        >
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path>
+          </svg>
+          <span class="sm:hidden">Shared</span><span class="hidden sm:inline">Shared by colleagues</span>
+        </button>
+
+        <button
           @click="openCreateModal"
           class="flex-shrink-0 px-2.5 py-1 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1.5 shadow-sm shadow-indigo-500/20 whitespace-nowrap"
         >
@@ -310,6 +321,25 @@
                   </svg>
                 </button>
                 <button
+                  @click.stop="toggleShare(topic)"
+                  class="p-1.5 min-w-[34px] min-h-[34px] flex items-center justify-center rounded-lg transition-colors"
+                  :class="(topic as any).shared_at ? 'bg-indigo-100 dark:bg-indigo-900/50 hover:bg-indigo-200' : 'hover:bg-indigo-100 dark:hover:bg-indigo-900/40'"
+                  :title="(topic as any).shared_at ? 'Shared with your department - click to stop sharing' : 'Share with colleagues in your department'"
+                >
+                  <svg class="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path>
+                  </svg>
+                </button>
+                <button
+                  @click.stop="insightsTopic = topic"
+                  class="p-1.5 min-w-[34px] min-h-[34px] flex items-center justify-center hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-lg transition-colors"
+                  title="Reading insights"
+                >
+                  <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                  </svg>
+                </button>
+                <button
                   @click.stop="deleteBook(copies)"
                   class="p-1.5 min-w-[34px] min-h-[34px] flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-900 rounded-lg transition-colors"
                   title="Delete"
@@ -329,6 +359,19 @@
         <p class="text-gray-500 dark:text-gray-400">No eNotes topics in this class yet.</p>
       </div>
     </template>
+
+    <SharedENotesModal
+      v-if="showShared"
+      @close="showShared = false"
+      @copy="copyFromColleague"
+    />
+
+    <ENoteInsightsModal
+      v-if="insightsTopic"
+      :topic-id="insightsTopic.id"
+      @close="insightsTopic = null"
+      @open-page="(pageId: number) => router.push(`/teacher/enotes/builder/${insightsTopic!.id}?page=${pageId}`)"
+    />
 
     <ENoteCoverEditor
       v-if="coverTopic"
@@ -692,7 +735,7 @@
       <div class="bg-white dark:bg-gray-800 rounded-lg w-full max-w-md max-h-[85vh] overflow-hidden flex flex-col">
         <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <div>
-            <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Duplicate Topic</h3>
+            <h3 class="text-xl font-semibold text-gray-900 dark:text-white">{{ copyingShared ? 'Copy to my classes' : 'Duplicate Topic' }}</h3>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 truncate">{{ duplicatingTopic?.title }}</p>
           </div>
           <button
@@ -733,7 +776,7 @@
           </div>
 
           <div v-if="duplicateResult" class="mt-4 p-3 rounded-lg bg-green-50 dark:bg-green-900/20 text-sm text-green-800 dark:text-green-300">
-            Created {{ duplicateResult.created }} duplicate(s){{ duplicateResult.skipped ? `, skipped ${duplicateResult.skipped}` : '' }}.
+            Created {{ duplicateResult.created }} {{ copyingShared ? 'draft cop' + (duplicateResult.created === 1 ? 'y' : 'ies') + ' in your eNotes' : 'duplicate(s)' }}{{ duplicateResult.skipped ? `, skipped ${duplicateResult.skipped}` : '' }}.
           </div>
 
           <div class="flex justify-end space-x-3 mt-6">
@@ -751,7 +794,7 @@
               @click="confirmDuplicate"
               class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {{ duplicating ? 'Duplicating...' : `Duplicate (${selectedDuplicateTargetCount})` }}
+              {{ duplicating ? (copyingShared ? 'Copying...' : 'Duplicating...') : `${copyingShared ? 'Copy' : 'Duplicate'} (${selectedDuplicateTargetCount})` }}
             </button>
           </div>
         </div>
@@ -774,6 +817,8 @@ import TeacherClassSelector from '@/components/teacher/TeacherClassSelector.vue'
 import BulkActionBar from '@/components/common/BulkActionBar.vue'
 import Bookshelf from '@/components/library/Bookshelf.vue'
 import ENoteCoverEditor from '@/components/enotes/ENoteCoverEditor.vue'
+import ENoteInsightsModal from '@/components/enotes/ENoteInsightsModal.vue'
+import SharedENotesModal, { type SharedTopic } from '@/components/enotes/SharedENotesModal.vue'
 import { parseCoverDesign } from '@/utils/enoteCover'
 import { subjectTag } from '@/utils/subjectTag'
 import { orderShelves } from '@/utils/shelfOrder'
@@ -1322,6 +1367,8 @@ const openingTopicId = ref<number | null>(null)
 
 // Book cover designer - saving reloads the list since linked copies in other streams share the cover
 const coverTopic = ref<ENoteTopic | null>(null)
+// The topic whose reading insights are open
+const insightsTopic = ref<ENoteTopic | null>(null)
 const onCoverSaved = async () => {
   coverTopic.value = null
   toast.success('Book cover saved')
@@ -1370,7 +1417,29 @@ const duplicateGroups = computed<DuplicateClassGroup[]>(() => {
 
 const selectedDuplicateTargetCount = computed(() => Object.values(duplicateChecked.value).filter(Boolean).length)
 
+// ---- Sharing with colleagues ----
+const showShared = ref(false)
+// The class picker below is copying a colleague's shared topic, not duplicating one of ours
+const copyingShared = ref(false)
+const copyFromColleague = (shared: SharedTopic) => {
+  showShared.value = false
+  openDuplicateModal({ id: shared.id, title: shared.title } as ENoteTopic)
+  copyingShared.value = true
+}
+const toggleShare = async (topic: ENoteTopic) => {
+  const t = topic as ENoteTopic & { shared_at?: string | null }
+  const shared = !t.shared_at
+  try {
+    const response = await axios.put(`${API_BASE}/teacher/enotes/topics/${t.id}/share`, { shared })
+    t.shared_at = shared ? new Date().toISOString() : null
+    toast.success(response.data.message || (shared ? 'Shared' : 'No longer shared'))
+  } catch (e: any) {
+    toast.error(e?.response?.data?.message || 'Could not change sharing')
+  }
+}
+
 const openDuplicateModal = (topic: ENoteTopic) => {
+  copyingShared.value = false
   duplicatingTopic.value = topic
   duplicateChecked.value = {}
   duplicateResult.value = null
@@ -1400,7 +1469,12 @@ const confirmDuplicate = async () => {
 
   duplicating.value = true
   try {
-    const response = await axios.post(`${API_BASE}/teacher/enotes/topics/${duplicatingTopic.value.id}/duplicate`, { targets })
+    const response = await axios.post(
+      copyingShared.value
+        ? `${API_BASE}/teacher/enotes/shared/${duplicatingTopic.value.id}/copy`
+        : `${API_BASE}/teacher/enotes/topics/${duplicatingTopic.value.id}/duplicate`,
+      { targets }
+    )
     if (response.data.success) {
       duplicateResult.value = {
         created: response.data.data.created.length,

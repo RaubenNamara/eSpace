@@ -237,6 +237,24 @@ class ENoteController extends Controller
             'pages_update' => $number,
         ]);
 
+        // Reading analytics: one more view of this page, and the time spent on the page before it
+        // (capped - a page left open isn't reading)
+        try {
+            $db->prepare(
+                "INSERT INTO enote_page_views (page_id, student_id, topic_id) VALUES (?, ?, ?)
+                 ON DUPLICATE KEY UPDATE views = views + 1, last_viewed_at = NOW()"
+            )->execute([$pageId, $studentId, $id]);
+            $prevPageId = (int) ($this->input('prev_page_id') ?? 0);
+            $prevSeconds = max(0, min(600, (int) ($this->input('prev_seconds') ?? 0)));
+            if ($prevPageId && $prevPageId !== $pageId && $prevSeconds > 0) {
+                $db->prepare(
+                    "UPDATE enote_page_views SET seconds = seconds + ? WHERE page_id = ? AND student_id = ? AND topic_id = ?"
+                )->execute([$prevSeconds, $prevPageId, $studentId, $id]);
+            }
+        } catch (\PDOException $e) {
+            // migration 103 not run yet
+        }
+
         // Reading counts towards the student's learning streak
         \eSpace\App\Services\RewardService::recordLearningDay($studentId);
         $this->success(['page_id' => $pageId, 'page_number' => $number], 'Progress saved');

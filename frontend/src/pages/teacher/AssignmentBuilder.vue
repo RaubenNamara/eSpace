@@ -79,7 +79,7 @@
 
     <!-- Main Content -->
     <div class="w-full max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12 py-4 sm:py-6 xl:grid xl:grid-cols-[1fr_300px] xl:gap-6 xl:items-start">
-      <div class="space-y-4 sm:space-y-6">
+      <div class="space-y-4 sm:space-y-6 min-w-0">
 
         <!-- Assessment Details (hidden in preview mode) -->
         <div v-if="!isPreview" class="space-y-4 sm:space-y-6">
@@ -592,14 +592,35 @@
                     <span v-if="group.count === 0"> - required before publishing</span>
                   </p>
                 </div>
-                <button
-                  type="button"
-                  @click="openAddQuestionForGroup(group)"
-                  class="px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors flex-shrink-0"
-                >
-                  Add Question
-                </button>
+                <div class="flex flex-col sm:flex-row gap-1.5 flex-shrink-0">
+                  <!-- Reuse a question already set for this outcome / topic -->
+                  <button
+                    v-if="form.subject_id"
+                    type="button"
+                    @click="bankGroup = group"
+                    class="px-3 py-1.5 border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 text-sm rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
+                  >
+                    From bank
+                  </button>
+                  <button
+                    type="button"
+                    @click="openAddQuestionForGroup(group)"
+                    class="px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors"
+                  >
+                    Add Question
+                  </button>
+                </div>
               </div>
+              <QuestionBankPicker
+                v-if="bankGroup && form.subject_id"
+                :subject-id="form.subject_id"
+                :outcome-id="bankGroup.learning_outcome_id"
+                :topic-id="bankGroup.curriculum_topic_id"
+                :label="bankGroup.label"
+                :exclude-assignment-id="isEdit ? Number(route.params.id) : null"
+                @close="bankGroup = null"
+                @add="addFromBank"
+              />
               <p v-if="curriculumQuestionGroups.length === 0" class="text-sm text-gray-500 dark:text-gray-400 py-2">
                 Select {{ form.assessment_category === 'LOA' ? 'a Topic and Learning Outcome(s)' : 'at least one Topic' }} above to start adding questions.
               </p>
@@ -1217,7 +1238,9 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
 import CKEditor from '@/components/teacher/CKEditor.vue'
-import AoiScenarioSuggest, { type AoiSuggestion } from '@/components/assignment/AoiScenarioSuggest.vue'
+import AoiScenarioSuggest from '@/components/assignment/AoiScenarioSuggest.vue'
+import { scenarioHtml, markingGuideJson, type AoiSuggestion } from '@/utils/aoiDraft'
+import QuestionBankPicker, { type BankQuestion } from '@/components/assignment/QuestionBankPicker.vue'
 import PdfAnnotationViewer from '@/components/assignment/PdfAnnotationViewer.vue'
 import type { AssignmentQuestion, QuestionType, Subject, ResponseType, AttachmentType } from '@/types'
 import type { ClassTarget } from '@/components/teacher/TeacherClassSelector.vue'
@@ -2186,6 +2209,45 @@ const closeQuestionModal = () => {
   }
 }
 
+// ---- Question bank: copy a question already set for this outcome / topic ----
+const bankGroup = ref<{ label: string; curriculum_topic_id: number | null; learning_outcome_id: number | null } | null>(null)
+const addFromBank = (q: BankQuestion, done: (ok: boolean) => void) => {
+  const group = bankGroup.value
+  if (!group) return done(false)
+  const marks = q.sub_questions.length ? q.sub_questions.reduce((n, s) => n + Number(s.marks), 0) : Number(q.marks)
+  if (marks > remainingMarksBudget.value) {
+    showToast('error', `This question is ${marks} marks, but only ${remainingMarksBudget.value} are left out of the 100-mark assessment total.`)
+    return done(false)
+  }
+  const now = new Date().toISOString()
+  const base = Date.now()
+  questions.value.push({
+    id: base,
+    assignment_id: 0,
+    parent_question_id: undefined,
+    question_type: q.question_type,
+    question_text: q.question_text,
+    scenario_text: q.scenario_text || '',
+    marks,
+    display_order: questions.value.length,
+    allow_drawing: q.allow_drawing,
+    response_type: q.response_type,
+    attachment_type: q.attachment_type,
+    attachment_path: q.attachment_path || undefined,
+    options: q.options.map((o, idx) => ({ id: 0, question_id: 0, option_text: o.option_text, is_correct: o.is_correct, display_order: idx, created_at: now, updated_at: now })),
+    sub_questions: q.sub_questions.map((s, i) => ({ id: base + i + 1, question_text: s.question_text, marks: Number(s.marks), display_order: i })),
+    curriculum_topic_id: group.curriculum_topic_id ?? undefined,
+    learning_outcome_id: group.learning_outcome_id ?? undefined,
+    created_at: now,
+    updated_at: now,
+    deleted_at: undefined
+  } as any)
+  // An AOI scenario brings its marking guide, unless this assessment already has one
+  if (q.marking_guide && !form.value.rubric) form.value.rubric = q.marking_guide
+  showToast('success', 'Question added from the bank - save to keep it')
+  done(true)
+}
+
 // ---- Suggested AOI scenarios ----
 const showAoiSuggest = ref(false)
 // The topic(s) the scenario is for: the question's own topic, else every topic the AOI assesses
@@ -2193,14 +2255,10 @@ const aoiScenarioTopicIds = computed<number[]>(() => {
   if (questionForm.value.curriculum_topic_id) return [questionForm.value.curriculum_topic_id]
   return Object.keys(selectedTopicIds.value).filter(id => selectedTopicIds.value[Number(id)]).map(Number)
 })
-const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 const useAoiScenario = (s: AoiSuggestion) => {
-  questionForm.value.scenario_description = s.scenario
-    .split(/\n{2,}|\r\n\r\n/)
-    .map(p => `<p>${escapeHtml(p.trim()).replace(/\n/g, '<br>')}</p>`)
-    .join('')
+  questionForm.value.scenario_description = scenarioHtml(s)
   questionForm.value.sub_questions = s.tasks.map((t, i) => ({ id: Date.now() + i, question_text: t.text, marks: t.marks, display_order: i }))
-  form.value.rubric = JSON.stringify({ kind: 'aoi_marking_guide', title: s.title, criteria: s.marking_guide })
+  form.value.rubric = markingGuideJson(s)
   showAoiSuggest.value = false
   showToast('success', 'Scenario added - edit it as you like. Its marking guide is kept with the assessment.')
 }

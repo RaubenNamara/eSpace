@@ -103,7 +103,7 @@ class CoverageController extends Controller
     private function topicsFor($db, int $subjectId): array
     {
         $stmt = $db->prepare(
-            "SELECT ct.id, ct.topic, ct.theme_branch, ct.term_id, t.name AS term_name, c.name AS class_name
+            "SELECT ct.id, ct.topic, ct.theme_branch, ct.term_id, t.name AS term_name, c.name AS class_name, ay.name AS academic_year
              FROM enote_curriculum_topics ct
              INNER JOIN academic_years ay ON ay.id = ct.academic_year_id AND ay.is_current = 1
              LEFT JOIN terms t ON t.id = ct.term_id
@@ -207,6 +207,10 @@ class CoverageController extends Controller
                     'topic' => $r['topic'],
                     'theme' => $r['theme_branch'],
                     'term_name' => $r['term_name'],
+                    // For drafting an AOI for the whole class level (every stream's copy)
+                    'ids' => [],
+                    'term_id' => $r['term_id'] !== null ? (int) $r['term_id'] : null,
+                    'academic_year' => $r['academic_year'],
                     'outcome_texts' => [],
                     'covered_texts' => [],
                     'aoi' => [], 'constructs' => [], 'enotes' => [], 'practice' => [],
@@ -214,6 +218,7 @@ class CoverageController extends Controller
             }
             $g = &$classes[$class][$key];
             $tid = (int) $r['id'];
+            $g['ids'][] = $tid;
             foreach ($outcomes[$tid] ?? [] as $o) {
                 $text = mb_strtolower(trim((string) $o['learning_outcome']));
                 $g['outcome_texts'][$text] = true;
@@ -237,6 +242,9 @@ class CoverageController extends Controller
                     'topic' => $g['topic'],
                     'theme' => $g['theme'],
                     'term_name' => $g['term_name'],
+                    'ids' => $g['ids'],
+                    'term_id' => $g['term_id'],
+                    'academic_year' => $g['academic_year'],
                     'outcomes' => count($g['outcome_texts']),
                     'outcomes_covered' => count($g['covered_texts']),
                     'aoi' => array_values($g['aoi']),
