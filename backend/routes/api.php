@@ -51,9 +51,6 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/dashboard', 'eSpace\App\Controllers\Student\DashboardController@index');
         Router::get('/mastery', 'eSpace\App\Controllers\Student\MasteryController@index');
         Router::get('/next-steps', 'eSpace\App\Controllers\Student\NextStepsController@index');
-        Router::get('/evidence', 'eSpace\App\Controllers\Student\EvidenceController@index');
-        Router::post('/evidence', 'eSpace\App\Controllers\Student\EvidenceController@store');
-        Router::delete('/evidence/{id}', 'eSpace\App\Controllers\Student\EvidenceController@destroy');
 
         // Academic History
         Router::get('/academic-history', 'eSpace\App\Controllers\Student\AcademicHistoryController@index');
@@ -354,8 +351,6 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/class-map', 'eSpace\App\Controllers\Teacher\ClassMapController@index');
         Router::get('/coverage', 'eSpace\App\Controllers\Teacher\CoverageController@index');
         Router::post('/coverage/relink', 'eSpace\App\Controllers\Teacher\CoverageController@relink');
-        Router::get('/evidence', 'eSpace\App\Controllers\Teacher\EvidenceController@index');
-        Router::put('/evidence/{id}', 'eSpace\App\Controllers\Teacher\EvidenceController@review');
         Router::get('/itembank/{id}/curriculum', 'eSpace\App\Controllers\Teacher\ItemBankController@getCurriculum');
         Router::put('/itembank/{id}/curriculum', 'eSpace\App\Controllers\Teacher\ItemBankController@updateCurriculum');
         Router::post('/itembank/{id}/cover', 'eSpace\App\Controllers\Teacher\ItemBankController@uploadCover');

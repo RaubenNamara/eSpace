@@ -325,7 +325,6 @@
               <option value="lab_experiments_completed">Virtual Lab Experiments Completed</option>
               <option value="outcomes_achieved">Learning Outcomes Achieved (Learning Map)</option>
               <option value="competencies_achieved">Topic Competencies Achieved (Activities of Integration)</option>
-              <option value="evidence_confirmed">Competency Evidence Confirmed by Teachers</option>
               <option value="learning_streak">Learning Streak (consecutive days learning)</option>
             </select>
           </div>

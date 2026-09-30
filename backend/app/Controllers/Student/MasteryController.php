@@ -159,7 +159,6 @@ class MasteryController extends Controller
         [$assessments, $outcomeLinks, $topicLinks, $eocByTopic] = $this->loadEvidence($db, $studentId, $classIds, $topicIds, $outcomeIds);
         $enotes = $this->loadEnotes($db, $studentId, $topicIds, $classIds, $classNames);
         $practice = $this->loadPractice($db, $topicIds);
-        $evidence = $this->loadEvidenceCounts($db, $studentId, $topicIds);
 
         // Assemble per subject
         $bySubject = [];
@@ -228,8 +227,6 @@ class MasteryController extends Controller
                 'enote' => $enotes[$topicId] ?? null,
                 // Item Bank resources the teacher tagged with this topic, to practise on
                 'practice' => $practice[$topicId] ?? [],
-                // The student's own evidence of the topic's competency (competency_evidence)
-                'evidence' => $evidence[$topicId] ?? ['confirmed' => 0, 'pending' => 0, 'returned' => 0],
             ];
             foreach ($summary as $key => $n) {
                 $bySubject[$subjectId]['totals'][$key] += $n;
@@ -630,30 +627,6 @@ class MasteryController extends Controller
         return $out;
     }
 
-    /** How much competency evidence the student has per topic, by status */
-    private function loadEvidenceCounts($db, int $studentId, array $topicIds): array
-    {
-        if (!$topicIds) {
-            return [];
-        }
-        try {
-            $stmt = $db->prepare(
-                "SELECT curriculum_topic_id, status, COUNT(*) AS n FROM competency_evidence
-                 WHERE student_id = ? AND deleted_at IS NULL
-                   AND curriculum_topic_id IN (" . self::placeholders($topicIds) . ")
-                 GROUP BY curriculum_topic_id, status"
-            );
-            $stmt->execute(array_merge([$studentId], $topicIds));
-        } catch (\PDOException $e) {
-            return []; // migration 099 not run yet
-        }
-        $out = [];
-        foreach ($stmt->fetchAll() as $row) {
-            $out[(int) $row['curriculum_topic_id']] ??= ['confirmed' => 0, 'pending' => 0, 'returned' => 0];
-            $out[(int) $row['curriculum_topic_id']][$row['status']] = (int) $row['n'];
-        }
-        return $out;
-    }
 
     private function hasEnotePageLink($db): bool
     {

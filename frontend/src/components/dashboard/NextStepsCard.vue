@@ -11,7 +11,7 @@
         <h3 class="text-sm font-bold text-gray-900 dark:text-white">What to do next</h3>
         <p class="text-[11px] text-gray-500 dark:text-gray-400">{{ steps.length ? 'Picked for you from your assessments, notes and Learning Map' : 'You\'re all caught up' }}</p>
       </div>
-      <!-- Learning streak: consecutive days of reading, answering or adding evidence -->
+      <!-- Learning streak: consecutive days of reading or answering -->
       <div
         v-if="streak"
         class="flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold"
@@ -71,7 +71,7 @@ const steps = ref<Step[]>([])
 const total = ref(0)
 const streak = ref<{ days: number; today: boolean } | null>(null)
 const streakHint = computed(() => !streak.value || streak.value.days === 0
-  ? 'Read notes, answer an assessment or add evidence to start a streak'
+  ? 'Read notes or answer an assessment to start a streak'
   : streak.value.today ? 'You learned something today - keep it going tomorrow' : 'Learn something today to keep your streak')
 const loaded = ref(false)
 

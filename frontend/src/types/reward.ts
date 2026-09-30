@@ -59,7 +59,7 @@ export interface RewardRule {
   badge_type: BadgeType
   award_title: string
   category: 'academic' | 'subject' | 'improvement' | 'attendance' | 'engagement'
-  metric: 'overall_average' | 'subject_average' | 'login_count' | 'assignments_completed' | 'improvement_delta' | 'lab_average' | 'lab_subject_average' | 'lab_experiments_completed' | 'outcomes_achieved' | 'competencies_achieved' | 'evidence_confirmed' | 'learning_streak'
+  metric: 'overall_average' | 'subject_average' | 'login_count' | 'assignments_completed' | 'improvement_delta' | 'lab_average' | 'lab_subject_average' | 'lab_experiments_completed' | 'outcomes_achieved' | 'competencies_achieved' | 'learning_streak'
   scope: 'individual' | 'class_top' | 'subject_top'
   subject_id: number | null
   min_value: number | null

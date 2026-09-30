@@ -101,13 +101,11 @@ class RewardService
                 return $subjectId ? $this->virtualLabService()->studentLabAverage($studentId, $termId, $subjectId) : null;
             case 'lab_experiments_completed':
                 return (float) $this->virtualLabService()->studentLabExperimentsCompleted($studentId, $termId);
-            // Real learning (migration 100) - the Learning Map, evidence and learning streaks
+            // Real learning (migration 100) - the Learning Map and learning streaks
             case 'outcomes_achieved':
                 return (float) ($this->learningMap($studentId)['overall']['achieved'] ?? 0);
             case 'competencies_achieved':
                 return (float) ($this->learningMap($studentId)['competencies']['achieved'] ?? 0);
-            case 'evidence_confirmed':
-                return (float) $this->getConfirmedEvidence($studentId, $termId);
             case 'learning_streak':
                 return (float) $this->longestStreak($studentId, $termId);
             default:
@@ -129,25 +127,6 @@ class RewardService
             }
         }
         return $this->learningMaps[$studentId];
-    }
-
-    private function getConfirmedEvidence(int $studentId, int $termId): int
-    {
-        $term = $this->getTermRange($termId);
-        if (!$term) {
-            return 0;
-        }
-        try {
-            $stmt = $this->getDb()->prepare(
-                "SELECT COUNT(*) AS c FROM competency_evidence
-                 WHERE student_id = ? AND status = 'confirmed' AND deleted_at IS NULL
-                   AND reviewed_at >= ? AND reviewed_at < DATE_ADD(?, INTERVAL 1 DAY)"
-            );
-            $stmt->execute([$studentId, $term['start_date'], $term['end_date']]);
-            return (int) $stmt->fetch()['c'];
-        } catch (\PDOException $e) {
-            return 0; // migration 099 not run yet
-        }
     }
 
     /** The student's learning days (learning_activity_days) between two dates, oldest first */
@@ -215,7 +194,7 @@ class RewardService
     }
 
     /**
-     * The student learned something today (read notes, answered an assessment, added evidence).
+     * The student learned something today (read notes, answered an assessment).
      * The first time each day it's recorded, their learning awards are looked at again.
      */
     public static function recordLearningDay(int $studentId): void
@@ -237,10 +216,10 @@ class RewardService
         }
     }
 
-    /** Re-checks only the learning awards (outcomes, competencies, evidence, streak) */
+    /** Re-checks only the learning awards (outcomes, competencies, streak) */
     public function evaluateLearningRules(int $studentId, int $termId): void
     {
-        $learning = ['outcomes_achieved', 'competencies_achieved', 'evidence_confirmed', 'learning_streak'];
+        $learning = ['outcomes_achieved', 'competencies_achieved', 'learning_streak'];
         foreach ($this->getActiveRules(['individual']) as $rule) {
             if (!in_array($rule['metric'], $learning, true)) {
                 continue;

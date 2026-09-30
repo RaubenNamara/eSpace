@@ -42,7 +42,7 @@
           :key="card.key"
           type="button"
           class="text-left bg-white dark:bg-gray-800 rounded-2xl border p-4 flex items-center gap-4 transition-all hover:-translate-y-0.5"
-          :class="view === card.key ? card.selected : 'border-gray-200 dark:border-gray-700'"
+          :class="view === card.key ? card.selected : 'border-gray-200 dark:border-gray-700 opacity-40 blur-[1px] hover:opacity-100 hover:blur-0'"
           :aria-pressed="view === card.key"
           @click="setView(card.key)"
         >
@@ -89,7 +89,7 @@
               type="button"
               :tabindex="copy === 2 ? -1 : undefined"
               class="flex-shrink-0 w-44 text-left bg-white dark:bg-gray-800 rounded-xl border p-3 transition-all hover:-translate-y-0.5"
-              :class="subject.id === activeSubjectId ? VIEW_SELECTED[view] : 'border-gray-200 dark:border-gray-700'"
+              :class="subject.id === activeSubjectId ? VIEW_SELECTED[view] : 'border-gray-200 dark:border-gray-700 opacity-40 blur-[1px] hover:opacity-100 hover:blur-0'"
               @click="selectSubject(subject.id)"
             >
               <div class="flex items-center gap-3">
@@ -263,8 +263,6 @@
                         {{ competencyStatusLabel(topic.competency.status) }}
                       </span>
                       <span class="text-[11px] text-gray-500 dark:text-gray-400">Built on {{ topic.competency.building_blocks.achieved }}/{{ topic.competency.building_blocks.outcomes }} outcomes</span>
-                      <span v-if="topic.evidence.confirmed" class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-200">{{ topic.evidence.confirmed }} evidence confirmed</span>
-                      <span v-else-if="topic.evidence.pending" class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-200">Evidence with your teacher</span>
                     </div>
                   </div>
                 </div>
@@ -296,9 +294,6 @@
                     </li>
                   </ul>
                 </div>
-
-                <!-- Evidence the student has of this competency -->
-                <EvidencePanel :topic-id="topic.id" @changed="refreshEvidence(topic)" />
 
                 <!-- Its building blocks: the topic's learning outcomes -->
                 <div v-if="topic.outcomes.length">
@@ -440,7 +435,6 @@ import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch, h, defineCo
 import axios from 'axios'
 import { useRoute, useRouter } from 'vue-router'
 import CountUp from '@/components/common/CountUp.vue'
-import EvidencePanel from '@/components/evidence/EvidencePanel.vue'
 
 type Status = 'achieved' | 'developing' | 'needs_support' | 'awaiting' | 'available' | 'not_assessed'
 interface Assessment { id: number; title: string; category: string | null; state: 'marked' | 'awaiting' | 'started' | 'available'; percentage: number | null; submission_id: number | null }
@@ -462,8 +456,6 @@ interface Topic {
   enote: { id: number; title: string; opened: boolean; pages_read: number; total_pages: number } | null
   // Item Bank resources tagged with this topic
   practice: { id: number; title: string }[]
-  // The student's evidence of the topic's competency, by status
-  evidence: { confirmed: number; pending: number; returned: number }
 }
 type Grade = 'A' | 'B' | 'C' | 'D' | 'E'
 interface Competency extends Standing { text: string | null; building_blocks: { achieved: number; outcomes: number } }
@@ -668,16 +660,6 @@ function actionFor(a: Assessment | undefined) {
 const outcomeAction = (o: Outcome) =>
   actionFor(o.assessments.find(a => a.state === 'started') ?? o.assessments.find(a => a.state === 'available') ?? o.assessments.find(a => a.state === 'marked'))
 const topicAction = (t: Topic) => (t.aoi ? actionFor(t.aoi.assessments.find(a => a.state === 'started') ?? t.aoi.assessments.find(a => a.state === 'available')) : null)
-
-// After evidence is added or removed, update the topic's counts
-const refreshEvidence = async (topic: Topic) => {
-  try {
-    const response = await axios.get('/api/student/evidence', { params: { topic_id: topic.id } })
-    const counts = { confirmed: 0, pending: 0, returned: 0 }
-    for (const e of response.data.data.evidence || []) counts[e.status as keyof typeof counts]++
-    topic.evidence = counts
-  } catch { /* keep the old counts */ }
-}
 
 const toggle = (id: number) => { open.value = { ...open.value, [id]: !open.value[id] } }
 

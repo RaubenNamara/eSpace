@@ -53,7 +53,6 @@ const TeacherSearch = () => import('../pages/teacher/Search.vue')
 const TeacherReports = () => import('../pages/teacher/Reports.vue')
 const TeacherEngagement = () => import('../pages/teacher/Engagement.vue')
 const TeacherConstructs = () => import('../pages/teacher/Constructs.vue')
-const TeacherEvidence = () => import('../pages/teacher/Evidence.vue')
 const TeacherCoverage = () => import('../pages/teacher/Coverage.vue')
 const TeacherClassMap = () => import('../pages/teacher/ClassMap.vue')
 const TeacherMarksheet = () => import('../pages/teacher/Marksheet.vue')
@@ -257,7 +256,6 @@ const routes: RouteRecordRaw[] = [
       { path: 'reports', name: 'TeacherReports', component: TeacherReports },
       { path: 'engagement', name: 'TeacherEngagement', component: TeacherEngagement },
       { path: 'constructs', name: 'TeacherConstructs', component: TeacherConstructs },
-      { path: 'evidence', name: 'TeacherEvidence', component: TeacherEvidence },
       { path: 'coverage', name: 'TeacherCoverage', component: TeacherCoverage },
       { path: 'class-map', name: 'TeacherClassMap', component: TeacherClassMap },
       { path: 'settings', name: 'TeacherSettings', component: TeacherSettings },
