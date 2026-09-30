@@ -7,13 +7,17 @@ class HtmlSanitizer
     private static $allowedTags = [
         'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
         'p', 'br', 'hr',
-        'strong', 'b', 'em', 'i', 'u', 's', 'strike',
+        'strong', 'b', 'em', 'i', 'u', 's', 'strike', 'del', 'ins', 'small',
+        // Superscript/subscript and highlighter (CKEditor's highlight is <mark class="marker-...">)
+        'sub', 'sup', 'mark',
+        // To-do lists: <label><input type="checkbox" disabled> ...</label> (see the input rules below)
+        'label', 'input',
         'ul', 'ol', 'li',
         'blockquote',
         'pre', 'code',
         'a',
         'img',
-        'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td',
+        'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'caption', 'colgroup', 'col',
         'div', 'span',
         'figure', 'figcaption',
         'iframe',
@@ -33,6 +37,12 @@ class HtmlSanitizer
         'target' => ['a'],
         'rel' => ['a'],
         'colspan' => ['td', 'th'],
+        'span' => ['col', 'colgroup'],
+        'start' => ['ol'],
+        'reversed' => ['ol'],
+        'type' => ['input'],
+        'checked' => ['input'],
+        'disabled' => ['input'],
         'rowspan' => ['td', 'th'],
         'align' => ['td', 'th', 'p', 'div'],
         'valign' => ['td', 'th'],
@@ -50,6 +60,20 @@ class HtmlSanitizer
         'data-oembed-url' => ['iframe', 'figure', 'oembed'],
         'data-oembed-type' => ['iframe', 'figure', 'oembed'],
         'data-oembed-provider' => ['iframe', 'figure', 'oembed']
+    ];
+
+    // CSS properties kept in style="" - what the editor's font colour/background, size, family,
+    // alignment, indent, list style, image size and table/cell properties produce. Anything else
+    // (position, url(), expression() and the like) is dropped.
+    private static $allowedStyleProperties = [
+        'color', 'background-color',
+        'font-size', 'font-family', 'font-weight', 'font-style', 'text-decoration', 'text-decoration-line',
+        'text-align', 'text-indent', 'line-height', 'letter-spacing', 'vertical-align', 'white-space',
+        'margin-left', 'margin-right', 'padding', 'padding-left', 'padding-right', 'padding-top', 'padding-bottom',
+        'list-style-type',
+        'width', 'height', 'max-width', 'min-width', 'aspect-ratio', 'float',
+        'border', 'border-top', 'border-right', 'border-bottom', 'border-left',
+        'border-color', 'border-style', 'border-width', 'border-collapse', 'border-spacing'
     ];
 
     private static $allowedProtocols = ['http', 'https', 'mailto', 'tel'];
@@ -150,7 +174,7 @@ class HtmlSanitizer
         }
         
         // Remove dangerous elements
-        $dangerousTags = ['script', 'style', 'object', 'embed', 'form', 'input', 'button'];
+        $dangerousTags = ['script', 'style', 'object', 'embed', 'form', 'button', 'select', 'textarea'];
         foreach ($dangerousTags as $tag) {
             $elements = $xpath->query('//' . $tag);
             foreach ($elements as $element) {
@@ -191,8 +215,15 @@ class HtmlSanitizer
                     continue;
                 }
                 
-                if ($allowedForTag !== '*' && !in_array($tagName, $allowedForTag)) {
+                if (!in_array('*', $allowedForTag, true) && !in_array($tagName, $allowedForTag, true)) {
                     continue;
+                }
+
+                if ($attrName === 'style') {
+                    $attrValue = self::sanitizeStyle($attrValue);
+                    if ($attrValue === '') {
+                        continue;
+                    }
                 }
                 
                 // Special handling for href/src
@@ -205,9 +236,23 @@ class HtmlSanitizer
                 $attributes[$attrName] = $attrValue;
             }
             
-            // Remove all attributes and re-add allowed ones
+            // Remove all attributes and re-add allowed ones (names collected first - removing while
+            // iterating the live attribute list skips every other one)
+            $names = [];
             foreach ($element->attributes as $attr) {
-                $element->removeAttribute($attr->name);
+                $names[] = $attr->name;
+            }
+            foreach ($names as $name) {
+                $element->removeAttribute($name);
+            }
+
+            // The only input kept is a to-do list's checkbox, and it can't be ticked by a reader
+            if ($tagName === 'input') {
+                if (strtolower($attributes['type'] ?? '') !== 'checkbox') {
+                    $element->parentNode->removeChild($element);
+                    continue;
+                }
+                $attributes['disabled'] = 'disabled';
             }
             
             foreach ($attributes as $name => $value) {
@@ -261,6 +306,28 @@ class HtmlSanitizer
         $html = str_replace('<?xml encoding="UTF-8">', '', $html);
         
         return trim($html);
+    }
+
+    // Keeps only the allowed CSS properties, and none whose value could load or run anything
+    private static function sanitizeStyle(string $style): string
+    {
+        $kept = [];
+        foreach (explode(';', $style) as $declaration) {
+            $parts = explode(':', $declaration, 2);
+            if (count($parts) !== 2) {
+                continue;
+            }
+            $property = strtolower(trim($parts[0]));
+            $value = trim($parts[1]);
+            if ($value === '' || !in_array($property, self::$allowedStyleProperties, true)) {
+                continue;
+            }
+            if (preg_match('/url\s*\(|expression\s*\(|javascript:|behavior|-moz-binding|@import|[<>]/i', $value) || strpos($value, '\\') !== false) {
+                continue;
+            }
+            $kept[] = $property . ':' . $value;
+        }
+        return $kept ? implode(';', $kept) . ';' : '';
     }
 
     private static function isValidUrl(string $url, string $tagName): bool

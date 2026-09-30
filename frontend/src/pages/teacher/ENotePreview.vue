@@ -552,10 +552,22 @@
                       <h2 v-if="hasMeaningfulTitle(page.title)" class="paper-title">
                         {{ page.title }}
                       </h2>
-                      <!-- First page: the topic's learning outcomes, as on the book's opening page -->
-                      <div v-if="page.id === pages[0]?.id && topic?.learning_outcomes?.length" class="paper-outcomes">
-                        <p class="paper-outcomes-head">In this topic you will</p>
-                        <ul>
+                      <!-- First page: the topic's learning outcomes, as on the book's opening page -
+                           folded away (the book already listed them as it opened); a tap opens them -->
+                      <div v-if="page.id === pages[0]?.id && topic?.learning_outcomes?.length" class="paper-outcomes" :class="{ 'is-open': outcomesOpen }">
+                        <button
+                          type="button"
+                          class="paper-outcomes-head paper-outcomes-toggle"
+                          :aria-expanded="outcomesOpen"
+                          @mousedown.stop
+                          @touchstart.stop
+                          @click.stop="outcomesOpen = !outcomesOpen"
+                        >
+                          <span>In this topic you will</span>
+                          <span class="paper-outcomes-count" :title="`${topic.learning_outcomes.length} learning outcome${topic.learning_outcomes.length === 1 ? '' : 's'}`">{{ topic.learning_outcomes.length }}</span>
+                          <svg class="paper-outcomes-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <ul v-show="outcomesOpen">
                           <li v-for="(outcome, i) in topic.learning_outcomes" :key="i">
                             <span class="paper-tick" aria-hidden="true">
                               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
@@ -1024,6 +1036,8 @@ const isMuted = usePersistedRef('espace:flipbook-muted', false)
 // already forces.
 const preferSinglePage = usePersistedRef('espace:flipbook-single-page-preferred', false)
 const showIntro = ref(false)
+// The learning outcomes box on the first page starts folded (see its template)
+const outcomesOpen = ref(false)
 const showCompletion = ref(false)
 const flipbookRef = ref<InstanceType<typeof BookFlipbook> | null>(null)
 
@@ -2153,6 +2167,55 @@ onBeforeUnmount(() => {
   border-bottom: 1px solid #d9c49c;
 }
 
+.paper-outcomes-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+.paper-outcomes:not(.is-open) .paper-outcomes-toggle {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom-color: transparent;
+}
+.paper-outcomes-toggle > span:first-child {
+  flex: 1;
+  min-width: 0;
+}
+.paper-outcomes-count {
+  flex-shrink: 0;
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(107, 79, 36, 0.12);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  color: #6b4f24;
+}
+.paper-outcomes-toggle > span:first-child {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.paper-outcomes-chevron {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+.paper-outcomes.is-open .paper-outcomes-chevron {
+  transform: rotate(180deg);
+}
+.dark .paper-outcomes-count {
+  background: rgba(229, 199, 141, 0.15);
+  color: #e5c78d;
+}
+
 .paper-outcomes ul {
   display: flex;
   flex-direction: column;
@@ -2404,6 +2467,107 @@ onBeforeUnmount(() => {
   height: 100%;
   border: 0;
   margin: 0;
+}
+
+/* What the teacher's editor (CKEditor) produces beyond plain typography - its stylesheet isn't
+   loaded here, so the reader shows these the way the editor did: highlighter and pen colours,
+   to-do lists, side/aligned/resized images with captions, and captioned tables. Font colour,
+   size, family, alignment and indents arrive as inline styles and need nothing. */
+.prose :deep(mark.marker-yellow) { background-color: #fdfd77; color: inherit; }
+.prose :deep(mark.marker-green) { background-color: #62f962; color: inherit; }
+.prose :deep(mark.marker-pink) { background-color: #fc7899; color: inherit; }
+.prose :deep(mark.marker-blue) { background-color: #72ccfd; color: inherit; }
+.dark .prose :deep(mark[class^='marker-']) { color: #111827; }
+.prose :deep(mark.pen-red) { background-color: transparent; color: #e71313; }
+.prose :deep(mark.pen-green) { background-color: transparent; color: #128a00; }
+.dark .prose :deep(mark.pen-red) { color: #f87171; }
+.dark .prose :deep(mark.pen-green) { color: #4ade80; }
+
+.prose :deep(sub),
+.prose :deep(sup) {
+  font-size: 75%;
+  line-height: 0;
+  position: relative;
+}
+.prose :deep(sub) { bottom: -0.25em; vertical-align: baseline; }
+.prose :deep(sup) { top: -0.5em; vertical-align: baseline; }
+
+.prose :deep(ul.todo-list) {
+  list-style: none;
+  padding-left: 0;
+}
+.prose :deep(ul.todo-list li) {
+  padding-left: 0;
+}
+.prose :deep(ul.todo-list li::before),
+.prose :deep(ul.todo-list li::marker) {
+  content: none;
+}
+.prose :deep(.todo-list__label) {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5em;
+}
+.prose :deep(.todo-list__label input[type='checkbox']) {
+  margin: 0;
+  pointer-events: none;
+}
+
+.prose :deep(figure.image) {
+  display: table;
+  clear: both;
+  margin: 1em auto;
+  text-align: center;
+}
+.prose :deep(figure.image img) {
+  display: block;
+  margin: 0 auto;
+}
+.prose :deep(figure.image_resized img) {
+  width: 100%;
+}
+.prose :deep(figure.image figcaption),
+.prose :deep(figure.table figcaption),
+.prose :deep(table caption) {
+  caption-side: bottom;
+  padding: 0.4em;
+  font-size: 0.8em;
+  color: #6b7280;
+  text-align: center;
+}
+.prose :deep(figure.image figcaption) {
+  display: table-caption;
+}
+.prose :deep(.image-style-side),
+.prose :deep(.image-style-align-right) {
+  float: right;
+  margin: 0.25em 0 1em 1.5em;
+  max-width: 50%;
+}
+.prose :deep(.image-style-align-left) {
+  float: left;
+  margin: 0.25em 1.5em 1em 0;
+  max-width: 50%;
+}
+.prose :deep(.image-style-block-align-left) { margin-left: 0; margin-right: auto; }
+.prose :deep(.image-style-block-align-right) { margin-left: auto; margin-right: 0; }
+.prose :deep(img.image-style-align-center) { display: block; margin-left: auto; margin-right: auto; }
+.prose :deep(figure.table) {
+  display: table;
+  margin: 1em auto;
+}
+.prose :deep(figure.table > table) {
+  width: 100%;
+  height: 100%;
+}
+@media (max-width: 640px) {
+  .prose :deep(.image-style-side),
+  .prose :deep(.image-style-align-left),
+  .prose :deep(.image-style-align-right) {
+    float: none;
+    max-width: 100%;
+    margin: 1em auto;
+  }
 }
 
 /* AI Tutor walkthrough: a soft highlighter glow plus a dashed underline that "draws" itself
