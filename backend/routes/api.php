@@ -51,6 +51,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/dashboard', 'eSpace\App\Controllers\Student\DashboardController@index');
         Router::get('/mastery', 'eSpace\App\Controllers\Student\MasteryController@index');
         Router::get('/next-steps', 'eSpace\App\Controllers\Student\NextStepsController@index');
+        Router::post('/support-groups/{id}/revised', 'eSpace\App\Controllers\Student\NextStepsController@revised');
 
         // Academic History
         Router::get('/academic-history', 'eSpace\App\Controllers\Student\AcademicHistoryController@index');
@@ -349,6 +350,11 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/itembank/{id}', 'eSpace\App\Controllers\Teacher\ItemBankController@show');
         Router::get('/class-map/options', 'eSpace\App\Controllers\Teacher\ClassMapController@options');
         Router::get('/class-map', 'eSpace\App\Controllers\Teacher\ClassMapController@index');
+        Router::post('/aoi-scenarios', 'eSpace\App\Controllers\Teacher\AoiScenarioController@suggest');
+        Router::get('/support-groups', 'eSpace\App\Controllers\Teacher\SupportGroupController@index');
+        Router::post('/support-groups', 'eSpace\App\Controllers\Teacher\SupportGroupController@store');
+        Router::post('/support-groups/{id}/remind', 'eSpace\App\Controllers\Teacher\SupportGroupController@remind');
+        Router::put('/support-groups/{id}/close', 'eSpace\App\Controllers\Teacher\SupportGroupController@close');
         Router::get('/coverage', 'eSpace\App\Controllers\Teacher\CoverageController@index');
         Router::post('/coverage/relink', 'eSpace\App\Controllers\Teacher\CoverageController@relink');
         Router::get('/itembank/{id}/curriculum', 'eSpace\App\Controllers\Teacher\ItemBankController@getCurriculum');

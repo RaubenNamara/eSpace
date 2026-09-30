@@ -849,6 +849,18 @@
             </select>
           </div>
 
+          <!-- AOI: start from a suggested scenario (drafted from the topic's competency and outcomes) -->
+          <div v-if="questionForm.question_type === 'scenario' && form.assessment_category === 'AOI' && aoiScenarioTopicIds.length" class="rounded-lg border border-violet-200 dark:border-violet-800 bg-violet-50/60 dark:bg-violet-900/15 p-3 flex flex-col sm:flex-row sm:items-center gap-2">
+            <p class="flex-1 text-xs text-violet-900 dark:text-violet-100">
+              <span class="font-semibold">Need a scenario?</span> Get three drafted from this topic's competency and learning outcomes, each with tasks and a marking guide.
+            </p>
+            <button type="button" class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-600 text-white text-xs font-semibold hover:bg-violet-700 flex-shrink-0" @click="showAoiSuggest = true">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+              Suggest scenarios
+            </button>
+          </div>
+          <AoiScenarioSuggest v-if="showAoiSuggest" :topic-ids="aoiScenarioTopicIds" @close="showAoiSuggest = false" @use="useAoiScenario" />
+
           <div v-if="questionForm.question_type === 'scenario'">
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Scenario Description</label>
             <CKEditor
@@ -1205,6 +1217,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
 import CKEditor from '@/components/teacher/CKEditor.vue'
+import AoiScenarioSuggest, { type AoiSuggestion } from '@/components/assignment/AoiScenarioSuggest.vue'
 import PdfAnnotationViewer from '@/components/assignment/PdfAnnotationViewer.vue'
 import type { AssignmentQuestion, QuestionType, Subject, ResponseType, AttachmentType } from '@/types'
 import type { ClassTarget } from '@/components/teacher/TeacherClassSelector.vue'
@@ -1291,7 +1304,10 @@ const form = ref({
   assessment_category: null as 'LOA' | 'AOI' | 'EOC' | null,
   academic_year_id: null as number | null,
   term_id: null as number | null,
-  enote_topic_id: null as number | null
+  enote_topic_id: null as number | null,
+  // An AOI's marking guide (JSON: { kind: 'aoi_marking_guide', title, criteria }), from a suggested
+  // scenario - shown beside the work when marking (AssignmentSubmissions)
+  rubric: null as string | null
 })
 
 const questions = ref<AssignmentQuestion[]>([])
@@ -1681,6 +1697,7 @@ const loadAssignment = async () => {
           ? { scope: 'all_streams', class_id: null, class_group_name: assignment.class_group_name }
           : { scope: 'stream', class_id: assignment.class_id || null, class_group_name: null },
         enote_topic_id: assignment.enote_topic_id || null,
+        rubric: assignment.rubric ? (typeof assignment.rubric === 'string' ? assignment.rubric : JSON.stringify(assignment.rubric)) : null,
         assessment_category: assignment.assessment_category || null,
         academic_year_id: assignment.academic_year_id || null,
         term_id: assignment.term_id || null
@@ -2169,6 +2186,25 @@ const closeQuestionModal = () => {
   }
 }
 
+// ---- Suggested AOI scenarios ----
+const showAoiSuggest = ref(false)
+// The topic(s) the scenario is for: the question's own topic, else every topic the AOI assesses
+const aoiScenarioTopicIds = computed<number[]>(() => {
+  if (questionForm.value.curriculum_topic_id) return [questionForm.value.curriculum_topic_id]
+  return Object.keys(selectedTopicIds.value).filter(id => selectedTopicIds.value[Number(id)]).map(Number)
+})
+const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+const useAoiScenario = (s: AoiSuggestion) => {
+  questionForm.value.scenario_description = s.scenario
+    .split(/\n{2,}|\r\n\r\n/)
+    .map(p => `<p>${escapeHtml(p.trim()).replace(/\n/g, '<br>')}</p>`)
+    .join('')
+  questionForm.value.sub_questions = s.tasks.map((t, i) => ({ id: Date.now() + i, question_text: t.text, marks: t.marks, display_order: i }))
+  form.value.rubric = JSON.stringify({ kind: 'aoi_marking_guide', title: s.title, criteria: s.marking_guide })
+  showAoiSuggest.value = false
+  showToast('success', 'Scenario added - edit it as you like. Its marking guide is kept with the assessment.')
+}
+
 const addSubQuestion = () => {
   if (!questionForm.value.sub_questions) {
     questionForm.value.sub_questions = []
@@ -2454,6 +2490,7 @@ const persistAssignment = async (): Promise<number | string | null> => {
     class_id: form.value.classTarget.class_id,
     class_group_name: form.value.classTarget.class_group_name,
     enote_topic_id: form.value.enote_topic_id || '',
+    rubric: form.value.rubric,
     assessment_category: form.value.assessment_category,
     academic_year_id: curriculumSelection.value.academic_year_id || null,
     term_id: curriculumSelection.value.term_id || null
@@ -2636,6 +2673,7 @@ const publishAssignment = async () => {
       scope: form.value.classTarget.scope,
       class_id: form.value.classTarget.class_id,
       class_group_name: form.value.classTarget.class_group_name,
+      rubric: form.value.rubric,
       assessment_category: form.value.assessment_category,
       academic_year_id: curriculumSelection.value.academic_year_id || null,
       term_id: curriculumSelection.value.term_id || null,

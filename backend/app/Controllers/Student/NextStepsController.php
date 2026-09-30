@@ -125,6 +125,25 @@ class NextStepsController extends Controller
             }
         }
 
+        // ---- Revision their teacher sent them (support groups) ---------------------------------
+        foreach ($this->supportGroups($db, $studentId) as $g) {
+            $meeting = $g['meet_at'] && strtotime($g['meet_at']) > $now - 86400
+                ? 'Session ' . date('D j M, g:i A', strtotime($g['meet_at'])) . ($g['meet_place'] ? ' · ' . $g['meet_place'] : '')
+                : ($g['meet_place'] ? 'Session: ' . $g['meet_place'] : '');
+            $steps[] = [
+                'kind' => 'support',
+                'priority' => 85,
+                'title' => 'Revise: ' . $this->shorten($g['kind'] === 'competency' ? $this->title($g['topic_text']) . ' competency' : $g['item_text']),
+                'detail' => trim('From your teacher · ' . ($meeting ? $meeting . ' · ' : '') . $g['subject_name']),
+                'note' => $g['note'],
+                'subject' => $g['subject_name'],
+                'due_date' => $g['meet_at'],
+                'overdue' => false,
+                // Opening it counts as revising (the card tells the server first)
+                'action' => $this->supportAction($map, $g) + ['mark' => "/api/student/support-groups/{$g['id']}/revised"],
+            ];
+        }
+
         // ---- Reading they were part-way through ------------------------------------------------
         foreach ($this->unfinishedReading($db, $studentId) as $r) {
             $steps[] = [
@@ -161,9 +180,86 @@ class NextStepsController extends Controller
             'steps' => array_map(fn($s) => array_diff_key($s, ['priority' => 0]), array_slice($steps, 0, self::MAX_STEPS)),
             'total' => count($steps),
             'assessments_to_do' => count($pendingAssessmentIds),
-            // Consecutive days of real learning (reading, answering, notes, evidence)
+            // Consecutive days of real learning (reading, answering)
             'streak' => \eSpace\App\Services\RewardService::currentStreak($studentId),
         ]);
+    }
+
+    /**
+     * The student opened revision their teacher sent them
+     * POST /student/support-groups/{id}/revised
+     */
+    public function revised($id): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+        $studentId = (int) ($_SESSION['user_id'] ?? 0);
+        try {
+            $this->getDb()->prepare(
+                "UPDATE support_group_members SET revised_at = NOW()
+                 WHERE group_id = ? AND student_id = ? AND revised_at IS NULL"
+            )->execute([(int) $id, $studentId]);
+        } catch (\PDOException $e) {
+            // migration 102 not run yet
+        }
+        $this->success(['id' => (int) $id]);
+    }
+
+    /** Open support groups the student is in and hasn't revised for yet, newest first */
+    private function supportGroups($db, int $studentId): array
+    {
+        try {
+            $stmt = $db->prepare(
+                "SELECT g.id, g.subject_id, g.kind, g.item_text, g.topic_text, g.note, g.meet_at, g.meet_place,
+                        s.name AS subject_name
+                 FROM support_group_members m
+                 INNER JOIN support_groups g ON g.id = m.group_id AND g.status = 'open'
+                 INNER JOIN subjects s ON s.id = g.subject_id
+                 WHERE m.student_id = ? AND m.revised_at IS NULL
+                 ORDER BY g.created_at DESC
+                 LIMIT 5"
+            );
+            $stmt->execute([$studentId]);
+            return $stmt->fetchAll();
+        } catch (\PDOException $e) {
+            return []; // migration 102 not run yet
+        }
+    }
+
+    /**
+     * Where to revise a support group's outcome or competency, from the student's own Learning Map
+     * (so it's their own stream's notes): the page it's taught on, else the topic's notes, else the
+     * practice tagged to the topic, else the map itself
+     */
+    private function supportAction(?array $map, array $g): array
+    {
+        $norm = fn($t) => mb_strtolower(trim(preg_replace('/\s+/', ' ', (string) $t)));
+        foreach ($map['subjects'] ?? [] as $subject) {
+            if ((int) ($subject['id'] ?? 0) !== (int) $g['subject_id']) {
+                continue;
+            }
+            foreach ($subject['topics'] as $topic) {
+                if ($norm($topic['topic']) !== $norm($g['topic_text'])) {
+                    continue;
+                }
+                if ($g['kind'] === 'outcome') {
+                    foreach ($topic['outcomes'] as $o) {
+                        if ($norm($o['text']) === $norm($g['item_text']) && $o['revise']) {
+                            return ['label' => 'Revise', 'to' => "/student/enotes/{$o['revise']['topic_id']}?resumePage={$o['revise']['page_id']}"];
+                        }
+                    }
+                }
+                if ($topic['enote']) {
+                    return ['label' => 'Revise', 'to' => "/student/enotes/{$topic['enote']['id']}"];
+                }
+                if ($topic['practice']) {
+                    return ['label' => 'Practise', 'to' => "/student/itembank?open={$topic['practice'][0]['id']}"];
+                }
+            }
+        }
+        return ['label' => 'See map', 'to' => '/student/learning-map'];
     }
 
     /** Published, open assessments for the student that they haven't submitted (or have started) */

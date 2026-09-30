@@ -153,6 +153,22 @@
         <!-- Marking Sidebar -->
         <div class="lg:col-span-1 xl:col-span-1">
           <div class="lg:sticky lg:top-6">
+            <!-- The AOI's marking guide (from its suggested scenario), beside the work -->
+            <div v-if="markingGuide" class="mb-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-violet-200 dark:border-violet-800 p-4">
+              <button type="button" class="w-full flex items-center gap-2 text-left" @click="guideOpen = !guideOpen">
+                <span class="flex-1 min-w-0">
+                  <span class="block text-sm font-bold text-violet-800 dark:text-violet-200">Marking guide</span>
+                  <span class="block text-[11px] text-gray-500 dark:text-gray-400">Score each criterion 0–3</span>
+                </span>
+                <svg class="w-4 h-4 text-gray-400 transition-transform" :class="{ 'rotate-180': guideOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+              </button>
+              <dl v-if="guideOpen" class="mt-2 space-y-2 max-h-[40vh] overflow-y-auto">
+                <div v-for="c in markingGuide.criteria" :key="c.criterion" class="rounded-md bg-violet-50/70 dark:bg-violet-900/15 p-2">
+                  <dt class="text-xs font-bold text-violet-800 dark:text-violet-200">{{ c.criterion }}</dt>
+                  <dd class="text-xs text-gray-700 dark:text-gray-200 mt-0.5">{{ c.look_for }}</dd>
+                </div>
+              </dl>
+            </div>
             <MarkingPanel
               :questions="markingData.questions"
               :assignment-id="assignmentId"
@@ -170,7 +186,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
 import TeacherMarkingCanvas from '@/components/assignment/TeacherMarkingCanvas.vue'
@@ -191,6 +207,19 @@ const markingData = ref<{ submission: any; questions: any[] } | null>(null)
 
 const loading = ref(false)
 const error = ref<string | null>(null)
+
+// An AOI's marking guide, saved from a suggested scenario (AssignmentBuilder's useAoiScenario)
+const guideOpen = ref(true)
+const markingGuide = computed<{ title: string; criteria: { criterion: string; look_for: string }[] } | null>(() => {
+  const raw = assignment.value?.rubric
+  if (!raw) return null
+  try {
+    const guide = typeof raw === 'string' ? JSON.parse(raw) : raw
+    return guide?.kind === 'aoi_marking_guide' && Array.isArray(guide.criteria) && guide.criteria.length ? guide : null
+  } catch {
+    return null
+  }
+})
 
 const OBJECTIVE_TYPES = ['multiple_choice_single', 'multiple_choice_multiple', 'true_false']
 function isObjective(question: any): boolean {

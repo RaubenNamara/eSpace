@@ -312,10 +312,12 @@ class ClassMapController extends Controller
                     $perStudent[$sid][$pct >= self::ACHIEVED_FROM ? 'achieved' : ($pct >= self::DEVELOPING_FROM ? 'developing' : 'needs_support')]++;
                 }
                 $assessed = (bool) array_intersect_key($outcomeAssessed, array_flip($og['ids']));
-                $outcomesOut[] = ['id' => $og['ids'][0], 'text' => $og['text']] + $summarise($results, $assessed);
+                $outcomesOut[] = ['id' => $og['ids'][0], 'ids' => $og['ids'], 'text' => $og['text']] + $summarise($results, $assessed);
             }
             $topicsOut[] = [
                 'id' => $g['ids'][0],
+                // Every stream's copy of the topic (and each outcome's), for support groups
+                'ids' => $g['ids'],
                 'topic' => $t['topic'],
                 'theme' => $t['theme_branch'],
                 'term_name' => $t['term_name'],

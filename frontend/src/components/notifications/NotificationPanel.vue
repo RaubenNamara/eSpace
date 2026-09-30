@@ -105,6 +105,9 @@ function routeForNotification(n: NotificationItem): { path: string; query?: Reco
       return { path: `${base}/itembank` }
     case 'report_card_ready':
       return { path: `${base}/reports` }
+    case 'support_group':
+      // The revision leads "What to do next" on the dashboard (it opens their own stream's notes)
+      return { path: `${base}/dashboard` }
     default:
       return null
   }

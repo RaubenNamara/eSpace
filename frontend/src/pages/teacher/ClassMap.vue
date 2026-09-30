@@ -26,9 +26,9 @@
       <!-- Legend + view -->
       <div class="flex flex-wrap items-center gap-2 mb-4">
         <span v-for="k in KEYS" :key="k" class="inline-flex items-center gap-1.5 text-[11px] text-gray-600 dark:text-gray-300"><span class="w-2.5 h-2.5 rounded-sm" :class="STYLE[k].bar"></span>{{ STYLE[k].label }}</span>
-        <div class="ml-auto flex gap-1 p-1 rounded-lg bg-gray-100 dark:bg-gray-800">
-          <button v-for="tab in (['outcomes', 'students'] as const)" :key="tab" type="button" class="px-3 py-1 rounded-md text-xs font-semibold" :class="view === tab ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400'" @click="view = tab">
-            {{ tab === 'outcomes' ? 'By outcome' : `By student (${data.student_count})` }}
+        <div class="ml-auto flex gap-1 p-1 rounded-lg bg-gray-100 dark:bg-gray-800 max-w-full overflow-x-auto [scrollbar-width:none]">
+          <button v-for="tab in (['outcomes', 'students', 'groups'] as const)" :key="tab" type="button" class="px-3 py-1 rounded-md text-xs font-semibold whitespace-nowrap" :class="view === tab ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400'" @click="view = tab">
+            {{ tab === 'outcomes' ? 'By outcome' : tab === 'students' ? `By student (${data.student_count})` : `Support groups${openGroupCount ? ` (${openGroupCount})` : ''}` }}
           </button>
         </div>
       </div>
@@ -63,10 +63,23 @@
                 <span v-for="s in row.support" :key="s.student_id" class="px-2 py-0.5 rounded-full" :class="STYLE[s.status].chip">{{ s.name }} · {{ s.percentage }}%</span>
               </div>
               <p v-else class="text-emerald-700 dark:text-emerald-300 font-semibold">Everyone assessed has achieved it.</p>
+              <!-- Re-teach: send the students who need help to revise it -->
+              <div v-if="row.support.length" class="mt-2.5 flex flex-wrap items-center gap-2">
+                <button type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700" @click="supportRow = { row, topic: t.topic }">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                  Create support group ({{ row.support.length }})
+                </button>
+                <button v-if="openGroupFor(row)" type="button" class="text-xs font-semibold text-indigo-600 dark:text-indigo-300" @click="view = 'groups'">
+                  Support group open · {{ openGroupFor(row)!.counts.revised }}/{{ openGroupFor(row)!.counts.members }} revised
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </template>
+
+      <!-- Support groups -->
+      <SupportGroupList v-else-if="view === 'groups'" :groups="classGroups" @changed="loadGroups" />
 
       <!-- By student -->
       <div v-else class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
@@ -90,6 +103,15 @@
         </ul>
       </div>
     </template>
+
+    <SupportGroupModal
+      v-if="supportRow && subjectId"
+      :row="supportRow.row"
+      :topic="supportRow.topic"
+      :subject-id="subjectId"
+      @close="supportRow = null"
+      @created="supportRow = null; loadGroups()"
+    />
   </div>
 </template>
 
@@ -97,10 +119,13 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import axios from 'axios'
 import PickerDropdown, { type PickerOption } from '@/components/common/PickerDropdown.vue'
+import SupportGroupModal, { type SupportRow } from '@/components/classmap/SupportGroupModal.vue'
+import SupportGroupList, { type SupportGroup } from '@/components/classmap/SupportGroupList.vue'
 
 type Key = 'achieved' | 'developing' | 'needs_support' | 'not_assessed'
 interface Summary { assessed: boolean; counts: Record<Key, number>; support: { student_id: number; name: string; percentage: number; status: 'developing' | 'needs_support' }[] }
-interface Topic { id: number; topic: string; theme: string | null; term_name: string | null; competence: string | null; outcomes: (Summary & { id: number; text: string })[]; competency: Summary }
+// ids: every stream's copy of the outcome / topic (the class level's streams each have their own)
+interface Topic { id: number; ids: number[]; topic: string; theme: string | null; term_name: string | null; competence: string | null; outcomes: (Summary & { id: number; ids: number[]; text: string })[]; competency: Summary }
 interface StudentRow { id: number; name: string; admission_number: string; class_name: string | null; achieved: number; developing: number; needs_support: number; results: number }
 interface ClassMap { subject: { id: number; name: string }; student_count: number; topics: Topic[]; students: StudentRow[]; outcome_count: number }
 
@@ -120,7 +145,7 @@ const level = ref<string | null>(null)
 const stream = ref<number | 'all' | null>(null)
 const data = ref<ClassMap | null>(null)
 const loading = ref(true)
-const view = ref<'outcomes' | 'students'>('outcomes')
+const view = ref<'outcomes' | 'students' | 'groups'>('outcomes')
 const open = ref<Record<string, boolean>>({})
 const search = ref('')
 
@@ -138,8 +163,34 @@ const streamOptions = computed<PickerOption<number | 'all'>[]>(() => {
 
 const rowsFor = (t: Topic) => [
   ...t.outcomes.map(o => ({ key: `o${o.id}`, kind: 'outcome' as const, ...o })),
-  { key: `c${t.id}`, kind: 'competency' as const, text: t.competence || 'Topic competency', ...t.competency }
+  { key: `c${t.id}`, kind: 'competency' as const, ids: t.ids, text: t.competence || 'Topic competency', ...t.competency }
 ]
+
+// ---- Support groups (re-teaching) ----
+const groups = ref<SupportGroup[]>([])
+const supportRow = ref<{ row: SupportRow; topic: string } | null>(null)
+const loadGroups = async () => {
+  if (!subjectId.value) return
+  try {
+    const response = await axios.get('/api/teacher/support-groups', { params: { subject_id: subjectId.value } })
+    groups.value = response.data.data.groups || []
+  } catch {
+    groups.value = []
+  }
+}
+// The groups for the outcomes and competencies of the class on view
+const classGroups = computed(() => {
+  const outcomeIds = new Set<number>()
+  const topicIds = new Set<number>()
+  for (const t of data.value?.topics ?? []) {
+    t.ids.forEach(id => topicIds.add(id))
+    t.outcomes.forEach(o => o.ids.forEach(id => outcomeIds.add(id)))
+  }
+  return groups.value.filter(g => g.item_ids.some(id => (g.kind === 'outcome' ? outcomeIds : topicIds).has(id)))
+})
+const openGroupCount = computed(() => classGroups.value.filter(g => g.status === 'open').length)
+const openGroupFor = (row: { kind: 'outcome' | 'competency'; ids: number[] }) =>
+  classGroups.value.find(g => g.status === 'open' && g.kind === row.kind && g.item_ids.some(id => row.ids.includes(id))) ?? null
 const share = (counts: Record<Key, number>, k: Key) => {
   const total = KEYS.reduce((n, key) => n + counts[key], 0)
   return total ? counts[k] / total * 100 : 0
@@ -183,6 +234,7 @@ onMounted(async () => {
 // A new subject keeps the class level when it has it (else its first); a new level starts on its
 // first stream
 watch(subjectId, () => {
+  loadGroups()
   if (!levels.value.some(l => l.name === level.value)) level.value = levels.value[0]?.name ?? null
   else stream.value = streamOptions.value[0]?.value ?? null
 })
