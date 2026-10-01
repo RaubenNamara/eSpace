@@ -87,6 +87,7 @@ class PracticalSkillService
                 'ruler' => 'measuring_length',
                 'metre_rule' => 'measuring_length',
                 'conical_flask' => 'measuring_volume',
+                'amber_conical_flask' => 'measuring_volume',
                 'round_bottom_flask' => 'measuring_volume',
                 'rain_gauge' => 'measuring_volume',
                 'burette' => 'measuring_volume',

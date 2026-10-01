@@ -267,8 +267,10 @@ const batteryVoltage = ref<number | null>(null)
 // back, and what a "pour" transfers between two of these. Objects with a tracked volume.
 const LIQUID_CONTAINER_TYPES = [
   'beaker', 'test_tube', 'burette', 'measuring_cylinder', 'water_container',
-  'conical_flask', 'round_bottom_flask', 'evaporating_dish', 'wash_bottle', 'specimen_bottle', 'rain_gauge', 'watering_can',
+  'conical_flask', 'amber_conical_flask', 'round_bottom_flask', 'evaporating_dish', 'wash_bottle', 'specimen_bottle', 'rain_gauge', 'watering_can',
 ]
+// Anything that can power the free-layout circuit (the dry cell and accumulator have fixed voltages)
+const POWER_SOURCE_TYPES = ['battery', 'dry_cell', 'accumulator']
 // Containers that start full (a source to pour from) rather than empty
 const STARTS_FULL_TYPES = ['water_container', 'burette', 'wash_bottle', 'watering_can']
 const containerVolumes = new Map<string, number>()
@@ -346,7 +348,7 @@ function placeObject(cfg: SceneObjectConfig) {
     containerVolumes.set(cfg.key, vol)
     setLiquidLevel(cfg.key, vol / Number(merged.capacity_ml ?? 250))
   }
-  if (cfg.object_type === 'battery') {
+  if (POWER_SOURCE_TYPES.includes(cfg.object_type)) {
     batteryVoltages.set(cfg.key, Number(merged.voltage ?? 6))
   }
 }
@@ -415,7 +417,7 @@ function connectedComponent(startKey: string): Set<string> {
  * what actually teaches circuit troubleshooting, not just a blank/zero meter.
  */
 function circuitDiagnosis(instrumentKey: string): { value: number; reason: string | null } {
-  const battery = props.sceneObjects.find(o => o.object_type === 'battery')
+  const battery = props.sceneObjects.find(o => POWER_SOURCE_TYPES.includes(o.object_type))
   const switchObj = props.sceneObjects.find(o => o.object_type === 'switch')
   const resistor = props.sceneObjects.find(o => o.object_type === 'resistor')
   const instrumentCfg = props.sceneObjects.find(o => o.key === instrumentKey)
