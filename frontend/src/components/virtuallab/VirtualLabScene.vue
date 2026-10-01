@@ -222,6 +222,8 @@ const props = defineProps<{
   cupboard?: boolean
   /** Glass-door apparatus cabinets on the wall behind the bench, stocked from objectCatalog */
   wallShelves?: boolean
+  /** Bench length in metres (default 1.8) */
+  benchLength?: number
 }>()
 
 const emit = defineEmits<{
@@ -1418,6 +1420,7 @@ function buildScene() {
       maxDistance: 14,
       cupboard: !!props.cupboard,
       wallCabinets: !!props.wallShelves,
+      benchLength: props.benchLength,
     })
   } catch (err) {
     console.error('Virtual Lab: failed to create a WebGL context', err)
@@ -1754,9 +1757,10 @@ function frameBench() {
   if (!room) return
   const u = UNITS_PER_METRE
   // With the wall cabinets, the view takes in the bench and both cabinets above it
+  const half = room.benchLength / 2
   const box = room.wallCabinets
-    ? new THREE.Box3(new THREE.Vector3(-1.5 * u, -0.9 * u, -0.6 * u), new THREE.Vector3(1.5 * u, 1.4 * u, 0.375 * u))
-    : new THREE.Box3(new THREE.Vector3(-0.9 * u, -0.9 * u, -0.375 * u), new THREE.Vector3(0.9 * u, 0.1 * u, 0.375 * u))
+    ? new THREE.Box3(new THREE.Vector3(-(half + 0.25) * u, -0.9 * u, -0.6 * u), new THREE.Vector3((half + 0.25) * u, 1.4 * u, 0.375 * u))
+    : new THREE.Box3(new THREE.Vector3(-half * u, -0.9 * u, -0.375 * u), new THREE.Vector3(half * u, 0.1 * u, 0.375 * u))
   room.fitBox(box, room.wallCabinets ? 0.94 : 0.72, { dir: new THREE.Vector3(0.4, room.wallCabinets ? 3.4 : 4.2, 6.4) })
 }
 

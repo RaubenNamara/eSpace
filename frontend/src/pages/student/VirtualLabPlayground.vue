@@ -44,6 +44,7 @@
               fixed-view
               cupboard
               wall-shelves
+              :bench-length="BENCH_LENGTH"
               @action="onSceneAction"
               @take-chemical="takeChemical"
               @pick-apparatus="pickApparatus"
@@ -114,12 +115,14 @@ const CHEMICAL_DEFS: LabObjectDef[] = [
 const sceneCatalog = computed(() => [...catalog.value, ...CHEMICAL_DEFS])
 const catalogByType = computed(() => new Map(sceneCatalog.value.map(o => [o.object_type, o])))
 
-// Grid auto-layout on the bench top (usable area about 8 x 3.4 units; 1 unit = 20 cm). The grid
+// The playground's long bench, in metres (the guided experiments use the standard 1.8 m one)
+const BENCH_LENGTH = 3
+// Grid auto-layout on the bench top (usable area about 14 x 3.4 units; 1 unit = 20 cm). The grid
 // widens as more apparatus is added so every row stays on the bench, never past its front edge.
 function layoutPosition(index: number, count: number) {
-  const cols = count <= 4 ? Math.max(1, count) : count <= 8 ? 4 : count <= 15 ? 5 : 7
+  const cols = count <= 6 ? Math.max(1, count) : count <= 14 ? 7 : count <= 24 ? 8 : 10
   const rows = Math.ceil(count / cols)
-  const spacingX = Math.min(1.2, 7.6 / cols)
+  const spacingX = Math.min(1.4, ((BENCH_LENGTH - 0.25) * 5) / cols)
   const spacingZ = Math.min(1.05, 3.2 / rows)
   const col = index % cols
   const row = Math.floor(index / cols)
