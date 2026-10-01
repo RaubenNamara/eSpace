@@ -39,26 +39,26 @@
           ? 'lg:grid-cols-[17rem_minmax(0,1fr)_12rem] 2xl:grid-cols-[19rem_minmax(0,1fr)_14rem]'
           : 'lg:grid-cols-[3rem_minmax(0,1fr)_12rem] 2xl:grid-cols-[3rem_minmax(0,1fr)_14rem]'"
       >
-        <!-- Apparatus shelves beside the lab (above it on phones and tablets). Hidden away like a
-             sidebar with the button on the left of its title bar, leaving a slim rail to reopen it. -->
+        <!-- Apparatus shelves beside the lab (above it on phones and tablets). Hidden away like the
+             main sidebar: a round arrow straddling the middle of its right edge, leaving a slim rail. -->
+        <div class="order-1 relative">
         <div
-          class="order-1 rounded-2xl shadow-sm overflow-hidden flex flex-col ring-1 ring-amber-950/20 lg:h-[calc(100svh-7rem)] lg:min-h-[560px]"
+          class="rounded-2xl shadow-sm overflow-hidden flex flex-col ring-1 ring-amber-950/20 lg:h-[calc(100svh-7rem)] lg:min-h-[560px]"
           :class="shelfPanelOpen ? 'max-h-[55svh] lg:max-h-none' : 'lg:bg-amber-950/90'"
         >
           <!-- Title bar (on large screens only while open; the rail below replaces it when hidden) -->
           <div class="flex-shrink-0 px-2 py-1.5 bg-amber-950/90 items-center gap-1.5" :class="shelfPanelOpen ? 'flex' : 'flex lg:hidden'">
+            <!-- Phones and tablets: the panel sits above the lab, so it folds up and down from here -->
             <button
               type="button"
               @click="shelfPanelOpen = !shelfPanelOpen"
-              class="flex-shrink-0 w-7 h-7 inline-flex items-center justify-center rounded-md bg-amber-100/15 text-amber-100 hover:bg-amber-100/30"
+              class="lg:hidden flex-shrink-0 w-7 h-7 inline-flex items-center justify-center rounded-md bg-amber-100/15 text-amber-100 hover:bg-amber-100/30"
               :aria-expanded="shelfPanelOpen"
               :title="shelfPanelOpen ? 'Hide the apparatus shelves' : 'Show the apparatus shelves'"
             >
-              <!-- Points left (hide) on large screens, up/down on phones where the panel sits above the lab -->
-              <svg class="w-4 h-4 hidden lg:block" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 17l-5-5 5-5M18 17l-5-5 5-5" /></svg>
-              <svg class="w-4 h-4 lg:hidden transition-transform" :class="shelfPanelOpen ? '' : '-rotate-90'" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6" /></svg>
+              <svg class="w-4 h-4 transition-transform" :class="shelfPanelOpen ? '' : '-rotate-90'" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6" /></svg>
             </button>
-            <p class="flex-1 min-w-0 truncate text-xs font-bold uppercase tracking-wider text-amber-100 flex items-center gap-1.5">
+            <p class="flex-1 min-w-0 truncate text-xs font-bold uppercase tracking-wider text-amber-100 flex items-center gap-1.5 lg:px-1 lg:py-1">
               <AppIcon name="kit" class="w-3.5 h-3.5" /> Apparatus Shelves
             </p>
           </div>
@@ -68,13 +68,10 @@
             v-if="!shelfPanelOpen"
             type="button"
             @click="shelfPanelOpen = true"
-            class="hidden lg:flex flex-1 flex-col items-center gap-3 py-2 text-amber-100 hover:bg-amber-100/10"
+            class="hidden lg:flex flex-1 flex-col items-center gap-3 pt-4 text-amber-100 hover:bg-amber-100/10"
             title="Show the apparatus shelves"
             aria-label="Show the apparatus shelves"
           >
-            <span class="w-7 h-7 inline-flex items-center justify-center rounded-md bg-amber-100/15">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5-5 5M6 7l5 5-5 5" /></svg>
-            </span>
             <AppIcon name="kit" class="w-4 h-4" />
             <span class="text-[11px] font-bold uppercase tracking-[0.2em] [writing-mode:vertical-rl]">Apparatus Shelves</span>
           </button>
@@ -90,6 +87,17 @@
             grid-class="grid-cols-3 sm:grid-cols-5 lg:grid-cols-3"
             @pick="addToScene"
           />
+        </div>
+          <!-- Large screens: round arrow on the middle of the panel's right edge, like the sidebar's -->
+          <button
+            type="button"
+            @click="shelfPanelOpen = !shelfPanelOpen"
+            class="hidden lg:flex absolute top-1/2 -right-3 -translate-y-1/2 z-10 w-6 h-6 rounded-full bg-white dark:bg-slate-800 border border-slate-400 dark:border-white/10 shadow-md items-center justify-center text-slate-600 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-500/50 transition-colors"
+            :aria-expanded="shelfPanelOpen"
+            :title="shelfPanelOpen ? 'Hide the apparatus shelves' : 'Show the apparatus shelves'"
+          >
+            <svg class="w-3.5 h-3.5 transition-transform duration-300" :class="{ 'rotate-180': !shelfPanelOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+          </button>
         </div>
 
         <!-- 3D scene - full screen only changes this wrapper's classes, so the scene isn't rebuilt -->
