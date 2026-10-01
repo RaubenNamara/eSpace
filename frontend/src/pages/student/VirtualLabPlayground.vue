@@ -14,89 +14,16 @@
         </button>
       </div>
 
-      <!-- Slim fixed side columns on large screens so the lab takes all the remaining width -->
-      <div
-        class="grid grid-cols-1 gap-4 sm:gap-5 lg:transition-[grid-template-columns] lg:duration-300"
-        :class="shelfPanelOpen
-          ? 'lg:grid-cols-[17rem_minmax(0,1fr)_12rem] 2xl:grid-cols-[19rem_minmax(0,1fr)_14rem]'
-          : 'lg:grid-cols-[3rem_minmax(0,1fr)_12rem] 2xl:grid-cols-[3rem_minmax(0,1fr)_14rem]'"
-      >
-        <!-- Apparatus shelves beside the lab (above it on phones and tablets). Hidden away like the
-             main sidebar: a round arrow straddling the middle of its right edge, leaving a slim rail. -->
-        <div class="order-1 relative">
-        <div
-          class="rounded-2xl shadow-sm overflow-hidden flex flex-col ring-1 ring-amber-950/20 lg:h-[calc(100svh-7rem)] lg:min-h-[560px]"
-          :class="shelfPanelOpen ? 'max-h-[55svh] lg:max-h-none' : 'lg:bg-amber-950/90'"
-        >
-          <!-- Title bar (on large screens only while open; the rail below replaces it when hidden) -->
-          <div class="flex-shrink-0 px-2 py-1.5 bg-amber-950/90 items-center gap-1.5" :class="shelfPanelOpen ? 'flex' : 'flex lg:hidden'">
-            <!-- Phones and tablets: the panel sits above the lab, so it folds up and down from here -->
-            <button
-              type="button"
-              @click="shelfPanelOpen = !shelfPanelOpen"
-              class="lg:hidden flex-shrink-0 w-7 h-7 inline-flex items-center justify-center rounded-md bg-amber-100/15 text-amber-100 hover:bg-amber-100/30"
-              :aria-expanded="shelfPanelOpen"
-              :title="shelfPanelOpen ? 'Hide the apparatus shelves' : 'Show the apparatus shelves'"
-            >
-              <svg class="w-4 h-4 transition-transform" :class="shelfPanelOpen ? '' : '-rotate-90'" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6" /></svg>
-            </button>
-            <p class="flex-1 min-w-0 truncate text-xs font-bold uppercase tracking-wider text-amber-100 flex items-center gap-1.5 lg:px-1 lg:py-1">
-              <AppIcon name="kit" class="w-3.5 h-3.5" /> Apparatus Shelves
-            </p>
-          </div>
-
-          <!-- Slim rail when hidden on large screens: click anywhere on it to open the shelves again -->
-          <button
-            v-if="!shelfPanelOpen"
-            type="button"
-            @click="shelfPanelOpen = true"
-            class="hidden lg:flex flex-1 flex-col items-center gap-3 pt-4 text-amber-100 hover:bg-amber-100/10"
-            title="Show the apparatus shelves"
-            aria-label="Show the apparatus shelves"
-          >
-            <AppIcon name="kit" class="w-4 h-4" />
-            <span class="text-[11px] font-bold uppercase tracking-[0.2em] [writing-mode:vertical-rl]">Apparatus Shelves</span>
-          </button>
-
-          <ApparatusShelves
-            v-show="shelfPanelOpen"
-            class="flex-1"
-            :shelves="shelves"
-            :counts="benchCounts"
-            v-model:collapsed="collapsedShelves"
-            v-model:search="shelfSearch"
-            :loading="loadingCatalog"
-            grid-class="grid-cols-3 sm:grid-cols-5 lg:grid-cols-3"
-            @pick="addToScene"
-          />
-        </div>
-          <!-- Large screens: round arrow on the middle of the panel's right edge, like the sidebar's -->
-          <button
-            type="button"
-            @click="shelfPanelOpen = !shelfPanelOpen"
-            class="hidden lg:flex absolute top-1/2 -right-3 -translate-y-1/2 z-10 w-6 h-6 rounded-full bg-white dark:bg-slate-800 border border-slate-400 dark:border-white/10 shadow-md items-center justify-center text-slate-600 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-500/50 transition-colors"
-            :aria-expanded="shelfPanelOpen"
-            :title="shelfPanelOpen ? 'Hide the apparatus shelves' : 'Show the apparatus shelves'"
-          >
-            <svg class="w-3.5 h-3.5 transition-transform duration-300" :class="{ 'rotate-180': !shelfPanelOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
-          </button>
-        </div>
-
+      <!-- The lab takes all the width; the apparatus lives in the room itself, in the glass
+           cabinets on the wall behind the bench, and the chemicals in the cupboard under it -->
+      <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_12rem] 2xl:grid-cols-[minmax(0,1fr)_14rem] gap-4 sm:gap-5">
         <!-- 3D scene - full screen only changes this wrapper's classes, so the scene isn't rebuilt -->
-        <div class="order-2" :class="labMaximized ? 'fixed inset-0 z-[200] flex flex-col bg-slate-900' : ''">
+        <div :class="labMaximized ? 'fixed inset-0 z-[200] flex flex-col bg-slate-900' : ''">
           <div v-if="labMaximized" class="flex-shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-3 sm:px-4 py-2 flex items-center gap-2 sm:gap-3">
-            <button
-              @click="shelvesOpen = !shelvesOpen"
-              class="flex-shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-colors"
-              :class="shelvesOpen ? 'bg-amber-700 text-white' : 'border border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20'"
-              :title="shelvesOpen ? 'Hide the apparatus shelves' : 'Show the apparatus shelves'"
-            >
-              <AppIcon name="kit" class="w-3.5 h-3.5" /> Shelves
-            </button>
             <p class="hidden sm:block text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 whitespace-nowrap">Apparatus Playground</p>
             <p class="flex-1 min-w-0 truncate text-[11px] text-gray-500 dark:text-gray-400">
               <template v-if="sceneObjects.length">{{ sceneObjects.length }} on your bench</template>
-              <template v-else>Pick apparatus from the shelves</template>
+              <template v-else>Open the glass cabinets for apparatus, or the cupboard for chemicals</template>
             </p>
             <button v-if="sceneObjects.length > 0" @click="clearBench" class="flex-shrink-0 px-2.5 py-1.5 text-xs font-medium rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">Clear</button>
             <button @click="exitMaximize" class="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
@@ -105,84 +32,37 @@
             </button>
           </div>
 
-          <!-- Always present (display: contents outside full screen) so the scene below is never re-created -->
-          <div :class="labMaximized ? 'relative flex flex-1 min-h-0' : 'contents'">
-            <!-- The apparatus cabinet: one wooden shelf per subject, each with its name plate -->
-            <transition
-              enter-active-class="transition duration-200 ease-out"
-              enter-from-class="-translate-x-4 opacity-0"
-              leave-active-class="transition duration-150 ease-in"
-              leave-to-class="-translate-x-4 opacity-0"
-            >
-              <aside
-                v-if="labMaximized && shelvesOpen"
-                class="absolute sm:relative inset-y-0 left-0 z-20 w-[86%] max-w-[22rem] sm:w-80 lg:w-[22rem] flex-shrink-0 flex flex-col shadow-2xl sm:shadow-none border-r-[6px] border-[#4a2a12]"
-              >
-                <ApparatusShelves
-                  class="flex-1"
-                  :shelves="shelves"
-                  :counts="benchCounts"
-                  v-model:collapsed="collapsedShelves"
-                  v-model:search="shelfSearch"
-                  :loading="loadingCatalog"
-                  @pick="pickFromShelf"
-                />
-                <!-- Round hide arrow on the middle of the shelves' right edge, like the sidebar's -->
-                <button
-                  type="button"
-                  @click="shelvesOpen = false"
-                  class="absolute -right-[15px] top-1/2 -translate-y-1/2 z-30 w-6 h-6 rounded-full bg-white dark:bg-slate-800 border border-slate-400 dark:border-white/10 shadow-md flex items-center justify-center text-slate-600 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-500/50 transition-colors"
-                  title="Hide the apparatus shelves"
-                  aria-label="Hide the apparatus shelves"
-                >
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
-                </button>
-              </aside>
-            </transition>
-            <!-- Shelves hidden: the same round arrow on the middle of the lab's left edge brings them back -->
-            <button
-              v-if="labMaximized && !shelvesOpen"
-              type="button"
-              @click="shelvesOpen = true"
-              class="absolute left-1.5 top-1/2 -translate-y-1/2 z-30 w-6 h-6 rounded-full bg-white dark:bg-slate-800 border border-slate-400 dark:border-white/10 shadow-md flex items-center justify-center text-slate-600 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-500/50 transition-colors"
-              title="Show the apparatus shelves"
-              aria-label="Show the apparatus shelves"
-            >
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
-            </button>
-            <!-- Phones: tap the lab beside the drawer to close it -->
-            <div v-if="labMaximized && shelvesOpen" class="sm:hidden absolute inset-0 z-10 bg-black/30" @click="shelvesOpen = false"></div>
-
           <div
             class="relative overflow-hidden"
             :class="labMaximized ? 'flex-1 min-h-0 min-w-0' : 'h-[68svh] min-h-[340px] sm:h-[72svh] lg:h-[calc(100svh-7rem)] lg:min-h-[560px] rounded-2xl shadow-lg ring-1 ring-gray-900/5'"
           >
-            <!-- The bench is always there, even when empty, so its cupboard can be opened -->
+            <!-- The room is always there, even with an empty bench, so its cabinets can be opened -->
             <VirtualLabScene
               ref="sceneRef"
               :scene-objects="sceneObjects"
               :object-catalog="sceneCatalog"
               fixed-view
               cupboard
+              wall-shelves
               @action="onSceneAction"
               @take-chemical="takeChemical"
+              @pick-apparatus="pickApparatus"
               @put-back="putBack"
             />
             <p v-if="sceneObjects.length === 0" class="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 w-max max-w-[90%] px-3 py-1.5 rounded-full bg-white/85 dark:bg-gray-900/80 text-gray-700 dark:text-gray-200 text-xs font-medium shadow text-center">
-              Pick apparatus from the shelves, or open the cupboard doors under the bench for chemicals.
+              {{ loadingCatalog ? 'Stocking the shelves...' : 'Open the glass cabinets on the wall for apparatus, or the cupboard under the bench for chemicals.' }}
             </p>
-            <!-- Brief confirmation when something comes off a shelf -->
+            <!-- Brief confirmation when something comes off a shelf or goes back -->
             <transition enter-active-class="transition duration-150" enter-from-class="opacity-0 translate-y-1" leave-active-class="transition duration-300" leave-to-class="opacity-0">
               <p v-if="lastPicked" :class="sceneObjects.length === 0 ? 'top-14' : 'top-3'" class="pointer-events-none absolute z-10 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full bg-gray-900/80 text-white text-xs font-semibold shadow">
                 {{ lastPicked }}
               </p>
             </transition>
           </div>
-          </div>
         </div>
 
         <!-- Items on bench -->
-        <div class="order-3 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-3 lg:h-[calc(100svh-7rem)] lg:min-h-[560px] lg:overflow-y-auto">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-3 lg:h-[calc(100svh-7rem)] lg:min-h-[560px] lg:overflow-y-auto">
           <div class="flex items-center justify-between mb-3">
             <p class="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">On Your Bench</p>
             <button v-if="sceneObjects.length > 0" @click="clearBench" class="text-[11px] font-medium text-red-500 hover:underline">Clear all</button>
@@ -208,12 +88,10 @@
 </template>
 
 <script setup lang="ts">
-import AppIcon from '@/components/common/AppIcon.vue'
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
 import VirtualLabScene from '@/components/virtuallab/VirtualLabScene.vue'
-import ApparatusShelves from '@/components/virtuallab/ApparatusShelves.vue'
 import { chemicalById, chemicalObjectType, chemicalProps } from '@/components/virtuallab/chemicals'
 import { useFullscreenLab } from '@/components/virtuallab/lab3d/useFullscreenLab'
 import type { LabObjectDef, SceneObjectConfig } from '@/types/virtualLab'
@@ -259,59 +137,14 @@ const addToScene = (obj: LabObjectDef) => {
   relayout()
 }
 
-// --- Full screen apparatus shelves ---------------------------------------------------------
-const SHELF_ORDER: { key: string; label: string }[] = [
-  { key: 'physics', label: 'Physics' },
-  { key: 'chemistry', label: 'Chemistry' },
-  { key: 'biology', label: 'Biology' },
-  { key: 'agriculture', label: 'Agriculture' },
-  { key: 'general', label: 'General' },
-]
-const shelvesOpen = ref(true)
-const shelfSearch = ref('')
-const shelves = computed(() => {
-  const q = shelfSearch.value.trim().toLowerCase()
-  return SHELF_ORDER
-    .map(sh => ({
-      ...sh,
-      items: catalog.value
-        .filter(o => (SHELF_ORDER.some(x => x.key === o.category) ? o.category : 'general') === sh.key)
-        .filter(o => !q || o.display_name.toLowerCase().includes(q))
-        .sort((a, b) => a.display_name.localeCompare(b.display_name)),
-    }))
-    .filter(sh => sh.items.length > 0)
-})
-const benchCounts = computed<Record<string, number>>(() => {
-  const out: Record<string, number> = {}
-  sceneObjects.value.forEach(o => { out[o.object_type] = (out[o.object_type] || 0) + 1 })
-  return out
-})
-
-// Which shelves are folded away - remembered on this device
-const FOLD_KEY = 'vl-playground-folded-shelves'
-const readFolded = (): string[] => {
-  try { return JSON.parse(localStorage.getItem(FOLD_KEY) || '[]') } catch { return [] }
-}
-const collapsedShelves = ref<string[]>(readFolded())
-watch(collapsedShelves, (v) => {
-  try { localStorage.setItem(FOLD_KEY, JSON.stringify(v)) } catch { /* storage unavailable */ }
-})
-// Whether the shelves panel beside the lab is shown or hidden away like a sidebar - remembered too
-const PANEL_KEY = 'vl-playground-shelves-panel'
-const readPanel = (): boolean => {
-  try { return localStorage.getItem(PANEL_KEY) !== 'hidden' } catch { return true }
-}
-const shelfPanelOpen = ref(readPanel())
-watch(shelfPanelOpen, (v) => {
-  try { localStorage.setItem(PANEL_KEY, v ? 'shown' : 'hidden') } catch { /* storage unavailable */ }
-})
 const lastPicked = ref<string | null>(null)
 let pickedTimer: ReturnType<typeof setTimeout> | null = null
-const pickFromShelf = (obj: LabObjectDef) => {
-  addToScene(obj)
-  flash(`${obj.display_name} placed on the bench`)
-  // On phones the drawer covers the lab, so close it to show what was placed
-  if (window.innerWidth < 640) shelvesOpen.value = false
+/** Taken off a shelf in one of the glass wall cabinets */
+const pickApparatus = (type: string) => {
+  const def = catalog.value.find(o => o.object_type === type)
+  if (!def) return
+  addToScene(def)
+  flash(`${def.display_name} placed on the bench`)
 }
 
 const takeChemical = (id: string) => {

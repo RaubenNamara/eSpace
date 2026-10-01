@@ -196,7 +196,7 @@
     </div>
 
     <p class="hidden sm:block absolute right-3 bottom-3 text-[10px] text-gray-500 dark:text-gray-400 bg-white/70 dark:bg-gray-900/60 rounded px-2 py-1 pointer-events-none">
-      Drag to orbit &middot; Scroll to zoom &middot; Click equipment to interact<template v-if="cupboard"> &middot; Open the cupboard doors for chemicals &middot; Click an empty shelf tag to put a chemical back</template>
+      Drag to orbit &middot; Scroll to zoom &middot; Click equipment to interact<template v-if="cupboard || wallShelves"> &middot; Click a door to open it</template>
     </p>
   </div>
 </template>
@@ -220,6 +220,8 @@ const props = defineProps<{
   fixedView?: boolean
   /** Bench cupboard with doors that open onto shelves of chemicals (Apparatus Playground) */
   cupboard?: boolean
+  /** Glass-door apparatus cabinets on the wall behind the bench, stocked from objectCatalog */
+  wallShelves?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -227,6 +229,8 @@ const emit = defineEmits<{
   takeChemical: [chemicalId: string]
   /** Put this bench object back - into the cupboard (chemicals) or onto the shelves */
   putBack: [objectKey: string]
+  /** An apparatus was taken off a wall-cabinet shelf */
+  pickApparatus: [objectType: string]
   action: [{ objectKey: string | null; action: LabAction; value: string | null; unit?: string | null; label?: string | null; safetyIssue?: boolean; targetObjectKey?: string | null; springLoadG?: number }]
 }>()
 
@@ -1413,6 +1417,7 @@ function buildScene() {
       minDistance: 1.2,
       maxDistance: 14,
       cupboard: !!props.cupboard,
+      wallCabinets: !!props.wallShelves,
     })
   } catch (err) {
     console.error('Virtual Lab: failed to create a WebGL context', err)
@@ -1439,6 +1444,7 @@ function buildScene() {
 
   recomputeOptics()
   stockCupboard()
+  stockWallShelves()
   if (props.fixedView) frameBench()
   else frameApparatus()
 
@@ -1463,6 +1469,9 @@ function buildScene() {
     })
     cupboardBottles.forEach((g, id) => {
       g.children.forEach((c) => { if (c.userData.role === 'label') c.visible = id === hoveredChemical })
+    })
+    shelfItems.forEach((g, type) => {
+      g.children.forEach((c) => { if (c.userData.role === 'label') c.visible = type === hoveredShelfType })
     })
   })
 }
@@ -1575,29 +1584,42 @@ function syncCupboard() {
   cupboardBottles.forEach((g, id) => { g.visible = !out.has(id) })
 }
 
-type CupboardHit = { kind: 'door'; door: THREE.Object3D } | { kind: 'chemical'; id: string } | null
+type CupboardHit =
+  | { kind: 'door'; door: THREE.Object3D }
+  | { kind: 'chemical'; id: string }
+  | { kind: 'apparatus'; type: string }
+  | null
 
-/** What in the cupboard is under the pointer - null when it's apparatus, the room, or nothing. */
+/** What in the cupboard or wall cabinets is under the pointer - null for bench apparatus, the room or nothing. */
 function cupboardHit(): CupboardHit {
   const cb = room?.cupboard
-  if (!cb) return null
+  const wc = room?.wallCabinets
+  if (!cb && !wc) return null
   raycaster.setFromCamera(pointerNdc, camera)
-  const targets: THREE.Object3D[] = [...cb.doors, ...cb.blockers]
+  const targets: THREE.Object3D[] = []
+  if (cb) targets.push(...cb.doors, ...cb.blockers)
+  if (wc) targets.push(...wc.doors, ...wc.blockers)
   groups.forEach(g => targets.push(g))
   cupboardBottles.forEach((g) => { if (g.visible) targets.push(g) })
   cupboardTags.forEach(t => targets.push(t))
+  shelfItems.forEach(g => targets.push(g))
   const hit = raycaster.intersectObjects(targets, true)[0]
   if (!hit) return null
-  const door = cb.doorOf(hit.object)
+  const door = room!.doorOf(hit.object)
   if (door) return { kind: 'door', door }
   let o: THREE.Object3D | null = hit.object
-  while (o && !o.userData.chemicalId) o = o.parent
-  return o ? { kind: 'chemical', id: o.userData.chemicalId as string } : null
+  while (o && !o.userData.chemicalId && !o.userData.shelfType) o = o.parent
+  if (!o) return null
+  return o.userData.shelfType ? { kind: 'apparatus', type: o.userData.shelfType as string } : { kind: 'chemical', id: o.userData.chemicalId as string }
 }
 
 function handleCupboardClick(): boolean {
   const hit = cupboardHit()
   if (!hit) return false
+  if (hit.kind === 'apparatus') {
+    emit('pickApparatus', hit.type)
+    return true
+  }
   if (hit.kind === 'chemical') {
     // Its bottle is on the shelf: take it out. Its place is empty: put it back from the bench.
     const out = props.sceneObjects.find(o => o.props?.chemical_id === hit.id)
@@ -1606,9 +1628,114 @@ function handleCupboardClick(): boolean {
     return true
   }
   // The view stays where the student left it - they zoom and turn to look inside themselves
-  room!.cupboard!.toggleDoor(hit.door)
+  room!.toggleDoor(hit.door)
   return true
 }
+
+// --- Wall cabinets (Apparatus Playground) ----------------------------------------------------
+// Every apparatus in the catalogue stands on a shelf behind glass, grouped by subject: physics
+// and general on the left, chemistry, biology and agriculture on the right. Models are shrunk to
+// fit their shelf space; picking one puts a full-size copy on the bench.
+const shelfItems = new Map<string, THREE.Group>()
+const shelfStrips: THREE.Mesh[] = []
+let hoveredShelfType: string | null = null
+const SHELF_SECTIONS: { key: string; label: string }[][] = [
+  [{ key: 'physics', label: 'Physics' }, { key: 'general', label: 'General' }],
+  [{ key: 'chemistry', label: 'Chemistry' }, { key: 'biology', label: 'Biology' }, { key: 'agriculture', label: 'Agriculture' }],
+]
+const KNOWN_SECTIONS = ['physics', 'chemistry', 'biology', 'agriculture']
+
+function disposeObject(o: THREE.Object3D) {
+  scene.remove(o)
+  o.traverse((c) => {
+    if (c instanceof THREE.Mesh || c instanceof THREE.Sprite) {
+      c.geometry?.dispose()
+      const mats = Array.isArray(c.material) ? c.material : [c.material]
+      mats.forEach((m: THREE.Material & { map?: THREE.Texture | null }) => { m.map?.dispose(); m.dispose() })
+    }
+  })
+}
+
+function stockWallShelves() {
+  const wc = room?.wallCabinets
+  if (!wc) return
+  shelfItems.forEach(disposeObject)
+  shelfItems.clear()
+  shelfStrips.splice(0).forEach(disposeObject)
+  const defs = props.objectCatalog.filter(d => d.id > 0 && d.is_active !== false)
+  const sectionOf = (d: LabObjectDef) => (KNOWN_SECTIONS.includes(d.category) ? d.category : 'general')
+
+  wc.cabinets.forEach((cab, ci) => {
+    const sections = SHELF_SECTIONS[ci]
+      .map(sec => ({ ...sec, items: defs.filter(d => sectionOf(d) === sec.key).sort((a, b) => a.display_name.localeCompare(b.display_name)) }))
+      .filter(sec => sec.items.length > 0)
+    // Fewest items per shelf that still fits everything on the cabinet's shelves
+    let perRow = 8
+    const pack = () => sections.flatMap(sec => {
+      const out: { label: string; items: LabObjectDef[] }[] = []
+      for (let i = 0; i < sec.items.length; i += perRow) out.push({ label: sec.label, items: sec.items.slice(i, i + perRow) })
+      return out
+    })
+    let rows = pack()
+    while (rows.length > cab.rows.length) { perRow++; rows = pack() }
+
+    const slotW = (cab.maxX - cab.minX) / perRow
+    rows.forEach((row, ri) => {
+      const y = cab.rows[ri]
+      row.items.forEach((def, j) => {
+        const g = createObjectMesh(def.object_type, `shelf:${def.object_type}`, def.display_name, def.default_props || {})
+        const box = new THREE.Box3()
+        g.children.forEach((c) => { if (!(c instanceof THREE.Sprite)) box.expandByObject(c) })
+        const size = box.getSize(new THREE.Vector3())
+        const center = box.getCenter(new THREE.Vector3())
+        const k = Math.min(1, (slotW * 0.84) / Math.max(size.x, 0.01), (cab.rowHeight * 0.8) / Math.max(size.y, 0.01), (cab.depth * 0.9) / Math.max(size.z, 0.01))
+        g.scale.setScalar(k)
+        g.position.set(cab.minX + slotW * (j + 0.5) - center.x * k, y - box.min.y * k, cab.z - center.z * k)
+        g.children.forEach((c) => {
+          if (c.userData.role !== 'label') return
+          c.scale.set(0.72 / k, 0.158 / k, 1)
+          c.position.y = box.max.y + 0.2 / k
+          c.visible = false
+        })
+        g.traverse((c) => { if (c instanceof THREE.Mesh) c.castShadow = false })
+        g.userData.shelfType = def.object_type
+        scene.add(g)
+        shelfItems.set(def.object_type, g)
+      })
+      // Subject name strip along the front edge of the shelf
+      const strip = new THREE.Mesh(
+        new THREE.PlaneGeometry(cab.maxX - cab.minX, 0.17),
+        new THREE.MeshBasicMaterial({ map: shelfStripTexture(row.label), toneMapped: false }),
+      )
+      strip.position.set((cab.minX + cab.maxX) / 2, y - 0.085, cab.frontZ + 0.005)
+      scene.add(strip)
+      shelfStrips.push(strip)
+    })
+  })
+}
+
+function shelfStripTexture(label: string): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas')
+  canvas.width = 1024
+  canvas.height = 64
+  const ctx = canvas.getContext('2d')!
+  const grad = ctx.createLinearGradient(0, 0, 0, 64)
+  grad.addColorStop(0, '#f6d98b')
+  grad.addColorStop(1, '#c9962f')
+  ctx.fillStyle = grad
+  ctx.fillRect(0, 0, 1024, 64)
+  ctx.fillStyle = '#3b2606'
+  ctx.font = 'bold 50px sans-serif'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(label.toUpperCase(), 24, 35)
+  const tex = new THREE.CanvasTexture(canvas)
+  tex.colorSpace = THREE.SRGBColorSpace
+  tex.anisotropy = 8
+  return tex
+}
+
+// The catalogue usually arrives after the room is built
+watch(() => props.objectCatalog.map(d => d.object_type).join(','), () => { if (room) stockWallShelves() })
 
 const selectedIsChemical = computed(() => !!props.sceneObjects.find(o => o.key === selectedKey.value)?.props?.chemical_id)
 
@@ -1626,10 +1753,11 @@ function putBackSelected() {
 function frameBench() {
   if (!room) return
   const u = UNITS_PER_METRE
-  room.fitBox(
-    new THREE.Box3(new THREE.Vector3(-0.9 * u, -0.9 * u, -0.375 * u), new THREE.Vector3(0.9 * u, 0.1 * u, 0.375 * u)),
-    0.72, { dir: new THREE.Vector3(0.4, 4.2, 6.4) },
-  )
+  // With the wall cabinets, the view takes in the bench and both cabinets above it
+  const box = room.wallCabinets
+    ? new THREE.Box3(new THREE.Vector3(-1.5 * u, -0.9 * u, -0.6 * u), new THREE.Vector3(1.5 * u, 1.4 * u, 0.375 * u))
+    : new THREE.Box3(new THREE.Vector3(-0.9 * u, -0.9 * u, -0.375 * u), new THREE.Vector3(0.9 * u, 0.1 * u, 0.375 * u))
+  room.fitBox(box, room.wallCabinets ? 0.94 : 0.72, { dir: new THREE.Vector3(0.4, room.wallCabinets ? 3.4 : 4.2, 6.4) })
 }
 
 /** Frames everything on the bench (name tags excluded), whatever the canvas shape. */
@@ -1647,6 +1775,7 @@ function onHoverMove(ev: PointerEvent) {
   hoveredKey.value = raycastGroupKey()
   const inCupboard = hoveredKey.value ? null : cupboardHit()
   hoveredChemical = inCupboard?.kind === 'chemical' ? inCupboard.id : null
+  hoveredShelfType = inCupboard?.kind === 'apparatus' ? inCupboard.type : null
   renderer.domElement.style.cursor = hoveredKey.value || inCupboard ? 'pointer' : 'grab'
 }
 
