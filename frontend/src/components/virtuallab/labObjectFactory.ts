@@ -70,6 +70,58 @@ function liquidMesh(radius: number, height: number, color: string, fillRatio = 0
   return m
 }
 
+const HAZARD_LABELS: Record<string, { text: string; color: string }> = {
+  corrosive: { text: 'CORROSIVE', color: '#dc2626' },
+  irritant: { text: 'IRRITANT', color: '#ea580c' },
+  flammable: { text: 'FLAMMABLE', color: '#dc2626' },
+  toxic: { text: 'TOXIC', color: '#111827' },
+  oxidising: { text: 'OXIDISING', color: '#ca8a04' },
+}
+
+/** Paper label wrapped round the front of a reagent bottle or jar: name, formula and hazard. */
+function reagentLabel(radius: number, height: number, centerY: number, props: Record<string, any>): THREE.Mesh {
+  const hazard = HAZARD_LABELS[props.hazard as string]
+  const tex = canvasTex(512, 256, (ctx, w, h) => {
+    ctx.fillStyle = '#fffdf6'
+    ctx.fillRect(0, 0, w, h)
+    ctx.fillStyle = hazard?.color || '#1e3a8a'
+    ctx.fillRect(0, 0, w, 34)
+    ctx.fillStyle = '#ffffff'
+    ctx.font = 'bold 24px sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(hazard ? `⚠ ${hazard.text}` : 'LABORATORY REAGENT', w / 2, 18)
+    ctx.fillStyle = '#111827'
+    // Name, wrapped onto at most two lines
+    const words = String(props.display_name || 'Reagent').split(' ')
+    const lines: string[] = []
+    let line = ''
+    ctx.font = 'bold 40px sans-serif'
+    words.forEach((word) => {
+      const next = line ? `${line} ${word}` : word
+      if (ctx.measureText(next).width > w - 40 && line) { lines.push(line); line = word } else line = next
+    })
+    lines.push(line)
+    const shown = lines.slice(0, 2)
+    shown.forEach((l, i) => ctx.fillText(l, w / 2, (props.formula ? 86 : 110) + i * 46 - (shown.length - 1) * 10))
+    if (props.formula) {
+      ctx.font = 'bold 54px serif'
+      ctx.fillStyle = '#1e3a8a'
+      ctx.fillText(String(props.formula), w / 2, 212)
+    }
+    ctx.strokeStyle = '#cbd5e1'
+    ctx.lineWidth = 4
+    ctx.strokeRect(2, 2, w - 4, h - 4)
+  })
+  const label = mesh(
+    new THREE.CylinderGeometry(radius, radius, height, 32, 1, true, -1.05, 2.1),
+    new THREE.MeshStandardMaterial({ map: tex, roughness: 0.85, side: THREE.DoubleSide }),
+    0, centerY,
+  )
+  label.userData.role = 'reagent_label'
+  return label
+}
+
 /** Printed white graduations on a glass wall (major/minor ticks facing the viewer). */
 function graduations(radius: number, bottom: number, height: number, majors: number): THREE.Mesh {
   const tex = canvasTex(64, 512, (ctx, w, h) => {
@@ -865,6 +917,33 @@ export function createObjectMesh(objectType: string, key: string, displayName: s
       const nozzle = mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.3, 10), plastic(0x2563eb), 0.08, 0.66)
       nozzle.rotation.z = -0.9
       add(body, cap, nozzle, liquidMesh(0.16, 0.5, props.color || '#e0f2fe', 0.8))
+      break
+    }
+    case 'reagent_bottle': {
+      // Narrow-necked glass reagent bottle with a ground-glass stopper and a printed label
+      const r = 0.2, h = 0.56
+      const profile = [
+        new THREE.Vector2(0, 0.003), new THREE.Vector2(r * 0.94, 0.003), new THREE.Vector2(r, 0.03),
+        new THREE.Vector2(r, h), new THREE.Vector2(r * 0.8, h + 0.08), new THREE.Vector2(0.07, h + 0.13),
+        new THREE.Vector2(0.065, h + 0.19), new THREE.Vector2(0.072, h + 0.2),
+      ]
+      add(new THREE.Mesh(new THREE.LatheGeometry(profile, 40), glass()))
+      add(liquidMesh(r * 0.97, h, props.color || '#eef6f8', 0.78))
+      const stopper = mesh(new THREE.CylinderGeometry(0.06, 0.055, 0.07, 24), glass(0xe8f0ef), 0, h + 0.22)
+      const knob = mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.035, 28), glass(0xe8f0ef), 0, h + 0.27)
+      add(stopper, knob, reagentLabel(r + 0.003, 0.26, h * 0.45, props))
+      break
+    }
+    case 'reagent_jar': {
+      // Wide-mouth jar for solids: the powder or granules show through the glass
+      const r = 0.21, h = 0.46
+      add(mesh(new THREE.CylinderGeometry(r, r, h, 40, 1, true), glass(), 0, h / 2 + 0.005))
+      add(mesh(new THREE.CylinderGeometry(r, r, 0.01, 40), glass(), 0, 0.005))
+      const fillH = h * 0.62
+      const powder = mesh(new THREE.CylinderGeometry(r * 0.95, r * 0.95, fillH, 40),
+        new THREE.MeshStandardMaterial({ color: props.color || '#f5f5f5', roughness: 1, metalness: props.chemical_id === 'zn' ? 0.6 : 0 }), 0, fillH / 2 + 0.01)
+      const lid = mesh(new THREE.CylinderGeometry(r * 1.04, r * 1.04, 0.07, 40), plastic(0x1f2937), 0, h + 0.035)
+      add(powder, lid, reagentLabel(r + 0.003, 0.22, h * 0.5, props))
       break
     }
     case 'dropper': {

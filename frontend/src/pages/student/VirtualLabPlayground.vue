@@ -157,21 +157,22 @@
             class="relative overflow-hidden"
             :class="labMaximized ? 'flex-1 min-h-0 min-w-0' : 'h-[68svh] min-h-[340px] sm:h-[72svh] lg:h-[calc(100svh-7rem)] lg:min-h-[560px] rounded-2xl shadow-lg ring-1 ring-gray-900/5'"
           >
-            <div v-if="sceneObjects.length === 0" class="w-full h-full flex flex-col items-center justify-center gap-2 bg-slate-200 dark:bg-slate-800 text-center px-6">
-              <AppIcon name="beaker" class="w-10 h-10 text-gray-400" />
-              <p class="text-sm text-gray-500 dark:text-gray-400">{{ labMaximized ? 'Pick apparatus from the shelves to put it on your workbench.' : 'Pick a piece of apparatus from the list to add it to your workbench.' }}</p>
-            </div>
+            <!-- The bench is always there, even when empty, so its cupboard can be opened -->
             <VirtualLabScene
-              v-else
               ref="sceneRef"
               :scene-objects="sceneObjects"
-              :object-catalog="catalog"
+              :object-catalog="sceneCatalog"
               fixed-view
+              cupboard
               @action="onSceneAction"
+              @take-chemical="takeChemical"
             />
+            <p v-if="sceneObjects.length === 0" class="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 w-max max-w-[90%] px-3 py-1.5 rounded-full bg-white/85 dark:bg-gray-900/80 text-gray-700 dark:text-gray-200 text-xs font-medium shadow text-center">
+              Pick apparatus from the shelves, or open the cupboard doors under the bench for chemicals.
+            </p>
             <!-- Brief confirmation when something comes off a shelf -->
             <transition enter-active-class="transition duration-150" enter-from-class="opacity-0 translate-y-1" leave-active-class="transition duration-300" leave-to-class="opacity-0">
-              <p v-if="labMaximized && lastPicked" class="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full bg-gray-900/80 text-white text-xs font-semibold shadow">
+              <p v-if="lastPicked" class="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full bg-gray-900/80 text-white text-xs font-semibold shadow">
                 {{ lastPicked }} placed on the bench
               </p>
             </transition>
@@ -188,7 +189,7 @@
           <div v-if="sceneObjects.length === 0" class="text-xs text-gray-400 dark:text-gray-500">Nothing here yet.</div>
           <div v-else class="space-y-1.5">
             <div v-for="o in sceneObjects" :key="o.key" class="flex items-center justify-between gap-2 bg-gray-50 dark:bg-gray-950/40 rounded-lg px-2.5 py-1.5">
-              <span class="text-xs text-gray-700 dark:text-gray-200 truncate">{{ catalogByType.get(o.object_type)?.icon || '🔬' }} {{ catalogByType.get(o.object_type)?.display_name || o.object_type }}</span>
+              <span class="text-xs text-gray-700 dark:text-gray-200 truncate">{{ catalogByType.get(o.object_type)?.icon || '🔬' }} {{ o.props?.display_name || catalogByType.get(o.object_type)?.display_name || o.object_type }}</span>
               <button @click="removeFromScene(o.key)" class="flex-shrink-0 text-gray-400 hover:text-red-500 text-xs">✕</button>
             </div>
           </div>
@@ -205,6 +206,7 @@ import { useRoute } from 'vue-router'
 import axios from 'axios'
 import VirtualLabScene from '@/components/virtuallab/VirtualLabScene.vue'
 import ApparatusShelves from '@/components/virtuallab/ApparatusShelves.vue'
+import { chemicalById, chemicalObjectType, chemicalProps } from '@/components/virtuallab/chemicals'
 import { useFullscreenLab } from '@/components/virtuallab/lab3d/useFullscreenLab'
 import type { LabObjectDef, SceneObjectConfig } from '@/types/virtualLab'
 
@@ -218,7 +220,13 @@ const sceneRef = ref<InstanceType<typeof VirtualLabScene> | null>(null)
 const placedCounts: Record<string, number> = {}
 const { labMaximized, enterMaximize, exitMaximize } = useFullscreenLab()
 
-const catalogByType = computed(() => new Map(catalog.value.map(o => [o.object_type, o])))
+// Chemicals from the bench cupboard come out as reagent bottles (liquids) and jars (solids)
+const CHEMICAL_DEFS: LabObjectDef[] = [
+  { id: -1, object_type: 'reagent_bottle', display_name: 'Reagent Bottle', category: 'chemistry', description: null, default_props: { capacity_ml: 250 }, supported_actions: ['move', 'rotate', 'pour', 'inspect'], icon: '🧪', is_active: true },
+  { id: -2, object_type: 'reagent_jar', display_name: 'Reagent Jar', category: 'chemistry', description: null, default_props: {}, supported_actions: ['move', 'rotate', 'inspect'], icon: '🫙', is_active: true },
+]
+const sceneCatalog = computed(() => [...catalog.value, ...CHEMICAL_DEFS])
+const catalogByType = computed(() => new Map(sceneCatalog.value.map(o => [o.object_type, o])))
 
 // Grid auto-layout on the bench top (usable area about 8 x 3.4 units; 1 unit = 20 cm). The grid
 // widens as more apparatus is added so every row stays on the bench, never past its front edge.
@@ -298,6 +306,16 @@ const pickFromShelf = (obj: LabObjectDef) => {
   pickedTimer = setTimeout(() => { lastPicked.value = null }, 1600)
   // On phones the drawer covers the lab, so close it to show what was placed
   if (window.innerWidth < 640) shelvesOpen.value = false
+}
+
+const takeChemical = (id: string) => {
+  const chem = chemicalById(id)
+  if (!chem || sceneObjects.value.some(o => o.props?.chemical_id === id)) return
+  sceneObjects.value.push({ key: `chem_${id}`, object_type: chemicalObjectType(chem), position: { x: 0, y: 0, z: 0 }, props: chemicalProps(chem) })
+  relayout()
+  lastPicked.value = chem.name
+  if (pickedTimer) clearTimeout(pickedTimer)
+  pickedTimer = setTimeout(() => { lastPicked.value = null }, 1600)
 }
 
 const removeFromScene = (key: string) => {
