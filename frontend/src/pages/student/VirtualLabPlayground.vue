@@ -1,36 +1,22 @@
 <template>
   <div class="min-h-full">
     <div>
-      <!-- Header - same compact icon + title + subtitle pattern as the other student pages -->
-      <router-link :to="`/${role}/virtual-lab`" class="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline mb-2">
-        <span>&larr;</span> Virtual Lab
-      </router-link>
-      <div class="flex items-center gap-2 mb-1">
+      <!-- Header: back link and title on one line, full screen on the right -->
+      <div class="flex flex-wrap items-center gap-x-2 gap-y-2 mb-1">
+        <router-link :to="`/${role}/virtual-lab`" class="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
+          <span>&larr;</span> Virtual Lab
+        </router-link>
+        <span class="text-gray-300 dark:text-gray-600" aria-hidden="true">/</span>
         <div class="hidden sm:flex w-7 h-7 rounded-lg bg-indigo-600 items-center justify-center flex-shrink-0">
           <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v6.5L4.5 18A2 2 0 006.3 21h11.4a2 2 0 001.8-3L15 9.5V3M8 3h8M7 15h10" /></svg>
         </div>
         <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight">Apparatus Playground</h1>
-      </div>
-      <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Pick any lab equipment from any subject and get familiar with it in 3D. Move, rotate, connect, pour, heat and measure freely. Nothing here is graded.</p>
-
-      <!-- Category filter (same segmented style as the Virtual Lab tabs) + full screen -->
-      <div class="flex flex-wrap items-center gap-2 mb-5">
-        <div class="inline-flex flex-wrap gap-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-1 shadow-sm">
-          <button
-            v-for="cat in categoryOptions"
-            :key="cat.value"
-            @click="activeCategory = cat.value"
-            class="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-2 text-sm font-semibold rounded-lg transition-colors"
-            :class="activeCategory === cat.value ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'"
-          >
-            <AppIcon :name="cat.icon" class="w-4 h-4" /> {{ cat.label }}
-          </button>
-        </div>
         <button @click="enterMaximize" class="ml-auto inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm" title="Fill the whole screen with the lab">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>
           Full Screen Lab
         </button>
       </div>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Pick any lab equipment from any subject and get familiar with it in 3D. Move, rotate, connect, pour, heat and measure freely. Nothing here is graded.</p>
 
       <!-- Slim fixed side columns on large screens so the lab takes all the remaining width -->
       <div
@@ -202,7 +188,7 @@ import axios from 'axios'
 import VirtualLabScene from '@/components/virtuallab/VirtualLabScene.vue'
 import ApparatusShelves from '@/components/virtuallab/ApparatusShelves.vue'
 import { useFullscreenLab } from '@/components/virtuallab/lab3d/useFullscreenLab'
-import type { LabObjectDef, SceneObjectConfig, LabCategory } from '@/types/virtualLab'
+import type { LabObjectDef, SceneObjectConfig } from '@/types/virtualLab'
 
 // Shared by the student and teacher routes - each reads the catalogue from its own API
 const role = useRoute().path.startsWith('/teacher') ? 'teacher' : 'student'
@@ -213,18 +199,6 @@ const sceneObjects = ref<SceneObjectConfig[]>([])
 const sceneRef = ref<InstanceType<typeof VirtualLabScene> | null>(null)
 const placedCounts: Record<string, number> = {}
 const { labMaximized, enterMaximize, exitMaximize } = useFullscreenLab()
-
-type CategoryFilter = LabCategory | 'general' | 'all'
-const activeCategory = ref<CategoryFilter>('all')
-
-const categoryOptions: { value: CategoryFilter; label: string; icon: string }[] = [
-  { value: 'all', label: 'All', icon: 'kit' },
-  { value: 'physics', label: 'Physics', icon: 'bolt' },
-  { value: 'chemistry', label: 'Chemistry', icon: 'beaker' },
-  { value: 'biology', label: 'Biology', icon: 'leaf' },
-  { value: 'agriculture', label: 'Agriculture', icon: 'sprout' },
-  { value: 'general', label: 'General', icon: 'wrench' },
-]
 
 const catalogByType = computed(() => new Map(catalog.value.map(o => [o.object_type, o])))
 
@@ -269,7 +243,6 @@ const shelves = computed(() => {
       items: catalog.value
         .filter(o => (SHELF_ORDER.some(x => x.key === o.category) ? o.category : 'general') === sh.key)
         .filter(o => !q || o.display_name.toLowerCase().includes(q))
-        .filter(() => activeCategory.value === 'all' || activeCategory.value === sh.key)
         .sort((a, b) => a.display_name.localeCompare(b.display_name)),
     }))
     .filter(sh => sh.items.length > 0)
