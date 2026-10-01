@@ -320,19 +320,37 @@ export function createObjectMesh(objectType: string, key: string, displayName: s
       break
     }
     case 'bunsen_burner': {
-      const base = mesh(new THREE.CylinderGeometry(0.2, 0.26, 0.1, 40), enamel(0x1f2937), 0, 0.05)
-      const barrel = mesh(new THREE.CylinderGeometry(0.055, 0.06, 0.52, 28), chrome(), 0, 0.36)
-      const collar = mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.07, 28), brass(), 0, 0.18)
-      for (let i = 0; i < 2; i++) {
-        const hole = mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.16, 12), plastic(0x111111), 0, 0.18)
-        hole.rotation.z = Math.PI / 2
-        hole.rotation.y = i * Math.PI / 2
-        add(hole)
-      }
-      const inlet = mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.2, 16), brass(), 0.18, 0.08)
-      inlet.rotation.z = Math.PI / 2
-      const hose = mesh(new THREE.TorusGeometry(0.16, 0.03, 12, 24, Math.PI * 0.7), plastic(0xea580c), 0.3, 0.06)
-      hose.rotation.x = Math.PI / 2
+      // Blue cast cone base, knurled air-regulator collar, chrome chimney, side gas inlet
+      const blue = new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.45, metalness: 0.2 })
+      const baseProfile = [
+        new THREE.Vector2(0, 0.005), new THREE.Vector2(0.27, 0.005), new THREE.Vector2(0.272, 0.018),
+        new THREE.Vector2(0.2, 0.05), new THREE.Vector2(0.11, 0.1), new THREE.Vector2(0.075, 0.13), new THREE.Vector2(0, 0.13),
+      ]
+      const base = new THREE.Mesh(new THREE.LatheGeometry(baseProfile, 56), blue)
+      const neck = mesh(new THREE.CylinderGeometry(0.068, 0.07, 0.11, 36), blue, 0, 0.175)
+      const knurlTex = canvasTex(128, 16, (ctx, w, h) => {
+        ctx.fillStyle = '#d4d4d8'; ctx.fillRect(0, 0, w, h)
+        ctx.fillStyle = '#71717a'
+        for (let x = 0; x < w; x += 4) ctx.fillRect(x, 0, 1.5, h)
+      })
+      knurlTex.wrapS = THREE.RepeatWrapping
+      knurlTex.repeat.set(3, 1)
+      const collar = mesh(new THREE.CylinderGeometry(0.052, 0.052, 0.075, 40), new THREE.MeshStandardMaterial({ map: knurlTex, roughness: 0.3, metalness: 1 }), 0, 0.268)
+      const nut = mesh(new THREE.CylinderGeometry(0.066, 0.066, 0.03, 6), chrome(), 0, 0.32)
+      const ring = mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.012, 40), chrome(), 0, 0.341)
+      const barrel = mesh(new THREE.CylinderGeometry(0.048, 0.048, 0.28, 36, 1, true), chrome(), 0, 0.485)
+      const bore = mesh(new THREE.CylinderGeometry(0.042, 0.042, 0.004, 28), new THREE.MeshStandardMaterial({ color: 0x3f3f46, roughness: 0.8 }), 0, 0.6)
+      const lip = mesh(new THREE.TorusGeometry(0.046, 0.004, 8, 32), chrome(), 0, 0.625)
+      lip.rotation.x = Math.PI / 2
+      // Gas inlet: chrome tube from the neck, ridged hose barb at the end
+      const inlet = new THREE.Group()
+      const tube = mesh(new THREE.CylinderGeometry(0.032, 0.032, 0.2, 24), chrome(), 0, 0.1)
+      inlet.add(tube)
+      for (let i = 0; i < 3; i++) inlet.add(mesh(new THREE.CylinderGeometry(0.03, 0.036, 0.025, 24), chrome(), 0, 0.215 + i * 0.03))
+      inlet.add(mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.004, 20), new THREE.MeshStandardMaterial({ color: 0x27272a }), 0, 0.29))
+      inlet.rotation.z = Math.PI / 2 + 0.12
+      inlet.position.set(-0.05, 0.16, 0)
+      add(base, neck, collar, nut, ring, barrel, bore, lip, inlet)
       const on = props.flame === 'on'
       const outerFlame = mesh(
         new THREE.ConeGeometry(0.09, 0.3, 24),
@@ -346,7 +364,7 @@ export function createObjectMesh(objectType: string, key: string, displayName: s
         0, 0.7,
       )
       innerFlame.userData.role = 'flame'
-      add(base, barrel, collar, inlet, hose, outerFlame, innerFlame)
+      add(outerFlame, innerFlame)
       break
     }
     case 'thermometer': {
@@ -1121,11 +1139,48 @@ export function createObjectMesh(objectType: string, key: string, displayName: s
       break
     }
     case 'hand_hoe': {
-      const handle = mesh(new THREE.CylinderGeometry(0.025, 0.025, 1.4, 16), wood(), 0, 0.03)
+      // Flat-bladed hoe resting on its cutting edge, handle rising away (as it lies on the ground)
+      const tool = new THREE.Group()
+      const ash = new THREE.MeshStandardMaterial({ color: 0xc9a06a, roughness: 0.6 })
+      const black = new THREE.MeshStandardMaterial({ color: 0x1c1f24, roughness: 0.45, metalness: 0.6 })
+      const handle = mesh(new THREE.CylinderGeometry(0.03, 0.034, 1.6, 20), ash, 0.85, 0)
       handle.rotation.z = Math.PI / 2
-      const head = mesh(rbox(0.06, 0.04, 0.32, 0.008), metal(0x6b7280), 0.72, 0.1)
-      head.rotation.z = 0.5
-      add(handle, head)
+      const socket = mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.14, 24), black, 0.05, 0)
+      socket.rotation.z = Math.PI / 2
+      const neck = mesh(rbox(0.05, 0.14, 0.05, 0.01), black, 0, -0.09)
+      const shape = new THREE.Shape()
+      shape.moveTo(-0.07, 0); shape.lineTo(0.07, 0); shape.lineTo(0.14, -0.34); shape.lineTo(-0.14, -0.34); shape.closePath()
+      const bladeGeo = new THREE.ExtrudeGeometry(shape, { depth: 0.014, bevelEnabled: false })
+      const blade = new THREE.Mesh(bladeGeo, new THREE.MeshStandardMaterial({ color: 0x5b6b80, roughness: 0.3, metalness: 0.8 }))
+      blade.rotation.y = Math.PI / 2
+      blade.position.set(-0.007, -0.14, 0)
+      const edge = mesh(new THREE.BoxGeometry(0.016, 0.04, 0.28), new THREE.MeshStandardMaterial({ color: 0xe5e7eb, roughness: 0.2, metalness: 1 }), 0, -0.46)
+      tool.add(handle, socket, neck, blade, edge)
+      tool.rotation.z = 0.4
+      tool.position.set(-0.55, 0.44, 0)
+      add(tool)
+      break
+    }
+    case 'fork_hoe': {
+      // Three-pronged hand fork hoe: tines lying on the bench, short handle rising from the socket
+      const tool = new THREE.Group()
+      const beech = new THREE.MeshStandardMaterial({ color: 0xe0bf8f, roughness: 0.55 })
+      const black = new THREE.MeshStandardMaterial({ color: 0x23262b, roughness: 0.5, metalness: 0.6 })
+      const handle = mesh(new THREE.CylinderGeometry(0.045, 0.036, 1.3, 20), beech, 0.72, 0)
+      handle.rotation.z = Math.PI / 2
+      const socket = mesh(rbox(0.16, 0.11, 0.11, 0.012), black, 0.06, 0)
+      const ferrule = mesh(rbox(0.03, 0.09, 0.08, 0.006), chrome(), 0.16, 0)
+      const bridge = mesh(rbox(0.05, 0.05, 0.24, 0.01), black, 0, -0.07)
+      tool.add(handle, socket, ferrule, bridge)
+      for (const z of [-0.09, 0, 0.09]) {
+        const tine = mesh(rbox(0.04, 0.5, 0.025, 0.008), black, 0, -0.33, z)
+        const tip = mesh(new THREE.ConeGeometry(0.016, 0.07, 4), new THREE.MeshStandardMaterial({ color: 0xb4b9c0, roughness: 0.25, metalness: 1 }), 0, -0.61, z)
+        tip.rotation.z = Math.PI
+        tool.add(tine, tip)
+      }
+      tool.rotation.z = Math.PI / 2 + 0.22
+      tool.position.set(-0.2, 0.08, 0)
+      add(tool)
       break
     }
     case 'soil_auger': {
