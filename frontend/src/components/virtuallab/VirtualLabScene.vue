@@ -1602,11 +1602,13 @@ type CupboardHit =
 function cupboardHit(): CupboardHit {
   const cb = room?.cupboard
   const wc = room?.wallCabinets
-  if (!cb && !wc) return null
+  const furniture = room?.furniture
+  if (!cb && !wc && !furniture?.doors.length) return null
   raycaster.setFromCamera(pointerNdc, camera)
   const targets: THREE.Object3D[] = []
   if (cb) targets.push(...cb.doors, ...cb.blockers)
   if (wc) targets.push(...wc.doors, ...wc.blockers)
+  if (furniture) targets.push(...furniture.doors, ...furniture.blockers)
   groups.forEach(g => targets.push(g))
   cupboardBottles.forEach((g) => { if (g.visible) targets.push(g) })
   cupboardTags.forEach(t => targets.push(t))

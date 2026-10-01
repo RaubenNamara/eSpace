@@ -83,6 +83,8 @@ export interface LabRoom {
   frameBox: (box: THREE.Box3) => void
   cupboard: LabCupboard | null
   wallCabinets: LabWallCabinets | null
+  /** Cupboard doors and panels of the other benches in the room (empty, but they open) */
+  furniture: { doors: THREE.Object3D[]; blockers: THREE.Object3D[] }
   /** Bench length in metres */
   benchLength: number
   /** Opens or closes any door built by the room (cupboard or wall cabinet) */
@@ -153,6 +155,9 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
   world.scale.setScalar(s)
   scene.add(world)
   const benchLength = opts.benchLength ?? BENCH_W
+  // Doors and panels of the other benches' cupboards (open and close like the main one's)
+  const furnitureDoors: THREE.Object3D[] = []
+  const furnitureBlockers: THREE.Object3D[] = []
   let cupboardParts: CupboardParts | null = null
   let wallParts: WallParts | null = null
   if (field) {
@@ -167,14 +172,18 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
       // Against the side walls (see buildWallCovering: walls at x = ±7 m), facing into the room
       const wallX = 7 - BENCH_D / 2 - 0.02
       for (const side of [-1, 1]) {
-        const bench = buildPlainBench(benchLength)
-        bench.position.set(side * wallX, 0, 1.6)
-        bench.rotation.y = -side * Math.PI / 2
-        world.add(bench)
+        const bench = buildPlainBench(benchLength, s)
+        bench.group.position.set(side * wallX, 0, 1.6)
+        bench.group.rotation.y = -side * Math.PI / 2
+        world.add(bench.group)
+        furnitureDoors.push(...bench.parts.doors)
+        furnitureBlockers.push(...bench.parts.blockers)
         // A small side table close to each end of the main bench
-        const small = buildPlainBench(0.9)
-        small.position.set(side * (benchLength / 2 + 0.5 + 0.45), 0, 0)
-        world.add(small)
+        const small = buildPlainBench(0.9, s)
+        small.group.position.set(side * (benchLength / 2 + 0.5 + 0.45), 0, 0)
+        world.add(small.group)
+        furnitureDoors.push(...small.parts.doors)
+        furnitureBlockers.push(...small.parts.blockers)
       }
     }
   }
@@ -303,7 +312,7 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
   const ndc = new THREE.Vector2()
 
   // Doors swing smoothly towards their target angle
-  const allDoors = [...(cupboardParts?.doors || []), ...(wallParts?.doors || [])]
+  const allDoors = [...(cupboardParts?.doors || []), ...(wallParts?.doors || []), ...furnitureDoors]
   if (allDoors.length) {
     frameCallbacks.push((dt) => {
       allDoors.forEach((d) => {
@@ -346,6 +355,7 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
   return {
     cupboard,
     wallCabinets,
+    furniture: { doors: furnitureDoors, blockers: furnitureBlockers },
     benchLength,
     toggleDoor,
     doorOf,
@@ -609,45 +619,23 @@ function buildWallCabinets(scene: THREE.Object3D, benchLength: number, s = 1): W
   return { doors, blockers, cabinets }
 }
 
-/** A bench like the main one - black resin top on a wooden cabinet with closed doors - built at the origin, front facing +z. */
-function buildPlainBench(length: number): THREE.Group {
-  const scene = new THREE.Group()
-  const cx = 0
+/**
+ * A bench like the main one - black resin top on a working cupboard whose doors open (two doors
+ * on a short table, four on a long one) - built at the origin, front facing +z. Its cupboard is
+ * empty and unlit to keep the room light to render.
+ */
+function buildPlainBench(length: number, s: number): { group: THREE.Group; parts: CupboardParts } {
+  const group = new THREE.Group()
   const top = new THREE.Mesh(
     new RoundedBoxGeometry(length, 0.035, BENCH_D, 3, 0.008),
     new THREE.MeshPhysicalMaterial({ color: 0x1f2328, roughness: 0.42, clearcoat: 0.4, clearcoatRoughness: 0.35 }),
   )
-  top.position.set(cx, -0.0175, 0)
+  top.position.y = -0.0175
   top.castShadow = true
   top.receiveShadow = true
-  scene.add(top)
-  const W = length - 0.06
-  const cabinet = new THREE.Mesh(
-    new THREE.BoxGeometry(W, BENCH_H - 0.035, BENCH_D - 0.06),
-    new THREE.MeshStandardMaterial({ map: woodTexture(), roughness: 0.7 }),
-  )
-  cabinet.position.set(cx, -BENCH_H / 2 - 0.0175, 0)
-  cabinet.castShadow = true
-  cabinet.receiveShadow = true
-  scene.add(cabinet)
-  // Four doors (two on a short table): seams between them and a pair of handles where each pair meets
-  const short = length < 1.5
-  const seamMat = new THREE.MeshStandardMaterial({ color: 0x3b2a1c, roughness: 0.8 })
-  const handleMat = labMaterials.steel()
-  const frontZ = (BENCH_D - 0.06) / 2
-  for (const f of short ? [0] : [-0.25, 0, 0.25]) {
-    const seam = new THREE.Mesh(new THREE.BoxGeometry(0.004, BENCH_H - 0.12, 0.002), seamMat)
-    seam.position.set(cx + f * W, -BENCH_H / 2 - 0.02, frontZ + 0.001)
-    scene.add(seam)
-  }
-  for (const f of short ? [0] : [-0.25, 0.25]) {
-    for (const dx of [-0.04, 0.04]) {
-      const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.1, 12), handleMat)
-      handle.position.set(cx + f * W + dx, -0.2, frontZ + 0.015)
-      scene.add(handle)
-    }
-  }
-  return scene
+  group.add(top)
+  const parts = buildCupboard(group, woodTexture(), length, s, false)
+  return { group, parts }
 }
 
 interface CupboardParts {
@@ -745,7 +733,7 @@ function buildRoom(scene: THREE.Object3D, withCupboard = false, BENCH_W = 1.8, s
  * The bench cabinet as a working cupboard: two bays, each with a shelf, behind a pair of hinged
  * doors that meet in the middle, so students can open it and take out what is stored inside.
  */
-function buildCupboard(scene: THREE.Object3D, woodTex: THREE.Texture, BENCH_W: number, s = 1): CupboardParts {
+function buildCupboard(scene: THREE.Object3D, woodTex: THREE.Texture, BENCH_W: number, s = 1, lit = true): CupboardParts {
   const W = BENCH_W - 0.06, D = BENCH_D - 0.06
   const t = 0.018
   const top = -0.035, bottom = -BENCH_H
@@ -777,7 +765,7 @@ function buildCupboard(scene: THREE.Object3D, woodTex: THREE.Texture, BENCH_W: n
   panel(bayW, t, D - t, -W / 4, shelfY - t / 2, t / 2, inner)
   panel(bayW, t, D - t, W / 4, shelfY - t / 2, t / 2, inner)
   // A light under the bench top and under the shelf of each bay, so nothing sits in the dark
-  for (const bx of [-W / 4, W / 4]) {
+  if (lit) for (const bx of [-W / 4, W / 4]) {
     interiorLight(scene, bx, top - 0.05, front - 0.12, bayW - 0.1, s, 10)
     interiorLight(scene, bx, shelfY - t - 0.006, front - 0.12, bayW - 0.1, s, 10)
   }
