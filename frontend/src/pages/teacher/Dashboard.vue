@@ -37,13 +37,24 @@
     </nav>
 
     <!-- Today, and what to do next -->
-    <div v-if="!overview" class="space-y-4 mb-6">
+    <div v-if="!overview && !overviewError" class="space-y-4 mb-6">
       <Skeleton variant="tiles" :count="4" />
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div class="lg:col-span-2"><Skeleton variant="list" :count="4" /></div>
         <Skeleton variant="list" :count="3" />
       </div>
     </div>
+    <EmptyState
+      v-else-if="!overview"
+      class="mb-6"
+      card
+      tone="rose"
+      icon="clipboard"
+      title="Today's overview couldn't load"
+      :message="overviewError"
+    >
+      <button type="button" class="px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700" @click="retryOverview">Try again</button>
+    </EmptyState>
     <template v-else>
       <TodayTiles class="mb-5" :today="overview.today" :live-today="overview.live_today" :mark-next="overview.mark_next" :agenda="overview.agenda" />
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
@@ -273,13 +284,29 @@ interface Overview {
   activity: { kind: 'submission' | 'enote' | 'revised' | 'message'; at: string; who: string; what: string; to: string }[]
 }
 const overview = ref<Overview | null>(null)
+// Why the overview couldn't load (shown instead of leaving the placeholders up for ever)
+const overviewError = ref('')
 const loadOverview = async () => {
   try {
     const response = await apiService.get('/teacher/dashboard/overview')
-    if (response.data?.success) overview.value = response.data.data
-  } catch (error) {
+    if (response.data?.success) {
+      overview.value = response.data.data
+      overviewError.value = ''
+    } else if (!overview.value) {
+      overviewError.value = response.data?.message || 'The server did not send the overview.'
+    }
+  } catch (error: any) {
     console.error('Failed to load the dashboard overview:', error)
+    // A quiet refresh that fails keeps what is already on screen
+    if (!overview.value) {
+      const status = error?.response?.status
+      overviewError.value = (status ? `Error ${status}: ` : '') + (error?.response?.data?.message || error?.message || 'The request failed.')
+    }
   }
+}
+const retryOverview = () => {
+  overviewError.value = ''
+  loadOverview()
 }
 
 const firstName = computed(() => {
@@ -461,6 +488,7 @@ const switchDepartment = async (departmentId: string) => {
     if (response.data?.success) {
       activeDepartmentId.value = id
       overview.value = null
+      overviewError.value = ''
       await Promise.all([loadAnalytics(), loadOverview()])
     } else {
       toast.error(response.data?.message || 'Failed to switch department')

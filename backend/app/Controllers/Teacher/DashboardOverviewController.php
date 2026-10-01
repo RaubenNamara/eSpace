@@ -26,6 +26,21 @@ class DashboardOverviewController extends Controller
 
     private const MAX_CLASSES = 6;
 
+    /**
+     * Run one section of the overview; if its queries fail (a table or column from a migration
+     * that hasn't been run yet, say) log why and carry on with an empty section, so the rest of
+     * the dashboard still loads instead of the whole request failing.
+     */
+    private function safe(callable $fn, mixed $default, string $what): mixed
+    {
+        try {
+            return $fn();
+        } catch (\Throwable $e) {
+            error_log("Teacher dashboard overview ({$what}): " . $e->getMessage());
+            return $default;
+        }
+    }
+
     private static function in(array $v): string
     {
         return implode(',', array_fill(0, count($v), '?'));
@@ -53,6 +68,7 @@ class DashboardOverviewController extends Controller
         }
 
         // ---- To mark ------------------------------------------------------------------------
+        $waiting = $this->safe(function () use ($db, $teacherId) {
         $stmt = $db->prepare(
             "SELECT sb.id AS submission_id, sb.assignment_id, sb.submitted_at, a.title, a.assessment_category,
                     st.first_name, st.last_name,
@@ -65,7 +81,8 @@ class DashboardOverviewController extends Controller
              ORDER BY sb.submitted_at IS NULL, sb.submitted_at ASC, sb.id ASC"
         );
         $stmt->execute([$teacherId]);
-        $waiting = $stmt->fetchAll();
+        return $stmt->fetchAll();
+        }, [], 'to mark');
         $markNext = array_map(fn($r) => [
             'submission_id' => (int) $r['submission_id'],
             'assignment_id' => (int) $r['assignment_id'],
@@ -77,6 +94,7 @@ class DashboardOverviewController extends Controller
         ], array_slice($waiting, 0, 5));
 
         // ---- Live classes and deadlines ----------------------------------------------------
+        $live = $this->safe(function () use ($db, $teacherId) {
         $stmt = $db->prepare(
             "SELECT lc.id, lc.title, lc.scheduled_start, lc.scheduled_end, lc.status, lc.class_group_name,
                     CONCAT(c.name, IF(c.stream_name IS NULL OR c.stream_name = '', '', CONCAT('-', c.stream_name))) AS class_name
@@ -88,10 +106,12 @@ class DashboardOverviewController extends Controller
              ORDER BY lc.scheduled_start"
         );
         $stmt->execute([$teacherId]);
-        $live = $stmt->fetchAll();
+        return $stmt->fetchAll();
+        }, [], 'live classes');
         $today = date('Y-m-d');
         $liveToday = array_values(array_filter($live, fn($l) => $l['status'] === 'started' || substr((string) $l['scheduled_start'], 0, 10) === $today));
 
+        $due = $this->safe(function () use ($db, $teacherId) {
         $stmt = $db->prepare(
             "SELECT a.id, a.title, a.due_date, a.assessment_category,
                     CONCAT(c.name, IF(c.stream_name IS NULL OR c.stream_name = '', '', CONCAT('-', c.stream_name))) AS class_name, a.class_group_name,
@@ -103,7 +123,8 @@ class DashboardOverviewController extends Controller
              ORDER BY a.due_date"
         );
         $stmt->execute([$teacherId]);
-        $due = $stmt->fetchAll();
+        return $stmt->fetchAll();
+        }, [], 'due this week');
 
         $agenda = [];
         foreach ($live as $l) {
@@ -158,8 +179,8 @@ class DashboardOverviewController extends Controller
             ], $liveToday),
             'mark_next' => $markNext,
             'agenda' => array_slice($agenda, 0, 8),
-            'classes' => $this->classHealth($db, $teacherId, $departmentId, $subjectIds),
-            'activity' => $this->activity($db, $teacherId),
+            'classes' => $this->safe(fn() => $this->classHealth($db, $teacherId, $departmentId, $subjectIds), [], 'classes'),
+            'activity' => $this->safe(fn() => $this->activity($db, $teacherId), [], 'activity'),
         ]);
     }
 

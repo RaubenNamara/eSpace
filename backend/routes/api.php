@@ -194,6 +194,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
     Router::group(['prefix' => '/teacher', 'middleware' => ['role:teacher', 'must_change_password']], function () {
         // Dashboard
         Router::get('/dashboard', 'eSpace\App\Controllers\Teacher\DashboardController@index');
+        Router::get('/dashboard/overview', 'eSpace\App\Controllers\Teacher\DashboardOverviewController@index');
 
         // Departments (a teacher in more than one department can switch their active one)
         Router::get('/departments', 'eSpace\App\Controllers\Teacher\DepartmentController@index');
@@ -202,6 +203,8 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         // Classes
         Router::get('/classes', 'eSpace\App\Controllers\Teacher\ClassController@index');
         Router::get('/classes/academic-years', 'eSpace\App\Controllers\Teacher\ClassController@academicYears');
+        Router::get('/classes/overview', 'eSpace\App\Controllers\Teacher\ClassController@overview');
+        Router::get('/classes/{id}/detail', 'eSpace\App\Controllers\Teacher\ClassController@detail');
         Router::get('/classes/{id}', 'eSpace\App\Controllers\Teacher\ClassController@show');
         Router::get('/classes/{id}/students', 'eSpace\App\Controllers\Teacher\ClassController@students');
         
