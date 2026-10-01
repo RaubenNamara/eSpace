@@ -33,22 +33,20 @@
       </div>
 
       <!-- Slim fixed side columns on large screens so the lab takes all the remaining width -->
-      <div class="grid grid-cols-1 lg:grid-cols-[10.5rem_minmax(0,1fr)_13rem] 2xl:grid-cols-[12rem_minmax(0,1fr)_14rem] gap-4 sm:gap-5">
-        <!-- Apparatus palette: tiles on phones/tablets, a compact one-column list beside the lab -->
-        <div class="order-1 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-3 lg:h-[calc(100svh-7rem)] lg:min-h-[560px] lg:overflow-y-auto">
-          <p class="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-2.5">Pick Apparatus</p>
-          <div v-if="loadingCatalog" class="py-8 text-center text-xs text-gray-400">Loading catalog...</div>
-          <div v-else class="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-1 gap-1.5">
-            <button
-              v-for="obj in filteredCatalog"
-              :key="obj.object_type"
-              @click="addToScene(obj)"
-              class="flex flex-col lg:flex-row items-center gap-1 lg:gap-2 p-2.5 lg:px-2 lg:py-1.5 rounded-xl lg:rounded-lg border border-gray-200 dark:border-gray-700 hover:border-indigo-400 dark:hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
-            >
-              <span class="text-xl lg:text-base flex-shrink-0">{{ obj.icon || '🔬' }}</span>
-              <span class="text-[10px] lg:text-[11px] font-medium text-gray-600 dark:text-gray-300 text-center lg:text-left leading-tight lg:truncate">{{ obj.display_name }}</span>
-            </button>
-          </div>
+      <div class="grid grid-cols-1 lg:grid-cols-[17rem_minmax(0,1fr)_12rem] 2xl:grid-cols-[19rem_minmax(0,1fr)_14rem] gap-4 sm:gap-5">
+        <!-- Apparatus shelves beside the lab (above it on phones and tablets) -->
+        <div class="order-1 rounded-2xl shadow-sm overflow-hidden flex flex-col max-h-[55svh] lg:max-h-none lg:h-[calc(100svh-7rem)] lg:min-h-[560px] ring-1 ring-amber-950/20">
+          <p class="flex-shrink-0 px-3 py-2 text-xs font-bold uppercase tracking-wider text-amber-100 bg-amber-950/90 flex items-center gap-1.5"><AppIcon name="kit" class="w-3.5 h-3.5" /> Apparatus Shelves</p>
+          <ApparatusShelves
+            class="flex-1"
+            :shelves="shelves"
+            :counts="benchCounts"
+            v-model:collapsed="collapsedShelves"
+            v-model:search="shelfSearch"
+            :loading="loadingCatalog"
+            grid-class="grid-cols-3 sm:grid-cols-5 lg:grid-cols-3"
+            @pick="addToScene"
+          />
         </div>
 
         <!-- 3D scene - full screen only changes this wrapper's classes, so the scene isn't rebuilt -->
@@ -85,38 +83,17 @@
             >
               <aside
                 v-if="labMaximized && shelvesOpen"
-                class="cabinet absolute sm:relative inset-y-0 left-0 z-20 w-[86%] max-w-[22rem] sm:w-80 lg:w-[22rem] flex-shrink-0 flex flex-col shadow-2xl sm:shadow-none"
+                class="absolute sm:relative inset-y-0 left-0 z-20 w-[86%] max-w-[22rem] sm:w-80 lg:w-[22rem] flex-shrink-0 flex flex-col shadow-2xl sm:shadow-none border-r-[6px] border-[#4a2a12]"
               >
-                <div class="px-3 pt-3 pb-2">
-                  <div class="relative">
-                    <svg class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-amber-900/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                    <input v-model="shelfSearch" type="text" placeholder="Find apparatus..." class="w-full pl-8 pr-2.5 py-1.5 text-xs rounded-lg border-0 bg-amber-50/90 text-amber-950 placeholder-amber-900/40 focus:ring-2 focus:ring-amber-400">
-                  </div>
-                </div>
-                <div class="flex-1 min-h-0 overflow-y-auto px-3 pb-4 space-y-4">
-                  <p v-if="shelves.length === 0" class="text-center text-xs text-amber-100/80 py-8">No apparatus matches "{{ shelfSearch }}".</p>
-                  <section v-for="shelf in shelves" :key="shelf.key">
-                    <div class="flex justify-center -mb-1 relative z-10">
-                      <span class="plate">{{ shelf.label }} <span class="plate-count">{{ shelf.items.length }}</span></span>
-                    </div>
-                    <div class="shelf">
-                      <div class="grid grid-cols-3 gap-x-1.5 gap-y-0">
-                        <button
-                          v-for="obj in shelf.items"
-                          :key="obj.object_type"
-                          type="button"
-                          @click="pickFromShelf(obj)"
-                          class="shelf-item group"
-                          :title="`Put ${obj.display_name} on the bench`"
-                        >
-                          <span class="shelf-icon">{{ obj.icon || '🔬' }}</span>
-                          <span class="shelf-name">{{ obj.display_name }}</span>
-                          <span v-if="benchCount(obj.object_type)" class="shelf-badge">{{ benchCount(obj.object_type) }}</span>
-                        </button>
-                      </div>
-                    </div>
-                  </section>
-                </div>
+                <ApparatusShelves
+                  class="flex-1"
+                  :shelves="shelves"
+                  :counts="benchCounts"
+                  v-model:collapsed="collapsedShelves"
+                  v-model:search="shelfSearch"
+                  :loading="loadingCatalog"
+                  @pick="pickFromShelf"
+                />
               </aside>
             </transition>
             <!-- Phones: tap the lab beside the drawer to close it -->
@@ -168,10 +145,11 @@
 
 <script setup lang="ts">
 import AppIcon from '@/components/common/AppIcon.vue'
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
 import VirtualLabScene from '@/components/virtuallab/VirtualLabScene.vue'
+import ApparatusShelves from '@/components/virtuallab/ApparatusShelves.vue'
 import { useFullscreenLab } from '@/components/virtuallab/lab3d/useFullscreenLab'
 import type { LabObjectDef, SceneObjectConfig, LabCategory } from '@/types/virtualLab'
 
@@ -198,10 +176,6 @@ const categoryOptions: { value: CategoryFilter; label: string; icon: string }[] 
 ]
 
 const catalogByType = computed(() => new Map(catalog.value.map(o => [o.object_type, o])))
-
-const filteredCatalog = computed(() =>
-  activeCategory.value === 'all' ? catalog.value : catalog.value.filter(o => o.category === activeCategory.value)
-)
 
 // Grid auto-layout on the bench top (usable area about 8 x 3.4 units; 1 unit = 20 cm). The grid
 // widens as more apparatus is added so every row stays on the bench, never past its front edge.
@@ -244,11 +218,26 @@ const shelves = computed(() => {
       items: catalog.value
         .filter(o => (SHELF_ORDER.some(x => x.key === o.category) ? o.category : 'general') === sh.key)
         .filter(o => !q || o.display_name.toLowerCase().includes(q))
+        .filter(() => activeCategory.value === 'all' || activeCategory.value === sh.key)
         .sort((a, b) => a.display_name.localeCompare(b.display_name)),
     }))
     .filter(sh => sh.items.length > 0)
 })
-const benchCount = (type: string) => sceneObjects.value.filter(o => o.object_type === type).length
+const benchCounts = computed<Record<string, number>>(() => {
+  const out: Record<string, number> = {}
+  sceneObjects.value.forEach(o => { out[o.object_type] = (out[o.object_type] || 0) + 1 })
+  return out
+})
+
+// Which shelves are folded away - remembered on this device
+const FOLD_KEY = 'vl-playground-folded-shelves'
+const readFolded = (): string[] => {
+  try { return JSON.parse(localStorage.getItem(FOLD_KEY) || '[]') } catch { return [] }
+}
+const collapsedShelves = ref<string[]>(readFolded())
+watch(collapsedShelves, (v) => {
+  try { localStorage.setItem(FOLD_KEY, JSON.stringify(v)) } catch { /* storage unavailable */ }
+})
 const lastPicked = ref<string | null>(null)
 let pickedTimer: ReturnType<typeof setTimeout> | null = null
 const pickFromShelf = (obj: LabObjectDef) => {
@@ -291,97 +280,3 @@ onMounted(async () => {
 })
 </script>
 
-<style scoped>
-/* A wooden apparatus cabinet: dark frame, lighter back panel, a plank under every row of items */
-.cabinet {
-  background:
-    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.035) 0 2px, transparent 2px 9px),
-    linear-gradient(180deg, #7a4a24, #5e3518);
-  border-right: 6px solid #4a2a12;
-}
-.shelf {
-  border-radius: 10px;
-  padding: 14px 8px 0;
-  background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.18), transparent 30px),
-    #a8743f;
-  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.35);
-}
-/* Each row of three items stands on its own plank */
-.shelf-item {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 2px;
-  padding: 6px 2px 9px;
-  min-height: 84px;
-  border-bottom: 9px solid #6b3f1d;
-  box-shadow: 0 7px 0 -2px #4a2a12;
-  margin-bottom: 10px;
-  transition: transform 0.15s ease;
-}
-.shelf-item:hover,
-.shelf-item:focus-visible {
-  transform: translateY(-4px);
-  outline: none;
-}
-.shelf-icon {
-  font-size: 30px;
-  line-height: 1;
-  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.35));
-}
-.shelf-name {
-  font-size: 10px;
-  font-weight: 600;
-  line-height: 1.15;
-  color: #fff7ed;
-  text-align: center;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.shelf-item:hover .shelf-name,
-.shelf-item:focus-visible .shelf-name {
-  color: #fde68a;
-}
-.shelf-badge {
-  position: absolute;
-  top: 2px;
-  right: 6px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: 9999px;
-  background: #4f46e5;
-  color: #fff;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 16px;
-}
-/* Brass name plate */
-.plate {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 12px;
-  border-radius: 6px;
-  background: linear-gradient(180deg, #f6d98b, #c9962f);
-  border: 1px solid #8a6416;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.5);
-  color: #3b2606;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.plate-count {
-  padding: 0 6px;
-  border-radius: 9999px;
-  background: rgba(59, 38, 6, 0.18);
-  font-size: 10px;
-}
-</style>
