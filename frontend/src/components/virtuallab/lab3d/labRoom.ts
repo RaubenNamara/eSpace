@@ -29,6 +29,11 @@ export interface LabRoom {
   resetView: () => void
   /** Moves the camera to frame `box` from the current viewing direction; Reset View returns here. */
   frameBox: (box: THREE.Box3) => void
+  /**
+   * Like frameBox, but fits every corner of `box` on screen exactly, leaving `fill` (0-1) of the
+   * view's width/height for it - used to keep a whole object such as the bench in view.
+   */
+  fitBox: (box: THREE.Box3, fill?: number) => void
   /** Normalised device coordinates for a pointer event over the canvas. */
   toNdc: (ev: PointerEvent) => THREE.Vector2
   dispose: () => void
@@ -124,6 +129,7 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
   // Last box framed by frameBox(); re-framed when the canvas changes shape (full screen, device
   // rotation) unless the student has since moved the camera themselves.
   let framedBox: THREE.Box3 | null = null
+  let fittedFill: number | null = null
   let userMovedCamera = false
   controls.addEventListener('start', () => { userMovedCamera = true })
 
@@ -134,13 +140,50 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
     renderer.setSize(w, h)
     camera.aspect = w / h
     camera.updateProjectionMatrix()
-    if (framedBox && !userMovedCamera) frameBox(framedBox)
+    if (framedBox && !userMovedCamera) {
+      if (fittedFill !== null) fitBox(framedBox, fittedFill)
+      else frameBox(framedBox)
+    }
   })
   resizeObserver.observe(host)
+
+  function fitBox(box: THREE.Box3, fill = 0.7) {
+    if (box.isEmpty()) return
+    framedBox = box.clone()
+    fittedFill = fill
+    userMovedCamera = false
+    const center = box.getCenter(new THREE.Vector3())
+    const dir = initialPos.clone().sub(initialTarget).normalize()
+    const corners = [0, 1, 2, 3, 4, 5, 6, 7].map(i => new THREE.Vector3(
+      i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, i & 4 ? box.max.z : box.min.z))
+    const fits = (d: number) => {
+      camera.position.copy(center).addScaledVector(dir, d)
+      camera.lookAt(center)
+      camera.updateMatrixWorld(true)
+      return corners.every((c) => {
+        const p = c.clone().project(camera)
+        return p.z < 1 && Math.abs(p.x) <= fill && Math.abs(p.y) <= fill
+      })
+    }
+    // Smallest distance at which every corner is on screen (binary search)
+    let lo = 0.01, hi = controls.maxDistance * 4
+    for (let i = 0; i < 40; i++) {
+      const mid = (lo + hi) / 2
+      if (fits(mid)) hi = mid
+      else lo = mid
+    }
+    controls.maxDistance = Math.max(controls.maxDistance, hi * 1.5)
+    initialTarget.copy(center)
+    initialPos.copy(center).addScaledVector(dir, hi)
+    camera.position.copy(initialPos)
+    controls.target.copy(initialTarget)
+    controls.update()
+  }
 
   function frameBox(box: THREE.Box3) {
     if (box.isEmpty()) return
     framedBox = box.clone()
+    fittedFill = null
     userMovedCamera = false
     const center = box.getCenter(new THREE.Vector3())
     const size = box.getSize(new THREE.Vector3())
@@ -172,6 +215,7 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
       controls.update()
     },
     frameBox,
+    fitBox,
     toNdc: (ev) => {
       const rect = renderer.domElement.getBoundingClientRect()
       ndc.set(((ev.clientX - rect.left) / rect.width) * 2 - 1, -((ev.clientY - rect.top) / rect.height) * 2 + 1)

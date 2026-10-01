@@ -166,6 +166,7 @@
               ref="sceneRef"
               :scene-objects="sceneObjects"
               :object-catalog="catalog"
+              fixed-view
               @action="onSceneAction"
             />
             <!-- Brief confirmation when something comes off a shelf -->

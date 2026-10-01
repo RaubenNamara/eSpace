@@ -207,6 +207,8 @@ const props = defineProps<{
   objectCatalog: LabObjectDef[]
   connections?: { from: string; to: string }[]
   readOnly?: boolean
+  /** Keep the camera on the whole bench instead of re-framing it each time apparatus is added */
+  fixedView?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -1393,7 +1395,8 @@ function buildScene() {
   })
 
   recomputeOptics()
-  frameApparatus()
+  if (props.fixedView) frameBench()
+  else frameApparatus()
 
   renderer.domElement.addEventListener('pointerdown', onPointerDown)
   renderer.domElement.addEventListener('pointermove', onPointerMove)
@@ -1446,9 +1449,19 @@ watch(
       if (g) g.position.set(cfg.position.x, cfg.position.y, cfg.position.z)
       else { placeObject(cfg); added = true }
     })
-    if (added) frameApparatus()
+    if (added && !props.fixedView) frameApparatus()
   },
 )
+
+/**
+ * Frames the whole bench (top and cabinet), whatever the canvas shape - the view then stays put as
+ * apparatus comes and goes, until the student zooms or turns it themselves.
+ */
+function frameBench() {
+  if (!room) return
+  const u = UNITS_PER_METRE
+  room.fitBox(new THREE.Box3(new THREE.Vector3(-0.9 * u, -0.9 * u, -0.375 * u), new THREE.Vector3(0.9 * u, 0.1 * u, 0.375 * u)), 0.72)
+}
 
 /** Frames everything on the bench (name tags excluded), whatever the canvas shape. */
 function frameApparatus() {
