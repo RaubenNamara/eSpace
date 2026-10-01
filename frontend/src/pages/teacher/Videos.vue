@@ -326,7 +326,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import api from '@/services/api'
+import axios from 'axios'
 import VideoPlayerModal from '@/components/video/VideoPlayerModal.vue'
 import TeacherClassSelector from '@/components/teacher/TeacherClassSelector.vue'
 import BulkActionBar from '@/components/common/BulkActionBar.vue'
@@ -341,6 +341,8 @@ import { downloadBlob } from '@/utils/downloadBlob'
 const toast = useToastStore()
 const confirmDialog = useConfirmStore()
 const bulk = useBulkSelection<number>()
+
+const API_BASE = '/api'
 
 const videos = ref<VideoResource[]>([])
 const assignments = ref<ENoteAssignments | null>(null)
@@ -388,7 +390,7 @@ const bulkSetStatus = async (status: 'draft' | 'published' | 'archived') => {
   const ids = bulk.selectedArray()
   if (ids.length === 0) return
   try {
-    await api.post('/teacher/videos/bulk-status', { ids, status })
+    await axios.post(`${API_BASE}/teacher/videos/bulk-status`, { ids, status })
     toast.success(`${ids.length} video(s) updated`)
     bulk.clear()
     await loadVideos()
@@ -402,7 +404,7 @@ const bulkDeleteSelected = async () => {
   if (ids.length === 0) return
   if (!await confirmDialog.open({ title: 'Delete videos', message: `Are you sure you want to delete ${ids.length} video(s)? This cannot be undone.`, confirmLabel: 'Delete', danger: true })) return
   try {
-    await api.post('/teacher/videos/bulk-delete', { ids })
+    await axios.post(`${API_BASE}/teacher/videos/bulk-delete`, { ids })
     toast.success(`${ids.length} video(s) deleted`)
     bulk.clear()
     await loadVideos()
@@ -414,7 +416,7 @@ const bulkDeleteSelected = async () => {
 const bulkExport = async () => {
   const ids = bulk.selectedArray()
   try {
-    const response = await api.post('/teacher/videos/bulk-export', { ids }, { responseType: 'blob' })
+    const response = await axios.post(`${API_BASE}/teacher/videos/bulk-export`, { ids }, { responseType: 'blob' })
     downloadBlob(response.data, 'videos.csv')
   } catch (error) {
     toast.error('Failed to export videos')
@@ -447,7 +449,7 @@ const formatFileSize = (bytes: number | null) => {
 const loadVideos = async () => {
   try {
     loading.value = true
-    const response = await api.get('/teacher/videos')
+    const response = await axios.get(`${API_BASE}/teacher/videos`)
     if (response.data.success) {
       videos.value = response.data.data.videos || []
     }
@@ -460,7 +462,7 @@ const loadVideos = async () => {
 
 const loadAssignments = async () => {
   try {
-    const response = await api.get('/teacher/enotes/assignments')
+    const response = await axios.get(`${API_BASE}/teacher/enotes/assignments`)
     if (response.data.success) {
       assignments.value = response.data.data
       assignmentsError.value = null
@@ -508,7 +510,7 @@ const saveVideo = async () => {
     saving.value = true
 
     if (editingVideo.value) {
-      await api.put(`/teacher/videos/${editingVideo.value.id}`, {
+      await axios.put(`${API_BASE}/teacher/videos/${editingVideo.value.id}`, {
         title: videoForm.value.title,
         description: videoForm.value.description,
         subject_id: videoForm.value.subject_id,
@@ -534,7 +536,7 @@ const saveVideo = async () => {
 
       uploading.value = true
       uploadProgress.value = 0
-      await api.post('/teacher/videos', formData, {
+      await axios.post(`${API_BASE}/teacher/videos`, formData, {
         onUploadProgress: (event) => {
           if (event.total) uploadProgress.value = Math.round((event.loaded * 100) / event.total)
         }
@@ -555,7 +557,7 @@ const saveVideo = async () => {
 const deleteVideo = async (id: number) => {
   if (!await confirmDialog.open({ title: 'Delete video', message: 'Are you sure you want to delete this video?', confirmLabel: 'Delete', danger: true })) return
   try {
-    await api.delete(`/teacher/videos/${id}`)
+    await axios.delete(`${API_BASE}/teacher/videos/${id}`)
     await loadVideos()
     toast.success('Video deleted')
   } catch (error) {
