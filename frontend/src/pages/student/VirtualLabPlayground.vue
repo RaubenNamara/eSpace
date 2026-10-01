@@ -45,6 +45,7 @@
               cupboard
               wall-shelves
               :bench-length="BENCH_LENGTH"
+              side-benches
               @action="onSceneAction"
               @take-chemical="takeChemical"
               @pick-apparatus="pickApparatus"

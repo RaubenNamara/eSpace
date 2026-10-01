@@ -23,6 +23,8 @@ export interface LabRoomOptions {
   wallCabinets?: boolean
   /** Bench length in metres (default 1.8); the wall cabinets widen with it */
   benchLength?: number
+  /** Two more benches of the same length, one either side of the main bench (decor only) */
+  sideBenches?: boolean
 }
 
 /** One wall cabinet's shelves, in scene units: where apparatus can stand. */
@@ -160,6 +162,10 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
     // With the wall cabinets, a fabric wall covering replaces the tiled splashback below them
     cupboardParts = buildRoom(world, !!opts.cupboard, benchLength, s, !!opts.wallCabinets)
     if (opts.wallCabinets) wallParts = buildWallCabinets(world, benchLength, s)
+    if (opts.sideBenches) {
+      const gap = 1.2 // walkway between benches
+      for (const side of [-1, 1]) buildPlainBench(world, side * (benchLength + gap), benchLength)
+    }
   }
   // A wider view of the room needs the fog pushed back
   if (!field && (opts.cupboard || opts.wallCabinets)) scene.fog = new THREE.Fog(0xdfe3e8, 7 * s, 16 * s)
@@ -590,6 +596,43 @@ function buildWallCabinets(scene: THREE.Object3D, benchLength: number, s = 1): W
     }
   }
   return { doors, blockers, cabinets }
+}
+
+/** A bench like the main one - black resin top on a wooden cabinet with closed doors - centred at `cx`. */
+function buildPlainBench(scene: THREE.Object3D, cx: number, length: number) {
+  const top = new THREE.Mesh(
+    new RoundedBoxGeometry(length, 0.035, BENCH_D, 3, 0.008),
+    new THREE.MeshPhysicalMaterial({ color: 0x1f2328, roughness: 0.42, clearcoat: 0.4, clearcoatRoughness: 0.35 }),
+  )
+  top.position.set(cx, -0.0175, 0)
+  top.castShadow = true
+  top.receiveShadow = true
+  scene.add(top)
+  const W = length - 0.06
+  const cabinet = new THREE.Mesh(
+    new THREE.BoxGeometry(W, BENCH_H - 0.035, BENCH_D - 0.06),
+    new THREE.MeshStandardMaterial({ map: woodTexture(), roughness: 0.7 }),
+  )
+  cabinet.position.set(cx, -BENCH_H / 2 - 0.0175, 0)
+  cabinet.castShadow = true
+  cabinet.receiveShadow = true
+  scene.add(cabinet)
+  // Four doors: seams between them and a pair of handles where each pair meets
+  const seamMat = new THREE.MeshStandardMaterial({ color: 0x3b2a1c, roughness: 0.8 })
+  const handleMat = labMaterials.steel()
+  const frontZ = (BENCH_D - 0.06) / 2
+  for (const f of [-0.25, 0, 0.25]) {
+    const seam = new THREE.Mesh(new THREE.BoxGeometry(0.004, BENCH_H - 0.12, 0.002), seamMat)
+    seam.position.set(cx + f * W, -BENCH_H / 2 - 0.02, frontZ + 0.001)
+    scene.add(seam)
+  }
+  for (const f of [-0.25, 0.25]) {
+    for (const dx of [-0.04, 0.04]) {
+      const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.1, 12), handleMat)
+      handle.position.set(cx + f * W + dx, -0.2, frontZ + 0.015)
+      scene.add(handle)
+    }
+  }
 }
 
 interface CupboardParts {
