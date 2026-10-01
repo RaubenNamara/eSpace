@@ -23,7 +23,8 @@ export interface LabRoomOptions {
   wallCabinets?: boolean
   /** Bench length in metres (default 1.8); the wall cabinets widen with it */
   benchLength?: number
-  /** Two more benches of the same length, against the left and right walls (decor only) */
+  /** Two more benches of the same length against the left and right walls, plus a small
+   *  table just beyond each end of the main bench (decor only) */
   sideBenches?: boolean
 }
 
@@ -170,6 +171,10 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
         bench.position.set(side * wallX, 0, 1.6)
         bench.rotation.y = -side * Math.PI / 2
         world.add(bench)
+        // A small side table close to each end of the main bench
+        const small = buildPlainBench(0.9)
+        small.position.set(side * (benchLength / 2 + 0.5 + 0.45), 0, 0)
+        world.add(small)
       }
     }
   }
@@ -625,16 +630,17 @@ function buildPlainBench(length: number): THREE.Group {
   cabinet.castShadow = true
   cabinet.receiveShadow = true
   scene.add(cabinet)
-  // Four doors: seams between them and a pair of handles where each pair meets
+  // Four doors (two on a short table): seams between them and a pair of handles where each pair meets
+  const short = length < 1.5
   const seamMat = new THREE.MeshStandardMaterial({ color: 0x3b2a1c, roughness: 0.8 })
   const handleMat = labMaterials.steel()
   const frontZ = (BENCH_D - 0.06) / 2
-  for (const f of [-0.25, 0, 0.25]) {
+  for (const f of short ? [0] : [-0.25, 0, 0.25]) {
     const seam = new THREE.Mesh(new THREE.BoxGeometry(0.004, BENCH_H - 0.12, 0.002), seamMat)
     seam.position.set(cx + f * W, -BENCH_H / 2 - 0.02, frontZ + 0.001)
     scene.add(seam)
   }
-  for (const f of [-0.25, 0.25]) {
+  for (const f of short ? [0] : [-0.25, 0.25]) {
     for (const dx of [-0.04, 0.04]) {
       const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.1, 12), handleMat)
       handle.position.set(cx + f * W + dx, -0.2, frontZ + 0.015)
