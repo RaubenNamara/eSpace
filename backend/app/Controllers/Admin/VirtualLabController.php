@@ -122,6 +122,48 @@ class VirtualLabController extends Controller
     }
 
     /**
+     * DELETE /admin/virtual-lab/experiments/{id}
+     * Removes the experiment (draft or published) and every class it was published to.
+     */
+    public function destroy($id): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+        if (!$this->service()->deleteExperimentEverywhere((int) $id)) {
+            $this->notFound('Experiment not found');
+            return;
+        }
+        $this->success([], 'Experiment deleted');
+    }
+
+    /**
+     * POST /admin/virtual-lab/experiments/bulk-delete
+     * body: { ids: number[] }
+     */
+    public function bulkDestroy(): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+        $raw = $this->input('ids');
+        $ids = is_array($raw) ? array_values(array_unique(array_filter(array_map('intval', $raw), fn ($v) => $v > 0))) : [];
+        if (empty($ids)) {
+            $this->validationError(['ids' => 'No experiments selected']);
+            return;
+        }
+        $deleted = 0;
+        foreach ($ids as $id) {
+            if ($this->service()->deleteExperimentEverywhere($id)) {
+                $deleted++;
+            }
+        }
+        $this->success(['deleted' => $deleted], $deleted . ' experiment(s) deleted');
+    }
+
+    /**
      * GET /admin/virtual-lab/analytics
      */
     public function analytics(): void
