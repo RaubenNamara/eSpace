@@ -17,6 +17,29 @@ export interface LabRoomOptions {
   setting?: 'bench' | 'field'
   /** Scene units per metre (default 1). The free-layout engine works at 5 (1 unit = 20 cm). */
   unitScale?: number
+  /** Build the bench cabinet as a real cupboard: hinged doors and shelves inside. */
+  cupboard?: boolean
+}
+
+export interface FitOptions {
+  /** Direction from the box towards the camera (default: the current viewing direction) */
+  dir?: THREE.Vector3
+  /** Glide the camera there instead of jumping */
+  animate?: boolean
+}
+
+/** The bench cupboard (only with `cupboard: true`). Positions are in metres - see `unitScale`. */
+export interface LabCupboard {
+  /** Hinge groups, one per door; any mesh inside one belongs to that door */
+  doors: THREE.Object3D[]
+  /** Carcass panels - they stop clicks reaching anything behind them */
+  blockers: THREE.Object3D[]
+  /** Interior of each bay, in scene units: shelf top heights and x range */
+  bays: { minX: number; maxX: number; levels: number[]; frontZ: number; backZ: number }[]
+  toggleDoor: (door: THREE.Object3D) => void
+  isOpen: (door: THREE.Object3D) => boolean
+  /** The door (hinge group) a mesh belongs to, if any */
+  doorOf: (obj: THREE.Object3D | null) => THREE.Object3D | null
 }
 
 export interface LabRoom {
@@ -29,11 +52,12 @@ export interface LabRoom {
   resetView: () => void
   /** Moves the camera to frame `box` from the current viewing direction; Reset View returns here. */
   frameBox: (box: THREE.Box3) => void
+  cupboard: LabCupboard | null
   /**
    * Like frameBox, but fits every corner of `box` on screen exactly, leaving `fill` (0-1) of the
    * view's width/height for it - used to keep a whole object such as the bench in view.
    */
-  fitBox: (box: THREE.Box3, fill?: number) => void
+  fitBox: (box: THREE.Box3, fill?: number, opts?: FitOptions) => void
   /** Normalised device coordinates for a pointer event over the canvas. */
   toNdc: (ev: PointerEvent) => THREE.Vector2
   dispose: () => void
@@ -92,12 +116,13 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
   const world = new THREE.Group()
   world.scale.setScalar(s)
   scene.add(world)
+  let cupboardParts: CupboardParts | null = null
   if (field) {
     buildFieldLighting(world)
     buildField(world)
   } else {
     buildLighting(world)
-    buildRoom(world)
+    cupboardParts = buildRoom(world, !!opts.cupboard)
   }
   if (s !== 1) {
     world.traverse((o) => {
@@ -120,6 +145,13 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
     // timing them with the stopwatch get wrong results.
     const dt = Math.min(1, timer.getDelta())
     frameCallbacks.forEach(cb => cb(dt))
+    if (flight) {
+      flight.t = Math.min(1, flight.t + dt / 0.7)
+      const e = flight.t < 0.5 ? 2 * flight.t * flight.t : 1 - Math.pow(-2 * flight.t + 2, 2) / 2
+      camera.position.lerpVectors(flight.fromPos, flight.toPos, e)
+      controls.target.lerpVectors(flight.fromTarget, flight.toTarget, e)
+      if (flight.t >= 1) flight = null
+    }
     controls.update()
     updateScreenLabels(scene, camera, renderer.domElement.clientHeight)
     renderer.render(scene, camera)
@@ -130,8 +162,10 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
   // rotation) unless the student has since moved the camera themselves.
   let framedBox: THREE.Box3 | null = null
   let fittedFill: number | null = null
+  let fittedDir: THREE.Vector3 | null = null
   let userMovedCamera = false
-  controls.addEventListener('start', () => { userMovedCamera = true })
+  let flight: { fromPos: THREE.Vector3; toPos: THREE.Vector3; fromTarget: THREE.Vector3; toTarget: THREE.Vector3; t: number } | null = null
+  controls.addEventListener('start', () => { userMovedCamera = true; flight = null })
 
   const resizeObserver = new ResizeObserver(() => {
     const w = host.clientWidth
@@ -141,19 +175,22 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
     camera.aspect = w / h
     camera.updateProjectionMatrix()
     if (framedBox && !userMovedCamera) {
-      if (fittedFill !== null) fitBox(framedBox, fittedFill)
+      if (fittedFill !== null) fitBox(framedBox, fittedFill, { dir: fittedDir || undefined })
       else frameBox(framedBox)
     }
   })
   resizeObserver.observe(host)
 
-  function fitBox(box: THREE.Box3, fill = 0.7) {
+  function fitBox(box: THREE.Box3, fill = 0.7, fitOpts: FitOptions = {}) {
     if (box.isEmpty()) return
     framedBox = box.clone()
     fittedFill = fill
     userMovedCamera = false
     const center = box.getCenter(new THREE.Vector3())
-    const dir = initialPos.clone().sub(initialTarget).normalize()
+    const dir = (fitOpts.dir ? fitOpts.dir.clone() : initialPos.clone().sub(initialTarget)).normalize()
+    fittedDir = dir.clone()
+    const startPos = camera.position.clone()
+    const startTarget = controls.target.clone()
     const corners = [0, 1, 2, 3, 4, 5, 6, 7].map(i => new THREE.Vector3(
       i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, i & 4 ? box.max.z : box.min.z))
     const fits = (d: number) => {
@@ -175,6 +212,13 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
     controls.maxDistance = Math.max(controls.maxDistance, hi * 1.5)
     initialTarget.copy(center)
     initialPos.copy(center).addScaledVector(dir, hi)
+    if (fitOpts.animate) {
+      camera.position.copy(startPos)
+      camera.lookAt(startTarget)
+      flight = { fromPos: startPos, toPos: initialPos.clone(), fromTarget: startTarget, toTarget: initialTarget.clone(), t: 0 }
+      return
+    }
+    flight = null
     camera.position.copy(initialPos)
     controls.target.copy(initialTarget)
     controls.update()
@@ -202,7 +246,34 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
 
   const ndc = new THREE.Vector2()
 
+  // Doors swing smoothly towards their target angle
+  let cupboard: LabCupboard | null = null
+  if (cupboardParts) {
+    const parts = cupboardParts
+    frameCallbacks.push((dt) => {
+      parts.doors.forEach((d) => {
+        const target = d.userData.open ? d.userData.openAngle : 0
+        d.rotation.y += (target - d.rotation.y) * Math.min(1, dt * 7)
+      })
+    })
+    cupboard = {
+      doors: parts.doors,
+      blockers: parts.blockers,
+      bays: parts.bays.map(b => ({
+        minX: b.minX * s, maxX: b.maxX * s, levels: b.levels.map(y => y * s), frontZ: b.frontZ * s, backZ: b.backZ * s,
+      })),
+      toggleDoor: (door) => { door.userData.open = !door.userData.open },
+      isOpen: door => !!door.userData.open,
+      doorOf: (obj) => {
+        let o: THREE.Object3D | null = obj
+        while (o && !o.userData.cupboardDoor) o = o.parent
+        return o
+      },
+    }
+  }
+
   return {
+    cupboard,
     renderer,
     scene,
     camera,
@@ -264,7 +335,13 @@ function buildLighting(scene: THREE.Object3D) {
   scene.add(fill)
 }
 
-function buildRoom(scene: THREE.Object3D) {
+interface CupboardParts {
+  doors: THREE.Object3D[]
+  blockers: THREE.Object3D[]
+  bays: { minX: number; maxX: number; levels: number[]; frontZ: number; backZ: number }[]
+}
+
+function buildRoom(scene: THREE.Object3D, withCupboard = false): CupboardParts | null {
   // Floor - vinyl tiles
   const floorTex = canvasTexture(512, 512, (ctx, w, h) => {
     ctx.fillStyle = '#b9bec6'
@@ -324,6 +401,7 @@ function buildRoom(scene: THREE.Object3D) {
   scene.add(top)
 
   const woodTex = woodTexture()
+  if (withCupboard) return buildCupboard(scene, woodTex)
   const cabinet = new THREE.Mesh(
     new THREE.BoxGeometry(BENCH_W - 0.06, BENCH_H - 0.035, BENCH_D - 0.06),
     new THREE.MeshStandardMaterial({ map: woodTex, roughness: 0.7 }),
@@ -345,6 +423,77 @@ function buildRoom(scene: THREE.Object3D) {
     handle.position.set(x, -0.2, (BENCH_D - 0.06) / 2 + 0.015)
     scene.add(handle)
   }
+  return null
+}
+
+/**
+ * The bench cabinet as a working cupboard: two bays, each with a shelf, behind a pair of hinged
+ * doors that meet in the middle, so students can open it and take out what is stored inside.
+ */
+function buildCupboard(scene: THREE.Object3D, woodTex: THREE.Texture): CupboardParts {
+  const W = BENCH_W - 0.06, D = BENCH_D - 0.06
+  const t = 0.018
+  const top = -0.035, bottom = -BENCH_H
+  const H = top - bottom
+  const front = D / 2, back = -D / 2
+  const outer = new THREE.MeshStandardMaterial({ map: woodTex, roughness: 0.7 })
+  const inner = new THREE.MeshStandardMaterial({ color: 0xe7dcc8, roughness: 0.8 })
+  const blockers: THREE.Object3D[] = []
+  const panel = (w: number, h: number, d: number, x: number, y: number, z: number, mat: THREE.Material) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat)
+    m.position.set(x, y, z)
+    m.castShadow = true
+    scene.add(m)
+    blockers.push(m)
+    return m
+  }
+  const floorY = bottom + 0.06
+  panel(t, H, D, -W / 2 + t / 2, bottom + H / 2, 0, outer) // left side
+  panel(t, H, D, W / 2 - t / 2, bottom + H / 2, 0, outer) // right side
+  panel(W, H, t, 0, bottom + H / 2, back + t / 2, inner) // back
+  panel(t, H, D - t, 0, bottom + H / 2, t / 2, inner) // middle divider
+  panel(W, t, D, 0, floorY - t / 2, 0, inner) // floor
+  panel(W, 0.06, t, 0, bottom + 0.03, front - 0.03, outer) // kick plinth
+  panel(W, 0.04, t, 0, top - 0.02, front - t / 2, outer) // top rail under the bench top
+  const shelfY = -0.46
+  const bayW = W / 2 - t * 1.5
+  panel(bayW, t, D - t, -W / 4, shelfY - t / 2, t / 2, inner)
+  panel(bayW, t, D - t, W / 4, shelfY - t / 2, t / 2, inner)
+
+  // A pair of doors hinged on the outer sides, meeting in the middle (one door per bay)
+  const doorTop = top - 0.04, doorBottom = floorY - t
+  const doorH = doorTop - doorBottom - 0.002
+  const doorW = W / 2 - 0.0025
+  const doorMat = new THREE.MeshStandardMaterial({ map: woodTex, roughness: 0.65 })
+  const handleMat = labMaterials.steel()
+  const doors: THREE.Object3D[] = []
+  const hinges: [number, 1 | -1][] = [[-W / 2, 1], [W / 2, -1]]
+  hinges.forEach(([hx, dirX], i) => {
+    const pivot = new THREE.Group()
+    pivot.position.set(hx + dirX * 0.001, (doorTop + doorBottom) / 2, front + t / 2)
+    const door = new THREE.Mesh(new THREE.BoxGeometry(doorW, doorH, t), doorMat)
+    door.position.x = dirX * doorW / 2
+    door.castShadow = true
+    pivot.add(door)
+    const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.1, 12), handleMat)
+    handle.position.set(dirX * (doorW - 0.045), -0.2 - pivot.position.y, t / 2 + 0.015)
+    pivot.add(handle)
+    for (const hy of [handle.position.y - 0.05, handle.position.y + 0.05]) {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.016, 8), handleMat)
+      post.rotation.x = Math.PI / 2
+      post.position.set(handle.position.x, hy, t / 2 + 0.008)
+      pivot.add(post)
+    }
+    pivot.userData.cupboardDoor = true
+    pivot.userData.bay = i
+    pivot.userData.open = false
+    pivot.userData.openAngle = -dirX * 1.95
+    scene.add(pivot)
+    doors.push(pivot)
+  })
+
+  const bay = (minX: number, maxX: number) => ({ minX, maxX, levels: [floorY, shelfY], frontZ: front - 0.02, backZ: back + t })
+  return { doors, blockers, bays: [bay(-W / 2 + t, -t / 2), bay(t / 2, W / 2 - t)] }
 }
 
 function buildFieldLighting(scene: THREE.Object3D) {

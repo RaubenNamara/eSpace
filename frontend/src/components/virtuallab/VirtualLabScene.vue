@@ -188,7 +188,7 @@
     </div>
 
     <p class="hidden sm:block absolute right-3 bottom-3 text-[10px] text-gray-500 dark:text-gray-400 bg-white/70 dark:bg-gray-900/60 rounded px-2 py-1 pointer-events-none">
-      Drag to orbit &middot; Scroll to zoom &middot; Click equipment to interact
+      Drag to orbit &middot; Scroll to zoom &middot; Click equipment to interact<template v-if="cupboard"> &middot; Open the cupboard doors for chemicals</template>
     </p>
   </div>
 </template>
@@ -201,6 +201,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { createObjectMesh, createConnectionLine, voltageSpriteTexture, digitalDisplayTexture } from './labObjectFactory'
 import { createLabRoom, type LabRoom } from './lab3d/labRoom'
 import type { SceneObjectConfig, LabObjectDef, LabAction } from '@/types/virtualLab'
+import { CUPBOARD_SHELVES, chemicalById, chemicalObjectType, chemicalProps } from './chemicals'
 
 const props = defineProps<{
   sceneObjects: SceneObjectConfig[]
@@ -209,9 +210,13 @@ const props = defineProps<{
   readOnly?: boolean
   /** Keep the camera on the whole bench instead of re-framing it each time apparatus is added */
   fixedView?: boolean
+  /** Bench cupboard with doors that open onto shelves of chemicals (Apparatus Playground) */
+  cupboard?: boolean
 }>()
 
 const emit = defineEmits<{
+  /** A chemical was taken out of the bench cupboard (see chemicals.ts) */
+  takeChemical: [chemicalId: string]
   action: [{ objectKey: string | null; action: LabAction; value: string | null; unit?: string | null; label?: string | null; safetyIssue?: boolean; targetObjectKey?: string | null; springLoadG?: number }]
 }>()
 
@@ -270,11 +275,12 @@ const batteryVoltage = ref<number | null>(null)
 const LIQUID_CONTAINER_TYPES = [
   'beaker', 'test_tube', 'burette', 'measuring_cylinder', 'water_container',
   'conical_flask', 'amber_conical_flask', 'round_bottom_flask', 'evaporating_dish', 'wash_bottle', 'specimen_bottle', 'rain_gauge', 'watering_can',
+  'reagent_bottle',
 ]
 // Anything that can power the free-layout circuit (the dry cell and accumulator have fixed voltages)
 const POWER_SOURCE_TYPES = ['battery', 'dry_cell', 'accumulator']
 // Containers that start full (a source to pour from) rather than empty
-const STARTS_FULL_TYPES = ['water_container', 'burette', 'wash_bottle', 'watering_can']
+const STARTS_FULL_TYPES = ['water_container', 'burette', 'wash_bottle', 'watering_can', 'reagent_bottle']
 const containerVolumes = new Map<string, number>()
 const batteryVoltages = new Map<string, number>()
 const switchStates = new Map<string, 'on' | 'off'>()
@@ -339,7 +345,7 @@ const trayItems = ref<SceneObjectConfig[]>([])
 function placeObject(cfg: SceneObjectConfig) {
   const def = catalogByType().get(cfg.object_type)
   const merged = { ...(def?.default_props || {}), ...(cfg.props || {}) }
-  const group = createObjectMesh(cfg.object_type, cfg.key, def?.display_name || cfg.object_type, merged)
+  const group = createObjectMesh(cfg.object_type, cfg.key, merged.display_name || def?.display_name || cfg.object_type, merged)
   group.position.set(cfg.position.x, cfg.position.y, cfg.position.z)
   if (cfg.rotation) group.rotation.y = cfg.rotation.y
   scene.add(group)
@@ -810,7 +816,7 @@ function selectObject(key: string) {
   const cfg = props.sceneObjects.find(o => o.key === key)
   const def = cfg ? catalogByType().get(cfg.object_type) : null
   selectedActions.value = def?.supported_actions ?? []
-  selectedDisplayName.value = def?.display_name ?? key
+  selectedDisplayName.value = cfg?.props?.display_name ?? def?.display_name ?? key
   selectedObjectType.value = cfg?.object_type ?? null
   batteryVoltage.value = cfg?.object_type === 'battery' ? (batteryVoltages.get(key) ?? mergedProps(key).voltage ?? 6) : null
   if (cfg?.object_type === 'microscope') updateMicroscopeDisplay(key)
@@ -937,6 +943,12 @@ function handleActionButton(action: LabAction) {
     const cfg = props.sceneObjects.find(o => o.key === selectedKey.value)
     const def = cfg ? catalogByType().get(cfg.object_type) : null
     let text = def?.description || 'No further detail available.'
+    const chem = cfg?.props?.chemical_id ? chemicalById(cfg.props.chemical_id) : null
+    if (chem && cfg) {
+      const hazard = chem.hazard ? ` Hazard: ${chem.hazard} - handle with care and wear goggles.` : ''
+      const left = chem.state === 'liquid' ? ` About ${Math.round(containerVolumes.get(cfg.key) ?? 0)} ml left in the bottle.` : ' A solid - use a spatula to take some out.'
+      text = `${chem.name}${chem.formula ? ` (${chem.formula})` : ''}.${left}${hazard}`
+    }
     let observedValue: string | null = null
     if (selectedObjectType.value === 'microscope') {
       const key = selectedKey.value
@@ -1216,6 +1228,7 @@ function onPointerUp(ev: PointerEvent) {
   if (moved) return // was an orbit drag, not a click
 
   pointerToNdc(ev)
+  if (handleCupboardClick()) return
   const key = raycastGroupKey()
   if (!key) {
     deselect()
@@ -1306,8 +1319,8 @@ function beginPour(fromKey: string, toKey: string) {
 
   pouring.value = {
     from: fromKey, to: toKey, amount: 0, max: Math.max(1, Math.round(Math.min(roomInDest, fromRemaining))),
-    fromLabel: catalogByType().get(fromCfg.object_type)?.display_name ?? fromCfg.object_type,
-    toLabel: catalogByType().get(toCfg.object_type)?.display_name ?? toCfg.object_type,
+    fromLabel: fromCfg.props?.display_name ?? catalogByType().get(fromCfg.object_type)?.display_name ?? fromCfg.object_type,
+    toLabel: toCfg.props?.display_name ?? catalogByType().get(toCfg.object_type)?.display_name ?? toCfg.object_type,
     fromTracked,
   }
 }
@@ -1328,12 +1341,31 @@ watch(() => pouring.value?.amount, updatePourPreview)
 function finishPouring() {
   if (!pouring.value) return
   const { from, to, amount, fromTracked } = pouring.value
+  tintPouredLiquid(from, to, amount)
   containerVolumes.set(to, Math.round((containerVolumes.get(to) ?? 0) + amount))
   if (fromTracked) containerVolumes.set(from, Math.max(0, Math.round((containerVolumes.get(from) ?? 0) - amount)))
   emit('action', { objectKey: to, action: 'pour', value: String(Math.round(amount)) })
   pouring.value = null
   armedAction.value = null
   controls.enabled = true
+}
+
+/** The receiving liquid takes on the colour of what is poured in, blended by volume. */
+function tintPouredLiquid(from: string, to: string, amount: number) {
+  if (amount <= 0) return
+  const source = liquidMaterial(from)
+  const dest = liquidMaterial(to)
+  if (!source || !dest) return
+  const before = containerVolumes.get(to) ?? 0
+  dest.color.lerp(source.color, before <= 0 ? 1 : amount / (before + amount))
+}
+
+function liquidMaterial(key: string): THREE.MeshStandardMaterial | null {
+  let found: THREE.MeshStandardMaterial | null = null
+  groups.get(key)?.traverse((c) => {
+    if (!found && c instanceof THREE.Mesh && c.userData.role === 'liquid') found = c.material as THREE.MeshStandardMaterial
+  })
+  return found
 }
 
 function cancelPouring() {
@@ -1370,6 +1402,7 @@ function buildScene() {
       target: [0, 0.4, 0],
       minDistance: 1.2,
       maxDistance: 14,
+      cupboard: !!props.cupboard,
     })
   } catch (err) {
     console.error('Virtual Lab: failed to create a WebGL context', err)
@@ -1395,6 +1428,7 @@ function buildScene() {
   })
 
   recomputeOptics()
+  stockCupboard()
   if (props.fixedView) frameBench()
   else frameApparatus()
 
@@ -1416,6 +1450,9 @@ function buildScene() {
     groups.forEach((g, key) => {
       const show = key === selectedKey.value || key === hoveredKey.value
       g.children.forEach((c) => { if (c.userData.role === 'label') c.visible = show })
+    })
+    cupboardBottles.forEach((g, id) => {
+      g.children.forEach((c) => { if (c.userData.role === 'label') c.visible = id === hoveredChemical })
     })
   })
 }
@@ -1450,17 +1487,143 @@ watch(
       else { placeObject(cfg); added = true }
     })
     if (added && !props.fixedView) frameApparatus()
+    syncCupboard()
   },
 )
+
+// --- Bench cupboard (Apparatus Playground) ---------------------------------------------------
+// Each chemical sits in the cupboard until it is taken out onto the bench; its place on the shelf
+// stays empty while it is out, and it reappears there once removed from the bench.
+const cupboardBottles = new Map<string, THREE.Group>()
+const cupboardTags: THREE.Mesh[] = []
+
+function shelfTagTexture(name: string, formula?: string): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas')
+  canvas.width = 512
+  canvas.height = 144
+  const ctx = canvas.getContext('2d')!
+  ctx.fillStyle = '#fffdf4'
+  ctx.fillRect(0, 0, 512, 144)
+  ctx.fillStyle = '#1e3a8a'
+  ctx.fillRect(0, 0, 512, 10)
+  ctx.fillStyle = '#111827'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  let size = 46
+  ctx.font = `bold ${size}px sans-serif`
+  while (ctx.measureText(name).width > 490 && size > 26) { size -= 2; ctx.font = `bold ${size}px sans-serif` }
+  if (ctx.measureText(name).width > 490) {
+    const words = name.split(' ')
+    const half = Math.ceil(words.length / 2)
+    ctx.fillText(words.slice(0, half).join(' '), 256, formula ? 42 : 52)
+    ctx.fillText(words.slice(half).join(' '), 256, formula ? 80 : 96)
+  } else {
+    ctx.fillText(name, 256, formula ? 54 : 76)
+  }
+  if (formula) {
+    ctx.font = 'bold 38px serif'
+    ctx.fillStyle = '#1e3a8a'
+    ctx.fillText(formula, 256, 118)
+  }
+  const tex = new THREE.CanvasTexture(canvas)
+  tex.colorSpace = THREE.SRGBColorSpace
+  tex.anisotropy = 8
+  return tex
+}
+let hoveredChemical: string | null = null
+let lookingInCupboard = false
+
+function stockCupboard() {
+  const cb = room?.cupboard
+  if (!cb) return
+  CUPBOARD_SHELVES.forEach((shelf, i) => {
+    const bay = cb.bays[i < 2 ? 0 : 1]
+    const y = bay.levels[i % 2]
+    const step = (bay.maxX - bay.minX) / shelf.length
+    shelf.forEach((chem, j) => {
+      const g = createObjectMesh(chemicalObjectType(chem), `cupboard:${chem.id}`, chem.name, chemicalProps(chem))
+      g.position.set(bay.minX + step * (j + 0.5), y, bay.frontZ - 0.6)
+      g.userData.chemicalId = chem.id
+      g.traverse((c) => { if (c instanceof THREE.Mesh) { c.castShadow = false; c.receiveShadow = false } })
+      scene.add(g)
+      cupboardBottles.set(chem.id, g)
+      // Shelf tag in front of each place, so students can read what is stored there (and where
+      // to find it again once it is back)
+      const tag = new THREE.Mesh(new THREE.PlaneGeometry(step * 0.92, 0.26), new THREE.MeshBasicMaterial({ map: shelfTagTexture(chem.name, chem.formula), toneMapped: false }))
+      tag.position.set(g.position.x, y + 0.14, bay.frontZ - 0.08)
+      tag.rotation.x = -0.35
+      tag.userData.chemicalId = chem.id
+      scene.add(tag)
+      cupboardTags.push(tag)
+    })
+  })
+  syncCupboard()
+}
+
+function syncCupboard() {
+  if (cupboardBottles.size === 0) return
+  const out = new Set(props.sceneObjects.map(o => o.props?.chemical_id).filter(Boolean))
+  cupboardBottles.forEach((g, id) => { g.visible = !out.has(id) })
+}
+
+type CupboardHit = { kind: 'door'; door: THREE.Object3D } | { kind: 'chemical'; id: string } | null
+
+/** What in the cupboard is under the pointer - null when it's apparatus, the room, or nothing. */
+function cupboardHit(): CupboardHit {
+  const cb = room?.cupboard
+  if (!cb) return null
+  raycaster.setFromCamera(pointerNdc, camera)
+  const targets: THREE.Object3D[] = [...cb.doors, ...cb.blockers]
+  groups.forEach(g => targets.push(g))
+  cupboardBottles.forEach((g) => { if (g.visible) targets.push(g) })
+  cupboardTags.forEach((t) => { if (cupboardBottles.get(t.userData.chemicalId)?.visible) targets.push(t) })
+  const hit = raycaster.intersectObjects(targets, true)[0]
+  if (!hit) return null
+  const door = cb.doorOf(hit.object)
+  if (door) return { kind: 'door', door }
+  let o: THREE.Object3D | null = hit.object
+  while (o && !o.userData.chemicalId) o = o.parent
+  return o ? { kind: 'chemical', id: o.userData.chemicalId as string } : null
+}
+
+function handleCupboardClick(): boolean {
+  const hit = cupboardHit()
+  if (!hit) return false
+  if (hit.kind === 'chemical') {
+    emit('takeChemical', hit.id)
+    return true
+  }
+  room!.cupboard!.toggleDoor(hit.door)
+  lookAtCupboard(room!.cupboard!.doors.some(d => room!.cupboard!.isOpen(d)))
+  return true
+}
+
+/** Opening the cupboard brings the camera down to look inside; closing it returns to the bench. */
+function lookAtCupboard(open: boolean) {
+  if (!room || open === lookingInCupboard) return
+  lookingInCupboard = open
+  const u = UNITS_PER_METRE
+  if (open) {
+    room.fitBox(
+      new THREE.Box3(new THREE.Vector3(-0.87 * u, -0.9 * u, -0.1 * u), new THREE.Vector3(0.87 * u, -0.03 * u, 0.6 * u)),
+      0.9, { dir: new THREE.Vector3(0, 0.32, 1), animate: true },
+    )
+  } else {
+    frameBench(true)
+  }
+}
 
 /**
  * Frames the whole bench (top and cabinet), whatever the canvas shape - the view then stays put as
  * apparatus comes and goes, until the student zooms or turns it themselves.
  */
-function frameBench() {
+function frameBench(animate = false) {
   if (!room) return
   const u = UNITS_PER_METRE
-  room.fitBox(new THREE.Box3(new THREE.Vector3(-0.9 * u, -0.9 * u, -0.375 * u), new THREE.Vector3(0.9 * u, 0.1 * u, 0.375 * u)), 0.72)
+  room.fitBox(
+    new THREE.Box3(new THREE.Vector3(-0.9 * u, -0.9 * u, -0.375 * u), new THREE.Vector3(0.9 * u, 0.1 * u, 0.375 * u)),
+    0.72, { dir: new THREE.Vector3(0.4, 4.2, 6.4), animate },
+  )
 }
 
 /** Frames everything on the bench (name tags excluded), whatever the canvas shape. */
@@ -1476,7 +1639,9 @@ function onHoverMove(ev: PointerEvent) {
   if (dragging) return
   pointerToNdc(ev)
   hoveredKey.value = raycastGroupKey()
-  renderer.domElement.style.cursor = hoveredKey.value ? 'pointer' : 'grab'
+  const inCupboard = hoveredKey.value ? null : cupboardHit()
+  hoveredChemical = inCupboard?.kind === 'chemical' ? inCupboard.id : null
+  renderer.domElement.style.cursor = hoveredKey.value || inCupboard ? 'pointer' : 'grab'
 }
 
 /** Toggles a switch's lever position and a connected bulb's glow, called by the parent after it validates the action server-side. */
