@@ -39,6 +39,7 @@ Thumbs.db
 # it straight to production, so the built app has to actually be committed for deploys to work.
 build/
 *.cache
+frontend/dist.zip
 
 # Uploads (keep structure, ignore content) - the real upload directory backend/public/uploads/
 # holds actual student/teacher-submitted files (assignment answers, chat media, profile
