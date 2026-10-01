@@ -130,10 +130,10 @@
                 <span class="text-lg flex-shrink-0"><AppIcon :name="CATEGORY_ICONS[e.category]" class="w-4 h-4" /></span>
               </div>
 
-              <div class="flex items-center gap-2 flex-wrap mb-4">
+              <div class="flex items-center gap-2 flex-wrap mb-2">
                 <span class="px-2 py-0.5 text-[11px] font-semibold rounded-full" :class="e.status === 'published' ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'">{{ e.status }}</span>
-                <span v-for="(label, li) in e.published_to" :key="li" class="px-2 py-0.5 text-[11px] font-semibold rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300">{{ label }}</span>
               </div>
+              <PublishedClasses :classes="e.published_to" class="mb-4" />
 
               <div class="flex-1"></div>
               <div class="flex items-center gap-2 pt-3 border-t border-gray-100 dark:border-gray-700">
@@ -164,6 +164,8 @@
                 <span v-if="t.estimated_duration_minutes" class="px-2 py-0.5 text-[10px] font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 inline-flex items-center gap-1"><AppIcon name="clock" class="w-3 h-3" /> {{ t.estimated_duration_minutes }} min</span>
                 <span v-if="t.template_version" class="px-2 py-0.5 text-[10px] font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">v{{ t.template_version }}</span>
               </div>
+
+              <PublishedClasses :classes="t.published_to" class="mt-2.5" />
 
               <div v-if="t.practical_skills?.length" class="flex items-center gap-1 flex-wrap mt-2">
                 <span v-for="sk in t.practical_skills.slice(0, 3)" :key="sk" class="px-2 py-0.5 text-[10px] font-medium rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300">{{ humanizeSkill(sk) }}</span>
@@ -828,6 +830,7 @@ import axios from 'axios'
 import { CATEGORY_ICONS, CATEGORY_LABELS, CATEGORY_COLORS } from '@/types/virtualLab'
 import type { ExperimentSummary, ExperimentDetail, LabObjectDef, TeacherAssignment, AttemptSummary, AttemptDetail, LabAction, LabCategory, SceneObjectConfig } from '@/types/virtualLab'
 import VirtualLabSkillsPanel from '@/components/virtuallab/VirtualLabSkillsPanel.vue'
+import PublishedClasses from '@/components/virtuallab/PublishedClasses.vue'
 import VirtualLabGraph from '@/components/virtuallab/VirtualLabGraph.vue'
 import VirtualLabMarking from '@/components/virtuallab/VirtualLabMarking.vue'
 import VirtualLabScene from '@/components/virtuallab/VirtualLabScene.vue'
