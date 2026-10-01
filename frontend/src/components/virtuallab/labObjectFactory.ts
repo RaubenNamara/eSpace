@@ -869,15 +869,90 @@ export function createObjectMesh(objectType: string, key: string, displayName: s
       break
     }
     case 'rheostat': {
-      add(mesh(rbox(0.8, 0.06, 0.2, 0.015), wood(), 0, 0.03))
-      const coil = new THREE.Mesh(new THREE.TubeGeometry(new Helix(0.66, 0.07, 40), 600, 0.006, 6, false), metal(0xb45309))
+      // Classic school sliding rheostat: wire wound on a ceramic tube between two cast-iron end
+      // plates, with a square slider bar above carrying the sliding contact.
+      const castIron = new THREE.MeshStandardMaterial({ color: 0x5c6159, roughness: 0.75, metalness: 0.45 })
+      const ceramic = new THREE.MeshStandardMaterial({ color: 0xe3bf94, roughness: 0.6 })
+      const blackPlastic = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.35 })
+      const axisY = 0.2, plateX = 0.79
+
+      // Fine black enamelled wire: a stripe texture repeated along the tube
+      const coilTex = canvasTex(64, 64, (ctx, w, h) => {
+        ctx.fillStyle = '#1a1a1a'; ctx.fillRect(0, 0, w, h)
+        for (let y = 0; y < h; y += 4) {
+          ctx.fillStyle = '#3a3a3a'; ctx.fillRect(0, y, w, 1)
+          ctx.fillStyle = '#050505'; ctx.fillRect(0, y + 2, w, 1)
+        }
+      })
+      coilTex.wrapS = coilTex.wrapT = THREE.RepeatWrapping
+      coilTex.repeat.set(1, 18)
+      const coil = mesh(new THREE.CylinderGeometry(0.125, 0.125, 1.24, 48), new THREE.MeshStandardMaterial({ map: coilTex, roughness: 0.4, metalness: 0.6 }), 0, axisY)
       coil.rotation.z = Math.PI / 2
-      coil.position.y = 0.16
-      add(coil, mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.66, 24), enamel(0xf5f5f4), 0, 0.16))
-      ;(group.children[group.children.length - 1] as THREE.Mesh).rotation.z = Math.PI / 2
-      const bar = mesh(new THREE.BoxGeometry(0.7, 0.02, 0.02), metal(), 0, 0.27)
-      const slider = mesh(rbox(0.06, 0.1, 0.08, 0.01), plastic(0x111827), 0.1, 0.24)
-      add(bar, slider, terminal(-0.36, 0.06, 0.06, 0xdc2626), terminal(0.36, 0.06, 0.06, 0x111827))
+      add(coil)
+
+      for (const side of [-1, 1]) {
+        // Ceramic end of the tube, chrome band, and the boss it sits in
+        const cap = mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.1, 40), ceramic, side * 0.67, axisY)
+        const band = mesh(new THREE.CylinderGeometry(0.129, 0.129, 0.035, 40), chrome(), side * 0.635, axisY)
+        const boss = mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.05, 32), castIron, side * 0.745, axisY)
+        for (const m of [cap, band, boss]) m.rotation.z = Math.PI / 2
+        add(cap, band, boss)
+
+        // End plate: tapered upright with feet, cast iron
+        const shape = new THREE.Shape()
+        shape.moveTo(-0.17, 0); shape.lineTo(0.17, 0); shape.lineTo(0.09, 0.42); shape.lineTo(-0.09, 0.42); shape.closePath()
+        const plateGeo = new THREE.ExtrudeGeometry(shape, { depth: 0.03, bevelEnabled: true, bevelSize: 0.006, bevelThickness: 0.006, bevelSegments: 2 })
+        plateGeo.translate(0, 0, -0.015)
+        const plate = new THREE.Mesh(plateGeo, castIron)
+        plate.rotation.y = Math.PI / 2
+        plate.position.x = side * plateX
+        add(plate)
+        for (const z of [-0.2, 0.2]) {
+          const foot = mesh(rbox(0.1, 0.025, 0.09, 0.008), castIron, side * (plateX - side * 0.04), 0.0125, z)
+          const hole = mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.027, 16), new THREE.MeshStandardMaterial({ color: 0x1f2937 }), side * (plateX - side * 0.04), 0.0125, z)
+          add(foot, hole)
+        }
+        // Screw lug under each end of the coil
+        add(mesh(rbox(0.05, 0.03, 0.06, 0.006), chrome(), side * 0.6, axisY - 0.15, 0.06))
+        add(mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.02, 12), metal(0x9ca3af), side * 0.6, axisY - 0.125, 0.06))
+      }
+
+      // Black knurled terminal posts on the end plates (two on the right, one on the left) and a brass stud
+      const terminalPost = (x: number, y: number, z: number, dir: number) => {
+        const g = new THREE.Group()
+        const stem = mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.04, 12), brass(), dir * 0.02, 0, 0)
+        stem.rotation.z = Math.PI / 2
+        const knob = mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.06, 18), blackPlastic, dir * 0.065, 0, 0)
+        knob.rotation.z = Math.PI / 2
+        for (let i = 0; i < 9; i++) {
+          const rib = mesh(new THREE.BoxGeometry(0.06, 0.006, 0.006), blackPlastic, dir * 0.065, Math.cos(i * 0.7) * 0.03, Math.sin(i * 0.7) * 0.03)
+          g.add(rib)
+        }
+        g.add(stem, knob)
+        g.position.set(x, y, z)
+        return g
+      }
+      add(terminalPost(plateX + 0.02, 0.32, 0.03, 1), terminalPost(plateX + 0.02, 0.1, 0.03, 1), terminalPost(-plateX - 0.02, 0.2, 0.06, -1))
+      const stud = mesh(new THREE.CylinderGeometry(0.012, 0.016, 0.05, 12), brass(), plateX + 0.04, 0.21, -0.03)
+      stud.rotation.z = Math.PI / 2
+      add(stud)
+
+      // Square slider bar across the top of the plates
+      add(mesh(new THREE.BoxGeometry(plateX * 2, 0.035, 0.035), chrome(), 0, 0.395, -0.02))
+
+      // Sliding contact: black block on the bar with two screws and its rating
+      const slider = new THREE.Group()
+      const labelTex = canvasTex(128, 128, (ctx, w, h) => {
+        ctx.fillStyle = '#111111'; ctx.fillRect(0, 0, w, h)
+        ctx.fillStyle = '#e5e7eb'; ctx.font = 'bold 26px Arial'; ctx.textAlign = 'center'
+        ctx.save(); ctx.translate(30, h / 2); ctx.rotate(-Math.PI / 2); ctx.fillText('11', 0, -4); ctx.fillText('5', 0, 22); ctx.restore()
+      })
+      slider.add(mesh(rbox(0.13, 0.08, 0.13, 0.015), [blackPlastic, blackPlastic, new THREE.MeshStandardMaterial({ map: labelTex, roughness: 0.35 }), blackPlastic, blackPlastic, blackPlastic], 0, 0.41, -0.01))
+      slider.add(mesh(rbox(0.12, 0.09, 0.05, 0.012), blackPlastic, 0, 0.34, 0.05))
+      for (const z of [-0.035, 0.025]) slider.add(mesh(new THREE.CylinderGeometry(0.017, 0.017, 0.006, 20), chrome(), 0.02, 0.453, z))
+      slider.position.x = 0.05
+      slider.userData.role = 'slider'
+      add(slider)
       break
     }
     case 'metre_rule': {
