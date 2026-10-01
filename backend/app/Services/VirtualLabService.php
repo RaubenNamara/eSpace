@@ -746,6 +746,8 @@ class VirtualLabService
             'INSERT INTO virtual_lab_assignments (experiment_id, class_id, class_group_name, subject_id, teacher_id, term_id, academic_year, due_date, marks, status, created_at, updated_at)
              VALUES (:experiment_id, NULL, :class_group_name, :subject_id, :teacher_id, :term_id, :academic_year, :due_date, :marks, :status, NOW(), NOW())'
         );
+        // class_id is written as a literal NULL here, so it must not be passed as a parameter too
+        unset($params['class_id']);
         $stmt->execute($params);
         return (int) \eSpace\Config\Database::lastInsertId();
     }
