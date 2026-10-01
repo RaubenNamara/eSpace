@@ -76,15 +76,15 @@
     >
 
     <!-- Details -->
-    <div class="mt-2.5 flex items-start gap-2">
-      <div class="min-w-0 flex-1">
-        <h3
-          class="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug cursor-pointer group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors"
-          @click="$emit('play')"
-        >{{ video.title }}</h3>
-        <p v-if="subtitle" class="mt-0.5 text-xs text-gray-500 dark:text-gray-400 truncate">{{ subtitle }}</p>
-        <p class="text-[11px] text-gray-400 dark:text-gray-500 truncate">{{ meta }}</p>
-      </div>
+    <div class="mt-2 flex items-start gap-2">
+      <p
+        class="min-w-0 flex-1 line-clamp-2 text-xs leading-snug cursor-pointer"
+        :title="[video.title, subtitle, meta].filter(Boolean).join(', ')"
+        @click="$emit('play')"
+      >
+        <span class="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{{ video.title }}</span>
+        <span v-for="part in [subtitle, meta].filter(Boolean)" :key="part" class="text-gray-500 dark:text-gray-400">, {{ part }}</span>
+      </p>
       <div v-if="$slots.actions" class="flex items-center flex-shrink-0 -mr-1.5">
         <slot name="actions" />
       </div>
