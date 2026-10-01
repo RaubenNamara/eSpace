@@ -25,6 +25,7 @@ const brass = () => new THREE.MeshStandardMaterial({ color: 0xd4a84b, roughness:
 const plastic = (color: number) => new THREE.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0.05 })
 const enamel = (color: number) => new THREE.MeshStandardMaterial({ color, roughness: 0.35, metalness: 0.1 })
 const wood = () => new THREE.MeshStandardMaterial({ color: 0x9a6841, roughness: 0.7 })
+const tin_ = () => new THREE.MeshStandardMaterial({ color: 0xd9dde2, roughness: 0.3, metalness: 0.9 })
 
 const rbox = (w: number, h: number, d: number, r = Math.min(w, h, d) * 0.12) => new RoundedBoxGeometry(w, h, d, 3, r)
 
@@ -1144,6 +1145,214 @@ export function createObjectMesh(objectType: string, key: string, displayName: s
         const tag = labelSprite(sign); tag.scale.set(0.16, 0.035, 1); tag.position.set(x, 0.86, 0.12)
         add(tag)
       }
+      break
+    }
+    case 'potentiometer': {
+      // Rotary potentiometer (shown about twice life size): plated steel can, brown phenolic
+      // board with three solder lugs, threaded bush with hex nut and a plain steel shaft
+      const zinc = new THREE.MeshStandardMaterial({ color: 0xc9c38f, roughness: 0.35, metalness: 0.9 })
+      const steel = metal(0xb8bec6)
+      const phenolic = new THREE.MeshStandardMaterial({ color: 0x9a3f17, roughness: 0.55 })
+      const r = 0.12
+      add(mesh(new THREE.CylinderGeometry(r, r, 0.09, 48), zinc, 0, 0.045))
+      // Board: a disc with a tab sticking out at the front for the lugs
+      const board = new THREE.Shape()
+      board.absarc(0, 0, r * 1.02, Math.PI * 0.05, Math.PI * 0.95, true)
+      board.lineTo(-r * 1.05, r * 0.6)
+      board.lineTo(r * 1.05, r * 0.6)
+      const boardGeo = new THREE.ExtrudeGeometry(board, { depth: 0.012, bevelEnabled: false })
+      const boardMesh = mesh(boardGeo, phenolic, 0, 0.102, 0)
+      boardMesh.rotation.x = Math.PI / 2
+      add(boardMesh)
+      // Mounting plate, bush, nut and shaft
+      add(mesh(rbox(0.2, 0.012, 0.14, 0.004), steel, 0, 0.114, -0.02))
+      add(mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.008, 32), brass(), 0, 0.124))
+      const nut = mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.03, 6), zinc, 0, 0.143)
+      add(nut)
+      add(mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.06, 24), steel, 0, 0.16))
+      for (let i = 0; i < 4; i++) {
+        const thread = mesh(new THREE.TorusGeometry(0.031, 0.004, 6, 24), steel, 0, 0.14 + i * 0.012)
+        thread.rotation.x = Math.PI / 2
+        add(thread)
+      }
+      const shaft = mesh(new THREE.CylinderGeometry(0.024, 0.024, 0.2, 24), steel, 0, 0.29)
+      shaft.userData.role = 'lever'
+      add(shaft, mesh(new THREE.SphereGeometry(0.024, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), steel, 0, 0.39))
+      // Anti-rotation tab and the three lugs with solder holes
+      add(mesh(new THREE.BoxGeometry(0.02, 0.06, 0.012), steel, -0.08, 0.15, -0.07))
+      for (const x of [-0.07, 0, 0.07]) {
+        const lug = mesh(new THREE.BoxGeometry(0.03, 0.08, 0.004), steel, x, 0.07, r * 0.66)
+        const eye = mesh(new THREE.TorusGeometry(0.012, 0.005, 8, 16), steel, x, 0.035, r * 0.66)
+        add(lug, eye)
+      }
+      break
+    }
+    case 'metre_bridge': {
+      // A 1 m slide-wire (metre) bridge: wooden base, metre scale, the resistance wire stretched
+      // along it, thick brass strips with gaps for the two resistors, terminals and a jockey
+      const L = 5.5, Wd = 0.5
+      add(mesh(rbox(L, 0.08, Wd, 0.01), new THREE.MeshStandardMaterial({ color: 0xb06a32, roughness: 0.6 }), 0, 0.04))
+      const scaleTex = canvasTex(2048, 96, (ctx, w, h) => {
+        ctx.fillStyle = '#f6d58a'
+        ctx.fillRect(0, 0, w, h)
+        ctx.fillStyle = '#1f2937'
+        ctx.strokeStyle = '#1f2937'
+        ctx.font = 'bold 22px Arial'
+        ctx.textAlign = 'center'
+        for (let i = 0; i <= 100; i++) {
+          const x = 24 + (i / 100) * (w - 48)
+          const major = i % 10 === 0
+          ctx.lineWidth = major ? 3 : 1.4
+          ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, major ? 46 : i % 5 === 0 ? 34 : 22); ctx.stroke()
+          if (major) ctx.fillText(String(i), x, 76)
+        }
+      })
+      const scale = mesh(new THREE.PlaneGeometry(5.0, 0.14), new THREE.MeshStandardMaterial({ map: scaleTex, roughness: 0.6 }), 0, 0.081, 0.12)
+      scale.rotation.x = -Math.PI / 2
+      add(scale)
+      const strip = enamel(0xd8dde3)
+      // Brass/steel strips: an L at each end and a middle strip, leaving two gaps
+      add(mesh(new THREE.BoxGeometry(0.85, 0.012, 0.07), strip, -2.1, 0.086, -0.15))
+      add(mesh(new THREE.BoxGeometry(0.07, 0.012, 0.32), strip, -2.5, 0.086, 0))
+      add(mesh(new THREE.BoxGeometry(0.85, 0.012, 0.07), strip, 2.1, 0.086, -0.15))
+      add(mesh(new THREE.BoxGeometry(0.07, 0.012, 0.32), strip, 2.5, 0.086, 0))
+      add(mesh(new THREE.BoxGeometry(2.6, 0.012, 0.07), strip, 0, 0.086, -0.15))
+      // The resistance wire over the scale
+      const wire = mesh(new THREE.CylinderGeometry(0.004, 0.004, 5.0, 8), chrome(), 0, 0.1, 0.06)
+      wire.rotation.z = Math.PI / 2
+      add(wire)
+      // Yellow binding-post terminals
+      const yellow = plastic(0xfacc15)
+      for (const [x, z] of [[-2.5, 0.13], [-2.4, -0.15], [-1.75, -0.15], [-1.2, -0.15], [0, -0.15], [1.2, -0.15], [1.75, -0.15], [2.4, -0.15], [2.5, 0.13]]) {
+        add(mesh(new THREE.CylinderGeometry(0.03, 0.035, 0.08, 16), yellow, x, 0.13, z))
+        add(mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.03, 10), brass(), x, 0.185, z))
+      }
+      // Jockey: black handle with a knife-edge contact resting on the wire
+      const jockey = mesh(new THREE.CylinderGeometry(0.03, 0.035, 0.28, 16), plastic(0x111827), -0.9, 0.16, 0.03)
+      jockey.rotation.z = Math.PI / 2.4
+      const tip = mesh(new THREE.ConeGeometry(0.012, 0.05, 8), chrome(), -0.79, 0.11, 0.05)
+      add(jockey, tip)
+      // Rubber feet
+      for (const x of [-2.55, 2.55]) for (const z of [-0.2, 0.2]) add(mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.02, 12), plastic(0x111827), x, -0.005, z))
+      break
+    }
+    case 'optical_pyrometer': {
+      // Disappearing-filament optical pyrometer standing in front of its carrying case
+      const black = new THREE.MeshStandardMaterial({ color: 0x1f2123, roughness: 0.8 })
+      const nickel = chrome()
+      const leather = new THREE.MeshStandardMaterial({ color: 0x8a5a2b, roughness: 0.7 })
+      // Case behind, with its lid and strap
+      add(mesh(new THREE.CylinderGeometry(0.3, 0.3, 1.3, 40), black, 0, 0.65, -0.32))
+      add(mesh(new THREE.CylinderGeometry(0.31, 0.31, 0.08, 40), black, 0, 1.33, -0.32))
+      // Leather straps buckled round the case
+      for (const y of [0.45, 1.05]) {
+        const strap = mesh(new THREE.TorusGeometry(0.305, 0.012, 6, 48), leather, 0, y, -0.32)
+        strap.rotation.x = Math.PI / 2
+        strap.scale.z = 2.2
+        add(strap)
+      }
+      // The instrument
+      add(mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.95, 40), black, 0, 0.5, 0.05))
+      add(mesh(new THREE.CylinderGeometry(0.205, 0.205, 0.06, 40), nickel, 0, 0.03, 0.05))
+      // Nameplate band with the temperature scale window
+      const bandTex = canvasTex(512, 128, (ctx, w, h) => {
+        ctx.fillStyle = '#d6d9dc'
+        ctx.fillRect(0, 0, w, h)
+        ctx.fillStyle = '#f5f2e6'
+        ctx.fillRect(150, 18, 210, 92)
+        ctx.strokeStyle = '#374151'
+        ctx.strokeRect(150, 18, 210, 92)
+        ctx.fillStyle = '#14532d'
+        ctx.font = 'italic bold 44px Georgia'
+        ctx.fillText('Pyro', 200, 72)
+        ctx.font = '14px Arial'
+        ctx.fillStyle = '#111827'
+        for (let i = 0; i < 9; i++) ctx.fillRect(160 + i * 22, 98, 2, 8)
+      })
+      // Centre the scale window on the front of the band
+      bandTex.wrapS = THREE.RepeatWrapping
+      bandTex.offset.x = 0.5
+      add(mesh(new THREE.CylinderGeometry(0.203, 0.203, 0.16, 40, 1, true), new THREE.MeshStandardMaterial({ map: bandTex, roughness: 0.3, metalness: 0.5 }), 0, 0.72, 0.05))
+      // Adjusting ring on the front and the eyepiece with its rubber cup on top
+      const ring = mesh(new THREE.TorusGeometry(0.07, 0.015, 10, 32), nickel, 0, 0.42, 0.25)
+      const knob = mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.02, 24), black, 0, 0.42, 0.25)
+      knob.rotation.x = Math.PI / 2
+      add(ring, knob)
+      const cupProfile = [new THREE.Vector2(0.06, 0), new THREE.Vector2(0.065, 0.04), new THREE.Vector2(0.1, 0.11), new THREE.Vector2(0.095, 0.12)]
+      const cup = new THREE.Mesh(new THREE.LatheGeometry(cupProfile, 32), new THREE.MeshStandardMaterial({ color: 0x2b2d30, roughness: 0.9, side: THREE.DoubleSide }))
+      cup.position.set(0, 1.05, 0.05)
+      cup.rotation.x = -0.2
+      add(mesh(new THREE.CylinderGeometry(0.07, 0.08, 0.1, 24), black, 0, 1.0, 0.05), cup)
+      // Clasp on the side
+      add(mesh(new THREE.BoxGeometry(0.03, 0.1, 0.03), nickel, 0.2, 0.82, 0.05))
+      break
+    }
+    case 'power_transistor': {
+      // TIP122 Darlington power transistor in a TO-220 package (shown about four times life size):
+      // black epoxy body, metal heat-sink tab with its mounting hole, and three legs
+      const epoxy = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.55 })
+      const tin = metal(0xd9dde2)
+      const legLen = 0.5
+      for (const x of [-0.1, 0, 0.1]) {
+        add(mesh(new THREE.BoxGeometry(0.03, legLen, 0.012), tin, x, legLen / 2, 0))
+        add(mesh(new THREE.BoxGeometry(0.05, 0.06, 0.014), tin, x, legLen + 0.02, 0))
+      }
+      const body = mesh(rbox(0.4, 0.36, 0.18, 0.015), epoxy, 0, legLen + 0.2, 0.02)
+      add(body)
+      const markTex = canvasTex(256, 224, (ctx, w, h) => {
+        ctx.fillStyle = '#18181b'
+        ctx.fillRect(0, 0, w, h)
+        ctx.fillStyle = '#e5e7eb'
+        ctx.font = 'bold 48px Arial'
+        ctx.textAlign = 'center'
+        ctx.fillText('TIP122G', w / 2, 90)
+        ctx.font = 'bold 40px Arial'
+        ctx.fillText('AFN39', w / 2, 150)
+        ctx.beginPath(); ctx.arc(40, 40, 18, 0, Math.PI * 2); ctx.lineWidth = 4; ctx.strokeStyle = '#e5e7eb'; ctx.stroke()
+      })
+      add(mesh(new THREE.PlaneGeometry(0.38, 0.33), new THREE.MeshStandardMaterial({ map: markTex, roughness: 0.6 }), 0, legLen + 0.2, 0.111))
+      // Heat-sink tab with a round hole, sticking out of the top behind the body
+      const tab = new THREE.Shape()
+      tab.moveTo(-0.2, 0); tab.lineTo(0.2, 0); tab.lineTo(0.2, 0.34); tab.lineTo(-0.2, 0.34); tab.lineTo(-0.2, 0)
+      const hole = new THREE.Path()
+      hole.absarc(0, 0.26, 0.06, 0, Math.PI * 2, false)
+      tab.holes.push(hole)
+      const tabMesh = mesh(new THREE.ExtrudeGeometry(tab, { depth: 0.05, bevelEnabled: false }), tin, 0, legLen + 0.2, -0.07)
+      add(tabMesh)
+      break
+    }
+    case 'capacitor': {
+      // 2200 uF 16 V radial electrolytic capacitor (shown about four times life size): blue
+      // sleeve with the black negative stripe, aluminium top, two leads
+      const r = 0.26, h = 0.95, legs = 0.35
+      const sleeveTex = canvasTex(1024, 512, (ctx, w, hh) => {
+        ctx.fillStyle = '#38bdf8'
+        ctx.fillRect(0, 0, w, hh)
+        // Negative stripe with minus signs
+        ctx.fillStyle = '#0f172a'
+        ctx.fillRect(w * 0.62, 0, w * 0.16, hh)
+        ctx.fillStyle = '#38bdf8'
+        for (let y = 60; y < hh; y += 130) ctx.fillRect(w * 0.66, y, w * 0.08, 18)
+        ctx.fillStyle = '#0f172a'
+        ctx.save()
+        ctx.translate(w * 0.3, hh / 2)
+        ctx.rotate(-Math.PI / 2)
+        ctx.textAlign = 'center'
+        ctx.font = 'bold 84px Arial'
+        ctx.fillText('2200 µF', 0, -40)
+        ctx.font = 'bold 64px Arial'
+        ctx.fillText('16 V', 0, 40)
+        ctx.font = 'italic 44px Georgia'
+        ctx.fillText('Robicon®  -40+85°C', 0, 110)
+        ctx.restore()
+      })
+      sleeveTex.wrapS = THREE.RepeatWrapping
+      // The printing faces the front, the negative stripe down the right side
+      sleeveTex.offset.x = 0.3
+      add(mesh(new THREE.CylinderGeometry(r, r, h, 48), new THREE.MeshStandardMaterial({ map: sleeveTex, roughness: 0.4 }), 0, legs + h / 2))
+      add(mesh(new THREE.CylinderGeometry(r * 0.94, r * 0.94, 0.012, 48), metal(0xd1d5db), 0, legs + h + 0.002))
+      add(mesh(new THREE.CylinderGeometry(r * 0.94, r * 0.94, 0.02, 48), plastic(0x111827), 0, legs - 0.005))
+      for (const x of [-0.09, 0.09]) add(mesh(new THREE.CylinderGeometry(0.008, 0.008, legs, 8), tin_(), x, legs / 2, 0))
       break
     }
     case 'metre_rule': {
