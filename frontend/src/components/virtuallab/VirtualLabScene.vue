@@ -44,6 +44,14 @@
         >
           {{ actionLabel(act) }}
         </button>
+        <!-- Playground: send it back where it came from (the cupboard for chemicals, else the shelves) -->
+        <button
+          v-if="cupboard"
+          @click="putBackSelected"
+          class="px-2.5 py-1.5 sm:py-1 text-xs font-semibold rounded-lg bg-amber-700 text-white hover:bg-amber-800 active:scale-95 transition-transform"
+        >
+          {{ selectedIsChemical ? 'Put Back in Cupboard' : 'Put Back on Shelf' }}
+        </button>
       </div>
 
       <!-- Real, simulation-derived reading - never free-typed. -->
@@ -188,14 +196,14 @@
     </div>
 
     <p class="hidden sm:block absolute right-3 bottom-3 text-[10px] text-gray-500 dark:text-gray-400 bg-white/70 dark:bg-gray-900/60 rounded px-2 py-1 pointer-events-none">
-      Drag to orbit &middot; Scroll to zoom &middot; Click equipment to interact<template v-if="cupboard"> &middot; Open the cupboard doors for chemicals</template>
+      Drag to orbit &middot; Scroll to zoom &middot; Click equipment to interact<template v-if="cupboard"> &middot; Open the cupboard doors for chemicals &middot; Click an empty shelf tag to put a chemical back</template>
     </p>
   </div>
 </template>
 
 <script setup lang="ts">
 import AppIcon from '@/components/common/AppIcon.vue'
-import { ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { createObjectMesh, createConnectionLine, voltageSpriteTexture, digitalDisplayTexture } from './labObjectFactory'
@@ -217,6 +225,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   /** A chemical was taken out of the bench cupboard (see chemicals.ts) */
   takeChemical: [chemicalId: string]
+  /** Put this bench object back - into the cupboard (chemicals) or onto the shelves */
+  putBack: [objectKey: string]
   action: [{ objectKey: string | null; action: LabAction; value: string | null; unit?: string | null; label?: string | null; safetyIssue?: boolean; targetObjectKey?: string | null; springLoadG?: number }]
 }>()
 
@@ -1531,7 +1541,6 @@ function shelfTagTexture(name: string, formula?: string): THREE.CanvasTexture {
   return tex
 }
 let hoveredChemical: string | null = null
-let lookingInCupboard = false
 
 function stockCupboard() {
   const cb = room?.cupboard
@@ -1576,7 +1585,7 @@ function cupboardHit(): CupboardHit {
   const targets: THREE.Object3D[] = [...cb.doors, ...cb.blockers]
   groups.forEach(g => targets.push(g))
   cupboardBottles.forEach((g) => { if (g.visible) targets.push(g) })
-  cupboardTags.forEach((t) => { if (cupboardBottles.get(t.userData.chemicalId)?.visible) targets.push(t) })
+  cupboardTags.forEach(t => targets.push(t))
   const hit = raycaster.intersectObjects(targets, true)[0]
   if (!hit) return null
   const door = cb.doorOf(hit.object)
@@ -1590,39 +1599,36 @@ function handleCupboardClick(): boolean {
   const hit = cupboardHit()
   if (!hit) return false
   if (hit.kind === 'chemical') {
-    emit('takeChemical', hit.id)
+    // Its bottle is on the shelf: take it out. Its place is empty: put it back from the bench.
+    const out = props.sceneObjects.find(o => o.props?.chemical_id === hit.id)
+    if (out) emit('putBack', out.key)
+    else emit('takeChemical', hit.id)
     return true
   }
+  // The view stays where the student left it - they zoom and turn to look inside themselves
   room!.cupboard!.toggleDoor(hit.door)
-  lookAtCupboard(room!.cupboard!.doors.some(d => room!.cupboard!.isOpen(d)))
   return true
 }
 
-/** Opening the cupboard brings the camera down to look inside; closing it returns to the bench. */
-function lookAtCupboard(open: boolean) {
-  if (!room || open === lookingInCupboard) return
-  lookingInCupboard = open
-  const u = UNITS_PER_METRE
-  if (open) {
-    room.fitBox(
-      new THREE.Box3(new THREE.Vector3(-0.87 * u, -0.9 * u, -0.1 * u), new THREE.Vector3(0.87 * u, -0.03 * u, 0.6 * u)),
-      0.9, { dir: new THREE.Vector3(0, 0.32, 1), animate: true },
-    )
-  } else {
-    frameBench(true)
-  }
+const selectedIsChemical = computed(() => !!props.sceneObjects.find(o => o.key === selectedKey.value)?.props?.chemical_id)
+
+function putBackSelected() {
+  const key = selectedKey.value
+  if (!key) return
+  deselect()
+  emit('putBack', key)
 }
 
 /**
  * Frames the whole bench (top and cabinet), whatever the canvas shape - the view then stays put as
  * apparatus comes and goes, until the student zooms or turns it themselves.
  */
-function frameBench(animate = false) {
+function frameBench() {
   if (!room) return
   const u = UNITS_PER_METRE
   room.fitBox(
     new THREE.Box3(new THREE.Vector3(-0.9 * u, -0.9 * u, -0.375 * u), new THREE.Vector3(0.9 * u, 0.1 * u, 0.375 * u)),
-    0.72, { dir: new THREE.Vector3(0.4, 4.2, 6.4), animate },
+    0.72, { dir: new THREE.Vector3(0.4, 4.2, 6.4) },
   )
 }
 
