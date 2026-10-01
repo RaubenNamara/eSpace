@@ -427,6 +427,12 @@ class VirtualLabController extends Controller
             return;
         }
 
+        $graphError = $this->service()->graphRequirementError((int) $attemptId);
+        if ($graphError !== null) {
+            $this->error($graphError, 422);
+            return;
+        }
+
         $ok = $this->service()->submitAttempt((int) $attemptId, $this->input('conclusion'), $this->input('graph_x_key'), $this->input('graph_y_key'));
         if (!$ok) {
             $this->error('Attempt already submitted or not found', 400);

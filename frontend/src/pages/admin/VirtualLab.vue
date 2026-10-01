@@ -7,7 +7,7 @@
       </div>
       <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight">Virtual Lab</h1>
     </div>
-    <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Oversee every experiment across all teachers, remove what shouldn't be there, and manage the 3D apparatus catalogue.</p>
+    <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Share library experiments with departments, oversee every teacher's experiments, and manage the 3D apparatus catalogue.</p>
 
     <!-- Tabs -->
     <div class="inline-flex flex-wrap gap-1 mb-5 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-1 shadow-sm">
@@ -73,6 +73,15 @@
           <option value="">All subjects</option>
           <option v-for="(label, key) in CATEGORY_LABELS" :key="key" :value="key">{{ label }}</option>
         </select>
+        <div class="inline-flex gap-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-1">
+          <button
+            v-for="o in SOURCE_OPTIONS"
+            :key="o.key"
+            @click="sourceFilter = o.key"
+            class="px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap"
+            :class="sourceFilter === o.key ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'"
+          >{{ o.label }}</button>
+        </div>
         <select v-model="expFilters.status" class="input-field text-sm w-auto">
           <option value="">All statuses</option>
           <option value="draft">Draft</option>
@@ -81,12 +90,12 @@
         </select>
       </div>
 
-      <div v-if="experiments.length" class="flex items-center gap-2 mb-3">
+      <div v-if="visibleExperiments.length" class="flex items-center gap-2 mb-3">
         <label class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none">
           <input type="checkbox" :checked="allSelected" @change="toggleAll" class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500">
           Select all
         </label>
-        <span class="ml-auto text-xs text-gray-400">{{ experiments.length }} {{ experiments.length === 1 ? 'experiment' : 'experiments' }}</span>
+        <span class="ml-auto text-xs text-gray-400">{{ visibleExperiments.length }} {{ visibleExperiments.length === 1 ? 'experiment' : 'experiments' }}</span>
       </div>
 
       <BulkActionBar :count="selected.size" @clear="selected.clear()">
@@ -98,14 +107,14 @@
         <div v-for="i in 4" :key="i" class="h-24 rounded-2xl bg-gray-200 dark:bg-gray-700 animate-pulse"></div>
       </div>
 
-      <div v-else-if="experiments.length === 0" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-12 text-center">
+      <div v-else-if="visibleExperiments.length === 0" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-12 text-center">
         <AppIcon name="beaker" class="w-10 h-10 mx-auto text-gray-300 dark:text-gray-600 mb-2" />
         <p class="text-sm text-gray-500 dark:text-gray-400">No experiments match these filters.</p>
       </div>
 
       <div v-else class="space-y-3">
         <div
-          v-for="e in experiments"
+          v-for="e in visibleExperiments"
           :key="e.id"
           class="bg-white dark:bg-gray-800 rounded-2xl border shadow-sm p-4 transition-colors"
           :class="selected.has(e.id) ? 'border-indigo-300 dark:border-indigo-700 ring-1 ring-indigo-100 dark:ring-indigo-900/40' : 'border-gray-200 dark:border-gray-700'"
@@ -117,7 +126,7 @@
             <div class="min-w-0 flex-1">
               <div class="flex flex-wrap items-center gap-1.5">
                 <h3 class="font-semibold text-gray-900 dark:text-white leading-snug">{{ e.title }}</h3>
-                <span v-if="e.is_template" class="px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">Template</span>
+                <span v-if="e.is_template" class="px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">Library</span>
                 <span class="px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase" :class="STATUS_BADGE[e.status]">{{ STATUS_LABEL[e.status] }}</span>
               </div>
               <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
@@ -135,9 +144,22 @@
                 <span v-for="t in (e.published_to || []).slice(0, 3)" :key="t" class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">{{ t }}</span>
                 <span v-if="(e.published_to || []).length > 3" class="text-[11px] text-gray-400">+{{ (e.published_to || []).length - 3 }} more</span>
               </div>
+              <div v-if="e.is_template" class="flex flex-wrap items-center gap-1.5 mt-2">
+                <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400">Departments:</span>
+                <span v-for="d in e.shared_departments || []" :key="d.id" class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">{{ d.name }}</span>
+                <span v-if="!(e.shared_departments || []).length" class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">Not shared - no teacher can use it yet</span>
+              </div>
             </div>
 
             <div class="flex flex-col sm:flex-row items-end sm:items-center gap-1.5 flex-shrink-0">
+              <button
+                v-if="e.is_template"
+                @click="openShare(e)"
+                class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-sky-600 text-white hover:bg-sky-700"
+                title="Choose which departments' teachers can use and publish this experiment"
+              >
+                <AppIcon name="users" class="w-3.5 h-3.5" /> Departments
+              </button>
               <button
                 v-if="e.status !== 'disabled'"
                 @click="setStatus(e, 'disabled')"
@@ -212,6 +234,37 @@
           <div class="flex flex-wrap gap-1 mt-2.5">
             <span v-for="a in o.supported_actions" :key="a" class="px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">{{ humanize(a) }}</span>
           </div>
+        </div>
+      </div>
+    </div>
+    <!-- Share with departments -->
+    <div v-if="shareTarget" class="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4" @click.self="shareTarget = null">
+      <div class="bg-white dark:bg-gray-800 w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[90dvh] flex flex-col">
+        <div class="px-5 pt-4 pb-3 border-b border-gray-100 dark:border-gray-700 flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <h3 class="font-bold text-gray-900 dark:text-white">Share with departments</h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ shareTarget.title }}</p>
+          </div>
+          <button @click="shareTarget = null" aria-label="Close" class="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">✕</button>
+        </div>
+        <div class="px-5 py-3 overflow-y-auto flex-1">
+          <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Teachers in the ticked departments will see this experiment in their Department Library and can publish it to their classes. Unticking a department stops new publishing; classes already doing it keep it.</p>
+          <div v-if="loadingDepartments" class="py-6 text-center text-xs text-gray-400">Loading departments...</div>
+          <p v-else-if="departments.length === 0" class="py-6 text-center text-xs text-gray-400">No departments found. Create departments first.</p>
+          <div v-else class="space-y-1.5">
+            <label class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-indigo-700 dark:text-indigo-300 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/20">
+              <input type="checkbox" :checked="shareSelection.size === departments.length" @change="toggleAllDepartments" class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+              All departments
+            </label>
+            <label v-for="d in departments" :key="d.id" class="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50" :class="shareSelection.has(d.id) ? 'border-sky-300 dark:border-sky-700 bg-sky-50/60 dark:bg-sky-900/20' : ''">
+              <input type="checkbox" :checked="shareSelection.has(d.id)" @change="shareSelection.has(d.id) ? shareSelection.delete(d.id) : shareSelection.add(d.id)" class="w-4 h-4 rounded border-gray-300 text-sky-600 focus:ring-sky-500">
+              <span class="text-sm text-gray-800 dark:text-gray-100">{{ d.name }}</span>
+            </label>
+          </div>
+        </div>
+        <div class="px-5 py-3 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-2">
+          <button @click="shareTarget = null" class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">Cancel</button>
+          <button @click="saveShare" :disabled="savingShare" class="px-4 py-2 text-sm font-semibold rounded-lg bg-sky-600 text-white hover:bg-sky-700 disabled:opacity-50">{{ savingShare ? 'Saving...' : 'Save' }}</button>
         </div>
       </div>
     </div>
@@ -298,13 +351,73 @@ const filteredObjects = computed(() => {
 const humanize = (s: string) => s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 const formatDate = (d: string) => new Date(d.replace(' ', 'T')).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 
+// --- Library vs teachers' own experiments ---
+const SOURCE_OPTIONS = [
+  { key: 'all', label: 'All' },
+  { key: 'library', label: 'Library' },
+  { key: 'teachers', label: "Teachers'" },
+] as const
+const sourceFilter = ref<'all' | 'library' | 'teachers'>('all')
+const visibleExperiments = computed(() => experiments.value.filter(e =>
+  sourceFilter.value === 'all' || (sourceFilter.value === 'library' ? e.is_template : !e.is_template)))
+
+// --- Sharing library experiments with departments ---
+interface Department { id: number; name: string }
+const departments = ref<Department[]>([])
+const loadingDepartments = ref(false)
+const shareTarget = ref<ExperimentSummary | null>(null)
+const shareSelection = reactive(new Set<number>())
+const savingShare = ref(false)
+
+const openShare = async (e: ExperimentSummary) => {
+  shareTarget.value = e
+  shareSelection.clear()
+  ;(e.shared_departments || []).forEach(d => shareSelection.add(d.id))
+  if (!departments.value.length) {
+    loadingDepartments.value = true
+    try {
+      const res = await axios.get('/api/admin/departments')
+      const list = Array.isArray(res.data.data) ? res.data.data : res.data.data?.departments || []
+      departments.value = list
+        .filter((d: any) => !d.deleted_at)
+        .map((d: any) => ({ id: Number(d.id), name: d.name }))
+        .sort((a: Department, b: Department) => a.name.localeCompare(b.name))
+    } catch {
+      toast.error('Could not load departments')
+    } finally {
+      loadingDepartments.value = false
+    }
+  }
+}
+
+const toggleAllDepartments = () => {
+  if (shareSelection.size === departments.value.length) shareSelection.clear()
+  else departments.value.forEach(d => shareSelection.add(d.id))
+}
+
+const saveShare = async () => {
+  if (!shareTarget.value) return
+  savingShare.value = true
+  try {
+    await axios.put(`${API_BASE}/experiments/${shareTarget.value.id}/departments`, { department_ids: [...shareSelection] })
+    const n = shareSelection.size
+    toast.success(n ? `"${shareTarget.value.title}" shared with ${n} department${n === 1 ? '' : 's'}` : `"${shareTarget.value.title}" is no longer shared`)
+    shareTarget.value = null
+    await loadExperiments()
+  } catch (err: any) {
+    toast.error(err.response?.data?.message || 'Could not save departments')
+  } finally {
+    savingShare.value = false
+  }
+}
+
 // --- Selection ---
 const selected = reactive(new Set<number>())
-const allSelected = computed(() => experiments.value.length > 0 && experiments.value.every(e => selected.has(e.id)))
+const allSelected = computed(() => visibleExperiments.value.length > 0 && visibleExperiments.value.every(e => selected.has(e.id)))
 const toggle = (id: number) => (selected.has(id) ? selected.delete(id) : selected.add(id))
 const toggleAll = () => {
   if (allSelected.value) selected.clear()
-  else experiments.value.forEach(e => selected.add(e.id))
+  else visibleExperiments.value.forEach(e => selected.add(e.id))
 }
 
 // --- Loading ---

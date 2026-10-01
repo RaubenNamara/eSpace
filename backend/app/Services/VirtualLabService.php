@@ -132,6 +132,10 @@ class VirtualLabService
             $where[] = 'e.is_template = :is_template';
             $params['is_template'] = $filters['is_template'] ? 1 : 0;
         }
+        if (array_key_exists('shared_with_department', $filters)) {
+            $where[] = 'EXISTS (SELECT 1 FROM virtual_lab_experiment_departments xd WHERE xd.experiment_id = e.id AND xd.department_id = :shared_dept)';
+            $params['shared_dept'] = (int) $filters['shared_with_department'];
+        }
         if (!empty($filters['search'])) {
             $where[] = '(e.title LIKE :search1 OR e.topic LIKE :search2)';
             $term = '%' . $filters['search'] . '%';
@@ -154,9 +158,11 @@ class VirtualLabService
         $stmt->execute($params);
 
         $rows = $stmt->fetchAll();
-        $published = $this->publishedTargets(array_map(fn ($r) => (int) $r['id'], $rows));
+        $ids = array_map(fn ($r) => (int) $r['id'], $rows);
+        $published = $this->publishedTargets($ids);
+        $sharedWith = $this->sharedDepartments($ids);
 
-        return array_map(function ($row) use ($published) {
+        return array_map(function ($row) use ($published, $sharedWith) {
             return [
                 'id' => (int) $row['id'],
                 'title' => $row['title'],
@@ -179,10 +185,73 @@ class VirtualLabService
                 'status' => $row['status'],
                 'assignment_count' => (int) $row['assignment_count'],
                 'published_to' => $published[(int) $row['id']] ?? [],
+                'shared_departments' => $sharedWith[(int) $row['id']] ?? [],
                 'attempt_count' => (int) $row['attempt_count'],
                 'created_at' => $row['created_at'],
             ];
         }, $rows);
+    }
+
+    /**
+     * Departments each library experiment is shared with, keyed by experiment id:
+     * [ ['id' => 3, 'name' => 'Sciences'], ... ].
+     */
+    private function sharedDepartments(array $experimentIds): array
+    {
+        if (empty($experimentIds)) {
+            return [];
+        }
+        $in = implode(',', array_map('intval', $experimentIds));
+        $rows = $this->getDb()->query(
+            "SELECT xd.experiment_id, d.id, d.name
+             FROM virtual_lab_experiment_departments xd
+             INNER JOIN departments d ON d.id = xd.department_id
+             WHERE xd.experiment_id IN ($in)
+             ORDER BY d.name"
+        )->fetchAll();
+        $out = [];
+        foreach ($rows as $r) {
+            $out[(int) $r['experiment_id']][] = ['id' => (int) $r['id'], 'name' => $r['name']];
+        }
+        return $out;
+    }
+
+    public function isSharedWithDepartment(int $experimentId, ?int $departmentId): bool
+    {
+        if (!$departmentId) {
+            return false;
+        }
+        $stmt = $this->getDb()->prepare('SELECT 1 FROM virtual_lab_experiment_departments WHERE experiment_id = :e AND department_id = :d');
+        $stmt->execute(['e' => $experimentId, 'd' => $departmentId]);
+        return (bool) $stmt->fetchColumn();
+    }
+
+    /** Replaces the set of departments a library experiment is shared with. */
+    public function setSharedDepartments(int $experimentId, array $departmentIds, ?int $sharedBy): void
+    {
+        $db = $this->getDb();
+        $departmentIds = array_values(array_unique(array_filter(array_map('intval', $departmentIds), fn ($v) => $v > 0)));
+        $db->beginTransaction();
+        try {
+            $del = 'DELETE FROM virtual_lab_experiment_departments WHERE experiment_id = ?';
+            $params = [$experimentId];
+            if ($departmentIds) {
+                $del .= ' AND department_id NOT IN (' . implode(',', array_fill(0, count($departmentIds), '?')) . ')';
+                array_push($params, ...$departmentIds);
+            }
+            $db->prepare($del)->execute($params);
+            $ins = $db->prepare(
+                'INSERT IGNORE INTO virtual_lab_experiment_departments (experiment_id, department_id, shared_by, created_at)
+                 SELECT ?, d.id, ?, NOW() FROM departments d WHERE d.id = ?'
+            );
+            foreach ($departmentIds as $deptId) {
+                $ins->execute([$experimentId, $sharedBy, $deptId]);
+            }
+            $db->commit();
+        } catch (\Throwable $e) {
+            $db->rollBack();
+            throw $e;
+        }
     }
 
     /**
@@ -1259,6 +1328,57 @@ class VirtualLabService
              ON DUPLICATE KEY UPDATE answer_text = VALUES(answer_text), updated_at = NOW()'
         );
         $stmt->execute(['attempt_id' => $attemptId, 'question_id' => $questionId, 'answer_text' => $text]);
+    }
+
+    /**
+     * When the experiment has a graph switched on, the student must have plotted at least its
+     * minimum number of points and answered every question about the graph (e.g. the gradient)
+     * before submitting. Returns the reason they can't submit yet, or null when they can.
+     */
+    public function graphRequirementError(int $attemptId): ?string
+    {
+        $db = $this->getDb();
+        $stmt = $db->prepare(
+            'SELECT a.experiment_id, gc.x_column, gc.y_column, gc.min_points, gc.manual_plot
+             FROM virtual_lab_attempts att
+             INNER JOIN virtual_lab_assignments a ON a.id = att.assignment_id
+             INNER JOIN virtual_lab_graph_configs gc ON gc.experiment_id = a.experiment_id AND gc.enabled = 1
+             WHERE att.id = :id'
+        );
+        $stmt->execute(['id' => $attemptId]);
+        $graph = $stmt->fetch();
+        if (!$graph) {
+            return null;
+        }
+
+        if ((int) $graph['manual_plot'] === 1) {
+            $count = $db->prepare("SELECT COUNT(*) FROM virtual_lab_notebook_entries WHERE attempt_id = :id AND entry_type = 'plot_point'");
+            $count->execute(['id' => $attemptId]);
+        } else {
+            $count = $db->prepare(
+                "SELECT COUNT(*) FROM virtual_lab_notebook_entries
+                 WHERE attempt_id = :id AND entry_type = 'result_row'
+                   AND JSON_EXTRACT(extra, :x) IS NOT NULL AND JSON_EXTRACT(extra, :y) IS NOT NULL"
+            );
+            $count->execute(['id' => $attemptId, 'x' => '$.' . $graph['x_column'], 'y' => '$.' . $graph['y_column']]);
+        }
+        $points = (int) $count->fetchColumn();
+        $minPoints = max(1, (int) $graph['min_points']);
+        if ($points < $minPoints) {
+            return "Plot at least {$minPoints} points on your graph before submitting ({$points} so far).";
+        }
+
+        $unanswered = $db->prepare(
+            "SELECT COUNT(*) FROM virtual_lab_questions q
+             LEFT JOIN virtual_lab_answers ans ON ans.question_id = q.id AND ans.attempt_id = :attempt
+             WHERE q.experiment_id = :experiment AND q.linked_to_graph = 1
+               AND (ans.answer_text IS NULL OR TRIM(ans.answer_text) = '')"
+        );
+        $unanswered->execute(['attempt' => $attemptId, 'experiment' => (int) $graph['experiment_id']]);
+        if ((int) $unanswered->fetchColumn() > 0) {
+            return 'Answer the questions about your graph (such as the gradient) before submitting.';
+        }
+        return null;
     }
 
     public function submitAttempt(int $attemptId, ?string $conclusionText, ?string $graphXKey = null, ?string $graphYKey = null): bool

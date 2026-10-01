@@ -122,6 +122,31 @@ class VirtualLabController extends Controller
     }
 
     /**
+     * PUT /admin/virtual-lab/experiments/{id}/departments
+     * body: { department_ids: number[] } - which departments' teachers may use and publish this
+     * library experiment (an empty list withdraws it from everyone).
+     */
+    public function setDepartments($id): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+        $ownership = $this->service()->getExperimentOwnership((int) $id);
+        if (!$ownership) {
+            $this->notFound('Experiment not found');
+            return;
+        }
+        if (!$ownership['is_template']) {
+            $this->error('Only library experiments can be shared with departments', 422);
+            return;
+        }
+        $ids = $this->input('department_ids');
+        $this->service()->setSharedDepartments((int) $id, is_array($ids) ? $ids : [], $_SESSION['user_id'] ?? null);
+        $this->success([], 'Departments updated');
+    }
+
+    /**
      * DELETE /admin/virtual-lab/experiments/{id}
      * Removes the experiment (draft or published) and every class it was published to.
      */
