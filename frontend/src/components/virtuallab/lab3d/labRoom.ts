@@ -23,7 +23,7 @@ export interface LabRoomOptions {
   wallCabinets?: boolean
   /** Bench length in metres (default 1.8); the wall cabinets widen with it */
   benchLength?: number
-  /** Two more benches of the same length, one either side of the main bench (decor only) */
+  /** Two more benches of the same length, against the left and right walls (decor only) */
   sideBenches?: boolean
 }
 
@@ -163,12 +163,18 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
     cupboardParts = buildRoom(world, !!opts.cupboard, benchLength, s, !!opts.wallCabinets)
     if (opts.wallCabinets) wallParts = buildWallCabinets(world, benchLength, s)
     if (opts.sideBenches) {
-      const gap = 1.2 // walkway between benches
-      for (const side of [-1, 1]) buildPlainBench(world, side * (benchLength + gap), benchLength)
+      // Against the side walls (see buildWallCovering: walls at x = ±7 m), facing into the room
+      const wallX = 7 - BENCH_D / 2 - 0.02
+      for (const side of [-1, 1]) {
+        const bench = buildPlainBench(benchLength)
+        bench.position.set(side * wallX, 0, 1.6)
+        bench.rotation.y = -side * Math.PI / 2
+        world.add(bench)
+      }
     }
   }
   // A wider view of the room needs the fog pushed back
-  if (!field && (opts.cupboard || opts.wallCabinets)) scene.fog = new THREE.Fog(0xdfe3e8, 7 * s, 16 * s)
+  if (!field && (opts.cupboard || opts.wallCabinets)) scene.fog = new THREE.Fog(0xdfe3e8, 11 * s, 26 * s)
   if (s !== 1) {
     world.traverse((o) => {
       if (!(o instanceof THREE.DirectionalLight) || !o.castShadow) return
@@ -598,8 +604,10 @@ function buildWallCabinets(scene: THREE.Object3D, benchLength: number, s = 1): W
   return { doors, blockers, cabinets }
 }
 
-/** A bench like the main one - black resin top on a wooden cabinet with closed doors - centred at `cx`. */
-function buildPlainBench(scene: THREE.Object3D, cx: number, length: number) {
+/** A bench like the main one - black resin top on a wooden cabinet with closed doors - built at the origin, front facing +z. */
+function buildPlainBench(length: number): THREE.Group {
+  const scene = new THREE.Group()
+  const cx = 0
   const top = new THREE.Mesh(
     new RoundedBoxGeometry(length, 0.035, BENCH_D, 3, 0.008),
     new THREE.MeshPhysicalMaterial({ color: 0x1f2328, roughness: 0.42, clearcoat: 0.4, clearcoatRoughness: 0.35 }),
@@ -633,6 +641,7 @@ function buildPlainBench(scene: THREE.Object3D, cx: number, length: number) {
       scene.add(handle)
     }
   }
+  return scene
 }
 
 interface CupboardParts {
