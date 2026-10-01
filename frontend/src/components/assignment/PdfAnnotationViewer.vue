@@ -139,7 +139,7 @@ onMounted(loadPdf)
   flex-wrap: wrap;
 }
 
-:global(.dark) .pdf-viewer__controls {
+.dark .pdf-viewer__controls {
   background-color: #1f2937;
   border-color: #374151;
 }
@@ -175,7 +175,7 @@ onMounted(loadPdf)
   cursor: pointer;
 }
 
-:global(.dark) .nav-btn {
+.dark .nav-btn {
   background-color: #111827;
   border-color: #374151;
   color: #e5e7eb;
@@ -194,8 +194,8 @@ onMounted(loadPdf)
   text-align: center;
 }
 
-:global(.dark) .page-info,
-:global(.dark) .zoom-value {
+.dark .page-info,
+.dark .zoom-value {
   color: #d1d5db;
 }
 

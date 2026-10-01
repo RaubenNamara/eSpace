@@ -361,7 +361,7 @@ function onEvidencePdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
   margin-top: 16px;
 }
 
-:global(.dark) .teacher-marking-canvas__section-label {
+.dark .teacher-marking-canvas__section-label {
   color: #9ca3af;
 }
 
@@ -371,7 +371,7 @@ function onEvidencePdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
   color: #6b7280;
 }
 
-:global(.dark) .teacher-marking-canvas__status {
+.dark .teacher-marking-canvas__status {
   color: #9ca3af;
 }
 
@@ -386,7 +386,7 @@ function onEvidencePdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
   border-radius: 8px;
 }
 
-:global(.dark) .teacher-marking-canvas__workspace {
+.dark .teacher-marking-canvas__workspace {
   border-color: #374151;
 }
 
@@ -421,7 +421,7 @@ function onEvidencePdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
   border-color: #a5b4fc;
   background: #eef2ff;
 }
-:global(.dark) .teacher-marking-canvas__part-closed {
+.dark .teacher-marking-canvas__part-closed {
   border-color: #374151;
   background: #1f2937;
 }
@@ -441,7 +441,7 @@ function onEvidencePdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-:global(.dark) .teacher-marking-canvas__part-closed-label {
+.dark .teacher-marking-canvas__part-closed-label {
   color: #f3f4f6;
 }
 .teacher-marking-canvas__part-closed-action {
@@ -470,7 +470,7 @@ function onEvidencePdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
   overflow: hidden;
 }
 
-:global(.dark) .teacher-marking-canvas__gallery-thumb {
+.dark .teacher-marking-canvas__gallery-thumb {
   border-color: #4b5563;
   background: #1f2937;
 }
@@ -480,7 +480,7 @@ function onEvidencePdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
   background: #fef2f2;
 }
 
-:global(.dark) .teacher-marking-canvas__gallery-thumb--active {
+.dark .teacher-marking-canvas__gallery-thumb--active {
   background: rgba(220, 38, 38, 0.12);
 }
 
@@ -510,7 +510,7 @@ function onEvidencePdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
   text-align: center;
 }
 
-:global(.dark) .teacher-marking-canvas__gallery-thumb-name {
+.dark .teacher-marking-canvas__gallery-thumb-name {
   color: #9ca3af;
 }
 </style>

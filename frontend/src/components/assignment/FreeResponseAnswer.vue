@@ -623,7 +623,7 @@ function onPdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
-:global(.dark) .free-response-answer__panel {
+.dark .free-response-answer__panel {
   border-color: #374151;
 }
 
@@ -635,7 +635,7 @@ function onPdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
   background-size: 24px 24px;
 }
 
-:global(.dark) .free-response-answer__workspace {
+.dark .free-response-answer__workspace {
   background-image: linear-gradient(#374151 1px, transparent 1px), linear-gradient(90deg, #374151 1px, transparent 1px);
 }
 
@@ -659,7 +659,7 @@ function onPdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
   transition: border-color 0.15s, background-color 0.15s;
 }
 
-:global(.dark) .free-response-answer__dropzone {
+.dark .free-response-answer__dropzone {
   border-color: #4338ca;
   background-color: rgba(99, 102, 241, 0.08);
 }
@@ -669,7 +669,7 @@ function onPdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
   background-color: #e0e7ff;
 }
 
-:global(.dark) .free-response-answer__dropzone--active {
+.dark .free-response-answer__dropzone--active {
   background-color: rgba(99, 102, 241, 0.18);
 }
 
@@ -678,7 +678,7 @@ function onPdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
   color: #4f46e5;
 }
 
-:global(.dark) .free-response-answer__dropzone-icon {
+.dark .free-response-answer__dropzone-icon {
   color: #a5b4fc;
 }
 
@@ -697,7 +697,7 @@ function onPdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
   padding: 0;
 }
 
-:global(.dark) .free-response-answer__thumb {
+.dark .free-response-answer__thumb {
   border-color: #4b5563;
   background: #1f2937;
 }
@@ -736,7 +736,7 @@ function onPdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
   cursor: pointer;
 }
 
-:global(.dark) .free-response-answer__thumb-remove {
+.dark .free-response-answer__thumb-remove {
   border-color: #1f2937;
 }
 
@@ -761,7 +761,7 @@ function onPdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
   text-align: center;
 }
 
-:global(.dark) .free-response-answer__add-tile {
+.dark .free-response-answer__add-tile {
   border-color: #4338ca;
   background-color: rgba(99, 102, 241, 0.08);
   color: #a5b4fc;

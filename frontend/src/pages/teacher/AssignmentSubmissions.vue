@@ -308,5 +308,8 @@ const capitalizeFirst = (str: string) => {
 onMounted(() => {
   loadAssignment()
   loadSubmissions()
+  // ?submission=<id> (e.g. the dashboard's "Mark next") opens that submission for marking
+  const submissionId = Number(route.query.submission)
+  if (submissionId) selectSubmission({ id: submissionId })
 })
 </script>

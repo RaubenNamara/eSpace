@@ -73,7 +73,7 @@ onMounted(async () => {
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
 
-:global(.dark) .comment-popup {
+.dark .comment-popup {
   background-color: #1f2937;
   border-color: #374151;
 }
@@ -85,7 +85,7 @@ onMounted(async () => {
   margin-bottom: 8px;
 }
 
-:global(.dark) .comment-popup__text {
+.dark .comment-popup__text {
   color: #e5e7eb;
 }
 

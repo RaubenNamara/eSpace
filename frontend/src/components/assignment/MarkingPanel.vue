@@ -249,7 +249,7 @@ watch(() => props.initialFeedback, (val) => {
   overflow-y: auto;
 }
 
-:global(.dark) .marking-panel {
+.dark .marking-panel {
   background-color: #1f2937;
   border-color: #374151;
 }
@@ -261,7 +261,7 @@ watch(() => props.initialFeedback, (val) => {
     height: auto;
   }
 
-  :global(.dark) .marking-panel {
+  .dark .marking-panel {
     border-color: #374151;
   }
 }
@@ -282,7 +282,7 @@ watch(() => props.initialFeedback, (val) => {
   color: #6366f1;
 }
 
-:global(.dark) .marking-panel__eyebrow {
+.dark .marking-panel__eyebrow {
   color: #a5b4fc;
 }
 
@@ -304,7 +304,7 @@ watch(() => props.initialFeedback, (val) => {
   color: #6b7280;
 }
 
-:global(.dark) .marking-panel__visibility-badge--hidden {
+.dark .marking-panel__visibility-badge--hidden {
   background-color: #374151;
   color: #9ca3af;
 }
@@ -315,7 +315,7 @@ watch(() => props.initialFeedback, (val) => {
   color: #111827;
 }
 
-:global(.dark) .marking-panel__title {
+.dark .marking-panel__title {
   color: #f3f4f6;
 }
 
@@ -331,7 +331,7 @@ watch(() => props.initialFeedback, (val) => {
   border-radius: 8px;
 }
 
-:global(.dark) .marking-panel__question {
+.dark .marking-panel__question {
   border-color: #374151;
 }
 
@@ -342,7 +342,7 @@ watch(() => props.initialFeedback, (val) => {
   margin: 0 0 4px;
 }
 
-:global(.dark) .marking-panel__curriculum-label {
+.dark .marking-panel__curriculum-label {
   color: #a5b4fc;
 }
 
@@ -355,7 +355,7 @@ watch(() => props.initialFeedback, (val) => {
   margin-bottom: 6px;
 }
 
-:global(.dark) .marking-panel__question-header {
+.dark .marking-panel__question-header {
   color: #d1d5db;
 }
 
@@ -394,7 +394,7 @@ watch(() => props.initialFeedback, (val) => {
   text-align: center;
 }
 
-:global(.dark) .marking-panel__summary {
+.dark .marking-panel__summary {
   background-color: #111827;
 }
 
@@ -418,7 +418,7 @@ watch(() => props.initialFeedback, (val) => {
   border-top: 1px solid #e5e7eb;
 }
 
-:global(.dark) .marking-panel__actions {
+.dark .marking-panel__actions {
   border-color: #374151;
 }
 

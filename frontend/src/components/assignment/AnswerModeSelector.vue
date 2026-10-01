@@ -16,7 +16,7 @@
       ]"
       @click="!readonly && $emit('update:modelValue', option.value)"
     >
-      <span class="text-2xl sm:text-3xl" aria-hidden="true"><AppIcon v-if="option.icon.startsWith('@')" :name="option.icon.slice(1)" class="w-7 h-7" /><template v-else>{{ option.icon }}</template></span>
+      <span class="text-2xl sm:text-3xl" :class="modelValue === option.value ? 'text-indigo-600 dark:text-indigo-300' : 'text-gray-500 dark:text-gray-300'" aria-hidden="true"><AppIcon v-if="option.icon.startsWith('@')" :name="option.icon.slice(1)" class="w-7 h-7" /><template v-else>{{ option.icon }}</template></span>
       <span class="text-sm sm:text-base font-semibold" :class="modelValue === option.value ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-900 dark:text-white'">
         {{ option.label }}
       </span>

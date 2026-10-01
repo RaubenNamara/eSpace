@@ -203,7 +203,7 @@ onMounted(() => {
   overflow: hidden;
 }
 
-:global(.dark) .question-editor {
+.dark .question-editor {
   border-color: #374151;
 }
 
@@ -246,7 +246,7 @@ onMounted(() => {
   background-color: #f9fafb;
 }
 
-:global(.dark) .question-editor__save-status {
+.dark .question-editor__save-status {
   background-color: #111827;
   color: #9ca3af;
 }

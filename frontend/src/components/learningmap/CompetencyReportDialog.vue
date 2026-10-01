@@ -83,7 +83,7 @@
                 <div class="flex items-center gap-3">
                   <p class="text-base font-extrabold tracking-wide text-gray-900">{{ s.name }}</p>
                   <div class="flex-1 h-1.5 rounded-full bg-gray-100 overflow-hidden"><div class="h-full rounded-full cr-exact" :style="{ width: `${s.assessed ? s.achieved / s.assessed * 100 : 0}%`, background: subjectColor(s) }"></div></div>
-                  <p class="text-[11px] font-semibold text-gray-600 whitespace-nowrap">{{ s.achieved }}/{{ s.assessed }} outcomes achieved</p>
+                  <p class="text-[11px] font-semibold text-gray-600 whitespace-nowrap">{{ s.achieved }}/{{ s.assessed }} Learning outcomes achieved</p>
                 </div>
                 <div v-if="s.competencies.length" class="mt-2 flex flex-wrap gap-1.5">
                   <span v-for="c in s.competencies" :key="c.topic" class="inline-block pl-0.5 pr-2 py-0.5 rounded-full leading-4 text-[10px] font-semibold border text-gray-800 cr-exact" :style="{ borderColor: gradeColor(c.grade) + '55', background: gradeColor(c.grade) + '12' }">

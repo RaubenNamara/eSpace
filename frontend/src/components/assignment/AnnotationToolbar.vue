@@ -312,7 +312,7 @@ const activeToolLabel = computed(() => {
   flex-wrap: wrap;
 }
 
-:global(.dark) .annotation-toolbar {
+.dark .annotation-toolbar {
   background-color: #1f2937;
   border-color: #374151;
 }
@@ -355,7 +355,7 @@ const activeToolLabel = computed(() => {
   }
 }
 
-:global(.dark) .toolbar-section {
+.dark .toolbar-section {
   border-color: #374151;
 }
 
@@ -376,7 +376,7 @@ const activeToolLabel = computed(() => {
   font-size: 15px;
 }
 
-:global(.dark) .tool-btn {
+.dark .tool-btn {
   background-color: #111827;
   border-color: #374151;
   color: #e5e7eb;
@@ -417,7 +417,7 @@ const activeToolLabel = computed(() => {
   color: #374151;
 }
 
-:global(.dark) .size-label {
+.dark .size-label {
   color: #d1d5db;
 }
 
@@ -435,7 +435,7 @@ const activeToolLabel = computed(() => {
   border-bottom: 1px solid #e5e7eb;
 }
 
-:global(.dark) .answer-toolbar {
+.dark .answer-toolbar {
   background-color: #1f2937;
   border-color: #374151;
 }
@@ -452,7 +452,7 @@ const activeToolLabel = computed(() => {
   border-top: 1px solid #e5e7eb;
 }
 
-:global(.dark) .answer-toolbar__row--secondary {
+.dark .answer-toolbar__row--secondary {
   border-color: #374151;
 }
 
@@ -504,7 +504,7 @@ const activeToolLabel = computed(() => {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-:global(.dark) .answer-toolbar__menu {
+.dark .answer-toolbar__menu {
   background-color: #111827;
   border-color: #374151;
 }
@@ -523,7 +523,7 @@ const activeToolLabel = computed(() => {
   color: #374151;
 }
 
-:global(.dark) .answer-toolbar__menu-item {
+.dark .answer-toolbar__menu-item {
   color: #d1d5db;
 }
 
@@ -532,8 +532,8 @@ const activeToolLabel = computed(() => {
   background-color: #e0e7ff;
 }
 
-:global(.dark) .answer-toolbar__menu-item:hover,
-:global(.dark) .answer-toolbar__menu-item.active {
+.dark .answer-toolbar__menu-item:hover,
+.dark .answer-toolbar__menu-item.active {
   background-color: rgba(99, 102, 241, 0.2);
 }
 
@@ -543,7 +543,7 @@ const activeToolLabel = computed(() => {
   color: #6b7280;
 }
 
-:global(.dark) .answer-toolbar__tool-label {
+.dark .answer-toolbar__tool-label {
   color: #9ca3af;
 }
 

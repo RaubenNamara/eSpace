@@ -149,7 +149,7 @@ const ALIGN_OPTIONS = [
   box-shadow: 0 6px 16px -4px rgba(0, 0, 0, 0.2);
 }
 
-:global(.dark) .text-format-toolbar {
+.dark .text-format-toolbar {
   background-color: #1f2937;
   border-color: #374151;
 }
@@ -168,7 +168,7 @@ const ALIGN_OPTIONS = [
   color: #374151;
 }
 
-:global(.dark) .tf-btn {
+.dark .tf-btn {
   background-color: #111827;
   border-color: #374151;
   color: #e5e7eb;
@@ -184,7 +184,7 @@ const ALIGN_OPTIONS = [
   color: #4338ca;
 }
 
-:global(.dark) .tf-btn.active {
+.dark .tf-btn.active {
   background-color: rgba(99, 102, 241, 0.25);
   color: #c7d2fe;
 }
@@ -196,7 +196,7 @@ const ALIGN_OPTIONS = [
   margin: 0 2px;
 }
 
-:global(.dark) .tf-divider {
+.dark .tf-divider {
   background-color: #374151;
 }
 
@@ -209,7 +209,7 @@ const ALIGN_OPTIONS = [
   color: #374151;
 }
 
-:global(.dark) .tf-select {
+.dark .tf-select {
   background-color: #111827;
   border-color: #374151;
   color: #e5e7eb;
@@ -237,7 +237,7 @@ const ALIGN_OPTIONS = [
   color: #6b7280;
 }
 
-:global(.dark) .tf-width {
+.dark .tf-width {
   color: #9ca3af;
 }
 
@@ -252,7 +252,7 @@ const ALIGN_OPTIONS = [
   padding: 0 4px;
 }
 
-:global(.dark) .tf-width input {
+.dark .tf-width input {
   background-color: #111827;
   border-color: #374151;
   color: #e5e7eb;

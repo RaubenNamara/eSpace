@@ -132,6 +132,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import axios from 'axios'
+import { useRoute } from 'vue-router'
 import PickerDropdown, { type PickerOption } from '@/components/common/PickerDropdown.vue'
 import SupportGroupModal, { type SupportRow } from '@/components/classmap/SupportGroupModal.vue'
 import SupportGroupList, { type SupportGroup } from '@/components/classmap/SupportGroupList.vue'
@@ -254,11 +255,25 @@ const load = async () => {
   }
 }
 
+// A link can open a given class: ?subject=<id>&level=S.1&stream=<class id | all> (e.g. the
+// dashboard's class cards)
+const route = useRoute()
+const wanted = {
+  level: typeof route.query.level === 'string' ? route.query.level : null,
+  stream: route.query.stream === 'all' ? 'all' as const : Number(route.query.stream) || null
+}
+const firstStream = () => {
+  const w = wanted.stream
+  wanted.stream = null
+  return w !== null && streamOptions.value.some(o => o.value === w) ? w : streamOptions.value[0]?.value ?? null
+}
+
 onMounted(async () => {
   try {
     const response = await axios.get('/api/teacher/class-map/options')
     options.value = response.data.data.subjects || []
-    subjectId.value = options.value[0]?.id ?? null
+    const wantedSubject = Number(route.query.subject)
+    subjectId.value = options.value.find(s => s.id === wantedSubject)?.id ?? options.value[0]?.id ?? null
   } finally {
     if (!options.value.length) loading.value = false
   }
@@ -267,9 +282,12 @@ onMounted(async () => {
 // first stream
 watch(subjectId, () => {
   loadGroups()
-  if (!levels.value.some(l => l.name === level.value)) level.value = levels.value[0]?.name ?? null
-  else stream.value = streamOptions.value[0]?.value ?? null
+  const w = wanted.level
+  wanted.level = null
+  if (w && levels.value.some(l => l.name === w) && w !== level.value) level.value = w
+  else if (!levels.value.some(l => l.name === level.value)) level.value = levels.value[0]?.name ?? null
+  else stream.value = firstStream()
 })
-watch(level, () => { stream.value = streamOptions.value[0]?.value ?? null })
+watch(level, () => { stream.value = firstStream() })
 watch(stream, load)
 </script>

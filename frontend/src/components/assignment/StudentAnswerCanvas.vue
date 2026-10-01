@@ -139,7 +139,7 @@ defineExpose({ undo, redo, clearAll, clearSelected })
   color: #6b7280;
 }
 
-:global(.dark) .student-answer-canvas__status {
+.dark .student-answer-canvas__status {
   color: #9ca3af;
 }
 </style>

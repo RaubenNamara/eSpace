@@ -113,7 +113,7 @@ onMounted(() => {
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
 }
 
-:global(.dark) .signature-pad {
+.dark .signature-pad {
   background-color: #1f2937;
 }
 
@@ -124,7 +124,7 @@ onMounted(() => {
   margin-bottom: 4px;
 }
 
-:global(.dark) .signature-pad__title {
+.dark .signature-pad__title {
   color: #f3f4f6;
 }
 
@@ -134,7 +134,7 @@ onMounted(() => {
   margin-bottom: 10px;
 }
 
-:global(.dark) .signature-pad__hint {
+.dark .signature-pad__hint {
   color: #9ca3af;
 }
 
@@ -149,7 +149,7 @@ onMounted(() => {
   touch-action: none;
 }
 
-:global(.dark) .signature-pad__canvas {
+.dark .signature-pad__canvas {
   background-color: #111827;
   border-color: #374151;
 }
@@ -175,7 +175,7 @@ onMounted(() => {
   cursor: pointer;
 }
 
-:global(.dark) .signature-pad__btn {
+.dark .signature-pad__btn {
   background-color: #111827;
   border-color: #374151;
   color: #e5e7eb;

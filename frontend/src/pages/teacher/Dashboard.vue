@@ -1,225 +1,100 @@
 <template>
-  <div>
-    <!-- The topbar already shows this teacher's name and photo, so this line is just a quick
-         personal greeting rather than a redundant "Teacher Dashboard" title + icon badge. The
-         department strip sits in the same row (rather than stacked below) so both fit on one
-         line instead of using two. -->
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-      <h1 class="text-xl font-bold text-gray-900 dark:text-white">{{ greeting }}, {{ authStore.userName }}</h1>
-
-      <!-- Department Info - a slim identity strip rather than a full hero card, since it's just
-           context (which department this data belongs to), not a headline number. "View Enrolled
-           Students" lives here as a compact link instead of its own header button, and "Preview as
-           Student" was dropped entirely - it's already one click away in the sidebar. -->
-      <div v-if="analytics.department" class="hidden sm:flex flex-wrap items-center gap-x-3 gap-y-1.5 bg-indigo-600 text-white rounded-lg px-4 py-2 text-sm">
-        <span class="font-semibold">{{ analytics.department.name }}</span>
-        <span class="text-indigo-200 truncate">{{ analytics.department.code }} &middot; {{ analytics.department.description }}</span>
-
-        <!-- Department switcher - only shown when the teacher belongs to more than one -->
-        <select
-          v-if="myDepartments.length > 1"
-          :value="activeDepartmentId"
-          @change="switchDepartment(($event.target as HTMLSelectElement).value)"
-          :disabled="switchingDepartment"
-          class="text-xs rounded-md bg-white/20 border border-white/30 text-white px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-white/50 disabled:opacity-50"
-        >
-          <option v-for="dept in myDepartments" :key="dept.id" :value="dept.id" class="text-gray-900">
-            {{ dept.name }}{{ dept.is_primary ? ' (Primary)' : '' }}
-          </option>
-        </select>
-
-        <button
-          @click="openViewEnrolledModal"
-          class="text-xs font-semibold text-white/90 hover:text-white hover:underline underline-offset-2 flex-shrink-0"
-        >
-          View Enrolled Students
-        </button>
-      </div>
-    </div>
-
-    <!-- Quick Access - the fast path into a teacher's most-used modules, front and centre so
-         there's no need to hunt through the sidebar for them. One color throughout (rather than
-         a different hue per tile) keeps this section calm since it's pure navigation, not a set
-         of distinct statuses worth color-coding. -->
-    <div class="mb-6">
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        <QuickLink to="/teacher/classes" label="My Classes" icon="classes" color="indigo" />
-        <QuickLink to="/teacher/live-classes" label="Live Classes" icon="live" color="indigo" />
-        <QuickLink to="/teacher/enotes" label="eNotes" icon="notes" color="indigo" />
-        <QuickLink to="/teacher/library" label="eLibrary" icon="library" color="indigo" />
-        <QuickLink to="/teacher/itembank" label="Item Bank" icon="itembank" color="indigo" />
-        <QuickLink to="/teacher/assignments" label="Assessments" icon="check" color="indigo" />
-        <QuickLink to="/teacher/reports" label="Reports" icon="reports" color="indigo" />
-        <QuickLink to="/teacher/chat" label="Chats" icon="chat" color="indigo" />
-      </div>
-    </div>
-
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
-      <RouterLink to="/teacher/classes" class="group card !p-4 sm:!p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 border border-transparent">
-        <div class="flex items-center justify-between">
-          <template v-if="loadingAnalytics">
-            <div class="flex-1">
-              <div class="h-3.5 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
-              <div class="h-7 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-            </div>
-            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse flex-shrink-0"></div>
-          </template>
-          <template v-else>
-            <div>
-              <p class="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">Total Enrollments</p>
-              <p class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400"><CountUp :value="analytics.total_enrollments" /></p>
-            </div>
-            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-indigo-100 dark:bg-indigo-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
-              <svg class="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
-              </svg>
-            </div>
-          </template>
-        </div>
-      </RouterLink>
-      <!-- Hidden below sm: a 7-day trend is a secondary metric compared to the totals, not
-           worth the space on a small screen. -->
-      <RouterLink to="/teacher/classes" class="hidden sm:block group card !p-4 sm:!p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 border border-transparent">
-        <div class="flex items-center justify-between">
-          <template v-if="loadingAnalytics">
-            <div class="flex-1">
-              <div class="h-3.5 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
-              <div class="h-7 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-            </div>
-            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse flex-shrink-0"></div>
-          </template>
-          <template v-else>
-            <div>
-              <p class="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">Recent (7 days)</p>
-              <p class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400"><CountUp :value="analytics.recent_enrollments" /></p>
-            </div>
-            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 dark:bg-green-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
-              <svg class="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
-              </svg>
-            </div>
-          </template>
-        </div>
-      </RouterLink>
-      <RouterLink to="/teacher/classes" class="group card !p-4 sm:!p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 border border-transparent">
-        <div class="flex items-center justify-between">
-          <template v-if="loadingAnalytics">
-            <div class="flex-1">
-              <div class="h-3.5 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
-              <div class="h-7 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-            </div>
-            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse flex-shrink-0"></div>
-          </template>
-          <template v-else>
-            <div>
-              <p class="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">Classes</p>
-              <p class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400"><CountUp :value="uniqueClassCount" /></p>
-            </div>
-            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
-              <svg class="w-5 h-5 sm:w-6 sm:h-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-              </svg>
-            </div>
-          </template>
-        </div>
-      </RouterLink>
-      <!-- Hidden below sm: the same information at finer granularity than "Classes" above -
-           not worth doubling up on a small screen. -->
-      <RouterLink to="/teacher/classes" class="hidden sm:block group card !p-4 sm:!p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 border border-transparent">
-        <div class="flex items-center justify-between">
-          <template v-if="loadingAnalytics">
-            <div class="flex-1">
-              <div class="h-3.5 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
-              <div class="h-7 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-            </div>
-            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse flex-shrink-0"></div>
-          </template>
-          <template v-else>
-            <div>
-              <p class="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">Class-Streams</p>
-              <p class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400"><CountUp :value="analytics.by_class.length" /></p>
-            </div>
-            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-purple-100 dark:bg-purple-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
-              <svg class="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-              </svg>
-            </div>
-          </template>
-        </div>
-      </RouterLink>
-    </div>
-
-    <!-- Enrollment by Stream -->
-    <div class="card mb-8">
-      <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1 flex items-center">
-        <span class="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/20 flex items-center justify-center mr-2.5 flex-shrink-0">
-          <svg class="w-4.5 h-4.5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-          </svg>
-        </span>
-        Enrollment by Stream
-      </h3>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mb-4 ml-[42px]">How your students are distributed across each class-stream</p>
-      <div class="h-72">
-        <Bar v-if="!loadingAnalytics && analytics.by_class.length > 0" :data="classChartData" :options="chartOptions" />
-        <div v-else-if="loadingAnalytics" class="flex items-center justify-center h-full text-gray-500">Loading...</div>
-        <div v-else class="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500 gap-2">
-          <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-          </svg>
-          <p class="text-sm">No enrollment data available yet</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Analytics Charts -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-      <!-- Enrollment by Year -->
-      <div class="card">
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1 flex items-center">
-          <span class="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-900/20 flex items-center justify-center mr-2.5 flex-shrink-0">
-            <svg class="w-4.5 h-4.5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-            </svg>
+  <div class="w-full">
+    <!-- Header: the day, a greeting, the department, and the three things a teacher starts most -->
+    <header class="mb-5 flex flex-col lg:flex-row lg:items-end gap-4">
+      <div class="flex-1 min-w-0">
+        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">{{ todayLabel }}</p>
+        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">{{ greeting }}, {{ firstName }}</h1>
+        <div v-if="analytics.department" class="mt-2 flex flex-wrap items-center gap-2 text-xs">
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-600 text-white font-semibold">
+            {{ analytics.department.name }}
+            <span class="text-indigo-200 font-medium">{{ analytics.department.code }}</span>
           </span>
-          Enrollment by Year
-        </h3>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4 ml-[42px]">Enrollment trend across academic years</p>
-        <div class="h-64">
-          <Bar v-if="!loadingAnalytics && analytics.by_academic_year.length > 0" :data="yearChartData" :options="chartOptions" />
-          <div v-else-if="loadingAnalytics" class="flex items-center justify-center h-full text-gray-500">Loading...</div>
-          <div v-else class="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500 gap-2">
-            <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <p class="text-sm">No data available</p>
+          <!-- Department switcher - only when the teacher belongs to more than one -->
+          <select
+            v-if="myDepartments.length > 1"
+            :value="activeDepartmentId"
+            :disabled="switchingDepartment"
+            class="rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2.5 py-1 text-xs focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+            @change="switchDepartment(($event.target as HTMLSelectElement).value)"
+          >
+            <option v-for="dept in myDepartments" :key="dept.id" :value="dept.id">{{ dept.name }}{{ dept.is_primary ? ' (Primary)' : '' }}</option>
+          </select>
+          <button type="button" class="font-semibold text-indigo-600 dark:text-indigo-300 hover:underline underline-offset-2" @click="openViewEnrolledModal">View enrolled students</button>
+        </div>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <RouterLink v-for="a in quickCreate" :key="a.to" :to="a.to" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-colors" :class="a.primary ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-500/20' : 'bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'">
+          <AppIcon :name="a.icon" class="w-4 h-4" />
+          {{ a.label }}
+        </RouterLink>
+      </div>
+    </header>
+
+    <!-- Quick links - the teacher's most-used modules, first thing, as small tiles -->
+    <nav class="grid grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-3 mb-5" aria-label="Quick links">
+      <QuickLink v-for="q in quickLinks" :key="q.to" compact :to="q.to" :label="q.label" :icon="q.icon" color="indigo" />
+    </nav>
+
+    <!-- Today, and what to do next -->
+    <div v-if="!overview" class="space-y-4 mb-6">
+      <Skeleton variant="tiles" :count="4" />
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div class="lg:col-span-2"><Skeleton variant="list" :count="4" /></div>
+        <Skeleton variant="list" :count="3" />
+      </div>
+    </div>
+    <template v-else>
+      <TodayTiles class="mb-5" :today="overview.today" :live-today="overview.live_today" :mark-next="overview.mark_next" :agenda="overview.agenda" />
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+        <MarkNext class="lg:col-span-2" :items="overview.mark_next" :total="overview.today.to_mark" />
+        <AgendaCard :items="overview.agenda" />
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
+        <ClassHealth class="lg:col-span-2" :classes="overview.classes" />
+        <ActivityFeed :items="overview.activity" />
+      </div>
+    </template>
+
+    <!-- Your students: who's enrolled with you, by class level and stream -->
+    <section class="mb-8">
+      <h2 class="text-sm font-bold text-gray-900 dark:text-white mb-3">Your students</h2>
+      <Skeleton v-if="loadingAnalytics && !analytics.total_enrollments" variant="tiles" :count="4" />
+      <template v-else>
+        <StatStrip class="mb-4" :items="studentStats" />
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 sm:p-5">
+            <p class="text-sm font-semibold text-gray-900 dark:text-white">Students per class</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Each bar is a class level; its colours are the streams - hover for the numbers.</p>
+            <div class="h-64">
+              <Bar v-if="analytics.by_class.length" :data="levelChartData" :options="stackedOptions" />
+              <EmptyState v-else :card="false" compact icon="users" tone="gray" title="No students enrolled yet" />
+            </div>
+          </div>
+          <div class="space-y-4">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 sm:p-5">
+              <p class="text-sm font-semibold text-gray-900 dark:text-white mb-3">Gender</p>
+              <template v-if="hasGenderData">
+                <div class="flex h-3 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-700">
+                  <span v-for="g in genderShares" :key="g.label" :style="{ width: `${g.percent}%`, background: g.color }"></span>
+                </div>
+                <div class="mt-3 grid grid-cols-3 gap-2 text-center">
+                  <div v-for="g in genderShares" :key="g.label">
+                    <p class="text-lg font-bold" :style="{ color: g.color }">{{ g.percent }}%</p>
+                    <p class="text-[11px] text-gray-500 dark:text-gray-400">{{ g.label }} · {{ g.count.toLocaleString() }}</p>
+                  </div>
+                </div>
+              </template>
+              <p v-else class="text-xs text-gray-400">No data yet</p>
+            </div>
+            <div v-if="analytics.by_academic_year.length > 1" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 sm:p-5">
+              <p class="text-sm font-semibold text-gray-900 dark:text-white mb-2">By year</p>
+              <div class="h-40"><Bar :data="yearChartData" :options="chartOptions" /></div>
+            </div>
           </div>
         </div>
-      </div>
-
-      <!-- Gender Distribution -->
-      <div class="card">
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1 flex items-center">
-          <span class="w-8 h-8 rounded-lg bg-pink-100 dark:bg-pink-900/20 flex items-center justify-center mr-2.5 flex-shrink-0">
-            <svg class="w-4.5 h-4.5 text-pink-600 dark:text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-            </svg>
-          </span>
-          Gender Distribution
-        </h3>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4 ml-[42px]">Breakdown of enrolled students by gender</p>
-        <div class="h-64">
-          <Doughnut v-if="!loadingAnalytics && hasGenderData" :data="genderChartData" :options="doughnutOptions" />
-          <div v-else-if="loadingAnalytics" class="flex items-center justify-center h-full text-gray-500">Loading...</div>
-          <div v-else class="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500 gap-2">
-            <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-            <p class="text-sm">No data available</p>
-          </div>
-        </div>
-      </div>
-    </div>
+      </template>
+    </section>
 
     <!-- View Enrolled Students Modal -->
     <div v-if="showViewEnrolledModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
@@ -355,20 +230,28 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import CountUp from '@/components/common/CountUp.vue'
 import { useLiveRefresh } from '@/composables/useLiveRefresh'
-import { Bar, Doughnut } from 'vue-chartjs'
-import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ArcElement } from 'chart.js'
+import { Bar } from 'vue-chartjs'
+import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale } from 'chart.js'
 import apiService from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
+import AppIcon from '@/components/common/AppIcon.vue'
 import QuickLink from '@/components/dashboard/QuickLink.vue'
+import Skeleton from '@/components/ui/Skeleton.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
+import StatStrip, { type StatItem } from '@/components/ui/StatStrip.vue'
+import TodayTiles from '@/components/dashboard/teacher/TodayTiles.vue'
+import MarkNext from '@/components/dashboard/teacher/MarkNext.vue'
+import AgendaCard from '@/components/dashboard/teacher/AgendaCard.vue'
+import ClassHealth, { type ClassHealthItem } from '@/components/dashboard/teacher/ClassHealth.vue'
+import ActivityFeed from '@/components/dashboard/teacher/ActivityFeed.vue'
 import { useToastStore } from '@/stores/toast'
 import { useConfirmStore } from '@/stores/confirm'
 
 const toast = useToastStore()
 const confirmDialog = useConfirmStore()
 
-ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ArcElement)
+ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale)
 
 const authStore = useAuthStore()
 
@@ -378,6 +261,47 @@ const greeting = computed(() => {
   if (hour < 17) return 'Good afternoon'
   return 'Good evening'
 })
+
+// ---- The day at a glance (GET /teacher/dashboard/overview) ----
+interface Overview {
+  teacher: { first_name: string; last_name: string }
+  today: { to_mark: number; live_today: number; due_week: number; support: { groups: number; members: number; revised: number } }
+  live_today: { id: number; title: string; at: string; status: string; class_name: string | null }[]
+  mark_next: { submission_id: number; assignment_id: number; assignment: string; category: string | null; student: string; class_name: string | null; submitted_at: string | null }[]
+  agenda: { kind: 'live' | 'due'; id: number; title: string; at: string; class_name: string | null; status?: string; category?: string | null; submitted?: number }[]
+  classes: ClassHealthItem[]
+  activity: { kind: 'submission' | 'enote' | 'revised' | 'message'; at: string; who: string; what: string; to: string }[]
+}
+const overview = ref<Overview | null>(null)
+const loadOverview = async () => {
+  try {
+    const response = await apiService.get('/teacher/dashboard/overview')
+    if (response.data?.success) overview.value = response.data.data
+  } catch (error) {
+    console.error('Failed to load the dashboard overview:', error)
+  }
+}
+
+const firstName = computed(() => {
+  const n = overview.value?.teacher.first_name || authStore.userName || ''
+  return n === n.toUpperCase() ? n.charAt(0) + n.slice(1).toLowerCase() : n
+})
+const todayLabel = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+const quickLinks = [
+  { to: '/teacher/classes', label: 'My Classes', icon: 'classes' },
+  { to: '/teacher/live-classes', label: 'Live Classes', icon: 'live' },
+  { to: '/teacher/enotes', label: 'eNotes', icon: 'notes' },
+  { to: '/teacher/library', label: 'eLibrary', icon: 'library' },
+  { to: '/teacher/itembank', label: 'Item Bank', icon: 'itembank' },
+  { to: '/teacher/assignments', label: 'Assessments', icon: 'check' },
+  { to: '/teacher/reports', label: 'Reports', icon: 'reports' },
+  { to: '/teacher/chat', label: 'Chats', icon: 'chat' }
+]
+const quickCreate = [
+  { label: 'New assessment', to: '/teacher/assignments/create', icon: 'clipboard', primary: true },
+  { label: 'New eNote', to: '/teacher/enotes', icon: 'book', primary: false },
+  { label: 'Schedule class', to: '/teacher/live-classes', icon: 'video', primary: false }
+]
 
 const loadingAnalytics = ref(false)
 const loadingEnrolled = ref(false)
@@ -414,16 +338,51 @@ const hasGenderData = computed(() => {
   return male + female + other > 0
 })
 
-// Chart data
-const classChartData = computed(() => ({
-  labels: analytics.value.by_class.map((c: any) => c.stream_name ? `${c.class_name} ${c.stream_name}` : c.class_name),
-  datasets: [{
-    label: 'Students',
-    data: analytics.value.by_class.map((c: any) => c.count),
-    backgroundColor: '#6366F1',
-    borderRadius: 8
-  }]
-}))
+// Students per class level, each level's streams stacked
+const STREAM_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#0ea5e9', '#8b5cf6', '#14b8a6', '#f97316', '#84cc16', '#e11d48']
+const levelChartData = computed(() => {
+  const rows = analytics.value.by_class as { class_name: string; stream_name: string | null; count: number }[]
+  const levels = [...new Set(rows.map(r => r.class_name))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+  const streams = [...new Set(rows.map(r => r.stream_name || '—'))].sort()
+  return {
+    labels: levels,
+    datasets: streams.map((st, i) => ({
+      label: st === '—' ? 'Students' : `Stream ${st}`,
+      data: levels.map(l => rows.filter(r => r.class_name === l && (r.stream_name || '—') === st).reduce((n, r) => n + Number(r.count), 0)),
+      backgroundColor: STREAM_COLORS[i % STREAM_COLORS.length],
+      borderRadius: 4,
+      borderSkipped: false as const,
+      maxBarThickness: 56
+    }))
+  }
+})
+const stackedOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { display: false },
+    tooltip: { filter: (item: any) => item.raw > 0 }
+  },
+  scales: {
+    x: { stacked: true, grid: { display: false } },
+    y: { stacked: true, beginAtZero: true, grid: { color: 'rgba(0, 0, 0, 0.05)' } }
+  }
+}
+const studentStats = computed<StatItem[]>(() => [
+  { label: 'Students', value: analytics.value.total_enrollments, tone: 'indigo' },
+  { label: 'Class levels', value: uniqueClassCount.value, tone: 'sky' },
+  { label: 'Streams', value: analytics.value.by_class.length, tone: 'violet' },
+  { label: 'New this week', value: analytics.value.recent_enrollments, tone: 'emerald' }
+])
+const genderShares = computed(() => {
+  const g = analytics.value.by_gender
+  const total = g.male + g.female + g.other || 1
+  return [
+    { label: 'Boys', count: g.male, percent: Math.round(g.male / total * 100), color: '#3b82f6' },
+    { label: 'Girls', count: g.female, percent: Math.round(g.female / total * 100), color: '#ec4899' },
+    { label: 'Other', count: g.other, percent: Math.round(g.other / total * 100), color: '#9ca3af' }
+  ].filter(x => x.count > 0)
+})
 
 const uniqueClassCount = computed(() => new Set(analytics.value.by_class.map((c: any) => c.class_name)).size)
 
@@ -437,14 +396,6 @@ const yearChartData = computed(() => ({
   }]
 }))
 
-const genderChartData = computed(() => ({
-  labels: ['Male', 'Female', 'Other'],
-  datasets: [{
-    data: [analytics.value.by_gender.male, analytics.value.by_gender.female, analytics.value.by_gender.other],
-    backgroundColor: ['#3B82F6', '#EC4899', '#6B7280'],
-    borderWidth: 0
-  }]
-}))
 
 const chartOptions = {
   responsive: true,
@@ -470,16 +421,6 @@ const chartOptions = {
   }
 }
 
-const doughnutOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      display: true,
-      position: 'bottom' as const
-    }
-  }
-}
 
 // silent: the live refresh (no loading state; the counters just move to the new numbers)
 const loadAnalytics = async (silent = false) => {
@@ -496,7 +437,7 @@ const loadAnalytics = async (silent = false) => {
   }
 }
 
-useLiveRefresh(() => loadAnalytics(true))
+useLiveRefresh(() => { loadAnalytics(true); loadOverview() })
 
 const loadMyDepartments = async () => {
   try {
@@ -519,7 +460,8 @@ const switchDepartment = async (departmentId: string) => {
     const response = await apiService.put('/teacher/departments/active', { department_id: id })
     if (response.data?.success) {
       activeDepartmentId.value = id
-      await loadAnalytics()
+      overview.value = null
+      await Promise.all([loadAnalytics(), loadOverview()])
     } else {
       toast.error(response.data?.message || 'Failed to switch department')
     }
@@ -601,6 +543,7 @@ const deEnrollStudent = async (enrollmentId: number, firstName: string, lastName
 }
 
 onMounted(() => {
+  loadOverview()
   loadAnalytics()
   loadMyDepartments()
 })

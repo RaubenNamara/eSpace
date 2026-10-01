@@ -31,7 +31,19 @@
         class="absolute z-30 mt-1.5 min-w-full w-max max-w-[min(18rem,calc(100vw-2rem))] max-h-72 overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg p-1"
         :class="align === 'right' ? 'right-0' : 'left-0'"
       >
-        <li v-for="o in options" :key="String(o.value)">
+        <!-- A long list gets a search box -->
+        <li v-if="options.length > SEARCH_FROM" class="sticky top-0 -mx-1 -mt-1 mb-1 p-1.5 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
+          <input
+            ref="searchInput"
+            v-model="search"
+            type="search"
+            placeholder="Search…"
+            class="w-full px-2.5 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            @keydown.enter.prevent="shown[0] && choose(shown[0].value)"
+          >
+        </li>
+        <li v-if="!shown.length" class="px-2.5 py-2 text-sm text-gray-400">No matches</li>
+        <li v-for="o in shown" :key="String(o.value)">
           <button
             type="button"
             role="option"
@@ -71,6 +83,15 @@ const open = ref(false)
 const nudge = ref(0)
 const current = computed(() => props.options.find(o => o.value === props.modelValue) ?? null)
 
+// More options than this and the menu gets a search box
+const SEARCH_FROM = 8
+const search = ref('')
+const searchInput = ref<HTMLInputElement | null>(null)
+const shown = computed(() => {
+  const q = search.value.trim().toLowerCase()
+  return q ? props.options.filter(o => o.label.toLowerCase().includes(q) || (o.hint || '').toLowerCase().includes(q)) : props.options
+})
+
 const choose = (value: T) => {
   emit('update:modelValue', value)
   open.value = false
@@ -82,7 +103,10 @@ const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') open.value = false
 watch(open, (isOpen) => {
   if (isOpen) {
     nudge.value = 0
+    search.value = ''
     nextTick(() => {
+      // Straight into typing with a mouse and keyboard; a phone keeps its keyboard down until tapped
+      if (window.matchMedia?.('(pointer: fine)').matches) searchInput.value?.focus()
       const box = menu.value?.getBoundingClientRect()
       if (!box) return
       const edge = 8

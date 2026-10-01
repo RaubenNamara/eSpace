@@ -62,7 +62,7 @@ onMounted(async () => {
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
 
-:global(.dark) .score-box-popup {
+.dark .score-box-popup {
   background-color: #1f2937;
   border-color: #374151;
 }
@@ -75,7 +75,7 @@ onMounted(async () => {
   border-radius: 6px;
 }
 
-:global(.dark) .score-box-popup__input {
+.dark .score-box-popup__input {
   background-color: #111827;
   border-color: #374151;
   color: #e5e7eb;

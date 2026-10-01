@@ -194,7 +194,7 @@ onBeforeUnmount(() => {
   background: #fff;
 }
 
-:global(.dark) .typed-answer-editor {
+.dark .typed-answer-editor {
   border-color: #4b5563;
   background: #374151;
 }
@@ -209,7 +209,7 @@ onBeforeUnmount(() => {
   flex-wrap: wrap;
 }
 
-:global(.dark) .typed-answer-editor__toolbar {
+.dark .typed-answer-editor__toolbar {
   border-color: #4b5563;
   background: #1f2937;
 }
@@ -227,7 +227,7 @@ onBeforeUnmount(() => {
   transition: background-color 0.15s, border-color 0.15s;
 }
 
-:global(.dark) .typed-answer-editor__btn {
+.dark .typed-answer-editor__btn {
   color: #e5e7eb;
 }
 
@@ -235,7 +235,7 @@ onBeforeUnmount(() => {
   background: #eef2ff;
 }
 
-:global(.dark) .typed-answer-editor__btn:hover {
+.dark .typed-answer-editor__btn:hover {
   background: rgba(99, 102, 241, 0.15);
 }
 
@@ -245,7 +245,7 @@ onBeforeUnmount(() => {
   color: #4338ca;
 }
 
-:global(.dark) .typed-answer-editor__btn.is-active {
+.dark .typed-answer-editor__btn.is-active {
   background: rgba(99, 102, 241, 0.25);
   color: #c7d2fe;
 }
@@ -262,7 +262,7 @@ onBeforeUnmount(() => {
   margin: 0 2px;
 }
 
-:global(.dark) .typed-answer-editor__divider {
+.dark .typed-answer-editor__divider {
   background: #4b5563;
 }
 
@@ -277,7 +277,7 @@ onBeforeUnmount(() => {
   cursor: pointer;
 }
 
-:global(.dark) .typed-answer-editor__size {
+.dark .typed-answer-editor__size {
   border-color: #4b5563;
   background: #1f2937;
   color: #e5e7eb;
@@ -301,7 +301,7 @@ onBeforeUnmount(() => {
   margin: 0;
 }
 
-:global(.dark) .typed-answer-editor__placeholder {
+.dark .typed-answer-editor__placeholder {
   color: #6b7280;
 }
 
@@ -314,7 +314,7 @@ onBeforeUnmount(() => {
   background: #f9fafb;
 }
 
-:global(.dark) .typed-answer-editor__footer {
+.dark .typed-answer-editor__footer {
   border-color: #4b5563;
   background: #1f2937;
   color: #6b7280;
@@ -324,7 +324,7 @@ onBeforeUnmount(() => {
   background: #f9fafb;
 }
 
-:global(.dark) .typed-answer-editor--readonly .typed-answer-editor__content {
+.dark .typed-answer-editor--readonly .typed-answer-editor__content {
   background: #1f2937;
 }
 </style>
@@ -339,7 +339,7 @@ onBeforeUnmount(() => {
   outline: none;
 }
 
-:global(.dark) .typed-answer-editor__prosemirror {
+.dark .typed-answer-editor__prosemirror {
   color: #f3f4f6;
 }
 

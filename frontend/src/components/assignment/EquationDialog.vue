@@ -104,7 +104,7 @@ async function onInsert() {
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
 }
 
-:global(.dark) .equation-dialog {
+.dark .equation-dialog {
   background-color: #1f2937;
 }
 
@@ -115,7 +115,7 @@ async function onInsert() {
   margin-bottom: 4px;
 }
 
-:global(.dark) .equation-dialog__title {
+.dark .equation-dialog__title {
   color: #f3f4f6;
 }
 
@@ -125,7 +125,7 @@ async function onInsert() {
   margin-bottom: 12px;
 }
 
-:global(.dark) .equation-dialog__hint {
+.dark .equation-dialog__hint {
   color: #9ca3af;
 }
 
@@ -135,7 +135,7 @@ async function onInsert() {
   border-radius: 4px;
 }
 
-:global(.dark) .equation-dialog__hint code {
+.dark .equation-dialog__hint code {
   background-color: #374151;
 }
 
@@ -149,7 +149,7 @@ async function onInsert() {
   resize: vertical;
 }
 
-:global(.dark) .equation-dialog__input {
+.dark .equation-dialog__input {
   background-color: #111827;
   border-color: #374151;
   color: #e5e7eb;
@@ -167,7 +167,7 @@ async function onInsert() {
   overflow-x: auto;
 }
 
-:global(.dark) .equation-dialog__preview-wrap {
+.dark .equation-dialog__preview-wrap {
   background-color: #111827;
 }
 
@@ -176,7 +176,7 @@ async function onInsert() {
   color: #111827;
 }
 
-:global(.dark) .equation-dialog__preview {
+.dark .equation-dialog__preview {
   color: #f3f4f6;
 }
 
@@ -206,7 +206,7 @@ async function onInsert() {
   cursor: pointer;
 }
 
-:global(.dark) .equation-dialog__btn {
+.dark .equation-dialog__btn {
   background-color: #111827;
   border-color: #374151;
   color: #e5e7eb;

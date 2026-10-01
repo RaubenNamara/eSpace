@@ -134,6 +134,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import axios from 'axios'
+import { useRoute } from 'vue-router'
 import ConversationListItem from '@/components/chat/ConversationListItem.vue'
 import MessageBubble from '@/components/chat/MessageBubble.vue'
 import MessageComposer from '@/components/chat/MessageComposer.vue'
@@ -151,6 +152,7 @@ const chatBadge = useChatBadgeStore()
 
 const conversations = ref<Conversation[]>([])
 const conversationSearch = ref('')
+const route = useRoute()
 const activeConversation = ref<Conversation | null>(null)
 const messages = ref<ChatMessage[]>([])
 const loadingConversations = ref(false)
@@ -310,8 +312,20 @@ let conversationPollTimer: number | null = null
 
 onMounted(() => {
   loadingConversations.value = true
-  Promise.all([loadConversations(), loadContacts()]).finally(() => {
+  Promise.all([loadConversations(), loadContacts()]).finally(async () => {
     loadingConversations.value = false
+    // ?student=<id> (e.g. "Message" on a class page) opens - or starts - that conversation
+    const studentId = Number(route.query.student)
+    if (!studentId) return
+    try {
+      const response = await axios.post('/api/teacher/chat/conversations', { contact_id: studentId, contact_role: 'student' })
+      const id = response.data?.data?.id
+      await loadConversations()
+      const conv = conversations.value.find(c => c.id === id)
+      if (conv) openConversation(conv)
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Could not open that conversation')
+    }
   })
 
   conversationPollTimer = window.setInterval(loadConversations, 8000)

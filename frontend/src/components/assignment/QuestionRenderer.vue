@@ -191,7 +191,7 @@ onMounted(measureImage)
   color: #6b7280;
 }
 
-:global(.dark) .question-renderer__status {
+.dark .question-renderer__status {
   color: #9ca3af;
 }
 
@@ -206,7 +206,7 @@ onMounted(measureImage)
   border-radius: 8px;
 }
 
-:global(.dark) .question-renderer__workspace {
+.dark .question-renderer__workspace {
   border-color: #374151;
 }
 

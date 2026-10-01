@@ -223,6 +223,7 @@ const routes: RouteRecordRaw[] = [
       { path: '', redirect: '/teacher/dashboard' },
       { path: 'dashboard', name: 'TeacherDashboard', component: TeacherDashboard },
       { path: 'classes', name: 'TeacherClasses', component: TeacherClasses },
+      { path: 'classes/:id', name: 'TeacherClassDetail', component: () => import('../pages/teacher/ClassDetail.vue') },
       { path: 'live-classes', name: 'TeacherLiveClasses', component: TeacherLiveClasses },
       { path: 'assignments', name: 'TeacherAssignments', component: TeacherAssignments },
       { path: 'assignments/create', name: 'AssignmentBuilder', component: AssignmentBuilder },

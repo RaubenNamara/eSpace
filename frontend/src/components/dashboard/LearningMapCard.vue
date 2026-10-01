@@ -19,7 +19,7 @@
         <CountUp :value="summary.achieved" /> of {{ summary.outcomes }} learning outcomes achieved this year
       </p>
       <p v-if="competencies && competencies.competencies > 0" class="text-xs text-gray-600 dark:text-gray-300">
-        <span class="font-semibold text-violet-700 dark:text-violet-300"><CountUp :value="competencies.achieved" /> of {{ competencies.competencies }}</span> topic competencies achieved
+        <span class="font-semibold text-violet-700 dark:text-violet-300"><CountUp :value="competencies.achieved" /> of {{ competencies.competencies }}</span> Topic competencies achieved
       </p>
       <p v-if="constructs && constructs.constructs > 0" class="text-xs text-gray-600 dark:text-gray-300">
         <span class="font-semibold text-amber-700 dark:text-amber-300"><CountUp :value="constructs.achieved" /> of {{ constructs.constructs }}</span> Elements of Construct achieved
