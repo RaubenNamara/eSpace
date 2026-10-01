@@ -21,6 +21,8 @@ export interface LabRoomOptions {
   cupboard?: boolean
   /** Two glass-fronted apparatus cabinets on the wall behind the bench (left and right). */
   wallCabinets?: boolean
+  /** Bench length in metres (default 1.8); the wall cabinets widen with it */
+  benchLength?: number
 }
 
 /** One wall cabinet's shelves, in scene units: where apparatus can stand. */
@@ -78,6 +80,8 @@ export interface LabRoom {
   frameBox: (box: THREE.Box3) => void
   cupboard: LabCupboard | null
   wallCabinets: LabWallCabinets | null
+  /** Bench length in metres */
+  benchLength: number
   /** Opens or closes any door built by the room (cupboard or wall cabinet) */
   toggleDoor: (door: THREE.Object3D) => void
   /** The door (hinge group) a mesh belongs to, if any */
@@ -145,6 +149,7 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
   const world = new THREE.Group()
   world.scale.setScalar(s)
   scene.add(world)
+  const benchLength = opts.benchLength ?? BENCH_W
   let cupboardParts: CupboardParts | null = null
   let wallParts: WallParts | null = null
   if (field) {
@@ -152,8 +157,8 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
     buildField(world)
   } else {
     buildLighting(world)
-    cupboardParts = buildRoom(world, !!opts.cupboard)
-    if (opts.wallCabinets) wallParts = buildWallCabinets(world)
+    cupboardParts = buildRoom(world, !!opts.cupboard, benchLength)
+    if (opts.wallCabinets) wallParts = buildWallCabinets(world, benchLength)
   }
   // A wider view of the room needs the fog pushed back
   if (!field && (opts.cupboard || opts.wallCabinets)) scene.fog = new THREE.Fog(0xdfe3e8, 7 * s, 16 * s)
@@ -323,6 +328,7 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
   return {
     cupboard,
     wallCabinets,
+    benchLength,
     toggleDoor,
     doorOf,
     renderer,
@@ -398,8 +404,9 @@ const WALL_Z = -BENCH_D / 2 - 0.25
  * Two wall-mounted apparatus cabinets behind the bench, top left and top right: four shelves each
  * behind a pair of light, aluminium-framed glass doors that swing open.
  */
-function buildWallCabinets(scene: THREE.Object3D): WallParts {
-  const W = 1.3, H = 0.86, D = 0.3, t = 0.016
+function buildWallCabinets(scene: THREE.Object3D, benchLength: number): WallParts {
+  // Each cabinet spans just over half the bench, with a narrow gap between the two
+  const W = benchLength / 2 + 0.1, H = 0.86, D = 0.3, t = 0.016
   const bottom = 0.5
   const backZ = WALL_Z + 0.002
   const front = backZ + D
@@ -415,7 +422,8 @@ function buildWallCabinets(scene: THREE.Object3D): WallParts {
   const blockers: THREE.Object3D[] = []
   const cabinets: WallParts['cabinets'] = []
 
-  for (const cx of [-0.83, 0.83]) {
+  const offset = 0.08 + W / 2
+  for (const cx of [-offset, offset]) {
     const minX = cx - W / 2, maxX = cx + W / 2
     const panel = (w: number, h: number, d: number, x: number, y: number, z: number, mat: THREE.Material) => {
       const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat)
@@ -481,7 +489,7 @@ interface CupboardParts {
   bays: { minX: number; maxX: number; levels: number[]; frontZ: number; backZ: number }[]
 }
 
-function buildRoom(scene: THREE.Object3D, withCupboard = false): CupboardParts | null {
+function buildRoom(scene: THREE.Object3D, withCupboard = false, BENCH_W = 1.8): CupboardParts | null {
   // Floor - vinyl tiles
   const floorTex = canvasTexture(512, 512, (ctx, w, h) => {
     ctx.fillStyle = '#b9bec6'
@@ -541,7 +549,7 @@ function buildRoom(scene: THREE.Object3D, withCupboard = false): CupboardParts |
   scene.add(top)
 
   const woodTex = woodTexture()
-  if (withCupboard) return buildCupboard(scene, woodTex)
+  if (withCupboard) return buildCupboard(scene, woodTex, BENCH_W)
   const cabinet = new THREE.Mesh(
     new THREE.BoxGeometry(BENCH_W - 0.06, BENCH_H - 0.035, BENCH_D - 0.06),
     new THREE.MeshStandardMaterial({ map: woodTex, roughness: 0.7 }),
@@ -570,7 +578,7 @@ function buildRoom(scene: THREE.Object3D, withCupboard = false): CupboardParts |
  * The bench cabinet as a working cupboard: two bays, each with a shelf, behind a pair of hinged
  * doors that meet in the middle, so students can open it and take out what is stored inside.
  */
-function buildCupboard(scene: THREE.Object3D, woodTex: THREE.Texture): CupboardParts {
+function buildCupboard(scene: THREE.Object3D, woodTex: THREE.Texture, BENCH_W: number): CupboardParts {
   const W = BENCH_W - 0.06, D = BENCH_D - 0.06
   const t = 0.018
   const top = -0.035, bottom = -BENCH_H
@@ -603,12 +611,18 @@ function buildCupboard(scene: THREE.Object3D, woodTex: THREE.Texture): CupboardP
   // A pair of doors hinged on the outer sides, meeting in the middle (one door per bay)
   const doorTop = top - 0.04, doorBottom = floorY - t
   const doorH = doorTop - doorBottom - 0.002
-  const doorW = W / 2 - 0.0025
+  // A long bench gets a pair of doors per bay; a short one a single door per bay
+  const fourDoors = W > 2.2
+  const doorW = (fourDoors ? W / 4 : W / 2) - 0.0025
   const doorMat = new THREE.MeshStandardMaterial({ map: woodTex, roughness: 0.65 })
   const handleMat = labMaterials.steel()
   const doors: THREE.Object3D[] = []
-  const hinges: [number, 1 | -1][] = [[-W / 2, 1], [W / 2, -1]]
-  hinges.forEach(([hx, dirX], i) => {
+  // [hinge x, which way the door extends, opening angle] - doors hinged on the middle divider
+  // stop just short of square so they stand side by side without swinging into each other
+  const hinges: [number, 1 | -1, number][] = fourDoors
+    ? [[-W / 2, 1, 1.95], [0, -1, 1.5], [0, 1, 1.5], [W / 2, -1, 1.95]]
+    : [[-W / 2, 1, 1.95], [W / 2, -1, 1.95]]
+  hinges.forEach(([hx, dirX, angle], i) => {
     const pivot = new THREE.Group()
     pivot.position.set(hx + dirX * 0.001, (doorTop + doorBottom) / 2, front + t / 2)
     const door = new THREE.Mesh(new THREE.BoxGeometry(doorW, doorH, t), doorMat)
@@ -625,9 +639,9 @@ function buildCupboard(scene: THREE.Object3D, woodTex: THREE.Texture): CupboardP
       pivot.add(post)
     }
     pivot.userData.cupboardDoor = true
-    pivot.userData.bay = i
+    pivot.userData.bay = fourDoors ? (i < 2 ? 0 : 1) : i
     pivot.userData.open = false
-    pivot.userData.openAngle = -dirX * 1.95
+    pivot.userData.openAngle = -dirX * angle
     scene.add(pivot)
     doors.push(pivot)
   })
