@@ -738,19 +738,48 @@ export function createObjectMesh(objectType: string, key: string, displayName: s
       break
     }
     // ---------------- Chemistry ----------------
-    case 'conical_flask': {
-      const r = 0.3, h = 0.6
+    case 'conical_flask':
+    case 'amber_conical_flask': {
+      const amber = objectType === 'amber_conical_flask'
+      const r = 0.3, h = 0.62, neckR = 0.085
       const profile = [
-        new THREE.Vector2(0, 0.004), new THREE.Vector2(r, 0.004), new THREE.Vector2(r * 1.02, 0.04),
-        new THREE.Vector2(0.09, h * 0.72), new THREE.Vector2(0.08, h), new THREE.Vector2(0.095, h + 0.015),
+        new THREE.Vector2(0, 0.004), new THREE.Vector2(r * 0.96, 0.004), new THREE.Vector2(r, 0.03),
+        new THREE.Vector2(neckR + 0.01, h * 0.7), new THREE.Vector2(neckR, h * 0.76), new THREE.Vector2(neckR, h - 0.02),
+        new THREE.Vector2(neckR + 0.012, h), new THREE.Vector2(neckR + 0.012, h + 0.012),
       ]
-      add(new THREE.Mesh(new THREE.LatheGeometry(profile, 48), glass()))
+      const glassMat = amber
+        ? new THREE.MeshPhysicalMaterial({ color: 0xb45309, transparent: true, opacity: 0.62, roughness: 0.06, clearcoat: 1, side: THREE.DoubleSide, depthWrite: false })
+        : glass()
+      add(new THREE.Mesh(new THREE.LatheGeometry(profile, 56), glassMat))
+
+      // White printed graduations and marking spot on the front of the cone
+      const printTex = canvasTex(512, 512, (ctx, w, hh) => {
+        ctx.clearRect(0, 0, w, hh)
+        ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#ffffff'
+        const marks: [number, string][] = [[0.78, '100'], [0.5, '200'], [0.3, '250']]
+        marks.forEach(([y, label]) => {
+          ctx.fillRect(w * 0.6, hh * y, w * 0.13, 5)
+          ctx.font = 'bold 34px Arial'; ctx.fillText(label, w * 0.76, hh * y + 12)
+        })
+        ctx.fillRect(w * 0.63, hh * 0.64, w * 0.07, 4)
+        ctx.font = 'bold 40px Arial'; ctx.fillText('250 ml', w * 0.12, hh * 0.52)
+        ctx.fillRect(w * 0.14, hh * 0.58, w * 0.2, hh * 0.09)
+        ctx.save(); ctx.translate(w * 0.56, hh * 0.86); ctx.rotate(-Math.PI / 2)
+        ctx.font = 'bold 22px Arial'; ctx.fillText('APPROX. VOL', 0, 0); ctx.restore()
+      })
+      const coneBottomY = 0.03, coneTopY = h * 0.7
+      const decal = new THREE.Mesh(
+        new THREE.LatheGeometry([new THREE.Vector2(r * 1.006, coneBottomY), new THREE.Vector2((neckR + 0.01) * 1.006, coneTopY)], 24, -0.75, 1.5),
+        new THREE.MeshBasicMaterial({ map: printTex, transparent: true, depthWrite: false, side: THREE.DoubleSide }),
+      )
+      add(decal)
+
       const liquid = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.12, r * 0.95, h * 0.85, 40),
+        new THREE.CylinderGeometry(0.11, r * 0.94, h * 0.66, 48),
         new THREE.MeshStandardMaterial({ color: props.color || '#e0f2fe', roughness: 0.1, transparent: true, opacity: 0.8 }),
       )
       liquid.userData.role = 'liquid'
-      liquid.userData.maxFillHeight = h * 0.85
+      liquid.userData.maxFillHeight = h * 0.66
       liquid.scale.y = 0.001
       add(liquid)
       break
@@ -971,6 +1000,71 @@ export function createObjectMesh(objectType: string, key: string, displayName: s
       slider.position.x = 0.05
       slider.userData.role = 'slider'
       add(slider)
+      break
+    }
+    case 'dry_cell': {
+      // 1.5 V "D" size dry cell: printed red jacket, metal end caps, + button on top
+      const label = canvasTex(512, 256, (ctx, w, h) => {
+        ctx.fillStyle = '#d61f26'; ctx.fillRect(0, 0, w, h)
+        ctx.fillStyle = '#f5c518'; ctx.fillRect(0, 0, w, 10); ctx.fillRect(0, h - 10, w, 10)
+        const cx = w * 0.25
+        ctx.textAlign = 'center'
+        ctx.font = 'italic bold 40px Georgia'; ctx.fillStyle = '#fde68a'; ctx.fillText('Power Cell', cx, 52)
+        ctx.fillStyle = '#f59e0b'; ctx.beginPath(); ctx.arc(cx, 118, 40, 0, Math.PI * 2); ctx.fill()
+        ctx.fillStyle = '#7c2d12'; ctx.font = 'bold 44px Arial'; ctx.fillText('+', cx, 134)
+        ctx.fillStyle = '#fde68a'; ctx.font = 'bold 22px Arial'; ctx.fillText('SUPER QUALITY', cx, 190)
+        ctx.fillStyle = '#ffffff'; ctx.font = 'bold 24px Arial'; ctx.fillText('BATTERY', cx, 218); ctx.fillText('1.5V', cx, 242)
+        ctx.fillStyle = '#fde68a'; ctx.font = 'bold 30px Arial'; ctx.fillText('1.5V  DRY CELL', w * 0.75, h / 2 + 10)
+      })
+      // Turn the jacket so the emblem half of the label faces the front of the bench
+      label.wrapS = THREE.RepeatWrapping
+      label.offset.x = 0.25
+      const r = 0.09, hh = 0.32
+      const body = mesh(new THREE.CylinderGeometry(r, r, hh, 48, 1, true), new THREE.MeshStandardMaterial({ map: label, roughness: 0.35 }), 0, hh / 2 + 0.006)
+      const top = mesh(new THREE.CylinderGeometry(r * 0.98, r * 0.98, 0.012, 48), chrome(), 0, hh + 0.006)
+      const nub = mesh(new THREE.CylinderGeometry(0.03, 0.032, 0.025, 24), chrome(), 0, hh + 0.024)
+      const bottom = mesh(new THREE.CylinderGeometry(r * 0.98, r * 0.98, 0.012, 48), metal(0x9ca3af), 0, 0.006)
+      add(body, top, nub, bottom)
+      break
+    }
+    case 'accumulator': {
+      // 12 V lead-acid accumulator: white case with electrolyte level lines, blue lid, six vent caps
+      const front = canvasTex(1024, 768, (ctx, w, h) => {
+        ctx.fillStyle = '#f8fafc'; ctx.fillRect(0, 0, w, h)
+        ctx.fillStyle = '#1d4ed8'; ctx.strokeStyle = '#1d4ed8'
+        ctx.textAlign = 'center'; ctx.font = 'bold 44px Arial'
+        ctx.fillText('UPPER LEVEL', w / 2, 70); ctx.fillRect(w * 0.08, 90, w * 0.84, 6)
+        ctx.fillText('LOWER LEVEL', w / 2, 170); ctx.fillRect(w * 0.08, 190, w * 0.84, 6)
+        ctx.fillRect(w * 0.06, 250, w * 0.88, 12)
+        ctx.fillRect(w * 0.06, 280, w * 0.4, 300)
+        ctx.fillStyle = '#ffffff'; ctx.font = 'bold 120px Arial'; ctx.fillText('12V', w * 0.26, 440)
+        ctx.font = 'bold 34px Arial'; ctx.fillText('LEAD-ACID', w * 0.26, 520)
+        ctx.fillStyle = '#1d4ed8'; ctx.font = 'bold 110px Arial'; ctx.fillText('NS60', w * 0.7, 400)
+        ctx.font = 'bold 56px Arial'; ctx.fillText('12V / 45AH', w * 0.7, 480)
+        ctx.font = 'bold 34px Arial'; ctx.fillText('ACCUMULATOR', w * 0.7, 545)
+        ctx.fillRect(w * 0.06, 600, w * 0.88, 10)
+      })
+      const caseMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.55 })
+      const blue = new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.4 })
+      const body = mesh(rbox(0.9, 0.62, 0.55, 0.03), [caseMat, caseMat, caseMat, caseMat, new THREE.MeshStandardMaterial({ map: front, roughness: 0.5 }), caseMat], 0, 0.31)
+      const lid = mesh(rbox(0.94, 0.09, 0.59, 0.025), blue, 0, 0.665)
+      const lidLip = mesh(rbox(0.96, 0.03, 0.61, 0.01), blue, 0, 0.625)
+      const clip = mesh(rbox(0.16, 0.055, 0.03, 0.008), blue, 0, 0.66, 0.3)
+      add(body, lid, lidLip, clip)
+      const yellow = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.45 })
+      for (let i = 0; i < 6; i++) {
+        const x = -0.35 + i * 0.14
+        add(mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.02, 24), blue, x, 0.72, -0.12))
+        add(mesh(new THREE.CylinderGeometry(0.036, 0.04, 0.05, 8), yellow, x, 0.75, -0.12))
+        add(mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.012, 16), yellow, x, 0.781, -0.12))
+      }
+      const lead = new THREE.MeshStandardMaterial({ color: 0x8b8f94, roughness: 0.5, metalness: 0.7 })
+      for (const [x, sign] of [[-0.38, '+'], [0.38, '-']] as const) {
+        add(mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.03, 28), blue, x, 0.725, 0.12))
+        add(mesh(new THREE.CylinderGeometry(0.026, 0.032, 0.09, 20), lead, x, 0.785, 0.12))
+        const tag = labelSprite(sign); tag.scale.set(0.16, 0.035, 1); tag.position.set(x, 0.86, 0.12)
+        add(tag)
+      }
       break
     }
     case 'metre_rule': {
