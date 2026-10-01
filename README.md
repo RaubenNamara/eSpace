@@ -14,7 +14,7 @@ A production-ready, enterprise-level Secondary School eLearning Management Syste
 - Axios
 - TipTap Editor
 - PDF.js
-- Konva.js
+- Three.js (Virtual Lab)
 - Progressive Web App (PWA)
 
 ### Backend

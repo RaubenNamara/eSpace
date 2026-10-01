@@ -153,7 +153,10 @@ class VirtualLabService
         $stmt = $this->getDb()->prepare($sql);
         $stmt->execute($params);
 
-        return array_map(function ($row) {
+        $rows = $stmt->fetchAll();
+        $published = $this->publishedTargets(array_map(fn ($r) => (int) $r['id'], $rows));
+
+        return array_map(function ($row) use ($published) {
             return [
                 'id' => (int) $row['id'],
                 'title' => $row['title'],
@@ -175,10 +178,38 @@ class VirtualLabService
                 'is_template' => (bool) $row['is_template'],
                 'status' => $row['status'],
                 'assignment_count' => (int) $row['assignment_count'],
+                'published_to' => $published[(int) $row['id']] ?? [],
                 'attempt_count' => (int) $row['attempt_count'],
                 'created_at' => $row['created_at'],
             ];
-        }, $stmt->fetchAll());
+        }, $rows);
+    }
+
+    /**
+     * Where each experiment is published, as readable labels ("S.5 - P1", or "S.1 (All Streams)"
+     * when it went to a whole class group) - keyed by experiment id.
+     */
+    private function publishedTargets(array $experimentIds): array
+    {
+        if (empty($experimentIds)) {
+            return [];
+        }
+        $in = implode(',', array_map('intval', $experimentIds));
+        $stmt = $this->getDb()->query(
+            "SELECT a.experiment_id, a.class_group_name, c.name AS class_name, c.stream_name
+             FROM virtual_lab_assignments a
+             LEFT JOIN classes c ON c.id = a.class_id
+             WHERE a.experiment_id IN ($in) AND a.deleted_at IS NULL
+             ORDER BY a.created_at ASC"
+        );
+        $out = [];
+        foreach ($stmt->fetchAll() as $r) {
+            $label = $r['class_group_name']
+                ? $r['class_group_name'] . ' (All Streams)'
+                : trim(($r['class_name'] ?? 'Class') . ($r['stream_name'] ? ' - ' . $r['stream_name'] : ''));
+            $out[(int) $r['experiment_id']][] = $label;
+        }
+        return $out;
     }
 
     public function getExperimentDetail(int $id): ?array
@@ -269,6 +300,7 @@ class VirtualLabService
                 'allow_axis_change' => (bool) $graphRow['allow_axis_change'],
                 'min_points' => (int) $graphRow['min_points'],
                 'show_best_fit' => (bool) $graphRow['show_best_fit'],
+                'manual_plot' => (bool) ($graphRow['manual_plot'] ?? 0),
             ] : null,
         ];
     }
@@ -336,6 +368,24 @@ class VirtualLabService
         return $experimentId;
     }
 
+    /** Subjects an experiment can belong to (the subjects table, not departments) */
+    public function listSubjects(): array
+    {
+        $stmt = $this->getDb()->query(
+            'SELECT s.id, s.name, s.code, d.name AS department_name
+             FROM subjects s LEFT JOIN departments d ON d.id = s.department_id
+             WHERE s.deleted_at IS NULL ORDER BY s.name ASC'
+        );
+        return $stmt->fetchAll();
+    }
+
+    public function subjectExists(int $id): bool
+    {
+        $stmt = $this->getDb()->prepare('SELECT 1 FROM subjects WHERE id = :id AND deleted_at IS NULL');
+        $stmt->execute(['id' => $id]);
+        return (bool) $stmt->fetchColumn();
+    }
+
     public function updateExperiment(int $id, array $data): bool
     {
         $allowed = ['title', 'subject_id', 'topic', 'category', 'difficulty', 'render_mode', 'render_component', 'template_key', 'template_version', 'engine_version', 'is_deprecated', 'estimated_duration_minutes', 'competency', 'learning_outcomes', 'prerequisite_knowledge', 'objective', 'introduction', 'apparatus', 'materials', 'safety_precautions', 'conclusion_prompt', 'marks', 'status'];
@@ -372,6 +422,15 @@ class VirtualLabService
         }
 
         return true;
+    }
+
+    /** Who owns an experiment, and whether it's an official template. Null if it doesn't exist. */
+    public function getExperimentOwnership(int $id): ?array
+    {
+        $stmt = $this->getDb()->prepare('SELECT created_by, is_template FROM virtual_lab_experiments WHERE id = :id AND deleted_at IS NULL');
+        $stmt->execute(['id' => $id]);
+        $row = $stmt->fetch();
+        return $row ? ['created_by' => $row['created_by'] !== null ? (int) $row['created_by'] : null, 'is_template' => (bool) $row['is_template']] : null;
     }
 
     public function deleteExperiment(int $id): bool
@@ -479,13 +538,13 @@ class VirtualLabService
             return;
         }
         $stmt = $this->getDb()->prepare(
-            'INSERT INTO virtual_lab_graph_configs (experiment_id, enabled, title, x_column, y_column, x_label, y_label, graph_type, allow_axis_change, min_points, show_best_fit, created_at, updated_at)
-             VALUES (:experiment_id, :enabled, :title, :x_column, :y_column, :x_label, :y_label, :graph_type, :allow_axis_change, :min_points, :show_best_fit, NOW(), NOW())
+            'INSERT INTO virtual_lab_graph_configs (experiment_id, enabled, title, x_column, y_column, x_label, y_label, graph_type, allow_axis_change, min_points, show_best_fit, manual_plot, created_at, updated_at)
+             VALUES (:experiment_id, :enabled, :title, :x_column, :y_column, :x_label, :y_label, :graph_type, :allow_axis_change, :min_points, :show_best_fit, :manual_plot, NOW(), NOW())
              ON DUPLICATE KEY UPDATE
                 enabled = VALUES(enabled), title = VALUES(title), x_column = VALUES(x_column), y_column = VALUES(y_column),
                 x_label = VALUES(x_label), y_label = VALUES(y_label), graph_type = VALUES(graph_type),
                 allow_axis_change = VALUES(allow_axis_change), min_points = VALUES(min_points), show_best_fit = VALUES(show_best_fit),
-                updated_at = NOW()'
+                manual_plot = VALUES(manual_plot), updated_at = NOW()'
         );
         $stmt->execute([
             'experiment_id' => $experimentId,
@@ -499,6 +558,7 @@ class VirtualLabService
             'allow_axis_change' => !empty($graph['allow_axis_change']) ? 1 : 0,
             'min_points' => $graph['min_points'] ?? 2,
             'show_best_fit' => !empty($graph['show_best_fit']) ? 1 : 0,
+            'manual_plot' => !empty($graph['manual_plot']) ? 1 : 0,
         ]);
     }
 
@@ -531,6 +591,11 @@ class VirtualLabService
         if (!$experiment) {
             throw new \RuntimeException('Experiment not found.');
         }
+        // Students are matched to an assignment through its subject's department, so an experiment
+        // with no subject would publish "successfully" yet be invisible to every student
+        if (empty($experiment['subject_id'])) {
+            throw new \RuntimeException('Choose a subject for this experiment (edit it and pick one) before publishing, so your students can see it.');
+        }
 
         $term = $this->getDb()->prepare('SELECT ay.name AS academic_year FROM terms t LEFT JOIN academic_years ay ON t.academic_year_id = ay.id WHERE t.id = :id');
         $term->execute(['id' => $termId]);
@@ -554,7 +619,7 @@ class VirtualLabService
             $stmt = $this->getDb()->prepare(
                 'INSERT INTO virtual_lab_assignments (experiment_id, class_id, class_group_name, subject_id, teacher_id, term_id, academic_year, due_date, marks, status, created_at, updated_at)
                  VALUES (:experiment_id, :class_id, :class_group_name, :subject_id, :teacher_id, :term_id, :academic_year, :due_date, :marks, :status, NOW(), NOW())
-                 ON DUPLICATE KEY UPDATE due_date = VALUES(due_date), marks = VALUES(marks), status = VALUES(status), updated_at = NOW()'
+                 ON DUPLICATE KEY UPDATE due_date = VALUES(due_date), marks = VALUES(marks), status = VALUES(status), subject_id = VALUES(subject_id), updated_at = NOW()'
             );
             $stmt->execute($params);
 
@@ -579,9 +644,9 @@ class VirtualLabService
 
         if ($existing) {
             $stmt = $this->getDb()->prepare(
-                'UPDATE virtual_lab_assignments SET due_date = :due_date, marks = :marks, status = :status, updated_at = NOW() WHERE id = :id'
+                'UPDATE virtual_lab_assignments SET due_date = :due_date, marks = :marks, status = :status, subject_id = :subject_id, updated_at = NOW() WHERE id = :id'
             );
-            $stmt->execute(['due_date' => $dueDate, 'marks' => $params['marks'], 'status' => 'active', 'id' => $existing['id']]);
+            $stmt->execute(['due_date' => $dueDate, 'marks' => $params['marks'], 'status' => 'active', 'subject_id' => $params['subject_id'], 'id' => $existing['id']]);
             return (int) $existing['id'];
         }
 
@@ -870,6 +935,7 @@ class VirtualLabService
             'observations' => $observations,
             'answers' => $answers,
             'notebook' => $this->listNotebookEntries($attemptId),
+            'marking_annotations' => $attempt['status'] !== 'in_progress' ? $this->getMarkingAnnotations($attemptId) : [],
         ];
     }
 
@@ -907,6 +973,16 @@ class VirtualLabService
             throw new \RuntimeException('This attempt is not in progress.');
         }
 
+        if ($entryType === 'plot_point') {
+            // A student-plotted point must be a real, finite (x, y) pair; nothing else is stored
+            $x = $extra['x'] ?? null;
+            $y = $extra['y'] ?? null;
+            if (!is_numeric($x) || !is_numeric($y) || !is_finite((float) $x) || !is_finite((float) $y) || abs((float) $x) > 1e9 || abs((float) $y) > 1e9) {
+                throw new \RuntimeException('A plotted point needs numeric x and y values.');
+            }
+            $extra = ['x' => (float) $x, 'y' => (float) $y];
+        }
+
         $stmt = $this->getDb()->prepare(
             'INSERT INTO virtual_lab_notebook_entries (attempt_id, entry_type, label, value, unit, extra, created_at)
              VALUES (:attempt_id, :entry_type, :label, :value, :unit, :extra, NOW())'
@@ -924,6 +1000,14 @@ class VirtualLabService
 
     public function removeNotebookEntry(int $attemptId, int $entryId): bool
     {
+        // Same lock as adding: once submitted, the notebook and graph are frozen for marking
+        $status = $this->getDb()->prepare('SELECT status FROM virtual_lab_attempts WHERE id = :id');
+        $status->execute(['id' => $attemptId]);
+        $row = $status->fetch();
+        if (!$row || $row['status'] !== 'in_progress') {
+            return false;
+        }
+
         $stmt = $this->getDb()->prepare('DELETE FROM virtual_lab_notebook_entries WHERE id = :id AND attempt_id = :attempt_id');
         return $stmt->execute(['id' => $entryId, 'attempt_id' => $attemptId]) && $stmt->rowCount() > 0;
     }
@@ -1019,22 +1103,10 @@ class VirtualLabService
         // actual required action (connect/pour/heat/...) should be.
         // Coarse/fine focus nudges are continuous exploratory adjustments (like inspect/zoom) -
         // a student fine-tuning focus while on an unrelated step shouldn't be flagged wrong.
-        $isFreeLookAction = in_array($action, ['inspect', 'zoom', 'focus_coarse', 'focus_fine'], true);
-
         if ($currentStep) {
-            $actionMatches = $currentStep['required_action'] === $action;
+            $verdict = $this->evaluateStepAction($currentStep, $objectKey, $action, $value);
 
-            if ($actionMatches && $action === 'connect') {
-                // A wire is undirected - normalize order so "connect A to B" grades the same as
-                // "connect B to A" (see connectionMatches()).
-                $targetMatches = $this->connectionMatches($currentStep['target_object_key'], $currentStep['expected_value'], $currentStep['tolerance'] ?? null, $objectKey, $value);
-                $valueMatches = $targetMatches;
-            } else {
-                $targetMatches = $currentStep['target_object_key'] === null || $currentStep['target_object_key'] === $objectKey;
-                $valueMatches = $this->valueWithinExpectedRange($currentStep['expected_value'], $currentStep['tolerance'] ?? null, $value);
-            }
-
-            if ($actionMatches && $targetMatches && $valueMatches) {
+            if ($verdict === 'correct') {
                 $isCorrect = true;
                 $feedback = $currentStep['feedback_correct'];
 
@@ -1045,7 +1117,7 @@ class VirtualLabService
                     'UPDATE virtual_lab_attempts SET current_step = :next, steps_completed = steps_completed + 1, correct_actions = correct_actions + 1, updated_at = NOW() WHERE id = :id'
                 )->execute(['next' => $nextStep, 'id' => $attemptId]);
                 $advanced = true;
-            } elseif ($isFreeLookAction) {
+            } elseif ($verdict === 'neutral') {
                 $neutral = true;
             } else {
                 $feedback = $currentStep['feedback_incorrect'];
@@ -1072,6 +1144,67 @@ class VirtualLabService
         ]);
 
         return ['is_correct' => $isCorrect, 'advanced' => $advanced, 'feedback' => $feedback, 'neutral' => $neutral];
+    }
+
+    /**
+     * Is this action the right one for the step? 'correct', 'neutral' (free exploration such as
+     * inspect/zoom/focus, never counted as a mistake) or 'wrong'. No side effects - shared by real
+     * attempts (logAction) and a teacher's practice run (practiceAction), so both grade identically.
+     */
+    public function evaluateStepAction(array $step, ?string $objectKey, string $action, ?string $value): string
+    {
+        // Inspect/zoom are free exploration, not an attempt at the current step - a student
+        // should be able to look at any piece of apparatus at any time without it being logged
+        // as a mistake or shown a "wrong step" warning, the way pressing a wrong button on the
+        // actual required action (connect/pour/heat/...) should be.
+        // Coarse/fine focus nudges are continuous exploratory adjustments (like inspect/zoom) -
+        // a student fine-tuning focus while on an unrelated step shouldn't be flagged wrong.
+        $isFreeLookAction = in_array($action, ['inspect', 'zoom', 'focus_coarse', 'focus_fine'], true);
+        $actionMatches = $step['required_action'] === $action;
+
+        if ($actionMatches && $action === 'connect') {
+            // A wire is undirected - normalize order so "connect A to B" grades the same as
+            // "connect B to A" (see connectionMatches()).
+            $targetMatches = $this->connectionMatches($step['target_object_key'], $step['expected_value'], $step['tolerance'] ?? null, $objectKey, $value);
+            $valueMatches = $targetMatches;
+        } else {
+            $targetMatches = $step['target_object_key'] === null || $step['target_object_key'] === $objectKey;
+            $valueMatches = $this->valueWithinExpectedRange($step['expected_value'], $step['tolerance'] ?? null, $value);
+        }
+
+        if ($actionMatches && $targetMatches && $valueMatches) {
+            return 'correct';
+        }
+        return $isFreeLookAction ? 'neutral' : 'wrong';
+    }
+
+    /**
+     * A teacher trying an experiment the way a student would: checks one action against the given
+     * step, exactly as a real attempt is graded, but records nothing (no attempt, log or marks).
+     */
+    public function practiceAction(int $experimentId, int $stepNumber, ?string $objectKey, string $action, ?string $value): array
+    {
+        $db = $this->getDb();
+        $stepStmt = $db->prepare('SELECT * FROM virtual_lab_steps WHERE experiment_id = :e AND step_number = :n');
+        $stepStmt->execute(['e' => $experimentId, 'n' => $stepNumber]);
+        $step = $stepStmt->fetch();
+        $countStmt = $db->prepare('SELECT COUNT(*) FROM virtual_lab_steps WHERE experiment_id = :e');
+        $countStmt->execute(['e' => $experimentId]);
+        $total = (int) $countStmt->fetchColumn();
+
+        if (!$step) {
+            return ['is_correct' => false, 'advanced' => false, 'neutral' => true, 'feedback' => null, 'is_safety_check' => false, 'next_step' => $stepNumber, 'total_steps' => $total];
+        }
+        $verdict = $this->evaluateStepAction($step, $objectKey, $action, $value);
+        return [
+            'is_correct' => $verdict === 'correct',
+            'advanced' => $verdict === 'correct',
+            'neutral' => $verdict === 'neutral',
+            'feedback' => $verdict === 'correct' ? $step['feedback_correct'] : ($verdict === 'wrong' ? $step['feedback_incorrect'] : null),
+            'is_safety_check' => !empty($step['is_safety_check']),
+            'next_step' => $verdict === 'correct' ? min($stepNumber + 1, $total) : $stepNumber,
+            'total_steps' => $total,
+        ];
     }
 
     public function saveObservation(int $attemptId, ?int $stepId, string $text): void
@@ -1151,12 +1284,15 @@ class VirtualLabService
             return;
         }
 
-        $xKey = ($config['allow_axis_change'] && $graphXKey) ? $graphXKey : $config['x_column'];
-        $yKey = ($config['allow_axis_change'] && $graphYKey) ? $graphYKey : $config['y_column'];
+        $manual = !empty($config['manual_plot']);
+        // Student-plotted points always live under x / y; simulation rows use the configured columns
+        $xKey = $manual ? 'x' : (($config['allow_axis_change'] && $graphXKey) ? $graphXKey : $config['x_column']);
+        $yKey = $manual ? 'y' : (($config['allow_axis_change'] && $graphYKey) ? $graphYKey : $config['y_column']);
+        $sourceType = $manual ? 'plot_point' : 'result_row';
 
         $points = [];
         foreach ($this->listNotebookEntries($attemptId) as $entry) {
-            if ($entry['entry_type'] !== 'result_row' || !$entry['extra']) {
+            if ($entry['entry_type'] !== $sourceType || !$entry['extra']) {
                 continue;
             }
             if (isset($entry['extra'][$xKey]) && isset($entry['extra'][$yKey]) && is_numeric($entry['extra'][$xKey]) && is_numeric($entry['extra'][$yKey])) {
@@ -1190,6 +1326,56 @@ class VirtualLabService
     // ---------------------------------------------------------------------
     // Teacher grading
     // ---------------------------------------------------------------------
+
+    // ---------------------------------------------------------------------
+    // Canvas marking - the teacher's annotations on each part of a submitted attempt
+    // ---------------------------------------------------------------------
+
+    public const MARKING_SECTION_PATTERN = '/^(results|graph|observations|conclusion|answer:\d+)$/';
+
+    /** Every marked part of an attempt: its key, the content that was marked, and the marks on it. */
+    public function getMarkingAnnotations(int $attemptId): array
+    {
+        $stmt = $this->getDb()->prepare(
+            'SELECT section_key, base_data, annotation_data, updated_at FROM virtual_lab_marking_annotations
+             WHERE attempt_id = :id ORDER BY id ASC'
+        );
+        $stmt->execute(['id' => $attemptId]);
+        return array_map(fn ($r) => [
+            'section_key' => $r['section_key'],
+            'base' => json_decode($r['base_data'], true),
+            'annotation' => json_decode($r['annotation_data'], true) ?: ['objects' => []],
+            'updated_at' => $r['updated_at'],
+        ], $stmt->fetchAll());
+    }
+
+    public function saveMarkingAnnotation(int $attemptId, string $sectionKey, array $base, array $annotation, int $teacherId): void
+    {
+        $stmt = $this->getDb()->prepare(
+            'INSERT INTO virtual_lab_marking_annotations (attempt_id, section_key, base_data, annotation_data, teacher_id)
+             VALUES (:attempt_id, :section_key, :base_data, :annotation_data, :teacher_id)
+             ON DUPLICATE KEY UPDATE base_data = VALUES(base_data), annotation_data = VALUES(annotation_data),
+                                     teacher_id = VALUES(teacher_id), updated_at = NOW()'
+        );
+        $stmt->execute([
+            'attempt_id' => $attemptId,
+            'section_key' => $sectionKey,
+            'base_data' => json_encode($base),
+            'annotation_data' => json_encode($annotation),
+            'teacher_id' => $teacherId,
+        ]);
+    }
+
+    /** The teacher who published the assignment this attempt belongs to (null if no such attempt). */
+    public function getAttemptAssignmentTeacherId(int $attemptId): ?int
+    {
+        $stmt = $this->getDb()->prepare(
+            'SELECT a.teacher_id FROM virtual_lab_attempts att INNER JOIN virtual_lab_assignments a ON att.assignment_id = a.id WHERE att.id = :id'
+        );
+        $stmt->execute(['id' => $attemptId]);
+        $v = $stmt->fetchColumn();
+        return $v === false || $v === null ? null : (int) $v;
+    }
 
     public function getAttemptDetail(int $attemptId): ?array
     {
@@ -1264,6 +1450,7 @@ class VirtualLabService
                 'feedback' => $a['feedback'],
             ], $ansStmt->fetchAll()),
             'notebook' => $this->listNotebookEntries($attemptId),
+            'marking_annotations' => $this->getMarkingAnnotations($attemptId),
             'graph_snapshot' => $graphSnapshot ? [
                 'title' => $graphSnapshot['title'],
                 'x_column' => $graphSnapshot['x_column'],

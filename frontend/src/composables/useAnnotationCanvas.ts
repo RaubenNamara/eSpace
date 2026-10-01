@@ -302,7 +302,7 @@ export function createTypedAnswerLayer(text: string, width: number): { layer: An
   return { layer: normalizeLayer({ objects: [raw] }, width, height), height }
 }
 
-export function createMarkObject(tool: 'tick' | 'cross', point: { x: number; y: number }, color: string): Path {
+export function createMarkObject(tool: 'tick' | 'cross', point: { x: number; y: number }, color: string, useInkColor = false): Path {
   const size = 24
   const path =
     tool === 'tick'
@@ -313,13 +313,12 @@ export function createMarkObject(tool: 'tick' | 'cross', point: { x: number; y: 
     top: point.y,
     originX: 'center',
     originY: 'center',
-    stroke: tool === 'tick' ? '#16a34a' : '#dc2626',
+    stroke: useInkColor ? color : tool === 'tick' ? '#16a34a' : '#dc2626',
     strokeWidth: 4,
     fill: '',
     strokeLineCap: 'round'
   })
   tagObject(obj, tool, { annotationType: tool })
-  void color
   return obj
 }
 

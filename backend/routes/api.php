@@ -421,10 +421,12 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
 
         // Virtual Lab (create/edit own experiments, copy templates, publish, grade attempts)
         Router::get('/virtual-lab/objects', 'eSpace\App\Controllers\Teacher\VirtualLabController@objects');
+        Router::get('/virtual-lab/subjects', 'eSpace\App\Controllers\Teacher\VirtualLabController@subjects');
         Router::get('/virtual-lab/experiments', 'eSpace\App\Controllers\Teacher\VirtualLabController@index');
         Router::post('/virtual-lab/experiments', 'eSpace\App\Controllers\Teacher\VirtualLabController@store');
         Router::post('/virtual-lab/experiments/{id}/copy-template', 'eSpace\App\Controllers\Teacher\VirtualLabController@copyTemplate');
         Router::post('/virtual-lab/experiments/{id}/publish', 'eSpace\App\Controllers\Teacher\VirtualLabController@publish');
+        Router::post('/virtual-lab/experiments/{id}/practice/action', 'eSpace\App\Controllers\Teacher\VirtualLabController@practiceAction');
         Router::put('/virtual-lab/experiments/{id}', 'eSpace\App\Controllers\Teacher\VirtualLabController@update');
         Router::delete('/virtual-lab/experiments/{id}', 'eSpace\App\Controllers\Teacher\VirtualLabController@destroy');
         Router::get('/virtual-lab/experiments/{id}', 'eSpace\App\Controllers\Teacher\VirtualLabController@show');
@@ -432,6 +434,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/virtual-lab/assignments/{id}/preview', 'eSpace\App\Controllers\Teacher\VirtualLabController@previewAssignment');
         Router::get('/virtual-lab/assignments', 'eSpace\App\Controllers\Teacher\VirtualLabController@assignments');
         Router::put('/virtual-lab/attempts/{id}/grade', 'eSpace\App\Controllers\Teacher\VirtualLabController@grade');
+        Router::put('/virtual-lab/attempts/{id}/marking-annotations', 'eSpace\App\Controllers\Teacher\VirtualLabController@saveMarkingAnnotation');
         Router::put('/virtual-lab/attempts/{id}/answers/{questionId}/grade', 'eSpace\App\Controllers\Teacher\VirtualLabController@gradeAnswer');
         Router::get('/virtual-lab/attempts/{id}', 'eSpace\App\Controllers\Teacher\VirtualLabController@attemptDetail');
         Router::get('/virtual-lab/students/{studentId}/skills/{skillKey}/evidence', 'eSpace\App\Controllers\Teacher\VirtualLabController@studentSkillEvidence');

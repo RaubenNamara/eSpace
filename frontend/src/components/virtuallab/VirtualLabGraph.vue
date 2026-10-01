@@ -1,25 +1,37 @@
 <template>
-  <div v-if="rows.length > 0" class="mt-3">
+  <div v-if="rows.length > 0 || config?.enabled" class="mt-3">
     <div class="flex items-center justify-between gap-2 mb-2">
       <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{ displayTitle }}</p>
       <div v-if="axesEditable" class="flex items-center gap-1.5 text-xs">
-        <select v-model="xKey" class="input-field text-xs py-1">
+        <select v-model="xKey" @change="xTouched = true" class="input-field text-xs py-1">
           <option v-for="c in numericColumns" :key="c" :value="c">{{ humanize(c) }}</option>
         </select>
         <span class="text-gray-400">vs</span>
-        <select v-model="yKey" class="input-field text-xs py-1">
+        <select v-model="yKey" @change="yTouched = true" class="input-field text-xs py-1">
           <option v-for="c in numericColumns" :key="c" :value="c">{{ humanize(c) }}</option>
         </select>
       </div>
     </div>
 
-    <p v-if="rows.length < minPoints" class="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/40 rounded-lg px-3 py-2.5">
-      Record at least {{ minPoints }} reading{{ minPoints === 1 ? '' : 's' }} to plot this graph.
+    <div v-if="points.length >= 2" class="flex items-center justify-end gap-1.5 text-xs text-gray-500 dark:text-gray-400 mb-1.5">
+      <label class="flex items-center gap-1.5 mr-3 cursor-pointer select-none"><input v-model="showFit" type="checkbox" class="rounded"> Line of best fit</label>
+      <label for="graph-line-mode">Line:</label>
+      <select id="graph-line-mode" v-model="lineMode" class="input-field text-xs py-1 w-auto">
+        <option value="none">Points only</option>
+        <option value="join">Join the points</option>
+        <option value="smooth">Smooth curve</option>
+      </select>
+    </div>
+    <p v-if="rows.length < minPoints" class="text-xs text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg px-3 py-2 mb-2">
+      <strong>{{ rows.length }} of {{ minPoints }}</strong> reading{{ minPoints === 1 ? '' : 's' }} recorded - the graph is drawn here as you add readings to your Results Table{{ rows.length ? '' : ' (run the experiment and use "Add to results")' }}.
     </p>
-    <template v-else-if="xKey && yKey">
+    <template v-if="config?.enabled || (xKey && yKey)">
       <div class="h-56 sm:h-64">
         <Scatter :data="chartData" :options="chartOptions" />
       </div>
+      <p v-if="numericColumns.includes('sin_2theta') && xKey !== 'sin_2theta' && yKey === 'range_m' && fit && fit.r2 < 0.7" class="mt-1.5 text-[11px] text-amber-700 dark:text-amber-400">
+        Range against angle is a hump, so a straight line fits it badly (R&sup2; {{ fit.r2 }}). Try choosing <strong>sin(2θ)</strong> for the horizontal axis - range against sin(2θ) is a straight line.
+      </p>
       <div v-if="fit" class="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-gray-500 dark:text-gray-400">
         <span>Gradient: <strong class="text-gray-700 dark:text-gray-300">{{ fit.slope }}</strong></span>
         <span>Intercept: <strong class="text-gray-700 dark:text-gray-300">{{ fit.intercept }}</strong></span>
@@ -40,7 +52,19 @@ ChartJS.register(Title, Tooltip, Legend, PointElement, LineElement, LinearScale)
 
 const props = defineProps<{ rows: NotebookEntry[]; config?: GraphConfig | null }>()
 
+// A derived column that is not stored in the results table but worked out from one that is. Range
+// against sin(2*angle) is a straight line (R = v^2 sin(2*angle) / g), unlike range against angle,
+// which is a hump - so it is the axis to choose for a meaningful line of best fit.
+const SIN_2THETA = 'sin_2theta'
+const isDerived = (key: string) => key === SIN_2THETA
+
+function cell(row: NotebookEntry, key: string): number {
+  if (key === SIN_2THETA) return Math.sin((2 * Number(row.extra?.angle_deg) * Math.PI) / 180)
+  return Number(row.extra?.[key])
+}
+
 function humanize(key: string): string {
+  if (key === SIN_2THETA) return 'sin(2θ)'
   return key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
@@ -50,9 +74,12 @@ function humanize(key: string): string {
 const numericColumns = computed(() => {
   const first = props.rows[0]?.extra
   if (!first) return []
-  return Object.keys(first).filter((key) =>
+  const cols = Object.keys(first).filter((key) =>
     props.rows.every((r) => r.extra != null && !Number.isNaN(Number(r.extra[key])))
   )
+  return cols.includes('angle_deg') && props.rows.every((r) => r.extra?.angle_deg != null && r.extra.angle_deg !== '')
+    ? [...cols, SIN_2THETA]
+    : cols
 })
 
 // No config (or a config the teacher never enabled) behaves exactly like before this feature -
@@ -62,12 +89,17 @@ const axesEditable = computed(() => !props.config?.enabled || props.config.allow
 
 const xKey = ref('')
 const yKey = ref('')
+// Set once the learner picks an axis themselves; until then the teacher's configured axes are
+// (re)applied whenever the columns change, so a row that arrives with more columns doesn't leave
+// both axes stuck on whichever column happened to exist first.
+const xTouched = ref(false)
+const yTouched = ref(false)
 
 watch([numericColumns, () => props.config], ([cols, config]) => {
   const configuredX = config?.enabled && config.x_column && cols.includes(config.x_column) ? config.x_column : null
   const configuredY = config?.enabled && config.y_column && cols.includes(config.y_column) ? config.y_column : null
-  if (!cols.includes(xKey.value)) xKey.value = configuredX ?? cols[0] ?? ''
-  if (!cols.includes(yKey.value)) yKey.value = configuredY ?? cols[1] ?? cols[0] ?? ''
+  if (!xTouched.value || !cols.includes(xKey.value)) xKey.value = configuredX ?? cols[0] ?? ''
+  if (!yTouched.value || !cols.includes(yKey.value)) yKey.value = configuredY ?? cols[1] ?? cols[0] ?? ''
   // A locked (non-editable) axis config always wins over whatever was previously selected, even if
   // that previous selection was itself a valid column - the teacher's choice isn't optional here.
   if (config?.enabled && !config.allow_axis_change) {
@@ -76,28 +108,73 @@ watch([numericColumns, () => props.config], ([cols, config]) => {
   }
 }, { immediate: true })
 
+// The points are joined by default so the graph reads as a graph; the learner can switch to points
+// only, or to a smooth curve, which suits non-linear results such as range against angle.
+const lineMode = ref<'none' | 'join' | 'smooth'>('join')
+
 const displayTitle = computed(() => props.config?.enabled && props.config.title ? props.config.title : 'Graph')
-const xAxisLabel = computed(() => props.config?.enabled && props.config.x_label ? props.config.x_label : humanize(xKey.value))
-const yAxisLabel = computed(() => props.config?.enabled && props.config.y_label ? props.config.y_label : humanize(yKey.value))
+// The teacher's axis labels belong to the columns they configured; if the learner switches an axis
+// to another column, the label follows the column instead of staying on the old one.
+const xAxisLabel = computed(() => props.config?.enabled && props.config.x_label && xKey.value === props.config.x_column ? props.config.x_label : humanize(xKey.value))
+const yAxisLabel = computed(() => props.config?.enabled && props.config.y_label && yKey.value === props.config.y_column ? props.config.y_label : humanize(yKey.value))
 
 const points = computed(() => props.rows
-  .map((r) => ({ x: Number(r.extra?.[xKey.value]), y: Number(r.extra?.[yKey.value]) }))
+  .map((r) => ({ x: cell(r, xKey.value), y: cell(r, yKey.value) }))
   .filter((p) => !Number.isNaN(p.x) && !Number.isNaN(p.y)))
 
 // Best-fit is computed only from the learner's own real recorded points, and only rendered when the
 // experiment explicitly asks for it - never replaces or adjusts the actual scatter points.
-const fit = computed(() => (props.config?.enabled && props.config.show_best_fit) ? linearRegression(points.value) : null)
+// The learner can also switch it on; it is a straight line by definition (least squares), so it
+// stays straight whatever the points do. On by default.
+const showFit = ref(true)
+watch(() => props.config?.show_best_fit, (on) => { if (on) showFit.value = true })
+const fit = computed(() => showFit.value ? linearRegression(points.value) : null)
 
 const fitLinePoints = computed(() => {
   if (!fit.value || points.value.length === 0) return []
   const xs = points.value.map((p) => p.x)
-  const minX = Math.min(0, ...xs)
-  const maxX = Math.max(...xs) * 1.1
+  // spans the data only, so drawing the line never stretches the axes
+  const minX = Math.min(...xs)
+  const maxX = Math.max(...xs)
   return [
     { x: minX, y: (fit.value.slope * minX) + fit.value.intercept },
     { x: maxX, y: (fit.value.slope * maxX) + fit.value.intercept },
   ]
 })
+
+// Smooth curve through the points using monotone cubic interpolation (Fritsch-Carlson): it passes
+// through every point and never overshoots between them, so it can't invent a peak or dip that the
+// readings don't show. Sampled into short straight segments for drawing.
+function smoothCurve(pts: { x: number; y: number }[], perSegment = 24): { x: number; y: number }[] {
+  const n = pts.length
+  if (n < 3) return pts
+  const dx: number[] = [], slope: number[] = []
+  for (let i = 0; i < n - 1; i++) {
+    dx.push(pts[i + 1].x - pts[i].x)
+    slope.push(dx[i] === 0 ? 0 : (pts[i + 1].y - pts[i].y) / dx[i])
+  }
+  const m: number[] = [slope[0]]
+  for (let i = 1; i < n - 1; i++) m.push(slope[i - 1] * slope[i] <= 0 ? 0 : (slope[i - 1] + slope[i]) / 2)
+  m.push(slope[n - 2])
+  for (let i = 0; i < n - 1; i++) {
+    if (slope[i] === 0) { m[i] = 0; m[i + 1] = 0; continue }
+    const a = m[i] / slope[i], b = m[i + 1] / slope[i]
+    const s = a * a + b * b
+    if (s > 9) { const t = 3 / Math.sqrt(s); m[i] = t * a * slope[i]; m[i + 1] = t * b * slope[i] }
+  }
+  const out: { x: number; y: number }[] = []
+  for (let i = 0; i < n - 1; i++) {
+    for (let k = 0; k < perSegment; k++) {
+      const t = k / perSegment, t2 = t * t, t3 = t2 * t, h = dx[i]
+      out.push({
+        x: pts[i].x + t * h,
+        y: (2 * t3 - 3 * t2 + 1) * pts[i].y + (t3 - 2 * t2 + t) * h * m[i] + (-2 * t3 + 3 * t2) * pts[i + 1].y + (t3 - t2) * h * m[i + 1],
+      })
+    }
+  }
+  out.push(pts[n - 1])
+  return out
+}
 
 const chartData = computed(() => {
   const datasets: any[] = [{
@@ -108,7 +185,25 @@ const chartData = computed(() => {
     borderColor: 'rgba(79, 70, 229, 1)',
     pointRadius: 5,
     pointHoverRadius: 7,
+    order: 0,
   }]
+  if (lineMode.value !== 'none' && points.value.length >= 2) {
+    // A joining line has to run left to right whatever order the readings were taken in. Drawn as its
+    // own line series (like the best-fit line) rather than switching the scatter series' showLine on.
+    const sorted = [...points.value].sort((a, b) => a.x - b.x)
+    datasets.push({
+      type: 'line',
+      label: lineMode.value === 'smooth' ? 'Smooth curve' : 'Joined points',
+      data: lineMode.value === 'smooth' ? smoothCurve(sorted) : sorted,
+      borderColor: 'rgba(79, 70, 229, 0.85)',
+      borderWidth: 2,
+      pointRadius: 0,
+      pointHitRadius: 0,
+      fill: false,
+      tension: 0,
+      order: 1,
+    })
+  }
   if (fit.value) {
     datasets.push({
       type: 'line',
@@ -137,5 +232,10 @@ const chartOptions = computed(() => ({
 
 // Read by the parent page at submit time so the frozen per-attempt snapshot reflects whichever
 // axes the learner was actually viewing (only meaningful when the config allows changing them).
-defineExpose({ xKey, yKey })
+// A derived column exists only in this view, so it is reported as "no choice" and the server falls
+// back to the experiment's configured columns for the saved snapshot.
+defineExpose({
+  xKey: computed(() => (isDerived(xKey.value) ? '' : xKey.value)),
+  yKey: computed(() => (isDerived(yKey.value) ? '' : yKey.value)),
+})
 </script>

@@ -199,6 +199,7 @@ import { ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { createObjectMesh, createConnectionLine, voltageSpriteTexture, digitalDisplayTexture } from './labObjectFactory'
+import { createLabRoom, type LabRoom } from './lab3d/labRoom'
 import type { SceneObjectConfig, LabObjectDef, LabAction } from '@/types/virtualLab'
 
 const props = defineProps<{
@@ -218,8 +219,6 @@ let renderer: THREE.WebGLRenderer
 let scene: THREE.Scene
 let camera: THREE.PerspectiveCamera
 let controls: OrbitControls
-let raf = 0
-let resizeObserver: ResizeObserver | null = null
 
 const groups = new Map<string, THREE.Group>()
 const raycaster = new THREE.Raycaster()
@@ -783,13 +782,14 @@ function resetStopwatch(key: string) {
 function highlight(key: string | null) {
   groups.forEach((g, k) => {
     g.traverse((child) => {
-      if (child instanceof THREE.Mesh && child.userData.role !== 'label') {
-        const mat = child.material as THREE.MeshStandardMaterial
-        if ('emissive' in mat) {
-          mat.emissive = new THREE.Color(k === key ? 0x22d3ee : 0x000000)
-          mat.emissiveIntensity = k === key ? 0.35 : (child.userData.role === 'flame' || child.userData.role === 'led' ? mat.emissiveIntensity : 0)
-        }
-      }
+      // Lamps and flames own their emissive glow (on/off state) - never touch it here
+      if (!(child instanceof THREE.Mesh) || child.userData.role === 'flame' || child.userData.role === 'led') return
+      const mats = Array.isArray(child.material) ? child.material : [child.material]
+      mats.forEach((m) => {
+        if (!(m instanceof THREE.MeshStandardMaterial)) return
+        m.emissive.setHex(k === key ? 0x22d3ee : 0x000000)
+        m.emissiveIntensity = k === key ? 0.3 : 0
+      })
     })
   })
 }
@@ -1342,69 +1342,35 @@ function cancelPouring() {
   controls.enabled = true
 }
 
+/** Scene units per metre - apparatus here is modelled at 1 unit = 20 cm (a 30 cm ruler is 1.5 units). */
+const UNITS_PER_METRE = 5
+let room: LabRoom | null = null
+/** Apparatus under the pointer while nothing is being dragged - its name tag shows. */
+const hoveredKey = ref<string | null>(null)
+
 function buildScene() {
   const host = canvasHost.value
   if (!host) return
-  scene = new THREE.Scene()
-  scene.background = null
 
-  camera = new THREE.PerspectiveCamera(45, host.clientWidth / host.clientHeight, 0.1, 100)
-  camera.position.set(2.5, 2.2, 3.2)
-
-  // WebGLRenderer throws (rather than returning a null/broken instance) when the browser can't
-  // grant a WebGL context - common on mobile after several experiments have been opened in one
-  // session without their prior context ever being released (see the forceContextLoss() call in
-  // onBeforeUnmount below). Without this guard that throw left the canvas silently blank forever.
+  // Throws when the browser can't grant a WebGL context (common on mobile after several labs in
+  // one session) - the room's dispose() releases each context with forceContextLoss() for this.
   try {
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' })
+    room = createLabRoom(host, {
+      unitScale: UNITS_PER_METRE,
+      cameraPosition: [0.4, 4.6, 6.4],
+      target: [0, 0.4, 0],
+      minDistance: 1.2,
+      maxDistance: 14,
+    })
   } catch (err) {
     console.error('Virtual Lab: failed to create a WebGL context', err)
     renderError.value = true
     return
   }
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-  renderer.setSize(host.clientWidth, host.clientHeight)
-  renderer.shadowMap.enabled = true
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap
-  renderer.outputColorSpace = THREE.SRGBColorSpace
-  renderer.toneMapping = THREE.ACESFilmicToneMapping
-  renderer.toneMappingExposure = 1.05
-  host.appendChild(renderer.domElement)
-
-  controls = new OrbitControls(camera, renderer.domElement)
-  controls.target.set(0, 0.3, 0)
-  controls.enableDamping = true
-  controls.maxPolarAngle = Math.PI / 2.1
-  controls.minDistance = 1.5
-  controls.maxDistance = 8
-
-  // A sky/ground hemisphere light reads as far more natural ambient fill than a flat AmbientLight
-  // (which lights every face equally and flattens the objects), plus a soft fill light on the
-  // opposite side of the key light so shadowed faces never go fully black.
-  const hemi = new THREE.HemisphereLight(0xe8f0ff, 0xb8b0a0, 0.65)
-  const key = new THREE.DirectionalLight(0xffffff, 1.5)
-  key.position.set(3, 5, 2)
-  key.castShadow = true
-  key.shadow.mapSize.set(2048, 2048)
-  key.shadow.camera.near = 0.5
-  key.shadow.camera.far = 15
-  key.shadow.camera.left = -4
-  key.shadow.camera.right = 4
-  key.shadow.camera.top = 4
-  key.shadow.camera.bottom = -4
-  key.shadow.bias = -0.0015
-  key.shadow.radius = 3
-  const fill = new THREE.DirectionalLight(0xdbe8ff, 0.35)
-  fill.position.set(-3, 2, -2)
-  scene.add(hemi, key, fill)
-
-  const bench = new THREE.Mesh(
-    new THREE.CylinderGeometry(4, 4, 0.1, 64),
-    new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.85, metalness: 0.05 })
-  )
-  bench.position.y = -0.05
-  bench.receiveShadow = true
-  scene.add(bench)
+  renderer = room.renderer
+  scene = room.scene
+  camera = room.camera
+  controls = room.controls
 
   props.sceneObjects.forEach((cfg) => {
     if (cfg.in_tray) {
@@ -1420,32 +1386,77 @@ function buildScene() {
   })
 
   recomputeOptics()
+  frameApparatus()
 
   renderer.domElement.addEventListener('pointerdown', onPointerDown)
   renderer.domElement.addEventListener('pointermove', onPointerMove)
+  renderer.domElement.addEventListener('pointermove', onHoverMove)
   renderer.domElement.addEventListener('pointerup', onPointerUp)
 
-  let lastStopwatchTick = 0
-  const animate = (now?: number) => {
-    raf = requestAnimationFrame(animate)
-    controls.update()
+  let sinceStopwatchTick = 0
+  room.onFrame((dt) => {
     // Throttled - regenerating a canvas texture every frame would be wasteful; a tenth-of-a-
     // second display only needs updating a few times a second to read as "live".
-    if ((now ?? 0) - lastStopwatchTick > 150) {
-      lastStopwatchTick = now ?? 0
+    sinceStopwatchTick += dt
+    if (sinceStopwatchTick > 0.15) {
+      sinceStopwatchTick = 0
       stopwatchRunning.forEach((running, key) => { if (running) updateStopwatchDisplay(key) })
     }
-    renderer.render(scene, camera)
-  }
-  animate()
-
-  resizeObserver = new ResizeObserver(() => {
-    if (!host.clientWidth || !host.clientHeight) return
-    camera.aspect = host.clientWidth / host.clientHeight
-    camera.updateProjectionMatrix()
-    renderer.setSize(host.clientWidth, host.clientHeight)
+    // Name tags only for the apparatus being hovered or worked with, so they never pile up
+    groups.forEach((g, key) => {
+      const show = key === selectedKey.value || key === hoveredKey.value
+      g.children.forEach((c) => { if (c.userData.role === 'label') c.visible = show })
+    })
   })
-  resizeObserver.observe(host)
+}
+
+/**
+ * Keeps the bench in step with `sceneObjects` without rebuilding the room: new apparatus is
+ * placed, removed apparatus is disposed, and existing apparatus keeps its state (poured liquid,
+ * switches, etc.) - only following a changed position.
+ */
+watch(
+  () => props.sceneObjects.map(o => `${o.key}@${o.position.x},${o.position.z}`).join('|'),
+  () => {
+    if (!room) return
+    const wanted = new Map(props.sceneObjects.filter(o => !o.in_tray).map(o => [o.key, o]))
+    let added = false
+    groups.forEach((g, key) => {
+      if (wanted.has(key)) return
+      scene.remove(g)
+      g.traverse((o) => {
+        if (o instanceof THREE.Mesh || o instanceof THREE.Sprite) {
+          o.geometry?.dispose()
+          const mats = Array.isArray(o.material) ? o.material : [o.material]
+          mats.forEach((m: THREE.Material & { map?: THREE.Texture | null }) => { m.map?.dispose(); m.dispose() })
+        }
+      })
+      groups.delete(key)
+      if (selectedKey.value === key) deselect()
+    })
+    wanted.forEach((cfg, key) => {
+      const g = groups.get(key)
+      if (g) g.position.set(cfg.position.x, cfg.position.y, cfg.position.z)
+      else { placeObject(cfg); added = true }
+    })
+    if (added) frameApparatus()
+  },
+)
+
+/** Frames everything on the bench (name tags excluded), whatever the canvas shape. */
+function frameApparatus() {
+  if (!room || groups.size === 0) return
+  scene.updateMatrixWorld(true)
+  const box = new THREE.Box3()
+  groups.forEach(g => g.children.forEach((c) => { if (c.userData.role !== 'label') box.expandByObject(c) }))
+  room.frameBox(box)
+}
+
+function onHoverMove(ev: PointerEvent) {
+  if (dragging) return
+  pointerToNdc(ev)
+  hoveredKey.value = raycastGroupKey()
+  renderer.domElement.style.cursor = hoveredKey.value ? 'pointer' : 'grab'
 }
 
 /** Toggles a switch's lever position and a connected bulb's glow, called by the parent after it validates the action server-side. */
@@ -1485,26 +1496,12 @@ function retryBuildScene() {
 onMounted(buildScene)
 
 onBeforeUnmount(() => {
-  cancelAnimationFrame(raf)
-  resizeObserver?.disconnect()
   renderer?.domElement.removeEventListener('pointerdown', onPointerDown)
   renderer?.domElement.removeEventListener('pointermove', onPointerMove)
+  renderer?.domElement.removeEventListener('pointermove', onHoverMove)
   renderer?.domElement.removeEventListener('pointerup', onPointerUp)
-  controls?.dispose()
-  scene?.traverse((obj) => {
-    if (obj instanceof THREE.Mesh) {
-      obj.geometry.dispose()
-      if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose())
-      else obj.material.dispose()
-    }
-  })
-  renderer?.dispose()
-  // renderer.dispose() alone frees Three.js-side resources but does NOT release the underlying
-  // WebGL context - mobile browsers cap concurrent live contexts far lower than desktop, so a
-  // student browsing several experiments in one session (each mount creates a new renderer)
-  // eventually has new contexts silently fail to acquire, leaving that experiment's canvas blank
-  // and unresponsive. forceContextLoss() is Three.js's documented way to actually free the context.
-  renderer?.forceContextLoss()
-  renderer?.domElement.remove()
+  // Disposes geometry/materials/textures and force-releases the WebGL context (mobile caps them)
+  room?.dispose()
+  room = null
 })
 </script>

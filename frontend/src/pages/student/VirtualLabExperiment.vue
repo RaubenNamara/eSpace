@@ -7,17 +7,35 @@
 
     <template v-else-if="attempt">
       <!-- Header -->
-      <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 lg:px-8 py-4">
-        <div class="max-w-7xl mx-auto">
-          <router-link to="/student/virtual-lab" class="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline mb-1.5">
-            <span>&larr;</span> Back to Virtual Lab
+      <!-- Header - same compact icon + title pattern as the other student pages -->
+      <div>
+        <div class="max-w-[1920px] mx-auto">
+          <router-link :to="backLink" class="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline mb-2">
+            <span>&larr;</span> Virtual Lab
           </router-link>
           <div class="flex flex-wrap items-center justify-between gap-2">
-            <h1 class="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white leading-tight">{{ attempt.experiment.title }}</h1>
-            <span class="px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap" :class="statusBadgeClass">{{ attempt.status.replace('_', ' ') }}</span>
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 min-w-0">
+              <div class="flex items-center gap-2">
+                <div class="hidden sm:flex w-7 h-7 rounded-lg bg-indigo-600 items-center justify-center flex-shrink-0">
+                  <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v6.5L4.5 18A2 2 0 006.3 21h11.4a2 2 0 001.8-3L15 9.5V3M8 3h8M7 15h10" /></svg>
+                </div>
+                <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight">{{ attempt.experiment.title }}</h1>
+              </div>
+              <p v-if="attempt.experiment.safety_precautions" class="inline-flex items-start gap-1.5 px-2.5 py-1 text-xs sm:text-sm rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300">
+                <AppIcon name="warning" class="w-4 h-4 flex-shrink-0 mt-0.5" /><span><strong>Safety:</strong> {{ attempt.experiment.safety_precautions }}</span>
+              </p>
+            </div>
+            <span v-if="isPractice" class="px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200">Practice mode</span>
+            <span v-else class="px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap" :class="statusBadgeClass">{{ attempt.status.replace('_', ' ') }}</span>
           </div>
 
           <!-- Progress bar -->
+          <!-- A teacher doing the experiment like a student: same lab, nothing saved, no submit -->
+          <div v-if="isPractice" class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-3 py-2 text-xs sm:text-sm text-amber-800 dark:text-amber-200">
+            <span class="font-semibold inline-flex items-center gap-1"><AppIcon name="teacher" class="w-4 h-4" /> Teacher practice</span>
+            <span class="flex-1 min-w-[12rem]">You are doing this experiment the way a student does. Nothing is saved and it can't be submitted.</span>
+            <button type="button" @click="restartPractice" class="px-2.5 py-1 rounded-lg bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-700 font-semibold hover:bg-amber-100 dark:hover:bg-amber-900/40">↺ Start again</button>
+          </div>
           <div v-if="attempt.status === 'in_progress'" class="mt-3 flex items-center gap-3">
             <div class="flex-1 h-2 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
               <div class="h-full rounded-full bg-indigo-600 print-color-exact transition-all duration-500" :style="{ width: progressPct + '%' }"></div>
@@ -27,17 +45,18 @@
         </div>
       </div>
 
-      <div class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-        <div v-if="attempt.experiment.safety_precautions" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3 sm:p-4 mb-4 flex items-start gap-3">
-          <span class="w-8 h-8 flex-shrink-0 rounded-full bg-red-100 dark:bg-red-900/50 flex items-center justify-center text-red-600 dark:text-red-300"><AppIcon name="warning" class="w-4 h-4" /></span>
-          <p class="text-sm text-red-700 dark:text-red-300"><strong>Safety:</strong> {{ attempt.experiment.safety_precautions }}</p>
-        </div>
-
+      <div class="max-w-[1920px] mx-auto pt-4">
         <!-- Required apparatus - some pieces may already be on the bench, others wait in the tray
              inside the 3D view until you pick them up; the setup itself (wiring, pouring,
              measuring) is still entirely up to you. -->
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-3.5 mb-4">
-          <p class="text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">{{ CATEGORY_LABELS[attempt.experiment.category] }} Apparatus</p>
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <p class="text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">{{ CATEGORY_LABELS[attempt.experiment.category] }} Apparatus</p>
+            <button @click="enterMaximize" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm whitespace-nowrap" title="Fill the whole screen with the lab">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>
+              Full Screen Lab
+            </button>
+          </div>
           <div class="flex flex-wrap gap-2">
             <span
               v-for="o in apparatusList"
@@ -50,10 +69,10 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
+        <div class="grid grid-cols-1 lg:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-5">
           <!-- Step panel: shown first on mobile/tablet so the instruction is visible without
                scrolling past the 3D view; resets to the right-hand column on desktop. -->
-          <div class="order-1 lg:order-2 lg:col-span-1 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-5 flex flex-col lg:h-[560px] lg:overflow-y-auto">
+          <div class="order-1 lg:order-2 lg:col-span-1 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-5 flex flex-col lg:h-[calc(100svh-7rem)] lg:min-h-[560px] lg:overflow-y-auto">
             <template v-if="attempt.status === 'in_progress'">
               <!-- A staged Procedure/Analysis question takes over this panel until answered (or
                    skipped, if optional) - "notebook_only" questions never reach here, they only
@@ -77,43 +96,25 @@
                 </div>
               </template>
               <template v-else>
-              <div class="flex items-center justify-between mb-2">
-                <p class="text-xs font-bold uppercase tracking-wider text-indigo-500 dark:text-indigo-400">
-                  Step {{ previewStepNumber }} of {{ attempt.experiment.steps.length }}
+              <div class="flex items-center justify-between mb-3">
+                <p class="text-xs font-bold uppercase tracking-wider text-indigo-500 dark:text-indigo-400">Steps</p>
+                <p :key="`n${attempt.steps_completed}`" class="step-anim-counter text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+                  {{ Math.min(attempt.steps_completed, attempt.experiment.steps.length) }} of {{ attempt.experiment.steps.length }} done
                 </p>
-                <div class="flex items-center gap-1">
-                  <button :disabled="previewStepNumber <= 1" @click="previewStepNumber--" class="w-6 h-6 flex items-center justify-center rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:hover:bg-transparent text-xs" title="Previous instruction">&larr;</button>
-                  <button :disabled="previewStepNumber >= attempt.experiment.steps.length" @click="previewStepNumber++" class="w-6 h-6 flex items-center justify-center rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:hover:bg-transparent text-xs" title="Next instruction">&rarr;</button>
-                </div>
               </div>
 
-              <div v-if="previewStep" class="mb-3">
-                <div v-if="!isPreviewingCurrent" class="bg-gray-50 dark:bg-gray-950/40 border border-gray-200 dark:border-gray-700 rounded-xl p-3.5">
-                  <p class="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-1">{{ previewStepNumber < attempt.current_step ? 'Already completed' : 'Coming up' }}</p>
-                  <p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{{ previewStep.instruction }}</p>
-                  <button @click="previewStepNumber = attempt.current_step" class="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline mt-2">Back to current step</button>
-                </div>
-                <template v-else>
-                  <div v-if="previewStep.is_safety_check" class="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-xl p-3.5">
-                    <p class="text-sm font-medium text-amber-800 dark:text-amber-200 mb-2.5">{{ previewStep.instruction }}</p>
-                    <button @click="acknowledgeSafety" class="w-full px-3 py-2.5 text-sm font-semibold rounded-lg bg-amber-600 text-white hover:bg-amber-700 shadow-sm">I Understand - Continue</button>
-                  </div>
-                  <div v-else class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/60 rounded-xl p-3.5">
-                    <p class="text-sm font-medium text-gray-800 dark:text-gray-100 leading-relaxed">{{ previewStep.instruction }}</p>
-                  </div>
-
-                  <div v-if="hintLevels.length && !previewStep.is_safety_check" class="mt-2">
-                    <button v-if="hintLevel < hintLevels.length" @click="requestHint" class="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
-                      <AppIcon name="bulb" class="w-4 h-4" /> {{ hintLevel === 0 ? 'Need a hint?' : 'Show me more' }}
-                    </button>
-                    <div v-for="(h, i) in hintLevels.slice(0, hintLevel)" :key="i" class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 italic bg-gray-50 dark:bg-gray-950/40 rounded-lg p-2.5">{{ h }}</div>
-                  </div>
-
-                  <button @click="resetCurrentStep" class="inline-flex items-center gap-1 text-xs font-medium text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:underline mt-2 ml-3">
-                    <span>↺</span> Reset this step
-                  </button>
-                </template>
-              </div>
+              <VirtualLabStepList
+                class="mb-3"
+                :steps="attempt.experiment.steps"
+                :current-step="attempt.current_step"
+                :all-done="allStepsDone"
+                :stagger="revealStagger"
+                :hint-levels="hintLevels"
+                :hint-level="hintLevel"
+                @acknowledge="acknowledgeSafety"
+                @hint="requestHint"
+                @reset="resetCurrentStep"
+              />
 
               <transition
                 enter-active-class="transition duration-200 ease-out"
@@ -151,29 +152,156 @@
               <div v-if="attempt.status === 'graded'" class="mt-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-4">
                 <p class="text-2xl font-extrabold text-indigo-700 dark:text-indigo-300">{{ attempt.score }}<span class="text-sm font-medium text-indigo-400">/{{ attempt.marks }}</span></p>
                 <p v-if="attempt.teacher_feedback" class="text-xs text-gray-600 dark:text-gray-300 mt-2 italic">&ldquo;{{ attempt.teacher_feedback }}&rdquo;</p>
+                <a v-if="hasTeacherMarking" href="#teacher-marking" class="inline-block mt-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">See your marked work &darr;</a>
               </div>
+              <a v-if="hasTeacherMarking && attempt.status !== 'graded'" href="#teacher-marking" class="mt-3 flex items-center gap-2 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 px-3 py-2.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/30"><AppIcon name="pencil" class="w-4 h-4" /> Your teacher has marked your work - see it below &darr;</a>
             </template>
           </div>
 
-          <!-- Experiment scene - a registered 2D/SVG renderer for experiments that have opted in
-               (render_mode + render_component), the original Three.js engine for everything else.
-               The lookup lives entirely in the registry - this component never branches on which
-               experiment it is. -->
-          <div class="order-2 lg:order-1 lg:col-span-2 h-[300px] sm:h-[440px] lg:h-[560px] rounded-2xl overflow-hidden shadow-lg ring-1 ring-gray-900/5">
-            <component
-              :is="active2DRenderer ?? VirtualLabScene"
-              ref="sceneRef"
-              :scene-objects="attempt.experiment.scene_objects"
-              :object-catalog="objectCatalog"
-              :read-only="sceneReadOnly"
-              @action="onSceneAction"
-            />
+          <!-- Experiment scene - a guided 3D experiment from the registry when one is configured
+               (render_mode + render_component), the free-layout Three.js engine for everything else.
+               This component never branches on which experiment it is. -->
+          <!-- Full screen keeps the same element (only its classes change), so the 3D scene is
+               never torn down and rebuilt - a slim bar keeps the current step in view. -->
+          <div
+            class="order-2 lg:order-1 lg:col-span-2 2xl:col-span-3"
+            :class="labMaximized ? 'fixed inset-0 z-[200] flex flex-col bg-slate-900' : ''"
+          >
+            <div v-if="labMaximized" class="flex-shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-3 sm:px-4 py-2 flex items-center gap-2 sm:gap-3">
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2">
+                  <p class="text-[10px] font-bold uppercase tracking-wider text-indigo-500 dark:text-indigo-400 whitespace-nowrap">
+                    {{ attempt.status === 'in_progress' && !allStepsDone ? `Step ${attempt.current_step} of ${attempt.experiment.steps.length}` : 'All steps done' }}
+                  </p>
+                  <div class="hidden sm:block flex-1 max-w-[12rem] h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+                    <div class="h-full rounded-full bg-indigo-600 transition-all duration-500" :style="{ width: progressPct + '%' }"></div>
+                  </div>
+                  <span class="text-[10px] font-medium text-green-600 dark:text-green-400">&check; {{ attempt.correct_actions }}</span>
+                  <span class="text-[10px] font-medium text-red-500 dark:text-red-400">&times; {{ attempt.wrong_actions }}</span>
+                </div>
+                <p :key="`bar${attempt.current_step}${allStepsDone}`" class="step-anim-bar text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-100 line-clamp-2">
+                  {{ allStepsDone || attempt.status !== 'in_progress' ? 'Exit full screen to complete your notebook and submit.' : currentStep?.instruction }}
+                </p>
+              </div>
+              <span v-if="toast" class="hidden sm:inline-flex items-center gap-1 max-w-[16rem] text-[11px] font-semibold rounded-lg px-2 py-1" :class="toast.correct ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300'">
+                <span>{{ toast.correct ? '✅' : '⚠️' }}</span><span class="truncate">{{ toast.text }}</span>
+              </span>
+              <button v-if="attempt.status === 'in_progress' && currentStep?.is_safety_check && !allStepsDone" @click="acknowledgeSafety" class="flex-shrink-0 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-amber-600 text-white hover:bg-amber-700">I Understand</button>
+              <button v-else-if="pendingInterstitialQuestion" @click="exitMaximize" class="flex-shrink-0 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700">Answer Question</button>
+              <button v-if="pendingNotebookEntry" @click="addPendingToNotebook" class="flex-shrink-0 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700" :title="`Add ${pendingNotebookEntry.label}: ${pendingNotebookEntry.value}${pendingNotebookEntry.unit} to your notebook`">+ Notebook</button>
+              <button
+                v-if="attempt.status === 'in_progress'"
+                @click="stepsPanelOpen = !stepsPanelOpen"
+                class="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition-colors"
+                :class="stepsPanelOpen ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'"
+              >
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01" /></svg>
+                Steps
+              </button>
+              <button @click="exitMaximize" class="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" /></svg>
+                Exit<span class="hidden sm:inline">&nbsp;Full Screen</span>
+              </button>
+            </div>
+            <div :class="labMaximized ? 'relative flex flex-1 min-h-0' : ''">
+              <div
+                class="relative overflow-hidden"
+                :class="labMaximized ? 'flex-1 min-w-0 min-h-0' : 'h-[68svh] min-h-[340px] sm:h-[72svh] lg:h-[calc(100svh-7rem)] lg:min-h-[560px] rounded-2xl shadow-lg ring-1 ring-gray-900/5'"
+              >
+                <component
+                  :is="guidedExperiment ?? VirtualLabScene"
+                  ref="sceneRef"
+                  :scene-objects="attempt.experiment.scene_objects"
+                  :object-catalog="objectCatalog"
+                  :read-only="sceneReadOnly"
+                  @action="onSceneAction"
+                />
+              </div>
+
+              <!-- Full screen steps: a side panel beside the lab, a slide-over drawer on phones -->
+              <transition
+                enter-active-class="transition duration-300 ease-out" enter-from-class="translate-x-full sm:translate-x-0 opacity-0"
+                leave-active-class="transition duration-200 ease-in" leave-to-class="translate-x-full sm:translate-x-0 opacity-0"
+              >
+                <aside
+                  v-if="labMaximized && stepsPanelOpen && attempt.status === 'in_progress'"
+                  class="absolute sm:static inset-y-0 right-0 z-10 w-[85%] max-w-sm sm:w-72 xl:w-80 flex-shrink-0 overflow-y-auto bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 shadow-2xl sm:shadow-none p-4"
+                >
+                  <div class="flex items-center justify-between mb-3">
+                    <p class="text-xs font-bold uppercase tracking-wider text-indigo-500 dark:text-indigo-400">Steps</p>
+                    <div class="flex items-center gap-2">
+                      <p :key="`fs${attempt.steps_completed}`" class="step-anim-counter text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+                        {{ Math.min(attempt.steps_completed, attempt.experiment.steps.length) }} of {{ attempt.experiment.steps.length }} done
+                      </p>
+                      <button @click="stepsPanelOpen = false" class="sm:hidden w-6 h-6 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm leading-none" aria-label="Close steps">&times;</button>
+                    </div>
+                  </div>
+                  <VirtualLabStepList
+                    :steps="attempt.experiment.steps"
+                    :current-step="attempt.current_step"
+                    :all-done="allStepsDone"
+                    :stagger="panelStagger"
+                    :hint-levels="hintLevels"
+                    :hint-level="hintLevel"
+                    @acknowledge="acknowledgeSafety"
+                    @hint="requestHint"
+                    @reset="resetCurrentStep"
+                  />
+                </aside>
+              </transition>
+            </div>
+          </div>
+        </div>
+
+        <!-- Plot your graph - when the teacher chose "students plot the graph", the student plots
+             their own points here (typing or clicking on graph paper) while they work, and answers
+             the questions about it right underneath. -->
+        <div v-if="manualPlot && attempt.experiment.graph" id="plot-graph" class="mt-5 sm:mt-6 grid grid-cols-1 gap-4" :class="graphQuestions.length ? 'xl:grid-cols-3 items-start' : ''">
+          <VirtualLabPlotter
+            class="min-w-0 xl:col-span-2"
+            :config="attempt.experiment.graph"
+            :entries="plotEntries"
+            :readings="measurementEntries"
+            :read-only="attempt.status !== 'in_progress'"
+            @add="addPlotPoint"
+            @remove="removePlotPoint"
+          />
+          <div v-if="graphQuestions.length" class="min-w-0 xl:sticky xl:top-24 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-5 space-y-3">
+            <p class="text-sm font-bold text-gray-900 dark:text-white">Questions about your graph</p>
+            <div v-for="q in graphQuestions" :key="q.id">
+              <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                <span class="inline-block px-1.5 py-0.5 mr-1.5 rounded text-[10px] font-bold uppercase tracking-wide bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 align-middle">Graph Analysis</span>
+                {{ q.question_text }} <span class="text-xs font-normal text-gray-400">({{ q.marks }} marks)</span>
+              </label>
+              <textarea
+                v-model="answers[q.id]"
+                :disabled="attempt.status !== 'in_progress'"
+                @blur="saveAnswer(q.id)"
+                rows="2"
+                class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-xl px-3.5 py-2.5 dark:bg-gray-700 dark:text-white disabled:opacity-70 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- The teacher's canvas marking on this practical (ticks, crosses, comments...), shown on the
+             same sheets they marked, once it has been graded. -->
+        <div v-if="hasTeacherMarking" id="teacher-marking" class="mt-5 sm:mt-6 scroll-mt-24 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 sm:p-6">
+          <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center justify-center gap-2 mb-1"><AppIcon name="pencil" class="w-5 h-5" /> Your Teacher's Marking</h2>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mb-5 text-center">Your work as your teacher marked it.</p>
+          <div class="max-w-[800px] mx-auto">
+            <VirtualLabMarking readonly :saved="attempt.marking_annotations" />
           </div>
         </div>
 
         <!-- Practical Notebook -->
-        <div v-if="allStepsDone || attempt.status !== 'in_progress'" class="mt-5 sm:mt-6 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 sm:p-6 space-y-5">
-          <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2"><AppIcon name="book" class="w-5 h-5" /> Practical Notebook</h2>
+        <div v-if="allStepsDone || attempt.status !== 'in_progress'" class="mt-5 sm:mt-6 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 sm:p-6">
+          <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-5"><AppIcon name="book" class="w-5 h-5" /> Practical Notebook</h2>
+
+          <!-- Uses the full width: readings, results table and graph on the left; the written work
+               (observations, questions, conclusion) and Submit on the right. Stacks on small screens. -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-8 items-start">
+          <div class="space-y-5 min-w-0">
 
           <div v-if="measurementEntries.length > 0">
             <p class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Measurements</p>
@@ -213,38 +341,42 @@
           <div v-if="resultRows.length > 0">
             <p class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Results Table</p>
             <div class="overflow-x-auto">
-              <table class="w-full text-xs border-collapse">
+              <table class="w-full text-sm border-collapse border border-gray-300 dark:border-gray-600">
                 <thead>
-                  <tr class="bg-gray-50 dark:bg-gray-950/40 text-left text-gray-500 dark:text-gray-400">
-                    <th v-for="col in resultTableColumns" :key="col" class="px-3 py-2 font-semibold capitalize">{{ col }}</th>
+                  <tr class="bg-indigo-50 dark:bg-indigo-900/30 text-left text-gray-800 dark:text-gray-100">
+                    <th v-for="col in resultTableColumns" :key="col" class="border border-gray-300 dark:border-gray-600 px-3 py-2 font-semibold capitalize">{{ col.replace(/_/g, ' ') }}</th>
                   </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                  <tr v-for="row in resultRows" :key="row.id">
-                    <td v-for="col in resultTableColumns" :key="col" class="px-3 py-2 text-gray-700 dark:text-gray-200">{{ row.extra?.[col] ?? '-' }}</td>
+                <tbody>
+                  <tr v-for="row in resultRows" :key="row.id" class="odd:bg-white even:bg-gray-50 dark:odd:bg-gray-800 dark:even:bg-gray-900/40">
+                    <td v-for="col in resultTableColumns" :key="col" class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-gray-800 dark:text-gray-100">{{ row.extra?.[col] ?? '-' }}</td>
                   </tr>
                 </tbody>
               </table>
             </div>
-            <VirtualLabGraph ref="graphRef" :rows="resultRows" :config="attempt.experiment.graph" />
+            <template v-if="!manualPlot">
+              <VirtualLabGraph ref="graphRef" :rows="resultRows" :config="attempt.experiment.graph" />
 
-            <!-- Graph-analysis questions render right under the graph they're about, not mixed in
-                 with the general question list below. -->
-            <div v-for="q in graphQuestions" :key="q.id" class="mt-3">
-              <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-                <span class="inline-block px-1.5 py-0.5 mr-1.5 rounded text-[10px] font-bold uppercase tracking-wide bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 align-middle">Graph Analysis</span>
-                {{ q.question_text }} <span class="text-xs font-normal text-gray-400">({{ q.marks }} marks)</span>
-              </label>
-              <textarea
-                v-model="answers[q.id]"
-                :disabled="attempt.status !== 'in_progress'"
-                @blur="saveAnswer(q.id)"
-                rows="2"
-                class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-xl px-3.5 py-2.5 dark:bg-gray-700 dark:text-white disabled:opacity-70 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow"
-              ></textarea>
-            </div>
+              <!-- Graph-analysis questions render right under the graph they're about, not mixed in
+                   with the general question list below. -->
+              <div v-for="q in graphQuestions" :key="q.id" class="mt-3">
+                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                  <span class="inline-block px-1.5 py-0.5 mr-1.5 rounded text-[10px] font-bold uppercase tracking-wide bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 align-middle">Graph Analysis</span>
+                  {{ q.question_text }} <span class="text-xs font-normal text-gray-400">({{ q.marks }} marks)</span>
+                </label>
+                <textarea
+                  v-model="answers[q.id]"
+                  :disabled="attempt.status !== 'in_progress'"
+                  @blur="saveAnswer(q.id)"
+                  rows="2"
+                  class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-xl px-3.5 py-2.5 dark:bg-gray-700 dark:text-white disabled:opacity-70 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow"
+                ></textarea>
+              </div>
+            </template>
+          </div>
           </div>
 
+          <div class="space-y-5 min-w-0 lg:sticky lg:top-24 lg:border-l lg:border-gray-100 dark:lg:border-gray-700 lg:pl-8">
           <div>
             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Observations</label>
             <textarea
@@ -282,14 +414,19 @@
             ></textarea>
           </div>
 
+          <p v-if="isPractice" class="rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-200 text-center">
+            Practice mode - teachers can't submit results. <button type="button" @click="restartPractice" class="font-semibold underline">Start again</button>
+          </p>
           <button
-            v-if="attempt.status === 'in_progress'"
+            v-else-if="attempt.status === 'in_progress'"
             :disabled="!allStepsDone || submitting"
             @click="submitPractical"
             class="w-full px-4 py-3 text-sm font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow-md disabled:opacity-50 transition-all print-color-exact"
           >
             {{ submitting ? 'Submitting...' : allStepsDone ? 'Submit Practical' : 'Complete all steps to submit' }}
           </button>
+          </div>
+          </div>
         </div>
       </div>
     </template>
@@ -299,13 +436,17 @@
 <script setup lang="ts">
 import AppIcon from '@/components/common/AppIcon.vue'
 import { ref, computed, watch, onMounted } from 'vue'
+import { useFullscreenLab } from '@/components/virtuallab/lab3d/useFullscreenLab'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import VirtualLabScene from '@/components/virtuallab/VirtualLabScene.vue'
 import VirtualLabGraph from '@/components/virtuallab/VirtualLabGraph.vue'
-import { resolve2DRenderer } from '@/components/virtuallab/render2d/registry'
+import VirtualLabStepList from '@/components/virtuallab/VirtualLabStepList.vue'
+import VirtualLabPlotter from '@/components/virtuallab/VirtualLabPlotter.vue'
+import VirtualLabMarking from '@/components/virtuallab/VirtualLabMarking.vue'
+import { resolveGuidedExperiment } from '@/components/virtuallab/lab3d/registry'
 import { CATEGORY_LABELS } from '@/types/virtualLab'
-import type { AttemptState, LabObjectDef, ExperimentQuestion } from '@/types/virtualLab'
+import type { AttemptState, LabObjectDef, ExperimentQuestion, NotebookEntry } from '@/types/virtualLab'
 
 const QUESTION_TYPE_LABELS: Record<string, string> = {
   short_answer: 'Short answer', calculation: 'Calculation', observation: 'Observation', procedure: 'Procedure',
@@ -314,10 +455,27 @@ const QUESTION_TYPE_LABELS: Record<string, string> = {
 const route = useRoute()
 const router = useRouter()
 
+// Practice mode (teacher route, meta.practice): a teacher does the experiment exactly like a
+// student - same lab, steps, notebook, graph and full screen. Each step is checked by the server the
+// way a student's is, but nothing is saved: the attempt lives only in this page and can't be submitted.
+const isPractice = computed(() => route.meta.practice === true)
+const backLink = computed(() => (isPractice.value ? '/teacher/virtual-lab' : '/student/virtual-lab'))
+let practiceNextId = -1
+type NotebookBody = { entry_type: NotebookEntry['entry_type']; label: string; value: string; unit?: string | null; extra?: Record<string, any> | null }
+const postNotebook = async (body: NotebookBody) => {
+  if (!attempt.value) return
+  if (isPractice.value) {
+    attempt.value.notebook.push({ id: practiceNextId--, entry_type: body.entry_type, label: body.label, value: String(body.value), unit: body.unit ?? null, extra: body.extra ?? null, created_at: new Date().toISOString() })
+    return
+  }
+  await axios.post(`/api/student/virtual-lab/attempts/${attempt.value.attempt_id}/notebook`, body)
+}
+const restartPractice = () => window.location.reload()
+
 const attempt = ref<AttemptState | null>(null)
 const objectCatalog = ref<LabObjectDef[]>([])
 const loading = ref(true)
-// Loosely typed on purpose - it can be the 3D engine or any registered 2D renderer, and the only
+// Loosely typed on purpose - it can be the free-layout engine or any guided experiment, and the only
 // method every renderer needs to expose is setObjectState (see registry.ts's Component contract).
 const sceneRef = ref<{ setObjectState: (key: string, patch: Record<string, any>) => void } | null>(null)
 const graphRef = ref<{ xKey: string; yKey: string } | null>(null)
@@ -330,7 +488,6 @@ const observationText = ref('')
 const answers = ref<Record<number, string>>({})
 const conclusionText = ref('')
 const submitting = ref(false)
-const previewStepNumber = ref(1)
 const pendingNotebookEntry = ref<{ label: string; value: string; unit: string } | null>(null)
 const lastVoltageReading = ref<number | null>(null)
 const lastCurrentReading = ref<number | null>(null)
@@ -342,12 +499,22 @@ const lastBuretteFinalMl = ref<number | null>(null)
 const lastIncidenceAngle = ref<number | null>(null)
 const lastOutgoingAngle = ref<number | null>(null)
 const lastOutgoingLabel = ref<'Angle of Reflection' | 'Angle of Refraction'>('Angle of Reflection')
+// Pendulum trial: a measured length plus the time for its oscillations makes one Results Table row
+const isPendulum = computed(() => attempt.value?.experiment.render_component === 'pendulum')
+const lastPendulumLengthCm = ref<number | null>(null)
+const lastPendulumTimeS = ref<number | null>(null)
+const lastPendulumOscillations = ref(10)
 const lastLaunchAngleDeg = ref<number | null>(null)
 const lastRangeM = ref<number | null>(null)
 
 const currentStep = computed(() => attempt.value?.experiment.steps.find(s => s.step_number === attempt.value!.current_step) || null)
-const previewStep = computed(() => attempt.value?.experiment.steps.find(s => s.step_number === previewStepNumber.value) || null)
-const isPreviewingCurrent = computed(() => !!attempt.value && previewStepNumber.value === attempt.value.current_step)
+/** True just after opening, so the step list builds up from Step 1 one step at a time. */
+const revealStagger = ref(true)
+/** Full screen side panel of steps (a slide-over drawer on phones). */
+const stepsPanelOpen = ref(true)
+/** Each time the panel opens its list builds up from Step 1, like the page does on load. */
+const panelStagger = ref(false)
+let panelStaggerTimer = 0
 const allStepsDone = computed(() => !!attempt.value && attempt.value.steps_completed >= attempt.value.experiment.steps.length)
 
 // notebook_only questions (the default, and every pre-existing question) always render passively at
@@ -414,9 +581,9 @@ const hintLevels = computed(() => {
   return hint.split('||').map(h => h.trim()).filter(Boolean)
 })
 
-const active2DRenderer = computed(() => {
+const guidedExperiment = computed(() => {
   if (!attempt.value || attempt.value.experiment.render_mode !== '2d') return null
-  return resolve2DRenderer(attempt.value.experiment.render_component)
+  return resolveGuidedExperiment(attempt.value.experiment.render_component)
 })
 
 const apparatusList = computed(() => {
@@ -437,6 +604,7 @@ const isHighlightedApparatus = (key: string) => {
 }
 
 const measurementEntries = computed(() => attempt.value?.notebook.filter(n => n.entry_type === 'measurement') ?? [])
+const hasTeacherMarking = computed(() => !!attempt.value && attempt.value.status !== 'in_progress' && (attempt.value.marking_annotations || []).some(m => (m.annotation?.objects?.length || 0) > 0))
 const resultRows = computed(() => attempt.value?.notebook.filter(n => n.entry_type === 'result_row') ?? [])
 const resultTableColumns = computed(() => {
   const first = resultRows.value[0]
@@ -450,8 +618,7 @@ const springForceN = computed(() => lastSpringMassG.value === null ? 0 : Math.ro
 const springExtensionCm = computed(() => lastSpringLengthCm.value === null ? 0 : Math.round((lastSpringLengthCm.value - lastSpringNaturalCm.value) * 100) / 100)
 const titreMl = computed(() => (lastBuretteInitialMl.value === null || lastBuretteFinalMl.value === null) ? 0 : Math.round((lastBuretteFinalMl.value - lastBuretteInitialMl.value) * 100) / 100)
 
-watch(() => attempt.value?.current_step, (step) => {
-  if (step !== undefined) previewStepNumber.value = step
+watch(() => attempt.value?.current_step, () => {
   // Beginner: the first hint level shows automatically, no need to ask. Intermediate/advanced
   // still need a click - the underlying grading/tolerance is identical at every difficulty,
   // this only changes how much guidance is surfaced.
@@ -459,27 +626,40 @@ watch(() => attempt.value?.current_step, (step) => {
 })
 
 const loadObjects = async () => {
-  const res = await axios.get('/api/student/virtual-lab/objects')
+  const res = await axios.get(isPractice.value ? '/api/teacher/virtual-lab/objects' : '/api/student/virtual-lab/objects')
   objectCatalog.value = res.data.data.objects
 }
 
 const startAttempt = async () => {
-  const assignmentId = route.params.assignmentId
-  const res = await axios.post(`/api/student/virtual-lab/assignments/${assignmentId}/start`)
-  attempt.value = res.data.data
-  previewStepNumber.value = attempt.value!.current_step
+  if (isPractice.value) {
+    const res = await axios.get(`/api/teacher/virtual-lab/experiments/${route.params.experimentId}`)
+    const experiment = res.data.data
+    attempt.value = {
+      attempt_id: 0, assignment_id: 0, status: 'in_progress', current_step: 1, steps_completed: 0,
+      correct_actions: 0, wrong_actions: 0, hints_used: 0, safety_mistakes: 0,
+      conclusion_text: null, score: null, teacher_feedback: null, due_date: null, marks: Number(experiment.marks) || 0,
+      experiment, observations: {}, answers: {}, notebook: [], marking_annotations: [],
+    }
+  } else {
+    const assignmentId = route.params.assignmentId
+    const res = await axios.post(`/api/student/virtual-lab/assignments/${assignmentId}/start`)
+    attempt.value = res.data.data
+  }
+  // Opening cascade (Step 1 downwards) only - later steps drop in one at a time as they're reached
+  const stepsShown = Math.min(attempt.value!.current_step, attempt.value!.experiment.steps.length)
+  setTimeout(() => { revealStagger.value = false }, stepsShown * 140 + 900)
   observationText.value = attempt.value!.observations['general'] || ''
   answers.value = { ...attempt.value!.answers }
   conclusionText.value = attempt.value!.conclusion_text || ''
 }
 
 const refreshAttempt = async () => {
-  if (!attempt.value) return
+  if (!attempt.value || isPractice.value) return // practice state is updated in place
   const res = await axios.get(`/api/student/virtual-lab/attempts/${attempt.value.attempt_id}`)
   attempt.value = res.data.data
 }
 
-const onSceneAction = async (payload: { objectKey: string | null; action: string; value: string | null; unit?: string | null; label?: string | null; safetyIssue?: boolean; targetObjectKey?: string | null; springLoadG?: number }) => {
+const onSceneAction = async (payload: { objectKey: string | null; action: string; value: string | null; unit?: string | null; label?: string | null; safetyIssue?: boolean; targetObjectKey?: string | null; springLoadG?: number; oscillations?: number }) => {
   if (!attempt.value) return
 
   if ((payload.action === 'switch_on' || payload.action === 'switch_off') && payload.objectKey) {
@@ -516,6 +696,14 @@ const onSceneAction = async (payload: { objectKey: string | null; action: string
     if (payload.unit === 'm' && payload.label === 'Range') {
       lastRangeM.value = num
     }
+    if (isPendulum.value && payload.unit === 'cm' && payload.label === 'Ruler') {
+      lastPendulumLengthCm.value = num
+    }
+    if (isPendulum.value && payload.unit === 's' && payload.label === 'Stopwatch') {
+      // The steps time 10 full oscillations; the lab sends its own count when it has one
+      lastPendulumOscillations.value = payload.oscillations && payload.oscillations > 0 ? payload.oscillations : 10
+      lastPendulumTimeS.value = num
+    }
     pendingNotebookEntry.value = { label: payload.label || 'Reading', value: payload.value, unit: payload.unit || '' }
   }
   if (payload.action === 'move' && payload.springLoadG !== undefined) {
@@ -536,7 +724,7 @@ const onSceneAction = async (payload: { objectKey: string | null; action: string
   }
   if (payload.safetyIssue) {
     try {
-      await axios.post(`/api/student/virtual-lab/attempts/${attempt.value.attempt_id}/safety-mistake`)
+      if (!isPractice.value) await axios.post(`/api/student/virtual-lab/attempts/${attempt.value.attempt_id}/safety-mistake`)
       attempt.value.safety_mistakes++
     } catch (err) {
       // non-fatal - the warning was already shown by the 3D engine either way
@@ -544,12 +732,32 @@ const onSceneAction = async (payload: { objectKey: string | null; action: string
   }
 
   try {
-    const res = await axios.post(`/api/student/virtual-lab/attempts/${attempt.value.attempt_id}/action`, {
-      step_id: currentStep.value?.id ?? null,
-      object_key: payload.objectKey,
-      action: payload.action,
-      value: payload.value,
-    })
+    const res = isPractice.value
+      ? await axios.post(`/api/teacher/virtual-lab/experiments/${route.params.experimentId}/practice/action`, {
+          step_number: attempt.value.current_step,
+          object_key: payload.objectKey,
+          action: payload.action,
+          value: payload.value,
+        })
+      : await axios.post(`/api/student/virtual-lab/attempts/${attempt.value.attempt_id}/action`, {
+          step_id: currentStep.value?.id ?? null,
+          object_key: payload.objectKey,
+          action: payload.action,
+          value: payload.value,
+        })
+    if (isPractice.value) {
+      // the same bookkeeping the server does for a real attempt, kept in the page
+      const r = res.data.data
+      const a = attempt.value
+      if (r.advanced && a.steps_completed < a.experiment.steps.length) {
+        a.steps_completed++
+        a.correct_actions++
+        a.current_step = r.next_step
+      } else if (!r.neutral && !r.is_correct) {
+        a.wrong_actions++
+        if (r.is_safety_check) a.safety_mistakes++
+      }
+    }
     // Free-look actions (inspect/zoom on something other than the current step's target) aren't
     // a wrong attempt at the step - they don't need a "not quite" warning, since the student
     // wasn't trying to complete the step at all.
@@ -569,7 +777,7 @@ const requestHint = async () => {
   if (!attempt.value || hintLevel.value >= hintLevels.value.length) return
   hintLevel.value++
   try {
-    await axios.post(`/api/student/virtual-lab/attempts/${attempt.value.attempt_id}/hint`)
+    if (!isPractice.value) await axios.post(`/api/student/virtual-lab/attempts/${attempt.value.attempt_id}/hint`)
     attempt.value.hints_used++
   } catch (err) {
     // non-fatal - the hint is already shown locally either way
@@ -583,10 +791,36 @@ const resetCurrentStep = () => {
 
 const dismissPendingNotebook = () => { pendingNotebookEntry.value = null }
 
+// --- Student-plotted graph (manual_plot experiments) ---------------------------------------------
+const manualPlot = computed(() => !!attempt.value?.experiment.graph?.enabled && !!attempt.value.experiment.graph.manual_plot)
+const plotEntries = computed(() => attempt.value?.notebook.filter(n => n.entry_type === 'plot_point') ?? [])
+
+const addPlotPoint = async (p: { x: number; y: number }) => {
+  if (!attempt.value || attempt.value.status !== 'in_progress') return
+  try {
+    await postNotebook({
+      entry_type: 'plot_point', label: 'Plotted point', value: `${p.x}, ${p.y}`, extra: { x: p.x, y: p.y },
+    })
+    await refreshAttempt()
+  } catch {
+    toast.value = { correct: false, text: 'That point could not be saved. Please try again.' }
+  }
+}
+
+const removePlotPoint = async (id: number) => {
+  if (!attempt.value || attempt.value.status !== 'in_progress') return
+  if (isPractice.value) {
+    attempt.value.notebook = attempt.value.notebook.filter(n => n.id !== id)
+    return
+  }
+  await axios.delete(`/api/student/virtual-lab/attempts/${attempt.value.attempt_id}/notebook/${id}`)
+  await refreshAttempt()
+}
+
 const addPendingToNotebook = async () => {
   if (!attempt.value || !pendingNotebookEntry.value) return
   const entry = pendingNotebookEntry.value
-  await axios.post(`/api/student/virtual-lab/attempts/${attempt.value.attempt_id}/notebook`, {
+  await postNotebook({
     entry_type: 'measurement', label: entry.label, value: entry.value, unit: entry.unit || null,
   })
   pendingNotebookEntry.value = null
@@ -598,7 +832,7 @@ const addResultRow = async () => {
   const v = lastVoltageReading.value
   const i = lastCurrentReading.value
   const r = computedResistance.value
-  await axios.post(`/api/student/virtual-lab/attempts/${attempt.value.attempt_id}/notebook`, {
+  await postNotebook({
     entry_type: 'result_row', label: `V=${v}V`, value: String(r), unit: 'ohm',
     extra: { voltage: v, current: i, resistance: r },
   })
@@ -613,7 +847,7 @@ const addSpringResultRow = async () => {
   const force = springForceN.value
   const length = lastSpringLengthCm.value
   const extension = springExtensionCm.value
-  await axios.post(`/api/student/virtual-lab/attempts/${attempt.value.attempt_id}/notebook`, {
+  await postNotebook({
     entry_type: 'result_row', label: `${mass}g`, value: String(extension), unit: 'cm',
     extra: { mass_g: mass, force_n: force, length_cm: length, extension_cm: extension },
   })
@@ -647,7 +881,7 @@ const addTitreResultRow = async () => {
   const initial = lastBuretteInitialMl.value
   const final = lastBuretteFinalMl.value
   const titre = titreMl.value
-  await axios.post(`/api/student/virtual-lab/attempts/${attempt.value.attempt_id}/notebook`, {
+  await postNotebook({
     entry_type: 'result_row', label: `Trial ${trialNumber}`, value: String(titre), unit: 'ml',
     extra: { trial: trialNumber, initial_reading_ml: initial, final_reading_ml: final, titre_ml: titre },
   })
@@ -664,7 +898,7 @@ const addOpticsResultRow = async () => {
   const incidence = lastIncidenceAngle.value
   const outgoing = lastOutgoingAngle.value
   const outgoingKey = lastOutgoingLabel.value === 'Angle of Refraction' ? 'refraction_deg' : 'reflection_deg'
-  await axios.post(`/api/student/virtual-lab/attempts/${attempt.value.attempt_id}/notebook`, {
+  await postNotebook({
     entry_type: 'result_row', label: `Trial ${trialNumber}`, value: String(outgoing), unit: '°',
     extra: { trial: trialNumber, incidence_deg: incidence, [outgoingKey]: outgoing },
   })
@@ -673,11 +907,45 @@ const addOpticsResultRow = async () => {
   await refreshAttempt()
 }
 
+// Each projectile trial (angle + measured range) is recorded as soon as the range is measured, so the
+// results table - and the graph built from it - fills up as the student works through the steps.
+// (Waiting for a manual "Add to Results Table" click only surfaced after the last step, and only for
+// the final trial, which left the graph one point short of its minimum.)
+let projectileRowSaving = false
+watch([lastLaunchAngleDeg, lastRangeM], async ([angle, range]) => {
+  if (projectileRowSaving || angle === null || range === null || attempt.value?.status !== 'in_progress') return
+  projectileRowSaving = true
+  try { await addProjectileResultRow() } finally { projectileRowSaving = false }
+})
+
+// Each pendulum trial (length + time) goes straight into the Results Table with its period T and T^2,
+// so the graph of T^2 against L builds up as the student works - T^2 against L is a straight line
+// whose gradient is 4*pi^2/g.
+let pendulumRowSaving = false
+watch([lastPendulumLengthCm, lastPendulumTimeS], async ([lengthCm, timeS]) => {
+  if (pendulumRowSaving || lengthCm === null || timeS === null || !attempt.value || attempt.value.status !== 'in_progress') return
+  pendulumRowSaving = true
+  try {
+    const n = lastPendulumOscillations.value
+    const L = Math.round((lengthCm / 100) * 1000) / 1000
+    const T = Math.round((timeS / n) * 1000) / 1000
+    await postNotebook({
+      entry_type: 'result_row', label: `L = ${L} m`, value: String(T), unit: 's',
+      extra: { length_m: L, oscillations: n, time_s: timeS, period_s: T, period_squared_s2: Math.round(T * T * 1000) / 1000 },
+    })
+    lastPendulumTimeS.value = null
+    lastPendulumLengthCm.value = null
+    await refreshAttempt()
+  } finally {
+    pendulumRowSaving = false
+  }
+})
+
 const addProjectileResultRow = async () => {
   if (!attempt.value || lastLaunchAngleDeg.value === null || lastRangeM.value === null) return
   const angle = lastLaunchAngleDeg.value
   const range = lastRangeM.value
-  await axios.post(`/api/student/virtual-lab/attempts/${attempt.value.attempt_id}/notebook`, {
+  await postNotebook({
     entry_type: 'result_row', label: `${angle}°`, value: String(range), unit: 'm',
     extra: { angle_deg: angle, range_m: range },
   })
@@ -687,17 +955,17 @@ const addProjectileResultRow = async () => {
 }
 
 const saveObservation = async () => {
-  if (!attempt.value) return
+  if (!attempt.value || isPractice.value) return
   await axios.post(`/api/student/virtual-lab/attempts/${attempt.value.attempt_id}/observation`, { step_id: null, text: observationText.value })
 }
 
 const saveAnswer = async (questionId: number) => {
-  if (!attempt.value) return
+  if (!attempt.value || isPractice.value) return
   await axios.post(`/api/student/virtual-lab/attempts/${attempt.value.attempt_id}/answer`, { question_id: questionId, text: answers.value[questionId] || '' })
 }
 
 const submitPractical = async () => {
-  if (!attempt.value) return
+  if (!attempt.value || isPractice.value) return // teachers practise; they never submit
   submitting.value = true
   try {
     await axios.post(`/api/student/virtual-lab/attempts/${attempt.value.attempt_id}/submit`, {
@@ -711,13 +979,39 @@ const submitPractical = async () => {
   }
 }
 
+const { labMaximized, enterMaximize, exitMaximize } = useFullscreenLab()
+
+// Entering full screen: steps panel open beside the lab on tablets/computers, closed on phones
+// (where it would cover the lab) until the student taps "Steps".
+watch(labMaximized, (on) => { if (on) stepsPanelOpen.value = window.innerWidth >= 640 })
+watch(() => labMaximized.value && stepsPanelOpen.value, (open) => {
+  window.clearTimeout(panelStaggerTimer)
+  if (!open || !attempt.value) return
+  panelStagger.value = true
+  const shown = Math.min(attempt.value.current_step, attempt.value.experiment.steps.length)
+  panelStaggerTimer = window.setTimeout(() => { panelStagger.value = false }, shown * 140 + 900)
+})
+
 onMounted(async () => {
   try {
     await Promise.all([loadObjects(), startAttempt()])
   } catch (err) {
-    router.push('/student/virtual-lab')
+    router.push(backLink.value)
   } finally {
     loading.value = false
   }
 })
 </script>
+
+<style scoped>
+@keyframes step-rise-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.step-anim-counter { animation: step-rise-in 0.3s ease-out both; }
+.step-anim-bar { animation: step-rise-in 0.4s ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .step-anim-counter, .step-anim-bar { animation: none; }
+}
+</style>

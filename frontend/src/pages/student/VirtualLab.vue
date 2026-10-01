@@ -1,11 +1,16 @@
 <template>
   <div class="min-h-full">
-    <div class="p-4 sm:p-6 lg:p-8">
+    <div>
       <!-- Header - a plain title/subtitle row, matching the compact style used on the teacher
            dashboard, instead of a hero card. -->
       <div class="mb-4">
-        <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Virtual Lab</h1>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Step into a 3D laboratory and run real science experiments &mdash; Physics, Chemistry, Biology and Agriculture, right from your browser.</p>
+        <div class="flex items-center gap-2 mb-1">
+          <div class="hidden sm:flex w-7 h-7 rounded-lg bg-indigo-600 items-center justify-center flex-shrink-0">
+            <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v6.5L4.5 18A2 2 0 006.3 21h11.4a2 2 0 001.8-3L15 9.5V3M8 3h8M7 15h10" /></svg>
+          </div>
+          <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight">Virtual Lab</h1>
+        </div>
+        <p class="text-xs text-gray-500 dark:text-gray-400">Step into a 3D laboratory and run real science experiments in Physics, Chemistry, Biology and Agriculture, right from your browser.</p>
       </div>
       <!-- Tabs -->
       <div class="inline-flex flex-wrap gap-1 mb-5 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-1 shadow-sm">
@@ -18,16 +23,16 @@
         <!-- Apparatus Playground CTA -->
         <router-link
           to="/student/virtual-lab/playground"
-          class="group flex items-center justify-between gap-3 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-5 mb-6 hover:shadow-md hover:border-emerald-300 dark:hover:border-emerald-700 transition-all"
+          class="group flex items-center justify-between gap-3 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-5 mb-6 hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-700 transition-all"
         >
           <div class="flex items-center gap-3 min-w-0">
-            <span class="w-10 h-10 flex-shrink-0 rounded-xl bg-emerald-600 flex items-center justify-center text-lg print-color-exact text-white"><AppIcon name="kit" class="w-5 h-5" /></span>
+            <span class="w-10 h-10 flex-shrink-0 rounded-xl bg-indigo-600 flex items-center justify-center text-lg print-color-exact text-white"><AppIcon name="kit" class="w-5 h-5" /></span>
             <div class="min-w-0">
               <p class="font-bold text-gray-900 dark:text-white text-sm">Apparatus Playground</p>
-              <p class="text-xs text-gray-500 dark:text-gray-400 truncate">Not graded &mdash; pick any equipment and get familiar with it before your next practical.</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400 truncate">Not graded. Pick any equipment and get familiar with it before your next practical.</p>
             </div>
           </div>
-          <span class="flex-shrink-0 text-emerald-600 dark:text-emerald-400 text-sm font-semibold transition-transform group-hover:translate-x-0.5">Explore &rarr;</span>
+          <span class="flex-shrink-0 text-indigo-600 dark:text-indigo-400 text-sm font-semibold transition-transform group-hover:translate-x-0.5">Explore &rarr;</span>
         </router-link>
 
         <!-- Search + filters (client-side only - the assignment list is already fully loaded) -->
@@ -133,47 +138,62 @@
           </div>
         </div>
 
-        <!-- Experiment Preview -->
-        <div v-if="previewAssignment" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4" @click.self="previewAssignment = null">
-          <div class="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
-            <div class="p-5 sm:p-6 space-y-4">
-              <div class="flex items-start justify-between gap-2">
-                <div>
-                  <h3 class="font-bold text-lg text-gray-900 dark:text-white">{{ previewAssignment.experiment_title }}</h3>
-                  <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{{ previewAssignment.subject_name }}<span v-if="previewAssignment.topic"> · {{ previewAssignment.topic }}</span></p>
-                </div>
-                <button @click="previewAssignment = null" class="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">✕</button>
+        <!-- Experiment Preview - wide two-column sheet on larger screens, full-width bottom sheet on phones;
+             the header and the Start button stay put while the details scroll. -->
+        <div v-if="previewAssignment" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4 lg:p-6" @click.self="previewAssignment = null">
+          <div class="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl lg:max-w-4xl xl:max-w-5xl max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden">
+            <div class="flex-shrink-0 flex items-start justify-between gap-3 px-5 sm:px-7 pt-5 sm:pt-6 pb-4 border-b border-gray-100 dark:border-gray-700">
+              <div class="min-w-0">
+                <h3 class="font-bold text-lg sm:text-xl lg:text-2xl text-gray-900 dark:text-white leading-snug">{{ previewAssignment.experiment_title }}</h3>
+                <p class="text-xs sm:text-sm text-gray-400 dark:text-gray-500 mt-0.5">{{ previewAssignment.subject_name }}<span v-if="previewAssignment.topic"> · {{ previewAssignment.topic }}</span></p>
               </div>
+              <button @click="previewAssignment = null" aria-label="Close" class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">✕</button>
+            </div>
 
-              <div v-if="loadingPreview" class="py-8 text-center"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div></div>
-              <template v-else-if="previewDetail">
+            <div class="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 sm:px-7 py-5">
+              <div v-if="loadingPreview" class="py-10 text-center"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div></div>
+              <div v-else-if="previewDetail" class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-7">
+                <div class="space-y-4 min-w-0">
                 <div class="flex items-center gap-1.5 flex-wrap text-xs">
-                  <span class="px-2 py-0.5 rounded-full font-semibold capitalize" :class="DIFFICULTY_BADGE[previewDetail.difficulty]">{{ previewDetail.difficulty }}</span>
-                  <span v-if="previewDetail.estimated_duration_minutes" class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 inline-flex items-center gap-1"><AppIcon name="clock" class="w-3 h-3" /> {{ previewDetail.estimated_duration_minutes }} min</span>
-                  <span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">{{ previewAssignment.marks }} marks</span>
-                  <span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">{{ previewDetail.steps.length }} steps</span>
+                  <span class="px-2.5 py-1 rounded-full font-semibold capitalize" :class="DIFFICULTY_BADGE[previewDetail.difficulty]">{{ previewDetail.difficulty }}</span>
+                  <span v-if="previewDetail.estimated_duration_minutes" class="px-2.5 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 inline-flex items-center gap-1"><AppIcon name="clock" class="w-3 h-3" /> {{ previewDetail.estimated_duration_minutes }} min</span>
+                  <span class="px-2.5 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">{{ previewAssignment.marks }} marks</span>
+                  <span class="px-2.5 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">{{ previewDetail.steps.length }} steps</span>
                 </div>
-
-                <div v-if="previewDetail.objective"><p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Objective</p><p class="text-sm text-gray-700 dark:text-gray-300">{{ previewDetail.objective }}</p></div>
-                <div v-if="previewDetail.learning_outcomes"><p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Learning Outcomes</p><p class="text-sm text-gray-700 dark:text-gray-300">{{ previewDetail.learning_outcomes }}</p></div>
-                <div v-if="previewDetail.apparatus"><p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Apparatus</p><p class="text-sm text-gray-700 dark:text-gray-300">{{ previewDetail.apparatus }}</p></div>
-                <div v-if="previewDetail.safety_precautions" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3">
+                <div v-if="previewDetail.objective"><p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Objective</p><p class="text-sm sm:text-[15px] leading-relaxed text-gray-700 dark:text-gray-300">{{ previewDetail.objective }}</p></div>
+                <div v-if="previewDetail.learning_outcomes"><p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Learning Outcomes</p><p class="text-sm sm:text-[15px] leading-relaxed text-gray-700 dark:text-gray-300">{{ previewDetail.learning_outcomes }}</p></div>
+                <div v-if="previewDetail.apparatus"><p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Apparatus</p><p class="text-sm sm:text-[15px] leading-relaxed text-gray-700 dark:text-gray-300">{{ previewDetail.apparatus }}</p></div>
+                </div>
+                <div class="space-y-4 min-w-0">
+                <div v-if="previewDetail.safety_precautions" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3.5">
                   <p class="text-xs font-semibold text-red-600 dark:text-red-400 mb-1 flex items-center gap-1"><AppIcon name="warning" class="w-3.5 h-3.5" /> Safety</p>
-                  <p class="text-sm text-red-700 dark:text-red-300">{{ previewDetail.safety_precautions }}</p>
+                  <p class="text-sm leading-relaxed text-red-700 dark:text-red-300">{{ previewDetail.safety_precautions }}</p>
                 </div>
-
                 <div v-if="previewDetail.practical_skills?.length">
-                  <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Practical Skills</p>
-                  <div class="flex items-center gap-1 flex-wrap">
-                    <span v-for="sk in previewDetail.practical_skills" :key="sk" class="px-2 py-0.5 text-[11px] font-medium rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300">{{ humanizeSkill(sk) }}</span>
+                  <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1.5">Practical Skills</p>
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <span v-for="sk in previewDetail.practical_skills" :key="sk" class="px-2.5 py-1 text-xs font-medium rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300">{{ humanizeSkill(sk) }}</span>
                   </div>
                 </div>
-
-                <button @click="startOrContinue(previewAssignment)" class="w-full px-4 py-3 text-sm font-bold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm hover:shadow-md transition-all">
-                  {{ previewAssignment.attempt_status === 'not_started' ? 'Start Experiment' : previewAssignment.attempt_status === 'in_progress' ? 'Continue Experiment' : 'View Result' }}
-                </button>
-              </template>
+                <div v-if="previewDetail.steps?.length">
+                  <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Procedure Overview</p>
+                  <ol class="space-y-1.5">
+                    <li v-for="(s, i) in previewDetail.steps" :key="s.id" class="flex gap-2.5 text-sm leading-snug text-gray-700 dark:text-gray-300">
+                      <span class="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 text-xs font-bold flex items-center justify-center">{{ Number(i) + 1 }}</span>
+                      <span class="pt-0.5">{{ s.instruction }}</span>
+                    </li>
+                  </ol>
+                </div>
+                </div>
+              </div>
               <p v-else class="text-sm text-red-500 text-center py-6">Could not load this experiment's preview.</p>
+            </div>
+
+            <div v-if="!loadingPreview && previewDetail" class="flex-shrink-0 px-5 sm:px-7 py-3.5 border-t border-gray-100 dark:border-gray-700 pb-[max(0.875rem,env(safe-area-inset-bottom))] flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+              <button @click="previewAssignment = null" class="px-5 py-2.5 text-sm font-semibold rounded-xl border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Close</button>
+              <button @click="startOrContinue(previewAssignment)" class="sm:min-w-[14rem] px-5 py-2.5 text-sm font-bold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm hover:shadow-md transition-all">
+                {{ previewAssignment.attempt_status === 'not_started' ? 'Start Experiment' : previewAssignment.attempt_status === 'in_progress' ? 'Continue Experiment' : 'View Result' }}
+              </button>
             </div>
           </div>
         </div>

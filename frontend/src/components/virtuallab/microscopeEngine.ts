@@ -1,9 +1,6 @@
 /**
- * The microscope focus model, shared so a future 2D-only specimen/template never has to
- * reimplement it. Ported from VirtualLabScene.vue's (3D engine) inline `microscopeFocusQuality()`
- * - same formula, same objective-scaled tolerance - kept as the one canonical version rather than
- * a second independent one (the 3D engine's own copy is left untouched, matching how
- * circuitEngine.ts was extracted for the circuit renderer).
+ * The microscope focus model used by the guided microscope experiment - same formula and
+ * objective-scaled tolerance as the free-layout engine's inline `microscopeFocusQuality()`.
  */
 
 export type FocusQuality = 'very_blurred' | 'blurred' | 'almost_focused' | 'focused'
