@@ -33,11 +33,54 @@
       </div>
 
       <!-- Slim fixed side columns on large screens so the lab takes all the remaining width -->
-      <div class="grid grid-cols-1 lg:grid-cols-[17rem_minmax(0,1fr)_12rem] 2xl:grid-cols-[19rem_minmax(0,1fr)_14rem] gap-4 sm:gap-5">
-        <!-- Apparatus shelves beside the lab (above it on phones and tablets) -->
-        <div class="order-1 rounded-2xl shadow-sm overflow-hidden flex flex-col max-h-[55svh] lg:max-h-none lg:h-[calc(100svh-7rem)] lg:min-h-[560px] ring-1 ring-amber-950/20">
-          <p class="flex-shrink-0 px-3 py-2 text-xs font-bold uppercase tracking-wider text-amber-100 bg-amber-950/90 flex items-center gap-1.5"><AppIcon name="kit" class="w-3.5 h-3.5" /> Apparatus Shelves</p>
+      <div
+        class="grid grid-cols-1 gap-4 sm:gap-5 lg:transition-[grid-template-columns] lg:duration-300"
+        :class="shelfPanelOpen
+          ? 'lg:grid-cols-[17rem_minmax(0,1fr)_12rem] 2xl:grid-cols-[19rem_minmax(0,1fr)_14rem]'
+          : 'lg:grid-cols-[3rem_minmax(0,1fr)_12rem] 2xl:grid-cols-[3rem_minmax(0,1fr)_14rem]'"
+      >
+        <!-- Apparatus shelves beside the lab (above it on phones and tablets). Hidden away like a
+             sidebar with the button on the left of its title bar, leaving a slim rail to reopen it. -->
+        <div
+          class="order-1 rounded-2xl shadow-sm overflow-hidden flex flex-col ring-1 ring-amber-950/20 lg:h-[calc(100svh-7rem)] lg:min-h-[560px]"
+          :class="shelfPanelOpen ? 'max-h-[55svh] lg:max-h-none' : 'lg:bg-amber-950/90'"
+        >
+          <!-- Title bar (on large screens only while open; the rail below replaces it when hidden) -->
+          <div class="flex-shrink-0 px-2 py-1.5 bg-amber-950/90 items-center gap-1.5" :class="shelfPanelOpen ? 'flex' : 'flex lg:hidden'">
+            <button
+              type="button"
+              @click="shelfPanelOpen = !shelfPanelOpen"
+              class="flex-shrink-0 w-7 h-7 inline-flex items-center justify-center rounded-md bg-amber-100/15 text-amber-100 hover:bg-amber-100/30"
+              :aria-expanded="shelfPanelOpen"
+              :title="shelfPanelOpen ? 'Hide the apparatus shelves' : 'Show the apparatus shelves'"
+            >
+              <!-- Points left (hide) on large screens, up/down on phones where the panel sits above the lab -->
+              <svg class="w-4 h-4 hidden lg:block" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 17l-5-5 5-5M18 17l-5-5 5-5" /></svg>
+              <svg class="w-4 h-4 lg:hidden transition-transform" :class="shelfPanelOpen ? '' : '-rotate-90'" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <p class="flex-1 min-w-0 truncate text-xs font-bold uppercase tracking-wider text-amber-100 flex items-center gap-1.5">
+              <AppIcon name="kit" class="w-3.5 h-3.5" /> Apparatus Shelves
+            </p>
+          </div>
+
+          <!-- Slim rail when hidden on large screens: click anywhere on it to open the shelves again -->
+          <button
+            v-if="!shelfPanelOpen"
+            type="button"
+            @click="shelfPanelOpen = true"
+            class="hidden lg:flex flex-1 flex-col items-center gap-3 py-2 text-amber-100 hover:bg-amber-100/10"
+            title="Show the apparatus shelves"
+            aria-label="Show the apparatus shelves"
+          >
+            <span class="w-7 h-7 inline-flex items-center justify-center rounded-md bg-amber-100/15">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5-5 5M6 7l5 5-5 5" /></svg>
+            </span>
+            <AppIcon name="kit" class="w-4 h-4" />
+            <span class="text-[11px] font-bold uppercase tracking-[0.2em] [writing-mode:vertical-rl]">Apparatus Shelves</span>
+          </button>
+
           <ApparatusShelves
+            v-show="shelfPanelOpen"
             class="flex-1"
             :shelves="shelves"
             :counts="benchCounts"
@@ -237,6 +280,15 @@ const readFolded = (): string[] => {
 const collapsedShelves = ref<string[]>(readFolded())
 watch(collapsedShelves, (v) => {
   try { localStorage.setItem(FOLD_KEY, JSON.stringify(v)) } catch { /* storage unavailable */ }
+})
+// Whether the shelves panel beside the lab is shown or hidden away like a sidebar - remembered too
+const PANEL_KEY = 'vl-playground-shelves-panel'
+const readPanel = (): boolean => {
+  try { return localStorage.getItem(PANEL_KEY) !== 'hidden' } catch { return true }
+}
+const shelfPanelOpen = ref(readPanel())
+watch(shelfPanelOpen, (v) => {
+  try { localStorage.setItem(PANEL_KEY, v ? 'shown' : 'hidden') } catch { /* storage unavailable */ }
 })
 const lastPicked = ref<string | null>(null)
 let pickedTimer: ReturnType<typeof setTimeout> | null = null
