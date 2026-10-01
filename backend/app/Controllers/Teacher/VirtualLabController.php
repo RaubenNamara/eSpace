@@ -70,7 +70,7 @@ class VirtualLabController extends Controller
         }
         $teacherId = $this->getTeacherId();
 
-        $filters = [];
+        $filters = ['published_by' => $teacherId];
         if ($this->query('category')) {
             $filters['category'] = $this->query('category');
         }

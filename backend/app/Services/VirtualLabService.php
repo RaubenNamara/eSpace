@@ -159,7 +159,7 @@ class VirtualLabService
 
         $rows = $stmt->fetchAll();
         $ids = array_map(fn ($r) => (int) $r['id'], $rows);
-        $published = $this->publishedTargets($ids);
+        $published = $this->publishedTargets($ids, isset($filters['published_by']) ? (int) $filters['published_by'] : null);
         $sharedWith = $this->sharedDepartments($ids);
 
         return array_map(function ($row) use ($published, $sharedWith) {
@@ -258,17 +258,20 @@ class VirtualLabService
      * Where each experiment is published, as readable labels ("S.5 - P1", or "S.1 (All Streams)"
      * when it went to a whole class group) - keyed by experiment id.
      */
-    private function publishedTargets(array $experimentIds): array
+    private function publishedTargets(array $experimentIds, ?int $teacherId = null): array
     {
         if (empty($experimentIds)) {
             return [];
         }
         $in = implode(',', array_map('intval', $experimentIds));
+        // A teacher only sees the classes they published to themselves - a shared library
+        // experiment may also be published by colleagues
+        $byTeacher = $teacherId !== null ? ' AND a.teacher_id = ' . (int) $teacherId : '';
         $stmt = $this->getDb()->query(
             "SELECT a.experiment_id, a.class_group_name, c.name AS class_name, c.stream_name
              FROM virtual_lab_assignments a
              LEFT JOIN classes c ON c.id = a.class_id
-             WHERE a.experiment_id IN ($in) AND a.deleted_at IS NULL
+             WHERE a.experiment_id IN ($in) AND a.deleted_at IS NULL{$byTeacher}
              ORDER BY a.created_at ASC"
         );
         $out = [];
