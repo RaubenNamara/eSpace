@@ -192,12 +192,8 @@ const gradients = ['from-rose-500 to-orange-500', 'from-indigo-500 to-sky-500', 
 const gradient = computed(() => gradients[Math.abs(props.video.id) % gradients.length])
 
 const meta = computed(() => {
-  const parts: string[] = []
-  const bytes = props.video.file_size
-  if (bytes) parts.push(bytes >= 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.round(bytes / 1024)} KB`)
   const when = props.video.published_at || props.video.updated_at || props.video.created_at
-  if (when) parts.push(timeAgo(when))
-  return parts.join(' · ')
+  return when ? timeAgo(when) : ''
 })
 
 function timeAgo(date: string): string {
