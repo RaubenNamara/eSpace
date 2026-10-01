@@ -426,15 +426,13 @@ function interiorLight(scene: THREE.Object3D, x: number, y: number, z: number, w
 }
 
 /**
- * A woven teal wall covering pinned along the whole back wall, from the floor up to where the
- * wall cabinets begin (`top`), finished with a wooden rail on top, a row of brass pins under
- * it and a skirting board at the floor.
+ * A woven teal wall covering pinned all round the room - back, side and front walls - from the
+ * floor up to where the wall cabinets begin (`top`), finished with a wooden rail on top, a row
+ * of brass pins under it and a skirting board at the floor. Adds the side and front walls.
  */
 function buildWallCovering(scene: THREE.Object3D, top: number) {
-  const width = 14
   const bottom = -BENCH_H
   const height = top - bottom
-  const z = WALL_Z + 0.004
   const fabric = canvasTexture(256, 256, (ctx, w, h) => {
     ctx.fillStyle = '#1f5a63'
     ctx.fillRect(0, 0, w, h)
@@ -456,35 +454,59 @@ function buildWallCovering(scene: THREE.Object3D, top: number) {
     ctx.stroke()
   })
   fabric.wrapS = fabric.wrapT = THREE.RepeatWrapping
-  fabric.repeat.set(width / 0.35, height / 0.35)
-  const cover = new THREE.Mesh(new THREE.PlaneGeometry(width, height), new THREE.MeshStandardMaterial({ map: fabric, roughness: 0.95 }))
-  cover.position.set(0, bottom + height / 2, z)
-  cover.receiveShadow = true
-  scene.add(cover)
-
   const woodMat = new THREE.MeshStandardMaterial({ map: woodTexture(), roughness: 0.55 })
-  const rail = new THREE.Mesh(new THREE.BoxGeometry(width, 0.045, 0.022), woodMat)
-  rail.position.set(0, top - 0.0225, z + 0.011)
-  rail.castShadow = true
-  rail.receiveShadow = true
-  scene.add(rail)
-  const skirting = new THREE.Mesh(new THREE.BoxGeometry(width, 0.1, 0.018), woodMat)
-  skirting.position.set(0, bottom + 0.05, z + 0.009)
-  scene.add(skirting)
+  const pinMat = new THREE.MeshStandardMaterial({ color: 0xd4a84b, roughness: 0.25, metalness: 1 })
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0xeef0f2, roughness: 0.95 })
 
-  // Brass pins holding the covering, every 15 cm just under the rail
-  const pinCount = Math.floor(width / 0.15)
-  const pins = new THREE.InstancedMesh(
-    new THREE.SphereGeometry(0.007, 10, 8),
-    new THREE.MeshStandardMaterial({ color: 0xd4a84b, roughness: 0.25, metalness: 1 }),
-    pinCount,
-  )
-  const m = new THREE.Matrix4()
-  for (let i = 0; i < pinCount; i++) {
-    m.makeTranslation(-width / 2 + 0.075 + i * 0.15, top - 0.075, z + 0.003)
-    pins.setMatrixAt(i, m)
-  }
-  scene.add(pins)
+  // The room: the back wall already exists; add the two side walls and the front wall
+  const half = 7
+  const frontZ = 7
+  const sideLength = frontZ - WALL_Z
+  const sideMidZ = (frontZ + WALL_Z) / 2
+  const wallH = 5
+  const walls: { x: number; z: number; rotY: number; length: number; newWall: boolean }[] = [
+    { x: 0, z: WALL_Z, rotY: 0, length: 2 * half, newWall: false },
+    { x: -half, z: sideMidZ, rotY: Math.PI / 2, length: sideLength, newWall: true },
+    { x: half, z: sideMidZ, rotY: -Math.PI / 2, length: sideLength, newWall: true },
+    { x: 0, z: frontZ, rotY: Math.PI, length: 2 * half, newWall: true },
+  ]
+  walls.forEach(({ x, z, rotY, length, newWall }) => {
+    // Everything for one wall is built facing +z at the origin, then turned into place
+    const run = new THREE.Group()
+    run.position.set(x, 0, z)
+    run.rotation.y = rotY
+    scene.add(run)
+    if (newWall) {
+      const wall = new THREE.Mesh(new THREE.PlaneGeometry(length, wallH), wallMat)
+      wall.position.y = bottom + wallH / 2
+      wall.receiveShadow = true
+      run.add(wall)
+    }
+    const tex = fabric.clone()
+    tex.needsUpdate = true
+    tex.repeat.set(length / 0.35, height / 0.35)
+    const cover = new THREE.Mesh(new THREE.PlaneGeometry(length, height), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95 }))
+    cover.position.set(0, bottom + height / 2, 0.004)
+    cover.receiveShadow = true
+    run.add(cover)
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(length, 0.045, 0.022), woodMat)
+    rail.position.set(0, top - 0.0225, 0.015)
+    rail.castShadow = true
+    rail.receiveShadow = true
+    run.add(rail)
+    const skirting = new THREE.Mesh(new THREE.BoxGeometry(length, 0.1, 0.018), woodMat)
+    skirting.position.set(0, bottom + 0.05, 0.013)
+    run.add(skirting)
+    // Brass pins holding the covering, every 15 cm just under the rail
+    const pinCount = Math.floor(length / 0.15)
+    const pins = new THREE.InstancedMesh(new THREE.SphereGeometry(0.007, 10, 8), pinMat, pinCount)
+    const m = new THREE.Matrix4()
+    for (let i = 0; i < pinCount; i++) {
+      m.makeTranslation(-length / 2 + 0.075 + i * 0.15, top - 0.075, 0.007)
+      pins.setMatrixAt(i, m)
+    }
+    run.add(pins)
+  })
 }
 
 function buildWallCabinets(scene: THREE.Object3D, benchLength: number, s = 1): WallParts {
