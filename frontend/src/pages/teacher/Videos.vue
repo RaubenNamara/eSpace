@@ -537,7 +537,6 @@ const saveVideo = async () => {
       uploading.value = true
       uploadProgress.value = 0
       await axios.post(`${API_BASE}/teacher/videos`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (event) => {
           if (event.total) uploadProgress.value = Math.round((event.loaded * 100) / event.total)
         }
