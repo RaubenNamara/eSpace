@@ -86,17 +86,14 @@ class VirtualLabController extends Controller
         }
     }
 
+    /**
+     * The attempt is this student's own. Access rules (enrollment, publishing) are checked once,
+     * when the attempt is started - an attempt already under way can always be continued and
+     * submitted by the student who owns it, even if something about the class changes meanwhile.
+     */
     private function ownsAttempt(int $attemptId, int $studentId): bool
     {
-        $state = null;
-        try {
-            $state = $this->service()->getAttemptState($attemptId);
-        } catch (\RuntimeException $e) {
-            return false;
-        }
-        // getAttemptState doesn't return student_id directly, so this is verified via
-        // studentCanAccessAssignment against the assignment it belongs to instead.
-        return $this->service()->studentCanAccessAssignment($studentId, (int) $state['assignment_id']);
+        return $this->service()->attemptBelongsToStudent($attemptId, $studentId);
     }
 
     /**

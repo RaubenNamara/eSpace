@@ -937,6 +937,13 @@ class VirtualLabService
         return $this->getExperimentDetail((int) $row['experiment_id']);
     }
 
+    public function attemptBelongsToStudent(int $attemptId, int $studentId): bool
+    {
+        $stmt = $this->getDb()->prepare('SELECT 1 FROM virtual_lab_attempts WHERE id = :id AND student_id = :student_id');
+        $stmt->execute(['id' => $attemptId, 'student_id' => $studentId]);
+        return (bool) $stmt->fetchColumn();
+    }
+
     public function studentCanAccessAssignment(int $studentId, int $assignmentId): bool
     {
         $stmt = $this->getDb()->prepare(
