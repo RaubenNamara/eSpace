@@ -224,6 +224,8 @@ const props = defineProps<{
   wallShelves?: boolean
   /** Bench length in metres (default 1.8) */
   benchLength?: number
+  /** Two more benches either side of the main one (Apparatus Playground) */
+  sideBenches?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -1421,6 +1423,7 @@ function buildScene() {
       cupboard: !!props.cupboard,
       wallCabinets: !!props.wallShelves,
       benchLength: props.benchLength,
+      sideBenches: !!props.sideBenches,
     })
   } catch (err) {
     console.error('Virtual Lab: failed to create a WebGL context', err)
