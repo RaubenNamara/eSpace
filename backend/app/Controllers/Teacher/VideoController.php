@@ -633,8 +633,18 @@ class VideoController extends Controller
      */
     private function handleUpload(): ?array
     {
-        if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
-            $this->error('No file uploaded or upload error occurred', 400);
+        if (!isset($_FILES['file'])) {
+            $this->error('No file uploaded (server limit: ' . ini_get('upload_max_filesize') . ')', 400);
+            return null;
+        }
+        if ($_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+            $message = match ($_FILES['file']['error']) {
+                UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'This video is too large for the server to accept (server limit: ' . ini_get('upload_max_filesize') . ')',
+                UPLOAD_ERR_PARTIAL => 'The upload was interrupted. Please try again',
+                UPLOAD_ERR_NO_FILE => 'No file uploaded',
+                default => 'Server could not store the upload (error code ' . $_FILES['file']['error'] . ')',
+            };
+            $this->error($message, 400);
             return null;
         }
 
