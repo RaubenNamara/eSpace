@@ -1582,9 +1582,11 @@ function stockCupboard() {
 }
 
 function syncCupboard() {
-  if (cupboardBottles.size === 0) return
   const out = new Set(props.sceneObjects.map(o => o.props?.chemical_id).filter(Boolean))
   cupboardBottles.forEach((g, id) => { g.visible = !out.has(id) })
+  // Apparatus taken off a wall-cabinet shelf leaves its place empty until it is put back
+  const onBench = new Set(props.sceneObjects.filter(o => !o.props?.chemical_id).map(o => o.object_type))
+  shelfItems.forEach((g, type) => { g.visible = !onBench.has(type) })
 }
 
 type CupboardHit =
@@ -1605,7 +1607,7 @@ function cupboardHit(): CupboardHit {
   groups.forEach(g => targets.push(g))
   cupboardBottles.forEach((g) => { if (g.visible) targets.push(g) })
   cupboardTags.forEach(t => targets.push(t))
-  shelfItems.forEach(g => targets.push(g))
+  shelfItems.forEach((g) => { if (g.visible) targets.push(g) })
   const hit = raycaster.intersectObjects(targets, true)[0]
   if (!hit) return null
   const door = room!.doorOf(hit.object)
@@ -1705,12 +1707,15 @@ function stockWallShelves() {
         scene.add(g)
         shelfItems.set(def.object_type, g)
       })
+      syncCupboard()
       // Subject name strip along the front edge of the shelf
       const strip = new THREE.Mesh(
         new THREE.PlaneGeometry(cab.maxX - cab.minX, 0.17),
         new THREE.MeshBasicMaterial({ map: shelfStripTexture(row.label), toneMapped: false }),
       )
-      strip.position.set((cab.minX + cab.maxX) / 2, y - 0.085, cab.frontZ + 0.005)
+      // The bottom shelf is the cabinet floor, whose front sits further forward
+      const stripZ = ri === cab.rows.length - 1 ? cab.frontZ + 0.03 * UNITS_PER_METRE + 0.005 : cab.frontZ + 0.005
+      strip.position.set((cab.minX + cab.maxX) / 2, y - 0.085, stripZ)
       scene.add(strip)
       shelfStrips.push(strip)
     })
