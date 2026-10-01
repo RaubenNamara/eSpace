@@ -150,7 +150,7 @@
       </div>
     </template>
 
-    <!-- Class video shelf: one shelf per subject -->
+    <!-- Class videos: one section per subject -->
     <template v-else>
       <div class="flex items-center gap-2 mb-4">
         <button
@@ -190,83 +190,48 @@
         <p class="text-gray-500 dark:text-gray-400">No videos in this class match these filters.</p>
       </div>
 
-      <div v-else class="shelf-row flex flex-wrap items-start gap-x-5 gap-y-7">
-        <Bookshelf
-          v-for="shelf in activeClassSubjectShelves"
-          :key="shelf.name"
-          :title="shelf.name"
-          :count="shelf.videos.length"
-          spines
-        >
-          <ShelfSlot
+      <div v-else>
+      <section v-for="(shelf, i) in activeClassSubjectShelves" :key="shelf.name" class="mb-8">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="w-1.5 h-5 rounded-full" :class="sectionAccents[i % sectionAccents.length]"></span>
+          <h3 class="text-sm sm:text-base font-semibold text-gray-900 dark:text-white">{{ shelf.name }}</h3>
+          <span class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ shelf.videos.length }}</span>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-6">
+          <VideoTile
             v-for="video in shelf.videos"
             :key="video.id"
-            :label="video.title"
-            open-label="Play"
-            :title="`Updated ${formatDate(video.updated_at || video.created_at)}`"
-            @open="playVideo = video"
+            :video="video"
+            :subtitle="video.class_group_name ? `${video.class_group_name} (All Streams)` : video.class_stream_name ? `${video.class_name} - ${video.class_stream_name}` : (video.class_name || '')"
+            show-status
+            selectable
+            :selected="bulk.isSelected(video.id)"
+            @toggle-select="bulk.toggle(video.id)"
+            @play="playVideo = video"
           >
-            <template #cover>
-              <div class="w-full"><VideoCover :video="video" size="sm" /></div>
+            <template #actions>
+              <button
+                @click="editVideo(video)"
+                class="p-1.5 min-w-[32px] min-h-[32px] flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                title="Edit"
+              >
+                <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                </svg>
+              </button>
+              <button
+                @click="deleteVideo(video.id)"
+                class="p-1.5 min-w-[32px] min-h-[32px] flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-900 rounded-lg transition-colors"
+                title="Delete"
+              >
+                <svg class="w-4 h-4 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+              </button>
             </template>
-            <ShelfBook
-              spine-out
-              :selected="bulk.isSelected(video.id)"
-              :title="video.title"
-              :seed="video.id"
-              :label="subjectTag(video.subject_name, video.subject_code)"
-              footer="Video"
-            />
-
-            <template #details>
-              <label class="flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400 cursor-pointer select-none mb-1.5">
-                <input
-                  type="checkbox"
-                  :checked="bulk.isSelected(video.id)"
-                  @change="bulk.toggle(video.id)"
-                  class="w-3.5 h-3.5 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
-                >
-                Select
-              </label>
-              <div class="flex items-center gap-1.5">
-                <span
-                  class="px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
-                  :class="video.status === 'published' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                    video.status === 'draft' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                    'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'"
-                >
-                  {{ video.status.charAt(0).toUpperCase() + video.status.slice(1) }}
-                </span>
-                <span class="text-[10px] text-gray-400 dark:text-gray-500 truncate">VIDEO &middot; {{ formatFileSize(video.file_size) }}</span>
-              </div>
-              <p class="mt-1 text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug">{{ video.title }}</p>
-              <p v-if="video.description" class="text-[11px] text-gray-500 dark:text-gray-400 line-clamp-2">{{ video.description }}</p>
-              <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">
-                {{ video.class_group_name ? `${video.class_group_name} (All Streams)` : video.class_stream_name ? `${video.class_name} - ${video.class_stream_name}` : video.class_name }}
-              </p>
-              <div class="flex items-center -ml-1.5 mt-0.5">
-                <button
-                  @click.stop="editVideo(video)"
-                  class="p-1.5 min-w-[34px] min-h-[34px] flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                  title="Edit"
-                >
-                  <svg class="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                  </svg>
-                </button>
-                <button
-                  @click.stop="deleteVideo(video.id)"
-                  class="p-1.5 min-w-[34px] min-h-[34px] flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-900 rounded-lg transition-colors"
-                  title="Delete"
-                >
-                  <svg class="w-4 h-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                  </svg>
-                </button>
-              </div>
-            </template>
-          </ShelfSlot>
-        </Bookshelf>
+          </VideoTile>
+        </div>
+      </section>
       </div>
     </template>
 
@@ -396,11 +361,7 @@ import axios from 'axios'
 import VideoPlayerModal from '@/components/video/VideoPlayerModal.vue'
 import TeacherClassSelector from '@/components/teacher/TeacherClassSelector.vue'
 import BulkActionBar from '@/components/common/BulkActionBar.vue'
-import Bookshelf from '@/components/library/Bookshelf.vue'
-import ShelfBook from '@/components/library/ShelfBook.vue'
-import ShelfSlot from '@/components/library/ShelfSlot.vue'
-import VideoCover from '@/components/video/VideoCover.vue'
-import { subjectTag } from '@/utils/subjectTag'
+import VideoTile from '@/components/video/VideoTile.vue'
 import { orderShelves } from '@/utils/shelfOrder'
 import type { VideoResource, VideoForm } from '@/types/video'
 import type { ENoteAssignments } from '@/types/enotes'
@@ -482,6 +443,8 @@ const activeClassSubjectShelves = computed(() => {
   return orderShelves(Array.from(map, ([name, videos]) => ({ name, videos })), g => g.videos)
 })
 
+const sectionAccents = ['bg-indigo-500', 'bg-rose-500', 'bg-emerald-500', 'bg-amber-500', 'bg-sky-500', 'bg-violet-500']
+
 const classPalettes = [
   { solid: 'bg-emerald-600', softText: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' },
   { solid: 'bg-blue-600', softText: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
@@ -539,23 +502,6 @@ const clearFilters = () => {
   statusFilter.value = ''
   subjectFilter.value = ''
   classFilter.value = ''
-}
-
-const formatDate = (dateString?: string) => {
-  if (!dateString) return ''
-  const date = new Date(dateString)
-  const now = new Date()
-  const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
-  if (diffDays === 0) return 'Today'
-  if (diffDays === 1) return 'Yesterday'
-  if (diffDays < 7) return `${diffDays} days ago`
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-}
-
-const formatFileSize = (bytes: number | null) => {
-  if (!bytes) return ''
-  const mb = bytes / (1024 * 1024)
-  return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.round(bytes / 1024)} KB`
 }
 
 const loadVideos = async () => {
