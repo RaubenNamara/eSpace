@@ -166,14 +166,15 @@
               cupboard
               @action="onSceneAction"
               @take-chemical="takeChemical"
+              @put-back="putBack"
             />
             <p v-if="sceneObjects.length === 0" class="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 w-max max-w-[90%] px-3 py-1.5 rounded-full bg-white/85 dark:bg-gray-900/80 text-gray-700 dark:text-gray-200 text-xs font-medium shadow text-center">
               Pick apparatus from the shelves, or open the cupboard doors under the bench for chemicals.
             </p>
             <!-- Brief confirmation when something comes off a shelf -->
             <transition enter-active-class="transition duration-150" enter-from-class="opacity-0 translate-y-1" leave-active-class="transition duration-300" leave-to-class="opacity-0">
-              <p v-if="lastPicked" class="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full bg-gray-900/80 text-white text-xs font-semibold shadow">
-                {{ lastPicked }} placed on the bench
+              <p v-if="lastPicked" :class="sceneObjects.length === 0 ? 'top-14' : 'top-3'" class="pointer-events-none absolute z-10 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full bg-gray-900/80 text-white text-xs font-semibold shadow">
+                {{ lastPicked }}
               </p>
             </transition>
           </div>
@@ -190,7 +191,14 @@
           <div v-else class="space-y-1.5">
             <div v-for="o in sceneObjects" :key="o.key" class="flex items-center justify-between gap-2 bg-gray-50 dark:bg-gray-950/40 rounded-lg px-2.5 py-1.5">
               <span class="text-xs text-gray-700 dark:text-gray-200 truncate">{{ catalogByType.get(o.object_type)?.icon || '🔬' }} {{ o.props?.display_name || catalogByType.get(o.object_type)?.display_name || o.object_type }}</span>
-              <button @click="removeFromScene(o.key)" class="flex-shrink-0 text-gray-400 hover:text-red-500 text-xs">✕</button>
+              <button
+                @click="putBack(o.key)"
+                class="flex-shrink-0 w-6 h-6 inline-flex items-center justify-center rounded-md text-gray-400 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                :title="o.props?.chemical_id ? 'Put back in the cupboard' : 'Put back on the shelf'"
+                :aria-label="o.props?.chemical_id ? 'Put back in the cupboard' : 'Put back on the shelf'"
+              >
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 14L4 9l5-5M4 9h11a5 5 0 010 10h-3" /></svg>
+              </button>
             </div>
           </div>
         </div>
@@ -301,9 +309,7 @@ const lastPicked = ref<string | null>(null)
 let pickedTimer: ReturnType<typeof setTimeout> | null = null
 const pickFromShelf = (obj: LabObjectDef) => {
   addToScene(obj)
-  lastPicked.value = obj.display_name
-  if (pickedTimer) clearTimeout(pickedTimer)
-  pickedTimer = setTimeout(() => { lastPicked.value = null }, 1600)
+  flash(`${obj.display_name} placed on the bench`)
   // On phones the drawer covers the lab, so close it to show what was placed
   if (window.innerWidth < 640) shelvesOpen.value = false
 }
@@ -313,9 +319,22 @@ const takeChemical = (id: string) => {
   if (!chem || sceneObjects.value.some(o => o.props?.chemical_id === id)) return
   sceneObjects.value.push({ key: `chem_${id}`, object_type: chemicalObjectType(chem), position: { x: 0, y: 0, z: 0 }, props: chemicalProps(chem) })
   relayout()
-  lastPicked.value = chem.name
+  flash(`${chem.name} placed on the bench`)
+}
+
+const flash = (msg: string) => {
+  lastPicked.value = msg
   if (pickedTimer) clearTimeout(pickedTimer)
-  pickedTimer = setTimeout(() => { lastPicked.value = null }, 1600)
+  pickedTimer = setTimeout(() => { lastPicked.value = null }, 1800)
+}
+
+/** Back where it came from: chemicals into the bench cupboard, apparatus onto its shelf. */
+const putBack = (key: string) => {
+  const o = sceneObjects.value.find(x => x.key === key)
+  if (!o) return
+  const name = o.props?.display_name || catalogByType.value.get(o.object_type)?.display_name || 'It'
+  removeFromScene(key)
+  flash(o.props?.chemical_id ? `${name} put back in the cupboard` : `${name} put back on the shelf`)
 }
 
 const removeFromScene = (key: string) => {
