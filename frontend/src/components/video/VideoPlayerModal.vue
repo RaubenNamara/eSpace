@@ -23,9 +23,17 @@
       </div>
 
       <!-- Player -->
-      <div class="flex-1 bg-black flex items-center justify-center">
+      <div class="flex-1 bg-black flex items-center justify-center min-h-[200px]">
+        <div v-if="!videoSrc" class="w-full max-w-sm px-6 py-12 text-center">
+          <p class="text-sm text-gray-200 mb-3">Downloading video{{ progress ? ` - ${progress}%` : '...' }}</p>
+          <div class="w-full h-2 bg-white/20 rounded-full overflow-hidden">
+            <div class="h-full bg-rose-500 transition-all" :style="{ width: progress + '%' }"></div>
+          </div>
+          <p class="text-xs text-gray-400 mt-3">It's saved on this device, so it opens instantly next time.</p>
+        </div>
         <video
-          :src="resolveAssetUrl(video.file_path)"
+          v-else
+          :src="videoSrc"
           controls
           autoplay
           class="w-full max-h-[75vh]"
@@ -44,15 +52,37 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import type { VideoResource } from '@/types/video'
 import { resolveAssetUrl } from '@/utils/url'
+import { loadCachedVideo } from '@/utils/videoCache'
 import apiService from '@/services/api'
 
 const props = withDefaults(defineProps<{ video: VideoResource; trackProgress?: boolean }>(), {
   trackProgress: false,
 })
 defineEmits(['close'])
+
+const videoSrc = ref('')
+const progress = ref(0)
+const abort = new AbortController()
+
+onMounted(async () => {
+  const url = resolveAssetUrl(props.video.file_path)
+  try {
+    const src = await loadCachedVideo(url, (p) => { progress.value = p }, abort.signal)
+    if (abort.signal.aborted) return URL.revokeObjectURL(src)
+    videoSrc.value = src
+  } catch {
+    // Cache Storage unavailable (e.g. private mode, full disk) - fall back to streaming directly.
+    if (!abort.signal.aborted) videoSrc.value = url
+  }
+})
+
+onBeforeUnmount(() => {
+  abort.abort()
+  if (videoSrc.value.startsWith('blob:')) URL.revokeObjectURL(videoSrc.value)
+})
 
 const teacherName = computed(() => {
   if (!props.video.teacher_first_name) return ''
