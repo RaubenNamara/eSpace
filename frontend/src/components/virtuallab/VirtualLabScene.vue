@@ -265,7 +265,12 @@ const batteryVoltage = ref<number | null>(null)
 // --- Real-measurement simulation state ---------------------------------------------------
 // A container's actual ml (not a fixed decorative fill level) - what a "measure" on it reads
 // back, and what a "pour" transfers between two of these. Objects with a tracked volume.
-const LIQUID_CONTAINER_TYPES = ['beaker', 'test_tube', 'burette', 'measuring_cylinder', 'water_container']
+const LIQUID_CONTAINER_TYPES = [
+  'beaker', 'test_tube', 'burette', 'measuring_cylinder', 'water_container',
+  'conical_flask', 'round_bottom_flask', 'evaporating_dish', 'wash_bottle', 'specimen_bottle', 'rain_gauge', 'watering_can',
+]
+// Containers that start full (a source to pour from) rather than empty
+const STARTS_FULL_TYPES = ['water_container', 'burette', 'wash_bottle', 'watering_can']
 const containerVolumes = new Map<string, number>()
 const batteryVoltages = new Map<string, number>()
 const switchStates = new Map<string, 'on' | 'off'>()
@@ -367,7 +372,7 @@ function mergedProps(key: string): Record<string, any> {
 
 function initialVolume(objectType: string, mergedP: Record<string, any>): number {
   if (mergedP.current_volume !== undefined) return Number(mergedP.current_volume)
-  if (objectType === 'water_container' || objectType === 'burette') return Number(mergedP.capacity_ml ?? 50)
+  if (STARTS_FULL_TYPES.includes(objectType)) return Number(mergedP.capacity_ml ?? 50)
   return 0
 }
 
@@ -900,8 +905,8 @@ function beginMeasure(key: string) {
     armedAction.value = 'measure'
     return
   }
-  if (type === 'ruler' || type === 'thermometer') {
-    measureTargetPickerFor.value = type
+  if (type === 'ruler' || type === 'metre_rule' || type === 'thermometer') {
+    measureTargetPickerFor.value = type === 'thermometer' ? 'thermometer' : 'ruler'
     armedAction.value = 'measure'
     return
   }

@@ -7,7 +7,10 @@
         <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v6.5L4.5 18A2 2 0 006.3 21h11.4a2 2 0 001.8-3L15 9.5V3M8 3h8M7 15h10" /></svg>
       </div>
       <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight whitespace-nowrap">Virtual Lab</h1>
-      <button v-if="activeTab === 'experiments'" @click="openBuilder(null)" class="ml-auto inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold rounded-lg bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 transition-colors">
+      <router-link to="/teacher/virtual-lab/playground" class="ml-auto inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 bg-white dark:bg-gray-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors" title="Try any apparatus freely in 3D">
+        <AppIcon name="kit" class="w-4 h-4" /><span class="hidden sm:inline">Apparatus</span> Playground
+      </router-link>
+      <button v-if="activeTab === 'experiments'" @click="openBuilder(null)" class="inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold rounded-lg bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 transition-colors">
         <span class="text-base leading-none">+</span> New Experiment
       </button>
     </div>
@@ -371,8 +374,8 @@
     </div>
 
     <!-- ===================== APPARATUS 3D VIEWER ===================== -->
-    <div v-if="viewApparatus" class="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4 lg:p-6" @click.self="viewApparatus = null">
-      <div class="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-3xl lg:max-w-5xl max-h-[94dvh] flex flex-col overflow-hidden">
+    <div v-if="viewApparatus" class="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4 lg:p-6" @click.self="exitMaximize(); viewApparatus = null">
+      <div class="bg-white dark:bg-gray-800 shadow-2xl flex flex-col overflow-hidden" :class="labMaximized ? 'fixed inset-0 z-[10000]' : 'rounded-t-2xl sm:rounded-2xl w-full sm:max-w-3xl lg:max-w-5xl max-h-[94dvh]'">
         <div class="flex-shrink-0 flex items-start justify-between gap-3 px-5 sm:px-6 pt-4 pb-3 border-b border-gray-100 dark:border-gray-700">
           <div class="flex items-center gap-3 min-w-0">
             <span class="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-900/40 flex items-center justify-center text-2xl flex-shrink-0">{{ viewApparatus.icon || '🔬' }}</span>
@@ -381,10 +384,16 @@
               <p class="text-xs text-gray-500 dark:text-gray-400">{{ apparatusGroupLabel(viewApparatus.category) }}</p>
             </div>
           </div>
-          <button @click="viewApparatus = null" aria-label="Close" class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">✕</button>
+          <div class="flex items-center gap-1.5 flex-shrink-0">
+            <button @click="labMaximized ? exitMaximize() : enterMaximize()" class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700" :title="labMaximized ? 'Exit full screen' : 'Full screen'">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path v-if="labMaximized" stroke-linecap="round" stroke-linejoin="round" d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" /><path v-else stroke-linecap="round" stroke-linejoin="round" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>
+              <span class="hidden sm:inline">{{ labMaximized ? 'Exit Full Screen' : 'Full Screen' }}</span>
+            </button>
+            <button @click="exitMaximize(); viewApparatus = null" aria-label="Close" class="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">✕</button>
+          </div>
         </div>
-        <div class="flex-1 min-h-0 overflow-y-auto">
-          <div class="h-[46dvh] sm:h-[52vh] min-h-[260px] bg-slate-900">
+        <div class="flex-1 min-h-0 overflow-y-auto flex flex-col">
+          <div class="bg-slate-900" :class="labMaximized ? 'flex-1 min-h-[300px]' : 'h-[46dvh] sm:h-[52vh] min-h-[260px]'">
             <VirtualLabScene :key="viewApparatus.object_type" :scene-objects="apparatusScene" :object-catalog="objectCatalog" read-only />
           </div>
           <div class="px-5 sm:px-6 py-4 space-y-3">
@@ -823,6 +832,7 @@ import VirtualLabScene from '@/components/virtuallab/VirtualLabScene.vue'
 import { useRouter } from 'vue-router'
 import VirtualLabLayoutEditor from '@/components/virtuallab/VirtualLabLayoutEditor.vue'
 import { GUIDED_EXPERIMENTS } from '@/components/virtuallab/lab3d/registry'
+import { useFullscreenLab } from '@/components/virtuallab/lab3d/useFullscreenLab'
 import TeacherClassSelector from '@/components/teacher/TeacherClassSelector.vue'
 import type { ClassTarget } from '@/components/teacher/TeacherClassSelector.vue'
 
@@ -851,6 +861,7 @@ const APPARATUS_GROUPS = [
   { key: 'physics', label: 'Physics', icon: 'bolt', color: 'bg-indigo-600', note: '' },
   { key: 'chemistry', label: 'Chemistry', icon: 'beaker', color: 'bg-emerald-600', note: '' },
   { key: 'biology', label: 'Biology', icon: 'leaf', color: 'bg-purple-600', note: '' },
+  { key: 'agriculture', label: 'Agriculture', icon: 'sprout', color: 'bg-lime-600', note: '' },
   { key: 'general', label: 'General', icon: 'wrench', color: 'bg-slate-600', note: 'used in every science' },
 ]
 const apparatusGroupLabel = (category: string) => APPARATUS_GROUPS.find(g => g.key === category)?.label ?? 'General'
@@ -870,6 +881,7 @@ const apparatusGroups = computed(() => {
     .filter(g => g.items.length > 0)
 })
 const viewApparatus = ref<LabObjectDef | null>(null)
+const { labMaximized, enterMaximize, exitMaximize } = useFullscreenLab()
 // One piece of apparatus alone on the bench, for the 3D viewer
 const apparatusScene = computed<SceneObjectConfig[]>(() => viewApparatus.value
   ? [{ key: 'preview', object_type: viewApparatus.value.object_type, position: { x: 0, y: 0, z: 0 } }]

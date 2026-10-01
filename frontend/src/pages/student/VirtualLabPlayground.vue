@@ -2,7 +2,7 @@
   <div class="min-h-full">
     <div>
       <!-- Header - same compact icon + title + subtitle pattern as the other student pages -->
-      <router-link to="/student/virtual-lab" class="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline mb-2">
+      <router-link :to="`/${role}/virtual-lab`" class="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline mb-2">
         <span>&larr;</span> Virtual Lab
       </router-link>
       <div class="flex items-center gap-2 mb-1">
@@ -11,7 +11,7 @@
         </div>
         <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight">Apparatus Playground</h1>
       </div>
-      <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Pick any lab equipment and get familiar with it in 3D. Move, rotate, connect, pour, heat and measure freely. Nothing here is graded.</p>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Pick any lab equipment from any subject and get familiar with it in 3D. Move, rotate, connect, pour, heat and measure freely. Nothing here is graded.</p>
 
       <!-- Category filter (same segmented style as the Virtual Lab tabs) + full screen -->
       <div class="flex flex-wrap items-center gap-2 mb-5">
@@ -111,10 +111,14 @@
 <script setup lang="ts">
 import AppIcon from '@/components/common/AppIcon.vue'
 import { ref, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import axios from 'axios'
 import VirtualLabScene from '@/components/virtuallab/VirtualLabScene.vue'
 import { useFullscreenLab } from '@/components/virtuallab/lab3d/useFullscreenLab'
 import type { LabObjectDef, SceneObjectConfig, LabCategory } from '@/types/virtualLab'
+
+// Shared by the student and teacher routes - each reads the catalogue from its own API
+const role = useRoute().path.startsWith('/teacher') ? 'teacher' : 'student'
 
 const catalog = ref<LabObjectDef[]>([])
 const loadingCatalog = ref(true)
@@ -131,6 +135,7 @@ const categoryOptions: { value: CategoryFilter; label: string; icon: string }[] 
   { value: 'physics', label: 'Physics', icon: 'bolt' },
   { value: 'chemistry', label: 'Chemistry', icon: 'beaker' },
   { value: 'biology', label: 'Biology', icon: 'leaf' },
+  { value: 'agriculture', label: 'Agriculture', icon: 'sprout' },
   { value: 'general', label: 'General', icon: 'wrench' },
 ]
 
@@ -186,7 +191,7 @@ const onSceneAction = (payload: { objectKey: string | null; action: string; valu
 
 onMounted(async () => {
   try {
-    const res = await axios.get('/api/student/virtual-lab/objects')
+    const res = await axios.get(`/api/${role}/virtual-lab/objects`)
     catalog.value = res.data.data.objects
   } finally {
     loadingCatalog.value = false
