@@ -78,8 +78,16 @@ class VirtualLabController extends Controller
             $filters['subject_id'] = (int) $this->query('subject_id');
         }
 
+        // The department library: only experiments the admin has shared with this teacher's
+        // (active) department
         if ($this->query('templates') === '1') {
+            $departmentId = $this->getActiveDepartmentId();
+            if (!$departmentId) {
+                $this->success(['experiments' => []]);
+                return;
+            }
             $filters['is_template'] = true;
+            $filters['shared_with_department'] = $departmentId;
             $this->success(['experiments' => $this->service()->listExperiments($filters)]);
             return;
         }
@@ -100,8 +108,8 @@ class VirtualLabController extends Controller
         }
         $teacherId = $this->getTeacherId();
         $ownership = $this->service()->getExperimentOwnership((int) $id);
-        // A teacher can open their own experiments and the official templates, nobody else's
-        if (!$ownership || (!$ownership['is_template'] && $ownership['created_by'] !== $teacherId)) {
+        // A teacher can open their own experiments and library experiments shared with their department
+        if (!$ownership || !$this->canUseExperiment((int) $id, $ownership, $teacherId)) {
             $this->notFound('Experiment not found');
             return;
         }
@@ -127,8 +135,8 @@ class VirtualLabController extends Controller
         }
         $teacherId = $this->getTeacherId();
         $ownership = $this->service()->getExperimentOwnership((int) $id);
-        // Same visibility as opening the experiment: the teacher's own ones and the official templates
-        if (!$ownership || (!$ownership['is_template'] && $ownership['created_by'] !== $teacherId)) {
+        // Same visibility as opening the experiment
+        if (!$ownership || !$this->canUseExperiment((int) $id, $ownership, $teacherId)) {
             $this->notFound('Experiment not found');
             return;
         }
@@ -151,6 +159,15 @@ class VirtualLabController extends Controller
      * Only the teacher who created an experiment may change or delete it, and official templates
      * are read-only (teachers copy them first). Sends the error response itself when denied.
      */
+    /** Own experiment, or a library experiment the admin has shared with the teacher's department. */
+    private function canUseExperiment(int $id, array $ownership, ?int $teacherId): bool
+    {
+        if ($ownership['is_template']) {
+            return $this->service()->isSharedWithDepartment($id, $this->getActiveDepartmentId());
+        }
+        return $teacherId !== null && $ownership['created_by'] === $teacherId;
+    }
+
     private function ownsExperiment(int $id): bool
     {
         $teacherId = $this->getTeacherId();
@@ -214,6 +231,10 @@ class VirtualLabController extends Controller
             return;
         }
 
+        if (!$this->service()->isSharedWithDepartment((int) $id, $this->getActiveDepartmentId())) {
+            $this->notFound('Template not found');
+            return;
+        }
         $newId = $this->service()->createExperimentFromTemplate((int) $id, $teacherId, $this->input());
         if (!$newId) {
             $this->notFound('Template not found');
@@ -281,7 +302,7 @@ class VirtualLabController extends Controller
         }
 
         $ownership = $this->service()->getExperimentOwnership((int) $id);
-        if (!$ownership || (!$ownership['is_template'] && $ownership['created_by'] !== $teacherId)) {
+        if (!$ownership || !$this->canUseExperiment((int) $id, $ownership, $teacherId)) {
             $this->notFound('Experiment not found');
             return;
         }

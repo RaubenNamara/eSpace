@@ -417,14 +417,19 @@
           <p v-if="isPractice" class="rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-200 text-center">
             Practice mode - teachers can't submit results. <button type="button" @click="restartPractice" class="font-semibold underline">Start again</button>
           </p>
-          <button
-            v-else-if="attempt.status === 'in_progress'"
-            :disabled="!allStepsDone || submitting"
-            @click="submitPractical"
-            class="w-full px-4 py-3 text-sm font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow-md disabled:opacity-50 transition-all print-color-exact"
-          >
-            {{ submitting ? 'Submitting...' : allStepsDone ? 'Submit Practical' : 'Complete all steps to submit' }}
-          </button>
+          <template v-else-if="attempt.status === 'in_progress'">
+            <p v-if="allStepsDone && graphBlocker" class="rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-4 py-2.5 text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2">
+              <AppIcon name="chart" class="w-4 h-4 flex-shrink-0 mt-px" />
+              <span>{{ graphBlocker }}</span>
+            </p>
+            <button
+              :disabled="!allStepsDone || !!graphBlocker || submitting"
+              @click="submitPractical"
+              class="w-full px-4 py-3 text-sm font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow-md disabled:opacity-50 transition-all print-color-exact"
+            >
+              {{ submitting ? 'Submitting...' : !allStepsDone ? 'Complete all steps to submit' : graphBlocker ? 'Finish your graph to submit' : 'Submit Practical' }}
+            </button>
+          </template>
           </div>
           </div>
         </div>
@@ -435,6 +440,7 @@
 
 <script setup lang="ts">
 import AppIcon from '@/components/common/AppIcon.vue'
+import { useToastStore } from '@/stores/toast'
 import { ref, computed, watch, onMounted } from 'vue'
 import { useFullscreenLab } from '@/components/virtuallab/lab3d/useFullscreenLab'
 import { useRoute, useRouter } from 'vue-router'
@@ -478,6 +484,7 @@ const loading = ref(true)
 // Loosely typed on purpose - it can be the free-layout engine or any guided experiment, and the only
 // method every renderer needs to expose is setObjectState (see registry.ts's Component contract).
 const sceneRef = ref<{ setObjectState: (key: string, patch: Record<string, any>) => void } | null>(null)
+const toastStore = useToastStore()
 const graphRef = ref<{ xKey: string; yKey: string } | null>(null)
 // Session-only ("optional" questions can be skipped, not answered - there's nothing to persist,
 // they just shouldn't interrupt again after being dismissed once this page is open).
@@ -793,6 +800,20 @@ const dismissPendingNotebook = () => { pendingNotebookEntry.value = null }
 
 // --- Student-plotted graph (manual_plot experiments) ---------------------------------------------
 const manualPlot = computed(() => !!attempt.value?.experiment.graph?.enabled && !!attempt.value.experiment.graph.manual_plot)
+
+// A switched-on graph must have its minimum number of points and every graph question (e.g. the
+// gradient) answered before the practical can be submitted - the server checks the same thing.
+const graphBlocker = computed<string | null>(() => {
+  const g = attempt.value?.experiment.graph
+  if (!g?.enabled) return null
+  const points = manualPlot.value
+    ? plotEntries.value.length
+    : resultRows.value.filter(r => r.extra && g.x_column && g.y_column && r.extra[g.x_column] != null && r.extra[g.y_column] != null).length
+  const min = Math.max(1, g.min_points || 1)
+  if (points < min) return `Plot at least ${min} points on your graph (${points} so far).`
+  if (graphQuestions.value.some(q => !(answers.value[q.id] || '').trim())) return 'Answer the questions about your graph, such as the gradient.'
+  return null
+})
 const plotEntries = computed(() => attempt.value?.notebook.filter(n => n.entry_type === 'plot_point') ?? [])
 
 const addPlotPoint = async (p: { x: number; y: number }) => {
@@ -890,6 +911,8 @@ const addTitreResultRow = async () => {
   await refreshAttempt()
 }
 
+const sin3 = (deg: number) => Math.round(Math.sin((deg * Math.PI) / 180) * 1000) / 1000
+
 const opticsTrials = computed(() => resultRows.value.filter(r => r.extra && 'incidence_deg' in r.extra))
 
 const addOpticsResultRow = async () => {
@@ -900,7 +923,10 @@ const addOpticsResultRow = async () => {
   const outgoingKey = lastOutgoingLabel.value === 'Angle of Refraction' ? 'refraction_deg' : 'reflection_deg'
   await postNotebook({
     entry_type: 'result_row', label: `Trial ${trialNumber}`, value: String(outgoing), unit: '°',
-    extra: { trial: trialNumber, incidence_deg: incidence, [outgoingKey]: outgoing },
+    extra: {
+      trial: trialNumber, incidence_deg: incidence, [outgoingKey]: outgoing,
+      ...(outgoingKey === 'refraction_deg' ? { sin_incidence: sin3(incidence), sin_refraction: sin3(outgoing) } : {}),
+    },
   })
   lastIncidenceAngle.value = null
   lastOutgoingAngle.value = null
@@ -968,12 +994,16 @@ const submitPractical = async () => {
   if (!attempt.value || isPractice.value) return // teachers practise; they never submit
   submitting.value = true
   try {
+    // Answers normally save on blur - make sure the graph answers are stored before the server checks them
+    await Promise.all(graphQuestions.value.map(q => saveAnswer(q.id)))
     await axios.post(`/api/student/virtual-lab/attempts/${attempt.value.attempt_id}/submit`, {
       conclusion: conclusionText.value,
       graph_x_key: graphRef.value?.xKey || null,
       graph_y_key: graphRef.value?.yKey || null,
     })
     await refreshAttempt()
+  } catch (err: any) {
+    toastStore.error(err.response?.data?.message || 'Could not submit your practical')
   } finally {
     submitting.value = false
   }

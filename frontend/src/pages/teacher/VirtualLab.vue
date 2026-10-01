@@ -59,7 +59,7 @@
           <p class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-1.5"><AppIcon name="sparkles" class="w-4 h-4" /> Experiments by Subject</p>
 
           <div class="flex flex-wrap items-center gap-2 mb-3.5">
-            <input v-model="catalogueSearch" type="text" placeholder="Search my experiments and templates..." class="input-field flex-1 min-w-[10rem] text-sm">
+            <input v-model="catalogueSearch" type="text" placeholder="Search my experiments and the library..." class="input-field flex-1 min-w-[10rem] text-sm">
             <select v-model="catalogueSubject" class="input-field text-sm w-auto">
               <option value="">All Subjects</option>
               <option v-for="s in catalogueSubjects" :key="s" :value="s">{{ s }}</option>
@@ -92,7 +92,7 @@
                   <span class="w-12 h-12 flex-shrink-0 rounded-2xl flex items-center justify-center text-2xl print-color-exact" :class="CATEGORY_COLORS[c.category]"><AppIcon :name="CATEGORY_ICONS[c.category]" class="w-6 h-6" /></span>
                   <div class="min-w-0">
                     <p class="font-bold text-gray-900 dark:text-white text-base leading-snug truncate">{{ c.name }}</p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ c.items.length }} {{ c.items.length === 1 ? 'template' : 'templates' }}<span v-if="c.mine.length"> &middot; <span class="font-semibold text-indigo-600 dark:text-indigo-400">{{ c.mine.length }} yours</span></span></p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ c.items.length }} in library<span v-if="c.mine.length"> &middot; <span class="font-semibold text-indigo-600 dark:text-indigo-400">{{ c.mine.length }} yours</span></span></p>
                   </div>
                 </div>
                 <div v-if="c.topics.length" class="flex flex-wrap gap-1 mt-3">
@@ -120,7 +120,7 @@
             </div>
 
             <p class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2.5">My Experiments <span class="text-xs font-normal text-gray-400">({{ filteredMine.length }})</span></p>
-            <div v-if="filteredMine.length === 0" class="bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-300 dark:border-gray-600 p-6 text-center text-sm text-gray-400 dark:text-gray-500 mb-6">You have no experiments in {{ catalogueSubject }} yet. Use a template below or create your own.</div>
+            <div v-if="filteredMine.length === 0" class="bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-300 dark:border-gray-600 p-6 text-center text-sm text-gray-400 dark:text-gray-500 mb-6">You have no experiments in {{ catalogueSubject }} yet. Publish one from the Department Library below or create your own.</div>
             <div v-else class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 mb-6">
           <div v-for="e in filteredMine" :key="e.id" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col">
             <div class="h-1.5 print-color-exact" :class="CATEGORY_COLORS[e.category]"></div>
@@ -146,8 +146,9 @@
           </div>
             </div>
 
-            <p class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2.5">Templates <span class="text-xs font-normal text-gray-400">({{ filteredTemplates.length }})</span></p>
-            <div v-if="filteredTemplates.length === 0" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 text-center text-sm text-gray-400 dark:text-gray-500">No templates in this subject match your filters.</div>
+            <p class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-0.5">Department Library <span class="text-xs font-normal text-gray-400">({{ filteredTemplates.length }})</span></p>
+            <p class="text-xs text-gray-400 dark:text-gray-500 mb-2.5">Ready-made experiments the administrator has shared with your department. Publish one straight to a class, or use it as a starting point for your own.</p>
+            <div v-if="filteredTemplates.length === 0" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 text-center text-sm text-gray-400 dark:text-gray-500">No library experiments in this subject match your filters.</div>
             <div v-else class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
             <div v-for="t in filteredTemplates" :key="t.id" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col">
               <div class="flex items-start gap-2.5">
@@ -173,7 +174,8 @@
               <div class="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
                 <button @click="practise(t.id)" title="Do this experiment like a student (nothing is saved)" class="flex-1 px-3 py-2 text-xs font-semibold rounded-lg bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-colors">▶ Try</button>
                 <button @click="openPreview(t.id)" class="flex-1 px-3 py-2 text-xs font-semibold rounded-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Preview</button>
-                <button @click="useTemplate(t.id)" class="flex-1 px-3 py-2 text-xs font-semibold rounded-lg border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">Use Template</button>
+                <button @click="useTemplate(t.id)" title="Make your own editable copy" class="flex-1 px-3 py-2 text-xs font-semibold rounded-lg border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">Copy</button>
+                <button @click="openPublish(t)" title="Publish to one of your classes" class="flex-1 px-3 py-2 text-xs font-semibold rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors">Publish</button>
               </div>
             </div>
             </div>

@@ -133,6 +133,8 @@ export interface ExperimentSummary {
   assignment_count: number
   /** Readable labels of where it is published, e.g. "S.5 - P1" or "S.1 (All Streams)" */
   published_to?: string[]
+  /** Departments this library experiment is shared with (admin) */
+  shared_departments?: { id: number; name: string }[]
   attempt_count: number
   created_at: string
 }
