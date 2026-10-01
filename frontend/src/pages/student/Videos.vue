@@ -34,8 +34,10 @@
       <!-- Loading: an empty shelf while videos arrive -->
       <div v-if="loading" class="space-y-8">
         <div v-for="i in 2" :key="i" class="animate-pulse">
-          <div class="h-6 w-32 rounded bg-gray-200 dark:bg-gray-700 mb-2"></div>
-          <div class="h-56 rounded-xl bg-gray-200 dark:bg-gray-700"></div>
+          <div class="h-5 w-32 rounded bg-gray-200 dark:bg-gray-700 mb-3"></div>
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            <div v-for="j in 5" :key="j" class="aspect-video rounded-xl bg-gray-200 dark:bg-gray-700"></div>
+          </div>
         </div>
       </div>
 
@@ -47,35 +49,26 @@
         <p class="text-red-800 dark:text-red-200">{{ error }}</p>
       </div>
 
-      <!-- Video shelves: one shelf per subject, same as the eLibrary bookcase -->
-      <div v-else-if="filteredSubjectGroups.length > 0" class="shelf-row flex flex-wrap items-start gap-x-5 gap-y-7">
-        <Bookshelf
-          v-for="group in filteredSubjectGroups"
-          :key="group.id"
-          :title="group.name"
-          :count="group.videos.length"
-          :fresh="group.videos.filter(v => isRecent(v)).length"
-          spines
-        >
-          <ShelfSlot
-            v-for="video in group.videos"
-            :key="video.id"
-            :label="video.title"
-            open-label="Play"
-            @open="playVideo = video"
-          >
-            <template #cover>
-              <div class="w-full"><VideoCover :video="video" size="sm" /></div>
-            </template>
-            <ShelfBook spine-out :is-new="isRecent(video)" :title="video.title" :seed="video.id" :label="subjectTag(video.subject_name, video.subject_code)" footer="Video" />
-            <template #details>
-              <p class="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug">{{ video.title }}</p>
-              <p v-if="video.teacher_first_name" class="text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ video.teacher_first_name }} {{ video.teacher_last_name }}</p>
-              <p v-if="video.description" class="text-[11px] text-gray-500 dark:text-gray-400 line-clamp-2">{{ video.description }}</p>
-              <p class="text-[11px] text-gray-400 dark:text-gray-500">Video<template v-if="video.file_size"> &middot; {{ formatFileSize(video.file_size) }}</template></p>
-            </template>
-          </ShelfSlot>
-        </Bookshelf>
+      <!-- One section per subject, newest first -->
+      <div v-else-if="filteredSubjectGroups.length > 0">
+        <section v-for="(group, i) in filteredSubjectGroups" :key="group.id" class="mb-8">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="w-1.5 h-5 rounded-full" :class="sectionAccents[i % sectionAccents.length]"></span>
+            <h3 class="text-sm sm:text-base font-semibold text-gray-900 dark:text-white">{{ group.name }}</h3>
+            <span class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ group.videos.length }}</span>
+            <span v-if="group.videos.some(v => isRecent(v))" class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">{{ group.videos.filter(v => isRecent(v)).length }} new</span>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-6">
+            <VideoTile
+              v-for="video in group.videos"
+              :key="video.id"
+              :video="video"
+              :subtitle="[video.teacher_first_name, video.teacher_last_name].filter(Boolean).join(' ')"
+              :is-new="isRecent(video)"
+              @play="playVideo = video"
+            />
+          </div>
+        </section>
       </div>
 
       <!-- Empty State -->
@@ -102,11 +95,7 @@
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import VideoPlayerModal from '@/components/video/VideoPlayerModal.vue'
-import VideoCover from '@/components/video/VideoCover.vue'
-import Bookshelf from '@/components/library/Bookshelf.vue'
-import ShelfBook from '@/components/library/ShelfBook.vue'
-import ShelfSlot from '@/components/library/ShelfSlot.vue'
-import { subjectTag } from '@/utils/subjectTag'
+import VideoTile from '@/components/video/VideoTile.vue'
 import { orderShelves, isRecent } from '@/utils/shelfOrder'
 import type { VideoResource } from '@/types/video'
 
@@ -125,6 +114,8 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 
 const playVideo = ref<VideoResource | null>(null)
+
+const sectionAccents = ['bg-indigo-500', 'bg-rose-500', 'bg-emerald-500', 'bg-amber-500', 'bg-sky-500', 'bg-violet-500']
 
 const subjectGroups = computed<SubjectGroup[]>(() => {
   const map = new Map<number, SubjectGroup>()
@@ -147,12 +138,6 @@ const filteredSubjectGroups = computed(() => {
       : { ...group, videos: group.videos.filter(v => v.title.toLowerCase().includes(q) || (v.description || '').toLowerCase().includes(q)) })
     .filter(group => group.videos.length > 0)
 })
-
-const formatFileSize = (bytes: number | null) => {
-  if (!bytes) return ''
-  const mb = bytes / (1024 * 1024)
-  return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.round(bytes / 1024)} KB`
-}
 
 const loadVideos = async () => {
   loading.value = true

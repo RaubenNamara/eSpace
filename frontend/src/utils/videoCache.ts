@@ -5,6 +5,14 @@ const MAX_CACHED_VIDEOS = 10
 // recordings often keep the MP4 index at the end of the file, so streaming them straight off the
 // server buffers until nearly the whole file has arrived; playing from a local copy avoids that
 // and makes every later view instant. Uploaded file names are unique, so a cached copy never goes stale.
+export async function isVideoCached(url: string): Promise<boolean> {
+  try {
+    return !!(await (await caches.open(CACHE_NAME)).match(new URL(url, location.origin).href))
+  } catch {
+    return false
+  }
+}
+
 export async function loadCachedVideo(
   url: string,
   onProgress: (percent: number) => void,
