@@ -2,21 +2,17 @@
   <div class="min-h-full">
     <div>
       <!-- Header: back link and title on one line, full screen on the right -->
-      <div class="flex flex-wrap items-center gap-x-2 gap-y-2 mb-1">
+      <div class="flex flex-wrap items-center gap-x-2 gap-y-2 mb-4">
         <router-link :to="`/${role}/virtual-lab`" class="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
           <span>&larr;</span> Virtual Lab
         </router-link>
         <span class="text-gray-300 dark:text-gray-600" aria-hidden="true">/</span>
-        <div class="hidden sm:flex w-7 h-7 rounded-lg bg-indigo-600 items-center justify-center flex-shrink-0">
-          <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v6.5L4.5 18A2 2 0 006.3 21h11.4a2 2 0 001.8-3L15 9.5V3M8 3h8M7 15h10" /></svg>
-        </div>
         <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight">Apparatus Playground</h1>
         <button @click="enterMaximize" class="ml-auto inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm" title="Fill the whole screen with the lab">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>
           Full Screen Lab
         </button>
       </div>
-      <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Pick any lab equipment from any subject and get familiar with it in 3D. Move, rotate, connect, pour, heat and measure freely. Nothing here is graded.</p>
 
       <!-- Slim fixed side columns on large screens so the lab takes all the remaining width -->
       <div
