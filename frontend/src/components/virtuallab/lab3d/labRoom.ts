@@ -19,6 +19,30 @@ export interface LabRoomOptions {
   unitScale?: number
   /** Build the bench cabinet as a real cupboard: hinged doors and shelves inside. */
   cupboard?: boolean
+  /** Two glass-fronted apparatus cabinets on the wall behind the bench (left and right). */
+  wallCabinets?: boolean
+}
+
+/** One wall cabinet's shelves, in scene units: where apparatus can stand. */
+export interface WallCabinetShelves {
+  minX: number
+  maxX: number
+  /** Shelf top heights, top shelf first */
+  rows: number[]
+  /** Usable height above each shelf and depth front-to-back */
+  rowHeight: number
+  depth: number
+  /** Where an item stands (front-back centre) */
+  z: number
+  /** Front edge of the shelves, for their label strips */
+  frontZ: number
+}
+
+export interface LabWallCabinets {
+  cabinets: WallCabinetShelves[]
+  /** Glass door hinge groups (toggle with LabCupboard-style userData.open) */
+  doors: THREE.Object3D[]
+  blockers: THREE.Object3D[]
 }
 
 export interface FitOptions {
@@ -53,6 +77,11 @@ export interface LabRoom {
   /** Moves the camera to frame `box` from the current viewing direction; Reset View returns here. */
   frameBox: (box: THREE.Box3) => void
   cupboard: LabCupboard | null
+  wallCabinets: LabWallCabinets | null
+  /** Opens or closes any door built by the room (cupboard or wall cabinet) */
+  toggleDoor: (door: THREE.Object3D) => void
+  /** The door (hinge group) a mesh belongs to, if any */
+  doorOf: (obj: THREE.Object3D | null) => THREE.Object3D | null
   /**
    * Like frameBox, but fits every corner of `box` on screen exactly, leaving `fill` (0-1) of the
    * view's width/height for it - used to keep a whole object such as the bench in view.
@@ -117,13 +146,17 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
   world.scale.setScalar(s)
   scene.add(world)
   let cupboardParts: CupboardParts | null = null
+  let wallParts: WallParts | null = null
   if (field) {
     buildFieldLighting(world)
     buildField(world)
   } else {
     buildLighting(world)
     cupboardParts = buildRoom(world, !!opts.cupboard)
+    if (opts.wallCabinets) wallParts = buildWallCabinets(world)
   }
+  // A wider view of the room needs the fog pushed back
+  if (!field && (opts.cupboard || opts.wallCabinets)) scene.fog = new THREE.Fog(0xdfe3e8, 7 * s, 16 * s)
   if (s !== 1) {
     world.traverse((o) => {
       if (!(o instanceof THREE.DirectionalLight) || !o.castShadow) return
@@ -247,33 +280,51 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
   const ndc = new THREE.Vector2()
 
   // Doors swing smoothly towards their target angle
-  let cupboard: LabCupboard | null = null
-  if (cupboardParts) {
-    const parts = cupboardParts
+  const allDoors = [...(cupboardParts?.doors || []), ...(wallParts?.doors || [])]
+  if (allDoors.length) {
     frameCallbacks.push((dt) => {
-      parts.doors.forEach((d) => {
+      allDoors.forEach((d) => {
         const target = d.userData.open ? d.userData.openAngle : 0
         d.rotation.y += (target - d.rotation.y) * Math.min(1, dt * 7)
       })
     })
+  }
+  const doorOf = (obj: THREE.Object3D | null) => {
+    let o: THREE.Object3D | null = obj
+    while (o && !o.userData.cupboardDoor) o = o.parent
+    return o
+  }
+  const toggleDoor = (door: THREE.Object3D) => { door.userData.open = !door.userData.open }
+  const wallCabinets: LabWallCabinets | null = wallParts
+    ? {
+        doors: wallParts.doors,
+        blockers: wallParts.blockers,
+        cabinets: wallParts.cabinets.map(c => ({
+          minX: c.minX * s, maxX: c.maxX * s, rows: c.rows.map(y => y * s), rowHeight: c.rowHeight * s,
+          depth: c.depth * s, z: c.z * s, frontZ: c.frontZ * s,
+        })),
+      }
+    : null
+  let cupboard: LabCupboard | null = null
+  if (cupboardParts) {
+    const parts = cupboardParts
     cupboard = {
       doors: parts.doors,
       blockers: parts.blockers,
       bays: parts.bays.map(b => ({
         minX: b.minX * s, maxX: b.maxX * s, levels: b.levels.map(y => y * s), frontZ: b.frontZ * s, backZ: b.backZ * s,
       })),
-      toggleDoor: (door) => { door.userData.open = !door.userData.open },
+      toggleDoor,
       isOpen: door => !!door.userData.open,
-      doorOf: (obj) => {
-        let o: THREE.Object3D | null = obj
-        while (o && !o.userData.cupboardDoor) o = o.parent
-        return o
-      },
+      doorOf,
     }
   }
 
   return {
     cupboard,
+    wallCabinets,
+    toggleDoor,
+    doorOf,
     renderer,
     scene,
     camera,
@@ -333,6 +384,95 @@ function buildLighting(scene: THREE.Object3D) {
   const fill = new THREE.DirectionalLight(0xdfe8ff, 0.45)
   fill.position.set(-1.6, 1.2, 0.8)
   scene.add(fill)
+}
+
+interface WallParts {
+  doors: THREE.Object3D[]
+  blockers: THREE.Object3D[]
+  cabinets: { minX: number; maxX: number; rows: number[]; rowHeight: number; depth: number; z: number; frontZ: number }[]
+}
+
+const WALL_Z = -BENCH_D / 2 - 0.25
+
+/**
+ * Two wall-mounted apparatus cabinets behind the bench, top left and top right: four shelves each
+ * behind a pair of light, aluminium-framed glass doors that swing open.
+ */
+function buildWallCabinets(scene: THREE.Object3D): WallParts {
+  const W = 1.3, H = 0.86, D = 0.3, t = 0.016
+  const bottom = 0.5
+  const backZ = WALL_Z + 0.002
+  const front = backZ + D
+  const shelfLevels = 4
+  const woodTex = woodTexture()
+  const outer = new THREE.MeshStandardMaterial({ map: woodTex, roughness: 0.6 })
+  const inner = new THREE.MeshStandardMaterial({ color: 0xf1ece2, roughness: 0.75 })
+  const frameMat = new THREE.MeshStandardMaterial({ color: 0xd7dbe0, roughness: 0.3, metalness: 0.85 })
+  const glassMat = new THREE.MeshPhysicalMaterial({
+    color: 0xeaf6ff, roughness: 0.05, metalness: 0, transparent: true, opacity: 0.16, depthWrite: false,
+  })
+  const doors: THREE.Object3D[] = []
+  const blockers: THREE.Object3D[] = []
+  const cabinets: WallParts['cabinets'] = []
+
+  for (const cx of [-0.83, 0.83]) {
+    const minX = cx - W / 2, maxX = cx + W / 2
+    const panel = (w: number, h: number, d: number, x: number, y: number, z: number, mat: THREE.Material) => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat)
+      m.position.set(x, y, z)
+      m.castShadow = true
+      m.receiveShadow = true
+      scene.add(m)
+      blockers.push(m)
+    }
+    panel(W, H, t, cx, bottom + H / 2, backZ + t / 2, inner) // back
+    panel(t, H, D, minX + t / 2, bottom + H / 2, backZ + D / 2, outer) // sides
+    panel(t, H, D, maxX - t / 2, bottom + H / 2, backZ + D / 2, outer)
+    panel(W, t * 1.5, D, cx, bottom + H - t * 0.75, backZ + D / 2, outer) // top
+    panel(W, t * 1.5, D, cx, bottom + t * 0.75, backZ + D / 2, outer) // bottom
+    // Cornice along the top
+    panel(W + 0.03, 0.03, D + 0.02, cx, bottom + H + 0.015, backZ + D / 2 + 0.01, outer)
+
+    const innerBottom = bottom + t * 1.5, innerTop = bottom + H - t * 1.5
+    const gap = (innerTop - innerBottom) / shelfLevels
+    const rows: number[] = []
+    for (let i = 0; i < shelfLevels; i++) {
+      const y = innerBottom + i * gap
+      if (i > 0) panel(W - 2 * t, t, D - t - 0.03, cx, y - t / 2, backZ + t + (D - t - 0.03) / 2, inner)
+      rows.unshift(y)
+    }
+    cabinets.push({ minX: minX + t, maxX: maxX - t, rows, rowHeight: gap - t, depth: D - t - 0.05, z: backZ + t + (D - t - 0.03) / 2, frontZ: backZ + D - 0.03 })
+
+    // Glass doors, hinged on the outer sides and meeting in the middle
+    const doorW = W / 2 - 0.004, doorH = H - 0.01
+    const bar = 0.018
+    for (const [hx, dirX] of [[minX, 1], [maxX, -1]] as [number, 1 | -1][]) {
+      const pivot = new THREE.Group()
+      pivot.position.set(hx + dirX * 0.002, bottom + H / 2, front + 0.008)
+      const pane = new THREE.Mesh(new THREE.BoxGeometry(doorW - bar, doorH - bar, 0.004), glassMat)
+      pane.position.x = dirX * doorW / 2
+      pane.renderOrder = 2
+      pivot.add(pane)
+      const frame = (w: number, h: number, x: number, y: number) => {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.014), frameMat)
+        m.position.set(x, y, 0)
+        pivot.add(m)
+      }
+      frame(doorW, bar, dirX * doorW / 2, doorH / 2 - bar / 2)
+      frame(doorW, bar, dirX * doorW / 2, -doorH / 2 + bar / 2)
+      frame(bar, doorH, dirX * bar / 2, 0)
+      frame(bar, doorH, dirX * (doorW - bar / 2), 0)
+      const knob = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.07, 12), labMaterials.steel())
+      knob.position.set(dirX * (doorW - 0.04), -0.12, 0.02)
+      pivot.add(knob)
+      pivot.userData.cupboardDoor = true
+      pivot.userData.open = false
+      pivot.userData.openAngle = -dirX * 1.7
+      scene.add(pivot)
+      doors.push(pivot)
+    }
+  }
+  return { doors, blockers, cabinets }
 }
 
 interface CupboardParts {
