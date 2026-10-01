@@ -127,8 +127,29 @@
                   :loading="loadingCatalog"
                   @pick="pickFromShelf"
                 />
+                <!-- Round hide arrow on the middle of the shelves' right edge, like the sidebar's -->
+                <button
+                  type="button"
+                  @click="shelvesOpen = false"
+                  class="absolute -right-[15px] top-1/2 -translate-y-1/2 z-30 w-6 h-6 rounded-full bg-white dark:bg-slate-800 border border-slate-400 dark:border-white/10 shadow-md flex items-center justify-center text-slate-600 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-500/50 transition-colors"
+                  title="Hide the apparatus shelves"
+                  aria-label="Hide the apparatus shelves"
+                >
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+                </button>
               </aside>
             </transition>
+            <!-- Shelves hidden: the same round arrow on the middle of the lab's left edge brings them back -->
+            <button
+              v-if="labMaximized && !shelvesOpen"
+              type="button"
+              @click="shelvesOpen = true"
+              class="absolute left-1.5 top-1/2 -translate-y-1/2 z-30 w-6 h-6 rounded-full bg-white dark:bg-slate-800 border border-slate-400 dark:border-white/10 shadow-md flex items-center justify-center text-slate-600 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-500/50 transition-colors"
+              title="Show the apparatus shelves"
+              aria-label="Show the apparatus shelves"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+            </button>
             <!-- Phones: tap the lab beside the drawer to close it -->
             <div v-if="labMaximized && shelvesOpen" class="sm:hidden absolute inset-0 z-10 bg-black/30" @click="shelvesOpen = false"></div>
 
