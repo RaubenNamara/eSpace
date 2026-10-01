@@ -256,7 +256,7 @@
         <!-- Plot your graph - when the teacher chose "students plot the graph", the student plots
              their own points here (typing or clicking on graph paper) while they work, and answers
              the questions about it right underneath. -->
-        <div v-if="manualPlot && attempt.experiment.graph" id="plot-graph" class="mt-5 sm:mt-6 grid grid-cols-1 gap-4" :class="graphQuestions.length ? 'xl:grid-cols-3 items-start' : ''">
+        <div v-if="manualPlot && attempt.experiment.graph && !hasTeacherMarking" id="plot-graph" class="mt-5 sm:mt-6 grid grid-cols-1 gap-4" :class="graphQuestions.length ? 'xl:grid-cols-3 items-start' : ''">
           <VirtualLabPlotter
             class="min-w-0 xl:col-span-2"
             :config="attempt.experiment.graph"
@@ -286,16 +286,23 @@
 
         <!-- The teacher's canvas marking on this practical (ticks, crosses, comments...), shown on the
              same sheets they marked, once it has been graded. -->
-        <div v-if="hasTeacherMarking" id="teacher-marking" class="mt-5 sm:mt-6 scroll-mt-24 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 sm:p-6">
-          <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center justify-center gap-2 mb-1"><AppIcon name="pencil" class="w-5 h-5" /> Your Teacher's Marking</h2>
-          <p class="text-xs text-gray-500 dark:text-gray-400 mb-5 text-center">Your work as your teacher marked it.</p>
-          <div class="max-w-[800px] mx-auto">
-            <VirtualLabMarking readonly :saved="attempt.marking_annotations" />
+        <div v-if="hasTeacherMarking" id="teacher-marking" class="mt-5 sm:mt-6 scroll-mt-24 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-5 lg:p-6">
+          <div class="flex flex-wrap items-end justify-between gap-x-4 gap-y-2 mb-4 sm:mb-5">
+            <div class="min-w-0">
+              <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2"><AppIcon name="pencil" class="w-5 h-5" /> Your Teacher's Marking</h2>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Your work exactly as your teacher marked it - ticks, crosses and comments on each part.</p>
+            </div>
+            <div v-if="attempt.status === 'graded'" class="flex items-center gap-2 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 px-3.5 py-2">
+              <span class="text-xs font-semibold text-indigo-700 dark:text-indigo-300">Score</span>
+              <span class="text-lg font-bold text-indigo-700 dark:text-indigo-200 leading-none">{{ attempt.score ?? '-' }}<span class="text-xs font-semibold text-indigo-500 dark:text-indigo-400"> / {{ attempt.marks }}</span></span>
+            </div>
           </div>
+          <p v-if="attempt.teacher_feedback" class="mb-4 sm:mb-5 rounded-xl bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 px-4 py-3 text-sm text-gray-700 dark:text-gray-200 italic">&ldquo;{{ attempt.teacher_feedback }}&rdquo;</p>
+          <VirtualLabMarking readonly grid :saved="attempt.marking_annotations" />
         </div>
 
-        <!-- Practical Notebook -->
-        <div v-if="allStepsDone || attempt.status !== 'in_progress'" class="mt-5 sm:mt-6 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 sm:p-6">
+        <!-- Practical Notebook - once the teacher has marked, their marked sheets above show this work -->
+        <div v-if="(allStepsDone || attempt.status !== 'in_progress') && !hasTeacherMarking" class="mt-5 sm:mt-6 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 sm:p-6">
           <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-5"><AppIcon name="book" class="w-5 h-5" /> Practical Notebook</h2>
 
           <!-- Uses the full width: readings, results table and graph on the left; the written work
