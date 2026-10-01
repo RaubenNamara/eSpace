@@ -145,7 +145,8 @@ let pickedTimer: ReturnType<typeof setTimeout> | null = null
 /** Taken off a shelf in one of the glass wall cabinets */
 const pickApparatus = (type: string) => {
   const def = catalog.value.find(o => o.object_type === type)
-  if (!def) return
+  // One of each on the shelves - it is already out if it's on the bench
+  if (!def || sceneObjects.value.some(o => o.object_type === type && !o.props?.chemical_id)) return
   addToScene(def)
   flash(`${def.display_name} placed on the bench`)
 }
