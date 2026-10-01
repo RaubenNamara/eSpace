@@ -298,7 +298,7 @@
             </div>
           </div>
           <p v-if="attempt.teacher_feedback" class="mb-4 sm:mb-5 rounded-xl bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 px-4 py-3 text-sm text-gray-700 dark:text-gray-200 italic">&ldquo;{{ attempt.teacher_feedback }}&rdquo;</p>
-          <VirtualLabMarking readonly grid :saved="attempt.marking_annotations" />
+          <VirtualLabMarkedBook :saved="attempt.marking_annotations" />
         </div>
 
         <!-- Practical Notebook - once the teacher has marked, their marked sheets above show this work -->
@@ -456,7 +456,7 @@ import VirtualLabScene from '@/components/virtuallab/VirtualLabScene.vue'
 import VirtualLabGraph from '@/components/virtuallab/VirtualLabGraph.vue'
 import VirtualLabStepList from '@/components/virtuallab/VirtualLabStepList.vue'
 import VirtualLabPlotter from '@/components/virtuallab/VirtualLabPlotter.vue'
-import VirtualLabMarking from '@/components/virtuallab/VirtualLabMarking.vue'
+import VirtualLabMarkedBook from '@/components/virtuallab/VirtualLabMarkedBook.vue'
 import { resolveGuidedExperiment } from '@/components/virtuallab/lab3d/registry'
 import { CATEGORY_LABELS } from '@/types/virtualLab'
 import type { AttemptState, LabObjectDef, ExperimentQuestion, NotebookEntry } from '@/types/virtualLab'

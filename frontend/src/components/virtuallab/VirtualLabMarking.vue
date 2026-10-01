@@ -1,7 +1,6 @@
 <template>
-  <!-- One centred column of sheets, each with its marks strip directly underneath. layout="grid"
-       (the student's read-only view) uses the full width: two sheets per row on wide screens. -->
-  <div :class="grid ? 'grid grid-cols-1 xl:grid-cols-2 gap-5 xl:gap-6 items-start w-full' : 'space-y-6 mx-auto w-full max-w-[800px]'">
+  <!-- One centred column of sheets, each with its marks strip directly underneath -->
+  <div class="space-y-6 mx-auto w-full max-w-[800px]">
     <!-- A short marking toolbar for every sheet: the few tools a practical needs, three ink colours.
          Undo/redo/clear act on the sheet last marked. With toolbarTo it is placed elsewhere (the
          grading dialog puts it in its header, beside the student's name, so it never scrolls away). -->
@@ -60,16 +59,11 @@
     </div>
     </Teleport>
 
-    <p v-if="sheets.length === 0" :class="grid ? 'xl:col-span-2' : ''" class="text-sm text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-950/40 rounded-xl p-6 text-center">
+    <p v-if="sheets.length === 0" class="text-sm text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-950/40 rounded-xl p-6 text-center">
       {{ readonly ? 'Your teacher has not marked on your work.' : 'This practical has nothing written or recorded to mark yet.' }}
     </p>
 
-    <section
-      v-for="(s, i) in sheets"
-      :key="s.key"
-      class="space-y-2 min-w-0"
-      :class="grid && sheets.length % 2 === 1 && i === sheets.length - 1 ? 'xl:col-span-2 xl:w-full xl:max-w-[800px] xl:mx-auto' : ''"
-    >
+    <section v-for="s in sheets" :key="s.key" class="space-y-2">
       <div class="min-w-0">
         <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-1.5">
           {{ s.base.title }}
@@ -119,8 +113,6 @@ const props = defineProps<{
   readonly?: boolean
   /** CSS selector to place the toolbar in (e.g. a dialog header); omitted = above the sheets */
   toolbarTo?: string
-  /** Lay the sheets out across the full width (two per row on wide screens) instead of one column */
-  grid?: boolean
 }>()
 
 
