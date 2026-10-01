@@ -719,6 +719,386 @@ export function createObjectMesh(objectType: string, key: string, displayName: s
       add(disc)
       break
     }
+    // ---------------- Chemistry ----------------
+    case 'conical_flask': {
+      const r = 0.3, h = 0.6
+      const profile = [
+        new THREE.Vector2(0, 0.004), new THREE.Vector2(r, 0.004), new THREE.Vector2(r * 1.02, 0.04),
+        new THREE.Vector2(0.09, h * 0.72), new THREE.Vector2(0.08, h), new THREE.Vector2(0.095, h + 0.015),
+      ]
+      add(new THREE.Mesh(new THREE.LatheGeometry(profile, 48), glass()))
+      const liquid = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.12, r * 0.95, h * 0.85, 40),
+        new THREE.MeshStandardMaterial({ color: props.color || '#e0f2fe', roughness: 0.1, transparent: true, opacity: 0.8 }),
+      )
+      liquid.userData.role = 'liquid'
+      liquid.userData.maxFillHeight = h * 0.85
+      liquid.scale.y = 0.001
+      add(liquid)
+      break
+    }
+    case 'round_bottom_flask': {
+      const bulb = mesh(new THREE.SphereGeometry(0.28, 40, 28), glass(), 0, 0.36)
+      const neck = mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.34, 28, 1, true), glass(), 0, 0.78)
+      const ring = mesh(new THREE.TorusGeometry(0.2, 0.025, 12, 40), plastic(0x374151), 0, 0.05)
+      ring.rotation.x = Math.PI / 2
+      // Offset holder: setLiquidLevel() positions the liquid from its parent's origin, so lift it into the bulb
+      const holder = new THREE.Group()
+      holder.position.y = 0.14
+      holder.add(liquidMesh(0.19, 0.5, props.color || '#e0f2fe', 0.001))
+      add(bulb, neck, ring, holder)
+      break
+    }
+    case 'evaporating_dish': {
+      const profile = [new THREE.Vector2(0, 0.01), new THREE.Vector2(0.12, 0.012), new THREE.Vector2(0.26, 0.09), new THREE.Vector2(0.3, 0.13)]
+      add(new THREE.Mesh(new THREE.LatheGeometry(profile, 48), new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.25, side: THREE.DoubleSide })))
+      const holder = new THREE.Group()
+      holder.position.y = 0.012
+      holder.add(liquidMesh(0.2, 0.13, props.color || '#bae6fd', 0.001))
+      add(holder)
+      break
+    }
+    case 'tripod_stand': {
+      const ring = mesh(new THREE.TorusGeometry(0.3, 0.02, 12, 48), metal(0x52525b), 0, 0.8)
+      ring.rotation.x = Math.PI / 2
+      add(ring)
+      for (let i = 0; i < 3; i++) {
+        const a = (i / 3) * Math.PI * 2
+        const leg = mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.82, 12), metal(0x52525b), Math.cos(a) * 0.34, 0.4, Math.sin(a) * 0.34)
+        leg.rotation.z = Math.cos(a) * -0.08
+        leg.rotation.x = Math.sin(a) * 0.08
+        add(leg)
+      }
+      break
+    }
+    case 'wire_gauze': {
+      const tex = canvasTex(256, 256, (ctx, w, h) => {
+        ctx.fillStyle = '#9ca3af'; ctx.fillRect(0, 0, w, h)
+        ctx.strokeStyle = '#4b5563'; ctx.lineWidth = 2
+        for (let i = 0; i < w; i += 10) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, h); ctx.moveTo(0, i); ctx.lineTo(w, i); ctx.stroke() }
+        ctx.fillStyle = '#f5f5f4'; ctx.beginPath(); ctx.arc(w / 2, h / 2, w * 0.28, 0, Math.PI * 2); ctx.fill()
+      })
+      add(mesh(new THREE.BoxGeometry(0.62, 0.008, 0.62), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.6, metalness: 0.4 }), 0, 0.004))
+      break
+    }
+    case 'filter_funnel': {
+      const cone = mesh(new THREE.CylinderGeometry(0.26, 0.03, 0.32, 40, 1, true), glass(), 0, 0.52)
+      const stem = mesh(new THREE.CylinderGeometry(0.025, 0.02, 0.32, 20, 1, true), glass(), 0, 0.2)
+      const paper = mesh(new THREE.ConeGeometry(0.22, 0.27, 32, 1, true), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, side: THREE.DoubleSide }), 0, 0.53)
+      paper.rotation.x = Math.PI
+      add(cone, stem, paper)
+      break
+    }
+    case 'test_tube_rack': {
+      const top = mesh(rbox(0.9, 0.04, 0.24, 0.01), wood(), 0, 0.3)
+      const base = mesh(rbox(0.9, 0.04, 0.24, 0.01), wood(), 0, 0.02)
+      const sideA = mesh(rbox(0.04, 0.3, 0.24, 0.01), wood(), -0.43, 0.16)
+      const sideB = sideA.clone(); sideB.position.x = 0.43
+      add(top, base, sideA, sideB)
+      const colors = ['#fca5a5', '#bae6fd', '#bbf7d0', '#fde68a']
+      for (let i = 0; i < 4; i++) {
+        const x = -0.3 + i * 0.2
+        add(mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.42, 20, 1, true), glass(), x, 0.25))
+        add(mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.12, 20), new THREE.MeshStandardMaterial({ color: colors[i], transparent: true, opacity: 0.8 }), x, 0.12))
+      }
+      break
+    }
+    case 'spatula': {
+      const blade = mesh(rbox(0.32, 0.008, 0.05, 0.003), chrome(), 0.16, 0.006)
+      const spoon = mesh(new THREE.SphereGeometry(0.04, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), chrome(), -0.18, 0.04)
+      spoon.rotation.x = Math.PI
+      const handle = mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.18, 12), chrome(), -0.06, 0.008)
+      handle.rotation.z = Math.PI / 2
+      add(blade, spoon, handle)
+      break
+    }
+    case 'wash_bottle': {
+      const body = mesh(new THREE.CylinderGeometry(0.17, 0.18, 0.5, 36), new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.35, transparent: true, opacity: 0.55 }), 0, 0.25)
+      const cap = mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.08, 24), plastic(0x2563eb), 0, 0.54)
+      const nozzle = mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.3, 10), plastic(0x2563eb), 0.08, 0.66)
+      nozzle.rotation.z = -0.9
+      add(body, cap, nozzle, liquidMesh(0.16, 0.5, props.color || '#e0f2fe', 0.8))
+      break
+    }
+    case 'dropper': {
+      const tube = mesh(new THREE.CylinderGeometry(0.02, 0.008, 0.36, 16), glass(), 0, 0.24)
+      const teat = mesh(new THREE.SphereGeometry(0.045, 20, 14), plastic(0x111827), 0, 0.46)
+      teat.scale.y = 1.6
+      const bottle = mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.22, 28), new THREE.MeshStandardMaterial({ color: 0x92400e, roughness: 0.2, transparent: true, opacity: 0.75 }), 0.22, 0.11)
+      add(tube, teat, bottle)
+      break
+    }
+    case 'crucible': {
+      const profile = [new THREE.Vector2(0, 0.005), new THREE.Vector2(0.08, 0.005), new THREE.Vector2(0.13, 0.2), new THREE.Vector2(0.14, 0.21)]
+      const porcelain = new THREE.MeshStandardMaterial({ color: 0xf5f5f4, roughness: 0.3, side: THREE.DoubleSide })
+      add(new THREE.Mesh(new THREE.LatheGeometry(profile, 40), porcelain))
+      const lid = mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.015, 40), porcelain, 0.32, 0.008)
+      const knob = mesh(new THREE.SphereGeometry(0.025, 16, 12), porcelain, 0.32, 0.025)
+      add(lid, knob)
+      break
+    }
+
+    // ---------------- Physics ----------------
+    case 'bar_magnet': {
+      add(mesh(rbox(0.3, 0.08, 0.1, 0.01), enamel(0xdc2626), -0.15, 0.04), mesh(rbox(0.3, 0.08, 0.1, 0.01), enamel(0x1d4ed8), 0.15, 0.04))
+      const n = labelSprite('N'); n.scale.set(0.2, 0.044, 1); n.position.set(-0.22, 0.16, 0)
+      const s = labelSprite('S'); s.scale.set(0.2, 0.044, 1); s.position.set(0.22, 0.16, 0)
+      add(n, s)
+      break
+    }
+    case 'plotting_compass': {
+      add(mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.04, 40), brass(), 0, 0.02))
+      add(mesh(new THREE.CylinderGeometry(0.105, 0.105, 0.002, 40), new THREE.MeshStandardMaterial({ color: 0xffffff }), 0, 0.041))
+      const needle = new THREE.Group()
+      const north = mesh(new THREE.ConeGeometry(0.018, 0.09, 4), solid(0xdc2626), 0, 0, -0.045)
+      north.rotation.x = -Math.PI / 2
+      const south = mesh(new THREE.ConeGeometry(0.018, 0.09, 4), solid(0x1f2937), 0, 0, 0.045)
+      south.rotation.x = Math.PI / 2
+      needle.add(north, south)
+      needle.position.y = 0.05
+      needle.userData.role = 'needle'
+      add(needle, mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.012, 40), glass(), 0, 0.06))
+      break
+    }
+    case 'prism': {
+      const shape = new THREE.Shape()
+      shape.moveTo(-0.22, 0); shape.lineTo(0.22, 0); shape.lineTo(0, 0.38); shape.closePath()
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.22, bevelEnabled: false })
+      geo.translate(0, 0, -0.11)
+      add(new THREE.Mesh(geo, glass(0xe0f2fe)))
+      break
+    }
+    case 'rheostat': {
+      add(mesh(rbox(0.8, 0.06, 0.2, 0.015), wood(), 0, 0.03))
+      const coil = new THREE.Mesh(new THREE.TubeGeometry(new Helix(0.66, 0.07, 40), 600, 0.006, 6, false), metal(0xb45309))
+      coil.rotation.z = Math.PI / 2
+      coil.position.y = 0.16
+      add(coil, mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.66, 24), enamel(0xf5f5f4), 0, 0.16))
+      ;(group.children[group.children.length - 1] as THREE.Mesh).rotation.z = Math.PI / 2
+      const bar = mesh(new THREE.BoxGeometry(0.7, 0.02, 0.02), metal(), 0, 0.27)
+      const slider = mesh(rbox(0.06, 0.1, 0.08, 0.01), plastic(0x111827), 0.1, 0.24)
+      add(bar, slider, terminal(-0.36, 0.06, 0.06, 0xdc2626), terminal(0.36, 0.06, 0.06, 0x111827))
+      break
+    }
+    case 'metre_rule': {
+      const edge = new THREE.MeshStandardMaterial({ color: 0xd6a35c, roughness: 0.6 })
+      const face = new THREE.MeshStandardMaterial({ map: rulerTexture(), color: 0xf5deb3, roughness: 0.55 })
+      add(mesh(new THREE.BoxGeometry(5, 0.02, 0.2), [edge, edge, face, edge, edge, edge], 0, 0.01))
+      break
+    }
+    case 'galvanometer': {
+      const body = mesh(rbox(0.42, 0.3, 0.2, 0.03), enamel(0x1e293b), 0, 0.15)
+      const face = mesh(new THREE.CircleGeometry(0.13, 40, 0, Math.PI), new THREE.MeshStandardMaterial({ map: gaugeTexture('G', '#1d4ed8') }), 0, 0.12, 0.101)
+      const needle = mesh(new THREE.BoxGeometry(0.006, 0.12, 0.004), solid(0xdc2626), 0, 0.18, 0.105)
+      needle.userData.role = 'needle'
+      add(body, face, needle, terminal(-0.12, 0.3, 0, 0xdc2626), terminal(0.12, 0.3, 0, 0x111827))
+      break
+    }
+    case 'tuning_fork': {
+      const prongA = mesh(new THREE.BoxGeometry(0.03, 0.4, 0.03), chrome(), -0.04, 0.42)
+      const prongB = prongA.clone(); prongB.position.x = 0.04
+      const bend = mesh(new THREE.TorusGeometry(0.04, 0.015, 10, 20, Math.PI), chrome(), 0, 0.22)
+      bend.rotation.z = Math.PI
+      const stem = mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.14, 12), chrome(), 0, 0.12)
+      const block = mesh(rbox(0.24, 0.05, 0.14, 0.01), wood(), 0, 0.025)
+      add(prongA, prongB, bend, stem, block)
+      break
+    }
+    case 'pulley': {
+      const wheel = mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.05, 40), metal(0x9ca3af), 0, 0.9)
+      wheel.rotation.x = Math.PI / 2
+      const groove = mesh(new THREE.TorusGeometry(0.15, 0.015, 10, 40), plastic(0x374151), 0, 0.9)
+      const clamp = mesh(rbox(0.06, 0.12, 0.08, 0.01), metal(0x52525b), 0, 1.08)
+      const rod = mesh(new THREE.CylinderGeometry(0.012, 0.012, 1.1, 12), metal(), -0.3, 0.55)
+      const arm = mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.3, 12), metal(), -0.15, 1.08)
+      arm.rotation.z = Math.PI / 2
+      const base = mesh(rbox(0.36, 0.03, 0.24, 0.01), enamel(0x1f2937), -0.3, 0.015)
+      const string = mesh(new THREE.CylinderGeometry(0.003, 0.003, 0.6, 6), plastic(0xf5f5f4), 0.15, 0.6)
+      add(wheel, groove, clamp, rod, arm, base, string, mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.1, 20), brass(), 0.15, 0.25))
+      break
+    }
+
+    // ---------------- Biology ----------------
+    case 'petri_dish': {
+      add(mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.05, 48, 1, true), glass(), 0, 0.025))
+      add(mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.004, 48), glass(), 0, 0.002))
+      add(mesh(new THREE.CylinderGeometry(0.21, 0.21, 0.02, 48), new THREE.MeshStandardMaterial({ color: props.color || '#fde68a', transparent: true, opacity: 0.7, roughness: 0.3 }), 0, 0.012))
+      for (let i = 0; i < 5; i++) {
+        const a = i * 1.3, rr = 0.05 + (i % 3) * 0.04
+        add(mesh(new THREE.CylinderGeometry(0.02 + (i % 2) * 0.01, 0.02, 0.006, 16), solid(0xf8fafc), Math.cos(a) * rr, 0.025, Math.sin(a) * rr))
+      }
+      break
+    }
+    case 'hand_lens': {
+      const lens = mesh(new THREE.SphereGeometry(0.14, 32, 32), glass(0xf3f8ff), 0, 0.03)
+      lens.scale.set(1, 0.16, 1)
+      const rim = mesh(new THREE.TorusGeometry(0.14, 0.018, 12, 48), plastic(0x111827), 0, 0.03)
+      rim.rotation.x = Math.PI / 2
+      const handle = mesh(rbox(0.3, 0.035, 0.05, 0.012), plastic(0x111827), 0.29, 0.03)
+      add(lens, rim, handle)
+      break
+    }
+    case 'scalpel': {
+      const handle = mesh(rbox(0.32, 0.02, 0.035, 0.006), chrome(), 0, 0.012)
+      const blade = new THREE.Shape()
+      blade.moveTo(0, 0); blade.lineTo(0.14, 0); blade.quadraticCurveTo(0.12, 0.05, 0, 0.04); blade.closePath()
+      const bladeMesh = new THREE.Mesh(new THREE.ExtrudeGeometry(blade, { depth: 0.003, bevelEnabled: false }), chrome())
+      bladeMesh.rotation.x = -Math.PI / 2
+      bladeMesh.position.set(0.16, 0.02, 0.02)
+      add(handle, bladeMesh)
+      break
+    }
+    case 'forceps': {
+      for (const side of [-1, 1]) {
+        const arm = mesh(rbox(0.36, 0.012, 0.03, 0.004), chrome(), 0, 0.012, side * 0.025)
+        arm.rotation.y = side * 0.07
+        add(arm)
+      }
+      add(mesh(rbox(0.05, 0.016, 0.08, 0.006), chrome(), -0.18, 0.012))
+      break
+    }
+    case 'dissecting_tray': {
+      add(mesh(rbox(0.9, 0.08, 0.6, 0.03), enamel(0x1f2937), 0, 0.04))
+      add(mesh(new THREE.BoxGeometry(0.82, 0.01, 0.52), new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.95 }), 0, 0.082))
+      for (let i = 0; i < 4; i++) add(mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.06, 8), chrome(), -0.3 + i * 0.2, 0.11, i % 2 ? 0.18 : -0.18))
+      break
+    }
+    case 'specimen_bottle': {
+      add(mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.5, 36, 1, true), glass(), 0, 0.25))
+      add(mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.06, 36), plastic(0x0f766e), 0, 0.53))
+      add(mesh(new THREE.CylinderGeometry(0.161, 0.161, 0.18, 36, 1, true, -0.6, 1.2), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, side: THREE.DoubleSide }), 0, 0.3))
+      add(liquidMesh(0.16, 0.5, props.color || '#fef3c7', 0.6))
+      break
+    }
+    case 'potted_plant': {
+      const pot = mesh(new THREE.CylinderGeometry(0.22, 0.16, 0.3, 32), enamel(0xb45309), 0, 0.15)
+      const soil = mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.02, 32), solid(0x3f2a1d), 0, 0.29)
+      const stem = mesh(new THREE.CylinderGeometry(0.015, 0.02, 0.5, 10), solid(0x15803d), 0, 0.54)
+      add(pot, soil, stem)
+      const leafMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, roughness: 0.5, side: THREE.DoubleSide })
+      for (let i = 0; i < 6; i++) {
+        const leaf = mesh(new THREE.SphereGeometry(0.09, 16, 10), leafMat, 0, 0.42 + i * 0.07)
+        leaf.scale.set(1.4, 0.15, 0.6)
+        leaf.rotation.y = i * 2.1
+        leaf.position.x = Math.cos(i * 2.1) * 0.08
+        leaf.position.z = -Math.sin(i * 2.1) * 0.08
+        add(leaf)
+      }
+      break
+    }
+
+    // ---------------- Agriculture ----------------
+    case 'soil_sieve': {
+      const rim = mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.14, 48, 1, true), new THREE.MeshStandardMaterial({ color: 0xa16207, roughness: 0.6, side: THREE.DoubleSide }), 0, 0.07)
+      const meshTex = canvasTex(256, 256, (ctx, w, h) => {
+        ctx.clearRect(0, 0, w, h)
+        ctx.strokeStyle = '#6b7280'; ctx.lineWidth = 2
+        for (let i = 0; i < w; i += 8) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, h); ctx.moveTo(0, i); ctx.lineTo(w, i); ctx.stroke() }
+      })
+      const screen = mesh(new THREE.CircleGeometry(0.39, 48), new THREE.MeshStandardMaterial({ map: meshTex, transparent: true, metalness: 0.6, side: THREE.DoubleSide }), 0, 0.03)
+      screen.rotation.x = -Math.PI / 2
+      add(rim, screen)
+      for (let i = 0; i < 14; i++) {
+        const a = i * 2.4, rr = (i % 4) * 0.08
+        add(mesh(new THREE.DodecahedronGeometry(0.025 + (i % 3) * 0.01), solid(0x78716c), Math.cos(a) * rr, 0.05, Math.sin(a) * rr))
+      }
+      break
+    }
+    case 'rain_gauge': {
+      const funnel = mesh(new THREE.CylinderGeometry(0.2, 0.06, 0.16, 36, 1, true), metal(0xcbd5e1), 0, 1.0)
+      const collar = mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.08, 36, 1, true), metal(0xcbd5e1), 0, 1.12)
+      const cylinder = mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.9, 32, 1, true), glass(), 0, 0.47)
+      const peg = mesh(new THREE.CylinderGeometry(0.03, 0.01, 0.1, 12), metal(0x52525b), 0, 0.01)
+      add(funnel, collar, cylinder, peg, graduations(0.1, 0.1, 0.75, 5), liquidMesh(0.1, 0.9, props.color || '#bfdbfe', 0.001))
+      break
+    }
+    case 'watering_can': {
+      const body = mesh(new THREE.CylinderGeometry(0.22, 0.25, 0.42, 36), enamel(0x16a34a), 0, 0.21)
+      const spout = mesh(new THREE.CylinderGeometry(0.025, 0.04, 0.6, 16), enamel(0x16a34a), 0.4, 0.4)
+      spout.rotation.z = -0.95
+      const rose = mesh(new THREE.CylinderGeometry(0.07, 0.04, 0.06, 20), metal(0x9ca3af), 0.64, 0.58)
+      rose.rotation.z = -0.95
+      const handle = mesh(new THREE.TorusGeometry(0.18, 0.022, 10, 32, Math.PI), enamel(0x15803d), 0, 0.42)
+      add(body, spout, rose, handle, liquidMesh(0.21, 0.42, props.color || '#bfdbfe', 0.8))
+      break
+    }
+    case 'seed_tray': {
+      add(mesh(rbox(0.9, 0.12, 0.55, 0.02), plastic(0x111827), 0, 0.06))
+      add(mesh(new THREE.BoxGeometry(0.84, 0.02, 0.49), solid(0x3f2a1d), 0, 0.115))
+      for (let x = 0; x < 6; x++) for (let z = 0; z < 3; z++) {
+        const px = -0.35 + x * 0.14, pz = -0.15 + z * 0.15
+        add(mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.08, 6), solid(0x16a34a), px, 0.16, pz))
+        const leaf = mesh(new THREE.SphereGeometry(0.022, 10, 8), solid(0x22c55e), px, 0.2, pz)
+        leaf.scale.set(1.6, 0.3, 0.8)
+        add(leaf)
+      }
+      break
+    }
+    case 'garden_trowel': {
+      const blade = mesh(new THREE.SphereGeometry(0.12, 24, 12, 0, Math.PI, 0, Math.PI / 2), metal(0x9ca3af), 0.16, 0.03)
+      blade.scale.set(1.6, 0.5, 1)
+      blade.rotation.z = Math.PI / 2
+      const shaft = mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.1, 10), metal(), 0, 0.03)
+      shaft.rotation.z = Math.PI / 2
+      const handle = mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.24, 16), wood(), -0.17, 0.03)
+      handle.rotation.z = Math.PI / 2
+      add(blade, shaft, handle)
+      break
+    }
+    case 'hand_hoe': {
+      const handle = mesh(new THREE.CylinderGeometry(0.025, 0.025, 1.4, 16), wood(), 0, 0.03)
+      handle.rotation.z = Math.PI / 2
+      const head = mesh(rbox(0.06, 0.04, 0.32, 0.008), metal(0x6b7280), 0.72, 0.1)
+      head.rotation.z = 0.5
+      add(handle, head)
+      break
+    }
+    case 'soil_auger': {
+      const shaft = mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.2, 12), metal(0x6b7280), 0, 0.75)
+      const tbar = mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.5, 12), metal(0x6b7280), 0, 1.35)
+      tbar.rotation.z = Math.PI / 2
+      const bit = new THREE.Mesh(new THREE.TubeGeometry(new Helix(0.3, 0.05, 4), 200, 0.012, 6, false), metal(0x9ca3af))
+      bit.position.y = 0.15
+      add(shaft, tbar, bit, mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.04, 32), solid(0x5b3a24), 0, 0.02))
+      break
+    }
+    case 'soil_sample': {
+      add(mesh(rbox(0.7, 0.08, 0.45, 0.02), plastic(0xd4d4d8), 0, 0.04))
+      const colors = [0x5b3a24, 0x9a6b3f, 0xc2a26b]
+      colors.forEach((c, i) => {
+        const pile = mesh(new THREE.SphereGeometry(0.11, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: c, roughness: 1 }), -0.22 + i * 0.22, 0.08)
+        pile.scale.y = 0.55
+        add(pile)
+      })
+      break
+    }
+
+    // ---------------- General ----------------
+    case 'safety_goggles': {
+      for (const side of [-1, 1]) {
+        const eye = mesh(new THREE.SphereGeometry(0.085, 24, 16), new THREE.MeshStandardMaterial({ color: 0xbfdbfe, transparent: true, opacity: 0.45, roughness: 0.05 }), side * 0.1, 0.08)
+        eye.scale.z = 0.5
+        const frame = mesh(new THREE.TorusGeometry(0.085, 0.014, 10, 32), plastic(0x0f766e), side * 0.1, 0.08)
+        add(eye, frame)
+      }
+      add(mesh(new THREE.TorusGeometry(0.2, 0.012, 8, 40, Math.PI), plastic(0x111827), 0, 0.08, -0.08))
+      ;(group.children[group.children.length - 1] as THREE.Mesh).rotation.x = Math.PI / 2
+      break
+    }
+    case 'crucible_tongs': {
+      for (const side of [-1, 1]) {
+        const arm = mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.5, 10), metal(0x6b7280), 0, 0.015, side * 0.03)
+        arm.rotation.z = Math.PI / 2
+        arm.rotation.y = side * 0.08
+        add(arm)
+      }
+      add(mesh(new THREE.TorusGeometry(0.03, 0.008, 8, 20), metal(0x6b7280), 0.26, 0.015))
+      break
+    }
+    case 'heat_proof_mat': {
+      add(mesh(rbox(0.8, 0.03, 0.8, 0.01), new THREE.MeshStandardMaterial({ color: 0xe7e5e4, roughness: 0.95 }), 0, 0.015))
+      break
+    }
     default:
       add(mesh(rbox(0.3, 0.3, 0.3, 0.03), solid(0x9ca3af), 0, 0.15))
   }

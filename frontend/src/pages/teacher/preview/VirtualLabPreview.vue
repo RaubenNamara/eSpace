@@ -95,7 +95,15 @@
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <!-- Scene -->
-          <div class="lg:col-span-2 h-[320px] sm:h-[440px] lg:h-[520px] rounded-2xl overflow-hidden shadow-lg ring-1 ring-gray-900/5">
+          <div class="lg:col-span-2 relative overflow-hidden" :class="labMaximized ? 'fixed inset-0 z-[200] bg-slate-900' : 'h-[320px] sm:h-[440px] lg:h-[520px] rounded-2xl shadow-lg ring-1 ring-gray-900/5'">
+            <button
+              @click="labMaximized ? exitMaximize() : enterMaximize()"
+              class="absolute top-3 right-3 z-10 inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-white/90 dark:bg-gray-800/90 backdrop-blur text-gray-700 dark:text-gray-200 shadow hover:bg-white dark:hover:bg-gray-700"
+              :title="labMaximized ? 'Exit full screen' : 'Full screen'"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path v-if="labMaximized" stroke-linecap="round" stroke-linejoin="round" d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" /><path v-else stroke-linecap="round" stroke-linejoin="round" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>
+              {{ labMaximized ? 'Exit Full Screen' : 'Full Screen' }}
+            </button>
             <component
               :is="guidedExperiment ?? VirtualLabScene"
               :scene-objects="detail.scene_objects"
@@ -135,6 +143,7 @@ import PreviewBanner from '@/components/preview/PreviewBanner.vue'
 import Breadcrumb, { type BreadcrumbItem } from '@/components/common/Breadcrumb.vue'
 import VirtualLabScene from '@/components/virtuallab/VirtualLabScene.vue'
 import { resolveGuidedExperiment } from '@/components/virtuallab/lab3d/registry'
+import { useFullscreenLab } from '@/components/virtuallab/lab3d/useFullscreenLab'
 import { CATEGORY_ICONS, CATEGORY_LABELS, CATEGORY_COLORS } from '@/types/virtualLab'
 import type { TeacherAssignment, LabObjectDef, ExperimentDetail, LabCategory } from '@/types/virtualLab'
 
@@ -144,6 +153,7 @@ interface CategoryGroup {
 }
 
 const route = useRoute()
+const { labMaximized, enterMaximize, exitMaximize } = useFullscreenLab()
 
 const assignments = ref<TeacherAssignment[]>([])
 const objectCatalog = ref<LabObjectDef[]>([])

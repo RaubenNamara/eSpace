@@ -1,6 +1,6 @@
 <template>
-  <div class="relative w-full h-full">
-    <div ref="canvasHost" class="w-full h-full rounded-lg overflow-hidden bg-gradient-to-b from-sky-50 to-slate-200 dark:from-gray-900 dark:to-gray-950"></div>
+  <div :class="labMaximized ? 'fixed inset-0 z-[10001] bg-slate-900' : 'relative w-full h-full'">
+    <div ref="canvasHost" class="w-full h-full overflow-hidden bg-gradient-to-b from-sky-50 to-slate-200 dark:from-gray-900 dark:to-gray-950" :class="labMaximized ? '' : 'rounded-lg'"></div>
 
     <p v-if="!objects.length" class="absolute inset-0 flex items-center justify-center text-xs text-gray-400 dark:text-gray-500 pointer-events-none px-6 text-center">
       Add an object above to see it on the bench and drag it into place.
@@ -23,6 +23,16 @@
         <span v-if="o.in_tray" class="opacity-70">· tray</span>
       </button>
     </div>
+
+    <button
+      type="button"
+      class="absolute bottom-2 right-2 z-10 inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold rounded-lg bg-white/90 dark:bg-gray-800/90 backdrop-blur text-gray-700 dark:text-gray-200 shadow border border-gray-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-700"
+      :title="labMaximized ? 'Exit full screen' : 'Full screen'"
+      @click="labMaximized ? exitMaximize() : enterMaximize()"
+    >
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path v-if="labMaximized" stroke-linecap="round" stroke-linejoin="round" d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" /><path v-else stroke-linecap="round" stroke-linejoin="round" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>
+      {{ labMaximized ? 'Exit Full Screen' : 'Full Screen' }}
+    </button>
 
     <!-- Selected object's position/rotation - dragging on the bench also updates these live. -->
     <div
@@ -59,11 +69,14 @@ import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { createObjectMesh } from './labObjectFactory'
+import { useFullscreenLab } from './lab3d/useFullscreenLab'
 import type { SceneObjectConfig, LabObjectDef } from '@/types/virtualLab'
 
 // Not v-model: the parent's `scene_objects` array is already treated as directly-mutable local
 // form state elsewhere in the teacher editor (e.g. `.splice()` on remove) - this component follows
 // the same convention rather than adding an emit round-trip for continuous drag updates.
+const { labMaximized, enterMaximize, exitMaximize } = useFullscreenLab()
+
 const props = defineProps<{
   objects: SceneObjectConfig[]
   objectCatalog: LabObjectDef[]
