@@ -1355,6 +1355,232 @@ export function createObjectMesh(objectType: string, key: string, displayName: s
       for (const x of [-0.09, 0.09]) add(mesh(new THREE.CylinderGeometry(0.008, 0.008, legs, 8), tin_(), x, legs / 2, 0))
       break
     }
+    case 'transformer': {
+      // Two-coil transformer: grey laminated iron core (two legs joined by top and bottom yokes)
+      // with a copper coil on white bobbin flanges round each leg, and its leads
+      const core = new THREE.MeshStandardMaterial({ color: 0x5b6068, roughness: 0.55, metalness: 0.4 })
+      const W = 0.9, H = 0.95, D = 0.42, leg = 0.24
+      add(mesh(new THREE.BoxGeometry(W, leg * 0.8, D), core, 0, leg * 0.4))
+      add(mesh(new THREE.BoxGeometry(W, leg * 0.8, D), core, 0, H - leg * 0.4))
+      for (const x of [-(W - leg) / 2, (W - leg) / 2]) add(mesh(new THREE.BoxGeometry(leg, H, D), core, x, H / 2))
+      // Lamination lines on the front and back
+      const lam = canvasTex(256, 256, (ctx, w, h) => {
+        ctx.fillStyle = '#5b6068'
+        ctx.fillRect(0, 0, w, h)
+        ctx.strokeStyle = 'rgba(0,0,0,0.25)'
+        for (let y = 0; y < h; y += 6) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke() }
+      })
+      for (const z of [D / 2 + 0.001, -D / 2 - 0.001]) {
+        const face = mesh(new THREE.PlaneGeometry(W, H), new THREE.MeshStandardMaterial({ map: lam, roughness: 0.55, metalness: 0.4, transparent: true, opacity: 0.5 }), 0, H / 2, z)
+        if (z < 0) face.rotation.y = Math.PI
+        add(face)
+      }
+      // Copper windings (striped texture for the turns) with bobbin flanges
+      const turns = canvasTex(64, 512, (ctx, w, h) => {
+        for (let y = 0; y < h; y += 8) {
+          const g = ctx.createLinearGradient(0, y, 0, y + 8)
+          g.addColorStop(0, '#7c2d12'); g.addColorStop(0.5, '#e07a3f'); g.addColorStop(1, '#7c2d12')
+          ctx.fillStyle = g
+          ctx.fillRect(0, y, w, 8)
+        }
+      })
+      turns.wrapS = turns.wrapT = THREE.RepeatWrapping
+      turns.repeat.set(4, 1)
+      const copper = new THREE.MeshStandardMaterial({ map: turns, roughness: 0.3, metalness: 0.75 })
+      const flange = plastic(0xf3f4f6)
+      for (const x of [-(W - leg) / 2, (W - leg) / 2]) {
+        add(mesh(rbox(leg + 0.22, H - leg * 1.7, D + 0.18, 0.08), copper, x, H / 2))
+        for (const y of [leg * 0.85, H - leg * 0.85]) add(mesh(rbox(leg + 0.26, 0.02, D + 0.22, 0.006), flange, x, y))
+      }
+      // Leads: red and blue wires out of the side
+      const lead = (color: number, y: number) => {
+        const m = mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.5, 10), plastic(color), W / 2 + 0.25, y, 0)
+        m.rotation.z = Math.PI / 2
+        return m
+      }
+      add(lead(0xdc2626, H * 0.62), lead(0x2563eb, H * 0.38))
+      break
+    }
+    case 'twin_flex_wire': {
+      // A coil of red and black twisted twin flex, lying on the bench
+      const twisted = (phase: number) => {
+        const pts: THREE.Vector3[] = []
+        const turnsN = 5, steps = 900
+        for (let i = 0; i <= steps; i++) {
+          const t = i / steps
+          const th = t * turnsN * Math.PI * 2
+          const R = 0.55 + 0.05 * Math.sin(th * 0.7) + 0.03 * Math.sin(th * 2.3)
+          const cy = 0.04 + 0.018 * Math.sin(th * 1.3) + t * 0.05
+          // Twist: the strand circles the cable's centre line
+          const tw = th * 9 + phase
+          const off = 0.016
+          pts.push(new THREE.Vector3((R + off * Math.cos(tw)) * Math.cos(th), cy + off * Math.sin(tw), (R + off * Math.cos(tw)) * Math.sin(th) * 0.85))
+        }
+        return new THREE.CatmullRomCurve3(pts)
+      }
+      add(mesh(new THREE.TubeGeometry(twisted(0), 1400, 0.014, 8, false), plastic(0xdc2626)))
+      add(mesh(new THREE.TubeGeometry(twisted(Math.PI), 1400, 0.014, 8, false), plastic(0x111827)))
+      break
+    }
+    case 'toroid_inductor': {
+      // Toroidal inductor: yellow-white ferrite ring wound with enamelled copper wire, two leads
+      const R = 0.3, tube = 0.1
+      const ring = mesh(new THREE.TorusGeometry(R, tube, 24, 64), new THREE.MeshStandardMaterial({ color: 0xf2ecc6, roughness: 0.6 }), 0, tube + 0.02)
+      ring.rotation.x = Math.PI / 2
+      add(ring)
+      const copper = new THREE.MeshStandardMaterial({ color: 0xc2552a, roughness: 0.3, metalness: 0.8 })
+      const N = 44
+      for (let i = 0; i < N; i++) {
+        const a = (i / N) * Math.PI * 2
+        const turn = mesh(new THREE.TorusGeometry(tube + 0.014, 0.012, 6, 20), copper, Math.cos(a) * R, tube + 0.02, Math.sin(a) * R)
+        turn.rotation.y = -a
+        add(turn)
+      }
+      for (const z of [-0.05, 0.05]) {
+        const leadWire = mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.45, 8), tin_(), R + 0.3, tube + 0.06, z)
+        leadWire.rotation.z = Math.PI / 2
+        add(leadWire)
+      }
+      break
+    }
+    case 'micrometer': {
+      // Micrometer screw gauge, 0-25 mm x 0.01 mm (about twice life size): C-shaped frame,
+      // anvil and spindle, sleeve with its main scale, thimble with 50 divisions, ratchet
+      const steel = chrome()
+      const satin = metal(0xcfd3d8)
+      const C = new THREE.Shape()
+      C.moveTo(-0.32, 0.22); C.lineTo(-0.32, 0)
+      C.absarc(0, 0, 0.32, Math.PI, Math.PI * 2, false)
+      C.lineTo(0.32, 0.22); C.lineTo(0.2, 0.22); C.lineTo(0.2, 0)
+      C.absarc(0, 0, 0.2, 0, Math.PI, true)
+      C.lineTo(-0.2, 0.22); C.lineTo(-0.32, 0.22)
+      const frame = mesh(new THREE.ExtrudeGeometry(C, { depth: 0.07, bevelEnabled: true, bevelSize: 0.008, bevelThickness: 0.008, bevelSegments: 2 }), satin, 0, 0.33, -0.035)
+      add(frame)
+      // Printed range on the frame
+      const plate = canvasTex(256, 128, (ctx, w, h) => {
+        ctx.fillStyle = '#cfd3d8'
+        ctx.fillRect(0, 0, w, h)
+        ctx.fillStyle = '#111827'
+        ctx.font = 'bold 34px Arial'
+        ctx.textAlign = 'center'
+        ctx.fillText('0-25mm', w / 2, 52)
+        ctx.fillText('0.01', w / 2, 98)
+      })
+      add(mesh(new THREE.PlaneGeometry(0.2, 0.1), new THREE.MeshStandardMaterial({ map: plate, roughness: 0.5, metalness: 0.4 }), 0, 0.07, 0.045))
+      const axisY = 0.5
+      const along = (geo: THREE.BufferGeometry, mat: THREE.Material, x: number) => {
+        const m = mesh(geo, mat, x, axisY, 0)
+        m.rotation.z = Math.PI / 2
+        return m
+      }
+      add(along(new THREE.CylinderGeometry(0.035, 0.035, 0.06, 20), steel, -0.17)) // anvil
+      add(along(new THREE.CylinderGeometry(0.03, 0.03, 0.32, 20), steel, 0.04)) // spindle
+      add(along(new THREE.CylinderGeometry(0.06, 0.06, 0.12, 24), satin, 0.26)) // spindle lock / hub
+      // Sleeve with the main scale (mm above the line, half-mm below)
+      // The cylinder's length runs along the texture's height, so the scale is drawn vertically
+      // (0 at the frame end) on a narrow strip of the circumference facing the viewer
+      const sleeveTex = canvasTex(256, 512, (ctx, w, h) => {
+        ctx.fillStyle = '#d8dce0'
+        ctx.fillRect(0, 0, w, h)
+        ctx.fillStyle = '#111827'
+        const cx = w * 0.5
+        ctx.fillRect(cx - 1, 0, 3, h)
+        ctx.font = 'bold 18px Arial'
+        for (let i = 0; i <= 25; i++) {
+          const y = 12 + i * 19
+          ctx.fillRect(cx - 22, y, 22, 2)
+          if (i < 25) ctx.fillRect(cx + 1, y + 9, 16, 2)
+          if (i % 5 === 0) {
+            ctx.save(); ctx.translate(cx - 30, y); ctx.rotate(-Math.PI / 2); ctx.fillText(String(i), -6, 0); ctx.restore()
+          }
+        }
+      })
+      sleeveTex.wrapS = THREE.RepeatWrapping
+      sleeveTex.offset.x = 0.25
+      const sleeve = along(new THREE.CylinderGeometry(0.05, 0.05, 0.4, 32), new THREE.MeshStandardMaterial({ map: sleeveTex, roughness: 0.35, metalness: 0.6 }), 0.52)
+      add(sleeve)
+      // Thimble: graduated bevel then knurled grip
+      const thimbleTex = canvasTex(512, 64, (ctx, w, h) => {
+        ctx.fillStyle = '#d8dce0'
+        ctx.fillRect(0, 0, w, h)
+        ctx.fillStyle = '#111827'
+        for (let i = 0; i < 50; i++) ctx.fillRect(i * (w / 50), 0, 2, i % 5 === 0 ? 30 : 18)
+      })
+      add(along(new THREE.CylinderGeometry(0.07, 0.075, 0.1, 40), new THREE.MeshStandardMaterial({ map: thimbleTex, roughness: 0.35, metalness: 0.6 }), 0.68))
+      const knurl = canvasTex(128, 128, (ctx, w, h) => {
+        ctx.fillStyle = '#9aa0a6'
+        ctx.fillRect(0, 0, w, h)
+        ctx.strokeStyle = '#4b5563'
+        for (let i = -h; i < w; i += 8) {
+          ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + h, h); ctx.stroke()
+          ctx.beginPath(); ctx.moveTo(i + h, 0); ctx.lineTo(i, h); ctx.stroke()
+        }
+      })
+      knurl.wrapS = knurl.wrapT = THREE.RepeatWrapping
+      knurl.repeat.set(6, 2)
+      add(along(new THREE.CylinderGeometry(0.075, 0.075, 0.24, 40), new THREE.MeshStandardMaterial({ map: knurl, roughness: 0.5, metalness: 0.7 }), 0.85))
+      add(along(new THREE.CylinderGeometry(0.035, 0.035, 0.08, 20), steel, 1.01))
+      add(along(new THREE.CylinderGeometry(0.055, 0.055, 0.08, 24, 1), new THREE.MeshStandardMaterial({ map: knurl, roughness: 0.5, metalness: 0.7 }), 1.09)) // ratchet
+      break
+    }
+    case 'vernier_caliper': {
+      // Vernier caliper (about 1.5 times life size) lying flat on the bench: main beam with a mm
+      // scale, fixed jaws, the sliding vernier with its own scale, thumb wheel and lock screw
+      const steel = metal(0xd5d9de)
+      const g = new THREE.Group()
+      const L = 1.8, beamH = 0.14, t = 0.025
+      const mainTex = canvasTex(2048, 128, (ctx, w, h) => {
+        ctx.fillStyle = '#e5e7eb'
+        ctx.fillRect(0, 0, w, h)
+        ctx.fillStyle = '#111827'
+        ctx.textAlign = 'center'
+        ctx.font = 'bold 26px Arial'
+        const mm = 150, x0 = 200, step = (w - x0 - 60) / mm
+        for (let i = 0; i <= mm; i++) {
+          const x = x0 + i * step
+          const len = i % 10 === 0 ? 50 : i % 5 === 0 ? 38 : 26
+          ctx.fillRect(x, h - len, 2, len)
+          if (i % 10 === 0) ctx.fillText(String(i / 10), x, h - 60)
+        }
+      })
+      const beam = mesh(new THREE.BoxGeometry(L, beamH, t), [steel, steel, steel, steel, new THREE.MeshStandardMaterial({ map: mainTex, roughness: 0.4, metalness: 0.6 }), steel], 0, 0, 0)
+      g.add(beam)
+      // Fixed jaws at the left end: long outside jaw down, short inside jaw up
+      g.add(mesh(new THREE.BoxGeometry(0.16, 0.42, t), steel, -L / 2 + 0.08, -0.27, 0))
+      g.add(mesh(new THREE.BoxGeometry(0.06, 0.16, t * 0.6), steel, -L / 2 + 0.12, 0.15, 0))
+      // Sliding jaw with the vernier plate
+      const sx = -L / 2 + 0.5
+      const vTex = canvasTex(512, 96, (ctx, w, h) => {
+        ctx.fillStyle = '#cbd0d6'
+        ctx.fillRect(0, 0, w, h)
+        ctx.fillStyle = '#111827'
+        ctx.font = 'bold 20px Arial'
+        ctx.textAlign = 'center'
+        for (let i = 0; i <= 50; i++) {
+          const x = 40 + i * 8.6
+          const len = i % 10 === 0 ? 34 : i % 5 === 0 ? 26 : 18
+          ctx.fillRect(x, 0, 2, len)
+          if (i % 10 === 0) ctx.fillText(String(i / 2), x, 60)
+        }
+        ctx.font = '16px Arial'
+        ctx.fillText('0.02 mm', 440, 86)
+      })
+      g.add(mesh(new THREE.BoxGeometry(0.5, beamH + 0.08, t + 0.02), [steel, steel, steel, steel, new THREE.MeshStandardMaterial({ map: vTex, roughness: 0.4, metalness: 0.6 }), steel], sx + 0.2, -0.01, 0.005))
+      g.add(mesh(new THREE.BoxGeometry(0.14, 0.42, t), steel, sx + 0.02, -0.27, 0))
+      g.add(mesh(new THREE.BoxGeometry(0.06, 0.16, t * 0.6), steel, sx - 0.02, 0.15, 0))
+      // Lock screw on top and thumb wheel underneath
+      g.add(mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.05, 16), steel, sx + 0.2, beamH / 2 + 0.065, 0))
+      const wheel = mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.03, 20), steel, sx + 0.35, -beamH / 2 - 0.05, 0)
+      wheel.rotation.x = Math.PI / 2
+      g.add(wheel)
+      // Depth rod out of the right end
+      g.add(mesh(new THREE.BoxGeometry(0.2, 0.02, 0.012), steel, L / 2 + 0.1, -0.03, 0))
+      // Lie flat, scale face up
+      g.rotation.x = -Math.PI / 2
+      g.position.y = t / 2 + 0.012
+      add(g)
+      break
+    }
     case 'metre_rule': {
       const edge = new THREE.MeshStandardMaterial({ color: 0xd6a35c, roughness: 0.6 })
       const face = new THREE.MeshStandardMaterial({ map: rulerTexture(), color: 0xf5deb3, roughness: 0.55 })
