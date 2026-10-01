@@ -817,6 +817,8 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::put('/virtual-lab/objects/{id}', 'eSpace\App\Controllers\Admin\VirtualLabController@updateObject');
         Router::get('/virtual-lab/experiments', 'eSpace\App\Controllers\Admin\VirtualLabController@experiments');
         Router::put('/virtual-lab/experiments/{id}/status', 'eSpace\App\Controllers\Admin\VirtualLabController@setStatus');
+        Router::post('/virtual-lab/experiments/bulk-delete', 'eSpace\App\Controllers\Admin\VirtualLabController@bulkDestroy');
+        Router::delete('/virtual-lab/experiments/{id}', 'eSpace\App\Controllers\Admin\VirtualLabController@destroy');
         Router::get('/virtual-lab/experiments/{id}', 'eSpace\App\Controllers\Admin\VirtualLabController@experimentDetail');
         Router::get('/virtual-lab/analytics', 'eSpace\App\Controllers\Admin\VirtualLabController@analytics');
 

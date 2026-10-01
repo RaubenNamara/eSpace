@@ -439,6 +439,29 @@ class VirtualLabService
         return $stmt->execute(['id' => $id]);
     }
 
+    /**
+     * Admin removal: soft-deletes the experiment and every class it was published to, so it
+     * disappears for students, teachers and HODs at once. Attempts and marks already recorded
+     * stay in the database (report history), they are just no longer reachable from the lab.
+     */
+    public function deleteExperimentEverywhere(int $id): bool
+    {
+        $db = $this->getDb();
+        $db->beginTransaction();
+        try {
+            $exp = $db->prepare('UPDATE virtual_lab_experiments SET deleted_at = NOW() WHERE id = :id AND deleted_at IS NULL');
+            $exp->execute(['id' => $id]);
+            $found = $exp->rowCount() > 0;
+            $db->prepare('UPDATE virtual_lab_assignments SET deleted_at = NOW() WHERE experiment_id = :id AND deleted_at IS NULL')
+                ->execute(['id' => $id]);
+            $db->commit();
+            return $found;
+        } catch (\Throwable $e) {
+            $db->rollBack();
+            throw $e;
+        }
+    }
+
     public function setExperimentStatus(int $id, string $status): bool
     {
         $stmt = $this->getDb()->prepare('UPDATE virtual_lab_experiments SET status = :status, updated_at = NOW() WHERE id = :id');
@@ -660,7 +683,7 @@ class VirtualLabService
 
     public function listAssignmentsForTeacher(int $teacherId, array $filters = []): array
     {
-        $where = ['a.teacher_id = :teacher_id', 'a.deleted_at IS NULL'];
+        $where = ['a.teacher_id = :teacher_id', 'a.deleted_at IS NULL', 'e.deleted_at IS NULL'];
         $params = ['teacher_id' => $teacherId];
         if (!empty($filters['term_id'])) {
             $where[] = 'a.term_id = :term_id';
@@ -737,7 +760,7 @@ class VirtualLabService
 
     public function listAssignmentsForStudent(int $studentId, ?int $termId = null): array
     {
-        $where = ['a.deleted_at IS NULL', "a.status = 'active'"];
+        $where = ['a.deleted_at IS NULL', "a.status = 'active'", 'e.deleted_at IS NULL', "e.status <> 'disabled'"];
         $params = ['student_id' => $studentId, 'student_id2' => $studentId];
         if ($termId) {
             $where[] = 'a.term_id = :term_id';
@@ -852,6 +875,7 @@ class VirtualLabService
                 AND sde.department_id = (SELECT department_id FROM subjects WHERE id = a.subject_id)
                 AND a.created_at BETWEEN sde.start_date AND COALESCE(sde.end_date, NOW())
              WHERE a.id = :assignment_id AND a.deleted_at IS NULL
+               AND EXISTS (SELECT 1 FROM virtual_lab_experiments ve WHERE ve.id = a.experiment_id AND ve.deleted_at IS NULL AND ve.status <> 'disabled')
                AND NOT EXISTS (
                    SELECT 1 FROM student_teacher_enrollments ste
                    WHERE ste.student_id = :student_id_te AND ste.teacher_id = a.teacher_id
