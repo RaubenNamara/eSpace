@@ -1,63 +1,17 @@
 <template>
-  <div class="relative w-full h-full rounded-xl overflow-hidden bg-gradient-to-b from-sky-50 to-slate-100 dark:from-slate-800 dark:to-slate-900">
-    <svg :viewBox="`0 0 ${VB_W} ${VB_H}`" class="w-full h-full select-none" ref="svgEl" @pointermove="onPointerMove" @pointerup="onPointerUp" @pointerleave="onPointerUp">
-      <!-- Bench line -->
-      <line :x1="0" :y1="BENCH_Y" :x2="VB_W" :y2="BENCH_Y" stroke="currentColor" class="text-gray-300 dark:text-gray-600" stroke-width="2" />
+  <LabUnsupported v-if="unsupported" />
+  <div v-else class="relative w-full h-full rounded-xl overflow-hidden bg-slate-200 select-none">
+    <div ref="labHost" class="absolute inset-0" :style="{ cursor: hoverCursor }" @pointerdown.capture="onPointerDown" @pointermove="onHover"></div>
 
-      <!-- Retort stand -->
-      <g class="text-gray-500 dark:text-gray-400">
-        <rect :x="pivot.x - 55" :y="20" width="110" height="12" rx="3" fill="currentColor" />
-        <rect :x="pivot.x - 6" :y="20" width="12" height="18" fill="currentColor" />
-        <rect :x="pivot.x - 8" :y="BENCH_Y - 6" width="16" height="10" fill="currentColor" />
-      </g>
-
-      <!-- Angle arc from vertical to the current string direction -->
-      <path :d="angleArcPath" fill="none" stroke="#38bdf8" stroke-width="2" stroke-dasharray="4 4" opacity="0.85" />
-      <line :x1="pivot.x" :y1="pivot.y" :x2="pivot.x" :y2="pivot.y + 46" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="3 3" />
-      <text :x="pivot.x + (angleDeg >= 0 ? 26 : -26)" :y="pivot.y + 60" text-anchor="middle" class="fill-sky-600 dark:fill-sky-400 text-[13px] font-bold">{{ Math.abs(Math.round(angleDeg)) }}&deg;</text>
-
-      <!-- Ruler alongside the string - a fixed 0-50cm scale like a real ruler (it doesn't resize
-           itself to whatever it's measuring); the student reads off wherever the bob's string
-           actually reaches. -->
-      <g v-if="showRuler" class="cursor-pointer" @click="selectObject('ruler1')">
-        <rect :x="rulerX - 11" :y="pivot.y" width="22" :height="RULER_MAX_CM * PX_PER_CM" rx="3" fill="#fdf6e3" stroke="#cbb892" stroke-width="1.5" :class="selectedKey === 'ruler1' && measureArmed ? 'ruler-armed' : ''" />
-        <g v-for="t in rulerTicks" :key="t.cm">
-          <line :x1="rulerX - 11" :y1="pivot.y + t.px" :x2="rulerX - 11 + (t.major ? 10 : 6)" :y2="pivot.y + t.px" stroke="#1e293b" stroke-width="1" />
-          <text v-if="t.major" :x="rulerX + 4" :y="pivot.y + t.px + 3" class="fill-slate-700 text-[9px] font-semibold">{{ t.cm }}</text>
-        </g>
-      </g>
-
-      <!-- String -->
-      <line :x1="pivot.x" :y1="pivot.y" :x2="bobPos.x" :y2="bobPos.y" stroke="#475569" stroke-width="2" />
-      <circle :cx="pivot.x" :cy="pivot.y" r="5" fill="#1e293b" />
-
-      <!-- Bob -->
-      <g
-        class="cursor-grab active:cursor-grabbing"
-        @pointerdown="onBobPointerDown"
-      >
-        <circle :cx="bobPos.x" :cy="bobPos.y" :r="bobRadius" fill="url(#bobGradient)" :stroke="selectedKey === 'bob1' ? '#4f46e5' : '#312e81'" :stroke-width="selectedKey === 'bob1' ? 3 : 1.5" />
-        <text :x="bobPos.x" :y="bobPos.y + bobRadius + 16" text-anchor="middle" class="fill-gray-700 dark:fill-gray-200 text-[11px] font-semibold">{{ massG }} g</text>
-      </g>
-
-      <defs>
-        <radialGradient id="bobGradient" cx="35%" cy="30%" r="70%">
-          <stop offset="0%" stop-color="#a5b4fc" />
-          <stop offset="100%" stop-color="#4338ca" />
-        </radialGradient>
-      </defs>
-    </svg>
-
-    <!-- Apparatus name + available actions - shown only for the current selection, matching the
-         rest of the app's "select then choose an action" convention rather than always-on clutter. -->
+    <!-- Selected apparatus + its actions -->
     <div v-if="selectedKey" class="absolute left-2 top-2 sm:left-3 sm:top-3 bg-white/95 dark:bg-gray-800/95 backdrop-blur rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 max-w-[13rem] max-h-[calc(100%-1rem)] sm:max-h-[calc(100%-1.5rem)] overflow-y-auto">
       <div class="flex items-center justify-between gap-2 mb-2">
         <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide truncate">{{ selectedDisplayName }}</p>
         <button @click="deselect" class="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs leading-none">&times;</button>
       </div>
       <div class="flex flex-wrap gap-1.5">
-        <button v-if="selectedKey === 'bob1'" @click="inspectBob" class="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">Inspect</button>
-        <button v-if="selectedKey === 'ruler1'" @click="armMeasure" class="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700" :disabled="props.readOnly">Measure</button>
+        <button v-if="selectedKey === bobKey" @click="inspectBob" class="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">Inspect</button>
+        <button v-if="selectedKey === rulerKey" @click="armMeasure" class="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700" :disabled="readOnly">Measure</button>
       </div>
 
       <div v-if="measureArmed" class="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 text-[11px] text-amber-600 dark:text-amber-400">Click the pendulum bob or string to measure.</div>
@@ -73,43 +27,58 @@
       <div v-if="inspectText" class="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-600 dark:text-gray-300">{{ inspectText }}</div>
     </div>
 
-    <!-- Stopwatch - a real, always-visible widget with direct handles rather than hidden behind
-         select-then-toolbar, matching the brief's "interactive handles built into apparatus". -->
-    <div class="absolute right-2 top-2 sm:right-3 sm:top-3 bg-white/95 dark:bg-gray-800/95 backdrop-blur rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 w-40 max-h-[calc(100%-1rem)] sm:max-h-[calc(100%-1.5rem)] overflow-y-auto">
-      <p class="text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1">Stopwatch</p>
-      <div class="bg-gray-900 rounded-lg px-2 py-1.5 text-center mb-2">
-        <span class="font-mono text-lg text-emerald-400 tabular-nums">{{ stopwatchText }}</span>
+    <!-- Stopwatch -->
+    <div class="absolute right-2 top-2 sm:right-3 sm:top-3 bg-white/95 dark:bg-gray-800/95 backdrop-blur rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-2 sm:p-3 w-32 sm:w-40 max-h-[calc(100%-1rem)] sm:max-h-[calc(100%-1.5rem)] overflow-y-auto">
+      <p class="hidden sm:block text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1">Stopwatch</p>
+      <div class="bg-gray-900 rounded-lg px-2 py-1 sm:py-1.5 text-center mb-1.5 sm:mb-2">
+        <span class="font-mono text-base sm:text-lg text-emerald-400 tabular-nums">{{ stopwatchText }}</span>
       </div>
-      <p class="text-[10px] text-gray-400 dark:text-gray-500 mb-2">Oscillations: <span class="font-semibold text-gray-600 dark:text-gray-300">{{ oscillationCount }}</span></p>
+      <p class="text-[10px] text-gray-400 dark:text-gray-500 mb-1.5 sm:mb-2">Oscillations: <span class="font-semibold text-gray-600 dark:text-gray-300">{{ oscillationCount }}</span></p>
       <div class="grid grid-cols-2 gap-1.5">
-        <button v-if="!stopwatchRunning" @click="startStopwatch" :disabled="props.readOnly" class="px-2 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50">Start</button>
+        <button v-if="!stopwatchRunning" @click="startStopwatch" :disabled="readOnly" class="px-2 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50">Start</button>
         <button v-else @click="stopStopwatch" class="px-2 py-1.5 text-xs font-semibold rounded-lg bg-red-500 text-white hover:bg-red-600">Stop</button>
-        <button @click="resetStopwatch" :disabled="props.readOnly" class="px-2 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 disabled:opacity-50">Reset</button>
+        <button @click="resetStopwatch" :disabled="readOnly" class="px-2 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 disabled:opacity-50">Reset</button>
       </div>
-      <button @click="readStopwatch" :disabled="props.readOnly" class="mt-1.5 w-full px-2 py-1.5 text-xs font-semibold rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 disabled:opacity-50">Read Time</button>
+      <button @click="readStopwatch" :disabled="readOnly" class="mt-1.5 w-full px-2 py-1.5 text-xs font-semibold rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 disabled:opacity-50">Read Time</button>
     </div>
 
-    <!-- Controls strip - length/mass/gravity are free, real adjustments (like the battery voltage
-         picker elsewhere): they change the live simulation, but nothing here is graded directly. -->
-    <div class="absolute left-2 right-2 bottom-2 sm:left-3 sm:right-3 sm:bottom-3 bg-white/95 dark:bg-gray-800/95 backdrop-blur rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 flex flex-wrap items-center gap-x-5 gap-y-2">
+    <!-- Controls strip - always shown from sm up; behind a toggle on phones, where the scene is
+         too short to leave it permanently covering the apparatus. -->
+    <button
+      v-if="!showControls"
+      @click="showControls = true"
+      class="sm:hidden absolute left-2 bottom-2 px-3 py-1.5 text-xs font-semibold rounded-full bg-white/95 dark:bg-gray-800/95 shadow-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200"
+    >Controls &middot; {{ lengthCm }} cm &middot; {{ Math.abs(Math.round(angleDeg)) }}&deg;</button>
+    <div
+      class="absolute left-2 right-2 bottom-2 sm:left-3 sm:right-3 sm:bottom-3 sm:mx-auto sm:max-w-5xl bg-white/95 dark:bg-gray-800/95 backdrop-blur rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 flex-wrap items-center gap-x-5 gap-y-2 max-h-[calc(100%-1rem)] overflow-y-auto"
+      :class="showControls ? 'flex' : 'hidden sm:flex'"
+    >
+      <button @click="showControls = false" class="sm:hidden absolute right-2 top-2 w-5 h-5 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs leading-none">&times;</button>
       <div class="flex-1 min-w-[9rem]">
         <p class="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">String Length: {{ lengthCm }} cm</p>
-        <input v-model.number="lengthCm" type="range" min="10" max="50" step="1" class="w-full accent-indigo-600" :disabled="props.readOnly">
+        <input v-model.number="lengthCm" type="range" min="10" max="50" step="1" class="w-full accent-indigo-600" :disabled="readOnly">
       </div>
       <div class="flex-1 min-w-[9rem]">
         <p class="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Bob Mass: {{ massG }} g</p>
-        <input v-model.number="massG" type="range" min="20" max="200" step="10" class="w-full accent-indigo-600" :disabled="props.readOnly">
+        <input v-model.number="massG" type="range" min="20" max="200" step="10" class="w-full accent-indigo-600" :disabled="readOnly">
       </div>
       <div>
         <p class="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Gravity</p>
         <div class="flex gap-1">
-          <button v-for="g in GRAVITY_OPTIONS" :key="g.label" @click="gravity = g.value" :disabled="props.readOnly"
+          <button v-for="g in GRAVITY_OPTIONS" :key="g.label" @click="gravity = g.value" :disabled="readOnly"
             class="px-2 py-1 text-[11px] font-semibold rounded-lg border transition-colors disabled:opacity-50"
             :class="gravity === g.value ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600'"
           >{{ g.label }}</button>
         </div>
       </div>
-      <button @click="resetSwing" :disabled="props.readOnly" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">Reset Swing</button>
+      <div class="text-center">
+        <p class="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Angle</p>
+        <p class="text-sm font-bold text-sky-600 dark:text-sky-400 tabular-nums">{{ Math.abs(Math.round(angleDeg)) }}&deg;</p>
+      </div>
+      <div class="flex gap-1.5">
+        <button @click="resetSwing" :disabled="readOnly" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">Reset Swing</button>
+        <button @click="room?.resetView()" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Reset View</button>
+      </div>
     </div>
 
     <transition
@@ -123,6 +92,11 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import * as THREE from 'three'
+import { canvasTexture, labMaterials } from './lab3d/labRoom'
+import { useLabScene } from './lab3d/useLabScene'
+import { buildRetortStand, buildHangingRuler, type HangingRuler } from './lab3d/apparatus'
+import LabUnsupported from './lab3d/LabUnsupported.vue'
 import type { SceneObjectConfig, LabObjectDef, LabAction } from '@/types/virtualLab'
 
 const props = defineProps<{
@@ -133,14 +107,22 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  action: [{ objectKey: string | null; action: LabAction; value: string | null; unit?: string | null; label?: string | null; safetyIssue?: boolean; targetObjectKey?: string | null; springLoadG?: number }]
+  action: [{ objectKey: string | null; action: LabAction; value: string | null; unit?: string | null; label?: string | null; safetyIssue?: boolean; targetObjectKey?: string | null; springLoadG?: number; oscillations?: number }]
 }>()
 
-// --- Layout constants (a fixed, stable educational view - no free camera to fight with) --------
-const VB_W = 600, VB_H = 420
-const BENCH_Y = 400
-const pivot = { x: VB_W / 2, y: 60 }
-const PX_PER_CM = 6
+const showControls = ref(false)
+
+const { room, unsupported, pick, pointOnPlane } = useLabScene(
+  { cameraPosition: [0.3, 0.52, 1.5], target: [0, 0.3, 0], minDistance: 0.45, maxDistance: 2.2 },
+  (r) => {
+    buildApparatus(r.scene)
+    r.onFrame((dt) => {
+      physicsStep(dt)
+      syncPendulum()
+    })
+    if (!props.readOnly) flash('Drag the brass bob sideways and let go. Drag empty space to look around.')
+  },
+)
 
 function mergedProps(key: string): Record<string, any> {
   const cfg = props.sceneObjects.find(o => o.key === key)
@@ -150,131 +132,253 @@ function mergedProps(key: string): Record<string, any> {
 const bobCfg = computed(() => props.sceneObjects.find(o => o.object_type === 'specimen'))
 const rulerCfg = computed(() => props.sceneObjects.find(o => o.object_type === 'ruler'))
 const stopwatchCfg = computed(() => props.sceneObjects.find(o => o.object_type === 'stopwatch'))
-const showRuler = computed(() => !!rulerCfg.value)
+const bobKey = computed(() => bobCfg.value?.key ?? 'bob1')
+const rulerKey = computed(() => rulerCfg.value?.key ?? 'ruler1')
 
-// --- Real, live-adjustable state (not graded by themselves - free realism controls) ------------
 const lengthCm = ref<number>(Number(mergedProps(bobCfg.value?.key || '').length_cm ?? 25))
 const massG = ref<number>(Number(mergedProps(bobCfg.value?.key || '').mass_g ?? 50))
 const GRAVITY_OPTIONS = [{ label: 'Earth', value: 9.8 }, { label: 'Moon', value: 1.6 }, { label: 'Mars', value: 3.7 }]
 const gravity = ref(9.8)
 
-const bobRadius = computed(() => Math.max(12, Math.min(30, 12 + massG.value / 8)))
-const stringLenPx = computed(() => lengthCm.value * PX_PER_CM)
-const rulerX = computed(() => pivot.x + 70)
-
-// --- Pendulum physics: real numerical integration of theta'' = -(g/L)sin(theta) - damping*omega,
-// not a scripted animation - the motion genuinely depends on the length/mass/gravity the student
-// has set, and the bob is released from wherever they actually dragged it. --------------------
+// --- Physics: theta'' = -(g/L) sin(theta) - damping * omega, real-time, independent of frame rate ---
 const angleRad = ref(0)
 const angularVelocity = ref(0)
 const swinging = ref(false)
 const zeroCrossings = ref(0)
 const MAX_ANGLE_RAD = (60 * Math.PI) / 180
-let rafId = 0
-let lastTs = 0
-
 const angleDeg = computed(() => (angleRad.value * 180) / Math.PI)
-const bobPos = computed(() => ({
-  x: pivot.x + stringLenPx.value * Math.sin(angleRad.value),
-  y: pivot.y + stringLenPx.value * Math.cos(angleRad.value),
-}))
-const angleArcPath = computed(() => {
-  const r = 46
-  const end = { x: pivot.x + r * Math.sin(angleRad.value), y: pivot.y + r * Math.cos(angleRad.value) }
-  const start = { x: pivot.x, y: pivot.y + r }
-  const largeArc = Math.abs(angleDeg.value) > 180 ? 1 : 0
-  const sweep = angleRad.value >= 0 ? 1 : 0
-  return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} ${sweep} ${end.x} ${end.y}`
-})
-
 const oscillationCount = computed(() => Math.floor(zeroCrossings.value / 2))
 
-function physicsStep(ts: number) {
-  rafId = requestAnimationFrame(physicsStep)
-  if (!lastTs) lastTs = ts
-  const dt = Math.min(0.04, (ts - lastTs) / 1000)
-  lastTs = ts
+const PHYSICS_STEP = 1 / 240
+
+/** Fixed substeps keep the simulated swing in real time whatever the frame rate. */
+function physicsStep(dt: number) {
   if (!swinging.value) return
-
   const L = Math.max(0.05, lengthCm.value / 100)
-  // A heavier bob carries relatively more of its own momentum against air resistance - a small,
-  // physically-reasonable touch; it does not change the (mass-independent) period itself.
   const damping = 0.03 * (50 / massG.value)
-  const alpha = -(gravity.value / L) * Math.sin(angleRad.value) - damping * angularVelocity.value
-  angularVelocity.value += alpha * dt
-  const prev = angleRad.value
-  angleRad.value += angularVelocity.value * dt
+  let theta = angleRad.value
+  let omega = angularVelocity.value
+  let crossings = 0
+  for (let remaining = dt; remaining > 1e-6; remaining -= PHYSICS_STEP) {
+    const h = Math.min(PHYSICS_STEP, remaining)
+    omega += (-(gravity.value / L) * Math.sin(theta) - damping * omega) * h
+    const prev = theta
+    theta += omega * h
+    if (Math.sign(prev) !== Math.sign(theta) && prev !== 0) crossings++
+  }
+  angleRad.value = theta
+  angularVelocity.value = omega
+  zeroCrossings.value += crossings
+}
 
-  if (Math.sign(prev) !== Math.sign(angleRad.value) && prev !== 0) {
-    zeroCrossings.value++
+// --- Scene (metres; bench top at y = 0; pendulum swings in the z = 0 plane) -----------------
+const PIVOT = new THREE.Vector3(0, 0.72, 0)
+const RULER_MAX_CM = 50
+let bob: THREE.Mesh
+let bobHook: THREE.Mesh
+let stringMesh: THREE.Mesh
+let ruler: HangingRuler | null = null
+let angleArc: THREE.Line
+const bobMaterial = labMaterials.brass()
+
+/** Brass (8.5 g/cm^3) sphere of the chosen mass, enlarged 1.4x so it reads clearly on screen. */
+const bobRadiusM = computed(() => Math.cbrt((3 * massG.value) / (4 * Math.PI * 8.5)) / 100 * 1.4)
+
+function buildApparatus(scene: THREE.Scene) {
+  // Stand rod sits to the left and behind the swing plane, so the bob can pass in front of it
+  scene.add(buildRetortStand({ pivot: PIVOT, rodX: -0.17, armZ: -0.07, armEnd: 0.13 }))
+
+  // Clear protractor behind the swing plane, centred on the pivot
+  const protractorTex = canvasTexture(512, 512, (ctx, w, h) => {
+    const cx = w / 2, cy = h / 2, R = w / 2 - 4
+    ctx.clearRect(0, 0, w, h)
+    ctx.fillStyle = 'rgba(251,146,60,0.96)'
+    ctx.beginPath()
+    ctx.arc(cx, cy, R, 0, Math.PI)
+    ctx.fill()
+    ctx.strokeStyle = '#000000'
+    ctx.fillStyle = '#000000'
+    ctx.font = 'bold 18px sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    for (let a = -90; a <= 90; a += 1) {
+      const rad = (a * Math.PI) / 180
+      const len = a % 10 === 0 ? 26 : a % 5 === 0 ? 17 : 9
+      ctx.lineWidth = a % 10 === 0 ? 2 : 1
+      ctx.beginPath()
+      ctx.moveTo(cx + R * Math.sin(rad), cy + R * Math.cos(rad))
+      ctx.lineTo(cx + (R - len) * Math.sin(rad), cy + (R - len) * Math.cos(rad))
+      ctx.stroke()
+      if (a % 10 === 0 && Math.abs(a) < 90) {
+        ctx.fillText(String(Math.abs(a)), cx + (R - 42) * Math.sin(rad), cy + (R - 42) * Math.cos(rad))
+      }
+    }
+  })
+  const protractor = new THREE.Mesh(
+    new THREE.CircleGeometry(0.1, 64, Math.PI, Math.PI),
+    new THREE.MeshBasicMaterial({ map: protractorTex, transparent: true, depthWrite: false, side: THREE.DoubleSide }),
+  )
+  protractor.position.set(PIVOT.x, PIVOT.y, -0.012)
+  scene.add(protractor)
+
+  // Vertical reference and live angle arc
+  const refLine = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([PIVOT.clone(), PIVOT.clone().add(new THREE.Vector3(0, -0.11, 0))]),
+    new THREE.LineDashedMaterial({ color: 0x64748b, dashSize: 0.006, gapSize: 0.005 }),
+  )
+  refLine.computeLineDistances()
+  refLine.position.z = -0.006
+  scene.add(refLine)
+
+  angleArc = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints(new Array(33).fill(0).map(() => new THREE.Vector3())),
+    new THREE.LineBasicMaterial({ color: 0x0ea5e9 }),
+  )
+  angleArc.position.z = -0.005
+  scene.add(angleArc)
+
+  // String
+  stringMesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.0011, 0.0011, 1, 8),
+    new THREE.MeshStandardMaterial({ color: 0x5b5246, roughness: 0.9 }),
+  )
+  stringMesh.castShadow = true
+  scene.add(stringMesh)
+
+  // Bob with a small hook eye on top
+  bob = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 32), bobMaterial)
+  bob.castShadow = true
+  scene.add(bob)
+  bobHook = new THREE.Mesh(new THREE.TorusGeometry(0.004, 0.0011, 8, 20), labMaterials.steel())
+  bobHook.castShadow = true
+  scene.add(bobHook)
+
+  // Wooden half-metre rule hanging beside the string, behind the swing plane
+  if (rulerCfg.value) {
+    ruler = buildHangingRuler(RULER_MAX_CM, new THREE.Vector3(0.115, PIVOT.y, -0.045), -0.07)
+    scene.add(ruler.group)
   }
 }
 
-// --- Bob drag-to-set-angle-and-release --------------------------------------------------------
-const svgEl = ref<SVGSVGElement | null>(null)
+const tmpDir = new THREE.Vector3()
+const UP = new THREE.Vector3(0, 1, 0)
+function syncPendulum() {
+  const L = lengthCm.value / 100
+  const r = bobRadiusM.value
+  tmpDir.set(Math.sin(angleRad.value), -Math.cos(angleRad.value), 0)
+
+  bob.scale.setScalar(r)
+  bob.position.copy(PIVOT).addScaledVector(tmpDir, L)
+
+  const stringLen = Math.max(0.001, L - r - 0.004)
+  stringMesh.scale.y = stringLen
+  stringMesh.position.copy(PIVOT).addScaledVector(tmpDir, stringLen / 2)
+  stringMesh.quaternion.setFromUnitVectors(UP, tmpDir.clone().negate())
+
+  bobHook.position.copy(PIVOT).addScaledVector(tmpDir, L - r - 0.003)
+  bobHook.rotation.set(0, Math.PI / 2, angleRad.value)
+
+  const pos = angleArc.geometry.attributes.position as THREE.BufferAttribute
+  const n = pos.count
+  for (let i = 0; i < n; i++) {
+    const a = (angleRad.value * i) / (n - 1)
+    pos.setXYZ(i, PIVOT.x + 0.08 * Math.sin(a), PIVOT.y - 0.08 * Math.cos(a), 0)
+  }
+  pos.needsUpdate = true
+
+  const highlight = selectedKey.value === bobKey.value
+  bobMaterial.emissive.setHex(highlight ? 0x3730a3 : 0x000000)
+  bobMaterial.emissiveIntensity = highlight ? 0.45 : 0
+  ruler?.setArmed(measureArmed.value)
+}
+
+// --- Pointer interaction -----------------------------------------------------------------------
+const swingPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0)
+const hitPoint = new THREE.Vector3()
+const hoverCursor = ref('grab')
 let draggingBob = false
 let dragMoved = false
 
-function svgPoint(ev: PointerEvent): { x: number; y: number } {
-  const svg = svgEl.value!
-  const pt = svg.createSVGPoint()
-  pt.x = ev.clientX
-  pt.y = ev.clientY
-  const ctm = svg.getScreenCTM()
-  if (!ctm) return { x: 0, y: 0 }
-  const local = pt.matrixTransform(ctm.inverse())
-  return { x: local.x, y: local.y }
+function pickTarget(ev: PointerEvent): 'bob' | 'string' | 'ruler' | null {
+  if (!bob) return null
+  const targets: THREE.Object3D[] = [bob, stringMesh]
+  if (ruler) targets.push(ruler.mesh)
+  const hit = pick(ev, targets)
+  if (!hit) return null
+  if (hit === bob) return 'bob'
+  if (hit === stringMesh) return 'string'
+  return 'ruler'
 }
 
-function onBobPointerDown(ev: PointerEvent) {
-  if (props.readOnly) return
-  if (measureArmed.value) {
-    tryMeasureLength()
-    ev.stopPropagation()
+function onHover(ev: PointerEvent) {
+  if (draggingBob) return
+  const target = pickTarget(ev)
+  hoverCursor.value = target === 'bob' || (target === 'string' && measureArmed.value) ? 'pointer' : target === 'ruler' ? 'pointer' : 'grab'
+}
+
+function onPointerDown(ev: PointerEvent) {
+  const target = pickTarget(ev)
+  if (!target || !room.value) return
+
+  // Capture phase: disabling controls here stops OrbitControls from starting a camera orbit.
+  room.value.controls.enabled = false
+  window.addEventListener('pointerup', onPointerUp, { once: true })
+
+  if (target === 'ruler') {
+    selectObject(rulerKey.value)
     return
   }
-  draggingBob = true
-  dragMoved = false
-  swinging.value = false
-  angularVelocity.value = 0
-  ev.stopPropagation()
+  if (props.readOnly) {
+    if (target === 'bob') selectObject(bobKey.value)
+    return
+  }
+  if (measureArmed.value) {
+    tryMeasureLength()
+    return
+  }
+  if (target === 'bob') {
+    draggingBob = true
+    dragMoved = false
+    swinging.value = false
+    angularVelocity.value = 0
+    hoverCursor.value = 'grabbing'
+    window.addEventListener('pointermove', onDragMove)
+  }
 }
 
-function onPointerMove(ev: PointerEvent) {
-  if (!draggingBob) return
-  const p = svgPoint(ev)
-  const dx = p.x - pivot.x
-  const dy = p.y - pivot.y
-  if (Math.hypot(dx, dy) > 4) dragMoved = true
-  let angle = Math.atan2(dx, dy)
-  angle = Math.max(-MAX_ANGLE_RAD, Math.min(MAX_ANGLE_RAD, angle))
+function onDragMove(ev: PointerEvent) {
+  if (!draggingBob || !pointOnPlane(ev, swingPlane, hitPoint)) return
+  const dx = hitPoint.x - PIVOT.x
+  const dy = PIVOT.y - hitPoint.y
+  const angle = Math.max(-MAX_ANGLE_RAD, Math.min(MAX_ANGLE_RAD, Math.atan2(dx, Math.max(0.001, dy))))
+  if (Math.abs(angle - angleRad.value) > 0.01) dragMoved = true
   angleRad.value = angle
 }
 
 function onPointerUp() {
+  if (room.value) room.value.controls.enabled = true
+  window.removeEventListener('pointermove', onDragMove)
   if (!draggingBob) return
   draggingBob = false
+  hoverCursor.value = 'grab'
   if (dragMoved) {
-    // Released - the pendulum swings naturally from wherever it was let go.
     swinging.value = true
     zeroCrossings.value = 0
-    lastTs = 0
   } else {
-    selectObject('bob1')
+    selectObject(bobKey.value)
   }
 }
 
-// --- Selection / inspect / measure - same emitted action shape as the 3D engine, so grading,
-// the notebook, and the teacher review all work completely unchanged. -----------------------
+// --- Selection / inspect / measure - graded via emitted actions ---------------------
 const selectedKey = ref<string | null>(null)
 const measureArmed = ref(false)
 const inspectText = ref<string | null>(null)
-const pendingReading = ref<{ value: string; unit: string; objectKey: string; targetKey: string; label: string } | null>(null)
+const pendingReading = ref<{ value: string; unit: string; objectKey: string; targetKey: string; label: string; oscillations?: number } | null>(null)
 const hint = ref<string | null>(null)
 
 function flash(text: string) {
   hint.value = text
-  setTimeout(() => { if (hint.value === text) hint.value = null }, 3000)
+  setTimeout(() => { if (hint.value === text) hint.value = null }, 3500)
 }
 
 const selectedDisplayName = computed(() => {
@@ -297,7 +401,7 @@ function deselect() {
 
 function inspectBob() {
   inspectText.value = props.objectCatalog.find(o => o.object_type === 'specimen')?.description || 'A pendulum bob - a mass suspended by a string, free to swing about the pivot.'
-  emit('action', { objectKey: bobCfg.value?.key ?? 'bob1', action: 'inspect', value: null })
+  emit('action', { objectKey: bobKey.value, action: 'inspect', value: null })
 }
 
 function armMeasure() {
@@ -306,9 +410,8 @@ function armMeasure() {
   pendingReading.value = null
 }
 
-/** Clicking the bob/string while the ruler's measure is armed - reads the real, live length. */
 function tryMeasureLength() {
-  if (!measureArmed.value || !rulerCfg.value || !bobCfg.value) return
+  if (!rulerCfg.value || !bobCfg.value) return
   const noise = (Math.random() - 0.5) * 0.2
   const value = Math.round((lengthCm.value + noise) * 10) / 10
   pendingReading.value = { value: String(value), unit: 'cm', objectKey: rulerCfg.value.key, targetKey: bobCfg.value.key, label: 'Ruler' }
@@ -318,12 +421,11 @@ function tryMeasureLength() {
 function confirmReading() {
   if (!pendingReading.value) return
   const r = pendingReading.value
-  emit('action', { objectKey: r.objectKey, action: 'measure', value: r.value, unit: r.unit, label: r.label, targetObjectKey: r.targetKey })
+  emit('action', { objectKey: r.objectKey, action: 'measure', value: r.value, unit: r.unit, label: r.label, targetObjectKey: r.targetKey, oscillations: r.oscillations })
   pendingReading.value = null
 }
 
-// --- Stopwatch - real elapsed wall-clock time, same switch_on/off/measure vocabulary the 3D
-// engine's stopwatch already uses. ------------------------------------------------------------
+// --- Stopwatch ---------------------------------------------------------------------------------
 const stopwatchRunning = ref(false)
 const stopwatchElapsedMs = ref(0)
 let stopwatchStartedAt = 0
@@ -340,8 +442,13 @@ const stopwatchText = computed(() => {
   return `${mm}:${ss}`
 })
 
+// Oscillations completed while the stopwatch was running (the counter keeps going between trials),
+// sent with the time reading so the page can work out the period T = time / oscillations.
+let oscillationsAtStart = 0
+const timedOscillations = ref(0)
 function startStopwatch() {
   if (props.readOnly || stopwatchRunning.value || !stopwatchCfg.value) return
+  oscillationsAtStart = oscillationCount.value
   stopwatchRunning.value = true
   stopwatchStartedAt = Date.now()
   emit('action', { objectKey: stopwatchCfg.value.key, action: 'switch_on', value: null })
@@ -349,6 +456,7 @@ function startStopwatch() {
 function stopStopwatch() {
   if (!stopwatchRunning.value || !stopwatchCfg.value) return
   stopwatchElapsedMs.value = currentStopwatchMs.value
+  timedOscillations.value += Math.max(0, oscillationCount.value - oscillationsAtStart)
   stopwatchRunning.value = false
   emit('action', { objectKey: stopwatchCfg.value.key, action: 'switch_off', value: null })
 }
@@ -356,11 +464,12 @@ function resetStopwatch() {
   stopwatchRunning.value = false
   stopwatchElapsedMs.value = 0
   zeroCrossings.value = 0
+  timedOscillations.value = 0
 }
 function readStopwatch() {
   if (props.readOnly || !stopwatchCfg.value) return
   const value = String(Math.round(currentStopwatchMs.value / 100) / 10)
-  pendingReading.value = { value, unit: 's', objectKey: stopwatchCfg.value.key, targetKey: stopwatchCfg.value.key, label: 'Stopwatch' }
+  pendingReading.value = { value, unit: 's', objectKey: stopwatchCfg.value.key, targetKey: stopwatchCfg.value.key, label: 'Stopwatch', oscillations: timedOscillations.value || undefined }
   selectedKey.value = stopwatchCfg.value.key
 }
 
@@ -373,24 +482,16 @@ function resetSwing() {
 
 watch(() => selectedKey.value, () => { measureArmed.value = false })
 
+// --- Lifecycle ---------------------------------------------------------------------------------
 let tickTimer = 0
 onMounted(() => {
-  rafId = requestAnimationFrame(physicsStep)
   tickTimer = window.setInterval(() => { stopwatchTick.value++ }, 100)
-  if (!props.readOnly) flash('Drag the bob sideways and let go to release the pendulum.')
-})
-onBeforeUnmount(() => {
-  cancelAnimationFrame(rafId)
-  window.clearInterval(tickTimer)
 })
 
-const RULER_MAX_CM = 50
-const rulerTicks = computed(() => {
-  const ticks: { cm: number; px: number; major: boolean }[] = []
-  for (let cm = 0; cm <= RULER_MAX_CM; cm++) {
-    ticks.push({ cm, px: cm * PX_PER_CM, major: cm % 5 === 0 })
-  }
-  return ticks
+onBeforeUnmount(() => {
+  window.clearInterval(tickTimer)
+  window.removeEventListener('pointermove', onDragMove)
+  window.removeEventListener('pointerup', onPointerUp)
 })
 
 function setObjectState(key: string, patch: Record<string, any>) {
@@ -401,9 +502,3 @@ function setObjectState(key: string, patch: Record<string, any>) {
 }
 defineExpose({ setObjectState })
 </script>
-
-<style scoped>
-.ruler-armed {
-  filter: drop-shadow(0 0 6px #6366f1);
-}
-</style>

@@ -97,7 +97,7 @@
           <!-- Scene -->
           <div class="lg:col-span-2 h-[320px] sm:h-[440px] lg:h-[520px] rounded-2xl overflow-hidden shadow-lg ring-1 ring-gray-900/5">
             <component
-              :is="active2DRenderer ?? VirtualLabScene"
+              :is="guidedExperiment ?? VirtualLabScene"
               :scene-objects="detail.scene_objects"
               :object-catalog="objectCatalog"
               :read-only="true"
@@ -134,7 +134,7 @@ import axios from 'axios'
 import PreviewBanner from '@/components/preview/PreviewBanner.vue'
 import Breadcrumb, { type BreadcrumbItem } from '@/components/common/Breadcrumb.vue'
 import VirtualLabScene from '@/components/virtuallab/VirtualLabScene.vue'
-import { resolve2DRenderer } from '@/components/virtuallab/render2d/registry'
+import { resolveGuidedExperiment } from '@/components/virtuallab/lab3d/registry'
 import { CATEGORY_ICONS, CATEGORY_LABELS, CATEGORY_COLORS } from '@/types/virtualLab'
 import type { TeacherAssignment, LabObjectDef, ExperimentDetail, LabCategory } from '@/types/virtualLab'
 
@@ -154,9 +154,9 @@ const activeAssignment = ref<TeacherAssignment | null>(null)
 const detail = ref<ExperimentDetail | null>(null)
 const detailLoading = ref(false)
 
-const active2DRenderer = computed(() => {
+const guidedExperiment = computed(() => {
   if (!detail.value || detail.value.render_mode !== '2d') return null
-  return resolve2DRenderer(detail.value.render_component)
+  return resolveGuidedExperiment(detail.value.render_component)
 })
 
 const categoryGroups = computed<CategoryGroup[]>(() => {

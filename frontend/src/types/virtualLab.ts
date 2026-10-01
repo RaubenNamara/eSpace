@@ -71,6 +71,8 @@ export interface GraphConfig {
   allow_axis_change: boolean
   min_points: number
   show_best_fit: boolean
+  /** Students plot the points themselves (typed or clicked on graph paper) instead of an auto-built chart */
+  manual_plot: boolean
 }
 
 export interface ExperimentDetail {
@@ -129,6 +131,8 @@ export interface ExperimentSummary {
   is_template: boolean
   status: 'draft' | 'published' | 'disabled'
   assignment_count: number
+  /** Readable labels of where it is published, e.g. "S.5 - P1" or "S.1 (All Streams)" */
+  published_to?: string[]
   attempt_count: number
   created_at: string
 }
@@ -192,7 +196,7 @@ export interface RecommendedTemplate {
 
 export interface NotebookEntry {
   id: number
-  entry_type: 'measurement' | 'calculation' | 'result_row'
+  entry_type: 'measurement' | 'calculation' | 'result_row' | 'plot_point'
   label: string
   value: string
   unit: string | null
@@ -219,6 +223,8 @@ export interface AttemptState {
   observations: Record<string, string>
   answers: Record<number, string>
   notebook: NotebookEntry[]
+  /** The teacher's canvas marks - only sent once the practical has been graded */
+  marking_annotations?: MarkingAnnotation[]
 }
 
 export interface TeacherAssignment {
@@ -301,6 +307,25 @@ export interface AttemptDetail {
     r_squared: number | null
   } | null
   action_log: { step_id: number | null; object_key: string | null; action: string; value: string | null; is_correct: boolean; created_at: string }[]
+  marking_annotations?: MarkingAnnotation[]
+}
+
+// ---- Canvas marking of a submitted practical -------------------------------------------------
+// What was marked is stored with the marks (base), so the student sees them on the same sheet.
+export type MarkingSheetBase =
+  | { kind: 'text'; title: string; text: string }
+  | { kind: 'table'; title: string; columns: string[]; rows: (string | number | null)[][] }
+  | {
+      kind: 'graph'; title: string; xLabel: string; yLabel: string
+      points: { x: number; y: number }[]
+      bestFit: { slope: number; intercept: number } | null
+    }
+
+export interface MarkingAnnotation {
+  section_key: string
+  base: MarkingSheetBase
+  annotation: import('./index').AnnotationLayerJSON
+  updated_at?: string
 }
 
 export interface LabResult {

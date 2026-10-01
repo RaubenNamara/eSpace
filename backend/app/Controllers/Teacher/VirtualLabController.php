@@ -44,6 +44,20 @@ class VirtualLabController extends Controller
     }
 
     /**
+     * GET /teacher/virtual-lab/subjects
+     * Real rows of the subjects table - experiments.subject_id references it. (The generic
+     * /teacher/subjects endpoint returns departments, whose ids are different and cannot be used.)
+     */
+    public function subjects(): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+        $this->success($this->service()->listSubjects());
+    }
+
+    /**
      * GET /teacher/virtual-lab/experiments?category=&subject_id=&mine=1
      * By default returns this teacher's own experiments plus the system templates, so the
      * builder can offer "start from a template" alongside "your experiments".
@@ -84,12 +98,72 @@ class VirtualLabController extends Controller
             $this->unauthorized();
             return;
         }
+        $teacherId = $this->getTeacherId();
+        $ownership = $this->service()->getExperimentOwnership((int) $id);
+        // A teacher can open their own experiments and the official templates, nobody else's
+        if (!$ownership || (!$ownership['is_template'] && $ownership['created_by'] !== $teacherId)) {
+            $this->notFound('Experiment not found');
+            return;
+        }
         $experiment = $this->service()->getExperimentDetail((int) $id);
         if (!$experiment) {
             $this->notFound('Experiment not found');
             return;
         }
         $this->success($experiment);
+    }
+
+    /**
+     * POST /teacher/virtual-lab/experiments/{id}/practice/action
+     * body: { step_number, object_key, action, value }
+     * A teacher doing the experiment like a student: the action is checked against that step the
+     * same way a student's is, and nothing is saved - practice runs can't be submitted.
+     */
+    public function practiceAction($id): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+        $teacherId = $this->getTeacherId();
+        $ownership = $this->service()->getExperimentOwnership((int) $id);
+        // Same visibility as opening the experiment: the teacher's own ones and the official templates
+        if (!$ownership || (!$ownership['is_template'] && $ownership['created_by'] !== $teacherId)) {
+            $this->notFound('Experiment not found');
+            return;
+        }
+        $action = (string) $this->input('action');
+        if ($action === '') {
+            $this->validationError(['action' => 'action is required']);
+            return;
+        }
+        $value = $this->input('value');
+        $this->success($this->service()->practiceAction(
+            (int) $id,
+            max(1, (int) $this->input('step_number')),
+            $this->input('object_key') !== null ? (string) $this->input('object_key') : null,
+            $action,
+            $value !== null ? (string) $value : null
+        ));
+    }
+
+    /**
+     * Only the teacher who created an experiment may change or delete it, and official templates
+     * are read-only (teachers copy them first). Sends the error response itself when denied.
+     */
+    private function ownsExperiment(int $id): bool
+    {
+        $teacherId = $this->getTeacherId();
+        $ownership = $this->service()->getExperimentOwnership($id);
+        if (!$ownership) {
+            $this->notFound('Experiment not found');
+            return false;
+        }
+        if ($ownership['is_template'] || !$teacherId || $ownership['created_by'] !== $teacherId) {
+            $this->error('You can only change experiments you created', 403);
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -107,7 +181,15 @@ class VirtualLabController extends Controller
             return;
         }
 
-        $errors = $this->validateRequired(['title', 'category', 'scene_objects']);
+        // scene_objects may be an empty list (a guided experiment supplies its own apparatus), so
+        // only its presence and type are checked, not that it has entries
+        $errors = $this->validateRequired(['title', 'category']);
+        if (!is_array($this->input('scene_objects'))) {
+            $errors['scene_objects'] = 'scene_objects must be a list (it can be empty)';
+        }
+        if ($this->input('subject_id') && !$this->service()->subjectExists((int) $this->input('subject_id'))) {
+            $errors['subject_id'] = 'Choose a valid subject';
+        }
         if (!empty($errors)) {
             $this->validationError($errors);
             return;
@@ -149,6 +231,13 @@ class VirtualLabController extends Controller
             $this->unauthorized();
             return;
         }
+        if (!$this->ownsExperiment((int) $id)) {
+            return;
+        }
+        if ($this->input('subject_id') && !$this->service()->subjectExists((int) $this->input('subject_id'))) {
+            $this->validationError(['subject_id' => 'Choose a valid subject']);
+            return;
+        }
         $this->service()->updateExperiment((int) $id, $this->input());
         $this->success([], 'Experiment updated');
     }
@@ -160,6 +249,9 @@ class VirtualLabController extends Controller
     {
         if (!$this->isAuthenticated()) {
             $this->unauthorized();
+            return;
+        }
+        if (!$this->ownsExperiment((int) $id)) {
             return;
         }
         $this->service()->deleteExperiment((int) $id);
@@ -188,8 +280,8 @@ class VirtualLabController extends Controller
             return;
         }
 
-        $experiment = $this->service()->getExperimentDetail((int) $id);
-        if (!$experiment) {
+        $ownership = $this->service()->getExperimentOwnership((int) $id);
+        if (!$ownership || (!$ownership['is_template'] && $ownership['created_by'] !== $teacherId)) {
             $this->notFound('Experiment not found');
             return;
         }
@@ -220,6 +312,11 @@ class VirtualLabController extends Controller
                 $this->input('due_date'),
                 $this->input('marks') !== null ? (float) $this->input('marks') : null
             );
+            // Publishing makes the teacher's own experiment "published" so it no longer shows as a
+            // draft on their list (official templates keep their own status)
+            if (!$ownership['is_template']) {
+                $this->service()->setExperimentStatus((int) $id, 'published');
+            }
             $this->success(['id' => $assignmentId], 'Experiment published');
         } catch (\RuntimeException $e) {
             $this->error($e->getMessage(), 400);
@@ -333,6 +430,57 @@ class VirtualLabController extends Controller
             return;
         }
         $this->success([], 'Practical graded');
+    }
+
+    /**
+     * PUT /teacher/virtual-lab/attempts/{id}/marking-annotations
+     * body: { section_key, base, annotation } - the teacher's canvas marks on one part of the
+     * attempt (see VirtualLabService::MARKING_SECTION_PATTERN), saved as they mark.
+     */
+    public function saveMarkingAnnotation($id): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+        $teacherId = $this->getTeacherId();
+        if (!$teacherId) {
+            $this->error('Teacher not found', 403);
+            return;
+        }
+        $ownerId = $this->service()->getAttemptAssignmentTeacherId((int) $id);
+        if ($ownerId === null) {
+            $this->notFound('Attempt not found');
+            return;
+        }
+        if ($ownerId !== (int) $teacherId) {
+            $this->error('Only the teacher who published this practical can mark it', 403);
+            return;
+        }
+
+        $sectionKey = (string) $this->input('section_key');
+        $base = $this->input('base');
+        $annotation = $this->input('annotation');
+        $errors = [];
+        if (!preg_match(\eSpace\App\Services\VirtualLabService::MARKING_SECTION_PATTERN, $sectionKey)) {
+            $errors['section_key'] = 'Unknown section';
+        }
+        if (!is_array($base)) {
+            $errors['base'] = 'base must be an object';
+        }
+        if (!is_array($annotation) || !isset($annotation['objects']) || !is_array($annotation['objects'])) {
+            $errors['annotation'] = 'annotation must be an annotation layer ({ objects: [...] })';
+        }
+        if (empty($errors) && strlen(json_encode($annotation)) > 4 * 1024 * 1024) {
+            $errors['annotation'] = 'These marks are too large to save';
+        }
+        if (!empty($errors)) {
+            $this->validationError($errors);
+            return;
+        }
+
+        $this->service()->saveMarkingAnnotation((int) $id, $sectionKey, $base, $annotation, (int) $teacherId);
+        $this->success([], 'Marks saved');
     }
 
     /**

@@ -118,6 +118,9 @@ interface Props {
   // filling white - used when this canvas is stacked as a pure annotation overlay on top of
   // another element (e.g. a PDF page canvas) that already provides the page background itself.
   transparent?: boolean
+  // Ticks and crosses take the chosen ink colour instead of their usual fixed green/red (used by
+  // Virtual Lab marking, which limits teachers to red, black and blue ink).
+  inkColoredMarks?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -383,7 +386,7 @@ function wireInteractiveEvents(canvas: Canvas) {
     }
 
     if (t === 'tick' || t === 'cross') {
-      const obj = createMarkObject(t, point, props.color)
+      const obj = createMarkObject(t, point, props.color, props.inkColoredMarks)
       canvas.add(obj)
       canvas.setActiveObject(obj)
       return

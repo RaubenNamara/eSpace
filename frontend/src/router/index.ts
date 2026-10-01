@@ -265,7 +265,9 @@ const routes: RouteRecordRaw[] = [
       { path: 'search', name: 'TeacherSearch', component: TeacherSearch },
       { path: 'marksheet', name: 'TeacherMarksheet', component: TeacherMarksheet },
       { path: 'physical-exams', name: 'TeacherPhysicalExams', component: TeacherPhysicalExams },
-      { path: 'virtual-lab', name: 'TeacherVirtualLab', component: TeacherVirtualLab }
+      { path: 'virtual-lab', name: 'TeacherVirtualLab', component: TeacherVirtualLab },
+      // A teacher doing an experiment exactly like a student (same page; nothing saved, no submit)
+      { path: 'virtual-lab/practice/:experimentId', name: 'TeacherVirtualLabPractice', component: StudentVirtualLabExperiment, meta: { practice: true } }
     ]
   },
   {

@@ -31,7 +31,7 @@
         <AppIcon name="hourglass" class="w-4 h-4" /> {{ pendingCount }} experiment{{ pendingCount > 1 ? 's' : '' }} waiting for you.
       </div>
       <div v-else-if="!summary?.experiments_completed" class="text-xs text-gray-400 dark:text-gray-500 px-0.5">
-        No experiments completed yet &mdash; step into the lab to get started.
+        No experiments completed yet. Step into the lab to get started.
       </div>
     </template>
   </router-link>

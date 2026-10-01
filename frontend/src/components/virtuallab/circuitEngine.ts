@@ -1,11 +1,8 @@
 import type { SceneObjectConfig } from '@/types/virtualLab'
 
 /**
- * The circuit-graph physics ported from VirtualLabScene.vue's (3D engine) inline implementation,
- * as a shared, framework-agnostic module so the new 2D circuit renderer uses the exact same
- * model rather than a second, independent one. The 3D engine's own copy is left untouched (per
- * this round's explicit "do not change the Three.js fallback" instruction) - this is the shared
- * source of truth going forward for any renderer that needs it.
+ * The circuit-graph physics used by the guided circuit experiment. The free-layout engine
+ * (VirtualLabScene.vue) still has its own older inline copy of the same model.
  *
  * Only models a single series loop (one battery, one switch, one resistor, one meter) - enough for
  * Ohm's Law and similar simple-circuit practicals. Ammeter/voltmeter readings are 0 unless the loop

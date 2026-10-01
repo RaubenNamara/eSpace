@@ -1,9 +1,6 @@
 /**
- * Reusable 2D ray-optics geometry, shared so future optics apparatus (lenses, prisms) can extend
- * it rather than each renderer reinventing ray/surface math. Ported from VirtualLabScene.vue's
- * (3D engine) inline ray functions - same formulas, expressed in plain 2D vectors since the 2D
- * renderer has no THREE.js dependency at all. The 3D engine's own copy is left untouched, exactly
- * like circuitEngine.ts and microscopeEngine.ts before it.
+ * Ray-optics geometry in the plane of the bench (plain 2D vectors), used by the guided optics
+ * experiment. Same formulas as the free-layout engine's inline ray functions.
  *
  * Deliberately generic: a "surface" is just a position + normal (+ optional refractive index),
  * not a mirror-specific or glass-specific concept, so a lens/prism can plug into computeRayHit()
