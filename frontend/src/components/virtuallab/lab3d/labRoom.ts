@@ -157,7 +157,8 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
     buildField(world)
   } else {
     buildLighting(world)
-    cupboardParts = buildRoom(world, !!opts.cupboard, benchLength, s)
+    // With the wall cabinets, a fabric wall covering replaces the tiled splashback below them
+    cupboardParts = buildRoom(world, !!opts.cupboard, benchLength, s, !!opts.wallCabinets)
     if (opts.wallCabinets) wallParts = buildWallCabinets(world, benchLength, s)
   }
   // A wider view of the room needs the fog pushed back
@@ -424,6 +425,68 @@ function interiorLight(scene: THREE.Object3D, x: number, y: number, z: number, w
   scene.add(light)
 }
 
+/**
+ * A woven teal wall covering pinned along the whole back wall, from the floor up to where the
+ * wall cabinets begin (`top`), finished with a wooden rail on top, a row of brass pins under
+ * it and a skirting board at the floor.
+ */
+function buildWallCovering(scene: THREE.Object3D, top: number) {
+  const width = 14
+  const bottom = -BENCH_H
+  const height = top - bottom
+  const z = WALL_Z + 0.004
+  const fabric = canvasTexture(256, 256, (ctx, w, h) => {
+    ctx.fillStyle = '#1f5a63'
+    ctx.fillRect(0, 0, w, h)
+    // Woven texture: fine light and dark threads both ways
+    for (let i = 0; i < w; i += 4) {
+      ctx.fillStyle = i % 8 === 0 ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.07)'
+      ctx.fillRect(i, 0, 2, h)
+      ctx.fillRect(0, i, w, 2)
+    }
+    for (let k = 0; k < 900; k++) {
+      ctx.fillStyle = `rgba(${Math.random() > 0.5 ? '255,255,255' : '0,0,0'},${Math.random() * 0.06})`
+      ctx.fillRect(Math.random() * w, Math.random() * h, 2, 2)
+    }
+    // A faint diamond pattern pressed into the fabric
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)'
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.moveTo(w / 2, 0); ctx.lineTo(w, h / 2); ctx.lineTo(w / 2, h); ctx.lineTo(0, h / 2); ctx.closePath()
+    ctx.stroke()
+  })
+  fabric.wrapS = fabric.wrapT = THREE.RepeatWrapping
+  fabric.repeat.set(width / 0.35, height / 0.35)
+  const cover = new THREE.Mesh(new THREE.PlaneGeometry(width, height), new THREE.MeshStandardMaterial({ map: fabric, roughness: 0.95 }))
+  cover.position.set(0, bottom + height / 2, z)
+  cover.receiveShadow = true
+  scene.add(cover)
+
+  const woodMat = new THREE.MeshStandardMaterial({ map: woodTexture(), roughness: 0.55 })
+  const rail = new THREE.Mesh(new THREE.BoxGeometry(width, 0.045, 0.022), woodMat)
+  rail.position.set(0, top - 0.0225, z + 0.011)
+  rail.castShadow = true
+  rail.receiveShadow = true
+  scene.add(rail)
+  const skirting = new THREE.Mesh(new THREE.BoxGeometry(width, 0.1, 0.018), woodMat)
+  skirting.position.set(0, bottom + 0.05, z + 0.009)
+  scene.add(skirting)
+
+  // Brass pins holding the covering, every 15 cm just under the rail
+  const pinCount = Math.floor(width / 0.15)
+  const pins = new THREE.InstancedMesh(
+    new THREE.SphereGeometry(0.007, 10, 8),
+    new THREE.MeshStandardMaterial({ color: 0xd4a84b, roughness: 0.25, metalness: 1 }),
+    pinCount,
+  )
+  const m = new THREE.Matrix4()
+  for (let i = 0; i < pinCount; i++) {
+    m.makeTranslation(-width / 2 + 0.075 + i * 0.15, top - 0.075, z + 0.003)
+    pins.setMatrixAt(i, m)
+  }
+  scene.add(pins)
+}
+
 function buildWallCabinets(scene: THREE.Object3D, benchLength: number, s = 1): WallParts {
   // Each cabinet spans just over half the bench, with a narrow gap between the two
   const W = benchLength / 2 + 0.1, H = 0.86, D = 0.3, t = 0.016
@@ -443,6 +506,7 @@ function buildWallCabinets(scene: THREE.Object3D, benchLength: number, s = 1): W
   const blockers: THREE.Object3D[] = []
   const cabinets: WallParts['cabinets'] = []
 
+  buildWallCovering(scene, bottom)
   const offset = 0.08 + W / 2
   for (const cx of [-offset, offset]) {
     const minX = cx - W / 2, maxX = cx + W / 2
@@ -512,7 +576,7 @@ interface CupboardParts {
   bays: { minX: number; maxX: number; levels: number[]; frontZ: number; backZ: number }[]
 }
 
-function buildRoom(scene: THREE.Object3D, withCupboard = false, BENCH_W = 1.8, s = 1): CupboardParts | null {
+function buildRoom(scene: THREE.Object3D, withCupboard = false, BENCH_W = 1.8, s = 1, wallCovering = false): CupboardParts | null {
   // Floor - vinyl tiles
   const floorTex = canvasTexture(512, 512, (ctx, w, h) => {
     ctx.fillStyle = '#b9bec6'
@@ -559,7 +623,7 @@ function buildRoom(scene: THREE.Object3D, withCupboard = false, BENCH_W = 1.8, s
     new THREE.MeshStandardMaterial({ map: tileTex, roughness: 0.3, metalness: 0 }),
   )
   splash.position.set(0, 0.3, -BENCH_D / 2 - 0.249)
-  scene.add(splash)
+  if (!wallCovering) scene.add(splash)
 
   // Bench: black chemical-resistant resin top on a wooden cabinet
   const top = new THREE.Mesh(
