@@ -8,6 +8,21 @@
         </router-link>
         <span class="text-gray-300 dark:text-gray-600" aria-hidden="true">/</span>
         <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight">Apparatus Playground</h1>
+        <!-- Camera views of the room -->
+        <div class="inline-flex flex-wrap rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm p-1 gap-1">
+          <button
+            v-for="v in CAMERA_VIEWS"
+            :key="v.key"
+            type="button"
+            @click="goToView(v.key)"
+            class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-colors"
+            :class="cameraView === v.key ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'"
+            :title="v.title"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.55-2.28A1 1 0 0121 8.62v6.76a1 1 0 01-1.45.9L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+            {{ v.label }}
+          </button>
+        </div>
         <button @click="enterMaximize" class="ml-auto inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm" title="Fill the whole screen with the lab">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>
           Full Screen Lab
@@ -21,6 +36,21 @@
         <div :class="labMaximized ? 'fixed inset-0 z-[200] flex flex-col bg-slate-900' : ''">
           <div v-if="labMaximized" class="flex-shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-3 sm:px-4 py-2 flex items-center gap-2 sm:gap-3">
             <p class="hidden sm:block text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 whitespace-nowrap">Apparatus Playground</p>
+            <!-- Camera views of the room -->
+            <div class="inline-flex flex-wrap rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm p-1 gap-1">
+              <button
+                v-for="v in CAMERA_VIEWS"
+                :key="v.key"
+                type="button"
+                @click="goToView(v.key)"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-colors"
+                :class="cameraView === v.key ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'"
+                :title="v.title"
+              >
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.55-2.28A1 1 0 0121 8.62v6.76a1 1 0 01-1.45.9L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                {{ v.label }}
+              </button>
+            </div>
             <p class="flex-1 min-w-0 truncate text-[11px] text-gray-500 dark:text-gray-400">
               <template v-if="sceneObjects.length">{{ sceneObjects.length }} on your bench</template>
               <template v-else>Open the glass cabinets for apparatus, or the cupboard for chemicals</template>
@@ -93,7 +123,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
-import VirtualLabScene from '@/components/virtuallab/VirtualLabScene.vue'
+import VirtualLabScene, { type CameraView } from '@/components/virtuallab/VirtualLabScene.vue'
 import { chemicalById, chemicalObjectType, chemicalProps } from '@/components/virtuallab/chemicals'
 import { useFullscreenLab } from '@/components/virtuallab/lab3d/useFullscreenLab'
 import type { LabObjectDef, SceneObjectConfig } from '@/types/virtualLab'
@@ -139,6 +169,19 @@ const addToScene = (obj: LabObjectDef) => {
   const key = `${obj.object_type}_${count}`
   sceneObjects.value.push({ key, object_type: obj.object_type, position: { x: 0, y: 0, z: 0 } })
   relayout()
+}
+
+// Camera views of the room - the scene glides the camera to each
+const CAMERA_VIEWS: { key: CameraView; label: string; title: string }[] = [
+  { key: 'bench', label: 'Bench', title: 'Look at the bench and the cabinets behind it' },
+  { key: 'entrance', label: 'Entrance', title: 'Look at the lab entrance' },
+  { key: 'left', label: 'Left Wall', title: 'Look at the left wall (General cabinet)' },
+  { key: 'right', label: 'Right Wall', title: 'Look at the right wall cabinets' },
+]
+const cameraView = ref<CameraView>('bench')
+const goToView = (v: CameraView) => {
+  cameraView.value = v
+  sceneRef.value?.goToView(v)
 }
 
 const lastPicked = ref<string | null>(null)
