@@ -25,6 +25,15 @@ const brass = () => new THREE.MeshStandardMaterial({ color: 0xd4a84b, roughness:
 const plastic = (color: number) => new THREE.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0.05 })
 const enamel = (color: number) => new THREE.MeshStandardMaterial({ color, roughness: 0.35, metalness: 0.1 })
 const wood = () => new THREE.MeshStandardMaterial({ color: 0x9a6841, roughness: 0.7 })
+/** A round rod (or square leg) running from point a to point b. */
+function strut(a: THREE.Vector3, b: THREE.Vector3, r: number, mat: THREE.Material, square = false): THREE.Mesh {
+  const len = a.distanceTo(b)
+  const geo = square ? new THREE.BoxGeometry(r * 2, len, r * 2.6) : new THREE.CylinderGeometry(r, r * 0.8, len, 12)
+  const m = new THREE.Mesh(geo, mat)
+  m.position.copy(a).add(b).multiplyScalar(0.5)
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize())
+  return m
+}
 const tin_ = () => new THREE.MeshStandardMaterial({ color: 0xd9dde2, roughness: 0.3, metalness: 0.9 })
 
 const rbox = (w: number, h: number, d: number, r = Math.min(w, h, d) * 0.12) => new RoundedBoxGeometry(w, h, d, 3, r)
@@ -1579,6 +1588,182 @@ export function createObjectMesh(objectType: string, key: string, displayName: s
       g.rotation.x = -Math.PI / 2
       g.position.y = t / 2 + 0.012
       add(g)
+      break
+    }
+    case 'tape_measure': {
+      // 5 m tape measure: yellow case with black rubber grip, lock button, belt clip and a
+      // length of yellow blade pulled out with its hook
+      const yellow = plastic(0xfacc15)
+      const rubber = new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.85 })
+      const caseG = new THREE.Group()
+      const body = mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.12, 40), yellow, 0, 0, 0)
+      body.rotation.x = Math.PI / 2
+      const grip = mesh(new THREE.TorusGeometry(0.17, 0.03, 10, 40, Math.PI * 1.25), rubber, 0, 0, 0)
+      grip.rotation.z = Math.PI * 0.6
+      const grip2 = grip.clone(); grip2.position.z = -0.045
+      grip.position.z = 0.045
+      const nose = mesh(rbox(0.14, 0.1, 0.14, 0.02), rubber, 0.13, -0.11, 0)
+      const lock = mesh(rbox(0.06, 0.04, 0.05, 0.01), yellow, 0.05, 0.19, 0)
+      const clip = mesh(rbox(0.12, 0.16, 0.012, 0.004), chrome(), 0, 0, -0.068)
+      caseG.add(body, grip, grip2, nose, lock, clip)
+      caseG.position.set(0, 0.18, 0)
+      add(caseG)
+      const bladeTex = canvasTex(1024, 64, (ctx, w, h) => {
+        ctx.fillStyle = '#facc15'; ctx.fillRect(0, 0, w, h)
+        ctx.fillStyle = '#111827'
+        ctx.font = 'bold 30px Arial'
+        for (let i = 0; i <= 40; i++) {
+          const x = 20 + i * 24.5
+          ctx.fillRect(x, 0, 2, i % 10 === 0 ? 30 : i % 5 === 0 ? 22 : 14)
+          if (i % 10 === 0 && i > 0) ctx.fillText(String(i / 10), x + 4, 58)
+        }
+        ctx.fillStyle = '#dc2626'; ctx.font = 'bold 20px Arial'; ctx.fillText('25ft', 470, 58)
+      })
+      const blade = mesh(new THREE.BoxGeometry(0.9, 0.004, 0.08), [plastic(0xeab308), plastic(0xeab308), new THREE.MeshStandardMaterial({ map: bladeTex, roughness: 0.4 }), plastic(0xeab308), plastic(0xeab308), plastic(0xeab308)], -0.42, 0.02, 0)
+      const hook = mesh(new THREE.BoxGeometry(0.012, 0.05, 0.09), chrome(), -0.87, 0.035, 0)
+      add(blade, hook)
+      break
+    }
+    case 'triple_beam_balance': {
+      // Triple beam balance: beige cast base, steel pan on the left, three graduated beams with
+      // sliding riders, pointer and zero mark at the right-hand end
+      const beige = new THREE.MeshStandardMaterial({ color: 0xd8c3a5, roughness: 0.5 })
+      const steel = chrome()
+      add(mesh(rbox(1.5, 0.1, 0.36, 0.03), beige, 0.1, 0.05))
+      add(mesh(rbox(0.3, 0.18, 0.3, 0.04), beige, -0.45, 0.17))
+      add(mesh(rbox(0.12, 0.42, 0.14, 0.02), beige, 0.78, 0.31))
+      // Pan on its support
+      add(mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.1, 12), steel, -0.45, 0.31))
+      add(mesh(new THREE.CylinderGeometry(0.28, 0.27, 0.02, 48), steel, -0.45, 0.37))
+      // Beams with scales
+      const beamTex = (max: number) => canvasTex(1024, 48, (ctx, w, h) => {
+        ctx.fillStyle = '#f8fafc'; ctx.fillRect(0, 0, w, h)
+        ctx.fillStyle = '#111827'; ctx.font = '16px Arial'
+        for (let i = 0; i <= 50; i++) {
+          const x = 10 + i * 19.6
+          ctx.fillRect(x, 0, 2, i % 10 === 0 ? 22 : i % 5 === 0 ? 16 : 10)
+          if (i % 10 === 0) ctx.fillText(String((i / 50) * max), x - 6, 42)
+        }
+      })
+      const beamY = [0.46, 0.4, 0.34]
+      const maxes = [10, 500, 100]
+      beamY.forEach((y, i) => {
+        const beam = mesh(new THREE.BoxGeometry(1.0, 0.045, 0.02), [steel, steel, steel, steel, new THREE.MeshStandardMaterial({ map: beamTex(maxes[i]), roughness: 0.4 }), steel], 0.22, y, 0.0)
+        add(beam)
+        add(mesh(rbox(0.05, 0.06, 0.05, 0.008), beige, -0.15 + i * 0.12, y + 0.005, 0.01)) // rider
+      })
+      add(mesh(new THREE.BoxGeometry(0.18, 0.04, 0.06), steel, -0.25, 0.4, 0))
+      // Pointer and zero mark
+      add(mesh(new THREE.BoxGeometry(0.1, 0.01, 0.01), solid(0x111827), 0.76, 0.42, 0.075))
+      add(mesh(new THREE.BoxGeometry(0.004, 0.08, 0.004), solid(0xdc2626), 0.74, 0.42, 0.075))
+      // Counterweights under the beam
+      for (const [x, r] of [[-0.1, 0.07], [0.15, 0.06], [0.38, 0.05]] as [number, number][]) {
+        const w = mesh(new THREE.CylinderGeometry(r * 0.8, r, 0.18, 24), beige, x, 0.17, 0.05)
+        w.rotation.z = Math.PI / 2
+        add(w)
+      }
+      // Red maker label
+      const lbl = canvasTex(256, 96, (ctx, w, h) => {
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h)
+        ctx.fillStyle = '#dc2626'; ctx.fillRect(0, 56, w, 40)
+        ctx.fillStyle = '#111827'; ctx.font = 'bold 22px Arial'; ctx.textAlign = 'center'
+        ctx.fillText('TRIPLE BEAM BALANCE', w / 2, 34)
+      })
+      add(mesh(new THREE.PlaneGeometry(0.22, 0.08), new THREE.MeshStandardMaterial({ map: lbl }), -0.45, 0.17, 0.152))
+      break
+    }
+    case 'carbon_resistor': {
+      // Carbon film resistor (shown about eight times life size): tan body with brown, black, red
+      // and gold bands = 1 kOhm +/-5%, tinned leads either side
+      const tan = new THREE.MeshStandardMaterial({ color: 0xd8b98c, roughness: 0.35 })
+      const prof = [
+        new THREE.Vector2(0.001, -0.3), new THREE.Vector2(0.07, -0.3), new THREE.Vector2(0.1, -0.26), new THREE.Vector2(0.1, -0.14),
+        new THREE.Vector2(0.085, -0.1), new THREE.Vector2(0.085, 0.1), new THREE.Vector2(0.1, 0.14), new THREE.Vector2(0.1, 0.26),
+        new THREE.Vector2(0.07, 0.3), new THREE.Vector2(0.001, 0.3),
+      ]
+      const body = new THREE.Mesh(new THREE.LatheGeometry(prof, 40), tan)
+      body.rotation.z = Math.PI / 2
+      body.position.y = 0.12
+      add(body)
+      const bands: [number, number, number][] = [[-0.19, 0x6b3a1f, 0.103], [-0.07, 0x111111, 0.088], [0.03, 0xdc2626, 0.088], [0.2, 0xd4a017, 0.103]]
+      bands.forEach(([x, color, r]) => {
+        const b = mesh(new THREE.CylinderGeometry(r, r, 0.04, 40), new THREE.MeshStandardMaterial({ color, roughness: color === 0xd4a017 ? 0.3 : 0.4, metalness: color === 0xd4a017 ? 0.7 : 0 }), x, 0.12, 0)
+        b.rotation.z = Math.PI / 2
+        add(b)
+      })
+      for (const x of [-0.55, 0.55]) {
+        const lead = mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.5, 10), tin_(), x, 0.12, 0)
+        lead.rotation.z = Math.PI / 2
+        add(lead)
+      }
+      break
+    }
+    case 'antique_telescope': {
+      // Antique telescope: parchment-covered tube with brass bands, eyepiece and focusing knobs,
+      // on a brass mount atop a carved wooden tripod
+      const brassM = brass()
+      const parchment = canvasTex(512, 256, (ctx, w, h) => {
+        ctx.fillStyle = '#d9c39b'; ctx.fillRect(0, 0, w, h)
+        for (let i = 0; i < 1500; i++) { ctx.fillStyle = `rgba(110,70,30,${Math.random() * 0.08})`; ctx.fillRect(Math.random() * w, Math.random() * h, 3, 3) }
+        ctx.strokeStyle = 'rgba(90,60,30,0.35)'; ctx.lineWidth = 1
+        for (let k = 0; k < 12; k++) { ctx.beginPath(); ctx.arc(Math.random() * w, Math.random() * h, 20 + Math.random() * 60, 0, Math.PI); ctx.stroke() }
+        ctx.fillStyle = 'rgba(160,60,40,0.25)'; ctx.fillRect(40, 0, 120, h)
+      })
+      const legWood = new THREE.MeshStandardMaterial({ color: 0x8a4b22, roughness: 0.6 })
+      // Tripod: round top, three splayed legs, a lower shelf
+      add(mesh(new THREE.CylinderGeometry(0.2, 0.22, 0.06, 32), legWood, 0, 0.62))
+      for (let i = 0; i < 3; i++) {
+        const a = (i / 3) * Math.PI * 2 + Math.PI / 2
+        add(strut(new THREE.Vector3(Math.cos(a) * 0.15, 0.6, Math.sin(a) * 0.15), new THREE.Vector3(Math.cos(a) * 0.36, 0, Math.sin(a) * 0.36), 0.03, legWood, true))
+      }
+      add(mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.03, 24), legWood, 0, 0.25))
+      add(mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.12, 16), brassM, 0, 0.71))
+      // Tube, tilted up
+      const tube = new THREE.Group()
+      tube.position.set(0, 0.86, 0)
+      tube.rotation.z = 0.42
+      tube.add(mesh(new THREE.CylinderGeometry(0.12, 0.12, 1.1, 40), new THREE.MeshStandardMaterial({ map: parchment, roughness: 0.75 }), 0, 0, 0))
+      for (const y of [-0.42, -0.1, 0.25, 0.5]) tube.add(mesh(new THREE.CylinderGeometry(0.125, 0.125, 0.04, 40), brassM, 0, y, 0))
+      tube.add(mesh(new THREE.CylinderGeometry(0.135, 0.13, 0.09, 40), metal(0x9ca3af), 0, 0.58, 0))
+      tube.add(mesh(new THREE.CylinderGeometry(0.11, 0.12, 0.08, 32), brassM, 0, -0.59, 0))
+      tube.add(mesh(new THREE.CylinderGeometry(0.03, 0.04, 0.14, 16), brassM, 0.0, -0.68, 0))
+      for (const z of [-0.1, 0.1]) tube.add(mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.1, 12), brassM, 0.13, -0.45, z))
+      tube.rotation.order = 'ZYX'
+      tube.rotation.z = -Math.PI / 2 + 0.42
+      add(tube)
+      break
+    }
+    case 'telescope': {
+      // Refractor telescope: white tube with black dew shield and focuser, diagonal and eyepiece,
+      // on an altazimuth mount and aluminium tripod
+      const black = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.5 })
+      const alu = metal(0xd1d5db)
+      const legTop = 0.75
+      for (let i = 0; i < 3; i++) {
+        const a = (i / 3) * Math.PI * 2 + Math.PI / 2
+        add(strut(new THREE.Vector3(Math.cos(a) * 0.05, legTop, Math.sin(a) * 0.05), new THREE.Vector3(Math.cos(a) * 0.38, 0, Math.sin(a) * 0.38), 0.016, alu))
+      }
+      // Accessory tray between the legs
+      add(mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.012, 3), black, 0, 0.3))
+      add(mesh(new THREE.CylinderGeometry(0.08, 0.09, 0.06, 24), black, 0, legTop))
+      add(mesh(rbox(0.08, 0.14, 0.08, 0.01), black, 0, legTop + 0.1))
+      const tube = new THREE.Group()
+      tube.position.set(0, legTop + 0.22, 0)
+      tube.rotation.z = Math.PI / 2 - 0.25
+      tube.add(mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.7, 40), new THREE.MeshStandardMaterial({ color: 0xe5edf3, roughness: 0.3 }), 0, 0, 0))
+      tube.add(mesh(new THREE.CylinderGeometry(0.11, 0.1, 0.22, 40, 1, true), black, 0, -0.44, 0)) // dew shield
+      const lens = mesh(new THREE.CircleGeometry(0.095, 32), new THREE.MeshPhysicalMaterial({ color: 0x93c5fd, roughness: 0.05, metalness: 0.3, clearcoat: 1 }), 0, -0.38, 0)
+      lens.rotation.x = Math.PI / 2
+      tube.add(lens)
+      tube.add(mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.12, 24), black, 0, 0.41, 0)) // focuser
+      // Star diagonal at the back, turning the eyepiece up at a right angle
+      tube.add(mesh(new THREE.BoxGeometry(0.07, 0.07, 0.07), black, 0, 0.5, 0))
+      const eye = mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.12, 16), black, 0.08, 0.5, 0)
+      eye.rotation.z = Math.PI / 2
+      const eyeLens = mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.03, 16), new THREE.MeshStandardMaterial({ color: 0xf3f4f6 }), 0.15, 0.5, 0)
+      eyeLens.rotation.z = Math.PI / 2
+      tube.add(eye, eyeLens)
+      add(tube)
       break
     }
     case 'metre_rule': {
