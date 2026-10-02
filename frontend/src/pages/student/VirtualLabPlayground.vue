@@ -52,7 +52,7 @@
               </button>
             </div>
             <p class="flex-1 min-w-0 truncate text-[11px] text-gray-500 dark:text-gray-400">
-              <template v-if="sceneObjects.length">{{ sceneObjects.length }} on your bench</template>
+              <template v-if="sceneObjects.length">{{ sceneObjects.length }} on the benches · working at the {{ BENCHES[activeBench].label.toLowerCase() }}</template>
               <template v-else>Open the glass cabinets for apparatus, or the cupboard for chemicals</template>
             </p>
             <button v-if="sceneObjects.length > 0" @click="clearBench" class="flex-shrink-0 px-2.5 py-1.5 text-xs font-medium rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">Clear</button>
@@ -96,7 +96,7 @@
         <!-- Items on bench -->
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-3 lg:h-[calc(100svh-7rem)] lg:min-h-[560px] lg:overflow-y-auto">
           <div class="flex items-center justify-between mb-3">
-            <p class="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">On Your Bench</p>
+            <p class="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">On Your Bench <span class="normal-case font-semibold text-gray-400">· {{ BENCHES[activeBench].label }}</span></p>
             <button v-if="sceneObjects.length > 0" @click="clearBench" class="text-[11px] font-medium text-red-500 hover:underline">Clear all</button>
           </div>
           <div v-if="sceneObjects.length === 0" class="text-xs text-gray-400 dark:text-gray-500">Nothing here yet.</div>
@@ -159,28 +159,62 @@ function layoutPosition(index: number, count: number) {
   const row = Math.floor(index / cols)
   return { x: (col - (cols - 1) / 2) * spacingX, y: 0, z: (row - (rows - 1) / 2) * spacingZ - 0.15 }
 }
+// The three working benches (must match the room in lab3d/labRoom.ts, 1 unit = 20 cm): the front
+// bench in the middle, and the long benches against the left and right walls, turned to face
+// into the room. Apparatus is laid out in each bench's own frame, then turned and moved there.
+type BenchKey = 'front' | 'left' | 'right'
+const SIDE_BENCH_X = (7 - 0.375 - 0.02) * 5
+const SIDE_BENCH_Z = 1.6 * 5
+const BENCHES: Record<BenchKey, { label: string; rotY: number; x: number; z: number }> = {
+  front: { label: 'Front table', rotY: 0, x: 0, z: 0 },
+  left: { label: 'Left table', rotY: Math.PI / 2, x: -SIDE_BENCH_X, z: SIDE_BENCH_Z },
+  right: { label: 'Right table', rotY: -Math.PI / 2, x: SIDE_BENCH_X, z: SIDE_BENCH_Z },
+}
+/** Which bench each object on the benches stands on */
+const benchOf: Record<string, BenchKey> = {}
+/** The bench new apparatus goes on - follows the camera view */
+const activeBench = ref<BenchKey>('front')
+
 function relayout() {
-  const n = sceneObjects.value.length
-  sceneObjects.value.forEach((o, i) => { o.position = layoutPosition(i, n) })
+  ;(Object.keys(BENCHES) as BenchKey[]).forEach((bk) => {
+    const bench = BENCHES[bk]
+    const onIt = sceneObjects.value.filter(o => (benchOf[o.key] ?? 'front') === bk)
+    const c = Math.cos(bench.rotY), sn = Math.sin(bench.rotY)
+    onIt.forEach((o, i) => {
+      const p = layoutPosition(i, onIt.length)
+      // Rotate about the vertical (same sense as Object3D.rotation.y), then move onto the bench
+      o.position = { x: bench.x + p.x * c + p.z * sn, y: 0, z: bench.z - p.x * sn + p.z * c }
+      o.rotation = { y: bench.rotY }
+    })
+  })
+}
+/** A new object goes on the bench the user is working at */
+function assignBench(key: string) {
+  benchOf[key] = activeBench.value
 }
 
 const addToScene = (obj: LabObjectDef) => {
   const count = (placedCounts[obj.object_type] = (placedCounts[obj.object_type] || 0) + 1)
   const key = `${obj.object_type}_${count}`
   sceneObjects.value.push({ key, object_type: obj.object_type, position: { x: 0, y: 0, z: 0 } })
+  assignBench(key)
   relayout()
 }
 
 // Camera views of the room - the scene glides the camera to each
 const CAMERA_VIEWS: { key: CameraView; label: string; title: string }[] = [
-  { key: 'bench', label: 'Bench', title: 'Look at the bench and the cabinets behind it' },
+  { key: 'bench', label: 'Front', title: 'Work at the front table, with the subject cabinets behind it' },
   { key: 'entrance', label: 'Entrance', title: 'Look at the lab entrance' },
-  { key: 'left', label: 'Left Wall', title: 'Look at the left wall (General cabinet)' },
-  { key: 'right', label: 'Right Wall', title: 'Look at the right wall cabinets' },
+  { key: 'left', label: 'Left', title: 'Work at the left table, under the General cabinet' },
+  { key: 'right', label: 'Right', title: 'Work at the right table' },
 ]
 const cameraView = ref<CameraView>('bench')
 const goToView = (v: CameraView) => {
   cameraView.value = v
+  // Choosing a table's camera makes it the table to work at (the entrance has no table, so the
+  // last table stays in use)
+  if (v === 'bench') activeBench.value = 'front'
+  else if (v === 'left' || v === 'right') activeBench.value = v
   sceneRef.value?.goToView(v)
 }
 
@@ -192,15 +226,16 @@ const pickApparatus = (type: string) => {
   // One of each on the shelves - it is already out if it's on the bench
   if (!def || sceneObjects.value.some(o => o.object_type === type && !o.props?.chemical_id)) return
   addToScene(def)
-  flash(`${def.display_name} placed on the bench`)
+  flash(`${def.display_name} placed on the ${BENCHES[activeBench.value].label.toLowerCase()}`)
 }
 
 const takeChemical = (id: string) => {
   const chem = chemicalById(id)
   if (!chem || sceneObjects.value.some(o => o.props?.chemical_id === id)) return
   sceneObjects.value.push({ key: `chem_${id}`, object_type: chemicalObjectType(chem), position: { x: 0, y: 0, z: 0 }, props: chemicalProps(chem) })
+  assignBench(`chem_${id}`)
   relayout()
-  flash(`${chem.name} placed on the bench`)
+  flash(`${chem.name} placed on the ${BENCHES[activeBench.value].label.toLowerCase()}`)
 }
 
 const flash = (msg: string) => {
