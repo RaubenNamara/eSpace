@@ -172,6 +172,8 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
   const furnitureDoors: THREE.Object3D[] = []
   const furnitureBlockers: THREE.Object3D[] = []
   let fixtures: Fixtures | null = null
+  // Inside of the enclosed room (rooms with wall cabinets), in scene units
+  let roomBounds: THREE.Box3 | null = null
   let cctvLed: THREE.Mesh | null = null
   const stockCabinets: { c: WallParts['cabinets'][number]; rotY: number; offset: THREE.Vector3 }[] = []
   let cupboardParts: CupboardParts | null = null
@@ -190,6 +192,13 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
       furnitureDoors.push(...entrance.doors)
       furnitureBlockers.push(...entrance.blockers)
       cctvLed = entrance.cctvLed
+      // Walls at x = ±7 m, back wall at WALL_Z, entrance wall at z = 7 m, floor 0.9 m below the
+      // bench top and walls 5 m high - keep 15 cm clear of each
+      const m = 0.15
+      roomBounds = new THREE.Box3(
+        new THREE.Vector3(-7 + m, -BENCH_H + 0.3, WALL_Z + m).multiplyScalar(s),
+        new THREE.Vector3(7 - m, -BENCH_H + 5 - m, FRONT_Z - m).multiplyScalar(s),
+      )
       // A whole room to look round: no limit on turning the view
       controls.minAzimuthAngle = -Infinity
       controls.maxAzimuthAngle = Infinity
@@ -273,6 +282,17 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
       if (flight.t >= 1) flight = null
     }
     controls.update()
+    // Enclosed room: the camera can't pass through the walls, floor or ceiling - when an orbit
+    // or zoom would take it outside, it stops just inside instead
+    if (roomBounds) {
+      const p = camera.position
+      const b = roomBounds
+      const clamped = p.clone().clamp(b.min, b.max)
+      if (!clamped.equals(p)) {
+        p.copy(clamped)
+        camera.lookAt(controls.target)
+      }
+    }
     updateScreenLabels(scene, camera, renderer.domElement.clientHeight)
     renderer.render(scene, camera)
   }
