@@ -98,6 +98,8 @@ export interface LabRoom {
   taps: LabTaps | null
   /** Bench length in metres */
   benchLength: number
+  /** Glide the camera to look from `pos` at `target` (both in metres); Reset View returns here */
+  flyTo: (pos: THREE.Vector3, target: THREE.Vector3) => void
   /** Opens or closes any door built by the room (cupboard or wall cabinet) */
   toggleDoor: (door: THREE.Object3D) => void
   /** The door (hinge group) a mesh belongs to, if any */
@@ -170,6 +172,7 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
   const furnitureDoors: THREE.Object3D[] = []
   const furnitureBlockers: THREE.Object3D[] = []
   let fixtures: Fixtures | null = null
+  let cctvLed: THREE.Mesh | null = null
   const stockCabinets: { c: WallParts['cabinets'][number]; rotY: number; offset: THREE.Vector3 }[] = []
   let cupboardParts: CupboardParts | null = null
   let wallParts: WallParts | null = null
@@ -183,6 +186,13 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
     if (opts.wallCabinets) {
       wallParts = buildWallCabinets(world, benchLength, s)
       fixtures = buildSinksAndClock(world)
+      const entrance = buildEntrance(world)
+      furnitureDoors.push(...entrance.doors)
+      furnitureBlockers.push(...entrance.blockers)
+      cctvLed = entrance.cctvLed
+      // A whole room to look round: no limit on turning the view
+      controls.minAzimuthAngle = -Infinity
+      controls.maxAzimuthAngle = Infinity
       // One long cabinet either side of the middle pair, out to just short of the corner sinks;
       // empty for now, doors open like the others
       const innerEdge = benchLength / 2 + 0.1 + 0.08 + 0.16
@@ -357,6 +367,12 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
   const ndc = new THREE.Vector2()
 
   // Doors swing smoothly towards their target angle
+  // The CCTV camera's recording light blinks
+  if (cctvLed) {
+    const led = cctvLed
+    let t = 0
+    frameCallbacks.push((dt) => { t += dt; led.visible = (t % 1.2) < 0.7 })
+  }
   // Taps: handles turn, water streams flicker while on; the clock follows the real time
   let taps: LabTaps | null = null
   if (fixtures) {
@@ -445,6 +461,15 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
     furniture: { doors: furnitureDoors, blockers: furnitureBlockers },
     taps,
     benchLength,
+    flyTo: (pos, target) => {
+      framedBox = null
+      fittedFill = null
+      userMovedCamera = false
+      initialPos.copy(pos).multiplyScalar(s)
+      initialTarget.copy(target).multiplyScalar(s)
+      controls.maxDistance = Math.max(controls.maxDistance, initialPos.distanceTo(initialTarget) * 1.5)
+      flight = { fromPos: camera.position.clone(), toPos: initialPos.clone(), fromTarget: controls.target.clone(), toTarget: initialTarget.clone(), t: 0 }
+    },
     toggleDoor,
     doorOf,
     renderer,
@@ -769,49 +794,220 @@ function buildWallCovering(scene: THREE.Object3D, top: number) {
   const sideLength = frontZ - WALL_Z
   const sideMidZ = (frontZ + WALL_Z) / 2
   const wallH = 5
-  const walls: { x: number; z: number; rotY: number; length: number; newWall: boolean }[] = [
+  // The front wall has the entrance in the middle: a gap the doors fill (see buildEntrance)
+  const walls: { x: number; z: number; rotY: number; length: number; newWall: boolean; gap?: number }[] = [
     { x: 0, z: WALL_Z, rotY: 0, length: 2 * half, newWall: false },
     { x: -half, z: sideMidZ, rotY: Math.PI / 2, length: sideLength, newWall: true },
     { x: half, z: sideMidZ, rotY: -Math.PI / 2, length: sideLength, newWall: true },
-    { x: 0, z: frontZ, rotY: Math.PI, length: 2 * half, newWall: true },
+    { x: 0, z: frontZ, rotY: Math.PI, length: 2 * half, newWall: true, gap: ENTRANCE_W + 0.2 },
   ]
-  walls.forEach(({ x, z, rotY, length, newWall }) => {
+  walls.forEach(({ x, z, rotY, length, newWall, gap }) => {
     // Everything for one wall is built facing +z at the origin, then turned into place
     const run = new THREE.Group()
     run.position.set(x, 0, z)
     run.rotation.y = rotY
     scene.add(run)
-    if (newWall) {
-      const wall = new THREE.Mesh(new THREE.PlaneGeometry(length, wallH), wallMat)
-      wall.position.y = bottom + wallH / 2
-      wall.receiveShadow = true
-      run.add(wall)
+    // Stretches of wall either side of the doorway (or the whole wall)
+    const segments: [number, number][] = gap ? [[-length / 2, -gap / 2], [gap / 2, length / 2]] : [[-length / 2, length / 2]]
+    if (newWall && gap) {
+      // Wall above the doorway
+      const lintelH = wallH - ENTRANCE_H
+      const lintel = new THREE.Mesh(new THREE.PlaneGeometry(gap, lintelH), wallMat)
+      lintel.position.y = bottom + ENTRANCE_H + lintelH / 2
+      run.add(lintel)
     }
-    const tex = fabric.clone()
-    tex.needsUpdate = true
-    tex.repeat.set(length / 0.35, height / 0.35)
-    const cover = new THREE.Mesh(new THREE.PlaneGeometry(length, height), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95 }))
-    cover.position.set(0, bottom + height / 2, 0.004)
-    cover.receiveShadow = true
-    run.add(cover)
-    const rail = new THREE.Mesh(new THREE.BoxGeometry(length, 0.045, 0.022), woodMat)
-    rail.position.set(0, top - 0.0225, 0.015)
-    rail.castShadow = true
-    rail.receiveShadow = true
-    run.add(rail)
-    const skirting = new THREE.Mesh(new THREE.BoxGeometry(length, 0.1, 0.018), woodMat)
-    skirting.position.set(0, bottom + 0.05, 0.013)
-    run.add(skirting)
-    // Brass pins holding the covering, every 15 cm just under the rail
-    const pinCount = Math.floor(length / 0.15)
-    const pins = new THREE.InstancedMesh(new THREE.SphereGeometry(0.007, 10, 8), pinMat, pinCount)
-    const m = new THREE.Matrix4()
-    for (let i = 0; i < pinCount; i++) {
-      m.makeTranslation(-length / 2 + 0.075 + i * 0.15, top - 0.075, 0.007)
-      pins.setMatrixAt(i, m)
-    }
-    run.add(pins)
+    segments.forEach(([x0, x1]) => {
+      const len = x1 - x0
+      const mid = (x0 + x1) / 2
+      if (newWall) {
+        const wall = new THREE.Mesh(new THREE.PlaneGeometry(len, wallH), wallMat)
+        wall.position.set(mid, bottom + wallH / 2, 0)
+        wall.receiveShadow = true
+        run.add(wall)
+      }
+      const tex = fabric.clone()
+      tex.needsUpdate = true
+      tex.repeat.set(len / 0.35, height / 0.35)
+      const cover = new THREE.Mesh(new THREE.PlaneGeometry(len, height), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95 }))
+      cover.position.set(mid, bottom + height / 2, 0.004)
+      cover.receiveShadow = true
+      run.add(cover)
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(len, 0.045, 0.022), woodMat)
+      rail.position.set(mid, top - 0.0225, 0.015)
+      rail.castShadow = true
+      rail.receiveShadow = true
+      run.add(rail)
+      const skirting = new THREE.Mesh(new THREE.BoxGeometry(len, 0.1, 0.018), woodMat)
+      skirting.position.set(mid, bottom + 0.05, 0.013)
+      run.add(skirting)
+      // Brass pins holding the covering, every 15 cm just under the rail
+      const pinCount = Math.floor(len / 0.15)
+      const pins = new THREE.InstancedMesh(new THREE.SphereGeometry(0.007, 10, 8), pinMat, pinCount)
+      const m = new THREE.Matrix4()
+      for (let i = 0; i < pinCount; i++) {
+        m.makeTranslation(x0 + 0.075 + i * 0.15, top - 0.075, 0.007)
+        pins.setMatrixAt(i, m)
+      }
+      run.add(pins)
+    })
   })
+}
+
+const ENTRANCE_W = 1.8
+const ENTRANCE_H = 2.1
+const FRONT_Z = 7
+
+/**
+ * The lab entrance in the middle of the front wall: a pair of wooden doors with glass vision
+ * panels and push plates that swing into the room when clicked, an oak frame, a lit green EXIT
+ * sign and a SCIENCE LABORATORY plate above, and a short corridor outside. Also a CCTV camera
+ * high on the back wall watching the doors. Returns the doors and their panels for clicking.
+ */
+function buildEntrance(scene: THREE.Object3D): { doors: THREE.Object3D[]; blockers: THREE.Object3D[]; cctvLed: THREE.Mesh } {
+  const floorY = -BENCH_H
+  const doors: THREE.Object3D[] = []
+  const blockers: THREE.Object3D[] = []
+  const oak = new THREE.MeshStandardMaterial({ map: woodTexture(), roughness: 0.55 })
+  const leafMat = new THREE.MeshStandardMaterial({ map: woodTexture(), color: 0xe0b98a, roughness: 0.5 })
+  const steel = labMaterials.steel()
+  const z = FRONT_Z
+  // Frame (architrave) round the opening, on the room side
+  const frame = (w: number, h: number, x: number, y: number) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.08), oak)
+    m.position.set(x, y, z - 0.03)
+    m.castShadow = true
+    scene.add(m)
+    blockers.push(m)
+  }
+  frame(0.1, ENTRANCE_H + 0.1, -ENTRANCE_W / 2 - 0.05, floorY + (ENTRANCE_H + 0.1) / 2)
+  frame(0.1, ENTRANCE_H + 0.1, ENTRANCE_W / 2 + 0.05, floorY + (ENTRANCE_H + 0.1) / 2)
+  frame(ENTRANCE_W + 0.2, 0.1, 0, floorY + ENTRANCE_H + 0.05)
+  // Two leaves hinged at the sides, opening into the room
+  const leafW = ENTRANCE_W / 2 - 0.005
+  const glassMat = new THREE.MeshPhysicalMaterial({ color: 0xcfe8ff, transparent: true, opacity: 0.35, roughness: 0.05, depthWrite: false })
+  for (const dirX of [1, -1] as const) {
+    const pivot = new THREE.Group()
+    pivot.position.set(-dirX * ENTRANCE_W / 2, floorY + ENTRANCE_H / 2, z - 0.02)
+    // Leaf with a window cut-out: built from rails and stiles round a glass pane
+    const w = leafW, h = ENTRANCE_H - 0.01, th = 0.045
+    const part = (pw: number, ph: number, px: number, py: number) => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(pw, ph, th), leafMat)
+      m.position.set(dirX * px, py, 0)
+      m.castShadow = true
+      pivot.add(m)
+    }
+    const winBottom = 0.15, winTop = 0.75, winL = 0.18, winR = w - 0.18
+    part(w, h / 2 + winBottom, w / 2, -h / 2 + (h / 2 + winBottom) / 2) // lower panel
+    part(w, h / 2 - winTop, w / 2, h / 2 - (h / 2 - winTop) / 2) // top rail
+    part(winL, winTop - winBottom, winL / 2, (winTop + winBottom) / 2) // stiles beside the window
+    part(w - winR, winTop - winBottom, (w + winR) / 2, (winTop + winBottom) / 2)
+    const pane = new THREE.Mesh(new THREE.PlaneGeometry(winR - winL, winTop - winBottom), glassMat)
+    pane.position.set(dirX * (winL + winR) / 2, (winTop + winBottom) / 2, 0)
+    pane.renderOrder = 2
+    pivot.add(pane)
+    // Push plate and pull handle on the room side, kick plate at the bottom
+    const plate = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.3, 0.004), steel)
+    plate.position.set(dirX * (w - 0.1), 0.05, -th / 2 - 0.003)
+    const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.3, 12), steel)
+    handle.position.set(dirX * (w - 0.1), 0.05, -th / 2 - 0.05)
+    const kick = new THREE.Mesh(new THREE.BoxGeometry(w - 0.04, 0.2, 0.004), steel)
+    kick.position.set(dirX * w / 2, -h / 2 + 0.12, -th / 2 - 0.003)
+    for (const hy of [-0.1, 0.2]) {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.05, 8), steel)
+      post.rotation.x = Math.PI / 2
+      post.position.set(dirX * (w - 0.1), hy, -th / 2 - 0.025)
+      pivot.add(post)
+    }
+    pivot.add(plate, handle, kick)
+    pivot.userData.cupboardDoor = true
+    pivot.userData.open = false
+    pivot.userData.openAngle = dirX * 1.45
+    scene.add(pivot)
+    doors.push(pivot)
+  }
+  // Lit EXIT sign and the lab's name plate above the doors
+  const sign = (w: number, h: number, y: number, draw: (ctx: CanvasRenderingContext2D, cw: number, ch: number) => void, glow: boolean) => {
+    const tex = canvasTexture(512, Math.round((512 * h) / w), draw)
+    const m = new THREE.Mesh(
+      new THREE.BoxGeometry(w, h, 0.03),
+      // The -z face looks into the room
+      [oak, oak, oak, oak, oak, new THREE.MeshStandardMaterial({ map: tex, emissive: glow ? 0xffffff : 0x000000, emissiveMap: glow ? tex : null, emissiveIntensity: glow ? 0.8 : 0, roughness: 0.4 })],
+    )
+    m.position.set(0, y, z - 0.04)
+    scene.add(m)
+  }
+  sign(0.42, 0.15, floorY + ENTRANCE_H + 0.25, (ctx, w, h) => {
+    ctx.fillStyle = '#15803d'
+    ctx.fillRect(0, 0, w, h)
+    ctx.fillStyle = '#ffffff'
+    ctx.font = 'bold 110px Arial'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText('EXIT', w / 2 + 40, h / 2 + 6)
+    // Running figure, simplified to an arrow and a door
+    ctx.fillRect(40, h * 0.3, 70, 16)
+    ctx.beginPath(); ctx.moveTo(110, h * 0.3 - 22); ctx.lineTo(150, h * 0.3 + 8); ctx.lineTo(110, h * 0.3 + 38); ctx.fill()
+  }, true)
+  sign(1.3, 0.18, floorY + ENTRANCE_H + 0.5, (ctx, w, h) => {
+    const g = ctx.createLinearGradient(0, 0, 0, h)
+    g.addColorStop(0, '#f8e3a1'); g.addColorStop(0.5, '#d9a842'); g.addColorStop(1, '#a8781f')
+    ctx.fillStyle = g
+    ctx.fillRect(0, 0, w, h)
+    ctx.strokeStyle = '#5a3f0c'
+    ctx.lineWidth = 4
+    ctx.strokeRect(6, 6, w - 12, h - 12)
+    ctx.fillStyle = '#3b2606'
+    ctx.font = 'bold 34px Georgia, serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText('SCIENCE  LABORATORY', w / 2, h / 2 + 2)
+  }, false)
+
+  // A short corridor outside, seen through the open doors
+  const corridorFloor = new THREE.Mesh(new THREE.PlaneGeometry(6, 4), new THREE.MeshStandardMaterial({ color: 0xc8ccd2, roughness: 0.8 }))
+  corridorFloor.rotation.x = -Math.PI / 2
+  corridorFloor.position.set(0, floorY + 0.001, z + 2)
+  scene.add(corridorFloor)
+  const farWall = new THREE.Mesh(new THREE.PlaneGeometry(6, 5), new THREE.MeshStandardMaterial({ color: 0xdfe6ec, roughness: 0.9 }))
+  farWall.rotation.y = Math.PI
+  farWall.position.set(0, floorY + 2.5, z + 4)
+  scene.add(farWall)
+  for (const sx of [-3, 3]) {
+    const side = new THREE.Mesh(new THREE.PlaneGeometry(4, 5), new THREE.MeshStandardMaterial({ color: 0xe8edf1, roughness: 0.9 }))
+    side.rotation.y = sx < 0 ? Math.PI / 2 : -Math.PI / 2
+    side.position.set(sx, floorY + 2.5, z + 2)
+    scene.add(side)
+  }
+
+  // CCTV camera high on the back wall, right-hand side, aimed at the doors
+  const cctv = new THREE.Group()
+  cctv.position.set(4.2, 2.35, WALL_Z + 0.02)
+  scene.add(cctv)
+  const white = new THREE.MeshStandardMaterial({ color: 0xf3f4f6, roughness: 0.4 })
+  const mount = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.12, 0.02), white)
+  const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.16, 12), white)
+  arm.rotation.x = Math.PI / 2
+  arm.position.z = 0.08
+  cctv.add(mount, arm)
+  const head = new THREE.Group()
+  head.position.z = 0.17
+  // Aim at the middle of the doorway
+  const aim = new THREE.Vector3(0, floorY + 1.1, z).sub(cctv.position).sub(head.position)
+  head.rotation.order = 'YXZ'
+  head.rotation.y = Math.atan2(aim.x, aim.z)
+  head.rotation.x = -Math.atan2(aim.y, Math.hypot(aim.x, aim.z))
+  cctv.add(head)
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.08, 0.24), white)
+  body.position.z = 0.06
+  const hood = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.012, 0.28), white)
+  hood.position.set(0, 0.046, 0.08)
+  const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.02, 20), new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.1, metalness: 0.6 }))
+  lens.rotation.x = Math.PI / 2
+  lens.position.z = 0.185
+  const cctvLed = new THREE.Mesh(new THREE.SphereGeometry(0.006, 8, 6), new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xef4444, emissiveIntensity: 2 }))
+  cctvLed.position.set(0.03, -0.025, 0.182)
+  head.add(body, hood, lens, cctvLed)
+  return { doors, blockers, cctvLed }
 }
 
 interface CabinetOptions {
