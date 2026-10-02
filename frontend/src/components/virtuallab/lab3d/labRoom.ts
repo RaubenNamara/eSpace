@@ -41,6 +41,15 @@ export interface WallCabinetShelves {
   z: number
   /** Front edge of the shelves, for their label strips */
   frontZ: number
+  /** Number of door bays (an upright stands between neighbouring bays) */
+  bays: number
+  /** Top of the cornice and its front face, and the cabinet's centre - for its name plate */
+  topY: number
+  corniceFrontZ: number
+  cx: number
+  /** Where the cabinet hangs: its own coordinates turned by rotY about the vertical and moved by offset */
+  rotY: number
+  offset: THREE.Vector3
 }
 
 export interface LabWallCabinets {
@@ -161,6 +170,7 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
   const furnitureDoors: THREE.Object3D[] = []
   const furnitureBlockers: THREE.Object3D[] = []
   let fixtures: Fixtures | null = null
+  const stockCabinets: { c: WallParts['cabinets'][number]; rotY: number; offset: THREE.Vector3 }[] = []
   let cupboardParts: CupboardParts | null = null
   let wallParts: WallParts | null = null
   if (field) {
@@ -182,6 +192,13 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
       const longs = buildWallCabinets(world, benchLength, s, { width: longW, centres: [-longCx, longCx], lit: false, covering: false, doorPairs: 3 })
       furnitureDoors.push(...longs.doors)
       furnitureBlockers.push(...longs.blockers)
+      // Stocking order, left to right along the back wall: long, middle, middle, long
+      stockCabinets.push(
+        { c: longs.cabinets[0], rotY: 0, offset: new THREE.Vector3() },
+        { c: wallParts.cabinets[0], rotY: 0, offset: new THREE.Vector3() },
+        { c: wallParts.cabinets[1], rotY: 0, offset: new THREE.Vector3() },
+        { c: longs.cabinets[1], rotY: 0, offset: new THREE.Vector3() },
+      )
     }
     if (opts.sideBenches) {
       // Against the side walls (see buildWallCovering: walls at x = ±7 m), facing into the room
@@ -203,6 +220,8 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
           const extra = buildWallCabinets(wallRun, benchLength, s, { wallZ: 0, width: half, centres: [-half / 2 - 0.02, half / 2 + 0.02], lit: false, covering: false })
           furnitureDoors.push(...extra.doors)
           furnitureBlockers.push(...extra.blockers)
+          // The one nearer the back wall first
+          for (const c of [...extra.cabinets].reverse()) stockCabinets.push({ c, rotY: wallRun.rotation.y, offset: wallRun.position.clone() })
         }
         // A small side table close to each end of the main bench
         const small = buildPlainBench(0.9, s)
@@ -397,9 +416,11 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
     ? {
         doors: wallParts.doors,
         blockers: wallParts.blockers,
-        cabinets: wallParts.cabinets.map(c => ({
+        cabinets: stockCabinets.map(({ c, rotY, offset }) => ({
           minX: c.minX * s, maxX: c.maxX * s, rows: c.rows.map(y => y * s), rowHeight: c.rowHeight * s,
-          depth: c.depth * s, z: c.z * s, frontZ: c.frontZ * s,
+          depth: c.depth * s, z: c.z * s, frontZ: c.frontZ * s, bays: c.bays,
+          topY: c.topY * s, corniceFrontZ: c.corniceFrontZ * s, cx: c.cx * s,
+          rotY, offset: offset.clone().multiplyScalar(s),
         })),
       }
     : null
@@ -490,7 +511,7 @@ function buildLighting(scene: THREE.Object3D) {
 interface WallParts {
   doors: THREE.Object3D[]
   blockers: THREE.Object3D[]
-  cabinets: { minX: number; maxX: number; rows: number[]; rowHeight: number; depth: number; z: number; frontZ: number }[]
+  cabinets: { bays: number; topY: number; corniceFrontZ: number; cx: number; minX: number; maxX: number; rows: number[]; rowHeight: number; depth: number; z: number; frontZ: number }[]
 }
 
 const WALL_Z = -BENCH_D / 2 - 0.25
@@ -857,7 +878,7 @@ function buildWallCabinets(scene: THREE.Object3D, benchLength: number, s = 1, o:
     }
     // A light along the top of each half of the cabinet
     if (o.lit !== false) for (const lx of [cx - W / 4, cx + W / 4]) interiorLight(scene, lx, innerTop - 0.006, backZ + D * 0.72, W / 2 - 0.08, s)
-    cabinets.push({ minX: minX + t, maxX: maxX - t, rows, rowHeight: gap - t, depth: D - t - 0.05, z: backZ + t + (D - t - 0.03) / 2, frontZ: backZ + D - 0.03 })
+    cabinets.push({ bays: o.doorPairs ?? 1, topY: bottom + H + 0.03, corniceFrontZ: backZ + D + 0.02, cx, minX: minX + t, maxX: maxX - t, rows, rowHeight: gap - t, depth: D - t - 0.05, z: backZ + t + (D - t - 0.03) / 2, frontZ: backZ + D - 0.03 })
 
     // Glass doors, a pair per bay: hinged on the bay's outer sides and meeting in its middle,
     // with an upright between neighbouring bays for them to close against

@@ -1657,11 +1657,16 @@ function handleCupboardClick(): boolean {
 // and general on the left, chemistry, biology and agriculture on the right. Models are shrunk to
 // fit their shelf space; picking one puts a full-size copy on the bench.
 const shelfItems = new Map<string, THREE.Group>()
-const shelfStrips: THREE.Mesh[] = []
+const shelfStrips: THREE.Object3D[] = []
 let hoveredShelfType: string | null = null
-const SHELF_SECTIONS: { key: string; label: string }[][] = [
-  [{ key: 'physics', label: 'Physics' }, { key: 'general', label: 'General' }],
-  [{ key: 'chemistry', label: 'Chemistry' }, { key: 'biology', label: 'Biology' }, { key: 'agriculture', label: 'Agriculture' }],
+// One subject per cabinet, in the order the room lists them: back wall left to right (long,
+// middle, middle, long), then the side-wall cabinets (left wall, nearer the back first)
+const CABINET_SUBJECTS: ({ key: string; label: string } | undefined)[] = [
+  { key: 'physics', label: 'Physics' },
+  { key: 'chemistry', label: 'Chemistry' },
+  { key: 'biology', label: 'Biology' },
+  { key: 'agriculture', label: 'Agriculture' },
+  { key: 'general', label: 'General' },
 ]
 const KNOWN_SECTIONS = ['physics', 'chemistry', 'biology', 'agriculture']
 
@@ -1684,77 +1689,125 @@ function stockWallShelves() {
   shelfStrips.splice(0).forEach(disposeObject)
   const defs = props.objectCatalog.filter(d => d.id > 0 && d.is_active !== false)
   const sectionOf = (d: LabObjectDef) => (KNOWN_SECTIONS.includes(d.category) ? d.category : 'general')
+  const up = new THREE.Vector3(0, 1, 0)
+  // Cabinet coordinates -> scene (the side-wall cabinets are turned to face into the room)
+  const place = (cab: (typeof wc.cabinets)[number], x: number, y: number, z: number) =>
+    new THREE.Vector3(x, y, z).applyAxisAngle(up, cab.rotY).add(cab.offset)
 
   wc.cabinets.forEach((cab, ci) => {
-    const sections = SHELF_SECTIONS[ci]
-      .map(sec => ({ ...sec, items: defs.filter(d => sectionOf(d) === sec.key).sort((a, b) => a.display_name.localeCompare(b.display_name)) }))
-      .filter(sec => sec.items.length > 0)
-    // Fewest items per shelf that still fits everything on the cabinet's shelves
-    let perRow = 8
-    const pack = () => sections.flatMap(sec => {
-      const out: { label: string; items: LabObjectDef[] }[] = []
-      for (let i = 0; i < sec.items.length; i += perRow) out.push({ label: sec.label, items: sec.items.slice(i, i + perRow) })
-      return out
-    })
-    let rows = pack()
-    while (rows.length > cab.rows.length) { perRow++; rows = pack() }
+    const subject = CABINET_SUBJECTS[ci]
+    if (!subject) return
+    // Name plate on the cornice, whether or not anything is stocked yet
+    const plate = subjectPlate(subject.label, Math.min(0.75 * UNITS_PER_METRE, (cab.maxX - cab.minX) * 0.7))
+    plate.position.copy(place(cab, cab.cx, cab.topY, cab.corniceFrontZ))
+    plate.rotation.y = cab.rotY
+    scene.add(plate)
+    shelfStrips.push(plate)
 
-    const slotW = (cab.maxX - cab.minX) / perRow
-    rows.forEach((row, ri) => {
+    const items = defs.filter(d => sectionOf(d) === subject.key).sort((a, b) => a.display_name.localeCompare(b.display_name))
+    if (items.length === 0) return
+    // Fewest items per bay that still fits everything on the cabinet's shelves; slots never
+    // straddle the uprights between the door bays
+    const bays = Math.max(1, cab.bays)
+    let perBay = Math.max(1, Math.ceil(4 / bays))
+    while (Math.ceil(items.length / (perBay * bays)) > cab.rows.length) perBay++
+    const perRow = perBay * bays
+    const bayW = (cab.maxX - cab.minX) / bays
+    const inset = bays > 1 ? 0.03 * UNITS_PER_METRE : 0
+    const slotW = (bayW - inset * 2) / perBay
+
+    items.forEach((def, idx) => {
+      const ri = Math.floor(idx / perRow)
+      const j = idx % perRow
+      const bay = Math.floor(j / perBay)
       const y = cab.rows[ri]
-      row.items.forEach((def, j) => {
-        const g = createObjectMesh(def.object_type, `shelf:${def.object_type}`, def.display_name, def.default_props || {})
-        const box = new THREE.Box3()
-        g.children.forEach((c) => { if (!(c instanceof THREE.Sprite)) box.expandByObject(c) })
-        const size = box.getSize(new THREE.Vector3())
-        const center = box.getCenter(new THREE.Vector3())
-        const k = Math.min(1, (slotW * 0.84) / Math.max(size.x, 0.01), (cab.rowHeight * 0.8) / Math.max(size.y, 0.01), (cab.depth * 0.9) / Math.max(size.z, 0.01))
-        g.scale.setScalar(k)
-        g.position.set(cab.minX + slotW * (j + 0.5) - center.x * k, y - box.min.y * k, cab.z - center.z * k)
-        g.children.forEach((c) => {
-          if (c.userData.role !== 'label') return
-          c.scale.set(0.72 / k, 0.158 / k, 1)
-          c.position.y = box.max.y + 0.2 / k
-          c.visible = false
-        })
-        g.traverse((c) => { if (c instanceof THREE.Mesh) c.castShadow = false })
-        g.userData.shelfType = def.object_type
-        scene.add(g)
-        shelfItems.set(def.object_type, g)
+      const g = createObjectMesh(def.object_type, `shelf:${def.object_type}`, def.display_name, def.default_props || {})
+      const box = new THREE.Box3()
+      g.children.forEach((c) => { if (!(c instanceof THREE.Sprite)) box.expandByObject(c) })
+      const size = box.getSize(new THREE.Vector3())
+      const center = box.getCenter(new THREE.Vector3())
+      const k = Math.min(1, (slotW * 0.84) / Math.max(size.x, 0.01), (cab.rowHeight * 0.8) / Math.max(size.y, 0.01), (cab.depth * 0.9) / Math.max(size.z, 0.01))
+      g.scale.setScalar(k)
+      const sx = cab.minX + bay * bayW + inset + slotW * ((j % perBay) + 0.5)
+      // Centre the model on its slot (in the cabinet's own frame), then hang it in the room
+      const local = new THREE.Vector3(sx, y - box.min.y * k, cab.z).sub(new THREE.Vector3(center.x * k, 0, center.z * k))
+      g.position.copy(place(cab, local.x, local.y, local.z))
+      g.rotation.y = cab.rotY
+      g.children.forEach((c) => {
+        if (c.userData.role !== 'label') return
+        c.scale.set(0.72 / k, 0.158 / k, 1)
+        c.position.y = box.max.y + 0.2 / k
+        c.visible = false
       })
-      syncCupboard()
-      // Subject name strip along the front edge of the shelf
-      const strip = new THREE.Mesh(
-        new THREE.PlaneGeometry(cab.maxX - cab.minX, 0.17),
-        new THREE.MeshBasicMaterial({ map: shelfStripTexture(row.label), toneMapped: false }),
-      )
-      // The bottom shelf is the cabinet floor, whose front sits further forward
-      const stripZ = ri === cab.rows.length - 1 ? cab.frontZ + 0.03 * UNITS_PER_METRE + 0.005 : cab.frontZ + 0.005
-      strip.position.set((cab.minX + cab.maxX) / 2, y - 0.085, stripZ)
-      scene.add(strip)
-      shelfStrips.push(strip)
+      g.traverse((c) => { if (c instanceof THREE.Mesh) c.castShadow = false })
+      g.userData.shelfType = def.object_type
+      scene.add(g)
+      shelfItems.set(def.object_type, g)
     })
   })
+  syncCupboard()
 }
 
-function shelfStripTexture(label: string): THREE.CanvasTexture {
+/**
+ * A subject name plate fixed to the front of a cabinet's top timber: a walnut board standing on
+ * the cornice with a brass plate on it, the subject engraved in dark serif capitals between two
+ * screws. `width` is in scene units.
+ */
+function subjectPlate(label: string, width: number): THREE.Group {
+  const u = UNITS_PER_METRE
+  const h = 0.13 * u
+  const g = new THREE.Group()
+  const board = new THREE.Mesh(
+    new THREE.BoxGeometry(width, h, 0.02 * u),
+    new THREE.MeshStandardMaterial({ color: 0x5b3418, roughness: 0.55 }),
+  )
+  board.position.set(0, h / 2, -0.008 * u)
+  g.add(board)
   const canvas = document.createElement('canvas')
   canvas.width = 1024
-  canvas.height = 64
+  canvas.height = 200
   const ctx = canvas.getContext('2d')!
-  const grad = ctx.createLinearGradient(0, 0, 0, 64)
-  grad.addColorStop(0, '#f6d98b')
-  grad.addColorStop(1, '#c9962f')
+  const grad = ctx.createLinearGradient(0, 0, 0, 200)
+  grad.addColorStop(0, '#f8e3a1')
+  grad.addColorStop(0.45, '#d9a842')
+  grad.addColorStop(1, '#a8781f')
   ctx.fillStyle = grad
-  ctx.fillRect(0, 0, 1024, 64)
-  ctx.fillStyle = '#3b2606'
-  ctx.font = 'bold 50px sans-serif'
+  ctx.beginPath(); ctx.roundRect(4, 4, 1016, 192, 22); ctx.fill()
+  ctx.strokeStyle = 'rgba(70,45,5,0.85)'
+  ctx.lineWidth = 6
+  ctx.beginPath(); ctx.roundRect(18, 18, 988, 164, 14); ctx.stroke()
+  ctx.lineWidth = 2
+  ctx.beginPath(); ctx.roundRect(30, 30, 964, 140, 10); ctx.stroke()
+  // Screws
+  for (const x of [62, 962]) {
+    const sg = ctx.createRadialGradient(x - 4, 96, 2, x, 100, 16)
+    sg.addColorStop(0, '#fff7d6'); sg.addColorStop(1, '#7a5a17')
+    ctx.fillStyle = sg
+    ctx.beginPath(); ctx.arc(x, 100, 15, 0, Math.PI * 2); ctx.fill()
+    ctx.strokeStyle = '#5a3f0c'; ctx.lineWidth = 3
+    ctx.beginPath(); ctx.moveTo(x - 9, 100); ctx.lineTo(x + 9, 100); ctx.stroke()
+  }
+  // Engraved lettering: a light highlight under dark text
+  ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.fillText(label.toUpperCase(), 24, 35)
+  let size = 96
+  ctx.font = `bold ${size}px Georgia, serif`
+  const text = label.toUpperCase().split('').join('\u200A')
+  while (ctx.measureText(text).width > 820 && size > 40) { size -= 4; ctx.font = `bold ${size}px Georgia, serif` }
+  ctx.fillStyle = 'rgba(255,248,220,0.7)'
+  ctx.fillText(text, 512, 104)
+  ctx.fillStyle = '#3b2606'
+  ctx.fillText(text, 512, 101)
   const tex = new THREE.CanvasTexture(canvas)
   tex.colorSpace = THREE.SRGBColorSpace
   tex.anisotropy = 8
-  return tex
+  const face = new THREE.Mesh(
+    new THREE.PlaneGeometry(width * 0.94, h * 0.8),
+    new THREE.MeshStandardMaterial({ map: tex, roughness: 0.3, metalness: 0.55, transparent: true }),
+  )
+  face.position.set(0, h / 2, 0.0035 * u)
+  g.add(face)
+  return g
 }
 
 // The catalogue usually arrives after the room is built
