@@ -1766,6 +1766,186 @@ export function createObjectMesh(objectType: string, key: string, displayName: s
       add(tube)
       break
     }
+    case 'sct_telescope': {
+      // Schmidt-Cassegrain telescope on a blue fork mount, cut away down one side so the primary
+      // mirror, baffle tube and secondary mirror inside can be seen; finder scope on the side
+      const blue = new THREE.MeshStandardMaterial({ color: 0x2f5d9b, roughness: 0.45, metalness: 0.2 })
+      const white = new THREE.MeshStandardMaterial({ color: 0xf3f4f6, roughness: 0.35 })
+      const dark = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.7, side: THREE.DoubleSide })
+      // Base with clock drive, and the fork arms
+      add(mesh(new THREE.CylinderGeometry(0.22, 0.25, 0.14, 40), blue, 0, 0.07))
+      add(mesh(rbox(0.5, 0.08, 0.2, 0.03), blue, 0, 0.2))
+      for (const x of [-0.24, 0.24]) {
+        add(strut(new THREE.Vector3(x * 0.9, 0.22, 0), new THREE.Vector3(x, 0.72, 0), 0.04, blue, true))
+        const disc = mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.03, 32), blue, x * 1.08, 0.72, 0)
+        disc.rotation.z = Math.PI / 2
+        add(disc)
+      }
+      // Optical tube, tilted back, open along one side
+      const tube = new THREE.Group()
+      tube.position.set(0, 0.72, 0)
+      tube.rotation.x = -0.35
+      tube.add(mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.75, 48, 1, true, Math.PI * 0.68, Math.PI * 1.3), white, 0, 0.15, 0))
+      tube.add(mesh(new THREE.CylinderGeometry(0.195, 0.195, 0.75, 48, 1, true, Math.PI * 0.68, Math.PI * 1.3), dark, 0, 0.15, 0))
+      tube.add(mesh(new THREE.TorusGeometry(0.2, 0.025, 10, 48), blue, 0, 0.53, 0).rotateX(Math.PI / 2))
+      tube.add(mesh(new THREE.CylinderGeometry(0.21, 0.21, 0.06, 48), blue, 0, -0.24, 0)) // rear cell
+      const corrector = mesh(new THREE.CircleGeometry(0.19, 40), glass(0xdbeafe), 0, 0.52, 0)
+      corrector.rotation.x = -Math.PI / 2
+      tube.add(corrector)
+      tube.add(mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.03, 24), dark, 0, 0.5, 0)) // secondary
+      tube.add(mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.03, 40), new THREE.MeshStandardMaterial({ color: 0xe5e7eb, metalness: 1, roughness: 0.05 }), 0, -0.16, 0)) // primary
+      tube.add(mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.25, 20), dark, 0, -0.02, 0)) // baffle
+      tube.add(mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.1, 16), dark, 0, -0.32, 0)) // visual back
+      const diag = mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.1, 16), dark, 0, -0.38, 0.05)
+      diag.rotation.x = Math.PI / 2
+      tube.add(diag)
+      const finder = mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.3, 20), white, 0.27, 0.1, 0)
+      tube.add(finder, mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.08, 12), dark, 0.27, -0.08, 0))
+      add(tube)
+      // Dust cap lying on the bench
+      const cap = mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.06, 40, 1, true), blue, -0.55, 0.03, 0.2)
+      add(cap, mesh(new THREE.CircleGeometry(0.22, 40), blue, -0.55, 0.002, 0.2).rotateX(-Math.PI / 2))
+      break
+    }
+    case 'flow_calorimeter': {
+      // Continuous flow calorimeter (Callendar and Barnes): a glass tube with a heating coil along
+      // its axis, inlet and outlet side arms, red rubber bungs, on two wooden blocks on a board,
+      // with two terminals and leads
+      const board = new THREE.MeshStandardMaterial({ color: 0x9a6a3e, roughness: 0.65 })
+      add(mesh(rbox(1.6, 0.05, 0.45, 0.01), board, 0, 0.025))
+      for (const x of [-0.45, 0.35]) add(mesh(rbox(0.16, 0.2, 0.14, 0.01), wood(), x, 0.15, -0.04))
+      const tube = new THREE.Group()
+      tube.position.set(0, 0.32, -0.04)
+      const t = mesh(new THREE.CylinderGeometry(0.06, 0.06, 1.25, 32, 1, true), glass(), 0, 0, 0)
+      t.rotation.z = Math.PI / 2
+      tube.add(t)
+      const coil = mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.8, 10), new THREE.MeshStandardMaterial({ color: 0x4b5563, metalness: 0.8, roughness: 0.4 }), -0.05, 0, 0)
+      coil.rotation.z = Math.PI / 2
+      tube.add(coil)
+      for (let i = 0; i < 40; i++) {
+        const turn = mesh(new THREE.TorusGeometry(0.016, 0.004, 4, 10), metal(0x9ca3af), -0.45 + i * 0.02, 0, 0)
+        turn.rotation.y = Math.PI / 2
+        tube.add(turn)
+      }
+      for (const x of [-0.65, 0.65]) {
+        const bung = mesh(new THREE.CylinderGeometry(0.07, 0.065, 0.06, 24), new THREE.MeshStandardMaterial({ color: 0xc2410c, roughness: 0.8 }), x, 0, 0)
+        bung.rotation.z = Math.PI / 2
+        tube.add(bung)
+      }
+      for (const x of [-0.55, 0.55]) tube.add(mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.1, 12), glass(), x, 0.1, 0))
+      for (const x of [-0.45, 0.35]) {
+        const clip = mesh(new THREE.TorusGeometry(0.065, 0.008, 6, 24, Math.PI), plastic(0xe5e7eb), x, -0.005, 0)
+        clip.rotation.y = Math.PI / 2
+        tube.add(clip)
+      }
+      add(tube)
+      for (const x of [0.5, 0.62]) {
+        add(mesh(new THREE.CylinderGeometry(0.025, 0.03, 0.06, 16), metal(0xb8bec6), x, 0.08, 0.14))
+      }
+      add(mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(0.69, 0.32, -0.04), new THREE.Vector3(0.75, 0.25, 0.05), new THREE.Vector3(0.62, 0.11, 0.14)]), 20, 0.008, 6), plastic(0x2563eb)))
+      add(mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(0.69, 0.33, -0.04), new THREE.Vector3(0.62, 0.25, 0.05), new THREE.Vector3(0.5, 0.11, 0.14)]), 20, 0.008, 6), plastic(0xeab308)))
+      break
+    }
+    case 'sonometer': {
+      // Sonometer: long hollow wooden sound box with sound holes, two metre scales, wires running
+      // over two wooden bridges, tuning pegs at one end and a pulley with a hanger at the other
+      const box = new THREE.MeshStandardMaterial({ map: canvasTex(512, 64, (ctx, w, h) => {
+        ctx.fillStyle = '#c98f4f'; ctx.fillRect(0, 0, w, h)
+        for (let i = 0; i < 40; i++) { ctx.strokeStyle = `rgba(110,60,20,${0.1 + Math.random() * 0.15})`; ctx.beginPath(); ctx.moveTo(0, Math.random() * h); ctx.bezierCurveTo(w / 3, Math.random() * h, 2 * w / 3, Math.random() * h, w, Math.random() * h); ctx.stroke() }
+      }), roughness: 0.6 })
+      const L = 2.4, W = 0.36, H = 0.28
+      add(mesh(new THREE.BoxGeometry(L, H, W), box, 0, H / 2))
+      for (const x of [-0.5, 0.6]) {
+        const hole = mesh(new THREE.CircleGeometry(0.06, 24), new THREE.MeshStandardMaterial({ color: 0x3b2410 }), x, H / 2, W / 2 + 0.001)
+        add(hole)
+      }
+      const rule = new THREE.MeshStandardMaterial({ map: rulerTexture(), roughness: 0.5 })
+      for (const z of [-0.15, 0.15]) {
+        const r = mesh(new THREE.BoxGeometry(2.0, 0.006, 0.04), [rule, rule, rule, rule, rule, rule], 0, H + 0.003, z)
+        add(r)
+      }
+      for (const x of [-0.75, 0.75]) add(mesh(new THREE.BoxGeometry(0.06, 0.05, W - 0.05), wood(), x, H + 0.025, 0))
+      const wireMat = metal(0xe5e7eb)
+      for (const z of [-0.06, 0, 0.06]) {
+        const w = mesh(new THREE.CylinderGeometry(0.004, 0.004, L - 0.1, 6), wireMat, 0, H + 0.052, z)
+        w.rotation.z = Math.PI / 2
+        add(w)
+        add(mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.07, 10), metal(0xd1d5db), L / 2 - 0.05, H + 0.035, z))
+      }
+      // Pulley bracket and hanger at the left end
+      for (const z of [-0.12, 0.12]) add(strut(new THREE.Vector3(-L / 2, H - 0.02, z), new THREE.Vector3(-L / 2 - 0.25, H - 0.08, z * 0.6), 0.015, metal(0xb8bec6), true))
+      const pulley = mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.02, 32), metal(0xd1d5db), -L / 2 - 0.25, H - 0.08, 0)
+      pulley.rotation.x = Math.PI / 2
+      add(pulley)
+      add(mesh(new THREE.CylinderGeometry(0.003, 0.003, 0.45, 6), wireMat, -L / 2 - 0.33, H - 0.31, 0))
+      add(mesh(new THREE.TorusGeometry(0.02, 0.004, 6, 16), wireMat, -L / 2 - 0.33, H - 0.55, 0))
+      break
+    }
+    case 'kundts_tube': {
+      // Kundt's tube: a clear acrylic tube with a blue scale, black end caps, held in black clips
+      // on two steel stands, with a long metal rod entering one end
+      const tube = new THREE.Group()
+      tube.position.y = 0.55
+      const t = mesh(new THREE.CylinderGeometry(0.07, 0.07, 1.6, 40, 1, true), glass(0xf8fafc), 0, 0, 0)
+      t.rotation.z = Math.PI / 2
+      tube.add(t)
+      const scaleTex = canvasTex(1024, 48, (ctx, w, h) => {
+        ctx.fillStyle = '#3730a3'; ctx.fillRect(0, 0, w, h)
+        ctx.fillStyle = '#ffffff'; ctx.font = 'bold 22px Arial'
+        for (let i = 0; i <= 60; i++) { const x = 8 + i * 16.8; ctx.fillRect(x, 0, 2, i % 5 === 0 ? 18 : 10); if (i % 5 === 0 && i < 60) ctx.fillText(String(i / 5 + 1), x + 2, 42) }
+      })
+      tube.add(mesh(new THREE.PlaneGeometry(1.55, 0.04), new THREE.MeshStandardMaterial({ map: scaleTex, side: THREE.DoubleSide }), 0, -0.02, 0.0705))
+      for (const x of [-0.81, 0.81]) {
+        const cap = mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.04, 32), plastic(0x111827), x, 0, 0)
+        cap.rotation.z = Math.PI / 2
+        tube.add(cap)
+      }
+      const rod = mesh(new THREE.CylinderGeometry(0.012, 0.012, 1.0, 12), metal(0x9ca3af), -1.2, 0, 0)
+      rod.rotation.z = Math.PI / 2
+      tube.add(rod)
+      // A little cork dust lying in heaps inside (the nodes of the standing wave)
+      for (let i = 0; i < 9; i++) tube.add(mesh(new THREE.SphereGeometry(0.03, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xd6b88a, roughness: 1 }), -0.65 + i * 0.16, -0.068, 0))
+      add(tube)
+      for (const x of [-0.5, 0.5]) {
+        add(mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.48, 12), chrome(), x, 0.24, 0))
+        add(mesh(new THREE.CylinderGeometry(0.1, 0.12, 0.02, 24), metal(0x6b7280), x, 0.01, 0))
+        const clip = mesh(new THREE.TorusGeometry(0.075, 0.01, 6, 24, Math.PI * 1.4), plastic(0x111827), x, 0.55, 0)
+        clip.rotation.y = Math.PI / 2
+        clip.rotation.z = -Math.PI * 0.2
+        add(clip)
+      }
+      break
+    }
+    case 'van_de_graaff': {
+      // Van de Graaff generator: polished dome on a clear column with the rubber belt inside, on a
+      // wooden base next to its grey control box (HIGH/LOW and ON/OFF switches, lamp)
+      add(mesh(rbox(0.9, 0.05, 0.5, 0.01), new THREE.MeshStandardMaterial({ color: 0xc8955a, roughness: 0.55 }), 0.1, 0.025))
+      const colX = -0.12
+      add(mesh(new THREE.BoxGeometry(0.14, 0.95, 0.1), glass(0xe5e7eb), colX, 0.55, 0))
+      add(mesh(new THREE.BoxGeometry(0.06, 0.92, 0.004), new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.9 }), colX, 0.55, 0.02)) // belt
+      add(mesh(rbox(0.2, 0.08, 0.16, 0.02), plastic(0x111827), colX - 0.02, 0.09, 0))
+      add(mesh(new THREE.SphereGeometry(0.26, 48, 32), chrome(), colX, 1.17, 0))
+      add(mesh(new THREE.SphereGeometry(0.02, 12, 8), chrome(), colX, 1.44, 0))
+      const box = mesh(rbox(0.32, 0.2, 0.28, 0.02), new THREE.MeshStandardMaterial({ color: 0x9ca3af, roughness: 0.45 }), 0.3, 0.15, 0)
+      add(box)
+      const panel = canvasTex(256, 160, (ctx, w, h) => {
+        ctx.fillStyle = '#9ca3af'; ctx.fillRect(0, 0, w, h)
+        ctx.fillStyle = '#111827'; ctx.font = 'bold 15px Arial'; ctx.textAlign = 'center'
+        ctx.fillText('VAN DE GRAAFF GENERATOR', w / 2, 26)
+        ctx.fillStyle = '#111827'; ctx.fillRect(40, 70, 30, 46)
+        ctx.fillStyle = '#dc2626'; ctx.fillRect(180, 70, 34, 46)
+        ctx.fillStyle = '#7f1d1d'; ctx.beginPath(); ctx.arc(128, 60, 7, 0, Math.PI * 2); ctx.fill()
+        ctx.fillStyle = '#111827'; ctx.font = '12px Arial'
+        ctx.fillText('HIGH / LOW', 55, 135); ctx.fillText('ON / OFF', 197, 135)
+      })
+      add(mesh(new THREE.PlaneGeometry(0.3, 0.19), new THREE.MeshStandardMaterial({ map: panel, roughness: 0.4 }), 0.3, 0.15, 0.141))
+      for (const y of [0.12, 0.16]) {
+        const lead = mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.22, 6), plastic(0x111827), 0.03, y, 0.02)
+        lead.rotation.z = Math.PI / 2
+        add(lead)
+      }
+      break
+    }
     case 'metre_rule': {
       const edge = new THREE.MeshStandardMaterial({ color: 0xd6a35c, roughness: 0.6 })
       const face = new THREE.MeshStandardMaterial({ map: rulerTexture(), color: 0xf5deb3, roughness: 0.55 })
