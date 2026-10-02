@@ -187,22 +187,6 @@
       </div>
     </transition>
 
-    <!-- Camera views (Apparatus Playground room) -->
-    <div v-if="wallShelves && !renderError" class="absolute left-2 top-2 sm:left-3 sm:top-3 z-10 inline-flex rounded-xl bg-white/90 dark:bg-gray-800/90 backdrop-blur shadow-md border border-gray-200 dark:border-gray-700 p-1 gap-1">
-      <button
-        v-for="v in CAMERA_VIEWS"
-        :key="v.key"
-        type="button"
-        @click="goToView(v.key)"
-        class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-colors"
-        :class="cameraView === v.key ? 'bg-indigo-600 text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'"
-        :title="v.title"
-      >
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" :d="v.icon" /></svg>
-        {{ v.label }}
-      </button>
-    </div>
-
     <!-- Inspect popover -->
     <div v-if="inspectText" class="absolute left-2 right-2 top-2 sm:left-auto sm:right-3 sm:top-3 sm:max-w-[min(20rem,calc(100vw-1.5rem))] bg-white/95 dark:bg-gray-800/95 backdrop-blur rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3">
       <div class="flex items-start justify-between gap-2">
@@ -1876,17 +1860,15 @@ onBeforeUnmount(() => {
   waterAudio = null
 })
 
-// --- Camera views --------------------------------------------------------------------------
-const CAMERA_VIEWS = [
-  { key: 'bench', label: 'Bench', title: 'Look at the bench and the cabinets', icon: 'M3 10h18M5 10v9m14-9v9M3 6h18' },
-  { key: 'entrance', label: 'Entrance', title: 'Look at the lab entrance', icon: 'M15 10l4.55-2.28A1 1 0 0121 8.62v6.76a1 1 0 01-1.45.9L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z' },
-] as const
-const cameraView = ref<'bench' | 'entrance'>('bench')
-function goToView(view: 'bench' | 'entrance') {
+// --- Camera views (buttons live in the page, which calls goToView) ---------------------------
+export type CameraView = 'bench' | 'entrance' | 'left' | 'right'
+function goToView(view: CameraView) {
   if (!room) return
-  cameraView.value = view
   if (view === 'bench') frameBench(true)
-  else room.flyTo(new THREE.Vector3(2.4, 0.95, 2.4), new THREE.Vector3(0, 0.25, 7))
+  // Standing in the room, looking at the doors / the left wall (General) / the right wall
+  else if (view === 'entrance') room.flyTo(new THREE.Vector3(2.4, 0.95, 2.4), new THREE.Vector3(0, 0.25, 7))
+  else if (view === 'left') room.flyTo(new THREE.Vector3(-1.2, 1.0, 1.6), new THREE.Vector3(-7, 0.45, 1.6))
+  else room.flyTo(new THREE.Vector3(1.2, 1.0, 1.6), new THREE.Vector3(7, 0.45, 1.6))
 }
 
 const selectedIsChemical = computed(() => !!props.sceneObjects.find(o => o.key === selectedKey.value)?.props?.chemical_id)
@@ -1959,7 +1941,7 @@ function setObjectState(key: string, patch: Record<string, any>) {
   })
 }
 
-defineExpose({ setObjectState })
+defineExpose({ setObjectState, goToView })
 
 function retryBuildScene() {
   renderError.value = false
