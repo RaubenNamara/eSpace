@@ -196,7 +196,7 @@
     </div>
 
     <p class="hidden sm:block absolute right-3 bottom-3 text-[10px] text-gray-500 dark:text-gray-400 bg-white/70 dark:bg-gray-900/60 rounded px-2 py-1 pointer-events-none">
-      Drag to orbit &middot; Scroll to zoom &middot; Click equipment to interact<template v-if="cupboard || wallShelves"> &middot; Click a door to open it</template>
+      Drag to orbit &middot; Scroll to zoom &middot; Click equipment to interact<template v-if="cupboard || wallShelves"> &middot; Click a door to open it, a sink tap to run water</template>
     </p>
   </div>
 </template>
@@ -1594,6 +1594,7 @@ function syncCupboard() {
 
 type CupboardHit =
   | { kind: 'door'; door: THREE.Object3D }
+  | { kind: 'tap'; tap: THREE.Object3D }
   | { kind: 'chemical'; id: string }
   | { kind: 'apparatus'; type: string }
   | null
@@ -1603,18 +1604,22 @@ function cupboardHit(): CupboardHit {
   const cb = room?.cupboard
   const wc = room?.wallCabinets
   const furniture = room?.furniture
-  if (!cb && !wc && !furniture?.doors.length) return null
+  const taps = room?.taps
+  if (!cb && !wc && !furniture?.doors.length && !taps) return null
   raycaster.setFromCamera(pointerNdc, camera)
   const targets: THREE.Object3D[] = []
   if (cb) targets.push(...cb.doors, ...cb.blockers)
   if (wc) targets.push(...wc.doors, ...wc.blockers)
   if (furniture) targets.push(...furniture.doors, ...furniture.blockers)
+  if (taps) targets.push(...taps.taps)
   groups.forEach(g => targets.push(g))
   cupboardBottles.forEach((g) => { if (g.visible) targets.push(g) })
   cupboardTags.forEach(t => targets.push(t))
   shelfItems.forEach((g) => { if (g.visible) targets.push(g) })
   const hit = raycaster.intersectObjects(targets, true)[0]
   if (!hit) return null
+  const tap = room!.taps?.tapOf(hit.object)
+  if (tap) return { kind: 'tap', tap }
   const door = room!.doorOf(hit.object)
   if (door) return { kind: 'door', door }
   let o: THREE.Object3D | null = hit.object
@@ -1628,6 +1633,11 @@ function handleCupboardClick(): boolean {
   if (!hit) return false
   if (hit.kind === 'apparatus') {
     emit('pickApparatus', hit.type)
+    return true
+  }
+  if (hit.kind === 'tap') {
+    room!.taps!.toggle(hit.tap)
+    updateWaterSound(room!.taps!.anyOn())
     return true
   }
   if (hit.kind === 'chemical') {
@@ -1750,6 +1760,53 @@ function shelfStripTexture(label: string): THREE.CanvasTexture {
 // The catalogue usually arrives after the room is built
 watch(() => props.objectCatalog.map(d => d.object_type).join(','), () => { if (room) stockWallShelves() })
 
+// --- Running-water sound for the sink taps ------------------------------------------------------
+// Made in the browser (filtered noise with a slow wobble) so there's no audio file to download.
+let waterAudio: { ctx: AudioContext; gain: GainNode } | null = null
+
+function updateWaterSound(running: number) {
+  try {
+    if (!waterAudio) {
+      if (running === 0) return
+      const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+      const ctx = new AC()
+      const buffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate)
+      const data = buffer.getChannelData(0)
+      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1
+      const noise = ctx.createBufferSource()
+      noise.buffer = buffer
+      noise.loop = true
+      const band = ctx.createBiquadFilter()
+      band.type = 'bandpass'
+      band.frequency.value = 1100
+      band.Q.value = 0.6
+      const low = ctx.createBiquadFilter()
+      low.type = 'lowpass'
+      low.frequency.value = 3500
+      const gain = ctx.createGain()
+      gain.gain.value = 0
+      // Gurgle: a slow wobble on the volume and pitch of the splash
+      const wobble = ctx.createOscillator()
+      wobble.frequency.value = 7
+      const wobbleDepth = ctx.createGain()
+      wobbleDepth.gain.value = 250
+      wobble.connect(wobbleDepth).connect(band.frequency)
+      noise.connect(band).connect(low).connect(gain).connect(ctx.destination)
+      noise.start()
+      wobble.start()
+      waterAudio = { ctx, gain }
+    }
+    const { ctx, gain } = waterAudio
+    if (ctx.state === 'suspended') ctx.resume()
+    gain.gain.setTargetAtTime(running === 0 ? 0 : Math.min(0.5, 0.3 + 0.1 * running), ctx.currentTime, 0.15)
+  } catch { /* no audio on this device - the water still runs */ }
+}
+
+onBeforeUnmount(() => {
+  waterAudio?.ctx.close().catch(() => {})
+  waterAudio = null
+})
+
 const selectedIsChemical = computed(() => !!props.sceneObjects.find(o => o.key === selectedKey.value)?.props?.chemical_id)
 
 function putBackSelected() {
@@ -1769,7 +1826,7 @@ function frameBench() {
   // With the wall cabinets, the view takes in the bench and both cabinets above it
   const half = room.benchLength / 2
   const box = room.wallCabinets
-    ? new THREE.Box3(new THREE.Vector3(-(half + 0.25) * u, -0.9 * u, -0.6 * u), new THREE.Vector3((half + 0.25) * u, 1.4 * u, 0.375 * u))
+    ? new THREE.Box3(new THREE.Vector3(-(half + 0.25) * u, -0.9 * u, -0.6 * u), new THREE.Vector3((half + 0.25) * u, 1.82 * u, 0.375 * u))
     : new THREE.Box3(new THREE.Vector3(-half * u, -0.9 * u, -0.375 * u), new THREE.Vector3(half * u, 0.1 * u, 0.375 * u))
   room.fitBox(box, room.wallCabinets ? 0.94 : 0.72, { dir: new THREE.Vector3(0.4, room.wallCabinets ? 3.4 : 4.2, 6.4) })
 }

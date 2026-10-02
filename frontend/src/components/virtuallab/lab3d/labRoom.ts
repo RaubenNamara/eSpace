@@ -85,6 +85,8 @@ export interface LabRoom {
   wallCabinets: LabWallCabinets | null
   /** Cupboard doors and panels of the other benches in the room (empty, but they open) */
   furniture: { doors: THREE.Object3D[]; blockers: THREE.Object3D[] }
+  /** Sink taps (rooms with wall cabinets): click one to turn its water on or off */
+  taps: LabTaps | null
   /** Bench length in metres */
   benchLength: number
   /** Opens or closes any door built by the room (cupboard or wall cabinet) */
@@ -158,6 +160,7 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
   // Doors and panels of the other benches' cupboards (open and close like the main one's)
   const furnitureDoors: THREE.Object3D[] = []
   const furnitureBlockers: THREE.Object3D[] = []
+  let fixtures: Fixtures | null = null
   let cupboardParts: CupboardParts | null = null
   let wallParts: WallParts | null = null
   if (field) {
@@ -167,7 +170,10 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
     buildLighting(world)
     // With the wall cabinets, a fabric wall covering replaces the tiled splashback below them
     cupboardParts = buildRoom(world, !!opts.cupboard, benchLength, s, !!opts.wallCabinets)
-    if (opts.wallCabinets) wallParts = buildWallCabinets(world, benchLength, s)
+    if (opts.wallCabinets) {
+      wallParts = buildWallCabinets(world, benchLength, s)
+      fixtures = buildSinksAndClock(world)
+    }
     if (opts.sideBenches) {
       // Against the side walls (see buildWallCovering: walls at x = ±7 m), facing into the room
       const wallX = 7 - BENCH_D / 2 - 0.02
@@ -312,6 +318,46 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
   const ndc = new THREE.Vector2()
 
   // Doors swing smoothly towards their target angle
+  // Taps: handles turn, water streams flicker while on; the clock follows the real time
+  let taps: LabTaps | null = null
+  if (fixtures) {
+    const fx = fixtures
+    let flow = 0
+    frameCallbacks.push((dt) => {
+      flow += dt
+      fx.taps.forEach((tap) => {
+        const on = !!tap.userData.on
+        const handle = tap.userData.handle as THREE.Object3D
+        handle.rotation.y += ((on ? -Math.PI / 2 : 0) - handle.rotation.y) * Math.min(1, dt * 10)
+        const stream = tap.userData.stream as THREE.Mesh
+        stream.visible = on
+        if (on) {
+          const tex = (stream.material as THREE.MeshStandardMaterial).map!
+          tex.offset.y = (tex.offset.y - dt * 3) % 1
+          stream.scale.x = stream.scale.z = 1 + Math.sin(flow * 40) * 0.08
+        }
+        ;(tap.userData.splash as THREE.Object3D).visible = on
+      })
+      const now = new Date()
+      const sec = now.getSeconds() + now.getMilliseconds() / 1000
+      const min = now.getMinutes() + sec / 60
+      const hr = (now.getHours() % 12) + min / 60
+      fx.clock.second.rotation.z = -(Math.floor(sec) / 60) * Math.PI * 2
+      fx.clock.minute.rotation.z = -(min / 60) * Math.PI * 2
+      fx.clock.hour.rotation.z = -(hr / 12) * Math.PI * 2
+    })
+    taps = {
+      taps: fx.taps,
+      tapOf: (obj) => {
+        let o: THREE.Object3D | null = obj
+        while (o && !o.userData.isTap) o = o.parent
+        return o
+      },
+      toggle: (tap) => { tap.userData.on = !tap.userData.on },
+      isOn: tap => !!tap.userData.on,
+      anyOn: () => fx.taps.filter(t => t.userData.on).length,
+    }
+  }
   const allDoors = [...(cupboardParts?.doors || []), ...(wallParts?.doors || []), ...furnitureDoors]
   if (allDoors.length) {
     frameCallbacks.push((dt) => {
@@ -356,6 +402,7 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
     cupboard,
     wallCabinets,
     furniture: { doors: furnitureDoors, blockers: furnitureBlockers },
+    taps,
     benchLength,
     toggleDoor,
     doorOf,
@@ -427,6 +474,196 @@ interface WallParts {
 }
 
 const WALL_Z = -BENCH_D / 2 - 0.25
+
+export interface LabTaps {
+  /** One group per tap (click anything in it to turn it on or off) */
+  taps: THREE.Object3D[]
+  tapOf: (obj: THREE.Object3D | null) => THREE.Object3D | null
+  toggle: (tap: THREE.Object3D) => void
+  isOn: (tap: THREE.Object3D) => boolean
+  /** How many taps are running */
+  anyOn: () => number
+}
+
+interface Fixtures {
+  taps: THREE.Object3D[]
+  clock: { hour: THREE.Object3D; minute: THREE.Object3D; second: THREE.Object3D }
+}
+
+/**
+ * Two sink units in the back corners of the room - wooden cupboard, black worktop, stainless
+ * basin and a swan-neck tap whose lever turns the water on - and a wall clock above the cabinets.
+ */
+function buildSinksAndClock(scene: THREE.Object3D): Fixtures {
+  const steel = labMaterials.steel()
+  const basinMat = new THREE.MeshStandardMaterial({ color: 0xc9ced4, roughness: 0.25, metalness: 0.9, side: THREE.DoubleSide })
+  const woodMat = new THREE.MeshStandardMaterial({ map: woodTexture(), roughness: 0.7 })
+  const topMat = new THREE.MeshPhysicalMaterial({ color: 0x1f2328, roughness: 0.42, clearcoat: 0.4 })
+  const W = 0.8, D = 0.6
+  const taps: THREE.Object3D[] = []
+  for (const side of [-1, 1]) {
+    const unit = new THREE.Group()
+    unit.position.set(side * (7 - W / 2 - 0.02), 0, WALL_Z + D / 2 + 0.01)
+    scene.add(unit)
+    // Cupboard with two doors and handles - its top stops below the basin, with an apron of
+    // wooden panels round the edges up to the worktop so the basin sits inside it
+    const apronH = 0.2
+    const cabH = BENCH_H - 0.035 - apronH
+    const cab = new THREE.Mesh(new THREE.BoxGeometry(W - 0.04, cabH, D - 0.04), woodMat)
+    cab.position.y = -BENCH_H + cabH / 2
+    cab.castShadow = cab.receiveShadow = true
+    unit.add(cab)
+    const apron = (w: number, d: number, x: number, z: number) => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w, apronH, d), woodMat)
+      m.position.set(x, -0.035 - apronH / 2, z)
+      unit.add(m)
+    }
+    apron(W - 0.04, 0.02, 0, (D - 0.04) / 2 - 0.01)
+    apron(W - 0.04, 0.02, 0, -(D - 0.04) / 2 + 0.01)
+    apron(0.02, D - 0.04, (W - 0.04) / 2 - 0.01, 0)
+    apron(0.02, D - 0.04, -(W - 0.04) / 2 + 0.01, 0)
+    const seam = new THREE.Mesh(new THREE.BoxGeometry(0.004, BENCH_H - 0.12, 0.002), new THREE.MeshStandardMaterial({ color: 0x3b2a1c }))
+    seam.position.set(0, -BENCH_H / 2 - 0.02, (D - 0.04) / 2 + 0.001)
+    unit.add(seam)
+    for (const dx of [-0.04, 0.04]) {
+      const h = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.1, 12), steel)
+      h.position.set(dx, -0.2, (D - 0.04) / 2 + 0.015)
+      unit.add(h)
+    }
+    // Worktop with a hole for the basin (four strips round it)
+    const bw = 0.5, bd = 0.36, bz = 0.03, depth = 0.2
+    const strip = (w: number, d: number, x: number, z: number) => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w, 0.035, d), topMat)
+      m.position.set(x, -0.0175, z)
+      m.receiveShadow = true
+      unit.add(m)
+    }
+    strip(W, (D / 2 + bz) - bd / 2, 0, -D / 2 + ((D / 2 + bz) - bd / 2) / 2)
+    strip(W, D / 2 - bz - bd / 2, 0, bz + bd / 2 + (D / 2 - bz - bd / 2) / 2)
+    strip((W - bw) / 2, bd, -(bw / 2 + (W - bw) / 4), bz)
+    strip((W - bw) / 2, bd, bw / 2 + (W - bw) / 4, bz)
+    // Stainless basin: open box sunk into the top, with a plughole
+    const basin = new THREE.Mesh(new THREE.BoxGeometry(bw, depth, bd), [basinMat, basinMat, basinMat, basinMat, basinMat, basinMat])
+    ;(basin.geometry as THREE.BoxGeometry).groups.splice(2, 1) // no lid
+    basin.position.set(0, -depth / 2, bz)
+    unit.add(basin)
+    const plug = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.004, 20), new THREE.MeshStandardMaterial({ color: 0x374151, metalness: 0.8, roughness: 0.4 }))
+    plug.position.set(0, -depth + 0.003, bz)
+    unit.add(plug)
+
+    // Swan-neck tap at the back of the basin
+    const tap = new THREE.Group()
+    tap.userData.isTap = true
+    tap.userData.on = false
+    const tz = bz - bd / 2 - 0.06, R = 0.09, riser = 0.3
+    const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.018, riser, 16), steel)
+    pipe.position.set(0, riser / 2, tz)
+    const neck = new THREE.Mesh(new THREE.TorusGeometry(R, 0.014, 10, 24, Math.PI), steel)
+    neck.position.set(0, riser, tz + R)
+    neck.rotation.y = -Math.PI / 2
+    const nozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.013, 0.04, 14), steel)
+    nozzle.position.set(0, riser - 0.02, tz + 2 * R)
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.035, 0.02, 20), steel)
+    base.position.set(0, 0.01, tz)
+    // Lever handle on the side of the riser - turns a quarter round when on
+    const handle = new THREE.Group()
+    handle.position.set(0, 0.16, tz)
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.04, 16), steel)
+    const lever = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.012, 0.11), steel)
+    lever.position.set(0, 0.01, 0.06)
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.014, 12, 8), new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.4 }))
+    tip.position.set(0, 0.01, 0.115)
+    handle.add(hub, lever, tip)
+    // Running water: a slightly rippled transparent column from the nozzle to the basin floor
+    const fall = riser - 0.04 + depth
+    const ripples = canvasTexture(32, 128, (ctx, w, h) => {
+      ctx.fillStyle = '#dbeafe'
+      ctx.fillRect(0, 0, w, h)
+      for (let y = 0; y < h; y += 6) {
+        ctx.fillStyle = `rgba(255,255,255,${0.3 + Math.random() * 0.5})`
+        ctx.fillRect(0, y, w, 2)
+      }
+    })
+    ripples.wrapS = ripples.wrapT = THREE.RepeatWrapping
+    ripples.repeat.set(1, 3)
+    const stream = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.009, 0.012, fall, 12, 1, true),
+      new THREE.MeshStandardMaterial({ map: ripples, color: 0xbfe3ff, transparent: true, opacity: 0.75, roughness: 0.05, metalness: 0.1, depthWrite: false }),
+    )
+    stream.position.set(0, riser - 0.04 - fall / 2, tz + 2 * R)
+    stream.visible = false
+    // Splash: a thin pool of water on the basin floor
+    const splash = new THREE.Mesh(new THREE.CircleGeometry(0.07, 24), new THREE.MeshStandardMaterial({ color: 0xbfe3ff, transparent: true, opacity: 0.6, roughness: 0.05 }))
+    splash.rotation.x = -Math.PI / 2
+    splash.position.set(0, -depth + 0.006, tz + 2 * R)
+    splash.visible = false
+    // Invisible click target over the tap and basin, so the thin pipe is easy to hit
+    const hit = new THREE.Mesh(
+      new THREE.BoxGeometry(bw + 0.06, riser + 0.05 + depth, bd + 0.16),
+      new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false }),
+    )
+    hit.position.set(0, (riser + 0.05 - depth) / 2, bz - 0.06)
+    tap.add(pipe, neck, nozzle, base, handle, stream, splash, hit)
+    tap.userData.handle = handle
+    tap.userData.stream = stream
+    tap.userData.splash = splash
+    unit.add(tap)
+    taps.push(tap)
+  }
+
+  // Wall clock centred above the wall cabinets
+  const clock = new THREE.Group()
+  clock.position.set(0, 1.62, WALL_Z + 0.02)
+  scene.add(clock)
+  const r = 0.17
+  const face = canvasTexture(512, 512, (ctx, w) => {
+    const c = w / 2
+    ctx.fillStyle = '#fffdf7'
+    ctx.beginPath(); ctx.arc(c, c, c, 0, Math.PI * 2); ctx.fill()
+    ctx.fillStyle = '#111827'
+    for (let i = 0; i < 60; i++) {
+      const a = (i / 60) * Math.PI * 2
+      const big = i % 5 === 0
+      ctx.save(); ctx.translate(c, c); ctx.rotate(a)
+      ctx.fillRect(big ? -5 : -2, -c + 14, big ? 10 : 4, big ? 34 : 16)
+      ctx.restore()
+    }
+    ctx.font = 'bold 54px Arial'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    for (let n = 1; n <= 12; n++) {
+      const a = (n / 12) * Math.PI * 2
+      ctx.fillText(String(n), c + Math.sin(a) * (c - 92), c - Math.cos(a) * (c - 92))
+    }
+    ctx.font = 'bold 22px Arial'
+    ctx.fillStyle = '#4b5563'
+    ctx.fillText('LABORATORY', c, c + 110)
+  })
+  const rimMesh = new THREE.Mesh(new THREE.CylinderGeometry(r + 0.02, r + 0.02, 0.05, 48), new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.4, metalness: 0.5 }))
+  rimMesh.rotation.x = Math.PI / 2
+  const faceMesh = new THREE.Mesh(new THREE.CircleGeometry(r, 48), new THREE.MeshStandardMaterial({ map: face, roughness: 0.6 }))
+  faceMesh.position.z = 0.026
+  const glassMesh = new THREE.Mesh(new THREE.CircleGeometry(r, 48), new THREE.MeshPhysicalMaterial({ color: 0xffffff, transparent: true, opacity: 0.12, roughness: 0.05, clearcoat: 1, depthWrite: false }))
+  glassMesh.position.z = 0.05
+  clock.add(rimMesh, faceMesh, glassMesh)
+  const hand = (len: number, width: number, color: number, z: number) => {
+    const pivot = new THREE.Group()
+    pivot.position.z = z
+    const m = new THREE.Mesh(new THREE.BoxGeometry(width, len, 0.004), new THREE.MeshStandardMaterial({ color, roughness: 0.5 }))
+    m.position.y = len / 2 - len * 0.12
+    pivot.add(m)
+    clock.add(pivot)
+    return pivot
+  }
+  const hour = hand(r * 0.55, 0.014, 0x111827, 0.03)
+  const minute = hand(r * 0.8, 0.009, 0x111827, 0.034)
+  const second = hand(r * 0.88, 0.004, 0xdc2626, 0.038)
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.012, 16), new THREE.MeshStandardMaterial({ color: 0xdc2626 }))
+  cap.rotation.x = Math.PI / 2
+  cap.position.z = 0.042
+  clock.add(cap)
+  return { taps, clock: { hour, minute, second } }
+}
 
 /**
  * Two wall-mounted apparatus cabinets behind the bench, top left and top right: four shelves each

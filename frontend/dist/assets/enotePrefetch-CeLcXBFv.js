@@ -1,1 +1,0 @@
-import{i as o}from"./index-DiI1-uow.js";const n=new Map;function c(e){let t=n.get(e);return t||(t=o.get(`/api/student/enotes/topics/${e}`),t.catch(()=>n.delete(e)),n.set(e,t)),t}function r(e){const t=n.get(e)??null;return n.delete(e),t}export{c as p,r as t};
