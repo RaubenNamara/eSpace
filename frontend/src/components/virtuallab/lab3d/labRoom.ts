@@ -184,6 +184,17 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
         world.add(bench.group)
         furnitureDoors.push(...bench.parts.doors)
         furnitureBlockers.push(...bench.parts.blockers)
+        // Two glass cabinets on the wall above it, empty for now (their doors open like the others)
+        if (opts.wallCabinets) {
+          const wallRun = new THREE.Group()
+          wallRun.position.set(side * 7, 0, 1.6)
+          wallRun.rotation.y = -side * Math.PI / 2
+          world.add(wallRun)
+          const half = benchLength / 2 - 0.04
+          const extra = buildWallCabinets(wallRun, benchLength, s, { wallZ: 0, width: half, centres: [-half / 2 - 0.02, half / 2 + 0.02], lit: false, covering: false })
+          furnitureDoors.push(...extra.doors)
+          furnitureBlockers.push(...extra.blockers)
+        }
         // A small side table close to each end of the main bench
         const small = buildPlainBench(0.9, s)
         small.group.position.set(side * (benchLength / 2 + 0.5 + 0.45), 0, 0)
@@ -613,9 +624,9 @@ function buildSinksAndClock(scene: THREE.Object3D): Fixtures {
 
   // Wall clock centred above the wall cabinets
   const clock = new THREE.Group()
-  clock.position.set(0, 1.62, WALL_Z + 0.02)
+  clock.position.set(0, 1.68, WALL_Z + 0.02)
   scene.add(clock)
-  const r = 0.17
+  const r = 0.12
   const face = canvasTexture(512, 512, (ctx, w) => {
     const c = w / 2
     ctx.fillStyle = '#fffdf7'
@@ -773,11 +784,24 @@ function buildWallCovering(scene: THREE.Object3D, top: number) {
   })
 }
 
-function buildWallCabinets(scene: THREE.Object3D, benchLength: number, s = 1): WallParts {
+interface CabinetOptions {
+  /** Where the wall is (cabinet backs stand on it), in the parent's coordinates */
+  wallZ?: number
+  /** Cabinet width; default just over half the bench */
+  width?: number
+  /** Cabinet centres along the wall; default one either side of the middle */
+  centres?: number[]
+  /** Interior lights (off for the extra cabinets, to keep the room quick to render) */
+  lit?: boolean
+  /** Also pin the fabric covering round the room */
+  covering?: boolean
+}
+
+function buildWallCabinets(scene: THREE.Object3D, benchLength: number, s = 1, o: CabinetOptions = {}): WallParts {
   // Each cabinet spans just over half the bench, with a narrow gap between the two
-  const W = benchLength / 2 + 0.1, H = 0.86, D = 0.3, t = 0.016
+  const W = o.width ?? benchLength / 2 + 0.1, H = 0.86, D = 0.3, t = 0.016
   const bottom = 0.5
-  const backZ = WALL_Z + 0.002
+  const backZ = (o.wallZ ?? WALL_Z) + 0.002
   const front = backZ + D
   const shelfLevels = 4
   const woodTex = woodTexture()
@@ -792,9 +816,9 @@ function buildWallCabinets(scene: THREE.Object3D, benchLength: number, s = 1): W
   const blockers: THREE.Object3D[] = []
   const cabinets: WallParts['cabinets'] = []
 
-  buildWallCovering(scene, bottom)
+  if (o.covering !== false) buildWallCovering(scene, bottom)
   const offset = 0.08 + W / 2
-  for (const cx of [-offset, offset]) {
+  for (const cx of o.centres ?? [-offset, offset]) {
     const minX = cx - W / 2, maxX = cx + W / 2
     const panel = (w: number, h: number, d: number, x: number, y: number, z: number, mat: THREE.Material) => {
       const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat)
@@ -821,7 +845,7 @@ function buildWallCabinets(scene: THREE.Object3D, benchLength: number, s = 1): W
       rows.unshift(y)
     }
     // A light along the top of each half of the cabinet
-    for (const lx of [cx - W / 4, cx + W / 4]) interiorLight(scene, lx, innerTop - 0.006, backZ + D * 0.72, W / 2 - 0.08, s)
+    if (o.lit !== false) for (const lx of [cx - W / 4, cx + W / 4]) interiorLight(scene, lx, innerTop - 0.006, backZ + D * 0.72, W / 2 - 0.08, s)
     cabinets.push({ minX: minX + t, maxX: maxX - t, rows, rowHeight: gap - t, depth: D - t - 0.05, z: backZ + t + (D - t - 0.03) / 2, frontZ: backZ + D - 0.03 })
 
     // Glass doors, hinged on the outer sides and meeting in the middle
