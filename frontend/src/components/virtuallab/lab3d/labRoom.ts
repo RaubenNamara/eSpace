@@ -173,6 +173,15 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
     if (opts.wallCabinets) {
       wallParts = buildWallCabinets(world, benchLength, s)
       fixtures = buildSinksAndClock(world)
+      // One long cabinet either side of the middle pair, out to just short of the corner sinks;
+      // empty for now, doors open like the others
+      const innerEdge = benchLength / 2 + 0.1 + 0.08 + 0.16
+      const outerEdge = 6.1
+      const longW = outerEdge - innerEdge
+      const longCx = (innerEdge + outerEdge) / 2
+      const longs = buildWallCabinets(world, benchLength, s, { width: longW, centres: [-longCx, longCx], lit: false, covering: false, doorPairs: 3 })
+      furnitureDoors.push(...longs.doors)
+      furnitureBlockers.push(...longs.blockers)
     }
     if (opts.sideBenches) {
       // Against the side walls (see buildWallCovering: walls at x = ±7 m), facing into the room
@@ -795,6 +804,8 @@ interface CabinetOptions {
   lit?: boolean
   /** Also pin the fabric covering round the room */
   covering?: boolean
+  /** Pairs of glass doors across each cabinet (a long cabinet gets several, with dividers) */
+  doorPairs?: number
 }
 
 function buildWallCabinets(scene: THREE.Object3D, benchLength: number, s = 1, o: CabinetOptions = {}): WallParts {
@@ -848,10 +859,16 @@ function buildWallCabinets(scene: THREE.Object3D, benchLength: number, s = 1, o:
     if (o.lit !== false) for (const lx of [cx - W / 4, cx + W / 4]) interiorLight(scene, lx, innerTop - 0.006, backZ + D * 0.72, W / 2 - 0.08, s)
     cabinets.push({ minX: minX + t, maxX: maxX - t, rows, rowHeight: gap - t, depth: D - t - 0.05, z: backZ + t + (D - t - 0.03) / 2, frontZ: backZ + D - 0.03 })
 
-    // Glass doors, hinged on the outer sides and meeting in the middle
-    const doorW = W / 2 - 0.004, doorH = H - 0.01
+    // Glass doors, a pair per bay: hinged on the bay's outer sides and meeting in its middle,
+    // with an upright between neighbouring bays for them to close against
+    const pairs = o.doorPairs ?? 1
+    const bayW = W / pairs
+    for (let k = 1; k < pairs; k++) panel(t, H, D, minX + k * bayW, bottom + H / 2, backZ + D / 2, outer)
+    const doorW = bayW / 2 - 0.004, doorH = H - 0.01
     const bar = 0.018
-    for (const [hx, dirX] of [[minX, 1], [maxX, -1]] as [number, 1 | -1][]) {
+    const hinges: [number, 1 | -1][] = []
+    for (let k = 0; k < pairs; k++) hinges.push([minX + k * bayW, 1], [minX + (k + 1) * bayW, -1])
+    for (const [hx, dirX] of hinges) {
       const pivot = new THREE.Group()
       pivot.position.set(hx + dirX * 0.002, bottom + H / 2, front + 0.008)
       const pane = new THREE.Mesh(new THREE.BoxGeometry(doorW - bar, doorH - bar, 0.004), glassMat)
