@@ -4,30 +4,24 @@
        Chapter, eNotes and Item Bank practice - and the assessments that need fixing. It's what makes
        students' Learning Maps fill in. -->
   <div class="w-full">
-    <div class="flex flex-wrap items-center gap-2 mb-1">
-      <div class="hidden sm:flex w-7 h-7 rounded-lg bg-emerald-600 items-center justify-center flex-shrink-0">
-        <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-      </div>
-      <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white mr-auto">Curriculum coverage</h1>
+    <PageHeader title="Curriculum coverage" description="What's linked to each topic this year - students' Learning Maps only fill in where an assessment is linked." icon="chart" accent="emerald">
       <!-- One class at a time (or all of them), in the chosen subject -->
-      <div class="flex flex-wrap gap-2 w-full sm:w-auto">
-        <PickerDropdown class="flex-1 sm:flex-none" v-if="data && data.subjects.length > 1" v-model="subjectId" label="Subject" :options="subjectOptions" align="right" />
-        <PickerDropdown class="flex-1 sm:flex-none" v-if="data && data.classes.length" v-model="classFilter" label="Class" :options="classOptions" align="right" />
-      </div>
-    </div>
-    <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">What's linked to each topic this year. Students' Learning Maps only fill in for outcomes, topics and constructs that have an assessment linked.</p>
+      <template #filters>
+        <PickerDropdown v-if="data && data.subjects.length > 1" v-model="subjectId" label="Subject" :options="subjectOptions" align="right" />
+        <PickerDropdown v-if="data && data.classes.length" v-model="classFilter" label="Class" :options="classOptions" align="right" />
+      </template>
+      <StatStrip v-if="summary.topics" :items="statItems" />
+    </PageHeader>
 
-    <div v-if="loading" class="space-y-3">
-      <div v-for="i in 3" :key="i" class="h-24 rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse"></div>
-    </div>
+    <Skeleton v-if="loading" variant="list" :count="4" />
 
     <template v-else-if="data">
       <!-- Needs fixing: linked to deleted topics -->
-      <div v-if="data.broken.length" class="bg-white dark:bg-gray-800 rounded-xl border border-red-200 dark:border-red-800 p-4 mb-4">
-        <p class="text-sm font-bold text-red-700 dark:text-red-300 mb-1">Assessments linked to deleted topics ({{ data.broken.length }})</p>
+      <div v-if="data.broken.length" class="bg-white dark:bg-gray-800 rounded-2xl border border-rose-200 dark:border-rose-800 p-4 mb-4">
+        <p class="flex items-center gap-2 text-sm font-bold text-rose-700 dark:text-rose-300 mb-1"><AppIcon name="warning" class="w-4 h-4" /> Assessments linked to deleted topics ({{ data.broken.length }})</p>
         <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">These topics were removed from the curriculum, so students' results on them don't show anywhere. Move each to the current topic.</p>
         <ul class="space-y-3">
-          <li v-for="b in data.broken" :key="`${b.assignment_id}-${b.topic_id}`" class="rounded-lg bg-red-50/60 dark:bg-red-900/10 p-3">
+          <li v-for="b in data.broken" :key="`${b.assignment_id}-${b.topic_id}`" class="rounded-xl bg-rose-50/60 dark:bg-rose-900/10 p-3">
             <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ b.title }} <span class="font-normal text-gray-500 dark:text-gray-400">· {{ b.category || 'Assessment' }} · {{ b.subject_name }} {{ b.class_name }}</span></p>
             <p class="text-xs text-gray-600 dark:text-gray-300 mb-2">Linked to "<span class="line-through">{{ b.topic }}</span>" (deleted)</p>
             <div v-if="b.suggestions.length" class="flex flex-wrap items-center gap-2">
@@ -41,13 +35,13 @@
                 @click="relink(b, s.id)"
               >{{ s.topic }}<span v-if="s.term_name" class="font-normal text-gray-500"> · {{ s.term_name }}</span></button>
             </div>
-            <p v-else class="text-xs text-gray-500 dark:text-gray-400">No similar current topic - <RouterLink :to="`/teacher/assignments/${b.assignment_id}/edit`" class="font-semibold text-indigo-600 hover:underline">choose one in the assessment</RouterLink>.</p>
+            <p v-else class="text-xs text-gray-500 dark:text-gray-400">No similar current topic - <RouterLink :to="`/teacher/assignments/${b.assignment_id}/edit`" class="font-semibold text-indigo-600 dark:text-indigo-300 hover:underline">choose one in the assessment</RouterLink>.</p>
           </li>
         </ul>
       </div>
 
       <!-- Needs linking: curriculum-type assessments with no links -->
-      <div v-if="data.unlinked.length" class="bg-white dark:bg-gray-800 rounded-xl border border-amber-200 dark:border-amber-800 p-4 mb-4">
+      <div v-if="data.unlinked.length" class="bg-white dark:bg-gray-800 rounded-2xl border border-amber-200 dark:border-amber-800 p-4 mb-4">
         <p class="text-sm font-bold text-amber-800 dark:text-amber-200 mb-1">Not linked to the curriculum ({{ data.unlinked.length }})</p>
         <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">Link these to their outcomes or topics so students' results count.</p>
         <div class="flex flex-wrap gap-2">
@@ -57,114 +51,76 @@
         </div>
       </div>
 
-      <!-- Summary for the subject -->
-      <div v-if="summary.topics" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-        <div v-for="card in summaryCards" :key="card.label" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3">
-          <p class="text-[11px] text-gray-500 dark:text-gray-400">{{ card.label }}</p>
-          <p class="text-xl font-bold text-gray-900 dark:text-white"><CountUp :value="`${card.percent}%`" /></p>
-          <p class="text-[11px] text-gray-500 dark:text-gray-400">{{ card.detail }}</p>
+      <EmptyState v-if="!data.classes.length" icon="chart" tone="emerald" title="No curriculum topics this year" message="Once this subject has curriculum topics for the year, what's linked to each shows here." />
+
+      <template v-else>
+        <div class="flex items-center gap-3 mb-3">
+          <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 cursor-pointer select-none">
+            <input v-model="gapsOnly" type="checkbox" class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-emerald-600 focus:ring-emerald-500">
+            Only topics with gaps
+          </label>
+          <span class="ml-auto hidden sm:flex items-center gap-3 text-[11px] text-gray-500 dark:text-gray-400">
+            <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-emerald-400"></span>All linked</span>
+            <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-amber-400"></span>Some</span>
+            <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-rose-400"></span>Missing</span>
+          </span>
         </div>
-      </div>
 
-      <p v-if="!data.classes.length" class="text-sm text-gray-500 dark:text-gray-400 py-8 text-center">No curriculum topics this year for this subject.</p>
-
-      <!-- Per class, per topic -->
-      <div v-for="cls in shownClasses" :key="cls.class_name" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-4">
-        <p class="text-sm font-bold text-gray-900 dark:text-white mb-2">{{ cls.class_name }}</p>
-        <!-- Phones: each topic as a small card (the table's five columns don't fit) -->
-        <div class="sm:hidden divide-y divide-gray-100 dark:divide-gray-700">
-          <div v-for="t in cls.topics" :key="t.id" class="py-3">
-            <p class="font-semibold text-sm text-gray-900 dark:text-white leading-snug">{{ t.topic }}</p>
-            <p class="text-[11px] text-gray-500 dark:text-gray-400 mb-2">{{ [t.term_name, t.theme].filter(Boolean).join(' · ') }}</p>
-            <div class="grid grid-cols-2 gap-x-3 gap-y-2">
-              <div>
-                <p class="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400">Outcomes (LOA)</p>
-                <div class="flex items-center gap-2">
-                  <div class="h-1.5 flex-1 max-w-[4rem] rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
-                    <div class="h-full rounded-full bg-emerald-500" :style="{ width: `${t.outcomes ? t.outcomes_covered / t.outcomes * 100 : 0}%` }"></div>
+        <!-- Per class, per topic: one row each, four status chips -->
+        <section v-for="cls in shownClasses" :key="cls.class_name" class="mb-5">
+          <div class="flex items-center gap-3 mb-2">
+            <h2 class="text-sm font-bold text-gray-900 dark:text-white">{{ cls.class_name }}</h2>
+            <span class="flex-1 max-w-[10rem] h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+              <span class="block h-full rounded-full bg-emerald-500" :style="{ width: classOutcomeShare(cls.topics) + '%' }"></span>
+            </span>
+            <span class="text-[11px] text-gray-500 dark:text-gray-400">{{ classOutcomeShare(cls.topics) }}% of outcomes linked</span>
+          </div>
+          <EmptyState v-if="!visibleTopics(cls.topics).length" compact icon="check-circle" tone="emerald" title="No gaps in this class" message="Every topic has its outcomes, AOI, EOCs and eNotes linked." />
+          <ul v-else class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700">
+            <li v-for="t in visibleTopics(cls.topics)" :key="t.id" class="p-3 sm:p-4 flex flex-col lg:flex-row lg:items-center gap-2.5 lg:gap-4">
+              <div class="min-w-0 lg:w-[32%] flex-shrink-0">
+                <p class="text-[10px] font-semibold uppercase tracking-wider text-gray-400 truncate">{{ [t.term_name, t.theme].filter(Boolean).join(' · ') }}</p>
+                <p class="text-sm font-semibold text-gray-900 dark:text-white leading-snug">{{ t.topic }}</p>
+              </div>
+              <div class="flex-1 min-w-0 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <!-- Outcomes with an assessment -->
+                <div class="rounded-xl px-2.5 py-2" :class="chipTone(t.outcomes ? t.outcomes_covered / t.outcomes : 1)">
+                  <p class="text-[10px] font-bold uppercase tracking-wider opacity-70">Outcomes · LOA</p>
+                  <div class="flex items-center gap-2">
+                    <span class="flex-1 h-1.5 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden"><span class="block h-full rounded-full bg-current" :style="{ width: `${t.outcomes ? t.outcomes_covered / t.outcomes * 100 : 0}%` }"></span></span>
+                    <span class="text-xs font-bold tabular-nums">{{ t.outcomes_covered }}/{{ t.outcomes }}</span>
                   </div>
-                  <span class="text-xs" :class="t.outcomes && t.outcomes_covered === t.outcomes ? 'text-emerald-700 dark:text-emerald-300 font-semibold' : 'text-gray-600 dark:text-gray-300'">{{ t.outcomes_covered }}/{{ t.outcomes }}</span>
+                </div>
+                <!-- Activity of Integration -->
+                <div class="rounded-xl px-2.5 py-2 min-w-0" :class="chipTone(t.aoi.length ? 1 : 0)">
+                  <p class="text-[10px] font-bold uppercase tracking-wider opacity-70">AOI</p>
+                  <p v-if="t.aoi.length" class="flex items-center gap-1 text-xs font-semibold truncate" :title="t.aoi.map(a => a.title).join(', ')"><AppIcon name="check-circle" class="w-3.5 h-3.5 flex-shrink-0" />{{ t.aoi.length === 1 ? t.aoi[0].title : `${t.aoi.length} set` }}</p>
+                  <button v-else type="button" class="inline-flex items-center gap-1 text-xs font-semibold hover:underline" @click="aoiFor = { topic: t, className: cls.class_name }">
+                    <AppIcon name="bulb" class="w-3.5 h-3.5" /> Suggest one
+                  </button>
+                </div>
+                <!-- Elements of Construct with an End of Chapter -->
+                <div class="rounded-xl px-2.5 py-2 min-w-0" :class="t.constructs.length ? chipTone(t.constructs.filter(c => c.has_eoc).length / t.constructs.length) : NEUTRAL">
+                  <p class="text-[10px] font-bold uppercase tracking-wider opacity-70">Construct · EOC</p>
+                  <p v-if="!t.constructs.length" class="text-xs">None in this topic</p>
+                  <p v-else class="text-xs font-semibold truncate" :title="t.constructs.map(c => `${c.assessment_objective}: ${c.has_eoc ? 'EOC set' : 'no EOC'}`).join('\n')">
+                    {{ t.constructs.filter(c => c.has_eoc).length }}/{{ t.constructs.length }} with an EOC
+                  </p>
+                </div>
+                <!-- Notes and practice -->
+                <div class="rounded-xl px-2.5 py-2 min-w-0" :class="chipTone(t.enotes.length ? 1 : 0)">
+                  <p class="text-[10px] font-bold uppercase tracking-wider opacity-70">eNotes · practice</p>
+                  <p class="text-xs font-semibold truncate">
+                    <template v-if="t.enotes.length">{{ t.enotes.length }} eNote{{ t.enotes.length === 1 ? '' : 's' }}</template>
+                    <RouterLink v-else to="/teacher/enotes" class="hover:underline">Write eNotes</RouterLink>
+                    <span class="font-normal opacity-80"> · {{ t.practice ? `${t.practice} practice` : 'no practice' }}</span>
+                  </p>
                 </div>
               </div>
-              <div class="min-w-0">
-                <p class="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400">AOI</p>
-                <p v-if="t.aoi.length" class="text-xs font-semibold text-emerald-700 dark:text-emerald-300 truncate">✓ {{ t.aoi.length === 1 ? t.aoi[0].title : `${t.aoi.length} set` }}</p>
-                <template v-else>
-                  <p class="text-xs font-semibold text-amber-700 dark:text-amber-300">Missing</p>
-                  <button type="button" class="mt-0.5 inline-flex items-center gap-1 text-[11px] font-semibold text-violet-700 dark:text-violet-300 hover:underline" @click="aoiFor = { topic: t, className: cls.class_name }">
-                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
-                  Suggest an AOI
-                </button>
-                </template>
-              </div>
-              <div class="min-w-0">
-                <p class="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400">Construct (EOC)</p>
-                <p v-if="!t.constructs.length" class="text-xs text-gray-400 dark:text-gray-500">-</p>
-                <p v-for="c in t.constructs" :key="c.id" class="text-xs leading-snug">
-                  <span class="font-semibold text-gray-700 dark:text-gray-200">{{ c.assessment_objective }}</span>
-                  <span :class="c.has_eoc ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'"> {{ c.has_eoc ? '✓ EOC' : 'no EOC' }}</span>
-                </p>
-              </div>
-              <div class="text-xs">
-                <p class="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400">Notes · practice</p>
-                <p :class="t.enotes.length ? 'text-gray-700 dark:text-gray-200' : 'text-gray-400 dark:text-gray-500'">{{ t.enotes.length ? `${t.enotes.length} eNote${t.enotes.length === 1 ? '' : 's'}` : 'No eNotes' }}</p>
-                <p :class="t.practice ? 'text-gray-700 dark:text-gray-200' : 'text-gray-400 dark:text-gray-500'">{{ t.practice ? `${t.practice} practice` : 'No practice' }}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="hidden sm:block overflow-x-auto -mx-1">
-          <table class="w-full text-sm min-w-[640px] table-fixed">
-            <colgroup><col class="w-[34%]"><col class="w-[16%]"><col class="w-[18%]"><col class="w-[14%]"><col class="w-[18%]"></colgroup>
-            <thead>
-              <tr class="text-left text-[11px] uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                <th class="px-1 py-1.5 font-semibold">Topic</th>
-                <th class="px-1 py-1.5 font-semibold">Outcomes (LOA)</th>
-                <th class="px-1 py-1.5 font-semibold">Activity of Integration</th>
-                <th class="px-1 py-1.5 font-semibold">Construct (EOC)</th>
-                <th class="px-1 py-1.5 font-semibold">Notes · practice</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-              <tr v-for="t in cls.topics" :key="t.id" class="align-top">
-                <td class="px-1 py-2">
-                  <p class="font-semibold text-gray-900 dark:text-white leading-snug">{{ t.topic }}</p>
-                  <p class="text-[11px] text-gray-500 dark:text-gray-400">{{ [t.term_name, t.theme].filter(Boolean).join(' · ') }}</p>
-                </td>
-                <td class="px-1 py-2">
-                  <div class="flex items-center gap-2">
-                    <div class="h-1.5 w-14 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
-                      <div class="h-full rounded-full bg-emerald-500" :style="{ width: `${t.outcomes ? t.outcomes_covered / t.outcomes * 100 : 0}%` }"></div>
-                    </div>
-                    <span class="text-xs" :class="t.outcomes && t.outcomes_covered === t.outcomes ? 'text-emerald-700 dark:text-emerald-300 font-semibold' : 'text-gray-600 dark:text-gray-300'">{{ t.outcomes_covered }}/{{ t.outcomes }}</span>
-                  </div>
-                </td>
-                <td class="px-1 py-2">
-                  <span v-if="t.aoi.length" class="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300">✓ {{ t.aoi.length === 1 ? t.aoi[0].title : `${t.aoi.length} set` }}</span>
-                  <template v-else>
-                    <span class="block text-xs font-semibold text-amber-700 dark:text-amber-300">Missing</span>
-                    <button type="button" class="mt-0.5 inline-flex items-center gap-1 text-[11px] font-semibold text-violet-700 dark:text-violet-300 hover:underline" @click="aoiFor = { topic: t, className: cls.class_name }">
-                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
-                  Suggest an AOI
-                </button>
-                  </template>
-                </td>
-                <td class="px-1 py-2">
-                  <span v-if="!t.constructs.length" class="text-xs text-gray-400 dark:text-gray-500">-</span>
-                  <p v-for="c in t.constructs" :key="c.id" class="text-xs leading-snug">
-                    <span class="font-semibold text-gray-700 dark:text-gray-200">{{ c.assessment_objective }}</span>
-                    <span :class="c.has_eoc ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'"> {{ c.has_eoc ? '✓ EOC' : 'no EOC' }}</span>
-                  </p>
-                </td>
-                <td class="px-1 py-2 text-xs">
-                  <p :class="t.enotes.length ? 'text-gray-700 dark:text-gray-200' : 'text-gray-400 dark:text-gray-500'">{{ t.enotes.length ? `${t.enotes.length} eNote${t.enotes.length === 1 ? '' : 's'}` : 'No eNotes linked' }}</p>
-                  <p :class="t.practice ? 'text-gray-700 dark:text-gray-200' : 'text-gray-400 dark:text-gray-500'">{{ t.practice ? `${t.practice} practice` : 'No practice' }}</p>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+            </li>
+          </ul>
+        </section>
+      </template>
     </template>
     <AoiQuickCreate
       v-if="aoiFor && subjectId"
@@ -182,7 +138,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import axios from 'axios'
-import CountUp from '@/components/common/CountUp.vue'
+import AppIcon from '@/components/common/AppIcon.vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StatStrip, { type StatItem } from '@/components/ui/StatStrip.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
+import Skeleton from '@/components/ui/Skeleton.vue'
+import { usePersistedRef } from '@/composables/usePersistedRef'
 import PickerDropdown, { type PickerOption } from '@/components/common/PickerDropdown.vue'
 import { useToastStore } from '@/stores/toast'
 import AoiQuickCreate from '@/components/assignment/AoiQuickCreate.vue'
@@ -245,7 +206,17 @@ onMounted(load)
 watch(subjectId, (now, before) => { if (before !== null && now !== before) load() })
 
 // Which class is shown - one at a time by default, or every class with 'all'
-const classFilter = ref<string>('')
+const classFilter = usePersistedRef<string>('coverage:class', '')
+// Hide the topics that already have everything linked
+const gapsOnly = usePersistedRef<boolean>('coverage:gaps-only', false)
+const hasGap = (t: Topic) => t.outcomes_covered < t.outcomes || !t.aoi.length || t.constructs.some(c => !c.has_eoc) || !t.enotes.length
+const visibleTopics = (topics: Topic[]) => (gapsOnly.value ? topics.filter(hasGap) : topics)
+
+// Status chip colour: all linked, some, none
+const NEUTRAL = 'bg-gray-50 text-gray-500 dark:bg-gray-700/40 dark:text-gray-400'
+const chipTone = (share: number) => share >= 1
+  ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-900/25 dark:text-emerald-200'
+  : share > 0 ? 'bg-amber-50 text-amber-800 dark:bg-amber-900/25 dark:text-amber-200' : 'bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-200'
 const subjectOptions = computed<PickerOption<number>[]>(() => (data.value?.subjects ?? []).map(s => ({ value: s.id, label: s.name })))
 const classOutcomeShare = (topics: Topic[]) => {
   const total = topics.reduce((n, t) => n + t.outcomes, 0)
@@ -288,11 +259,12 @@ const summary = computed(() => {
   }
 })
 const pct = (a: number, b: number) => (b ? Math.round(a / b * 100) : 0)
-const summaryCards = computed(() => [
-  { label: 'Outcomes with an assessment', percent: pct(summary.value.covered, summary.value.outcomes), detail: `${summary.value.covered} of ${summary.value.outcomes}` },
-  { label: 'Topics with an AOI', percent: pct(summary.value.aoi, summary.value.topics), detail: `${summary.value.aoi} of ${summary.value.topics}` },
-  { label: 'Constructs with an EOC', percent: pct(summary.value.constructsEoc, summary.value.constructs), detail: `${summary.value.constructsEoc} of ${summary.value.constructs}` },
-  { label: 'Topics with eNotes', percent: pct(summary.value.notes, summary.value.topics), detail: `${summary.value.notes} of ${summary.value.topics}` }
+const statItems = computed<StatItem[]>(() => [
+  { label: 'Outcomes assessed', value: `${pct(summary.value.covered, summary.value.outcomes)}%`, tone: 'emerald', hint: `${summary.value.covered} of ${summary.value.outcomes}` },
+  { label: 'Topics with an AOI', value: `${pct(summary.value.aoi, summary.value.topics)}%`, tone: 'violet', hint: `${summary.value.aoi} of ${summary.value.topics}` },
+  // Only where the topics have Elements of Construct at all
+  ...(summary.value.constructs ? [{ label: 'Constructs with an EOC', value: `${pct(summary.value.constructsEoc, summary.value.constructs)}%`, tone: 'amber' as const, hint: `${summary.value.constructsEoc} of ${summary.value.constructs}` }] : []),
+  { label: 'Topics with eNotes', value: `${pct(summary.value.notes, summary.value.topics)}%`, tone: 'sky', hint: `${summary.value.notes} of ${summary.value.topics}` }
 ])
 
 const relink = async (b: Broken, toTopicId: number) => {

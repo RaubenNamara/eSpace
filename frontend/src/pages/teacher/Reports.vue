@@ -1,281 +1,160 @@
 <template>
-  <div class="p-6">
-    <div class="mb-6">
-      <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Report Cards</h1>
-      <p class="text-gray-600 dark:text-gray-400">Generate and view learners' summative assessment reports.</p>
+  <div class="w-full">
+    <PageHeader title="Report Cards" description="Learners' LOA, AOI and EOC results for the term - and their report cards, ready to print." icon="document" accent="indigo">
+      <template #filters>
+        <PickerDropdown v-if="termOptions.length" v-model="selectedTermId" label="Term" :options="termOptions" align="right" />
+        <PickerDropdown v-if="classOptions.length" v-model="selectedClassId" label="Class" :options="classOptions" align="right" />
+      </template>
+    </PageHeader>
+
+    <div v-if="error" class="mb-4 flex items-start gap-3 rounded-xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-900/20 p-3">
+      <AppIcon name="warning" class="w-5 h-5 text-rose-500 flex-shrink-0" />
+      <p class="flex-1 text-sm text-rose-700 dark:text-rose-200">{{ error }}</p>
+      <button type="button" class="text-rose-500 hover:text-rose-700" aria-label="Dismiss" @click="error = null">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
     </div>
 
-    <!-- Filters -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
-      <div class="flex flex-wrap items-end gap-4">
-        <div>
-          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Term</label>
-          <select v-model="selectedTermId" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white min-w-[220px]">
-            <option :value="null">Select term...</option>
-            <option v-for="term in terms" :key="term.id" :value="term.id">
-              {{ term.name }}{{ term.academic_year ? ` - ${term.academic_year}` : '' }}{{ term.is_current ? ' (Current)' : '' }}
-            </option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Class</label>
-          <select v-model="selectedClassId" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white min-w-[220px]">
-            <option :value="null">Select class...</option>
-            <option v-for="cls in classes" :key="cls.id" :value="cls.id">
-              {{ cls.name }}{{ cls.stream_name ? ` - ${cls.stream_name}` : '' }}
-            </option>
-          </select>
-        </div>
-        <div v-if="!isClassTeacher && mySubjects.length > 0">
-          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Subject</label>
-          <select v-model="selectedSubjectId" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white min-w-[180px]">
-            <option v-for="subj in mySubjects" :key="subj.id" :value="subj.id">{{ subj.name }}</option>
-          </select>
-        </div>
-        <p v-if="selectedClassId && !loadingStudents" class="text-xs px-3 py-2 rounded-lg" :class="isClassTeacher ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'">
-          {{ isClassTeacher ? "You are this class's Class Teacher - you can generate full reports." : 'You can generate report entries for your subject(s) only.' }}
-        </p>
+    <Skeleton v-if="booting" variant="list" :count="5" />
+    <EmptyState v-else-if="!classOptions.length" icon="document" tone="indigo" title="No classes yet" message="Report cards appear here for the classes you teach." />
+
+    <template v-else-if="selectedTermId && selectedClassId">
+      <!-- Who you are for this class -->
+      <div v-if="!loadingStudents && !noAccess" class="mb-4 flex items-center gap-2 rounded-xl px-3 py-2 text-xs" :class="isClassTeacher ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-200' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300'">
+        <AppIcon :name="isClassTeacher ? 'teacher' : 'book'" class="w-4 h-4 flex-shrink-0" />
+        {{ isClassTeacher ? "You're this class's Class Teacher - you can generate full report cards." : 'You can generate report entries for your own subject(s).' }}
       </div>
-    </div>
 
-    <!-- Error -->
-    <div v-if="error" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6 text-red-600 dark:text-red-400 text-sm">
-      {{ error }}
-    </div>
+      <!-- Two jobs, one at a time -->
+      <nav class="flex gap-1 p-1 rounded-xl bg-gray-100 dark:bg-gray-800 mb-4 w-full sm:w-auto sm:inline-flex" aria-label="Sections">
+        <button v-for="t in TABS" :key="t.key" type="button" class="flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap" :class="tab === t.key ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400'" @click="tab = t.key">
+          {{ t.label }}<span v-if="t.key === 'generate' && students.length" class="ml-1.5 text-xs text-gray-400">{{ generatedCount }}/{{ students.length }}</span>
+        </button>
+      </nav>
 
-    <!-- Loading -->
-    <div v-if="loadingStudents" class="flex items-center justify-center py-12">
-      <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
-    </div>
-
-    <!-- No selection -->
-    <div v-else-if="!selectedTermId || !selectedClassId" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center text-gray-500 dark:text-gray-400">
-      Select a term and class to see students.
-    </div>
-
-    <template v-else>
-      <!-- Class-Wide LOA/AOI/EOC Competency Summary -->
-      <div class="mb-8">
-        <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-1">Class Competency Summary</h2>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">LOA, AOI and EOC results for every learner in this class, for one subject at a time.</p>
-
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-4">
-          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Subject</label>
-          <select v-model="summarySubjectId" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white min-w-[220px]">
-            <option :value="null">Select subject...</option>
-            <option v-for="subj in summarySubjects" :key="subj.id" :value="subj.id">{{ subj.name }}</option>
-          </select>
-          <p v-if="summarySubjects.length === 0 && !summarySubjectsLoading" class="text-xs text-gray-400 mt-2">
-            No LOA/AOI/EOC-tagged assignments found yet for this class/term.
-          </p>
+      <!-- ===== Class competency summary ===== -->
+      <template v-if="tab === 'summary'">
+        <div class="flex flex-wrap items-end gap-2 mb-4">
+          <PickerDropdown v-if="summarySubjects.length" v-model="summarySubjectId" label="Subject" :options="summarySubjects.map(s => ({ value: s.id, label: s.name }))" />
         </div>
 
-        <div v-if="!summarySubjectId" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-dashed border-gray-300 dark:border-gray-700 p-8 text-center text-gray-400 text-sm">
-          Select a subject to see the class competency summary.
-        </div>
+        <EmptyState v-if="!summarySubjectsLoading && !summarySubjects.length" compact icon="clipboard" tone="gray" title="No LOA, AOI or EOC results yet" message="Once assessments tagged LOA, AOI or EOC are marked for this class and term, each learner's results show here." />
+        <Skeleton v-else-if="summaryLoading || summarySubjectsLoading" variant="list" :count="4" />
 
-        <div v-else-if="summaryLoading" class="flex items-center justify-center py-12">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-        </div>
+        <template v-else-if="summarySubjectId">
+          <StatStrip :items="summaryStats" class="mb-3" />
 
-        <template v-else>
-          <!-- Stats -->
-          <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 mb-4">
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3">
-              <p class="text-[10px] uppercase tracking-wide text-gray-400">Learners</p>
-              <p class="text-xl font-bold text-gray-900 dark:text-white">{{ classStats.total }}</p>
+          <!-- Grade spread across every LOA/AOI/EOC result -->
+          <div v-if="gradeTotal" class="mb-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+            <p class="text-xs font-bold text-gray-900 dark:text-white mb-2">Grade spread</p>
+            <div class="flex h-3 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-700">
+              <span v-for="g in GRADES" :key="g" :class="GRADE_BAR[g]" :style="{ width: `${classStats.gradeCounts[g] / gradeTotal * 100}%` }" :title="`${g}: ${classStats.gradeCounts[g]}`"></span>
             </div>
-            <div v-for="grade in (['A','B','C','D','E'] as const)" :key="grade" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3">
-              <p class="text-[10px] uppercase tracking-wide text-gray-400">{{ grade }} &middot; {{ GRADE_DESCRIPTORS[grade] }}</p>
-              <p class="text-xl font-bold" :class="gradeTextColor(grade)">{{ classStats.gradeCounts[grade] }}</p>
-            </div>
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3">
-              <p class="text-[10px] uppercase tracking-wide text-gray-400">Ready</p>
-              <p class="text-xl font-bold text-emerald-600">{{ classStats.ready }}</p>
-            </div>
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3">
-              <p class="text-[10px] uppercase tracking-wide text-gray-400">Published</p>
-              <p class="text-xl font-bold text-indigo-600">{{ classStats.published }}</p>
-            </div>
-          </div>
-
-          <!-- Search & filters -->
-          <div class="flex flex-wrap items-end gap-3 mb-4">
-            <div class="flex-1 min-w-[200px]">
-              <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Search learner</label>
-              <input
-                v-model="searchQuery"
-                type="text"
-                placeholder="Name or student number..."
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white text-sm"
-              >
-            </div>
-            <div>
-              <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Performance</label>
-              <select v-model="performanceFilter" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white text-sm">
-                <option value="all">All</option>
-                <option v-for="grade in (['A','B','C','D','E'] as const)" :key="grade" :value="grade">{{ grade }} - {{ GRADE_DESCRIPTORS[grade] }}</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Report Status</label>
-              <select v-model="statusFilter" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white text-sm">
-                <option value="all">All</option>
-                <option v-for="s in REPORT_STATUS_ORDER" :key="s" :value="s">{{ REPORT_STATUS_LABELS[s] }}</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Desktop / tablet table -->
-          <div class="hidden md:block bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div class="overflow-x-auto">
-              <table class="w-full text-sm">
-                <thead class="bg-gray-50 dark:bg-gray-700">
-                  <tr>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Learner</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">LOA</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">AOI</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">EOC</th>
-                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Overall</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Report Status</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                  <tr v-for="s in filteredSummary" :key="s.student_id" class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                    <td class="px-4 py-3">
-                      <button @click="openLearnerReport(s.student_id)" class="font-medium text-indigo-600 dark:text-indigo-400 hover:underline text-left">
-                        {{ s.first_name }} {{ s.last_name }}
-                      </button>
-                      <p class="text-xs text-gray-400">{{ s.admission_number }}</p>
-                    </td>
-                    <td class="px-4 py-3"><CategoryCell :result="s.categories.LOA" :max-weight="summaryMaxWeight" /></td>
-                    <td class="px-4 py-3"><CategoryCell :result="s.categories.AOI" :max-weight="summaryMaxWeight" /></td>
-                    <td class="px-4 py-3"><CategoryCell :result="s.categories.EOC" :max-weight="summaryMaxWeight" /></td>
-                    <td class="px-4 py-3 text-center text-gray-400">&mdash;</td>
-                    <td class="px-4 py-3">
-                      <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium" :class="REPORT_STATUS_BADGE[s.report_status]">
-                        {{ REPORT_STATUS_LABELS[s.report_status] }}
-                      </span>
-                    </td>
-                  </tr>
-                  <tr v-if="filteredSummary.length === 0">
-                    <td colspan="6" class="px-6 py-10 text-center text-gray-400">No learners match these filters.</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- Mobile cards -->
-          <div class="md:hidden space-y-3">
-            <div
-              v-for="s in filteredSummary"
-              :key="s.student_id"
-              class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4"
-            >
-              <div class="flex items-start justify-between gap-3 mb-3">
-                <div>
-                  <button @click="openLearnerReport(s.student_id)" class="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline text-left">
-                    {{ s.first_name }} {{ s.last_name }}
-                  </button>
-                  <p class="text-xs text-gray-400">{{ s.admission_number }}</p>
-                </div>
-                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium flex-shrink-0" :class="REPORT_STATUS_BADGE[s.report_status]">
-                  {{ REPORT_STATUS_LABELS[s.report_status] }}
-                </span>
-              </div>
-
-              <div class="space-y-2.5">
-                <div v-for="cat in (['LOA', 'AOI', 'EOC'] as const)" :key="cat" class="flex items-center justify-between text-sm border-t border-gray-100 dark:border-gray-700 pt-2.5 first:border-t-0 first:pt-0">
-                  <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">{{ cat }}</span>
-                  <CategoryCell :result="s.categories[cat]" :max-weight="summaryMaxWeight" align="right" />
-                </div>
-              </div>
-
-              <button
-                @click="openLearnerReport(s.student_id)"
-                class="w-full mt-3 px-3 py-2 text-xs font-medium rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50"
-              >
-                View Report
+            <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+              <button v-for="g in GRADES" :key="g" type="button" class="inline-flex items-center gap-1.5 text-[11px]" :class="performanceFilter === g ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-300'" @click="performanceFilter = performanceFilter === g ? 'all' : g">
+                <span class="w-2.5 h-2.5 rounded-sm" :class="GRADE_BAR[g]"></span>{{ g }} · {{ GRADE_DESCRIPTORS[g] }} <span class="text-gray-400">{{ classStats.gradeCounts[g] }}</span>
               </button>
             </div>
-            <div v-if="filteredSummary.length === 0" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 text-center text-gray-400 text-sm">
-              No learners match these filters.
-            </div>
           </div>
-        </template>
-      </div>
 
-      <!-- Students table (generate/view management) -->
-      <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-3">Report Card Generation</h2>
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <div class="overflow-x-auto">
-        <table class="w-full">
-          <thead class="bg-gray-50 dark:bg-gray-700">
-            <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Student</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Admission No</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-              <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-            <tr v-for="student in students" :key="student.id" :data-student-id="student.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-              <td class="px-6 py-4 font-medium text-gray-900 dark:text-white">{{ student.first_name }} {{ student.last_name }}</td>
-              <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ student.admission_number }}</td>
-              <td class="px-6 py-4">
-                <span v-if="student.report_card_id" class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
-                  Generated{{ student.performance_level ? ` - ${student.performance_level}` : '' }}
-                </span>
-                <span v-else class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-                  Not generated
-                </span>
-              </td>
-              <td class="px-6 py-4 text-right space-x-2 whitespace-nowrap">
-                <button
-                  v-if="student.report_card_id"
-                  @click="viewReport(student.id)"
-                  class="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-                >
-                  View
-                </button>
-                <button
-                  v-if="isClassTeacher"
-                  :disabled="generatingId === student.id"
-                  @click="generateFull(student.id)"
-                  class="px-3 py-1.5 text-xs font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
-                >
-                  {{ generatingId === student.id ? 'Generating...' : (student.report_card_id ? 'Regenerate Full' : 'Generate Full') }}
-                </button>
-                <button
-                  v-else-if="selectedSubjectId"
-                  :disabled="generatingId === student.id"
-                  @click="generateSubject(student.id)"
-                  class="px-3 py-1.5 text-xs font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
-                >
-                  {{ generatingId === student.id ? 'Generating...' : 'Generate Subject' }}
-                </button>
-              </td>
-            </tr>
-            <tr v-if="students.length === 0">
-              <td colspan="4" class="px-6 py-10 text-center text-gray-400">No students found for this class.</td>
-            </tr>
-          </tbody>
-        </table>
+          <div class="flex flex-col sm:flex-row gap-2 mb-3">
+            <input v-model="searchQuery" type="search" placeholder="Search learner or student number" class="flex-1 px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+            <PickerDropdown v-model="statusFilter" label="Report status" :options="statusOptions" align="right" />
+          </div>
+
+          <EmptyState v-if="!filteredSummary.length" compact icon="users" tone="gray" title="No learners match these filters" />
+          <ul v-else class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700">
+            <li v-for="s in filteredSummary" :key="s.student_id" class="p-3 sm:p-4 flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
+              <button type="button" class="min-w-0 md:w-56 flex-shrink-0 text-left" @click="openLearnerReport(s.student_id)">
+                <span class="block text-sm font-semibold text-gray-900 dark:text-white hover:text-indigo-700 dark:hover:text-indigo-300 truncate">{{ niceName(`${s.first_name} ${s.last_name}`) }}</span>
+                <span class="block text-[11px] text-gray-400">{{ s.admission_number }}</span>
+              </button>
+              <div class="flex-1 grid grid-cols-3 gap-2">
+                <div v-for="cat in CATS" :key="cat" class="rounded-xl px-2.5 py-1.5 bg-gray-50 dark:bg-gray-700/40 min-w-0">
+                  <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400">{{ cat }}</p>
+                  <p v-if="s.categories[cat].state === 'assessed'" class="flex items-center gap-1.5 min-w-0">
+                    <span class="w-5 h-5 rounded-md flex items-center justify-center text-[11px] font-extrabold text-white flex-shrink-0" :class="GRADE_BAR[(s.categories[cat].status || 'E') as Grade]">{{ s.categories[cat].status }}</span>
+                    <span class="text-sm font-semibold text-gray-900 dark:text-white tabular-nums">{{ s.categories[cat].percentage }}%</span>
+                  </p>
+                  <p v-else class="text-[11px] italic text-gray-400 truncate">{{ STATE_LABEL[s.categories[cat].state] || s.categories[cat].state }}</p>
+                </div>
+              </div>
+              <div class="flex items-center justify-between md:justify-end gap-2 md:w-56 flex-shrink-0">
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium" :class="REPORT_STATUS_BADGE[s.report_status]">{{ REPORT_STATUS_LABELS[s.report_status] }}</span>
+                <button type="button" class="px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700" @click="openLearnerReport(s.student_id)">Report</button>
+              </div>
+            </li>
+          </ul>
+        </template>
+      </template>
+
+      <!-- ===== Report card generation ===== -->
+      <template v-else>
+        <div v-if="!noAccess" class="flex flex-col sm:flex-row sm:items-end gap-2 mb-4">
+          <PickerDropdown v-if="!isClassTeacher && mySubjects.length" v-model="selectedSubjectId" label="Your subject" :options="mySubjects.map(s => ({ value: s.id, label: s.name }))" />
+          <div class="sm:ml-auto flex items-center gap-2">
+            <span v-if="bulkProgress" class="text-xs text-gray-500 dark:text-gray-400">Generating {{ bulkProgress.done }}/{{ bulkProgress.total }}…</span>
+            <button
+              v-if="missingCount || !isClassTeacher"
+              type="button"
+              :disabled="!!bulkProgress || (!isClassTeacher && !selectedSubjectId)"
+              class="px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
+              @click="generateAll"
+            >{{ isClassTeacher ? `Generate all missing (${missingCount})` : `Generate for all (${students.length})` }}</button>
+          </div>
         </div>
-      </div>
+
+        <!-- Progress through the class -->
+        <div v-if="students.length && !noAccess" class="mb-4 flex items-center gap-3">
+          <span class="flex-1 h-2 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden"><span class="block h-full rounded-full bg-indigo-500" :style="{ width: `${generatedCount / students.length * 100}%` }"></span></span>
+          <span class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ generatedCount }} of {{ students.length }} generated</span>
+        </div>
+
+        <Skeleton v-if="loadingStudents" variant="list" :count="5" />
+        <EmptyState v-else-if="noAccess" compact icon="teacher" tone="amber" title="Report cards for this class come from its class teacher" message="You can generate them for a class you're Class Teacher of, or where you're allocated a subject on the timetable. Ask the school admin if this class should be yours." />
+        <EmptyState v-else-if="!students.length" compact icon="users" tone="gray" title="No students in this class" />
+        <ul v-else class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700">
+          <li v-for="student in students" :key="student.id" :data-student-id="student.id" class="p-3 sm:px-4 flex items-center gap-3">
+            <div class="min-w-0 flex-1">
+              <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ niceName(`${student.first_name} ${student.last_name}`) }}</p>
+              <p class="text-[11px] text-gray-400">{{ student.admission_number }}</p>
+            </div>
+            <span v-if="student.report_card_id" class="hidden sm:inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-emerald-50 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200">
+              <AppIcon name="check-circle" class="w-3.5 h-3.5" /> Generated{{ student.performance_level ? ` · ${student.performance_level}` : '' }}
+            </span>
+            <span v-else class="hidden sm:inline-flex px-2 py-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300">Not generated</span>
+            <div class="flex items-center gap-1.5 flex-shrink-0">
+              <button v-if="student.report_card_id" type="button" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700" @click="viewReport(student.id)">View</button>
+              <button
+                v-if="isClassTeacher"
+                type="button"
+                :disabled="generatingId === student.id || !!bulkProgress"
+                class="px-3 py-1.5 text-xs font-semibold rounded-lg disabled:opacity-50"
+                :class="student.report_card_id ? 'text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30' : 'bg-indigo-600 text-white hover:bg-indigo-700'"
+                @click="generateFull(student.id)"
+              >{{ generatingId === student.id ? 'Generating…' : (student.report_card_id ? 'Regenerate' : 'Generate') }}</button>
+              <button
+                v-else-if="selectedSubjectId"
+                type="button"
+                :disabled="generatingId === student.id || !!bulkProgress"
+                class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
+                @click="generateSubject(student.id)"
+              >{{ generatingId === student.id ? 'Generating…' : 'Generate' }}</button>
+            </div>
+          </li>
+        </ul>
+      </template>
     </template>
 
-    <!-- Report viewer modal -->
-    <div v-if="activeReport" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div class="bg-transparent max-w-5xl w-full my-8">
+    <!-- Report viewer -->
+    <div v-if="activeReport" class="fixed inset-0 bg-black/60 flex items-start justify-center z-50 p-4 overflow-y-auto" @click.self="activeReport = null">
+      <div class="max-w-5xl w-full my-6">
         <div class="flex justify-end mb-2 gap-2">
-          <button @click="printReport" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600">
+          <button type="button" class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-xl bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 shadow" @click="printReport">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
             Print
           </button>
-          <button @click="activeReport = null" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600">
-            Close
-          </button>
+          <button type="button" class="px-3 py-2 text-sm font-semibold rounded-xl bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 shadow" @click="activeReport = null">Close</button>
         </div>
         <ReportCard
           :report="activeReport"
@@ -288,12 +167,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, h, defineComponent, type PropType } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import axios from 'axios'
 import ReportCard from '@/components/reportcard/ReportCard.vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StatStrip, { type StatItem } from '@/components/ui/StatStrip.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
+import Skeleton from '@/components/ui/Skeleton.vue'
+import PickerDropdown, { type PickerOption } from '@/components/common/PickerDropdown.vue'
+import AppIcon from '@/components/common/AppIcon.vue'
+import { niceName } from '@/components/dashboard/teacher/time'
+import { usePersistedRef } from '@/composables/usePersistedRef'
+import { useToastStore } from '@/stores/toast'
 import type {
   ReportCard as ReportCardType, ReportCardStudentEntry,
-  ClassSummaryStudent, ClassSummarySubjectOption, ClassSummaryCategoryResult, ClassSummaryReportStatus,
+  ClassSummaryStudent, ClassSummarySubjectOption, ClassSummaryReportStatus,
 } from '@/types/reportCard'
 
 interface Term {
@@ -328,6 +216,10 @@ const selectedClassId = ref<number | null>(null)
 const selectedSubjectId = ref<number | null>(null)
 
 const loadingStudents = ref(false)
+// The report-card side refused this class (not its class teacher, no subject allocation)
+const noAccess = ref(false)
+// Streams the teacher actually teaches - listed first, and the default
+const mine = ref<Set<number>>(new Set())
 const generatingId = ref<number | null>(null)
 const error = ref<string | null>(null)
 
@@ -350,6 +242,21 @@ const searchQuery = ref('')
 const performanceFilter = ref<'all' | 'A' | 'B' | 'C' | 'D' | 'E'>('all')
 const statusFilter = ref<'all' | ClassSummaryReportStatus>('all')
 
+const toast = useToastStore()
+const booting = ref(true)
+// Two jobs on the page, one shown at a time (remembered)
+const TABS = [
+  { key: 'summary' as const, label: 'Class summary' },
+  { key: 'generate' as const, label: 'Generate reports' }
+]
+const tab = usePersistedRef<'summary' | 'generate'>('reports:tab', 'summary')
+
+type Grade = 'A' | 'B' | 'C' | 'D' | 'E'
+const GRADES: Grade[] = ['A', 'B', 'C', 'D', 'E']
+const GRADE_BAR: Record<Grade, string> = { A: 'bg-emerald-500', B: 'bg-sky-500', C: 'bg-amber-400', D: 'bg-orange-500', E: 'bg-rose-500' }
+const CATS = ['LOA', 'AOI', 'EOC'] as const
+const STATE_LABEL: Record<string, string> = { not_assessed: 'Not assessed', awaiting_marking: 'Awaiting marking', awaiting_submission: 'Not handed in' }
+
 const GRADE_DESCRIPTORS: Record<'A' | 'B' | 'C' | 'D' | 'E', string> = {
   A: 'Exceptional', B: 'Outstanding', C: 'Satisfactory', D: 'Basic', E: 'Elementary',
 }
@@ -369,45 +276,6 @@ const REPORT_STATUS_BADGE: Record<ClassSummaryReportStatus, string> = {
   ready: 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300',
   published: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300',
 }
-
-const gradeTextColor = (grade: string) => {
-  const colors: Record<string, string> = {
-    A: 'text-emerald-600', B: 'text-blue-600', C: 'text-amber-500', D: 'text-orange-500', E: 'text-red-600',
-  }
-  return colors[grade] || 'text-gray-400'
-}
-
-// Small inline component (one file, avoids a whole new SFC for a single grade+status+weight cell
-// reused in both the desktop table and the mobile cards). Declared via defineComponent with an
-// explicit props object - a bare render function here does NOT reliably get kebab-case template
-// attributes (e.g. :max-weight) camelCased into its argument, so max-weight silently read as
-// undefined without this.
-const CategoryCell = defineComponent({
-  props: {
-    result: { type: Object as PropType<ClassSummaryCategoryResult>, required: true },
-    maxWeight: { type: Number, required: true },
-    align: { type: String as PropType<'left' | 'right'>, default: 'left' },
-  },
-  setup(props) {
-    return () => {
-      const r = props.result
-      if (r.state === 'assessed') {
-        return h('div', { class: props.align === 'right' ? 'text-right' : '' }, [
-          h('span', { class: 'font-semibold text-gray-900 dark:text-white' }, `${r.percentage}%`),
-          h('span', { class: `mx-1 font-bold ${gradeTextColor(r.status || '')}` }, `· ${r.status} ·`),
-          h('span', { class: 'text-gray-600 dark:text-gray-400' }, r.performance_descriptor || ''),
-          h('div', { class: 'text-xs text-gray-400 mt-0.5' }, `Weight: ${r.weight}/${props.maxWeight}`),
-        ])
-      }
-      const labels: Record<string, string> = {
-        not_assessed: 'Not Assessed',
-        awaiting_marking: 'Awaiting Marking',
-        awaiting_submission: 'Awaiting Submission',
-      }
-      return h('span', { class: 'text-xs italic text-gray-400' }, labels[r.state] || r.state)
-    }
-  },
-})
 
 const loadSummarySubjects = async () => {
   if (!selectedClassId.value || !selectedTermId.value) {
@@ -465,6 +333,17 @@ const filteredSummary = computed(() => {
   })
 })
 
+const termOptions = computed<PickerOption<number>[]>(() => terms.value.map(t => ({
+  value: t.id, label: `${t.name}${t.academic_year ? ` ${t.academic_year}` : ''}`, hint: t.is_current ? 'current' : undefined
+})))
+const classOptions = computed<PickerOption<number>[]>(() => [...classes.value]
+  .sort((a, b) => Number(mine.value.has(b.id)) - Number(mine.value.has(a.id)) || a.name.localeCompare(b.name, undefined, { numeric: true }) || String(a.stream_name).localeCompare(String(b.stream_name)))
+  .map(c => ({ value: c.id, label: `${c.name}${c.stream_name ? `-${c.stream_name}` : ''}`, hint: mine.value.has(c.id) ? 'yours' : undefined, hintClass: 'text-indigo-600 dark:text-indigo-300' })))
+const statusOptions = computed<PickerOption<'all' | ClassSummaryReportStatus>[]>(() => [
+  { value: 'all', label: 'All' },
+  ...REPORT_STATUS_ORDER.map(s => ({ value: s, label: REPORT_STATUS_LABELS[s] }))
+])
+
 const classStats = computed(() => {
   const gradeCounts: Record<'A' | 'B' | 'C' | 'D' | 'E', number> = { A: 0, B: 0, C: 0, D: 0, E: 0 }
   let ready = 0
@@ -480,6 +359,44 @@ const classStats = computed(() => {
   return { total: classSummary.value.length, gradeCounts, ready, published }
 })
 
+const gradeTotal = computed(() => GRADES.reduce((n, g) => n + classStats.value.gradeCounts[g], 0))
+const summaryStats = computed<StatItem[]>(() => [
+  { label: 'Learners', value: classStats.value.total, tone: 'gray' },
+  { label: 'Ready', value: classStats.value.ready, tone: 'emerald', hint: 'all results in' },
+  { label: 'Published', value: classStats.value.published, tone: 'indigo' },
+  { label: 'Still to come', value: classStats.value.total - classStats.value.ready - classStats.value.published, tone: 'amber', hint: 'waiting on work or marking' }
+])
+const generatedCount = computed(() => students.value.filter(s => s.report_card_id).length)
+const missingCount = computed(() => students.value.length - generatedCount.value)
+
+// Generate for the whole class in one go - one learner after another, so the server isn't
+// flooded; the class teacher fills in the missing full reports, a subject teacher their subject
+const bulkProgress = ref<{ done: number; total: number } | null>(null)
+const generateAll = async () => {
+  if (!selectedTermId.value) return
+  const subjectId = selectedSubjectId.value
+  const targets = isClassTeacher.value ? students.value.filter(s => !s.report_card_id) : students.value
+  if (!targets.length || (!isClassTeacher.value && !subjectId)) return
+  bulkProgress.value = { done: 0, total: targets.length }
+  let failed = 0
+  for (const st of targets) {
+    try {
+      const url = isClassTeacher.value
+        ? `${API_BASE}/report-cards/${st.id}/${selectedTermId.value}/generate`
+        : `${API_BASE}/report-cards/${st.id}/${selectedTermId.value}/subjects/${subjectId}/generate`
+      await axios.post(url)
+    } catch {
+      failed++
+    }
+    bulkProgress.value = { done: bulkProgress.value.done + 1, total: targets.length }
+  }
+  bulkProgress.value = null
+  await loadStudents()
+  await loadClassSummary()
+  if (failed) toast.warning(`${targets.length - failed} generated, ${failed} could not be`)
+  else toast.success(`${targets.length} report${targets.length === 1 ? '' : 's'} generated`)
+}
+
 // Reuses the exact existing view/generate flow below - the already-loaded `students` list (from
 // the "Report Card Generation" table) tells us whether a report already exists for this learner.
 const openLearnerReport = async (studentId: number) => {
@@ -493,9 +410,8 @@ const openLearnerReport = async (studentId: number) => {
   } else if (selectedSubjectId.value) {
     await generateSubject(studentId)
   } else {
-    error.value = 'Generate this student\'s report card from the table below first (select your subject).'
-    const row = document.querySelector(`[data-student-id="${studentId}"]`)
-    row?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    toast.warning("Generate this learner's report first - pick your subject")
+    tab.value = 'generate'
   }
 }
 
@@ -507,9 +423,19 @@ const loadTerms = async () => {
 }
 
 const loadClasses = async () => {
-  const res = await axios.get(`${API_BASE}/classes`)
+  const [res, overview] = await Promise.all([
+    axios.get(`${API_BASE}/classes`),
+    axios.get(`${API_BASE}/classes/overview`).catch(() => null)
+  ])
   classes.value = res.data.data
+  const streams: { id: number; mine?: boolean }[] = overview?.data?.data?.streams ?? []
+  mine.value = new Set(streams.filter(st => st.mine).map(st => st.id))
+  // The last class looked at, else the first - never a blank "Select class"
+  let last: number | null = null
+  try { last = Number(localStorage.getItem('reports:class')) || null } catch { /* private mode */ }
+  selectedClassId.value = classOptions.value.find(o => o.value === last)?.value ?? classOptions.value[0]?.value ?? null
 }
+watch(selectedClassId, (id) => { try { if (id) localStorage.setItem('reports:class', String(id)) } catch { /* private mode */ } })
 
 const loadMySubjects = async () => {
   if (!selectedClassId.value || !selectedTermId.value) {
@@ -534,6 +460,7 @@ const loadStudents = async () => {
   }
   loadingStudents.value = true
   error.value = null
+  noAccess.value = false
   try {
     const res = await axios.get(`${API_BASE}/report-cards/students`, {
       params: { class_id: selectedClassId.value, term_id: selectedTermId.value },
@@ -546,8 +473,10 @@ const loadStudents = async () => {
       mySubjects.value = []
     }
   } catch (err: any) {
-    error.value = err.response?.data?.message || 'Failed to load students'
+    if (err.response?.status === 403) noAccess.value = true
+    else error.value = err.response?.data?.message || 'Failed to load students'
     students.value = []
+    isClassTeacher.value = false
   } finally {
     loadingStudents.value = false
   }
@@ -619,8 +548,12 @@ const printReport = () => {
 }
 
 onMounted(async () => {
-  await Promise.all([loadTerms(), loadClasses()])
-  await loadStudents()
-  await loadSummarySubjects()
+  try {
+    await Promise.all([loadTerms(), loadClasses()])
+  } catch (err: any) {
+    error.value = err.response?.data?.message || 'Failed to load terms and classes'
+  } finally {
+    booting.value = false
+  }
 })
 </script>

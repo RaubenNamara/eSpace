@@ -581,7 +581,19 @@ class AssignmentController extends Controller
                 c.stream_name as stream_name,
                 COUNT(DISTINCT q.id) as question_count,
                 COUNT(DISTINCT sub.id) as submission_count,
-                COUNT(DISTINCT CASE WHEN sub.status = 'submitted' THEN sub.id END) as pending_submission_count
+                COUNT(DISTINCT CASE WHEN sub.status = 'submitted' THEN sub.id END) as pending_submission_count,
+                -- Where the class has got: handed in, waiting to be marked (new or part-marked),
+                -- marked, and the students it's aimed at (the subject's department, same class rule
+                -- students see it by)
+                COUNT(DISTINCT CASE WHEN sub.status IN ('submitted','marking','graded','returned') THEN sub.id END) as handed_in_count,
+                COUNT(DISTINCT CASE WHEN sub.status IN ('submitted','marking') THEN sub.id END) as to_mark_count,
+                COUNT(DISTINCT CASE WHEN sub.status IN ('graded','returned') THEN sub.id END) as marked_count,
+                (SELECT COUNT(DISTINCT sde.student_id) FROM student_department_enrollments sde
+                 LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
+                 WHERE sde.department_id = s.department_id AND sde.deleted_at IS NULL AND sde.status = 'active'
+                   AND ((a.class_id IS NULL AND a.class_group_name IS NULL)
+                        OR sde.class_id = a.class_id
+                        OR (a.class_group_name IS NOT NULL AND sde_c.name = a.class_group_name))) as audience
                 FROM assignments a
                 LEFT JOIN subjects s ON a.subject_id = s.id
                 LEFT JOIN classes c ON a.class_id = c.id
