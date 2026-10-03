@@ -1,6 +1,5 @@
 <template>
   <div>
-    <PreviewBanner module-label="Item Bank" />
 
     <Breadcrumb :items="breadcrumbItems" />
 
@@ -51,7 +50,6 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
-import PreviewBanner from '@/components/preview/PreviewBanner.vue'
 import Breadcrumb, { type BreadcrumbItem } from '@/components/common/Breadcrumb.vue'
 import ItemCover from '@/components/itembank/ItemCover.vue'
 import ItemBankPdfViewer from '@/components/itembank/ItemBankPdfViewer.vue'

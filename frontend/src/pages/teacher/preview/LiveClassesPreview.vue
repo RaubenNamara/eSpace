@@ -1,8 +1,6 @@
 <template>
   <div>
-    <PreviewBanner module-label="Live Classes" />
 
-    <Breadcrumb :items="[{ label: 'Preview as Student', to: '/teacher/preview' }, { label: 'Live Classes' }]" />
 
     <div v-if="loading" class="text-center py-16">
       <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
@@ -60,8 +58,6 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
-import PreviewBanner from '@/components/preview/PreviewBanner.vue'
-import Breadcrumb from '@/components/common/Breadcrumb.vue'
 import type { LiveClass } from '@/types/liveclass'
 
 const route = useRoute()

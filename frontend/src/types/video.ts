@@ -30,6 +30,11 @@ export interface VideoResource {
   class_stream_name?: string
   teacher_first_name?: string
   teacher_last_name?: string
+  // Teacher list only: who it's aimed at and how far they've got
+  audience?: number
+  viewers?: number
+  completed?: number
+  avg_watched?: number | string | null
 }
 
 export interface VideoForm {

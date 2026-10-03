@@ -1,6 +1,5 @@
 <template>
   <div>
-    <PreviewBanner module-label="Videos" />
 
     <Breadcrumb :items="breadcrumbItems" />
 
@@ -51,7 +50,6 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
-import PreviewBanner from '@/components/preview/PreviewBanner.vue'
 import Breadcrumb, { type BreadcrumbItem } from '@/components/common/Breadcrumb.vue'
 import VideoCover from '@/components/video/VideoCover.vue'
 import VideoPlayerModal from '@/components/video/VideoPlayerModal.vue'

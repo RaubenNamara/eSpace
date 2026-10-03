@@ -1,87 +1,58 @@
 <template>
-  <div>
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-      <div class="flex items-center gap-2.5">
-        <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0">
-          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-          </svg>
+  <!-- Student View: any of the teacher's class streams exactly as its students see it, one module
+       at a time - the stream and module are remembered, so it opens straight onto the last view -->
+  <div class="w-full">
+    <PageHeader title="Student View" description="See your classes exactly as your students do." icon="teacher">
+      <template #filters>
+        <PickerDropdown v-if="streamOptions.length" v-model="selectedStreamId" label="Class" :options="streamOptions" align="right" />
+      </template>
+    </PageHeader>
+
+    <Skeleton v-if="loading" variant="cards" :count="3" />
+    <EmptyState v-else-if="classes.length === 0" icon="users" title="No classes yet" message="Classes appear here once students are enrolled in your department." />
+
+    <template v-else-if="selectedStream">
+      <!-- Whose eyes these are -->
+      <div class="mb-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-4 py-3 flex items-center gap-3 shadow-sm">
+        <div class="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
         </div>
-        <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Preview as Student</h1>
+        <p class="flex-1 min-w-0 text-sm leading-snug">
+          You're seeing exactly what students in <span class="font-bold">{{ streamLabel(selectedStream) }}</span> see
+          <span class="text-indigo-100">· {{ selectedStream.student_count }} students</span>
+          <span class="block text-xs text-indigo-100">Read-only - nothing you do here changes real data.</span>
+        </p>
       </div>
 
-      <div v-if="classes.length > 0" class="flex items-center gap-2">
-        <label class="text-sm font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">Class</label>
-        <select
-          v-model="selectedStreamId"
-          class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-        >
-          <option value="">Select a class...</option>
-          <optgroup v-for="group in classGroups" :key="group.name + group.level" :label="group.name">
-            <option v-for="stream in group.streams" :key="stream.id" :value="stream.id">
-              {{ group.name }}{{ stream.stream_name ? ' - ' + stream.stream_name : '' }} ({{ stream.student_count }})
-            </option>
-          </optgroup>
-        </select>
-      </div>
-    </div>
+      <!-- Modules -->
+      <nav class="flex gap-1 p-1 rounded-xl bg-gray-100 dark:bg-gray-800 mb-4 overflow-x-auto [scrollbar-width:none]" aria-label="Modules">
+        <template v-for="mod in modules" :key="mod.label">
+          <RouterLink
+            v-if="mod.external"
+            :to="mod.to"
+            class="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold whitespace-nowrap text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+            :title="mod.description"
+          >
+            <component :is="mod.icon" class="w-4 h-4" />
+            {{ mod.label }}
+            <svg class="w-3 h-3 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+          </RouterLink>
+          <button
+            v-else
+            type="button"
+            class="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors"
+            :class="isModuleActive(mod) ? 'bg-white dark:bg-gray-700 text-indigo-700 dark:text-indigo-200 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'"
+            :title="mod.description"
+            @click="openModule(mod)"
+          >
+            <component :is="mod.icon" class="w-4 h-4" />
+            {{ mod.label }}
+          </button>
+        </template>
+      </nav>
 
-    <div v-if="loading" class="text-center py-10">
-      <div class="inline-block animate-spin rounded-full h-8 w-8 border-2 border-gray-200 dark:border-gray-700 border-t-indigo-600"></div>
-    </div>
-
-    <div v-else-if="classes.length === 0" class="text-center py-10 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700">
-      <p class="text-gray-500 dark:text-gray-400">No classes found in your department yet.</p>
-    </div>
-
-    <template v-else>
-      <div v-if="!selectedStream" class="text-center py-10 bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700">
-        <p class="text-sm text-gray-500 dark:text-gray-400">Pick a class above to see its preview options.</p>
-      </div>
-
-      <!-- Modules for the selected class-stream - same blur-on-sibling
-           row, smaller cards, one indigo color throughout so it reads as the final step. Clicking
-           one opens its content in the <router-view> below without leaving this page - the picker
-           above stays put and the other module cards blur, just like the class/stream rows. -->
-      <div v-if="selectedStream">
-        <p class="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">Modules</p>
-        <div class="flex flex-wrap gap-3">
-          <template v-for="mod in modules" :key="mod.label">
-            <RouterLink
-              v-if="mod.external"
-              :to="mod.to"
-              class="flex-shrink-0 w-36 text-left card !p-3.5 transition-all duration-200 border-2 border-transparent hover:border-indigo-200 dark:hover:border-indigo-800"
-            >
-              <div class="w-9 h-9 bg-indigo-100 dark:bg-indigo-900/20 rounded-lg flex items-center justify-center mb-2">
-                <component :is="mod.icon" class="w-[18px] h-[18px] text-indigo-600 dark:text-indigo-400" />
-              </div>
-              <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ mod.label }}</p>
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">{{ mod.description }}</p>
-            </RouterLink>
-            <button
-              v-else
-              @click="toggleModule(mod)"
-              class="flex-shrink-0 w-36 text-left card !p-3.5 transition-all duration-200 border-2 hover:opacity-100 hover:blur-0"
-              :class="[
-                isModuleActive(mod) ? 'border-indigo-500 dark:border-indigo-400' : 'border-transparent hover:border-indigo-200 dark:hover:border-indigo-800',
-                { 'opacity-40 blur-[1px]': anyModuleActive && !isModuleActive(mod) }
-              ]"
-            >
-              <div class="w-9 h-9 bg-indigo-100 dark:bg-indigo-900/20 rounded-lg flex items-center justify-center mb-2">
-                <component :is="mod.icon" class="w-[18px] h-[18px] text-indigo-600 dark:text-indigo-400" />
-              </div>
-              <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ mod.label }}</p>
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">{{ mod.description }}</p>
-            </button>
-          </template>
-        </div>
-      </div>
-
-      <!-- Opened module content, rendered in place via the nested route under /teacher/preview. -->
-      <div v-if="anyModuleActive" class="mt-4">
-        <router-view />
-      </div>
+      <!-- The open module, rendered in place via the nested route under /teacher/preview -->
+      <router-view />
     </template>
   </div>
 </template>
@@ -90,6 +61,11 @@
 import { ref, computed, watch, onMounted, h } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
+import Skeleton from '@/components/ui/Skeleton.vue'
+import PickerDropdown, { type PickerOption } from '@/components/common/PickerDropdown.vue'
+import { usePersistedRef } from '@/composables/usePersistedRef'
 
 interface TeacherClass {
   id: number
@@ -97,6 +73,8 @@ interface TeacherClass {
   level: string
   stream_name: string | null
   student_count: number
+  // A stream this teacher teaches (has published work for)
+  mine: boolean
 }
 
 const API_BASE = '/api/teacher'
@@ -105,30 +83,17 @@ const route = useRoute()
 const router = useRouter()
 
 const classes = ref<TeacherClass[]>([])
-const selectedStreamId = ref<number | ''>('')
+// The stream and module on view - both remembered, so the page reopens where the teacher left it
+const selectedStreamId = usePersistedRef<number | null>('preview:stream', null)
+const lastModule = usePersistedRef<string>('preview:module', 'eNotes')
 const loading = ref(false)
 
-// The backend returns one row per class+stream combination - group them here so the dropdown
-// shows an optgroup per class (e.g. "S.6") with its streams as options, same grouping used in
-// My Classes.
-const classGroups = computed(() => {
-  const groups = new Map<string, { name: string; level: string; streams: TeacherClass[]; totalStudents: number }>()
-  for (const cls of classes.value) {
-    const key = `${cls.name}|${cls.level}`
-    if (!groups.has(key)) {
-      groups.set(key, { name: cls.name, level: cls.level, streams: [], totalStudents: 0 })
-    }
-    const group = groups.get(key)!
-    group.streams.push(cls)
-    group.totalStudents += Number(cls.student_count) || 0
-  }
-  return Array.from(groups.values())
-})
+const streamLabel = (c: TeacherClass) => `${c.name}${c.stream_name ? `-${c.stream_name}` : ''}`
+const streamOptions = computed<PickerOption<number>[]>(() => [...classes.value]
+  .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }) || String(a.stream_name).localeCompare(String(b.stream_name)))
+  .map(c => ({ value: c.id, label: streamLabel(c), hint: c.mine ? 'yours' : `${c.student_count}` })))
 
-const selectedStream = computed<TeacherClass | null>(() => {
-  if (!selectedStreamId.value) return null
-  return classes.value.find(c => c.id === selectedStreamId.value) || null
-})
+const selectedStream = computed<TeacherClass | null>(() => classes.value.find(c => c.id === selectedStreamId.value) || null)
 
 // Tiny inline icon factory so this file doesn't need eight separate heroicon imports for
 // single-use glyphs - each is just a path/viewBox pair rendered through the same <svg> shell.
@@ -160,32 +125,38 @@ const modules = computed(() => selectedStream.value ? [
 const isModuleActive = (mod: { routeNames?: string[] }) => !!mod.routeNames?.includes(route.name as string)
 const anyModuleActive = computed(() => modules.value.some(m => isModuleActive(m)))
 
-const toggleModule = (mod: { to: string; routeNames?: string[] }) => {
-  if (isModuleActive(mod)) {
-    router.push('/teacher/preview')
-  } else {
-    router.push(mod.to)
-  }
+const openModule = (mod: { label: string; to: string }) => {
+  lastModule.value = mod.label
+  router.push(mod.to)
+}
+
+// With a stream chosen and no module open, open the last one used (eNotes to begin with)
+const openDefaultModule = () => {
+  if (!selectedStream.value || anyModuleActive.value) return
+  const mod = modules.value.find(m => m.label === lastModule.value && !m.external) ?? modules.value.find(m => !m.external)
+  if (mod) router.replace(mod.to)
 }
 
 // Keep whatever module is currently open in sync with the class/stream picker above it: closing
 // the drill-down closes the module too, and switching to a different stream re-opens the same
 // module type against the new class instead of leaving a stale classId in the URL.
 watch(selectedStream, (newStream) => {
-  if (!newStream) {
-    if (anyModuleActive.value) router.push('/teacher/preview')
-    return
-  }
+  if (!newStream) return
   const activeMod = modules.value.find(m => isModuleActive(m))
   if (activeMod && activeMod.to !== route.path) router.push(activeMod.to)
+  else openDefaultModule()
 })
+// Back on /teacher/preview itself (e.g. the sidebar link): reopen the module
+watch(() => route.name, (name) => { if (name === 'StudentPreview') openDefaultModule() })
 
 const loadClasses = async () => {
   loading.value = true
   try {
-    const response = await axios.get(`${API_BASE}/classes`)
+    const response = await axios.get(`${API_BASE}/classes/overview`)
     if (response.data.success) {
-      classes.value = response.data.data || []
+      classes.value = (response.data.data.streams || []).map((s: any) => ({
+        id: s.id, name: s.name, level: s.level, stream_name: s.stream_name, student_count: s.students, mine: !!s.mine
+      }))
     }
   } catch (error) {
     console.error('Failed to load classes:', error)
@@ -198,10 +169,14 @@ const loadClasses = async () => {
 // still show the right class/stream highlighted above it instead of an empty picker.
 const initFromRoute = () => {
   const classId = Number(route.params.classId)
-  if (!classId) return
-  if (classes.value.some(c => c.id === classId)) {
+  if (classId && classes.value.some(c => c.id === classId)) {
     selectedStreamId.value = classId
+  } else if (!selectedStream.value) {
+    // The remembered stream isn't there any more (or first visit): the first one the teacher teaches
+    const firstMine = streamOptions.value.find(o => classes.value.find(c => c.id === o.value)?.mine)
+    selectedStreamId.value = (firstMine ?? streamOptions.value[0])?.value ?? null
   }
+  openDefaultModule()
 }
 
 onMounted(async () => {

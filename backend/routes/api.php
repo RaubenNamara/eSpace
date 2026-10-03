@@ -279,6 +279,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::post('/library/bulk-download', 'eSpace\App\Controllers\Teacher\LibraryController@bulkDownload');
         Router::post('/library/bulk-delete', 'eSpace\App\Controllers\Teacher\LibraryController@bulkDelete');
         Router::post('/library/bulk-export', 'eSpace\App\Controllers\Teacher\LibraryController@bulkExport');
+        Router::get('/library/{id}/readers', 'eSpace\App\Controllers\Teacher\LibraryController@readers');
         Router::get('/library/{id}', 'eSpace\App\Controllers\Teacher\LibraryController@show');
         Router::put('/library/{id}', 'eSpace\App\Controllers\Teacher\LibraryController@update');
         Router::post('/library/{id}/replace-file', 'eSpace\App\Controllers\Teacher\LibraryController@replaceFile');
@@ -293,6 +294,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::post('/videos/bulk-status', 'eSpace\App\Controllers\Teacher\VideoController@bulkStatus');
         Router::post('/videos/bulk-delete', 'eSpace\App\Controllers\Teacher\VideoController@bulkDelete');
         Router::post('/videos/bulk-export', 'eSpace\App\Controllers\Teacher\VideoController@bulkExport');
+        Router::get('/videos/{id}/viewers', 'eSpace\App\Controllers\Teacher\VideoController@viewers');
         Router::get('/videos/{id}', 'eSpace\App\Controllers\Teacher\VideoController@show');
         Router::put('/videos/{id}', 'eSpace\App\Controllers\Teacher\VideoController@update');
         Router::delete('/videos/{id}', 'eSpace\App\Controllers\Teacher\VideoController@delete');

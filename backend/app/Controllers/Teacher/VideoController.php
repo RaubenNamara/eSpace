@@ -92,15 +92,30 @@ class VideoController extends Controller
 
         $whereClause = implode(' AND ', $where);
 
+        // Each video also carries how far its audience has got: the students it's aimed at
+        // (same rule students see it by), how many have opened it, finished it, and the
+        // average share watched among those who opened it
         $sql = "SELECT v.*,
                        s.name as subject_name,
                        s.code as subject_code,
                        c.name as class_name,
                        c.level as class_level,
-                       c.stream_name as class_stream_name
+                       c.stream_name as class_stream_name,
+                       (SELECT COUNT(DISTINCT sde.student_id) FROM student_department_enrollments sde
+                        LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
+                        WHERE " . self::AUDIENCE_MATCH . ") AS audience,
+                       COALESCE(vv.viewers, 0) AS viewers,
+                       COALESCE(vv.completed, 0) AS completed,
+                       vv.avg_watched
                 FROM videos v
                 LEFT JOIN subjects s ON v.subject_id = s.id
                 LEFT JOIN classes c ON v.class_id = c.id
+                LEFT JOIN (
+                    SELECT video_id, COUNT(DISTINCT student_id) AS viewers,
+                           COUNT(DISTINCT CASE WHEN completed_at IS NOT NULL THEN student_id END) AS completed,
+                           ROUND(AVG(percentage_watched)) AS avg_watched
+                    FROM video_views GROUP BY video_id
+                ) vv ON vv.video_id = v.id
                 WHERE {$whereClause}
                 ORDER BY v.updated_at DESC";
 
@@ -150,6 +165,66 @@ class VideoController extends Controller
 
         $service = new \eSpace\App\Services\StudentModulePreviewService();
         $this->success(['videos' => $service->getVideos($departmentId, $classId)]);
+    }
+
+    /** The students a video is aimed at (sde = their enrollment, sde_c = its class) */
+    private const AUDIENCE_MATCH = "sde.department_id = v.department_id AND sde.deleted_at IS NULL AND sde.status = 'active'
+        AND ((v.class_id IS NULL AND v.class_group_name IS NULL)
+             OR sde.class_id = v.class_id
+             OR (v.class_group_name IS NOT NULL AND sde_c.name = v.class_group_name))";
+
+    /**
+     * Who has watched a video: every student it's aimed at, with how far they got
+     * GET /teacher/videos/{id}/viewers
+     */
+    public function viewers($id): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+        $teacherId = $this->getTeacherId();
+        if (!$teacherId) {
+            $this->error('Teacher not found', 403);
+            return;
+        }
+
+        $db = $this->getDb();
+        $stmt = $db->prepare("SELECT id FROM videos WHERE id = :id AND teacher_id = :teacher_id AND deleted_at IS NULL");
+        $stmt->execute(['id' => (int) $id, 'teacher_id' => $teacherId]);
+        if (!$stmt->fetch()) {
+            $this->notFound('Video not found');
+            return;
+        }
+
+        $stmt = $db->prepare(
+            "SELECT st.id, st.first_name, st.last_name, st.gender,
+                    CONCAT(sde_c.name, IF(sde_c.stream_name IS NULL OR sde_c.stream_name = '', '', CONCAT('-', sde_c.stream_name))) AS class_label,
+                    vw.percentage_watched, vw.watched_seconds, vw.last_watched_at, vw.completed_at
+             FROM videos v
+             INNER JOIN student_department_enrollments sde ON 1 = 1
+             LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
+             INNER JOIN students st ON st.id = sde.student_id AND st.deleted_at IS NULL
+             LEFT JOIN video_views vw ON vw.video_id = v.id AND vw.student_id = st.id
+             WHERE v.id = :id AND " . self::AUDIENCE_MATCH . "
+             GROUP BY st.id
+             ORDER BY st.first_name, st.last_name"
+        );
+        $stmt->execute(['id' => (int) $id]);
+        $students = array_map(static function (array $row): array {
+            return [
+                'id' => (int) $row['id'],
+                'name' => trim($row['first_name'] . ' ' . $row['last_name']),
+                'gender' => $row['gender'],
+                'class_label' => $row['class_label'],
+                'percent' => $row['percentage_watched'] !== null ? (int) round((float) $row['percentage_watched']) : null,
+                'watched_seconds' => $row['watched_seconds'] !== null ? (int) $row['watched_seconds'] : null,
+                'last_at' => $row['last_watched_at'],
+                'completed' => $row['completed_at'] !== null,
+            ];
+        }, $stmt->fetchAll(\PDO::FETCH_ASSOC));
+
+        $this->success(['students' => $students]);
     }
 
     /**

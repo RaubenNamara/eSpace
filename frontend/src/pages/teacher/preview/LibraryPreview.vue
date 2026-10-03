@@ -1,6 +1,5 @@
 <template>
   <div>
-    <PreviewBanner module-label="eLibrary" />
 
     <Breadcrumb :items="breadcrumbItems" />
 
@@ -51,7 +50,6 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
-import PreviewBanner from '@/components/preview/PreviewBanner.vue'
 import Breadcrumb, { type BreadcrumbItem } from '@/components/common/Breadcrumb.vue'
 import BookCover from '@/components/library/BookCover.vue'
 import LibraryDocumentViewer from '@/components/library/LibraryDocumentViewer.vue'

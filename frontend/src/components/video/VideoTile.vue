@@ -89,6 +89,7 @@
         <slot name="actions" />
       </div>
     </div>
+    <slot name="footer" />
   </div>
 </template>
 

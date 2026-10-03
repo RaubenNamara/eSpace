@@ -56,6 +56,67 @@ class LibraryController extends Controller
         return $this->getActiveDepartmentId();
     }
 
+    /** The students a book is aimed at (sde = their enrollment, sde_c = its class) */
+    private const AUDIENCE_MATCH = "sde.department_id = lb.department_id AND sde.deleted_at IS NULL AND sde.status = 'active'
+        AND ((lb.class_id IS NULL AND lb.class_group_name IS NULL)
+             OR sde.class_id = lb.class_id
+             OR (lb.class_group_name IS NOT NULL AND sde_c.name = lb.class_group_name))";
+
+    /**
+     * Who has read a book: every student it's aimed at, with how far they got
+     * GET /teacher/library/{id}/readers
+     */
+    public function readers($id): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+        $teacherId = $this->getTeacherId();
+        if (!$teacherId) {
+            $this->error('Teacher not found', 403);
+            return;
+        }
+
+        $db = $this->getDb();
+        $stmt = $db->prepare("SELECT id FROM library_books WHERE id = :id AND uploaded_by = :teacher_id AND deleted_at IS NULL");
+        $stmt->execute(['id' => (int) $id, 'teacher_id' => $teacherId]);
+        if (!$stmt->fetch()) {
+            $this->notFound('Book not found');
+            return;
+        }
+
+        $stmt = $db->prepare(
+            "SELECT st.id, st.first_name, st.last_name, st.gender,
+                    CONCAT(sde_c.name, IF(sde_c.stream_name IS NULL OR sde_c.stream_name = '', '', CONCAT('-', sde_c.stream_name))) AS class_label,
+                    pr.percentage_completed, pr.current_page, pr.last_read_at, pr.updated_at AS progress_at
+             FROM library_books lb
+             INNER JOIN student_department_enrollments sde ON 1 = 1
+             LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
+             INNER JOIN students st ON st.id = sde.student_id AND st.deleted_at IS NULL
+             LEFT JOIN library_progress pr ON pr.book_id = lb.id AND pr.student_id = st.id
+             WHERE lb.id = :id AND " . self::AUDIENCE_MATCH . "
+             GROUP BY st.id
+             ORDER BY st.first_name, st.last_name"
+        );
+        $stmt->execute(['id' => (int) $id]);
+        $students = array_map(static function (array $row): array {
+            $percent = $row['percentage_completed'] !== null ? (int) round((float) $row['percentage_completed']) : null;
+            return [
+                'id' => (int) $row['id'],
+                'name' => trim($row['first_name'] . ' ' . $row['last_name']),
+                'gender' => $row['gender'],
+                'class_label' => $row['class_label'],
+                'percent' => $percent,
+                'current_page' => $row['current_page'] !== null ? (int) $row['current_page'] : null,
+                'last_at' => $row['last_read_at'] ?? $row['progress_at'],
+                'completed' => $percent !== null && $percent >= 95,
+            ];
+        }, $stmt->fetchAll(\PDO::FETCH_ASSOC));
+
+        $this->success(['students' => $students]);
+    }
+
     /**
      * Get all books uploaded by the teacher
      * GET /teacher/library
@@ -99,15 +160,30 @@ class LibraryController extends Controller
 
         $whereClause = implode(' AND ', $where);
 
+        // Each book also carries how far its audience has got: the students it's aimed at
+        // (same rule students see it by), how many have opened it, finished it (read to 95%+),
+        // and the average share read among those who opened it
         $sql = "SELECT lb.*,
                        s.name as subject_name,
                        s.code as subject_code,
                        c.name as class_name,
                        c.level as class_level,
-                       c.stream_name as class_stream_name
+                       c.stream_name as class_stream_name,
+                       (SELECT COUNT(DISTINCT sde.student_id) FROM student_department_enrollments sde
+                        LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
+                        WHERE " . self::AUDIENCE_MATCH . ") AS audience,
+                       COALESCE(lp.readers, 0) AS readers,
+                       COALESCE(lp.finished, 0) AS finished,
+                       lp.avg_read
                 FROM library_books lb
                 LEFT JOIN subjects s ON lb.subject_id = s.id
                 LEFT JOIN classes c ON lb.class_id = c.id
+                LEFT JOIN (
+                    SELECT book_id, COUNT(DISTINCT student_id) AS readers,
+                           COUNT(DISTINCT CASE WHEN percentage_completed >= 95 THEN student_id END) AS finished,
+                           ROUND(AVG(percentage_completed)) AS avg_read
+                    FROM library_progress GROUP BY book_id
+                ) lp ON lp.book_id = lb.id
                 WHERE {$whereClause}
                 ORDER BY lb.updated_at DESC";
 

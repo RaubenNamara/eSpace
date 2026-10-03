@@ -1,6 +1,5 @@
 <template>
   <div>
-    <PreviewBanner module-label="Virtual Lab" />
 
     <Breadcrumb :items="breadcrumbItems" />
 
@@ -139,7 +138,6 @@ import AppIcon from '@/components/common/AppIcon.vue'
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
-import PreviewBanner from '@/components/preview/PreviewBanner.vue'
 import Breadcrumb, { type BreadcrumbItem } from '@/components/common/Breadcrumb.vue'
 import VirtualLabScene from '@/components/virtuallab/VirtualLabScene.vue'
 import { resolveGuidedExperiment } from '@/components/virtuallab/lab3d/registry'

@@ -1,196 +1,72 @@
 <template>
-  <div>
-    <!-- Header - title shares a row with the filters/action (never wrapping, scrolling
-         horizontally on narrow screens instead) so the dropdowns always line up with the
-         heading; the subtitle drops to its own full-width line underneath. -->
-    <div class="flex items-center gap-2 mb-1">
-      <div class="flex items-center gap-2 flex-shrink-0">
-        <div class="hidden sm:flex w-7 h-7 rounded-lg bg-indigo-600 items-center justify-center flex-shrink-0">
-          <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-          </svg>
-        </div>
-        <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight whitespace-nowrap">Videos</h1>
-      </div>
-
-      <div class="flex items-center gap-2 min-w-0">
-        <div class="flex flex-nowrap items-center gap-2 overflow-x-auto -mx-1 px-1 sm:mx-0 sm:px-0 min-w-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <select v-model="statusFilter" class="flex-shrink-0 max-w-[92px] truncate px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white">
-            <option value="">Status</option>
-            <option value="draft">Draft</option>
-            <option value="published">Published</option>
-            <option value="archived">Archived</option>
-          </select>
-
-          <select
-            v-model="subjectFilter"
-            class="flex-shrink-0 max-w-[92px] truncate px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-            :disabled="!assignments?.subjects || assignments.subjects.length === 0"
-          >
-            <option value="">Subjects</option>
-            <option v-for="subject in assignments?.subjects" :key="subject.id" :value="subject.id">{{ subject.name }}</option>
-          </select>
-
-          <select
-            v-model="classFilter"
-            class="flex-shrink-0 max-w-[92px] truncate px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-            :disabled="!assignments?.classes || assignments.classes.length === 0"
-          >
-            <option value="">Classes</option>
-            <option v-for="cls in assignments?.classes" :key="cls.id" :value="cls.id">
-              {{ cls.name }} ({{ cls.level }}{{ cls.stream_name ? ' - ' + cls.stream_name : '' }})
-            </option>
-          </select>
-
-          <div v-if="assignmentsError" class="flex-shrink-0 text-red-600 dark:text-red-400 text-xs whitespace-nowrap">{{ assignmentsError }}</div>
-        </div>
-
-        <button
-          v-if="videos.length > 0"
-          @click="openCreateModal"
-          class="flex-shrink-0 px-2.5 py-1 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1.5 shadow-sm shadow-indigo-500/20 whitespace-nowrap"
-        >
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-          </svg>
-          <span class="sm:hidden">Upload</span><span class="hidden sm:inline">Upload Video</span>
+  <div class="w-full">
+    <PageHeader title="Videos" description="Short lessons and demos for your classes - see who has watched them." icon="video" accent="violet" :active-filters="activeFilterCount">
+      <template #actions>
+        <button type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold bg-violet-600 text-white hover:bg-violet-700 shadow-sm shadow-violet-500/20" @click="openCreateModal">
+          <AppIcon name="upload" class="w-4 h-4" />
+          <span class="hidden sm:inline">Upload video</span><span class="sm:hidden">Upload</span>
         </button>
-      </div>
-    </div>
-    <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Upload video resources for your classes.</p>
+      </template>
+      <template #filters>
+        <div class="relative">
+          <svg class="w-4 h-4 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"></path></svg>
+          <input v-model="search" type="search" placeholder="Search videos" class="w-full md:w-48 pl-8 pr-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-violet-500">
+        </div>
+        <PickerDropdown v-model="subjectFilter" label="Subject" :options="subjectOptions" align="right" />
+      </template>
+      <StatStrip v-model="statusFilter" :items="statItems" hide-when-empty />
+    </PageHeader>
 
-    <!-- Stats - clickable to filter the list below; the count sits as a corner badge so each
-         card is shorter and the label can be centered. -->
-    <div class="grid grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
-      <button
-        @click="statusFilter = ''"
-        class="relative bg-white dark:bg-gray-800 rounded-xl px-1 py-2 sm:p-4 shadow-sm border transition-shadow hover:shadow-md text-center"
-        :class="statusFilter === '' ? 'border-indigo-300 dark:border-indigo-700 ring-1 ring-indigo-100 dark:ring-indigo-900/30' : 'border-gray-200 dark:border-gray-700'"
-      >
-        <span class="block sm:absolute sm:top-2 sm:right-3 text-base sm:text-lg font-bold leading-tight text-gray-900 dark:text-white">{{ stats.total }}</span>
-        <p class="text-[11px] sm:text-sm text-gray-500 dark:text-gray-400"><span class="sm:hidden">Total</span><span class="hidden sm:inline">Total Videos</span></p>
-      </button>
-      <button
-        @click="statusFilter = 'draft'"
-        class="relative bg-white dark:bg-gray-800 rounded-xl px-1 py-2 sm:p-4 shadow-sm border transition-shadow hover:shadow-md text-center"
-        :class="statusFilter === 'draft' ? 'border-yellow-300 dark:border-yellow-700 ring-1 ring-yellow-100 dark:ring-yellow-900/30' : 'border-gray-200 dark:border-gray-700'"
-      >
-        <span class="block sm:absolute sm:top-2 sm:right-3 text-base sm:text-lg font-bold leading-tight text-yellow-600 dark:text-yellow-400">{{ stats.draft }}</span>
-        <p class="text-[11px] sm:text-sm text-gray-500 dark:text-gray-400">Draft</p>
-      </button>
-      <button
-        @click="statusFilter = 'published'"
-        class="relative bg-white dark:bg-gray-800 rounded-xl px-1 py-2 sm:p-4 shadow-sm border transition-shadow hover:shadow-md text-center"
-        :class="statusFilter === 'published' ? 'border-green-300 dark:border-green-700 ring-1 ring-green-100 dark:ring-green-900/30' : 'border-gray-200 dark:border-gray-700'"
-      >
-        <span class="block sm:absolute sm:top-2 sm:right-3 text-base sm:text-lg font-bold leading-tight text-green-600 dark:text-green-400">{{ stats.published }}</span>
-        <p class="text-[11px] sm:text-sm text-gray-500 dark:text-gray-400">Published</p>
-      </button>
-      <button
-        @click="statusFilter = 'archived'"
-        class="relative bg-white dark:bg-gray-800 rounded-xl px-1 py-2 sm:p-4 shadow-sm border transition-shadow hover:shadow-md text-center"
-        :class="statusFilter === 'archived' ? 'border-gray-400 dark:border-gray-500 ring-1 ring-gray-200 dark:ring-gray-700' : 'border-gray-200 dark:border-gray-700'"
-      >
-        <span class="block sm:absolute sm:top-2 sm:right-3 text-base sm:text-lg font-bold leading-tight text-gray-600 dark:text-gray-400">{{ stats.archived }}</span>
-        <p class="text-[11px] sm:text-sm text-gray-500 dark:text-gray-400">Archived</p>
-      </button>
-    </div>
+    <p v-if="assignmentsError" class="mb-4 text-sm text-rose-600 dark:text-rose-300">{{ assignmentsError }}</p>
 
-    <!-- Videos -->
-    <div v-if="loading" class="text-center py-12">
-      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-      <p class="mt-4 text-gray-600 dark:text-gray-400">Loading videos...</p>
-    </div>
+    <Skeleton v-if="loading && !videos.length" variant="cards" :count="8" />
 
-    <div v-else-if="filteredVideos.length === 0" class="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-      <svg class="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-      </svg>
-      <p class="text-gray-600 dark:text-gray-400 mb-4">{{ videos.length === 0 ? 'No videos uploaded yet' : 'No videos match your filters' }}</p>
-      <button v-if="videos.length === 0" @click="openCreateModal" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-        Upload Your First Video
-      </button>
-      <button v-else @click="clearFilters" class="px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors">
-        Clear filters
-      </button>
-    </div>
+    <EmptyState v-else-if="!videos.length" icon="video" tone="violet" title="No videos yet" message="Upload a short lesson, a practical demo or a revision clip - students can watch it any time, even save it for offline.">
+      <button type="button" class="px-4 py-2 rounded-xl text-sm font-semibold bg-violet-600 text-white hover:bg-violet-700" @click="openCreateModal">Upload your first video</button>
+    </EmptyState>
 
-    <!-- Browse by Class: one docket per class -->
-    <template v-else-if="!activeClassName">
-      <h2 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">Browse by Class</h2>
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
-        <button
-          v-for="group in classGroups"
-          :key="group.name"
-          @click="activeClassName = group.name"
-          class="text-left bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 p-5 sm:p-6 group overflow-hidden relative"
-        >
-          <div
-            class="absolute -right-6 -top-6 w-28 h-28 rounded-full opacity-10 transition-transform duration-300 group-hover:scale-125"
-            :class="classPalette(group.name).solid"
-          ></div>
-          <div
-            class="relative w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-white shadow-sm flex-shrink-0 mb-3 sm:mb-4"
-            :class="classPalette(group.name).solid"
-          >
-            <svg class="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-            </svg>
-          </div>
-          <h3 class="relative text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-            {{ group.name }}
-          </h3>
-          <span
-            class="relative inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
-            :class="classPalette(group.name).softText"
-          >
-            {{ group.videos.length }} {{ group.videos.length === 1 ? 'video' : 'videos' }}
-          </span>
-        </button>
-      </div>
-    </template>
-
-    <!-- Class videos: one section per subject -->
     <template v-else>
-      <div class="flex items-center gap-2 mb-4">
+      <!-- Class tabs: one per class (all-streams videos sit under their class) -->
+      <nav v-if="classTabs.length > 2" class="flex gap-1.5 mb-4 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 pb-1 [scrollbar-width:none]" aria-label="Classes">
         <button
-          @click="activeClassName = null"
-          class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+          v-for="g in classTabs"
+          :key="g.name"
+          type="button"
+          class="flex-shrink-0 inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold border transition-colors"
+          :class="activeClassName === g.name
+            ? 'bg-violet-600 border-violet-600 text-white shadow-sm shadow-violet-500/20'
+            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:border-violet-300 dark:hover:border-violet-700'"
+          @click="activeClassName = g.name"
         >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-          </svg>
-          All Classes
+          {{ g.label }}
+          <span class="px-1.5 rounded-md text-[11px] font-bold" :class="activeClassName === g.name ? 'bg-white/20' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300'">{{ g.count }}</span>
         </button>
-        <span class="text-gray-300 dark:text-gray-600">/</span>
-        <span class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ activeClassName }}</span>
-      </div>
+      </nav>
 
-      <div class="flex items-center gap-2 mb-3">
+      <div v-if="visibleIds.length" class="flex items-center gap-2 mb-3">
         <label class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none">
           <input
             type="checkbox"
             :checked="bulk.allSelected(visibleIds)"
+            class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-violet-600 focus:ring-violet-500"
             @change="bulk.toggleAll(visibleIds)"
-            class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
           >
           Select all
         </label>
       </div>
 
       <BulkActionBar :count="bulk.selectedCount.value" @clear="bulk.clear()">
-        <button @click="bulkSetStatus('published')" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Publish</button>
-        <button @click="bulkSetStatus('draft')" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Draft</button>
-        <button @click="bulkSetStatus('archived')" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Archive</button>
-        <button @click="bulkExport" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Export CSV</button>
-        <button @click="bulkDeleteSelected" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors">Delete</button>
+        <button class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" @click="bulkSetStatus('published')">Publish</button>
+        <button class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" @click="bulkSetStatus('draft')">Draft</button>
+        <button class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" @click="bulkSetStatus('archived')">Archive</button>
+        <button class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" @click="bulkExport">Export CSV</button>
+        <button class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors" @click="bulkDeleteSelected">Delete</button>
       </BulkActionBar>
 
-      <div v-if="activeClassSubjectShelves.length === 0" class="text-center py-16 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-        <p class="text-gray-500 dark:text-gray-400">No videos in this class match these filters.</p>
-      </div>
+      <EmptyState v-if="!activeClassSubjectShelves.length" compact icon="video" tone="gray" title="No videos match" message="Try another class, subject or status.">
+        <button type="button" class="text-sm font-semibold text-violet-600 dark:text-violet-300 hover:underline" @click="clearFilters">Clear filters</button>
+      </EmptyState>
 
-      <div v-else>
       <section v-for="(shelf, i) in activeClassSubjectShelves" :key="shelf.name" class="mb-8">
         <div class="flex items-center gap-2 mb-3">
           <span class="w-1.5 h-5 rounded-full" :class="sectionAccents[i % sectionAccents.length]"></span>
@@ -202,7 +78,7 @@
             v-for="video in shelf.videos"
             :key="video.id"
             :video="video"
-            :subtitle="video.class_group_name ? `${video.class_group_name} (All Streams)` : video.class_stream_name ? `${video.class_name} - ${video.class_stream_name}` : (video.class_name || '')"
+            :subtitle="audienceLabel(video)"
             show-status
             selectable
             :selected="bulk.isSelected(video.id)"
@@ -210,29 +86,35 @@
             @play="playVideo = video"
           >
             <template #actions>
-              <button
-                @click="editVideo(video)"
-                class="p-1.5 min-w-[32px] min-h-[32px] flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                title="Edit"
-              >
-                <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                </svg>
+              <button class="p-1.5 min-w-[32px] min-h-[32px] flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors" title="Edit" @click="editVideo(video)">
+                <AppIcon name="pencil" class="w-4 h-4 text-gray-500 dark:text-gray-400" />
               </button>
-              <button
-                @click="deleteVideo(video.id)"
-                class="p-1.5 min-w-[32px] min-h-[32px] flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-900 rounded-lg transition-colors"
-                title="Delete"
-              >
-                <svg class="w-4 h-4 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                </svg>
+              <button class="p-1.5 min-w-[32px] min-h-[32px] flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg transition-colors" title="Delete" @click="deleteVideo(video.id)">
+                <AppIcon name="trash" class="w-4 h-4 text-red-500 dark:text-red-400" />
               </button>
+            </template>
+            <template #footer>
+              <!-- Published: how far the class has got, opening the full list -->
+              <p v-if="video.status === 'published' && !video.audience" class="mt-1.5 text-[11px] text-gray-400">No students in this class yet</p>
+              <button v-else-if="video.status === 'published'" type="button" class="mt-1.5 w-full text-left group/w" :title="'See who has watched'" @click="viewersFor = video">
+                <span class="flex items-center gap-2">
+                  <span class="flex-1 h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+                    <span class="block h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500" :style="{ width: reach(video) + '%' }"></span>
+                  </span>
+                  <span class="text-[11px] font-semibold tabular-nums text-gray-500 dark:text-gray-400">{{ reach(video) }}%</span>
+                </span>
+                <span class="block text-[11px] text-gray-500 dark:text-gray-400 group-hover/w:text-violet-600 dark:group-hover/w:text-violet-300">
+                  {{ video.viewers || 0 }} of {{ video.audience || 0 }} watched<template v-if="video.completed"> · {{ video.completed }} finished</template>
+                </span>
+              </button>
+              <p v-else-if="video.status === 'draft'" class="mt-1.5 flex items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400">
+                Students can't see it yet
+                <button type="button" class="font-semibold text-violet-600 dark:text-violet-300 hover:underline" @click="publishOne(video)">Publish</button>
+              </p>
             </template>
           </VideoTile>
         </div>
       </section>
-      </div>
     </template>
 
     <!-- Upload/Edit Modal -->
@@ -308,15 +190,27 @@
             </div>
 
             <div v-if="!editingVideo" class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Video File *</label>
-              <input
-                type="file"
-                accept="video/mp4,video/webm,video/ogg,video/quicktime"
-                required
-                @change="handleFileSelect"
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Video file *</label>
+              <label
+                class="flex flex-col items-center justify-center gap-2 px-4 py-6 rounded-xl border-2 border-dashed cursor-pointer text-center transition-colors"
+                :class="dragging ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/20' : videoForm.file ? 'border-emerald-300 dark:border-emerald-700 bg-emerald-50/60 dark:bg-emerald-900/10' : 'border-gray-300 dark:border-gray-600 hover:border-violet-400 dark:hover:border-violet-600'"
+                @dragover.prevent="dragging = true"
+                @dragleave.prevent="dragging = false"
+                @drop.prevent="onDrop"
               >
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">MP4, WebM, OGG or MOV, up to 300MB.</p>
+                <input type="file" accept="video/mp4,video/webm,video/ogg,video/quicktime" class="sr-only" @change="handleFileSelect">
+                <span class="w-11 h-11 rounded-xl flex items-center justify-center" :class="videoForm.file ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-300'">
+                  <AppIcon :name="videoForm.file ? 'video' : 'upload'" class="w-5 h-5" />
+                </span>
+                <template v-if="videoForm.file">
+                  <span class="text-sm font-semibold text-gray-900 dark:text-white break-all">{{ videoForm.file.name }}</span>
+                  <span class="text-xs text-gray-500 dark:text-gray-400">{{ fileSize(videoForm.file.size) }} · tap to choose another</span>
+                </template>
+                <template v-else>
+                  <span class="text-sm font-semibold text-gray-900 dark:text-white">Drop a video here, or tap to choose</span>
+                  <span class="text-xs text-gray-500 dark:text-gray-400">MP4, WebM, OGG or MOV, up to 300MB</span>
+                </template>
+              </label>
             </div>
             <p v-else class="text-xs text-gray-500 dark:text-gray-400 mb-4">
               The video file can't be replaced here - delete this video and upload a new one if you need to change it.
@@ -352,12 +246,20 @@
 
     <!-- Player -->
     <VideoPlayerModal v-if="playVideo" :video="playVideo" @close="playVideo = null" />
+    <AudiencePanel v-if="viewersFor" :title="viewersFor.title" :endpoint="`/api/teacher/videos/${viewersFor.id}/viewers`" :subtitle="`${audienceLabel(viewersFor)} · ${viewersFor.subject_name || ''}`" @close="viewersFor = null" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import axios from 'axios'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StatStrip, { type StatItem } from '@/components/ui/StatStrip.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
+import Skeleton from '@/components/ui/Skeleton.vue'
+import PickerDropdown, { type PickerOption } from '@/components/common/PickerDropdown.vue'
+import AppIcon from '@/components/common/AppIcon.vue'
+import AudiencePanel from '@/components/common/AudiencePanel.vue'
 import VideoPlayerModal from '@/components/video/VideoPlayerModal.vue'
 import TeacherClassSelector from '@/components/teacher/TeacherClassSelector.vue'
 import BulkActionBar from '@/components/common/BulkActionBar.vue'
@@ -385,9 +287,11 @@ const saving = ref(false)
 const uploading = ref(false)
 const uploadProgress = ref(0)
 
-const statusFilter = usePersistedRef('teacher-videos-status-filter', '')
-const subjectFilter = usePersistedRef('teacher-videos-subject-filter', '')
-const classFilter = usePersistedRef('teacher-videos-class-filter', '')
+const statusFilter = usePersistedRef<string | null>('teacher-videos:status', null)
+const subjectFilter = usePersistedRef<string>('teacher-videos:subject', '')
+const search = ref('')
+const dragging = ref(false)
+const viewersFor = ref<VideoResource | null>(null)
 
 const showVideoModal = ref(false)
 const editingVideo = ref<VideoResource | null>(null)
@@ -408,30 +312,55 @@ const stats = computed(() => ({
   archived: videos.value.filter(v => v.status === 'archived').length
 }))
 
+const statItems = computed<StatItem[]>(() => [
+  { label: 'All videos', value: stats.value.total, tone: 'gray' },
+  { label: 'Published', value: stats.value.published, key: 'published', tone: 'emerald' },
+  { label: 'Draft', value: stats.value.draft, key: 'draft', tone: 'amber' },
+  { label: 'Archived', value: stats.value.archived, key: 'archived', tone: 'gray' }
+])
+const subjectOptions = computed<PickerOption<string>[]>(() => [
+  { value: '', label: 'All subjects' },
+  ...(assignments.value?.subjects ?? []).map(s => ({ value: String(s.id), label: s.name }))
+])
+const activeFilterCount = computed(() => (subjectFilter.value ? 1 : 0) + (search.value.trim() ? 1 : 0))
+
 const filteredVideos = computed(() => {
+  const q = search.value.trim().toLowerCase()
   return videos.value.filter(video => {
     const matchesStatus = !statusFilter.value || video.status === statusFilter.value
     const matchesSubject = !subjectFilter.value || video.subject_id === parseInt(subjectFilter.value)
-    const matchesClass = !classFilter.value || video.class_id === parseInt(classFilter.value)
-    return matchesStatus && matchesSubject && matchesClass
+    const matchesSearch = !q || video.title.toLowerCase().includes(q) || (video.description || '').toLowerCase().includes(q)
+    return matchesStatus && matchesSubject && matchesSearch
   })
 })
 
-// Same shape as eNotes/eLibrary: one docket per class ("All Streams" videos under their class
-// group), then one shelf per subject inside the class.
-const activeClassName = ref<string | null>(null)
-
-const classGroups = computed(() => {
-  const map = new Map<string, { name: string; videos: VideoResource[] }>()
-  for (const video of filteredVideos.value) {
-    const name = video.class_group_name || video.class_name || 'Unassigned'
-    if (!map.has(name)) map.set(name, { name, videos: [] })
-    map.get(name)!.videos.push(video)
-  }
-  return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
+// One tab per class ("All Streams" videos under their class), then one shelf per subject.
+// A class is always open - the last one used, or the first - with "All" beside them.
+const ALL = '__all'
+const classOf = (video: VideoResource) => video.class_group_name || video.class_name || 'Unassigned'
+const activeClassName = usePersistedRef<string>('teacher-videos:class', '')
+const classTabs = computed(() => {
+  const names = [...new Set(videos.value.map(classOf))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+  return [
+    { name: ALL, label: 'All classes', count: filteredVideos.value.length },
+    ...names.map(name => ({ name, label: name, count: filteredVideos.value.filter(v => classOf(v) === name).length }))
+  ]
 })
+watch(classTabs, (tabs) => {
+  if (!videos.value.length) return
+  if (!tabs.some(t => t.name === activeClassName.value)) activeClassName.value = tabs[1]?.name ?? ALL
+}, { immediate: true })
 
-const activeClassVideos = computed(() => classGroups.value.find(g => g.name === activeClassName.value)?.videos ?? [])
+const activeClassVideos = computed(() => activeClassName.value === ALL
+  ? filteredVideos.value
+  : filteredVideos.value.filter(v => classOf(v) === activeClassName.value))
+
+const audienceLabel = (video: VideoResource) => video.class_group_name
+  ? `${video.class_group_name} (All Streams)`
+  : video.class_stream_name ? `${video.class_name}-${video.class_stream_name}` : (video.class_name || '')
+// Share of the class that has opened it
+const reach = (video: VideoResource) => video.audience ? Math.min(100, Math.round(((video.viewers || 0) / video.audience) * 100)) : 0
+const fileSize = (bytes: number) => bytes >= 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`
 
 const activeClassSubjectShelves = computed(() => {
   const map = new Map<string, VideoResource[]>()
@@ -445,20 +374,6 @@ const activeClassSubjectShelves = computed(() => {
 
 const sectionAccents = ['bg-indigo-500', 'bg-rose-500', 'bg-emerald-500', 'bg-amber-500', 'bg-sky-500', 'bg-violet-500']
 
-const classPalettes = [
-  { solid: 'bg-emerald-600', softText: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' },
-  { solid: 'bg-blue-600', softText: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
-  { solid: 'bg-indigo-600', softText: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' },
-  { solid: 'bg-amber-600', softText: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' },
-  { solid: 'bg-rose-600', softText: 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300' },
-  { solid: 'bg-violet-600', softText: 'bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300' }
-]
-const classPalette = (name: string) => {
-  let hash = 0
-  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0
-  return classPalettes[hash % classPalettes.length]
-}
-
 const visibleIds = computed(() => activeClassVideos.value.map(v => v.id))
 
 const bulkSetStatus = async (status: 'draft' | 'published' | 'archived') => {
@@ -471,6 +386,16 @@ const bulkSetStatus = async (status: 'draft' | 'published' | 'archived') => {
     await loadVideos()
   } catch (error: any) {
     toast.error(error.response?.data?.message || 'Failed to update videos')
+  }
+}
+
+const publishOne = async (video: VideoResource) => {
+  try {
+    await axios.post(`${API_BASE}/teacher/videos/bulk-status`, { ids: [video.id], status: 'published' })
+    toast.success(`"${video.title}" is now visible to students`)
+    await loadVideos()
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Failed to publish video')
   }
 }
 
@@ -499,9 +424,9 @@ const bulkExport = async () => {
 }
 
 const clearFilters = () => {
-  statusFilter.value = ''
+  statusFilter.value = null
   subjectFilter.value = ''
-  classFilter.value = ''
+  search.value = ''
 }
 
 const loadVideos = async () => {
@@ -534,7 +459,8 @@ const loadAssignments = async () => {
 
 const openCreateModal = () => {
   editingVideo.value = null
-  videoForm.value = { title: '', description: '', subject_id: '', classTarget: { scope: 'stream', class_id: null, class_group_name: null }, status: 'draft', file: null }
+  // The subject on view is the likely one
+  videoForm.value = { title: '', description: '', subject_id: subjectFilter.value, classTarget: { scope: 'stream', class_id: null, class_group_name: null }, status: 'draft', file: null }
   showVideoModal.value = true
 }
 
@@ -558,9 +484,19 @@ const closeVideoModal = () => {
   editingVideo.value = null
 }
 
-const handleFileSelect = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  videoForm.value.file = target.files?.[0] || null
+// A chosen file names the video too, if the teacher hasn't typed a title yet
+const pickFile = (file: File | null) => {
+  videoForm.value.file = file
+  if (file && !videoForm.value.title.trim()) {
+    videoForm.value.title = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim()
+  }
+}
+const handleFileSelect = (event: Event) => pickFile((event.target as HTMLInputElement).files?.[0] || null)
+const onDrop = (event: DragEvent) => {
+  dragging.value = false
+  const file = event.dataTransfer?.files?.[0]
+  if (file && file.type.startsWith('video/')) pickFile(file)
+  else if (file) toast.warning('That file isn\'t a video')
 }
 
 const saveVideo = async () => {

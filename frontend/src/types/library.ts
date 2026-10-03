@@ -35,6 +35,11 @@ export interface LibraryBook {
   department_name?: string
   teacher_first_name?: string
   teacher_last_name?: string
+  // Teacher list only: who it's aimed at and how far they've got
+  audience?: number
+  readers?: number
+  finished?: number
+  avg_read?: number | string | null
 }
 
 export interface LibraryBookForm {

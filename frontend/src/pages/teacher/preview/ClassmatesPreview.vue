@@ -1,8 +1,6 @@
 <template>
   <div>
-    <PreviewBanner module-label="My Classes" />
 
-    <Breadcrumb :items="[{ label: 'Preview as Student', to: '/teacher/preview' }, { label: 'My Classes' }]" />
 
     <div class="card mb-6">
       <h2 class="text-2xl font-bold text-gray-900 dark:text-white">{{ className }}</h2>
@@ -38,8 +36,6 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
-import PreviewBanner from '@/components/preview/PreviewBanner.vue'
-import Breadcrumb from '@/components/common/Breadcrumb.vue'
 
 interface Classmate {
   enrollment_id: number

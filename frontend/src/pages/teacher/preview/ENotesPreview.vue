@@ -1,6 +1,5 @@
 <template>
   <div>
-    <PreviewBanner module-label="eNotes" />
 
     <Breadcrumb :items="breadcrumbItems" />
 
@@ -58,7 +57,6 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
-import PreviewBanner from '@/components/preview/PreviewBanner.vue'
 import Breadcrumb, { type BreadcrumbItem } from '@/components/common/Breadcrumb.vue'
 import type { ENoteTopic } from '@/types/enotes'
 
