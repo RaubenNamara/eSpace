@@ -34,6 +34,9 @@ export interface ItemBankResource {
   department_name?: string
   teacher_first_name?: string
   teacher_last_name?: string
+  // Teacher list only: who it's aimed at and how many have opened it
+  audience?: number
+  readers?: number
 }
 
 export interface ItemBankResourceForm {

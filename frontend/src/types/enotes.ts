@@ -41,6 +41,11 @@ export interface ENoteTopic {
   teacher_first_name?: string
   teacher_last_name?: string
   pages?: ENotePage[]
+  // Teacher list (with_reach) only: who it's aimed at and how far they've got
+  audience?: number | string
+  readers?: number | string
+  finished?: number | string
+  avg_read?: number | string | null
   /** The assignment linked to this topic, shape depends on who's asking: the student-facing
    *  show() response includes due_date/submission_status and is gated to a published assignment
    *  currently visible to that student (powers the "Attempt Assessment" topic-completion

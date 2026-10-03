@@ -319,6 +319,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/enotes/preview/topics/{id}', 'eSpace\App\Controllers\Teacher\ENoteController@previewShow');
         Router::get('/enotes/topics/{id}', 'eSpace\App\Controllers\Teacher\ENoteController@show');
         Router::get('/enotes/topics/{id}/insights', 'eSpace\App\Controllers\Teacher\ENoteInsightsController@show');
+        Router::get('/enotes/topics/{id}/readers', 'eSpace\App\Controllers\Teacher\ENoteController@readers');
         Router::put('/enotes/topics/{id}/share', 'eSpace\App\Controllers\Teacher\ENoteController@share');
         Router::get('/enotes/shared', 'eSpace\App\Controllers\Teacher\ENoteController@sharedIndex');
         Router::post('/enotes/shared/{id}/copy', 'eSpace\App\Controllers\Teacher\ENoteController@copyShared');
@@ -358,6 +359,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::post('/itembank/bulk-download', 'eSpace\App\Controllers\Teacher\ItemBankController@bulkDownload');
         Router::post('/itembank/bulk-delete', 'eSpace\App\Controllers\Teacher\ItemBankController@bulkDelete');
         Router::post('/itembank/bulk-export', 'eSpace\App\Controllers\Teacher\ItemBankController@bulkExport');
+        Router::get('/itembank/{id}/readers', 'eSpace\App\Controllers\Teacher\ItemBankController@readers');
         Router::get('/itembank/{id}', 'eSpace\App\Controllers\Teacher\ItemBankController@show');
         Router::get('/class-map/options', 'eSpace\App\Controllers\Teacher\ClassMapController@options');
         Router::get('/class-map', 'eSpace\App\Controllers\Teacher\ClassMapController@index');

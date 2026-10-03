@@ -51,7 +51,7 @@
                   </span>
                   <span class="text-[11px] font-semibold tabular-nums w-9 text-right" :class="s.completed ? 'text-emerald-600 dark:text-emerald-300' : 'text-gray-500 dark:text-gray-400'">{{ s.completed ? 'Done' : s.percent + '%' }}</span>
                 </div>
-                <p class="text-[11px] text-gray-400 truncate">{{ s.class_label }}<template v-if="s.current_page"> · page {{ s.current_page }}</template><template v-if="s.last_at"> · {{ timeAgo(s.last_at) }}</template><template v-else-if="s.percent === null"> · not opened yet</template></p>
+                <p class="text-[11px] text-gray-400 truncate">{{ s.class_label }}<template v-if="s.current_page"> · page {{ s.current_page }}</template><template v-if="s.notes"> · {{ s.notes }} {{ s.notes === 1 ? 'note' : 'notes' }}</template><template v-if="s.last_at"> · {{ timeAgo(s.last_at) }}</template><template v-else-if="!isOpened(s)"> · not opened yet</template></p>
               </div>
               <RouterLink :to="`/teacher/chat?student=${s.id}`" class="p-2 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 dark:hover:text-indigo-300" :title="`Message ${niceName(s.name)}`">
                 <AppIcon name="chat" class="w-4 h-4" />
@@ -78,6 +78,9 @@ interface Viewer {
   gender: string | null
   class_label: string | null
   percent: number | null
+  // Set where only opening is recorded (no "how far")
+  opened?: boolean
+  notes?: number
   current_page?: number | null
   last_at: string | null
   completed: boolean
@@ -91,36 +94,53 @@ const props = withDefaults(defineProps<{
   icon?: string
   // How progress is described: "watched" for a video, "read" for a book
   verb?: string
-}>(), { icon: 'video', verb: 'watched' })
+  // false: only "opened or not" is known - no finished/part-way split or average
+  tracksProgress?: boolean
+}>(), { icon: 'video', verb: 'watched', tracksProgress: true })
 defineEmits<{ close: [] }>()
 
 const students = ref<Viewer[]>([])
 const loading = ref(true)
-type Tab = 'all' | 'done' | 'watching' | 'not'
+type Tab = 'all' | 'done' | 'watching' | 'opened' | 'not'
+const isOpened = (s: Viewer) => s.opened ?? s.percent !== null
 const tab = ref<Tab>('all')
 
 const groups = computed(() => ({
   all: students.value,
   done: students.value.filter(s => s.completed),
   watching: students.value.filter(s => !s.completed && s.percent !== null),
+  opened: students.value.filter(isOpened),
   // Most useful nudge list: who hasn't opened it at all
-  not: students.value.filter(s => s.percent === null)
+  not: students.value.filter(s => !isOpened(s))
 }))
-const tabs = computed(() => [
+const tabs = computed(() => props.tracksProgress ? [
   { key: 'all' as Tab, label: 'All', count: groups.value.all.length },
   { key: 'done' as Tab, label: 'Finished', count: groups.value.done.length },
   { key: 'watching' as Tab, label: props.verb === 'read' ? 'Reading' : 'Watching', count: groups.value.watching.length },
   { key: 'not' as Tab, label: 'Not opened', count: groups.value.not.length }
+] : [
+  { key: 'all' as Tab, label: 'All', count: groups.value.all.length },
+  { key: 'opened' as Tab, label: 'Opened', count: groups.value.opened.length },
+  { key: 'not' as Tab, label: 'Not opened', count: groups.value.not.length }
 ])
-// Furthest along first, so the list reads like a leaderboard
-const shown = computed(() => [...groups.value[tab.value]].sort((a, b) => (b.percent ?? -1) - (a.percent ?? -1)))
-const emptyTitle = computed(() => ({ all: 'No students in this class yet', done: 'Nobody has finished it yet', watching: 'Nobody is part-way through', not: 'Everyone has opened it' }[tab.value]))
+// Furthest along (or most recent) first, so the list reads like a leaderboard
+const shown = computed(() => [...groups.value[tab.value]].sort((a, b) =>
+  (b.percent ?? -1) - (a.percent ?? -1) || (b.last_at || '').localeCompare(a.last_at || '')))
+const emptyTitle = computed(() => ({ all: 'No students in this class yet', done: 'Nobody has finished it yet', watching: 'Nobody is part-way through', opened: 'Nobody has opened it yet', not: 'Everyone has opened it' }[tab.value]))
 
 const facts = computed(() => {
   const total = students.value.length
   const opened = total - groups.value.not.length
   const seen = students.value.filter(s => s.percent !== null)
   const avg = seen.length ? Math.round(seen.reduce((n, s) => n + (s.percent ?? 0), 0) / seen.length) : null
+  if (!props.tracksProgress) {
+    const notes = students.value.reduce((n, s) => n + (s.notes || 0), 0)
+    return [
+      { label: 'Opened', value: loading.value ? '–' : `${opened}/${total}`, tone: 'text-gray-900 dark:text-white' },
+      { label: 'Reach', value: loading.value || !total ? '–' : `${Math.round((opened / total) * 100)}%`, tone: 'text-emerald-600 dark:text-emerald-300' },
+      { label: 'Notes', value: loading.value ? '–' : notes, tone: 'text-amber-600 dark:text-amber-300' }
+    ]
+  }
   return [
     { label: 'Opened', value: loading.value ? '–' : `${opened}/${total}`, tone: 'text-gray-900 dark:text-white' },
     { label: 'Finished', value: loading.value ? '–' : groups.value.done.length, tone: 'text-emerald-600 dark:text-emerald-300' },

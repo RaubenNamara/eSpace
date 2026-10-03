@@ -246,6 +246,77 @@ class ENoteController extends Controller
      * Get all topics for the teacher
      * GET /teacher/enotes/topics
      */
+    /** The students a topic is aimed at (sde = their enrollment, sde_c = its class) */
+    private const AUDIENCE_MATCH = "sde.department_id = et.department_id AND sde.deleted_at IS NULL AND sde.status = 'active'
+        AND ((et.class_id IS NULL AND et.class_group_name IS NULL)
+             OR sde.class_id = et.class_id
+             OR (et.class_group_name IS NOT NULL AND sde_c.name = et.class_group_name))";
+
+    /**
+     * Who is reading a topic: every student it's aimed at, with how far they got. With
+     * with_copies=1, the topic's linked copies in other classes/streams are included too.
+     * GET /teacher/enotes/topics/{id}/readers
+     */
+    public function readers($id): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+        $teacherId = $this->getTeacherId();
+        if (!$teacherId) {
+            $this->error('Teacher not found', 403);
+            return;
+        }
+
+        $db = $this->getDb();
+        $stmt = $db->prepare("SELECT id, content_group_id FROM enote_topics WHERE id = :id AND teacher_id = :teacher_id AND deleted_at IS NULL");
+        $stmt->execute(['id' => (int) $id, 'teacher_id' => $teacherId]);
+        $topic = $stmt->fetch(\PDO::FETCH_ASSOC);
+        if (!$topic) {
+            $this->notFound('Topic not found');
+            return;
+        }
+
+        $topicIds = [(int) $topic['id']];
+        if ($this->query('with_copies') && $topic['content_group_id']) {
+            $stmt = $db->prepare("SELECT id FROM enote_topics WHERE content_group_id = :gid AND teacher_id = :teacher_id AND deleted_at IS NULL");
+            $stmt->execute(['gid' => $topic['content_group_id'], 'teacher_id' => $teacherId]);
+            $topicIds = array_map('intval', $stmt->fetchAll(\PDO::FETCH_COLUMN));
+        }
+        $in = implode(',', $topicIds);
+
+        $stmt = $db->query(
+            "SELECT st.id, st.first_name, st.last_name, st.gender,
+                    CONCAT(sde_c.name, IF(sde_c.stream_name IS NULL OR sde_c.stream_name = '', '', CONCAT('-', sde_c.stream_name))) AS class_label,
+                    MAX(ep.percentage_completed) AS percent, MAX(ep.last_read_at) AS last_at, MAX(ep.completed_at) AS completed_at,
+                    MAX(pg.order_number) AS current_page
+             FROM enote_topics et
+             INNER JOIN student_department_enrollments sde ON 1 = 1
+             LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
+             INNER JOIN students st ON st.id = sde.student_id AND st.deleted_at IS NULL
+             LEFT JOIN enote_progress ep ON ep.topic_id = et.id AND ep.student_id = st.id
+             LEFT JOIN enote_pages pg ON pg.id = ep.current_page_id
+             WHERE et.id IN ({$in}) AND " . self::AUDIENCE_MATCH . "
+             GROUP BY st.id
+             ORDER BY st.first_name, st.last_name"
+        );
+        $students = array_map(static function (array $row): array {
+            return [
+                'id' => (int) $row['id'],
+                'name' => trim($row['first_name'] . ' ' . $row['last_name']),
+                'gender' => $row['gender'],
+                'class_label' => $row['class_label'],
+                'percent' => $row['percent'] !== null ? (int) round((float) $row['percent']) : null,
+                'current_page' => $row['current_page'] !== null ? (int) $row['current_page'] : null,
+                'last_at' => $row['last_at'],
+                'completed' => $row['completed_at'] !== null,
+            ];
+        }, $stmt->fetchAll(\PDO::FETCH_ASSOC));
+
+        $this->success(['students' => $students]);
+    }
+
     public function index(): void
     {
         if (!$this->isAuthenticated()) {
@@ -309,12 +380,21 @@ class ENoteController extends Controller
 
         // Get paginated results
         $offset = ($page - 1) * $limit;
+        // with_reach=1 (the eNotes page): each topic also carries how far its audience has got -
+        // the students it's aimed at, how many opened it, finished it, and the average read
+        $reach = $this->query('with_reach') ? ",
+                       (SELECT COUNT(DISTINCT sde.student_id) FROM student_department_enrollments sde
+                        LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
+                        WHERE " . self::AUDIENCE_MATCH . ") AS audience,
+                       (SELECT COUNT(*) FROM enote_progress ep WHERE ep.topic_id = et.id) AS readers,
+                       (SELECT COUNT(*) FROM enote_progress ep WHERE ep.topic_id = et.id AND ep.completed_at IS NOT NULL) AS finished,
+                       (SELECT ROUND(AVG(ep.percentage_completed)) FROM enote_progress ep WHERE ep.topic_id = et.id) AS avg_read" : '';
         $sql = "SELECT et.*,
                        s.name as subject_name,
                        s.code as subject_code,
                        c.name as class_name,
                        c.level as class_level,
-                       c.stream_name as class_stream_name
+                       c.stream_name as class_stream_name{$reach}
                 FROM enote_topics et
                 LEFT JOIN subjects s ON et.subject_id = s.id
                 LEFT JOIN classes c ON et.class_id = c.id

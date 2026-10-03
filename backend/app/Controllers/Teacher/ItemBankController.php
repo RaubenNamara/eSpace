@@ -46,6 +46,66 @@ class ItemBankController extends Controller
         return $this->getActiveDepartmentId();
     }
 
+    /** The students a resource is aimed at (sde = their enrollment, sde_c = its class) */
+    private const AUDIENCE_MATCH = "sde.department_id = q.department_id AND sde.deleted_at IS NULL AND sde.status = 'active'
+        AND ((q.class_id IS NULL AND q.class_group_name IS NULL)
+             OR sde.class_id = q.class_id
+             OR (q.class_group_name IS NOT NULL AND sde_c.name = q.class_group_name))";
+
+    /**
+     * Who has opened a resource: every student it's aimed at, when they last opened it, and how
+     * many page notes they've written on it (opening is all item_bank_attempts records)
+     * GET /teacher/itembank/{id}/readers
+     */
+    public function readers($id): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+        $teacherId = $this->getTeacherId();
+        if (!$teacherId) {
+            $this->error('Teacher not found', 403);
+            return;
+        }
+
+        $db = $this->getDb();
+        if (!$this->ownedResource($db, (int) $id, $teacherId)) {
+            $this->notFound('Resource not found');
+            return;
+        }
+
+        $stmt = $db->prepare(
+            "SELECT st.id, st.first_name, st.last_name, st.gender,
+                    CONCAT(sde_c.name, IF(sde_c.stream_name IS NULL OR sde_c.stream_name = '', '', CONCAT('-', sde_c.stream_name))) AS class_label,
+                    (SELECT MAX(a.attempted_at) FROM item_bank_attempts a WHERE a.question_id = q.id AND a.student_id = st.id) AS last_at,
+                    (SELECT COUNT(*) FROM item_bank_page_notes n WHERE n.question_id = q.id AND n.student_id = st.id) AS notes
+             FROM item_bank_questions q
+             INNER JOIN student_department_enrollments sde ON 1 = 1
+             LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
+             INNER JOIN students st ON st.id = sde.student_id AND st.deleted_at IS NULL
+             WHERE q.id = :id AND " . self::AUDIENCE_MATCH . "
+             GROUP BY st.id
+             ORDER BY st.first_name, st.last_name"
+        );
+        $stmt->execute(['id' => (int) $id]);
+        $students = array_map(static function (array $row): array {
+            return [
+                'id' => (int) $row['id'],
+                'name' => trim($row['first_name'] . ' ' . $row['last_name']),
+                'gender' => $row['gender'],
+                'class_label' => $row['class_label'],
+                'opened' => $row['last_at'] !== null,
+                'percent' => null,
+                'notes' => (int) $row['notes'],
+                'last_at' => $row['last_at'],
+                'completed' => false,
+            ];
+        }, $stmt->fetchAll(\PDO::FETCH_ASSOC));
+
+        $this->success(['students' => $students]);
+    }
+
     /**
      * Get all resources uploaded by the teacher
      * GET /teacher/itembank
@@ -98,7 +158,11 @@ class ItemBankController extends Controller
                        s.code as subject_code,
                        c.name as class_name,
                        c.level as class_level,
-                       c.stream_name as class_stream_name
+                       c.stream_name as class_stream_name,
+                       (SELECT COUNT(DISTINCT sde.student_id) FROM student_department_enrollments sde
+                        LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
+                        WHERE " . self::AUDIENCE_MATCH . ") AS audience,
+                       (SELECT COUNT(DISTINCT a.student_id) FROM item_bank_attempts a WHERE a.question_id = q.id) AS readers
                 FROM item_bank_questions q
                 LEFT JOIN subjects s ON q.subject_id = s.id
                 LEFT JOIN classes c ON q.class_id = c.id

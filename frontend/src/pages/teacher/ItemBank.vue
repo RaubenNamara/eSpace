@@ -1,196 +1,73 @@
 <template>
-  <div>
-    <!-- Header - icon and title share a row with the filters/action, so the dropdowns line up
-         exactly with the heading instead of floating above it; the subtitle drops to its own
-         full-width line underneath. -->
-    <div class="flex items-center gap-2 mb-1">
-      <div class="flex items-center gap-2 flex-shrink-0">
-        <div class="hidden sm:flex w-7 h-7 rounded-lg bg-indigo-600 items-center justify-center flex-shrink-0">
-          <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-          </svg>
-        </div>
-        <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight whitespace-nowrap">Item Bank</h1>
-      </div>
-
-      <div class="flex items-center gap-2 min-w-0">
-        <div class="flex flex-nowrap items-center gap-2 overflow-x-auto -mx-1 px-1 sm:mx-0 sm:px-0 min-w-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <select v-model="statusFilter" class="flex-shrink-0 max-w-[92px] truncate px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white">
-            <option value="">Status</option>
-            <option value="draft">Draft</option>
-            <option value="published">Published</option>
-            <option value="archived">Archived</option>
-          </select>
-
-          <select
-            v-model="subjectFilter"
-            class="flex-shrink-0 max-w-[92px] truncate px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-            :disabled="!assignments?.subjects || assignments.subjects.length === 0"
-          >
-            <option value="">Subjects</option>
-            <option v-for="subject in assignments?.subjects" :key="subject.id" :value="subject.id">{{ subject.name }}</option>
-          </select>
-
-          <select
-            v-model="classFilter"
-            class="flex-shrink-0 max-w-[92px] truncate px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-            :disabled="!assignments?.classes || assignments.classes.length === 0"
-          >
-            <option value="">Classes</option>
-            <option v-for="cls in assignments?.classes" :key="cls.id" :value="cls.id">
-              {{ cls.name }} ({{ cls.level }}{{ cls.stream_name ? ' - ' + cls.stream_name : '' }})
-            </option>
-          </select>
-
-          <div v-if="assignmentsError" class="flex-shrink-0 text-red-600 dark:text-red-400 text-xs whitespace-nowrap">{{ assignmentsError }}</div>
-        </div>
-
-        <button
-          v-if="resources.length > 0"
-          @click="openCreateModal"
-          class="flex-shrink-0 px-2.5 py-1 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1.5 shadow-sm shadow-indigo-500/20 whitespace-nowrap"
-        >
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-          </svg>
-          <span class="sm:hidden">Upload</span><span class="hidden sm:inline">Upload Item Bank</span>
+  <div class="w-full">
+    <PageHeader title="Item Bank" description="Past papers, practice questions and revision packs - students open them right in eSpace." icon="clipboard" accent="amber" :active-filters="activeFilterCount">
+      <template #actions>
+        <button type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold bg-amber-600 text-white hover:bg-amber-700 shadow-sm shadow-amber-500/20" @click="openCreateModal">
+          <AppIcon name="upload" class="w-4 h-4" />
+          <span class="hidden sm:inline">Add a paper</span><span class="sm:hidden">Add</span>
         </button>
-      </div>
-    </div>
-    <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Upload PDF resources for your classes - students read them in the browser, and can download them only where you allow it.</p>
+      </template>
+      <template #filters>
+        <div class="relative">
+          <svg class="w-4 h-4 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"></path></svg>
+          <input v-model="search" type="search" placeholder="Search papers" class="w-full md:w-48 pl-8 pr-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+        </div>
+        <PickerDropdown v-model="subjectFilter" label="Subject" :options="subjectOptions" align="right" />
+      </template>
+      <StatStrip v-model="statusFilter" :items="statItems" hide-when-empty />
+    </PageHeader>
 
-    <!-- Stats - clickable to filter the list below; the count sits as a corner badge so each
-         card is shorter and the label can be centered. -->
-    <div class="grid grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
-      <button
-        @click="statusFilter = ''"
-        class="relative bg-white dark:bg-gray-800 rounded-xl px-1 py-2 sm:p-4 shadow-sm border transition-shadow hover:shadow-md text-center"
-        :class="statusFilter === '' ? 'border-indigo-300 dark:border-indigo-700 ring-1 ring-indigo-100 dark:ring-indigo-900/30' : 'border-gray-200 dark:border-gray-700'"
-      >
-        <span class="block sm:absolute sm:top-2 sm:right-3 text-base sm:text-lg font-bold leading-tight text-gray-900 dark:text-white">{{ stats.total }}</span>
-        <p class="text-[11px] sm:text-sm text-gray-500 dark:text-gray-400"><span class="sm:hidden">Total</span><span class="hidden sm:inline">Total Resources</span></p>
-      </button>
-      <button
-        @click="statusFilter = 'draft'"
-        class="relative bg-white dark:bg-gray-800 rounded-xl px-1 py-2 sm:p-4 shadow-sm border transition-shadow hover:shadow-md text-center"
-        :class="statusFilter === 'draft' ? 'border-yellow-300 dark:border-yellow-700 ring-1 ring-yellow-100 dark:ring-yellow-900/30' : 'border-gray-200 dark:border-gray-700'"
-      >
-        <span class="block sm:absolute sm:top-2 sm:right-3 text-base sm:text-lg font-bold leading-tight text-yellow-600 dark:text-yellow-400">{{ stats.draft }}</span>
-        <p class="text-[11px] sm:text-sm text-gray-500 dark:text-gray-400">Draft</p>
-      </button>
-      <button
-        @click="statusFilter = 'published'"
-        class="relative bg-white dark:bg-gray-800 rounded-xl px-1 py-2 sm:p-4 shadow-sm border transition-shadow hover:shadow-md text-center"
-        :class="statusFilter === 'published' ? 'border-green-300 dark:border-green-700 ring-1 ring-green-100 dark:ring-green-900/30' : 'border-gray-200 dark:border-gray-700'"
-      >
-        <span class="block sm:absolute sm:top-2 sm:right-3 text-base sm:text-lg font-bold leading-tight text-green-600 dark:text-green-400">{{ stats.published }}</span>
-        <p class="text-[11px] sm:text-sm text-gray-500 dark:text-gray-400">Published</p>
-      </button>
-      <button
-        @click="statusFilter = 'archived'"
-        class="relative bg-white dark:bg-gray-800 rounded-xl px-1 py-2 sm:p-4 shadow-sm border transition-shadow hover:shadow-md text-center"
-        :class="statusFilter === 'archived' ? 'border-gray-400 dark:border-gray-500 ring-1 ring-gray-200 dark:ring-gray-700' : 'border-gray-200 dark:border-gray-700'"
-      >
-        <span class="block sm:absolute sm:top-2 sm:right-3 text-base sm:text-lg font-bold leading-tight text-gray-600 dark:text-gray-400">{{ stats.archived }}</span>
-        <p class="text-[11px] sm:text-sm text-gray-500 dark:text-gray-400">Archived</p>
-      </button>
-    </div>
+    <p v-if="assignmentsError" class="mb-4 text-sm text-rose-600 dark:text-rose-300">{{ assignmentsError }}</p>
 
-    <!-- Resources -->
-    <div v-if="loading" class="text-center py-12">
-      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-      <p class="mt-4 text-gray-600 dark:text-gray-400">Loading item bank...</p>
-    </div>
+    <Skeleton v-if="loading && !resources.length" variant="cards" :count="6" />
 
-    <div v-else-if="filteredResources.length === 0" class="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-      <svg class="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-      </svg>
-      <p class="text-gray-600 dark:text-gray-400 mb-4">{{ resources.length === 0 ? 'No PDFs uploaded yet' : 'No resources match your filters' }}</p>
-      <button v-if="resources.length === 0" @click="openCreateModal" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-        Upload Your First Item
-      </button>
-      <button v-else @click="clearFilters" class="px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors">
-        Clear filters
-      </button>
-    </div>
+    <EmptyState v-else-if="!resources.length" icon="clipboard" tone="amber" title="No papers yet" message="Add a PDF - a past paper, a set of practice questions, a revision pack - and students open it in the browser. The first page becomes its cover.">
+      <button type="button" class="px-4 py-2 rounded-xl text-sm font-semibold bg-amber-600 text-white hover:bg-amber-700" @click="openCreateModal">Add your first paper</button>
+    </EmptyState>
 
-    <!-- Browse by Class: one docket per class -->
-    <template v-else-if="!activeClassName">
-      <h2 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">Browse by Class</h2>
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
-        <button
-          v-for="group in classGroups"
-          :key="group.name"
-          @click="activeClassName = group.name"
-          class="text-left bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 p-5 sm:p-6 group overflow-hidden relative"
-        >
-          <div
-            class="absolute -right-6 -top-6 w-28 h-28 rounded-full opacity-10 transition-transform duration-300 group-hover:scale-125"
-            :class="classPalette(group.name).solid"
-          ></div>
-          <div
-            class="relative w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-white shadow-sm flex-shrink-0 mb-3 sm:mb-4"
-            :class="classPalette(group.name).solid"
-          >
-            <svg class="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-            </svg>
-          </div>
-          <h3 class="relative text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-            {{ group.name }}
-          </h3>
-          <span
-            class="relative inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
-            :class="classPalette(group.name).softText"
-          >
-            {{ group.resources.length }} {{ group.resources.length === 1 ? 'resource' : 'resources' }}
-          </span>
-        </button>
-      </div>
-    </template>
-
-    <!-- Class bookcase: one shelf per subject -->
     <template v-else>
-      <div class="flex items-center gap-2 mb-4">
+      <!-- Class tabs: one per class (all-streams papers sit under their class) -->
+      <nav v-if="classTabs.length > 2" class="flex gap-1.5 mb-4 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 pb-1 [scrollbar-width:none]" aria-label="Classes">
         <button
-          @click="activeClassName = null"
-          class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+          v-for="g in classTabs"
+          :key="g.name"
+          type="button"
+          class="flex-shrink-0 inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold border transition-colors"
+          :class="activeClassName === g.name
+            ? 'bg-amber-600 border-amber-600 text-white shadow-sm shadow-amber-500/20'
+            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:border-amber-300 dark:hover:border-amber-700'"
+          @click="activeClassName = g.name"
         >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-          </svg>
-          All Classes
+          {{ g.label }}
+          <span class="px-1.5 rounded-md text-[11px] font-bold" :class="activeClassName === g.name ? 'bg-white/20' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300'">{{ g.count }}</span>
         </button>
-        <span class="text-gray-300 dark:text-gray-600">/</span>
-        <span class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ activeClassName }}</span>
-      </div>
+      </nav>
 
-      <div class="flex items-center gap-2 mb-3">
+      <div v-if="visibleIds.length" class="flex items-center gap-2 mb-3">
         <label class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none">
           <input
             type="checkbox"
             :checked="bulk.allSelected(visibleIds)"
+            class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-amber-600 focus:ring-amber-500"
             @change="bulk.toggleAll(visibleIds)"
-            class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
           >
           Select all
         </label>
       </div>
 
       <BulkActionBar :count="bulk.selectedCount.value" @clear="bulk.clear()">
-        <button @click="bulkSetStatus('published')" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Publish</button>
-        <button @click="bulkSetStatus('draft')" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Draft</button>
-        <button @click="bulkSetStatus('archived')" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Archive</button>
-        <button @click="bulkSetDownload(true)" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" title="Students can download these and save them for offline reading">Allow download</button>
-        <button @click="bulkSetDownload(false)" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" title="Students can only read these inside eSpace">No download</button>
-        <button @click="bulkExport" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Export CSV</button>
-        <button @click="bulkDeleteSelected" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors">Delete</button>
+        <button class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" @click="bulkSetStatus('published')">Publish</button>
+        <button class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" @click="bulkSetStatus('draft')">Draft</button>
+        <button class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" @click="bulkSetStatus('archived')">Archive</button>
+        <button class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" title="Students can download these and save them for offline reading" @click="bulkSetDownload(true)">Allow download</button>
+        <button class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" title="Students can only read these inside eSpace" @click="bulkSetDownload(false)">No download</button>
+        <button class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" @click="bulkExport">Export CSV</button>
+        <button class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors" @click="bulkDeleteSelected">Delete</button>
       </BulkActionBar>
 
-      <div v-if="activeClassSubjectShelves.length === 0" class="text-center py-16 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-        <p class="text-gray-500 dark:text-gray-400">No resources in this class match these filters.</p>
-      </div>
+      <EmptyState v-if="!activeClassSubjectShelves.length" compact icon="clipboard" tone="gray" title="Nothing matches" message="Try another class, subject or status.">
+        <button type="button" class="text-sm font-semibold text-amber-600 dark:text-amber-300 hover:underline" @click="clearFilters">Clear filters</button>
+      </EmptyState>
 
       <div v-else class="shelf-row flex flex-wrap items-start gap-x-5 gap-y-7">
         <Bookshelf
@@ -208,7 +85,9 @@
             @open="previewResource = resource"
           >
             <template #cover="{ size }">
-              <ShelfBook flat :size="size"
+              <ShelfBook
+                flat
+                :size="size"
                 :title="resource.title"
                 :seed="resource.id"
                 :label="subjectTag(resource.subject_name, resource.subject_code)"
@@ -231,50 +110,92 @@
                 <input
                   type="checkbox"
                   :checked="bulk.isSelected(resource.id)"
+                  class="w-3.5 h-3.5 rounded border-gray-300 dark:border-gray-600 text-amber-600 focus:ring-amber-500"
                   @change="bulk.toggle(resource.id)"
-                  class="w-3.5 h-3.5 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
                 >
                 Select
               </label>
               <div class="flex items-center gap-1.5">
-                <span
-                  class="px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
-                  :class="resource.status === 'published' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                    resource.status === 'draft' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                    'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'"
-                >
-                  {{ resource.status.charAt(0).toUpperCase() + resource.status.slice(1) }}
-                </span>
-                <span class="text-[10px] text-gray-400 dark:text-gray-500 truncate">PDF &middot; {{ resource.total_pages ? `${resource.total_pages} pages` : formatFileSize(resource.file_size) }}</span>
+                <span class="px-1.5 py-0.5 rounded-full text-[10px] font-semibold" :class="statusChip(resource.status)">{{ resource.status.charAt(0).toUpperCase() + resource.status.slice(1) }}</span>
+                <span class="text-[10px] text-gray-400 dark:text-gray-500 truncate">{{ 'PDF' }}<template v-if="resource.total_pages"> · {{ resource.total_pages }} pages</template><template v-if="resource.file_size"> · {{ formatFileSize(resource.file_size) }}</template></span>
               </div>
               <p class="mt-1 text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug">{{ resource.title }}</p>
-              <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">
-                {{ resource.class_group_name ? `${resource.class_group_name} (All Streams)` : resource.class_stream_name ? `${resource.class_name} - ${resource.class_stream_name}` : resource.class_name }}
+              <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ audienceLabel(resource) }}</p>
+
+              <!-- Published: how far the class has got, opening the full list -->
+              <template v-if="resource.status === 'published'">
+                <p v-if="!resource.audience" class="mt-1.5 text-[11px] text-gray-400">No students in this class yet</p>
+                <button v-else type="button" class="mt-1.5 w-full text-left group/r" title="See who has opened it" @click.stop="readersFor = resource">
+                  <span class="flex items-center gap-2">
+                    <span class="flex-1 h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+                      <span class="block h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500" :style="{ width: reach(resource) + '%' }"></span>
+                    </span>
+                    <span class="text-[11px] font-semibold tabular-nums text-gray-500 dark:text-gray-400">{{ reach(resource) }}%</span>
+                  </span>
+                  <span class="block text-[11px] text-gray-500 dark:text-gray-400 group-hover/r:text-amber-600 dark:group-hover/r:text-amber-300">
+                    {{ resource.readers || 0 }} of {{ resource.audience }} opened
+                  </span>
+                </button>
+              </template>
+              <p v-else-if="resource.status === 'draft'" class="mt-1.5 flex items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400">
+                Students can't see it yet
+                <button type="button" class="font-semibold text-amber-600 dark:text-amber-300 hover:underline" @click.stop="publishOne(resource)">Publish</button>
               </p>
+
               <div class="flex items-center -ml-1.5 mt-0.5">
-                <button
-                  @click.stop="editResource(resource)"
-                  class="p-1.5 min-w-[34px] min-h-[34px] flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                  title="Edit"
-                >
-                  <svg class="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                  </svg>
+                <button class="p-1.5 min-w-[34px] min-h-[34px] flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors" title="Edit" @click.stop="editResource(resource)">
+                  <AppIcon name="pencil" class="w-4 h-4 text-gray-600 dark:text-gray-400" />
                 </button>
-                <button
-                  @click.stop="deleteResource(resource.id)"
-                  class="p-1.5 min-w-[34px] min-h-[34px] flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-900 rounded-lg transition-colors"
-                  title="Delete"
-                >
-                  <svg class="w-4 h-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                  </svg>
+                <button class="p-1.5 min-w-[34px] min-h-[34px] flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg transition-colors" title="Delete" @click.stop="deleteResource(resource.id)">
+                  <AppIcon name="trash" class="w-4 h-4 text-red-600 dark:text-red-400" />
                 </button>
+                <span v-if="Number(resource.allow_download)" class="ml-auto inline-flex items-center gap-1 text-[10px] text-gray-400" title="Students can download this paper">
+                  <AppIcon name="download" class="w-3.5 h-3.5" /> Downloadable
+                </span>
               </div>
             </template>
           </ShelfSlot>
         </Bookshelf>
       </div>
+
+      <!-- The same books as a list: how far each class has got, and quick actions -->
+      <section v-if="activeClassResources.length" class="mt-8">
+        <h2 class="text-sm font-bold text-gray-900 dark:text-white mb-2">Who's opened them</h2>
+        <ul class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700">
+          <li v-for="resource in readingList" :key="resource.id" class="p-3 flex items-center gap-3">
+            <button type="button" class="w-10 h-[53px] flex-shrink-0 overflow-hidden rounded-sm" :title="`Open ${resource.title}`" @click="previewResource = resource">
+              <span class="block origin-top-left scale-[0.43] pointer-events-none">
+                <ShelfBook flat size="sm" :title="resource.title" :seed="resource.id" :label="subjectTag(resource.subject_name, resource.subject_code)" :cover-image="resource.cover_image" :pages="resource.total_pages" />
+              </span>
+            </button>
+            <div class="min-w-0 flex-1">
+              <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ resource.title }}</p>
+              <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">
+                {{ resource.subject_name }} · {{ audienceLabel(resource) }}<template v-if="resource.total_pages"> · {{ resource.total_pages }} pages</template>
+              </p>
+              <button v-if="resource.status === 'published' && resource.audience" type="button" class="mt-1 w-full max-w-sm flex items-center gap-2 group/r" title="See who has opened it" @click="readersFor = resource">
+                <span class="flex-1 h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+                  <span class="block h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500" :style="{ width: reach(resource) + '%' }"></span>
+                </span>
+                <span class="text-[11px] whitespace-nowrap text-gray-500 dark:text-gray-400 group-hover/r:text-amber-600 dark:group-hover/r:text-amber-300">{{ resource.readers || 0 }}/{{ resource.audience }} opened</span>
+              </button>
+              <p v-else-if="resource.status === 'published'" class="mt-1 text-[11px] text-gray-400">No students in this class yet</p>
+              <p v-else class="mt-1 flex items-center gap-2 text-[11px]">
+                <span class="px-1.5 py-0.5 rounded-full font-semibold" :class="statusChip(resource.status)">{{ resource.status === 'draft' ? 'Draft' : 'Archived' }}</span>
+                <button v-if="resource.status === 'draft'" type="button" class="font-semibold text-amber-600 dark:text-amber-300 hover:underline" @click="publishOne(resource)">Publish</button>
+              </p>
+            </div>
+            <div class="flex items-center flex-shrink-0">
+              <button class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" title="Edit" @click="editResource(resource)">
+                <AppIcon name="pencil" class="w-4 h-4 text-gray-500 dark:text-gray-400" />
+              </button>
+              <button class="hidden sm:flex p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40" title="Delete" @click="deleteResource(resource.id)">
+                <AppIcon name="trash" class="w-4 h-4 text-red-500 dark:text-red-400" />
+              </button>
+            </div>
+          </li>
+        </ul>
+      </section>
     </template>
 
     <!-- Upload/Edit Modal -->
@@ -390,15 +311,27 @@
             </label>
 
             <div v-if="!editingResource" class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">PDF File *</label>
-              <input
-                type="file"
-                accept="application/pdf"
-                required
-                @change="handleFileSelect"
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">PDF file *</label>
+              <label
+                class="flex flex-col items-center justify-center gap-2 px-4 py-6 rounded-xl border-2 border-dashed cursor-pointer text-center transition-colors"
+                :class="dragging ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20' : resourceForm.file ? 'border-amber-300 dark:border-amber-700 bg-amber-50/60 dark:bg-amber-900/10' : 'border-gray-300 dark:border-gray-600 hover:border-amber-400 dark:hover:border-amber-600'"
+                @dragover.prevent="dragging = true"
+                @dragleave.prevent="dragging = false"
+                @drop.prevent="onDrop"
               >
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">PDF only, up to 50MB. Students read it in the browser - they can download it only if you tick Allow above.</p>
+                <input type="file" accept="application/pdf" class="sr-only" @change="handleFileSelect">
+                <span class="w-11 h-11 rounded-xl flex items-center justify-center bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-300">
+                  <AppIcon :name="resourceForm.file ? 'clipboard' : 'upload'" class="w-5 h-5" />
+                </span>
+                <template v-if="resourceForm.file">
+                  <span class="text-sm font-semibold text-gray-900 dark:text-white break-all">{{ resourceForm.file.name }}</span>
+                  <span class="text-xs text-gray-500 dark:text-gray-400">{{ formatFileSize(resourceForm.file.size) }} · tap to choose another</span>
+                </template>
+                <template v-else>
+                  <span class="text-sm font-semibold text-gray-900 dark:text-white">Drop a PDF here, or tap to choose</span>
+                  <span class="text-xs text-gray-500 dark:text-gray-400">Up to 50MB - downloadable only if you tick Allow above</span>
+                </template>
+              </label>
               <div v-if="saving && uploadProgress > 0" class="mt-2">
                 <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
                   <span>Uploading&hellip;</span>
@@ -424,7 +357,7 @@
               <button
                 type="submit"
                 :disabled="saving"
-                class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                class="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {{ saving ? (uploadProgress > 0 ? `Uploading... ${uploadProgress}%` : 'Saving...') : (editingResource ? 'Update Resource' : 'Upload') }}
               </button>
@@ -436,12 +369,29 @@
 
     <!-- PDF Preview -->
     <ItemBankPdfViewer v-if="previewResource" :resource="previewResource" @close="previewResource = null" />
+    <AudiencePanel
+      v-if="readersFor"
+      :title="readersFor.title"
+      :subtitle="`${audienceLabel(readersFor)} · ${readersFor.subject_name || ''}`"
+      :endpoint="`/api/teacher/itembank/${readersFor.id}/readers`"
+      icon="clipboard"
+      verb="opened"
+      :tracks-progress="false"
+      @close="readersFor = null"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import axios from 'axios'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StatStrip, { type StatItem } from '@/components/ui/StatStrip.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
+import Skeleton from '@/components/ui/Skeleton.vue'
+import PickerDropdown, { type PickerOption } from '@/components/common/PickerDropdown.vue'
+import AppIcon from '@/components/common/AppIcon.vue'
+import AudiencePanel from '@/components/common/AudiencePanel.vue'
 import ItemBankPdfViewer from '@/components/itembank/ItemBankPdfViewer.vue'
 import TeacherClassSelector from '@/components/teacher/TeacherClassSelector.vue'
 import BulkActionBar from '@/components/common/BulkActionBar.vue'
@@ -474,9 +424,11 @@ const loading = ref(false)
 const saving = ref(false)
 const uploadProgress = ref(0)
 
-const statusFilter = usePersistedRef('teacher-itembank-status-filter', '')
-const subjectFilter = usePersistedRef('teacher-itembank-subject-filter', '')
-const classFilter = usePersistedRef('teacher-itembank-class-filter', '')
+const statusFilter = usePersistedRef<string | null>('teacher-itembank:status', null)
+const subjectFilter = usePersistedRef<string>('teacher-itembank:subject', '')
+const search = ref('')
+const dragging = ref(false)
+const readersFor = ref<ItemBankResource | null>(null)
 
 const showResourceModal = ref(false)
 const editingResource = ref<ItemBankResource | null>(null)
@@ -499,30 +451,60 @@ const stats = computed(() => ({
   archived: resources.value.filter(r => r.status === 'archived').length
 }))
 
+const statItems = computed<StatItem[]>(() => [
+  { label: 'All papers', value: stats.value.total, tone: 'gray' },
+  { label: 'Published', value: stats.value.published, key: 'published', tone: 'emerald' },
+  { label: 'Draft', value: stats.value.draft, key: 'draft', tone: 'amber' },
+  { label: 'Archived', value: stats.value.archived, key: 'archived', tone: 'gray' }
+])
+const subjectOptions = computed<PickerOption<string>[]>(() => [
+  { value: '', label: 'All subjects' },
+  ...(assignments.value?.subjects ?? []).map(s => ({ value: String(s.id), label: s.name }))
+])
+const activeFilterCount = computed(() => (subjectFilter.value ? 1 : 0) + (search.value.trim() ? 1 : 0))
+
 const filteredResources = computed(() => {
+  const q = search.value.trim().toLowerCase()
   return resources.value.filter(resource => {
     const matchesStatus = !statusFilter.value || resource.status === statusFilter.value
     const matchesSubject = !subjectFilter.value || resource.subject_id === parseInt(subjectFilter.value)
-    const matchesClass = !classFilter.value || resource.class_id === parseInt(classFilter.value)
-    return matchesStatus && matchesSubject && matchesClass
+    const matchesSearch = !q || [resource.title, resource.description].some(t => (t || '').toLowerCase().includes(q))
+    return matchesStatus && matchesSubject && matchesSearch
   })
 })
 
-// Resources are browsed class first (one docket per class, "All Streams" resources under their
-// class group), then stand on one shelf per subject inside the class - same shape as the eLibrary.
-const activeClassName = ref<string | null>(null)
-
-const classGroups = computed(() => {
-  const map = new Map<string, { name: string; resources: ItemBankResource[] }>()
-  for (const resource of filteredResources.value) {
-    const name = resource.class_group_name || resource.class_name || 'Unassigned'
-    if (!map.has(name)) map.set(name, { name, resources: [] })
-    map.get(name)!.resources.push(resource)
-  }
-  return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
+// One tab per class ("All Streams" papers under their class), then one shelf per subject.
+// A class is always open - the last one used, or the first - with "All" beside them.
+const ALL = '__all'
+const classOf = (resource: ItemBankResource) => resource.class_group_name || resource.class_name || 'Unassigned'
+const activeClassName = usePersistedRef<string>('teacher-itembank:class', '')
+const classTabs = computed(() => {
+  const names = [...new Set(resources.value.map(classOf))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+  return [
+    { name: ALL, label: 'All classes', count: filteredResources.value.length },
+    ...names.map(name => ({ name, label: name, count: filteredResources.value.filter(r => classOf(r) === name).length }))
+  ]
 })
+watch(classTabs, (tabs) => {
+  if (!resources.value.length) return
+  if (!tabs.some(t => t.name === activeClassName.value)) activeClassName.value = tabs[1]?.name ?? ALL
+}, { immediate: true })
 
-const activeClassResources = computed(() => classGroups.value.find(g => g.name === activeClassName.value)?.resources ?? [])
+const activeClassResources = computed(() => activeClassName.value === ALL
+  ? filteredResources.value
+  : filteredResources.value.filter(r => classOf(r) === activeClassName.value))
+
+// Share of the class that has opened it
+const reach = (resource: ItemBankResource) => resource.audience ? Math.min(100, Math.round(((resource.readers || 0) / resource.audience) * 100)) : 0
+// Published first, the least-opened on top - that's where a nudge helps most
+const readingList = computed(() => [...activeClassResources.value].sort((a, b) =>
+  (a.status === 'published' ? 0 : 1) - (b.status === 'published' ? 0 : 1) || reach(a) - reach(b)))
+const audienceLabel = (resource: ItemBankResource) => resource.class_group_name
+  ? `${resource.class_group_name} (All Streams)`
+  : resource.class_stream_name ? `${resource.class_name}-${resource.class_stream_name}` : (resource.class_name || '')
+const statusChip = (status: string) => status === 'published'
+  ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200'
+  : status === 'draft' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
 
 const activeClassSubjectShelves = computed(() => {
   const map = new Map<string, ItemBankResource[]>()
@@ -533,20 +515,6 @@ const activeClassSubjectShelves = computed(() => {
   })
   return orderShelves(Array.from(map, ([name, resources]) => ({ name, resources })), g => g.resources)
 })
-
-const classPalettes = [
-  { solid: 'bg-emerald-600', softText: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' },
-  { solid: 'bg-blue-600', softText: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
-  { solid: 'bg-indigo-600', softText: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' },
-  { solid: 'bg-amber-600', softText: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' },
-  { solid: 'bg-rose-600', softText: 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300' },
-  { solid: 'bg-violet-600', softText: 'bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300' }
-]
-const classPalette = (name: string) => {
-  let hash = 0
-  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0
-  return classPalettes[hash % classPalettes.length]
-}
 
 const visibleIds = computed(() => activeClassResources.value.map(r => r.id))
 
@@ -577,6 +545,16 @@ const bulkSetDownload = async (allow: boolean) => {
   }
 }
 
+const publishOne = async (resource: ItemBankResource) => {
+  try {
+    await axios.post(`${API_BASE}/teacher/itembank/bulk-status`, { ids: [resource.id], status: 'published' })
+    toast.success(`"${resource.title}" is now visible to students`)
+    await loadResources()
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Failed to publish')
+  }
+}
+
 const bulkDeleteSelected = async () => {
   const ids = bulk.selectedArray()
   if (ids.length === 0) return
@@ -602,9 +580,9 @@ const bulkExport = async () => {
 }
 
 const clearFilters = () => {
-  statusFilter.value = ''
+  statusFilter.value = null
   subjectFilter.value = ''
-  classFilter.value = ''
+  search.value = ''
 }
 
 const formatDate = (dateString?: string) => {
@@ -755,7 +733,8 @@ const loadAssignments = async () => {
 
 const openCreateModal = () => {
   editingResource.value = null
-  resourceForm.value = { title: '', description: '', subject_id: '', classTarget: { scope: 'stream', class_id: null, class_group_name: null }, status: 'draft', allow_download: false, file: null }
+  // The subject on view is the likely one
+  resourceForm.value = { title: '', description: '', subject_id: subjectFilter.value, classTarget: { scope: 'stream', class_id: null, class_group_name: null }, status: 'draft', allow_download: false, file: null }
   showResourceModal.value = true
 }
 
@@ -780,9 +759,25 @@ const closeResourceModal = () => {
   editingResource.value = null
 }
 
+// A chosen file names the paper too, if the teacher hasn't typed a title yet
+const pickFile = (file: File | null) => {
+  if (file && file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) {
+    toast.warning('Item Bank takes PDF files only')
+    return false
+  }
+  resourceForm.value.file = file
+  if (file && !resourceForm.value.title.trim()) {
+    resourceForm.value.title = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim()
+  }
+  return true
+}
 const handleFileSelect = (event: Event) => {
   const target = event.target as HTMLInputElement
-  resourceForm.value.file = target.files?.[0] || null
+  if (!pickFile(target.files?.[0] || null)) target.value = ''
+}
+const onDrop = (event: DragEvent) => {
+  dragging.value = false
+  pickFile(event.dataTransfer?.files?.[0] || null)
 }
 
 const saveResource = async () => {

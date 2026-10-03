@@ -1,209 +1,78 @@
 <template>
-  <div>
-    <!-- Header - icon and title share a row with the filters/action, so the dropdowns line up
-         exactly with the heading instead of floating above it; the subtitle drops to its own
-         full-width line underneath. -->
-    <div class="flex items-center gap-2 mb-1">
-      <div class="flex items-center gap-2 flex-shrink-0">
-        <div class="hidden sm:flex w-7 h-7 rounded-lg bg-indigo-600 items-center justify-center flex-shrink-0">
-          <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-          </svg>
-        </div>
-        <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight whitespace-nowrap">eNotes</h1>
-      </div>
-
-      <div class="flex items-center gap-2 min-w-0">
-        <div class="flex flex-nowrap items-center gap-2 overflow-x-auto -mx-1 px-1 sm:mx-0 sm:px-0 min-w-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <select
-            v-model="statusFilter"
-            class="flex-shrink-0 max-w-[92px] truncate px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-          >
-            <option value="">Status</option>
-            <option value="draft">Draft</option>
-            <option value="published">Published</option>
-            <option value="archived">Archived</option>
-          </select>
-
-          <select
-            v-model="subjectFilter"
-            class="flex-shrink-0 max-w-[92px] truncate px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-            :disabled="!assignments?.subjects || assignments.subjects.length === 0"
-          >
-            <option value="">Subjects</option>
-            <option v-for="subject in assignments?.subjects" :key="subject.id" :value="subject.id">
-              {{ subject.name }}
-            </option>
-          </select>
-
-          <select
-            v-model="classFilter"
-            class="flex-shrink-0 max-w-[92px] truncate px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-            :disabled="!assignments?.classes || assignments.classes.length === 0"
-          >
-            <option value="">Classes</option>
-            <option v-for="cls in assignments?.classes" :key="cls.id" :value="cls.id">
-              {{ cls.name }}{{ cls.stream_name ? ' - ' + cls.stream_name : '' }}
-            </option>
-          </select>
-
-          <div v-if="assignmentsError" class="flex-shrink-0 text-red-600 dark:text-red-400 text-xs flex items-center whitespace-nowrap">
-            {{ assignmentsError }}
-          </div>
-        </div>
-
-        <button
-          @click="showShared = true"
-          class="flex-shrink-0 px-2.5 py-1 text-xs border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors flex items-center gap-1.5 whitespace-nowrap"
-          title="eNotes shared by colleagues in your department"
-        >
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path>
-          </svg>
-          <span class="sm:hidden">Shared</span><span class="hidden sm:inline">Shared by colleagues</span>
+  <div class="w-full">
+    <PageHeader title="eNotes" description="Interactive notes your students read page by page - with narration, highlights and progress." icon="document" accent="indigo" :active-filters="activeFilterCount">
+      <template #actions>
+        <button type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30" title="eNotes shared by colleagues in your department" @click="showShared = true">
+          <AppIcon name="users" class="w-4 h-4" />
+          <span class="hidden sm:inline">Shared by colleagues</span>
         </button>
-
-        <button
-          @click="openCreateModal"
-          class="flex-shrink-0 px-2.5 py-1 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1.5 shadow-sm shadow-indigo-500/20 whitespace-nowrap"
-        >
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-          </svg>
-          <span class="sm:hidden">New</span><span class="hidden sm:inline">Create Topic</span>
+        <button type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-500/20" @click="openCreateModal">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+          <span class="hidden sm:inline">New topic</span><span class="sm:hidden">New</span>
         </button>
-      </div>
-    </div>
-    <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Create and manage interactive note topics for your classes</p>
-
-    <!-- Dashboard Stats - clickable to filter the list below; the count sits as a corner badge
-         so each card is shorter and the label can be centered. -->
-    <div v-if="stats" class="grid grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
-      <button
-        @click="statusFilter = ''"
-        class="relative bg-white dark:bg-gray-800 rounded-xl px-1 py-2 sm:p-4 shadow-sm border transition-shadow hover:shadow-md text-center"
-        :class="statusFilter === '' ? 'border-indigo-300 dark:border-indigo-700 ring-1 ring-indigo-100 dark:ring-indigo-900/30' : 'border-gray-200 dark:border-gray-700'"
-      >
-        <span class="block sm:absolute sm:top-2 sm:right-3 text-base sm:text-lg font-bold leading-tight text-gray-900 dark:text-white">{{ stats.total }}</span>
-        <p class="text-[11px] sm:text-sm text-gray-500 dark:text-gray-400"><span class="sm:hidden">Total</span><span class="hidden sm:inline">Total Topics</span></p>
-      </button>
-      <button
-        @click="statusFilter = 'draft'"
-        class="relative bg-white dark:bg-gray-800 rounded-xl px-1 py-2 sm:p-4 shadow-sm border transition-shadow hover:shadow-md text-center"
-        :class="statusFilter === 'draft' ? 'border-yellow-300 dark:border-yellow-700 ring-1 ring-yellow-100 dark:ring-yellow-900/30' : 'border-gray-200 dark:border-gray-700'"
-      >
-        <span class="block sm:absolute sm:top-2 sm:right-3 text-base sm:text-lg font-bold leading-tight text-yellow-600 dark:text-yellow-400">{{ stats.draft }}</span>
-        <p class="text-[11px] sm:text-sm text-gray-500 dark:text-gray-400">Draft</p>
-      </button>
-      <button
-        @click="statusFilter = 'published'"
-        class="relative bg-white dark:bg-gray-800 rounded-xl px-1 py-2 sm:p-4 shadow-sm border transition-shadow hover:shadow-md text-center"
-        :class="statusFilter === 'published' ? 'border-green-300 dark:border-green-700 ring-1 ring-green-100 dark:ring-green-900/30' : 'border-gray-200 dark:border-gray-700'"
-      >
-        <span class="block sm:absolute sm:top-2 sm:right-3 text-base sm:text-lg font-bold leading-tight text-green-600 dark:text-green-400">{{ stats.published }}</span>
-        <p class="text-[11px] sm:text-sm text-gray-500 dark:text-gray-400">Published</p>
-      </button>
-      <button
-        @click="statusFilter = 'archived'"
-        class="relative bg-white dark:bg-gray-800 rounded-xl px-1 py-2 sm:p-4 shadow-sm border transition-shadow hover:shadow-md text-center"
-        :class="statusFilter === 'archived' ? 'border-gray-400 dark:border-gray-500 ring-1 ring-gray-200 dark:ring-gray-700' : 'border-gray-200 dark:border-gray-700'"
-      >
-        <span class="block sm:absolute sm:top-2 sm:right-3 text-base sm:text-lg font-bold leading-tight text-gray-600 dark:text-gray-400">{{ stats.archived }}</span>
-        <p class="text-[11px] sm:text-sm text-gray-500 dark:text-gray-400">Archived</p>
-      </button>
-    </div>
-
-    <!-- Topics List -->
-    <div v-if="loading" class="flex flex-col items-center justify-center py-16 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-      <div class="inline-block animate-spin rounded-full h-8 w-8 border-2 border-gray-200 dark:border-gray-700 border-t-indigo-600"></div>
-      <p class="mt-3 text-sm text-gray-600 dark:text-gray-400">Loading topics...</p>
-    </div>
-
-    <div v-else-if="topics.length === 0" class="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-      <svg class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-      </svg>
-      <p class="text-gray-600 dark:text-gray-400">No topics found</p>
-    </div>
-
-    <!-- Browse by Class -->
-    <template v-else-if="!activeClassName">
-      <div v-if="classGroups.length === 0" class="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-        <p class="text-gray-500 dark:text-gray-400 mb-3">No topics match these filters.</p>
-        <button @click="clearFilters" class="px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors">
-          Clear filters
-        </button>
-      </div>
-      <template v-else>
-        <h2 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">Browse by Class</h2>
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
-          <button
-            v-for="group in classGroups"
-            :key="group.name"
-            @click="activeClassName = group.name"
-            class="text-left bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 p-5 sm:p-6 group overflow-hidden relative"
-          >
-            <div
-              class="absolute -right-6 -top-6 w-28 h-28 rounded-full opacity-10 transition-transform duration-300 group-hover:scale-125"
-              :class="classPalette(group.name).solid"
-            ></div>
-            <div
-              class="relative w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-white shadow-sm flex-shrink-0 mb-3 sm:mb-4"
-              :class="classPalette(group.name).solid"
-            >
-              <svg class="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"></path>
-              </svg>
-            </div>
-            <h3 class="relative text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-              {{ group.name }}
-            </h3>
-            <span
-              class="relative inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
-              :class="classPalette(group.name).softText"
-            >
-              {{ bookCount(group.topics) }} {{ bookCount(group.topics) === 1 ? 'topic' : 'topics' }}
-            </span>
-          </button>
-        </div>
       </template>
-    </template>
+      <template #filters>
+        <div class="relative">
+          <svg class="w-4 h-4 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"></path></svg>
+          <input v-model="search" type="search" placeholder="Search topics" class="w-full md:w-48 pl-8 pr-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+        </div>
+        <PickerDropdown v-model="subjectFilter" label="Subject" :options="subjectOptions" align="right" />
+      </template>
+      <StatStrip v-model="statusFilter" :items="statItems" hide-when-empty />
+    </PageHeader>
 
-    <!-- Class Topics -->
-    <template v-else>
-      <div class="flex items-center gap-2 mb-4">
-        <button
-          @click="activeClassName = null"
-          class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-          </svg>
-          All Classes
-        </button>
-        <span class="text-gray-300 dark:text-gray-600">/</span>
-        <span class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ activeClassName }}</span>
+    <p v-if="assignmentsError" class="mb-4 text-sm text-rose-600 dark:text-rose-300">{{ assignmentsError }}</p>
+
+    <Skeleton v-if="loading && !topics.length" variant="cards" :count="6" />
+
+    <EmptyState v-else-if="!topics.length" icon="document" tone="indigo" title="No eNotes yet" message="Write a topic page by page - text, pictures, equations, narration - and your students read it like a book, with their progress tracked.">
+      <div class="flex flex-wrap justify-center gap-2">
+        <button type="button" class="px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700" @click="openCreateModal">Create your first topic</button>
+        <button type="button" class="px-4 py-2 rounded-xl text-sm font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700" @click="showShared = true">Copy one from a colleague</button>
       </div>
+    </EmptyState>
 
-      <template v-if="activeClassTopics.length > 0">
+    <template v-else>
+      <!-- Class tabs: one per class (stream and all-streams topics sit under their class) -->
+      <nav v-if="classTabs.length > 2" class="flex gap-1.5 mb-4 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 pb-1 [scrollbar-width:none]" aria-label="Classes">
+        <button
+          v-for="g in classTabs"
+          :key="g.name"
+          type="button"
+          class="flex-shrink-0 inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold border transition-colors"
+          :class="activeClassName === g.name
+            ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm shadow-indigo-500/20'
+            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:border-indigo-300 dark:hover:border-indigo-700'"
+          @click="activeClassName = g.name"
+        >
+          {{ g.label }}
+          <span class="px-1.5 rounded-md text-[11px] font-bold" :class="activeClassName === g.name ? 'bg-white/20' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300'">{{ g.count }}</span>
+        </button>
+      </nav>
+
+      <EmptyState v-if="!activeClassTopics.length" compact icon="document" tone="gray" title="No topics match" message="Try another class, subject or status.">
+        <button type="button" class="text-sm font-semibold text-indigo-600 dark:text-indigo-300 hover:underline" @click="clearFilters">Clear filters</button>
+      </EmptyState>
+
+      <template v-else>
         <div class="flex items-center gap-2 mb-3">
           <label class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none">
             <input
               type="checkbox"
               :checked="bulk.allSelected(visibleTopicIds)"
-              @change="bulk.toggleAll(visibleTopicIds)"
               class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+              @change="bulk.toggleAll(visibleTopicIds)"
             >
             Select all
           </label>
         </div>
 
         <BulkActionBar :count="bulk.selectedCount.value" @clear="bulk.clear()">
-          <button @click="bulkSetStatus('published')" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Publish</button>
-          <button @click="bulkSetStatus('draft')" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Draft</button>
-          <button @click="bulkSetStatus('archived')" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Archive</button>
-          <button @click="bulkExport" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Export CSV</button>
-          <button @click="bulkDeleteSelected" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors">Delete</button>
+          <button class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" @click="bulkSetStatus('published')">Publish</button>
+          <button class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" @click="bulkSetStatus('draft')">Draft</button>
+          <button class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" @click="bulkSetStatus('archived')">Archive</button>
+          <button class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" @click="bulkExport">Export CSV</button>
+          <button class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors" @click="bulkDeleteSelected">Delete</button>
         </BulkActionBar>
 
         <div class="shelf-row flex flex-wrap items-start gap-x-5 gap-y-7">
@@ -353,12 +222,59 @@
             </ShelfSlot>
           </Bookshelf>
         </div>
-      </template>
 
-      <div v-else class="text-center py-16 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-        <p class="text-gray-500 dark:text-gray-400">No eNotes topics in this class yet.</p>
-      </div>
+        <!-- The same topics as a list: how far each class has got, and quick actions -->
+        <section class="mt-8">
+          <h2 class="text-sm font-bold text-gray-900 dark:text-white mb-2">Who's reading</h2>
+          <ul class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700">
+            <li v-for="{ topic, copies } in readingList" :key="topic.id" class="p-3 flex items-center gap-3">
+              <button type="button" class="w-10 h-[53px] flex-shrink-0 overflow-hidden rounded-sm" :title="`Open ${topic.title}`" @click="openBuilder(topic.id)">
+                <span class="block origin-top-left scale-[0.43] pointer-events-none">
+                  <ShelfBook flat size="sm" variant="notes" :title="topic.title" :seed="topic.id" :label="subjectTag(topic.subject_name, topic.subject_code)" :footer="`${topic.total_pages} ${topic.total_pages === 1 ? 'page' : 'pages'}`" :cover="parseCoverDesign(topic.cover_design)" />
+                </span>
+              </button>
+              <div class="min-w-0 flex-1">
+                <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ topic.title }}</p>
+                <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">
+                  {{ topic.subject_name }} · {{ copies.length > 1 ? `${copies.length} classes` : classLabel(topic) }} · {{ topic.total_pages }} {{ topic.total_pages === 1 ? 'page' : 'pages' }}
+                </p>
+                <template v-if="bookReach(copies).audience">
+                  <button type="button" class="mt-1 w-full max-w-sm flex items-center gap-2 group/r" title="See who is reading it" @click="readersFor = { topic, copies }">
+                    <span class="flex-1 h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+                      <span class="block h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500" :style="{ width: bookReach(copies).percent + '%' }"></span>
+                    </span>
+                    <span class="text-[11px] whitespace-nowrap text-gray-500 dark:text-gray-400 group-hover/r:text-indigo-600 dark:group-hover/r:text-indigo-300">{{ bookReach(copies).readers }}/{{ bookReach(copies).audience }} opened<template v-if="bookReach(copies).finished"> · {{ bookReach(copies).finished }} done</template></span>
+                  </button>
+                </template>
+                <p v-else-if="copies.some(c => c.status === 'published')" class="mt-1 text-[11px] text-gray-400">No students in this class yet</p>
+                <p v-else class="mt-1 flex items-center gap-2 text-[11px]">
+                  <span class="px-1.5 py-0.5 rounded-full font-semibold" :class="statusChip(topic.status)">{{ statusLabel(topic.status) }}</span>
+                  <button v-if="topic.status === 'draft'" type="button" class="font-semibold text-indigo-600 dark:text-indigo-300 hover:underline" @click="publishCopies(copies)">Publish</button>
+                </p>
+              </div>
+              <div class="flex items-center flex-shrink-0">
+                <button class="p-2 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/30" title="Reading insights - page by page" @click="insightsTopic = topic">
+                  <AppIcon name="chart" class="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                </button>
+                <button class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" title="Write / edit pages" @click="openBuilder(topic.id)">
+                  <AppIcon name="pencil" class="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                </button>
+              </div>
+            </li>
+          </ul>
+        </section>
+      </template>
     </template>
+
+    <AudiencePanel
+      v-if="readersFor"
+      :title="readersFor.topic.title"
+      :subtitle="`${readersFor.copies.length > 1 ? `${readersFor.copies.length} classes` : classLabel(readersFor.topic)} · ${readersFor.topic.subject_name || ''}`"
+      :endpoint="`/api/teacher/enotes/topics/${readersFor.topic.id}/readers?with_copies=1`"
+      icon="document"
+      verb="read"
+      @close="readersFor = null"
+    />
 
     <SharedENotesModal
       v-if="showShared"
@@ -804,7 +720,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StatStrip, { type StatItem } from '@/components/ui/StatStrip.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
+import Skeleton from '@/components/ui/Skeleton.vue'
+import PickerDropdown, { type PickerOption } from '@/components/common/PickerDropdown.vue'
+import AppIcon from '@/components/common/AppIcon.vue'
+import AudiencePanel from '@/components/common/AudiencePanel.vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import type {
@@ -877,9 +800,9 @@ const loading = ref(false)
 const saving = ref(false)
 const topicSaveError = ref<string | null>(null)
 
-const statusFilter = usePersistedRef('teacher-enotes-status-filter', '')
-const subjectFilter = usePersistedRef('teacher-enotes-subject-filter', '')
-const classFilter = usePersistedRef('teacher-enotes-class-filter', '')
+const statusFilter = usePersistedRef<string | null>('teacher-enotes:status', null)
+const subjectFilter = usePersistedRef<string>('teacher-enotes:subject', '')
+const search = ref('')
 
 const showTopicModal = ref(false)
 const editingTopic = ref<ENoteTopic | null>(null)
@@ -1004,12 +927,25 @@ const removeLearningOutcome = (index: number) => {
   topicForm.value.learning_outcomes.splice(index, 1)
 }
 
+const statItems = computed<StatItem[]>(() => [
+  { label: 'All topics', value: topics.value.length, tone: 'gray' },
+  { label: 'Published', value: topics.value.filter(t => t.status === 'published').length, key: 'published', tone: 'emerald' },
+  { label: 'Draft', value: topics.value.filter(t => t.status === 'draft').length, key: 'draft', tone: 'amber' },
+  { label: 'Archived', value: topics.value.filter(t => t.status === 'archived').length, key: 'archived', tone: 'gray' }
+])
+const subjectOptions = computed<PickerOption<string>[]>(() => [
+  { value: '', label: 'All subjects' },
+  ...(assignments.value?.subjects ?? []).map(s => ({ value: String(s.id), label: s.name }))
+])
+const activeFilterCount = computed(() => (subjectFilter.value ? 1 : 0) + (search.value.trim() ? 1 : 0))
+
 const filteredTopics = computed(() => {
+  const q = search.value.trim().toLowerCase()
   return topics.value.filter(topic => {
     const matchesStatus = !statusFilter.value || topic.status === statusFilter.value
     const matchesSubject = !subjectFilter.value || topic.subject_id === parseInt(subjectFilter.value)
-    const matchesClass = !classFilter.value || topic.class_id === parseInt(classFilter.value)
-    return matchesStatus && matchesSubject && matchesClass
+    const matchesSearch = !q || [topic.title, topic.description].some(t => (t || '').toLowerCase().includes(q))
+    return matchesStatus && matchesSubject && matchesSearch
   })
 })
 
@@ -1020,27 +956,9 @@ const linkedTopicCount = (topic: ENoteTopic): number => {
   return topics.value.filter(t => t.id !== topic.id && t.content_group_id === topic.content_group_id).length
 }
 
-// Browse-by-class landing: topics are grouped by class level (e.g. "S.1") regardless of stream -
-// a topic targeting a specific stream and one targeting "All Streams" of the same class both land
-// in the same class card, since a teacher thinking "show me my S.1 topics" doesn't care which.
-interface ClassTopicGroup {
-  name: string
-  topics: ENoteTopic[]
-}
-
-const activeClassName = ref<string | null>(null)
-
-const classGroups = computed<ClassTopicGroup[]>(() => {
-  const map = new Map<string, ClassTopicGroup>()
-  for (const topic of filteredTopics.value) {
-    const name = topic.class_group_name || topic.class_name || 'Unassigned'
-    if (!map.has(name)) map.set(name, { name, topics: [] })
-    map.get(name)!.topics.push(topic)
-  }
-  return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
-})
-
-const activeClassTopics = computed(() => classGroups.value.find(g => g.name === activeClassName.value)?.topics ?? [])
+const activeClassTopics = computed(() => activeClassName.value === ALL
+  ? filteredTopics.value
+  : filteredTopics.value.filter(t => classOf(t) === activeClassName.value))
 // Inside a class, topics stand on one shelf per subject
 // Copies of one topic (linked by content_group_id when it was duplicated to other streams) are one
 // book on the shelf: the original (earliest) copy stands for them, `copies` holds them all.
@@ -1067,6 +985,50 @@ const toBooks = (list: ENoteTopic[]): TopicBook[] => {
   return books
 }
 const bookCount = (list: ENoteTopic[]) => toBooks(list).length
+
+// One tab per class, then one shelf per subject. A class is always open - the last one used, or
+// the first - with "All" beside them.
+const ALL = '__all'
+const classOf = (topic: ENoteTopic) => topic.class_group_name || topic.class_name || 'Unassigned'
+const activeClassName = usePersistedRef<string>('teacher-enotes:class', '')
+const classTabs = computed(() => {
+  const names = [...new Set(topics.value.map(classOf))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+  return [
+    { name: ALL, label: 'All classes', count: bookCount(filteredTopics.value) },
+    ...names.map(name => ({ name, label: name, count: bookCount(filteredTopics.value.filter(t => classOf(t) === name)) }))
+  ]
+})
+watch(classTabs, (tabs) => {
+  if (!topics.value.length) return
+  if (!tabs.some(t => t.name === activeClassName.value)) activeClassName.value = tabs[1]?.name ?? ALL
+})
+
+
+// A book's reach adds up its published copies (a duplicated topic is in several classes)
+const bookReach = (copies: ENoteTopic[]) => {
+  const live = copies.filter(c => c.status === 'published')
+  const audience = live.reduce((n, c) => n + Number(c.audience || 0), 0)
+  const readers = live.reduce((n, c) => n + Number(c.readers || 0), 0)
+  const finished = live.reduce((n, c) => n + Number(c.finished || 0), 0)
+  return { audience, readers, finished, percent: audience ? Math.min(100, Math.round((readers / audience) * 100)) : 0 }
+}
+// Published first, the least-read on top - that's where a nudge helps most
+const readingList = computed(() => toBooks(activeClassTopics.value).sort((a, b) => {
+  const pa = a.copies.some(c => c.status === 'published') ? 0 : 1
+  const pb = b.copies.some(c => c.status === 'published') ? 0 : 1
+  return pa - pb || bookReach(a.copies).percent - bookReach(b.copies).percent
+}))
+const readersFor = ref<TopicBook | null>(null)
+
+const publishCopies = async (copies: ENoteTopic[]) => {
+  try {
+    await axios.post(`${API_BASE}/teacher/enotes/topics/bulk-status`, { ids: copies.map(c => c.id), status: 'published' })
+    toast.success(`"${copies[0].title}" is now visible to students`)
+    await loadTopics()
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Failed to publish')
+  }
+}
 
 const activeClassSubjectShelves = computed(() => {
   const map = new Map<string, ENoteTopic[]>()
@@ -1150,25 +1112,9 @@ const bulkExport = async () => {
 }
 
 const clearFilters = () => {
-  statusFilter.value = ''
+  statusFilter.value = null
   subjectFilter.value = ''
-  classFilter.value = ''
-}
-
-// Deterministic color per class name (not a fixed lookup - department class names vary), so each
-// class card/topic-card banner gets a distinct but stable palette across reloads.
-const classPalettes = [
-  { solid: 'bg-amber-600', softText: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' },
-  { solid: 'bg-blue-600', softText: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
-  { solid: 'bg-indigo-600', softText: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' },
-  { solid: 'bg-emerald-600', softText: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' },
-  { solid: 'bg-rose-600', softText: 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300' },
-  { solid: 'bg-violet-600', softText: 'bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300' }
-]
-const classPalette = (name: string) => {
-  let hash = 0
-  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0
-  return classPalettes[hash % classPalettes.length]
+  search.value = ''
 }
 
 const formatDate = (dateString: string) => {
@@ -1203,9 +1149,7 @@ const loadTopics = async () => {
     // This page has no pagination UI - it groups every loaded topic into "Browse by Class" cards
     // client-side, so it must fetch the teacher's full topic list, not just the backend's default
     // first page of 20 (which silently hid classes whose topics fell past that page).
-    const params: Record<string, string> = { limit: '1000' }
-    if (statusFilter.value) params.status = statusFilter.value
-    if (subjectFilter.value) params.subject_id = subjectFilter.value
+    const params: Record<string, string> = { limit: '1000', with_reach: '1' }
 
     const response = await axios.get(`${API_BASE}/teacher/enotes/topics`, { params })
     if (response.data.success) {
