@@ -59,7 +59,7 @@ class TeacherController extends Controller
 
         $search = $this->query('search', '');
         $page = (int) $this->query('page', 1);
-        $limit = (int) $this->query('limit', 20);
+        $limit = max(1, min(500, (int) $this->query('limit', 20)));
 
         // Build query - only teachers who belong to HOD's department (any of their
         // departments, not just their primary one - see teacher_department_assignments)
@@ -86,9 +86,18 @@ class TeacherController extends Controller
 
         // Get paginated results
         $offset = ($page - 1) * $limit;
+        // What each teacher is doing in this department: assessments and eNotes published, scripts
+        // waiting to be marked, and when they were last on eSpace
         $sql = "SELECT t.id, t.username, t.email, t.employee_number, t.first_name, t.last_name, t.phone, 
-                       t.is_active, t.created_at, t.department_id,
-                       d.name as department_name, d.code as department_code
+                       t.is_active, t.created_at, t.department_id, t.last_active_at,
+                       d.name as department_name, d.code as department_code,
+                       (SELECT COUNT(*) FROM assignments a INNER JOIN subjects s ON s.id = a.subject_id AND s.department_id = :dept_a
+                         WHERE a.teacher_id = t.id AND a.deleted_at IS NULL AND a.status = 'published') AS assessments_count,
+                       (SELECT COUNT(*) FROM enote_topics et WHERE et.teacher_id = t.id AND et.department_id = :dept_e
+                         AND et.deleted_at IS NULL AND et.status = 'published') AS enotes_count,
+                       (SELECT COUNT(*) FROM assignment_submissions sb INNER JOIN assignments a2 ON a2.id = sb.assignment_id AND a2.deleted_at IS NULL
+                         INNER JOIN subjects s2 ON s2.id = a2.subject_id AND s2.department_id = :dept_m
+                         WHERE a2.teacher_id = t.id AND sb.deleted_at IS NULL AND sb.status IN ('submitted','marking')) AS to_mark_count
                 FROM teachers t
                 LEFT JOIN departments d ON t.department_id = d.id
                 WHERE {$whereClause}
@@ -96,7 +105,7 @@ class TeacherController extends Controller
                 LIMIT {$limit} OFFSET {$offset}";
         
         $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
+        $stmt->execute($params + ['dept_a' => $departmentId, 'dept_e' => $departmentId, 'dept_m' => $departmentId]);
         $teachers = $stmt->fetchAll();
 
         $this->success([

@@ -30,6 +30,7 @@
         </RouterLink>
       </div>
     </header>
+    <NoticeBanner role="teacher" />
 
     <!-- Quick links - the teacher's most-used modules, first thing, as small tiles -->
     <nav class="grid grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-3 mb-5" aria-label="Quick links">
@@ -241,6 +242,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import NoticeBanner from '@/components/dashboard/NoticeBanner.vue'
 import { useLiveRefresh } from '@/composables/useLiveRefresh'
 import { Bar } from 'vue-chartjs'
 import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale } from 'chart.js'

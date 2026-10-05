@@ -4,16 +4,16 @@
        them in a bottom sheet (the filters are rendered once - the same controls, just placed
        differently), so a row of pickers never runs off the screen. -->
   <header class="mb-4 sm:mb-5">
-    <div class="flex items-start gap-3">
+    <div class="flex flex-wrap items-start gap-x-3 gap-y-2">
       <div v-if="icon" class="hidden sm:flex w-10 h-10 rounded-xl items-center justify-center flex-shrink-0 shadow-sm" :class="ACCENT[accent].icon">
         <AppIcon :name="icon" class="w-5 h-5" />
       </div>
-      <div class="min-w-0 flex-1">
+      <div class="min-w-[11rem] flex-1">
         <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-tight truncate">{{ title }}</h1>
         <p v-if="description" class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">{{ description }}</p>
       </div>
 
-      <div class="flex items-center gap-2 flex-shrink-0">
+      <div class="flex items-center gap-2 flex-shrink-0 ml-auto">
         <!-- Phone: one button for all the filters -->
         <button
           v-if="$slots.filters"

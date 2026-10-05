@@ -22,6 +22,13 @@ Router::post('/api/auth/register', 'eSpace\App\Controllers\AuthController@regist
 Router::post('/api/auth/forgot-password', 'eSpace\App\Controllers\AuthController@forgotPassword');
 Router::post('/api/auth/reset-password', 'eSpace\App\Controllers\AuthController@resetPassword');
 
+// A school asking for a demo, from the public landing page
+Router::post('/api/demo-requests', 'eSpace\App\Controllers\DemoRequestController@store');
+// Headline totals for the public website (no personal data)
+Router::get('/api/public/stats', 'eSpace\App\Controllers\PublicStatsController@index');
+// A parent's private weekly view of their child (the token is the key - see ParentLinkController)
+Router::get('/api/parent/{token}', 'eSpace\App\Controllers\ParentViewController@show');
+
 // BBB logoutURL target - a real browser navigation (BBB redirects the top-level window here), not
 // a JSON API call, so it's outside the /api + auth-middleware group: it checks the session itself
 // and always responds with an HTTP redirect, authenticated or not. See LiveClassReturnController.
@@ -47,10 +54,34 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
 
     // Student routes
     Router::group(['prefix' => '/student', 'middleware' => ['role:student']], function () {
+        // Exam countdown and revision plan; my notes (to read and download)
+        Router::get('/exam-plan', 'eSpace\App\Controllers\Student\ExamPlanController@index');
+        Router::get('/my-notes', 'eSpace\App\Controllers\Student\MyNotesController@index');
+        // Questions and answers on eNote topics
+        Router::get('/enotes/{id}/questions', 'eSpace\App\Controllers\ENoteQuestionController@index');
+        Router::post('/enotes/{id}/questions', 'eSpace\App\Controllers\ENoteQuestionController@ask');
+        Router::post('/enote-questions/{id}/answers', 'eSpace\App\Controllers\ENoteQuestionController@answer');
+        Router::delete('/enote-questions/{id}', 'eSpace\App\Controllers\ENoteQuestionController@deleteQuestion');
+        Router::delete('/enote-answers/{id}', 'eSpace\App\Controllers\ENoteQuestionController@deleteAnswer');
+        // Noticeboard (same for every role - see NoticeController)
+        Router::get('/notices', 'eSpace\App\Controllers\NoticeController@index');
+        Router::get('/notices/options', 'eSpace\App\Controllers\NoticeController@options');
+        Router::post('/notices', 'eSpace\App\Controllers\NoticeController@store');
+        Router::post('/notices/{id}/read', 'eSpace\App\Controllers\NoticeController@read');
+        Router::get('/notices/{id}/readers', 'eSpace\App\Controllers\NoticeController@readers');
+        Router::delete('/notices/{id}', 'eSpace\App\Controllers\NoticeController@destroy');
         // Dashboard
         Router::get('/dashboard', 'eSpace\App\Controllers\Student\DashboardController@index');
         Router::get('/mastery', 'eSpace\App\Controllers\Student\MasteryController@index');
         Router::get('/next-steps', 'eSpace\App\Controllers\Student\NextStepsController@index');
+        // Live Quiz (join with the teacher's code) and Daily Revision
+        Router::get('/live-quiz/available', 'eSpace\App\Controllers\Student\LiveQuizController@available');
+        Router::post('/live-quiz/join', 'eSpace\App\Controllers\Student\LiveQuizController@join');
+        Router::get('/live-quiz/{id}', 'eSpace\App\Controllers\Student\LiveQuizController@show');
+        Router::post('/live-quiz/{id}/answer', 'eSpace\App\Controllers\Student\LiveQuizController@answer');
+        Router::get('/revision', 'eSpace\App\Controllers\Student\RevisionController@index');
+        Router::post('/revision/answer', 'eSpace\App\Controllers\Student\RevisionController@answer');
+        Router::post('/revision/finish', 'eSpace\App\Controllers\Student\RevisionController@finish');
         Router::post('/support-groups/{id}/revised', 'eSpace\App\Controllers\Student\NextStepsController@revised');
         Router::get('/growth', 'eSpace\App\Controllers\Student\GrowthController@index');
         Router::get('/competency-report', 'eSpace\App\Controllers\CompetencyReportController@mine');
@@ -192,6 +223,24 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
 
     // Teacher routes
     Router::group(['prefix' => '/teacher', 'middleware' => ['role:teacher', 'must_change_password']], function () {
+        // Scheme of work
+        Router::get('/scheme', 'eSpace\App\Controllers\Teacher\SchemeController@index');
+        Router::post('/scheme/auto-plan', 'eSpace\App\Controllers\Teacher\SchemeController@autoPlan');
+        Router::put('/scheme/{topicId}', 'eSpace\App\Controllers\Teacher\SchemeController@update');
+        // Questions and answers on eNote topics
+        Router::get('/enote-questions', 'eSpace\App\Controllers\ENoteQuestionController@waiting');
+        Router::get('/enotes/{id}/questions', 'eSpace\App\Controllers\ENoteQuestionController@index');
+        Router::post('/enote-questions/{id}/answers', 'eSpace\App\Controllers\ENoteQuestionController@answer');
+        Router::post('/enote-answers/{id}/endorse', 'eSpace\App\Controllers\ENoteQuestionController@endorse');
+        Router::delete('/enote-questions/{id}', 'eSpace\App\Controllers\ENoteQuestionController@deleteQuestion');
+        Router::delete('/enote-answers/{id}', 'eSpace\App\Controllers\ENoteQuestionController@deleteAnswer');
+        // Noticeboard (same for every role - see NoticeController)
+        Router::get('/notices', 'eSpace\App\Controllers\NoticeController@index');
+        Router::get('/notices/options', 'eSpace\App\Controllers\NoticeController@options');
+        Router::post('/notices', 'eSpace\App\Controllers\NoticeController@store');
+        Router::post('/notices/{id}/read', 'eSpace\App\Controllers\NoticeController@read');
+        Router::get('/notices/{id}/readers', 'eSpace\App\Controllers\NoticeController@readers');
+        Router::delete('/notices/{id}', 'eSpace\App\Controllers\NoticeController@destroy');
         // Dashboard
         Router::get('/dashboard', 'eSpace\App\Controllers\Teacher\DashboardController@index');
         Router::get('/dashboard/overview', 'eSpace\App\Controllers\Teacher\DashboardOverviewController@index');
@@ -319,6 +368,8 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/enotes/preview/topics/{id}', 'eSpace\App\Controllers\Teacher\ENoteController@previewShow');
         Router::get('/enotes/topics/{id}', 'eSpace\App\Controllers\Teacher\ENoteController@show');
         Router::get('/enotes/topics/{id}/insights', 'eSpace\App\Controllers\Teacher\ENoteInsightsController@show');
+        Router::get('/enotes/topics/{id}/history', 'eSpace\App\Controllers\Teacher\ENoteHistoryController@index');
+        Router::get('/enotes/history/{id}', 'eSpace\App\Controllers\Teacher\ENoteHistoryController@show');
         Router::get('/enotes/topics/{id}/readers', 'eSpace\App\Controllers\Teacher\ENoteController@readers');
         Router::put('/enotes/topics/{id}/share', 'eSpace\App\Controllers\Teacher\ENoteController@share');
         Router::get('/enotes/shared', 'eSpace\App\Controllers\Teacher\ENoteController@sharedIndex');
@@ -367,6 +418,18 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/question-bank', 'eSpace\App\Controllers\Teacher\QuestionBankController@index');
         Router::get('/students/{id}/competency-report', 'eSpace\App\Controllers\CompetencyReportController@forStudent');
         Router::get('/support-groups', 'eSpace\App\Controllers\Teacher\SupportGroupController@index');
+        // Live Quiz (run an assessment's choice questions live) and the early-warning list
+        Router::get('/live-quiz/assessments', 'eSpace\App\Controllers\Teacher\LiveQuizController@assessments');
+        Router::post('/live-quizzes', 'eSpace\App\Controllers\Teacher\LiveQuizController@store');
+        Router::get('/live-quizzes/{id}', 'eSpace\App\Controllers\Teacher\LiveQuizController@show');
+        Router::post('/live-quizzes/{id}/advance', 'eSpace\App\Controllers\Teacher\LiveQuizController@advance');
+        Router::post('/live-quizzes/{id}/save', 'eSpace\App\Controllers\Teacher\LiveQuizController@save');
+        Router::get('/early-warning', 'eSpace\App\Controllers\Teacher\EarlyWarningController@index');
+        // Comment bank for marking
+        Router::get('/comment-bank', 'eSpace\App\Controllers\Teacher\CommentBankController@index');
+        Router::post('/comment-bank', 'eSpace\App\Controllers\Teacher\CommentBankController@store');
+        Router::post('/comment-bank/{id}/used', 'eSpace\App\Controllers\Teacher\CommentBankController@used');
+        Router::delete('/comment-bank/{id}', 'eSpace\App\Controllers\Teacher\CommentBankController@destroy');
         Router::post('/support-groups', 'eSpace\App\Controllers\Teacher\SupportGroupController@store');
         Router::post('/support-groups/{id}/remind', 'eSpace\App\Controllers\Teacher\SupportGroupController@remind');
         Router::put('/support-groups/{id}/close', 'eSpace\App\Controllers\Teacher\SupportGroupController@close');
@@ -458,9 +521,17 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
 
     // HOD routes
     Router::group(['prefix' => '/hod', 'middleware' => ['role:hod']], function () {
+        // Noticeboard (same for every role - see NoticeController)
+        Router::get('/notices', 'eSpace\App\Controllers\NoticeController@index');
+        Router::get('/notices/options', 'eSpace\App\Controllers\NoticeController@options');
+        Router::post('/notices', 'eSpace\App\Controllers\NoticeController@store');
+        Router::post('/notices/{id}/read', 'eSpace\App\Controllers\NoticeController@read');
+        Router::get('/notices/{id}/readers', 'eSpace\App\Controllers\NoticeController@readers');
+        Router::delete('/notices/{id}', 'eSpace\App\Controllers\NoticeController@destroy');
         // Dashboard
         Router::get('/dashboard', 'eSpace\App\Controllers\HOD\DashboardController@index');
         Router::get('/mastery-overview', 'eSpace\App\Controllers\HOD\MasteryOverviewController@index');
+        Router::get('/early-warning', 'eSpace\App\Controllers\Teacher\EarlyWarningController@index');
         
         // Department Management
         Router::get('/department/info', 'eSpace\App\Controllers\HOD\DepartmentController@getDepartmentInfo');
@@ -590,6 +661,27 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
 
     // Admin routes
     Router::group(['prefix' => '/admin', 'middleware' => ['role:admin,super_admin']], function () {
+        // Exam dates (student countdown and revision plan)
+        Router::get('/exam-dates', 'eSpace\App\Controllers\Admin\ExamDateController@index');
+        Router::post('/exam-dates', 'eSpace\App\Controllers\Admin\ExamDateController@store');
+        Router::delete('/exam-dates/{id}', 'eSpace\App\Controllers\Admin\ExamDateController@destroy');
+        // Noticeboard (same for every role - see NoticeController)
+        Router::get('/notices', 'eSpace\App\Controllers\NoticeController@index');
+        Router::get('/notices/options', 'eSpace\App\Controllers\NoticeController@options');
+        Router::post('/notices', 'eSpace\App\Controllers\NoticeController@store');
+        Router::post('/notices/{id}/read', 'eSpace\App\Controllers\NoticeController@read');
+        Router::get('/notices/{id}/readers', 'eSpace\App\Controllers\NoticeController@readers');
+        Router::delete('/notices/{id}', 'eSpace\App\Controllers\NoticeController@destroy');
+        // Demo requests from the landing page
+        Router::get('/demo-requests', 'eSpace\App\Controllers\DemoRequestController@index');
+        Router::put('/demo-requests/{id}', 'eSpace\App\Controllers\DemoRequestController@update');
+        // Parent links and the weekly parent digest
+        Router::get('/parent-links', 'eSpace\App\Controllers\Admin\ParentLinkController@index');
+        Router::get('/parent-links/students', 'eSpace\App\Controllers\Admin\ParentLinkController@students');
+        Router::post('/parent-links/send', 'eSpace\App\Controllers\Admin\ParentLinkController@send');
+        Router::post('/parent-links', 'eSpace\App\Controllers\Admin\ParentLinkController@store');
+        Router::put('/parent-links/{id}', 'eSpace\App\Controllers\Admin\ParentLinkController@update');
+        Router::delete('/parent-links/{id}', 'eSpace\App\Controllers\Admin\ParentLinkController@destroy');
         // Dashboard
         Router::get('/dashboard', 'eSpace\App\Controllers\Admin\DashboardController@index');
         Router::get('/mastery-overview', 'eSpace\App\Controllers\Admin\MasteryOverviewController@index');

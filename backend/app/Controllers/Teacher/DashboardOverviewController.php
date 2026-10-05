@@ -312,6 +312,7 @@ class DashboardOverviewController extends Controller
             $items[] = ['kind' => 'message', 'at' => $r['at'], 'who' => trim((string) $r['who']) ?: 'Someone', 'what' => mb_substr(trim(strip_tags((string) $r['message'])), 0, 80), 'to' => '/teacher/chat'];
         }
         usort($items, fn($a, $b) => strcmp((string) $b['at'], (string) $a['at']));
-        return array_slice($items, 0, 8);
+        // Six, to sit beside the class cards (three rows of two)
+        return array_slice($items, 0, 6);
     }
 }

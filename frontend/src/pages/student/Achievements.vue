@@ -1,9 +1,6 @@
 <template>
-  <div class="p-4 sm:p-6">
-    <div class="mb-6">
-      <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1 flex items-center gap-2"><AppIcon name="trophy" class="w-7 h-7" /> My Achievements</h1>
-      <p class="text-sm text-gray-500 dark:text-gray-400">Your full badge history, automatically awarded based on performance.</p>
-    </div>
+  <div class="w-full">
+    <PageHeader title="My Achievements" description="Badges you've earned and how much you're improving - growth counts here, not just top marks." icon="trophy" accent="amber" />
 
     <GrowthBoard />
 
@@ -39,9 +36,7 @@
       <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
     </div>
 
-    <div v-else-if="filteredAwards.length === 0" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-12 text-center text-gray-400 dark:text-gray-500">
-      No badges to show yet.
-    </div>
+    <EmptyState v-else-if="filteredAwards.length === 0" compact icon="trophy" tone="amber" title="No badges yet" message="Badges are awarded automatically - for strong results, steady improvement and keeping a learning streak going." />
 
     <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       <div
@@ -68,8 +63,9 @@
 </template>
 
 <script setup lang="ts">
+import PageHeader from '@/components/ui/PageHeader.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
 import BadgeIcon from '@/components/common/BadgeIcon.vue'
-import AppIcon from '@/components/common/AppIcon.vue'
 import GrowthBoard from '@/components/dashboard/GrowthBoard.vue'
 import { ref, computed, onMounted, watch } from 'vue'
 import axios from 'axios'

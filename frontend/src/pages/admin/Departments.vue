@@ -1,129 +1,64 @@
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-950">
-    <div class="px-4 sm:px-6 lg:px-8 py-8">
-      <!-- Header -->
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-        <div>
-          <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Departments Management</h1>
-          <p class="text-gray-600 dark:text-gray-400 mt-1">Create and manage academic departments</p>
+  <!-- The school's departments - each one's head, teachers and subjects at a glance. -->
+  <div class="w-full">
+    <PageHeader title="Departments" description="The school's departments - each one's head, teachers and subjects at a glance." icon="kit" accent="indigo">
+      <template #actions>
+        <button type="button" class="btn-primary" @click="showCreateModal = true">Add department</button>
+      </template>
+      <StatStrip v-if="!loading && departments.length" v-model="quick" :items="statItems" />
+    </PageHeader>
+
+    <!-- Toast Notification -->
+    <transition name="toast">
+      <div
+        v-if="successMessage"
+        class="fixed top-6 right-6 z-50 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-emerald-200 dark:border-emerald-800 p-4 flex items-center gap-4 min-w-[280px] max-w-[calc(100vw-3rem)]"
+      >
+        <div class="flex-shrink-0 w-10 h-10 bg-emerald-100 dark:bg-emerald-900/40 rounded-full flex items-center justify-center">
+          <svg class="w-6 h-6 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
         </div>
-        <button
-          @click="showCreateModal = true"
-          class="btn-primary"
-        >
-          Create Department
+        <div class="flex-1">
+          <p class="font-semibold text-gray-900 dark:text-white">Done</p>
+          <p class="text-sm text-gray-600 dark:text-gray-400">{{ successMessage }}</p>
+        </div>
+        <button class="flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" aria-label="Close" @click="successMessage = ''">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
       </div>
+    </transition>
 
-      <!-- Toast Notification -->
-      <transition name="toast">
-        <div
-          v-if="successMessage"
-          class="fixed top-6 right-6 z-50 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-green-200 dark:border-green-800 p-4 flex items-center gap-4 min-w-[280px] max-w-[calc(100vw-3rem)]"
-        >
-          <div class="flex-shrink-0 w-10 h-10 bg-green-100 dark:bg-green-900/40 rounded-full flex items-center justify-center">
-            <svg class="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-            </svg>
-          </div>
-          <div class="flex-1">
-            <p class="font-semibold text-gray-900 dark:text-white">Success!</p>
-            <p class="text-sm text-gray-600 dark:text-gray-400">{{ successMessage }}</p>
-          </div>
-          <button
-            @click="successMessage = ''"
-            class="flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
-          </button>
-        </div>
-      </transition>
-
-      <!-- Departments Table -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden border border-gray-100 dark:border-gray-700">
-        <!-- Loading State -->
-        <div v-if="loading" class="p-12 text-center">
-          <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div>
-          <p class="mt-4 text-gray-500 dark:text-gray-400">Loading departments...</p>
-        </div>
-
-        <!-- Empty State -->
-        <div v-else-if="departments.length === 0" class="p-12 text-center">
-          <svg class="mx-auto h-16 w-16 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-          </svg>
-          <h3 class="mt-4 text-lg font-medium text-gray-900 dark:text-white">No departments found</h3>
-          <p class="mt-2 text-gray-500 dark:text-gray-400">Get started by creating your first department.</p>
-          <button
-            @click="showCreateModal = true"
-            class="mt-4 btn-primary"
-          >
-            Create Department
-          </button>
-        </div>
-
-        <!-- Departments Table -->
-        <div v-else class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700">
-          <thead class="bg-gray-50 dark:bg-gray-950">
-            <tr>
-              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Name</th>
-              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Code</th>
-              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Description</th>
-              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Created</th>
-              <th class="px-6 py-4 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
-            <tr
-              v-for="department in departments"
-              :key="department.id"
-              class="hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors duration-150"
-            >
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm font-semibold text-gray-900 dark:text-white">{{ department.name }}</div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300">
-                  {{ department.code }}
-                </span>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                {{ department.description || '-' }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                {{ formatDate(department.created_at) }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-right">
-                <div class="flex items-center justify-end gap-2">
-                  <button
-                    @click="editDepartment(department)"
-                    class="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors duration-150"
-                    title="Edit"
-                  >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                    </svg>
-                  </button>
-                  <button
-                    @click="deleteDepartment(department)"
-                    class="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors duration-150"
-                    title="Delete"
-                  >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                    </svg>
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        </div>
-      </div>
-    </div>
+    <DataTable
+      :columns="columns"
+      :rows="shown"
+      :loading="loading && !departments.length"
+      :search-keys="['name', 'code', 'description', 'hod_name']"
+      search-placeholder="Search departments"
+      :page-size="30"
+      :initial-sort="{ key: 'name', dir: 'asc' }"
+      empty-title="No departments here"
+      :empty-message="departments.length ? 'Nothing matches this filter.' : 'Add your first department - subjects and teachers hang off it.'"
+    >
+      <template #cell-name="{ row }">
+        <span class="block font-semibold text-gray-900 dark:text-white">{{ row.description || row.name }}</span>
+        <span class="block text-[11px] text-gray-400">{{ row.name }} · {{ row.code }}</span>
+      </template>
+      <template #cell-hod_name="{ row }">
+        <span v-if="row.hod_name" class="text-gray-700 dark:text-gray-200">{{ niceName(row.hod_name) }}</span>
+        <span v-else class="text-amber-600 dark:text-amber-400 text-xs font-semibold">No head</span>
+      </template>
+      <template #cell-teachers_count="{ row }">
+        <span class="tabular-nums" :class="row.teachers_count ? 'text-gray-900 dark:text-white font-semibold' : 'text-gray-300 dark:text-gray-600'">{{ row.teachers_count }}</span>
+      </template>
+      <template #cell-subjects_count="{ row }">
+        <span class="tabular-nums" :class="row.subjects_count ? 'text-gray-900 dark:text-white font-semibold' : 'text-gray-300 dark:text-gray-600'">{{ row.subjects_count }}</span>
+      </template>
+      <template #actions="{ row }">
+        <ActionMenu :label="`Actions for ${row.name}`" :items="[
+          { label: 'Edit', icon: 'pencil', run: () => editDepartment(row) },
+          { label: 'Delete', icon: 'trash', danger: true, divider: true, run: () => deleteDepartment(row) }
+        ]" />
+      </template>
+    </DataTable>
 
     <!-- Create Department Modal -->
     <div v-if="showCreateModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -238,16 +173,45 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { apiService } from '../../services/api'
 import type { Department } from '../../types'
 import { useToastStore } from '@/stores/toast'
 import { useConfirmStore } from '@/stores/confirm'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StatStrip, { type StatItem } from '@/components/ui/StatStrip.vue'
+import DataTable, { type Column } from '@/components/ui/DataTable.vue'
+import ActionMenu from '@/components/ui/ActionMenu.vue'
+import { niceName } from '@/components/dashboard/teacher/time'
+
+type DepartmentRow = Department & { teachers_count?: number; subjects_count?: number; hod_name?: string | null }
 
 const toast = useToastStore()
 const confirmDialog = useConfirmStore()
 
-const departments = ref<Department[]>([])
+const departments = ref<DepartmentRow[]>([])
+const quick = ref<string | null>(null)
+
+const columns: Column[] = [
+  { key: 'name', label: 'Department', sortable: true, mobile: 'title', value: (r: DepartmentRow) => r.description || r.name },
+  { key: 'hod_name', label: 'Head', sortable: true, mobile: 'subtitle', value: (r: DepartmentRow) => r.hod_name || '' },
+  { key: 'teachers_count', label: 'Teachers', sortable: true, align: 'center' },
+  { key: 'subjects_count', label: 'Subjects', sortable: true, align: 'center' }
+]
+const statItems = computed<StatItem[]>(() => [
+  { label: 'Departments', value: departments.value.length, key: 'all', tone: 'indigo' },
+  { label: 'No head', value: departments.value.filter(d => !d.hod_name).length, key: 'nohead', tone: 'amber' },
+  { label: 'No teachers', value: departments.value.filter(d => !d.teachers_count).length, key: 'noteachers', tone: 'rose' },
+  { label: 'No subjects', value: departments.value.filter(d => !d.subjects_count).length, key: 'nosubjects', tone: 'gray' }
+])
+const shown = computed(() => departments.value.filter(d => {
+  switch (quick.value) {
+    case 'nohead': return !d.hod_name
+    case 'noteachers': return !d.teachers_count
+    case 'nosubjects': return !d.subjects_count
+    default: return true
+  }
+}))
 const loading = ref(false)
 const successMessage = ref('')
 const showCreateModal = ref(false)
@@ -377,9 +341,6 @@ const deleteDepartment = async (department: Department) => {
   }
 }
 
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString()
-}
 
 onMounted(() => {
   fetchDepartments()

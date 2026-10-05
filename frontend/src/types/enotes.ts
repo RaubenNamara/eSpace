@@ -68,6 +68,8 @@ export interface ENotePage {
   is_active: boolean
   created_at: string
   updated_at: string
+  /** Bumped on every content/title save - sent back as base_revision so a stale copy (another tab or device) cannot overwrite newer work */
+  revision?: number
   deleted_at: string | null
   /** All cached (voice -> audio) narrations for this page - populated on the teacher/authoring show() response. */
   narrations?: ENotePageNarration[]

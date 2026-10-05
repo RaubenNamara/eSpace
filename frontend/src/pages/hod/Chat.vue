@@ -17,7 +17,7 @@
               v-model="conversationSearch"
               type="text"
               placeholder="Search conversations"
-              class="w-full pl-9 pr-3 py-1.5 rounded-lg text-sm bg-gray-100 dark:bg-[#202c33] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 border-0 focus:outline-none focus:ring-1 focus:ring-red-500"
+              class="w-full pl-9 pr-3 py-1.5 rounded-lg text-sm bg-gray-100 dark:bg-[#202c33] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 border-0 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             >
           </div>
         </div>
@@ -35,7 +35,7 @@
             :key="conv.id"
             @click="openConversation(conv)"
             class="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors border-b border-gray-100 dark:border-white/5"
-            :class="activeConversation?.id === conv.id ? 'bg-red-50 dark:bg-[#2a3942]' : 'hover:bg-gray-50 dark:hover:bg-[#182229]'"
+            :class="activeConversation?.id === conv.id ? 'bg-indigo-50 dark:bg-[#2a3942]' : 'hover:bg-gray-50 dark:hover:bg-[#182229]'"
           >
             <div class="w-11 h-11 rounded-full bg-gray-500 flex items-center justify-center text-white flex-shrink-0">
               <svg v-if="conv.type === 'class'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -21,11 +21,11 @@ export default defineConfig(() => ({
       // security-relevant changes (e.g. the mandatory teacher password-change screen) need
       // the app shell to actually be current, not just eventually.
       injectRegister: false,
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+      includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'eSpace - eLearning Management System',
+        name: 'eSpace - the digital school',
         short_name: 'eSpace',
-        description: 'Enterprise eLearning Management System for Secondary Schools',
+        description: 'Notes, books, videos, live lessons, competency-based assessment and Learning Maps for secondary schools',
         theme_color: '#4f46e5',
         background_color: '#ffffff',
         display: 'standalone',

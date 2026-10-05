@@ -90,7 +90,7 @@
               v-for="{ topic, copies } in shelf.books"
               :key="topic.id"
               :label="topic.title"
-              :title="`Updated ${formatDate(topic.updated_at)}`"
+              :title="`Last edited ${timeAgo(topic.updated_at)} (${formatDate(topic.updated_at)}) - open it and press History to see every change`"
               @open="openBuilder(topic.id)"
             >
               <template #cover="{ size }">
@@ -745,6 +745,7 @@ import SharedENotesModal, { type SharedTopic } from '@/components/enotes/SharedE
 import { parseCoverDesign } from '@/utils/enoteCover'
 import { subjectTag } from '@/utils/subjectTag'
 import { orderShelves } from '@/utils/shelfOrder'
+import { timeAgo } from '@/components/dashboard/teacher/time'
 import ShelfBook from '@/components/library/ShelfBook.vue'
 import ShelfSlot from '@/components/library/ShelfSlot.vue'
 import { useToastStore } from '@/stores/toast'

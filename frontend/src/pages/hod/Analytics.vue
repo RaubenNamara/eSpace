@@ -1,187 +1,90 @@
 <template>
-  <div>
-    <!-- Header - department strip shares a row with the heading instead of its own full-width
-         hero card, and shrinks to a slim identity strip since it's just context, not a KPI. -->
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
-      <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-tight">Analytics</h1>
+  <!-- How the department is doing: the headline figures, the score trend, where submissions stand,
+       subjects and teachers side by side, and what's being read in the library. -->
+  <div class="w-full">
+    <PageHeader title="Analytics" :description="overview.department ? `${overview.department.name} - scores, submissions, teachers and reading, all in one place.` : 'Scores, submissions, teachers and reading for your department.'" icon="chart" accent="indigo">
+      <StatStrip :items="statItems" />
+    </PageHeader>
 
-      <div v-if="overview.department" class="hidden sm:flex flex-wrap items-center gap-x-3 bg-indigo-600 text-white rounded-lg px-4 py-2 text-sm">
-        <span class="font-semibold">{{ overview.department.name }}</span>
-        <span class="text-indigo-200">{{ overview.department.code }} &middot; {{ overview.department.description }}</span>
-      </div>
-    </div>
-
-    <!-- KPI Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-      <div class="group card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg border border-transparent hover:border-emerald-300 dark:hover:border-emerald-700">
-        <template v-if="loading.overview">
-          <div class="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
-          <div class="h-8 w-14 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-        </template>
-        <template v-else>
-          <p class="text-gray-500 dark:text-gray-400 text-sm">Teachers</p>
-          <p class="text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{{ overview.teachers_count ?? '-' }}</p>
-        </template>
-      </div>
-      <div class="group card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg border border-transparent hover:border-emerald-300 dark:hover:border-emerald-700">
-        <template v-if="loading.overview">
-          <div class="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
-          <div class="h-8 w-14 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-        </template>
-        <template v-else>
-          <p class="text-gray-500 dark:text-gray-400 text-sm">Students</p>
-          <p class="text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{{ overview.students_count ?? '-' }}</p>
-        </template>
-      </div>
-      <div class="group card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg border border-transparent hover:border-emerald-300 dark:hover:border-emerald-700">
-        <template v-if="loading.overview">
-          <div class="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
-          <div class="h-8 w-14 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-        </template>
-        <template v-else>
-          <p class="text-gray-500 dark:text-gray-400 text-sm">Subjects</p>
-          <p class="text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{{ overview.subjects_count ?? '-' }}</p>
-        </template>
-      </div>
-      <div class="group card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg border border-transparent hover:border-emerald-300 dark:hover:border-emerald-700">
-        <template v-if="loading.overview">
-          <div class="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
-          <div class="h-8 w-14 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-        </template>
-        <template v-else>
-          <p class="text-gray-500 dark:text-gray-400 text-sm">Assignments</p>
-          <p class="text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{{ overview.assignments_count ?? '-' }}</p>
-        </template>
-      </div>
-      <div class="group card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg border border-transparent hover:border-emerald-300 dark:hover:border-emerald-700">
-        <template v-if="loading.overview">
-          <div class="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
-          <div class="h-8 w-14 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-        </template>
-        <template v-else>
-          <p class="text-gray-500 dark:text-gray-400 text-sm">Average Score</p>
-          <p class="text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400">
-            {{ overview.average_percentage !== null && overview.average_percentage !== undefined ? overview.average_percentage + '%' : 'N/A' }}
-          </p>
-        </template>
-      </div>
-    </div>
-
-    <!-- Performance Trend & Submission Status -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-      <div class="card">
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Average Score Trend (last 6 months)</h3>
-        <div class="h-64">
-          <Line v-if="!loading.performance && performanceTrend.length > 0" :data="performanceChartData" :options="lineOptions" />
-          <div v-else-if="loading.performance" class="flex items-center justify-center h-full text-gray-500">Loading...</div>
-          <div v-else class="flex items-center justify-center h-full text-gray-500">No graded submissions yet</div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+      <section class="panel">
+        <h3 class="panel-title">Average score, last 6 months</h3>
+        <div class="h-60">
+          <Skeleton v-if="loading.performance" class="h-full w-full rounded-xl" />
+          <Line v-else-if="performanceTrend.length" :data="performanceChartData" :options="lineOptions" />
+          <EmptyState v-else compact :card="false" icon="trend" tone="gray" title="No marked work yet" message="The trend starts once teachers return marked scripts." />
         </div>
-      </div>
-
-      <div class="card">
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Submission Status</h3>
-        <div class="h-64">
-          <Doughnut v-if="!loading.overview && statusBreakdown.length > 0" :data="statusChartData" :options="doughnutOptions" />
-          <div v-else-if="loading.overview" class="flex items-center justify-center h-full text-gray-500">Loading...</div>
-          <div v-else class="flex items-center justify-center h-full text-gray-500">No submissions yet</div>
+      </section>
+      <section class="panel">
+        <h3 class="panel-title">Where submissions stand</h3>
+        <div class="h-60">
+          <Skeleton v-if="loading.overview" class="h-full w-full rounded-xl" />
+          <Doughnut v-else-if="statusBreakdown.length" :data="statusChartData" :options="doughnutOptions" />
+          <EmptyState v-else compact :card="false" icon="clipboard" tone="gray" title="No submissions yet" />
         </div>
-      </div>
+      </section>
+      <section class="panel">
+        <h3 class="panel-title">Average score by subject</h3>
+        <div class="h-60">
+          <Skeleton v-if="loading.assignments" class="h-full w-full rounded-xl" />
+          <Bar v-else-if="subjectsWithData.length" :data="subjectChartData" :options="chartOptions" />
+          <EmptyState v-else compact :card="false" icon="book" tone="gray" title="No marked work yet" />
+        </div>
+      </section>
+      <section class="panel">
+        <h3 class="panel-title">Assessments set per teacher</h3>
+        <div class="h-60">
+          <Skeleton v-if="loading.teachers" class="h-full w-full rounded-xl" />
+          <Bar v-else-if="teachers.length" :data="teacherChartData" :options="horizontalChartOptions" />
+          <EmptyState v-else compact :card="false" icon="teacher" tone="gray" title="No teachers in this department" />
+        </div>
+      </section>
     </div>
 
-    <!-- Assignments by Subject & Teacher Workload -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-      <div class="card">
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Average Score by Subject</h3>
-        <div class="h-64">
-          <Bar v-if="!loading.assignments && subjectsWithData.length > 0" :data="subjectChartData" :options="chartOptions" />
-          <div v-else-if="loading.assignments" class="flex items-center justify-center h-full text-gray-500">Loading...</div>
-          <div v-else class="flex items-center justify-center h-full text-gray-500">No graded submissions yet</div>
-        </div>
-      </div>
+    <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-2">Teacher by teacher</h3>
+    <DataTable
+      class="mb-4"
+      :columns="teacherColumns"
+      :rows="teacherRows"
+      :loading="loading.teachers"
+      :search-keys="['name']"
+      search-placeholder="Search teachers"
+      :page-size="20"
+      :initial-sort="{ key: 'assignments_count', dir: 'desc' }"
+      empty-title="No teachers in this department"
+    >
+      <template #cell-submissions_pending="{ row }">
+        <span class="font-semibold tabular-nums" :class="row.submissions_pending > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400 dark:text-gray-500'">{{ row.submissions_pending }}</span>
+      </template>
+      <template #cell-average_percentage="{ row }">
+        <span v-if="row.average_percentage !== null" class="flex items-center gap-2 min-w-[120px]">
+          <span class="flex-1 h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+            <span class="block h-full rounded-full" :class="row.average_percentage >= 60 ? 'bg-emerald-500' : 'bg-amber-500'" :style="{ width: Math.min(100, row.average_percentage) + '%' }"></span>
+          </span>
+          <span class="font-semibold tabular-nums text-gray-900 dark:text-white">{{ Math.round(row.average_percentage) }}%</span>
+        </span>
+        <span v-else class="text-gray-400 dark:text-gray-500">-</span>
+      </template>
+    </DataTable>
 
-      <div class="card">
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Assignments Set per Teacher</h3>
-        <div class="h-64">
-          <Bar v-if="!loading.teachers && teachers.length > 0" :data="teacherChartData" :options="horizontalChartOptions" />
-          <div v-else-if="loading.teachers" class="flex items-center justify-center h-full text-gray-500">Loading...</div>
-          <div v-else class="flex items-center justify-center h-full text-gray-500">No teachers in this department</div>
-        </div>
+    <section class="panel">
+      <div class="flex flex-wrap items-baseline justify-between gap-2 mb-3">
+        <h3 class="panel-title !mb-0">Library reading</h3>
+        <p class="text-xs text-gray-500 dark:text-gray-400"><b class="text-gray-900 dark:text-white">{{ reading.books_count ?? 0 }}</b> books · <b class="text-gray-900 dark:text-white">{{ reading.readers_count ?? 0 }}</b> readers</p>
       </div>
-    </div>
-
-    <!-- Per-Teacher Breakdown -->
-    <div class="card mb-6">
-      <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Teacher Breakdown</h3>
-      <div v-if="loading.teachers" class="text-gray-500 py-6 text-center">Loading...</div>
-      <div v-else-if="teachers.length === 0" class="text-gray-500 py-6 text-center">No teachers in this department</div>
-      <div v-else class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead>
-            <tr>
-              <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Teacher</th>
-              <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Assignments</th>
-              <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Submissions</th>
-              <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Marked</th>
-              <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Pending</th>
-              <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Students Reached</th>
-              <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Average Score</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-            <tr v-for="t in teachers" :key="t.id">
-              <td class="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white whitespace-nowrap">{{ t.first_name }} {{ t.last_name }}</td>
-              <td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 text-right">{{ t.assignments_count }}</td>
-              <td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 text-right">{{ t.total_submissions }}</td>
-              <td class="px-4 py-2 text-sm text-green-600 dark:text-green-400 text-right font-medium">{{ t.submissions_marked }}</td>
-              <td class="px-4 py-2 text-sm text-right font-medium" :class="t.submissions_pending > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400 dark:text-gray-500'">
-                {{ t.submissions_pending }}
-              </td>
-              <td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 text-right">{{ t.students_reached }}</td>
-              <td class="px-4 py-2 text-sm">
-                <div v-if="t.average_percentage !== null" class="flex items-center gap-2 min-w-[120px]">
-                  <div class="flex-1 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                    <div class="h-full bg-indigo-600 rounded-full" :style="{ width: Math.min(100, t.average_percentage) + '%' }"></div>
-                  </div>
-                  <span class="text-gray-900 dark:text-white font-medium whitespace-nowrap">{{ t.average_percentage }}%</span>
-                </div>
-                <span v-else class="text-gray-400 dark:text-gray-500">No graded work</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Reading Engagement -->
-    <div class="card">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Library Reading Engagement</h3>
-        <div class="flex gap-6 text-sm text-gray-600 dark:text-gray-400">
-          <span><span class="font-bold text-gray-900 dark:text-white">{{ reading.books_count ?? 0 }}</span> books</span>
-          <span><span class="font-bold text-gray-900 dark:text-white">{{ reading.readers_count ?? 0 }}</span> readers</span>
-        </div>
-      </div>
-      <div v-if="loading.reading" class="text-gray-500 py-6 text-center">Loading...</div>
-      <div v-else-if="!reading.top_books || reading.top_books.length === 0" class="text-gray-500 py-6 text-center">
-        No reading activity recorded yet.
-      </div>
-      <table v-else class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-        <thead>
-          <tr>
-            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Title</th>
-            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Author</th>
-            <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Readers</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-          <tr v-for="book in reading.top_books" :key="book.id">
-            <td class="px-4 py-2 text-sm text-gray-900 dark:text-white">{{ book.title }}</td>
-            <td class="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{{ book.author || '-' }}</td>
-            <td class="px-4 py-2 text-sm text-gray-900 dark:text-white text-right">{{ book.readers_count }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+      <Skeleton v-if="loading.reading" class="h-24 w-full rounded-xl" />
+      <EmptyState v-else-if="!reading.top_books?.length" compact :card="false" icon="book" tone="gray" title="No reading yet" message="Books your students open in the eLibrary show up here." />
+      <ol v-else class="divide-y divide-gray-100 dark:divide-gray-700/60">
+        <li v-for="(book, i) in reading.top_books" :key="book.id" class="flex items-center gap-3 py-2">
+          <span class="w-6 text-xs font-semibold text-gray-400 tabular-nums">{{ i + 1 }}</span>
+          <span class="flex-1 min-w-0">
+            <span class="block text-sm font-medium text-gray-900 dark:text-white truncate">{{ book.title }}</span>
+            <span v-if="book.author" class="block text-xs text-gray-500 dark:text-gray-400 truncate">{{ book.author }}</span>
+          </span>
+          <span class="text-xs text-gray-600 dark:text-gray-300 tabular-nums whitespace-nowrap">{{ book.readers_count }} reader{{ book.readers_count === 1 ? '' : 's' }}</span>
+        </li>
+      </ol>
+    </section>
   </div>
 </template>
 
@@ -193,6 +96,12 @@ import {
   CategoryScale, LinearScale, ArcElement
 } from 'chart.js'
 import apiService from '@/services/api'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StatStrip, { type StatItem } from '@/components/ui/StatStrip.vue'
+import DataTable, { type Column } from '@/components/ui/DataTable.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
+import Skeleton from '@/components/ui/Skeleton.vue'
+import { niceName } from '@/components/dashboard/teacher/time'
 
 ChartJS.register(Title, Tooltip, Legend, BarElement, LineElement, PointElement, CategoryScale, LinearScale, ArcElement)
 
@@ -212,7 +121,7 @@ interface SubjectStat { id: number; name: string; assignment_count: number; subm
 interface TrendPoint { month: string; average_percentage: number; submission_count: number }
 interface TopBook { id: number; title: string; author: string | null; readers_count: number }
 
-const loading = ref({ overview: false, teachers: false, assignments: false, performance: false, reading: false })
+const loading = ref({ overview: true, teachers: true, assignments: true, performance: true, reading: true })
 
 const overview = ref<{
   department: { id: number; name: string; code: string; description: string } | null
@@ -247,13 +156,35 @@ const STATUS_LABELS: Record<string, string> = {
   returned: 'Returned'
 }
 
+const fig = (v: number | null | undefined) => (loading.value.overview ? '…' : v ?? '-')
+const statItems = computed<StatItem[]>(() => [
+  { label: 'Teachers', value: fig(overview.value.teachers_count), tone: 'indigo' },
+  { label: 'Students', value: fig(overview.value.students_count), tone: 'sky' },
+  { label: 'Subjects', value: fig(overview.value.subjects_count), tone: 'violet' },
+  { label: 'Assessments', value: fig(overview.value.assignments_count), tone: 'amber' },
+  { label: 'Average score', value: loading.value.overview ? '…' : overview.value.average_percentage != null ? `${Math.round(overview.value.average_percentage)}%` : '-', tone: 'emerald' }
+])
+
+const teacherColumns: Column[] = [
+  { key: 'name', label: 'Teacher', sortable: true, mobile: 'title' },
+  { key: 'assignments_count', label: 'Assessments', sortable: true, align: 'center' },
+  { key: 'total_submissions', label: 'Submissions', sortable: true, align: 'center' },
+  { key: 'submissions_marked', label: 'Marked', sortable: true, align: 'center' },
+  { key: 'submissions_pending', label: 'To mark', sortable: true, align: 'center' },
+  { key: 'students_reached', label: 'Students reached', sortable: true, align: 'center' },
+  { key: 'average_percentage', label: 'Average', sortable: true, value: (r: TeacherStat) => r.average_percentage ?? -1 }
+]
+const teacherRows = computed(() => teachers.value.map(t => ({ ...t, name: niceName(`${t.first_name} ${t.last_name}`) })))
+
+const STATUS_COLORS: Record<string, string> = { in_progress: '#CBD5E1', submitted: '#38BDF8', marking: '#FBBF24', graded: '#34D399', returned: '#818CF8' }
+
 const subjectsWithData = computed(() => subjects.value.filter(s => s.average_percentage !== null))
 
 const statusChartData = computed(() => ({
-  labels: statusBreakdown.value.map(s => STATUS_LABELS[s.status] || s.status),
+  labels: statusBreakdown.value.map(s => STATUS_LABELS[s.status] || (s.status ? s.status.replace('_', ' ') : 'Not started')),
   datasets: [{
     data: statusBreakdown.value.map(s => s.count),
-    backgroundColor: ['#9CA3AF', '#3B82F6', '#F59E0B', '#10B981', '#6366F1'],
+    backgroundColor: statusBreakdown.value.map(s => STATUS_COLORS[s.status] || '#CBD5E1'),
     borderWidth: 0
   }]
 }))
@@ -275,18 +206,20 @@ const subjectChartData = computed(() => ({
   datasets: [{
     label: 'Average Score (%)',
     data: subjectsWithData.value.map(s => s.average_percentage),
-    backgroundColor: '#10B981',
-    borderRadius: 8
+    backgroundColor: '#34D399',
+    borderRadius: 6,
+    maxBarThickness: 56
   }]
 }))
 
 const teacherChartData = computed(() => ({
-  labels: teachers.value.map(t => `${t.first_name} ${t.last_name}`),
+  labels: teachers.value.map(t => niceName(`${t.first_name} ${t.last_name}`)),
   datasets: [{
     label: 'Assignments',
     data: teachers.value.map(t => t.assignments_count),
-    backgroundColor: '#F59E0B',
-    borderRadius: 8
+    backgroundColor: '#818CF8',
+    borderRadius: 6,
+    maxBarThickness: 22
   }]
 }))
 
@@ -295,7 +228,7 @@ const chartOptions = {
   maintainAspectRatio: false,
   plugins: { legend: { display: false } },
   scales: {
-    y: { beginAtZero: true, grid: { display: true, color: 'rgba(0, 0, 0, 0.05)' } },
+    y: { beginAtZero: true, grid: { display: true, color: 'rgba(148, 163, 184, 0.15)' } },
     x: { grid: { display: false } }
   }
 }
@@ -306,7 +239,7 @@ const horizontalChartOptions = {
   indexAxis: 'y' as const,
   plugins: { legend: { display: false } },
   scales: {
-    x: { beginAtZero: true, grid: { display: true, color: 'rgba(0, 0, 0, 0.05)' } },
+    x: { beginAtZero: true, grid: { display: true, color: 'rgba(148, 163, 184, 0.15)' } },
     y: { grid: { display: false } }
   }
 }
@@ -316,7 +249,7 @@ const lineOptions = {
   maintainAspectRatio: false,
   plugins: { legend: { display: false } },
   scales: {
-    y: { beginAtZero: true, max: 100, grid: { display: true, color: 'rgba(0, 0, 0, 0.05)' } },
+    y: { beginAtZero: true, max: 100, grid: { display: true, color: 'rgba(148, 163, 184, 0.15)' } },
     x: { grid: { display: false } }
   }
 }
@@ -324,7 +257,8 @@ const lineOptions = {
 const doughnutOptions = {
   responsive: true,
   maintainAspectRatio: false,
-  plugins: { legend: { display: true, position: 'bottom' as const } }
+  cutout: '62%',
+  plugins: { legend: { display: true, position: 'bottom' as const, labels: { boxWidth: 10, color: '#94A3B8' } } }
 }
 
 async function loadOverview() {
@@ -398,3 +332,8 @@ onMounted(() => {
   loadReading()
 })
 </script>
+
+<style scoped>
+.panel { @apply rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5; }
+.panel-title { @apply text-sm font-semibold text-gray-900 dark:text-white mb-3; }
+</style>

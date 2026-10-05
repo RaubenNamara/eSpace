@@ -1,349 +1,75 @@
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-950">
-    <div class="px-4 sm:px-6 lg:px-8 py-8">
-      <!-- Header -->
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-        <div>
-          <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Teachers</h1>
-          <p class="text-gray-600 dark:text-gray-400 mt-1">Manage teacher accounts, departments, subjects and class assignments.</p>
-        </div>
-        <div class="flex flex-wrap gap-3">
-          <button
-            @click="fetchTeachers"
-            class="btn-secondary"
-          >
-            Refresh
+  <!-- Every teacher account: departments, last sign-in, and everything you can do to an account,
+       one at a time or in bulk. -->
+  <div class="w-full">
+    <PageHeader title="Teachers" description="Every teacher account - departments, who's signing in, passwords and access, one at a time or in bulk." icon="teacher" accent="indigo" :active-filters="deptFilter ? 1 : 0">
+      <template #actions>
+        <button type="button" class="btn-secondary" @click="showImportModal = true">Import</button>
+        <button type="button" class="btn-primary" @click="showCreateModal = true">Add teacher</button>
+      </template>
+      <StatStrip v-if="statistics" v-model="quick" :items="statItems" />
+      <template #filters>
+        <select v-model="deptFilter" class="w-full sm:w-60 py-2 pl-3 pr-8 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white" aria-label="Department">
+          <option value="">All departments</option>
+          <option v-for="d in departments" :key="d.id" :value="String(d.id)">{{ d.name }}</option>
+        </select>
+      </template>
+    </PageHeader>
+
+    <BulkActionBar :count="bulk.selectedCount.value" @clear="bulk.clear()">
+      <select v-model="bulkAssignDepartmentId" class="px-2.5 py-1 min-h-[32px] text-xs border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white">
+        <option value="">Add to department…</option>
+        <option v-for="dept in departments" :key="dept.id" :value="dept.id">{{ dept.name }}</option>
+      </select>
+      <button :disabled="!bulkAssignDepartmentId" class="bulk-btn disabled:opacity-50" @click="bulkAssignDepartment">Apply</button>
+      <button class="bulk-btn" @click="bulkSetActive(true)">Activate</button>
+      <button class="bulk-btn" @click="bulkSetActive(false)">Suspend</button>
+      <button class="bulk-btn" @click="bulkExport">Export CSV</button>
+      <button class="px-2.5 py-1 min-h-[32px] text-xs font-semibold rounded-lg bg-rose-600 text-white hover:bg-rose-700" @click="bulkDeleteSelected">Delete</button>
+    </BulkActionBar>
+
+    <DataTable
+      :columns="columns"
+      :rows="shown"
+      :loading="loading && !teachers.length"
+      :search-keys="['name', 'employee_number', 'username', 'email']"
+      search-placeholder="Search name, staff no., username or email"
+      :page-size="25"
+      :initial-sort="{ key: 'name', dir: 'asc' }"
+      empty-title="No teachers here"
+      :empty-message="teachers.length ? 'Nothing matches this filter.' : 'Add your first teacher, or import a list.'"
+    >
+      <template #toolbar>
+        <label class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none">
+          <input type="checkbox" :checked="bulk.allSelected(visibleIds)" class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500" @change="bulk.toggleAll(visibleIds)">
+          Select all {{ shown.length }}
+        </label>
+      </template>
+      <template #cell-name="{ row }">
+        <span class="flex items-center gap-2.5 min-w-0">
+          <input type="checkbox" :checked="bulk.isSelected(row.id)" class="flex-shrink-0 w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500" :aria-label="`Select ${row.name}`" @click.stop @change="bulk.toggle(row.id)">
+          <span class="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 text-[11px] font-bold flex items-center justify-center flex-shrink-0">{{ initials(row.name) }}</span>
+          <button type="button" class="min-w-0 text-left" @click.stop="viewTeacher(row)">
+            <span class="block font-semibold text-gray-900 dark:text-white truncate hover:text-indigo-600 dark:hover:text-indigo-300">{{ row.name }}</span>
+            <span class="block text-[11px] text-gray-400 truncate">{{ row.email || `@${row.username}` }}</span>
           </button>
-          <button
-            @click="showImportModal = true"
-            class="btn-secondary"
-          >
-            Import Teachers
-          </button>
-          <button
-            @click="showCreateModal = true"
-            class="btn-primary"
-          >
-            Add Teacher
-          </button>
-        </div>
-      </div>
-
-      <!-- Statistics Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8" v-if="statistics || loading">
-        <div class="group bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700">
-          <template v-if="!statistics">
-            <div class="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
-            <div class="h-8 w-14 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-          </template>
-          <template v-else>
-            <div class="text-sm text-gray-500 dark:text-gray-400">Total Teachers</div>
-            <div class="text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{{ statistics.total || 0 }}</div>
-          </template>
-        </div>
-        <div class="group bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700">
-          <template v-if="!statistics">
-            <div class="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
-            <div class="h-8 w-14 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-          </template>
-          <template v-else>
-            <div class="text-sm text-gray-500 dark:text-gray-400">Active Teachers</div>
-            <div class="text-2xl font-bold text-green-600 dark:text-green-400">{{ statistics.active || 0 }}</div>
-          </template>
-        </div>
-        <div class="group bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700">
-          <template v-if="!statistics">
-            <div class="h-4 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
-            <div class="h-8 w-14 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-          </template>
-          <template v-else>
-            <div class="text-sm text-gray-500 dark:text-gray-400">Suspended Teachers</div>
-            <div class="text-2xl font-bold text-red-600 dark:text-red-400">{{ statistics.suspended || 0 }}</div>
-          </template>
-        </div>
-        <div class="group bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700">
-          <template v-if="!statistics">
-            <div class="h-4 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
-            <div class="h-8 w-14 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-          </template>
-          <template v-else>
-            <div class="text-sm text-gray-500 dark:text-gray-400">Heads of Department</div>
-            <div class="text-2xl font-bold text-purple-600 dark:text-purple-400">{{ statistics.hods || 0 }}</div>
-          </template>
-        </div>
-        <div class="group bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700">
-          <template v-if="!statistics">
-            <div class="h-4 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
-            <div class="h-8 w-14 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-          </template>
-          <template v-else>
-            <div class="text-sm text-gray-500 dark:text-gray-400">Unassigned Teachers</div>
-            <div class="text-2xl font-bold text-orange-600 dark:text-orange-400">{{ statistics.unassigned || 0 }}</div>
-          </template>
-        </div>
-      </div>
-
-      <!-- Filters -->
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
-        <div class="flex gap-4">
-          <div class="flex-1">
-            <input
-              v-model="search"
-              @input="debouncedSearch"
-              type="text"
-              placeholder="Search by name, staff number, username, email or phone..."
-              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-            >
-          </div>
-          <select
-            v-model="filterStatus"
-            @change="fetchTeachers"
-            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-          >
-            <option value="">All Status</option>
-            <option value="1">Active</option>
-            <option value="0">Suspended</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- Teachers Table -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden border border-gray-100 dark:border-gray-700">
-        <!-- Loading State -->
-        <div v-if="loading" class="p-12 text-center">
-          <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div>
-          <p class="mt-4 text-gray-500 dark:text-gray-400">Loading teachers...</p>
-        </div>
-
-        <!-- Empty State -->
-        <div v-else-if="teachers.length === 0" class="p-12 text-center">
-          <svg class="mx-auto h-16 w-16 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-          </svg>
-          <h3 class="mt-4 text-lg font-medium text-gray-900 dark:text-white">No teachers found</h3>
-          <p class="mt-2 text-gray-500 dark:text-gray-400">
-            {{ search || filterStatus ? 'No teachers match your search or filter.' : 'Get started by creating your first teacher.' }}
-          </p>
-          <button
-            v-if="search || filterStatus"
-            @click="clearFilters"
-            class="mt-4 px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
-          >
-            Clear filters
-          </button>
-          <button
-            v-else
-            @click="showCreateModal = true"
-            class="btn-primary mt-4"
-          >
-            Add Teacher
-          </button>
-        </div>
-
-        <!-- Teachers Table -->
-        <div v-else>
-        <div class="px-6 pt-4">
-          <BulkActionBar :count="bulk.selectedCount.value" @clear="bulk.clear()">
-            <select v-model="bulkAssignDepartmentId" class="px-2.5 py-1 min-h-[32px] text-xs border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
-              <option value="">Assign department...</option>
-              <option v-for="dept in departments" :key="dept.id" :value="dept.id">{{ dept.name }}</option>
-            </select>
-            <button @click="bulkAssignDepartment" :disabled="!bulkAssignDepartmentId" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50">Apply</button>
-            <button @click="bulkSetActive(true)" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Activate</button>
-            <button @click="bulkSetActive(false)" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Suspend</button>
-            <button @click="bulkExport" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Export CSV</button>
-            <button @click="bulkDeleteSelected" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors">Delete</button>
-          </BulkActionBar>
-        </div>
-        <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700">
-          <thead class="bg-gray-50 dark:bg-gray-950">
-            <tr>
-              <th class="px-4 py-4 text-left">
-                <input
-                  type="checkbox"
-                  :checked="bulk.allSelected(visibleIds)"
-                  @change="bulk.toggleAll(visibleIds)"
-                  class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
-                >
-              </th>
-              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Teacher</th>
-              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Staff Number</th>
-              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Department</th>
-              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Status</th>
-              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Last Login</th>
-              <th class="px-6 py-4 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
-            <tr
-              v-for="teacher in teachers"
-              :key="teacher.id"
-              class="hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors duration-150"
-            >
-              <td class="px-4 py-4">
-                <input
-                  type="checkbox"
-                  :checked="bulk.isSelected(teacher.id)"
-                  @change="bulk.toggle(teacher.id)"
-                  class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
-                >
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="flex items-center">
-                  <div class="flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center text-white font-medium" :class="getAvatarColor(teacher.first_name)">
-                    {{ getInitials(teacher.first_name, teacher.last_name) }}
-                  </div>
-                  <div class="ml-4">
-                    <div class="text-sm font-medium text-gray-900 dark:text-white">{{ teacher.first_name }} {{ teacher.last_name }}</div>
-                    <div class="text-sm text-gray-500 dark:text-gray-400">{{ teacher.username }}</div>
-                  </div>
-                </div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                {{ teacher.employee_number }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                <span :title="allTeacherDepartmentNames(teacher)">{{ primaryDepartmentName(teacher) }}</span>
-                <span v-if="(teacher.departments?.length || 0) > 1" class="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
-                  +{{ teacher.departments!.length - 1 }} more
-                </span>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <span v-if="teacher.is_active" class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300">
-                  Active
-                </span>
-                <span v-else class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300">
-                  Suspended
-                </span>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                {{ formatDate(teacher.last_login_at) }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                <div class="flex justify-end gap-2">
-                  <button
-                    @click="viewTeacher(teacher)"
-                    class="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
-                    title="View"
-                  >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                    </svg>
-                  </button>
-                  <button
-                    @click="editTeacher(teacher)"
-                    class="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300"
-                    title="Edit"
-                  >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                    </svg>
-                  </button>
-                  <button
-                    @click="manageDepartments(teacher)"
-                    class="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center text-purple-600 dark:text-purple-400 hover:text-purple-900 dark:hover:text-purple-300"
-                    title="Manage Departments"
-                  >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2M5 21H3m16 0h-6m-4 0H5m6-14v.01M11 12v.01M11 16v.01M7 8v.01M7 12v.01M7 16v.01M15 8v.01M15 12v.01M15 16v.01"></path>
-                    </svg>
-                  </button>
-                  <button
-                    @click="resetPassword(teacher)"
-                    class="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center text-yellow-600 dark:text-yellow-400 hover:text-yellow-900 dark:hover:text-yellow-300"
-                    title="Reset Password"
-                  >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
-                    </svg>
-                  </button>
-                  <button
-                    v-if="teacher.is_active"
-                    @click="suspendTeacher(teacher)"
-                    class="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
-                    title="Suspend"
-                  >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
-                    </svg>
-                  </button>
-                  <button
-                    v-else
-                    @click="restoreTeacher(teacher)"
-                    class="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300"
-                    title="Activate"
-                  >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                  </button>
-                  <button
-                    @click="deleteTeacher(teacher)"
-                    class="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
-                    title="Delete"
-                  >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                    </svg>
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        </div>
-        </div>
-
-        <!-- Pagination -->
-        <div v-if="pagination.pages > 1" class="bg-white dark:bg-gray-800 px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
-          <div class="flex-1 flex justify-between sm:hidden">
-            <button
-              @click="prevPage"
-              :disabled="pagination.page === 1"
-              class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
-            >
-              Previous
-            </button>
-            <button
-              @click="nextPage"
-              :disabled="pagination.page === pagination.pages"
-              class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
-            >
-              Next
-            </button>
-          </div>
-          <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-            <div>
-              <p class="text-sm text-gray-700 dark:text-gray-300">
-                Showing <span class="font-medium">{{ (pagination.page - 1) * pagination.limit + 1 }}</span>
-                to <span class="font-medium">{{ Math.min(pagination.page * pagination.limit, pagination.total) }}</span>
-                of <span class="font-medium">{{ pagination.total }}</span> results
-              </p>
-            </div>
-            <div>
-              <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                <button
-                  @click="prevPage"
-                  :disabled="pagination.page === 1"
-                  class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
-                >
-                  Previous
-                </button>
-                <button
-                  @click="nextPage"
-                  :disabled="pagination.page === pagination.pages"
-                  class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
-                >
-                  Next
-                </button>
-              </nav>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+        </span>
+      </template>
+      <template #cell-department="{ row }">
+        <span v-if="row.department" class="text-gray-700 dark:text-gray-200" :title="allTeacherDepartmentNames(row)">{{ row.department }}</span>
+        <span v-else class="text-amber-600 dark:text-amber-400 text-xs font-semibold">No department</span>
+        <span v-if="(row.departments?.length || 0) > 1" class="ml-1 px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">+{{ row.departments!.length - 1 }}</span>
+      </template>
+      <template #cell-is_active="{ row }">
+        <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold" :class="row.is_active ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300'">{{ row.is_active ? 'Active' : 'Suspended' }}</span>
+      </template>
+      <template #cell-last_login_at="{ row }">
+        <span class="whitespace-nowrap" :class="row.last_login_at ? 'text-gray-600 dark:text-gray-300' : 'text-gray-400'">{{ row.last_login_at ? timeAgo(row.last_login_at) : 'Never' }}</span>
+      </template>
+      <template #actions="{ row }">
+        <ActionMenu :label="`Actions for ${row.name}`" :items="menuFor(row)" />
+      </template>
+    </DataTable>
 
     <!-- Create Teacher Modal -->
     <div v-if="showCreateModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -718,6 +444,11 @@ import { useConfirmStore } from '@/stores/confirm'
 import { useBulkSelection } from '@/composables/useBulkSelection'
 import { usePersistedRef } from '@/composables/usePersistedRef'
 import { downloadBlob } from '@/utils/downloadBlob'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StatStrip, { type StatItem } from '@/components/ui/StatStrip.vue'
+import DataTable, { type Column } from '@/components/ui/DataTable.vue'
+import ActionMenu, { type ActionItem } from '@/components/ui/ActionMenu.vue'
+import { niceName, initials, timeAgo } from '@/components/dashboard/teacher/time'
 
 const toast = useToastStore()
 const confirmDialog = useConfirmStore()
@@ -757,8 +488,6 @@ interface Statistics {
 const teachers = ref<Teacher[]>([])
 const departments = ref<any[]>([])
 const statistics = ref<Statistics | null>(null)
-const search = ref('')
-const filterStatus = usePersistedRef('admin-teachers-status-filter', '')
 const loading = ref(false)
 const creating = ref(false)
 const editing = ref(false)
@@ -809,15 +538,6 @@ const editForm = ref({
   department_id: ''
 })
 
-let searchTimeout: NodeJS.Timeout | null = null
-
-const debouncedSearch = () => {
-  if (searchTimeout) clearTimeout(searchTimeout)
-  searchTimeout = setTimeout(() => {
-    fetchTeachers()
-  }, 500)
-}
-
 const fetchDepartments = async () => {
   try {
     const response = await apiService.get('/admin/departments')
@@ -829,35 +549,69 @@ const fetchDepartments = async () => {
   }
 }
 
+// Loads every teacher at once - search, filters and paging all happen in the table
 const fetchTeachers = async () => {
   loading.value = true
   try {
-    const params: any = {
-      page: pagination.value.page,
-      limit: pagination.value.limit
-    }
-
-    if (search.value) params.search = search.value
-    if (filterStatus.value) params.is_active = filterStatus.value
-
-    // apiService here is actually the raw axios instance (see services/api.ts's default
-    // export vs its named `apiService` wrapper export) - its .get(url, config) needs the
-    // query params nested under config.params, not passed flat as the 2nd argument.
-    const response = await apiService.get('/admin/teachers', { params })
-
+    const response = await apiService.get('/admin/teachers', { params: { page: 1, limit: 2000 } })
     if (response.data.success) {
       teachers.value = response.data.data.teachers
       pagination.value = response.data.data.pagination
       statistics.value = response.data.data.statistics
+      if (deptFilter.value && !departments.value.some((d: any) => String(d.id) === deptFilter.value)) deptFilter.value = ''
     }
-  } catch (error) {
-    console.error('Failed to fetch teachers:', error)
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Could not load the teachers')
   } finally {
     loading.value = false
   }
 }
 
-const visibleIds = computed(() => teachers.value.map(t => t.id))
+const columns: Column[] = [
+  { key: 'name', label: 'Teacher', sortable: true, mobile: 'title' },
+  { key: 'employee_number', label: 'Staff no.', sortable: true, mobile: 'subtitle' },
+  { key: 'department', label: 'Department', sortable: true, value: (r: any) => r.department || '' },
+  { key: 'is_active', label: 'Status', sortable: true, value: (r: any) => (r.is_active ? 1 : 0) },
+  { key: 'last_login_at', label: 'Last sign-in', sortable: true, value: (r: any) => r.last_login_at || '' }
+]
+const quick = ref<string | null>(null)
+const deptFilter = usePersistedRef<string>('admin-teachers-dept', '')
+const rows = computed(() => teachers.value.map(t => ({
+  ...t,
+  name: niceName(`${t.first_name} ${t.last_name}`),
+  department: (t.departments?.length || t.department_id) ? primaryDepartmentName(t) : ''
+})))
+const inDept = computed(() => rows.value.filter(t => !deptFilter.value
+  || String(t.department_id) === deptFilter.value
+  || (t.departments || []).some(d => String(d.id) === deptFilter.value)))
+const statItems = computed<StatItem[]>(() => [
+  { label: 'Teachers', value: inDept.value.length, key: 'all', tone: 'indigo' },
+  { label: 'Active', value: inDept.value.filter(t => t.is_active).length, key: 'active', tone: 'emerald' },
+  { label: 'Suspended', value: inDept.value.filter(t => !t.is_active).length, key: 'suspended', tone: 'rose' },
+  { label: 'Never signed in', value: inDept.value.filter(t => !t.last_login_at).length, key: 'never', tone: 'amber' },
+  { label: 'No department', value: inDept.value.filter(t => !t.department).length, key: 'nodept', tone: 'gray' }
+])
+const shown = computed(() => inDept.value.filter(t => {
+  switch (quick.value) {
+    case 'active': return !!t.is_active
+    case 'suspended': return !t.is_active
+    case 'never': return !t.last_login_at
+    case 'nodept': return !t.department
+    default: return true
+  }
+}))
+const menuFor = (t: Teacher): ActionItem[] => [
+  { label: 'View profile', icon: 'teacher', run: () => viewTeacher(t) },
+  { label: 'Edit details', icon: 'pencil', run: () => editTeacher(t) },
+  { label: 'Departments', icon: 'users', run: () => manageDepartments(t) },
+  { label: 'Reset password', icon: 'key', run: () => resetPassword(t) },
+  t.is_active
+    ? { label: 'Suspend', icon: 'clock', divider: true, run: () => suspendTeacher(t) }
+    : { label: 'Activate', icon: 'sparkles', divider: true, run: () => restoreTeacher(t) },
+  { label: 'Delete', icon: 'trash', danger: true, run: () => deleteTeacher(t) }
+]
+
+const visibleIds = computed(() => shown.value.map(t => t.id))
 
 const bulkAssignDepartment = async () => {
   const ids = bulk.selectedArray()
@@ -908,13 +662,6 @@ const bulkExport = async () => {
   } catch (error) {
     toast.error('Failed to export teachers')
   }
-}
-
-const clearFilters = () => {
-  search.value = ''
-  filterStatus.value = ''
-  pagination.value.page = 1
-  fetchTeachers()
 }
 
 const createTeacher = async () => {
@@ -1153,20 +900,6 @@ const deleteTeacher = async (teacher: Teacher) => {
   }
 }
 
-const prevPage = () => {
-  if (pagination.value.page > 1) {
-    pagination.value.page--
-    fetchTeachers()
-  }
-}
-
-const nextPage = () => {
-  if (pagination.value.page < pagination.value.pages) {
-    pagination.value.page++
-    fetchTeachers()
-  }
-}
-
 const getInitials = (firstName: string, lastName: string) => {
   return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
 }
@@ -1188,8 +921,12 @@ const getDepartmentName = (departmentId: number | null) => {
   return department ? department.name : 'Unknown'
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await fetchDepartments()
   fetchTeachers()
-  fetchDepartments()
 })
 </script>
+
+<style scoped>
+.bulk-btn { @apply px-2.5 py-1 min-h-[32px] text-xs font-semibold rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700; }
+</style>

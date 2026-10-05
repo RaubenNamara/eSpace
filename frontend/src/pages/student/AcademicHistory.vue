@@ -1,12 +1,7 @@
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-950">
-    <div class="px-4 sm:px-6 lg:px-8 py-8">
-      <div class="mb-4">
-        <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">My Academic History</h1>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          Every class and academic year you've been part of<span v-if="!loading && periods.length > 0"> &middot; {{ periods.length }} {{ periods.length === 1 ? 'period' : 'periods' }}</span>
-        </p>
-      </div>
+  <div class="w-full">
+    <div>
+      <PageHeader title="My Academic History" description="Every class and academic year you've been part of, and the subjects you took." icon="teacher" accent="indigo" />
 
       <div v-if="loading" class="text-center py-12">
         <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-indigo-600 border-t-transparent"></div>
@@ -77,6 +72,7 @@
 </template>
 
 <script setup lang="ts">
+import PageHeader from '@/components/ui/PageHeader.vue'
 import { ref, onMounted } from 'vue'
 import { apiService } from '../../services/api'
 

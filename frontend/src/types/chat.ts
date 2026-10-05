@@ -41,6 +41,9 @@ export interface Conversation {
   updated_at: string
   is_online?: boolean
   last_active_at?: string | null
+  // Direct chats: the other person
+  other_id?: number | null
+  other_role?: ChatRole | null
   last_message: ConversationLastMessage | null
   unread_count?: number
   participants?: { id: number; role: ChatRole; name: string; is_online?: boolean; last_active_at?: string | null }[]

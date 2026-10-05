@@ -107,6 +107,11 @@ class LiveClassController extends Controller
 
         $service = new LiveClassService();
         foreach ($started as $row) {
+            // A class with no BBB meeting to ask about can't be checked - skip it rather than let
+            // one odd row take the student's whole list down
+            if (empty($row['meeting_id'])) {
+                continue;
+            }
             $service->reconcileStatus((int) $row['id'], $row['meeting_id'], $row['actual_start']);
         }
     }
@@ -188,7 +193,7 @@ class LiveClassController extends Controller
             return;
         }
 
-        if ($class['status'] === 'started') {
+        if ($class['status'] === 'started' && !empty($class['meeting_id'])) {
             $class['status'] = (new LiveClassService())->reconcileStatus((int) $class['id'], $class['meeting_id'], $class['actual_start']);
         }
 

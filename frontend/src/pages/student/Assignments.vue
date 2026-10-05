@@ -1,205 +1,69 @@
 <template>
-  <div class="p-6">
-    <div class="mb-4">
-      <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Assignments</h1>
-      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">View and complete your assigned assignments</p>
-    </div>
-
-    <!-- Summary Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-gray-600 dark:text-gray-400">Total</p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.total }}</p>
-          </div>
-          <div class="p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
-            <svg class="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-            </svg>
-          </div>
+  <div class="w-full">
+    <PageHeader title="Assessments" description="Work from your teachers - what's due first, what you've started, and your marks when they come back." icon="clipboard" accent="indigo" :active-filters="(subjectFilter ? 1 : 0) + (searchQuery.trim() ? 1 : 0)">
+      <template #filters>
+        <div class="relative">
+          <svg class="w-4 h-4 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"></path></svg>
+          <input v-model="searchQuery" type="search" placeholder="Search assessments" class="w-full md:w-52 pl-8 pr-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
         </div>
-      </div>
+        <PickerDropdown v-if="subjectOptions.length > 2" v-model="subjectFilter" label="Subject" :options="subjectOptions" align="right" />
+      </template>
+      <StatStrip v-if="assignments.length" v-model="viewFilter" :items="statItems" hide-when-empty />
+    </PageHeader>
 
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-gray-600 dark:text-gray-400">New</p>
-            <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ stats.new }}</p>
-          </div>
-          <div class="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-            <svg class="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-            </svg>
-          </div>
-        </div>
-      </div>
+    <Skeleton v-if="loading" variant="list" :count="4" />
 
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-gray-600 dark:text-gray-400">In Progress</p>
-            <p class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{{ stats.in_progress }}</p>
-          </div>
-          <div class="p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
-            <svg class="w-6 h-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-gray-600 dark:text-gray-400">Submitted</p>
-            <p class="text-2xl font-bold text-green-600 dark:text-green-400">{{ stats.submitted }}</p>
-          </div>
-          <div class="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
-            <svg class="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-          </div>
-        </div>
-      </div>
+    <div v-else-if="error" class="flex items-start gap-3 rounded-xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-900/20 p-4">
+      <AppIcon name="warning" class="w-5 h-5 text-rose-500 flex-shrink-0" />
+      <p class="flex-1 text-sm text-rose-700 dark:text-rose-200">{{ error }}</p>
+      <button type="button" class="text-sm font-semibold text-rose-700 dark:text-rose-200 hover:underline" @click="loadAssignments">Try again</button>
     </div>
 
-    <!-- Filters -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
-      <div class="flex flex-wrap gap-4">
-        <div class="flex-1 min-w-64">
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="Search assignments..."
-            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-          >
-        </div>
-        <select
-          v-model="statusFilter"
-          class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-        >
-          <option value="">All Statuses</option>
-          <option value="new">New</option>
-          <option value="in_progress">In Progress</option>
-          <option value="submitted">Submitted</option>
-          <option value="marked">Marked</option>
-          <option value="late">Late</option>
-          <option value="overdue">Overdue</option>
-        </select>
-        <select
-          v-model="subjectFilter"
-          class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-        >
-          <option value="">All Subjects</option>
-          <option v-for="subject in availableSubjects" :key="subject.id" :value="subject.id">
-            {{ subject.name }}
-          </option>
-        </select>
+    <EmptyState v-else-if="!assignments.length" icon="clipboard" tone="indigo" title="No assessments yet" message="When a teacher sets work for your class, it shows here with its deadline." />
+
+    <EmptyState v-else-if="!groups.length" compact icon="clipboard" tone="gray" title="Nothing matches" message="Try another subject or search.">
+      <button type="button" class="text-sm font-semibold text-indigo-600 dark:text-indigo-300 hover:underline" @click="clearFilters">Clear filters</button>
+    </EmptyState>
+
+    <!-- One section per state, the ones needing you first -->
+    <section v-for="group in groups" :key="group.key" class="mb-6">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="w-2 h-2 rounded-full" :class="group.dot"></span>
+        <h2 class="text-sm font-bold text-gray-900 dark:text-white">{{ group.title }}</h2>
+        <span class="text-xs font-medium text-gray-400">{{ group.items.length }}</span>
+        <span v-if="group.hint" class="hidden sm:inline text-xs text-gray-400">· {{ group.hint }}</span>
       </div>
-    </div>
-
-    <!-- Loading State -->
-    <div v-if="loading" class="flex items-center justify-center py-12">
-      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-    </div>
-
-    <!-- Error State -->
-    <div v-else-if="error" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 mb-6">
-      <div class="flex items-center">
-        <svg class="w-5 h-5 text-red-600 dark:text-red-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-        </svg>
-        <p class="text-red-800 dark:text-red-200">{{ error }}</p>
-      </div>
-    </div>
-
-    <!-- Empty State -->
-    <div v-else-if="filteredAssignments.length === 0" class="text-center py-12">
-      <svg class="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-      </svg>
-      <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No assignments found</h3>
-      <p class="text-gray-600 dark:text-gray-400">Check back later for new assignments</p>
-    </div>
-
-    <!-- Assignments List -->
-    <div v-else class="space-y-4">
-      <div
-        v-for="assignment in filteredAssignments"
-        :key="assignment.id"
-        class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow"
-      >
-        <div class="flex items-start justify-between">
-          <div class="flex-1">
-            <div class="flex items-center space-x-3 mb-2">
-              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ assignment.title }}</h3>
-              <span :class="getStatusClass(assignment.status)" class="px-2 py-1 text-xs font-medium rounded-full">
-                {{ formatStatus(assignment.status) }}
-              </span>
-              <span
-                v-if="assignment.assessment_category"
-                class="px-2 py-1 text-xs font-medium rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300"
-              >
-                {{ assignment.assessment_category }} &ndash; {{ ASSESSMENT_CATEGORY_LABELS[assignment.assessment_category] }}
-              </span>
-            </div>
-            
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600 dark:text-gray-400 mb-3">
-              <div>
-                <span class="font-medium">Subject:</span> {{ assignment.subject_name }}
-              </div>
-              <div>
-                <span class="font-medium">Teacher:</span> {{ assignment.teacher_name }}
-              </div>
-              <div>
-                <span class="font-medium">Opens:</span> {{ assignment.open_at ? formatDate(assignment.open_at) : 'N/A' }}
-              </div>
-              <div>
-                <span class="font-medium">Deadline:</span> {{ assignment.due_date ? formatDate(assignment.due_date) : 'N/A' }}
-              </div>
-            </div>
-
-            <p class="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
-              {{ assignment.instructions }}
+      <ul class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700">
+        <li v-for="a in group.items" :key="a.id" class="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+          <div class="min-w-0 flex-1">
+            <p class="flex items-center gap-2 min-w-0">
+              <span v-if="a.assessment_category" class="flex-shrink-0 px-1.5 py-0.5 rounded-md text-[10px] font-bold tracking-wide" :class="CATEGORY_CHIP[a.assessment_category]" :title="CATEGORY_LABEL[a.assessment_category]">{{ a.assessment_category }}</span>
+              <span class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ a.title }}</span>
             </p>
+            <p class="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ a.subject_name }}<template v-if="a.teacher_name"> · {{ a.teacher_name }}</template> · {{ Number(a.total_marks) }} {{ Number(a.total_marks) === 1 ? 'mark' : 'marks' }}</p>
+          </div>
 
-            <div class="flex items-center space-x-4 text-sm">
-              <span class="text-gray-600 dark:text-gray-400">
-                <span class="font-medium">Total Marks:</span> {{ assignment.total_marks }}
-              </span>
-              <span v-if="assignment.submission" class="text-gray-600 dark:text-gray-400">
-                <span class="font-medium">Score:</span> {{ assignment.submission.total_score }}/{{ assignment.total_marks }}
-              </span>
+          <div class="flex items-center justify-between sm:justify-end gap-3 flex-shrink-0">
+            <!-- Marked: the score; otherwise when it's due -->
+            <div v-if="a.status === 'marked' && a.submission" class="text-right">
+              <p class="text-lg font-extrabold tabular-nums leading-none" :class="scoreTone(a.submission.percentage)">{{ Math.round(Number(a.submission.percentage)) }}%</p>
+              <p class="text-[10px] text-gray-400">{{ Number(a.submission.total_score) }} / {{ Number(a.total_marks) }}</p>
             </div>
-          </div>
+            <div v-else class="text-left sm:text-right text-[11px]">
+              <p class="font-semibold" :class="due(a).tone">{{ due(a).label }}</p>
+              <p class="text-gray-400">{{ due(a).sub }}</p>
+            </div>
 
-          <div class="flex flex-col space-y-2 ml-4">
-            <button
-              v-if="assignment.status === 'new' || assignment.status === 'in_progress'"
-              @click="startAssignment(assignment)"
-              class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm"
-            >
-              {{ assignment.status === 'new' ? 'Start Assignment' : 'Continue' }}
+            <button v-if="a.status === 'new' || a.status === 'in_progress'" type="button" class="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700" @click="startAssignment(a)">
+              {{ a.status === 'new' ? 'Start' : 'Continue' }}
             </button>
-            <button
-              v-if="assignment.status === 'submitted' || assignment.status === 'marked'"
-              @click="viewSubmission(assignment)"
-              class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm"
-            >
-              View Submission
-            </button>
-            <button
-              v-if="assignment.status === 'marked'"
-              @click="viewResult(assignment)"
-              class="px-4 py-2 border border-green-600 text-green-600 dark:text-green-400 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors text-sm"
-            >
-              View Result
-            </button>
+            <button v-else-if="a.status === 'overdue' && Number(a.allow_late_submission)" type="button" class="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 text-white hover:bg-rose-700" @click="startAssignment(a)">Hand in late</button>
+            <button v-else-if="a.status === 'marked'" type="button" class="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700" @click="viewResult(a)">See result</button>
+            <button v-else-if="a.status === 'submitted'" type="button" class="px-4 py-2 rounded-xl text-xs font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700" @click="viewSubmission(a)">Your answers</button>
           </div>
-        </div>
-      </div>
-    </div>
+        </li>
+      </ul>
+    </section>
   </div>
 </template>
 
@@ -207,6 +71,12 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { apiService } from '../../services/api'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StatStrip, { type StatItem } from '@/components/ui/StatStrip.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
+import Skeleton from '@/components/ui/Skeleton.vue'
+import PickerDropdown, { type PickerOption } from '@/components/common/PickerDropdown.vue'
+import AppIcon from '@/components/common/AppIcon.vue'
 
 interface StudentAssignment {
   id: number
@@ -220,22 +90,25 @@ interface StudentAssignment {
   total_marks: number
   status: 'new' | 'in_progress' | 'submitted' | 'marked' | 'late' | 'overdue'
   assessment_category?: 'LOA' | 'AOI' | 'EOC' | null
+  // The teacher still takes work after the deadline
+  allow_late_submission?: number | boolean | string
   submission?: {
     id: number
     total_score: number
     percentage: number
   }
 }
+type GroupKey = 'overdue' | 'todo' | 'started' | 'waiting' | 'marked'
 
-const ASSESSMENT_CATEGORY_LABELS: Record<'LOA' | 'AOI' | 'EOC', string> = {
+const CATEGORY_LABEL: Record<'LOA' | 'AOI' | 'EOC', string> = {
   LOA: 'Learning Outcome Assessment',
   AOI: 'Activity of Integration',
   EOC: 'Elements of Construct'
 }
-
-interface FilterOption {
-  id: number
-  name: string
+const CATEGORY_CHIP: Record<'LOA' | 'AOI' | 'EOC', string> = {
+  LOA: 'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-200',
+  AOI: 'bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-200',
+  EOC: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200'
 }
 
 const router = useRouter()
@@ -245,114 +118,95 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 
 const searchQuery = ref('')
-const statusFilter = ref('')
 const subjectFilter = ref('')
+const viewFilter = ref<string | null>(null)
 
-const availableSubjects = ref<FilterOption[]>([])
+// Which section each piece of work sits in
+const groupOf = (a: StudentAssignment): GroupKey => {
+  if (a.status === 'marked') return 'marked'
+  if (a.status === 'submitted' || a.status === 'late') return 'waiting'
+  if (a.status === 'overdue') return 'overdue'
+  if (a.status === 'in_progress') return 'started'
+  return 'todo'
+}
+const GROUPS: { key: GroupKey; title: string; dot: string; hint?: string }[] = [
+  { key: 'overdue', title: 'Overdue', dot: 'bg-rose-500', hint: 'the deadline has passed' },
+  { key: 'started', title: 'In progress', dot: 'bg-amber-500', hint: 'pick up where you left off' },
+  { key: 'todo', title: 'To do', dot: 'bg-indigo-500', hint: 'soonest deadline first' },
+  { key: 'waiting', title: 'Waiting for marks', dot: 'bg-sky-500' },
+  { key: 'marked', title: 'Marked', dot: 'bg-emerald-500' }
+]
 
-const stats = ref({
-  total: 0,
-  new: 0,
-  in_progress: 0,
-  submitted: 0,
-  marked: 0,
-  late: 0,
-  overdue: 0
+const filtered = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase()
+  return assignments.value.filter(a =>
+    (!q || a.title.toLowerCase().includes(q) || (a.subject_name || '').toLowerCase().includes(q)) &&
+    (!subjectFilter.value || a.subject_id === Number(subjectFilter.value)))
+})
+const at = (v: string) => (v ? new Date(v.replace(' ', 'T')).getTime() : NaN)
+const groups = computed(() => GROUPS
+  // The To do tile covers work started too
+  .filter(g => !viewFilter.value || g.key === viewFilter.value || (viewFilter.value === 'todo' && g.key === 'started'))
+  .map(g => ({
+    ...g,
+    items: filtered.value.filter(a => groupOf(a) === g.key).sort((x, y) => g.key === 'marked' || g.key === 'waiting'
+      ? (at(y.due_date) || 0) - (at(x.due_date) || 0)
+      : (at(x.due_date) || Infinity) - (at(y.due_date) || Infinity))
+  }))
+  .filter(g => g.items.length))
+
+const count = (k: GroupKey) => filtered.value.filter(a => groupOf(a) === k).length
+const statItems = computed<StatItem[]>(() => {
+  const marked = filtered.value.filter(a => a.status === 'marked' && a.submission)
+  const avg = marked.length ? Math.round(marked.reduce((n, a) => n + Number(a.submission!.percentage), 0) / marked.length) : null
+  return [
+    { label: 'To do', value: count('todo') + count('started'), key: 'todo', tone: 'indigo', hint: count('started') ? `${count('started')} started` : undefined },
+    { label: 'Overdue', value: count('overdue'), key: 'overdue', tone: 'rose' },
+    { label: 'Waiting', value: count('waiting'), key: 'waiting', tone: 'sky', hint: 'for marks' },
+    { label: 'Marked', value: count('marked'), key: 'marked', tone: 'emerald', hint: avg === null ? undefined : `average ${avg}%` }
+  ]
 })
 
-const filteredAssignments = computed(() => {
-  return assignments.value.filter(assignment => {
-    const matchesSearch = !searchQuery.value || 
-      assignment.title.toLowerCase().includes(searchQuery.value.toLowerCase())
-    const matchesStatus = !statusFilter.value || assignment.status === statusFilter.value
-    const matchesSubject = !subjectFilter.value || assignment.subject_id === Number(subjectFilter.value)
-    return matchesSearch && matchesStatus && matchesSubject
-  })
-})
-
-const formatDate = (dateString: string) => {
-  if (!dateString) return 'N/A'
-  const date = new Date(dateString)
-  return date.toLocaleDateString('en-US', { 
-    month: 'short', 
-    day: 'numeric', 
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
+const subjectOptions = computed<PickerOption<string>[]>(() => [
+  { value: '', label: 'All subjects' },
+  ...[...new Map(assignments.value.filter(a => a.subject_id).map(a => [a.subject_id, a.subject_name])).entries()]
+    .map(([id, name]) => ({ value: String(id), label: name }))
+])
+const clearFilters = () => {
+  searchQuery.value = ''
+  subjectFilter.value = ''
+  viewFilter.value = null
 }
 
-const formatStatus = (status: string) => {
-  const statusMap: Record<string, string> = {
-    new: 'New',
-    in_progress: 'In Progress',
-    submitted: 'Submitted',
-    marked: 'Marked',
-    late: 'Late',
-    overdue: 'Overdue'
-  }
-  return statusMap[status] || status
-}
-
-const getStatusClass = (status: string) => {
-  const classMap: Record<string, string> = {
-    new: 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200',
-    in_progress: 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200',
-    submitted: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200',
-    marked: 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200',
-    late: 'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200',
-    overdue: 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
-  }
-  return classMap[status] || 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
-}
-
-const calculateStats = () => {
-  stats.value = {
-    total: assignments.value.length,
-    new: assignments.value.filter(a => a.status === 'new').length,
-    in_progress: assignments.value.filter(a => a.status === 'in_progress').length,
-    submitted: assignments.value.filter(a => a.status === 'submitted').length,
-    marked: assignments.value.filter(a => a.status === 'marked').length,
-    late: assignments.value.filter(a => a.status === 'late').length,
-    overdue: assignments.value.filter(a => a.status === 'overdue').length
+const DAY = 86400000
+const due = (a: StudentAssignment) => {
+  const end = at(a.due_date)
+  if (isNaN(end)) return { label: 'No deadline', sub: '', tone: 'text-gray-500 dark:text-gray-400' }
+  const date = new Date(end).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })
+  if (a.status === 'submitted' || a.status === 'late') return { label: a.status === 'late' ? 'Handed in late' : 'Handed in', sub: `was due ${date}`, tone: 'text-sky-600 dark:text-sky-300' }
+  const midnight = (t: number) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime() }
+  const days = Math.round((midnight(end) - midnight(Date.now())) / DAY)
+  if (end < Date.now()) return { label: days === 0 ? 'Closed today' : `Closed ${-days === 1 ? 'yesterday' : `${-days} days ago`}`, sub: date, tone: 'text-rose-600 dark:text-rose-300' }
+  return {
+    label: days <= 0 ? 'Due today' : days === 1 ? 'Due tomorrow' : `Due in ${days} days`,
+    sub: `${date} · ${new Date(end).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`,
+    tone: days <= 1 ? 'text-rose-600 dark:text-rose-300' : 'text-gray-700 dark:text-gray-200'
   }
 }
-
-const extractFilters = () => {
-  const subjects = new Map<number, FilterOption>()
-  
-  assignments.value.forEach(assignment => {
-    if (assignment.subject_id && assignment.subject_name) {
-      subjects.set(assignment.subject_id, { id: assignment.subject_id, name: assignment.subject_name })
-    }
-  })
-  
-  availableSubjects.value = Array.from(subjects.values())
-}
+const scoreTone = (pct: number) => (Number(pct) >= 70 ? 'text-emerald-600 dark:text-emerald-300' : Number(pct) >= 50 ? 'text-amber-600 dark:text-amber-300' : 'text-rose-600 dark:text-rose-300')
 
 const loadAssignments = async () => {
-  console.log('loadAssignments called')
   loading.value = true
   error.value = null
-  
   try {
-    console.log('Making API call to /student/assignments')
     const response = await apiService.get('/student/assignments')
-    console.log('API response:', response)
-    console.log('Response data:', response.data)
-    console.log('Response data success:', response.data.success)
     if (response.data.success) {
-      console.log('Assignments data:', response.data.data)
       assignments.value = response.data.data
-      calculateStats()
-      extractFilters()
     } else {
-      console.log('API response not successful. Full response:', response.data)
-      error.value = response.data.message || 'Failed to load assignments'
+      error.value = response.data.message || 'Failed to load assessments'
     }
   } catch (err: any) {
-    console.error('Error loading assignments:', err)
-    error.value = err.response?.data?.message || 'Failed to load assignments'
+    error.value = err.response?.data?.message || 'Failed to load assessments'
   } finally {
     loading.value = false
   }
@@ -378,4 +232,3 @@ onMounted(() => {
   loadAssignments()
 })
 </script>
-

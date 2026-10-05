@@ -7,6 +7,7 @@ const AuthLayout = () => import('../layouts/AuthLayout.vue')
 
 // Pages
 const Landing = () => import('../pages/Landing.vue')
+const Guide = () => import('../pages/Guide.vue')
 const Login = () => import('../pages/auth/Login.vue')
 const Register = () => import('../pages/auth/Register.vue')
 const ForgotPassword = () => import('../pages/auth/ForgotPassword.vue')
@@ -114,6 +115,7 @@ const AdminPhysicalExams = () => import('../pages/admin/PhysicalExams.vue')
 const AdminRewards = () => import('../pages/admin/Rewards.vue')
 const AdminVirtualLab = () => import('../pages/admin/VirtualLab.vue')
 const AdminAuditLogs = () => import('../pages/admin/AuditLogs.vue')
+const AdminDemoRequests = () => import('../pages/admin/DemoRequests.vue')
 const AdminPermissions = () => import('../pages/admin/Permissions.vue')
 const AdminSettings = () => import('../pages/admin/Settings.vue')
 const AdminBackup = () => import('../pages/admin/Backup.vue')
@@ -133,6 +135,24 @@ const routes: RouteRecordRaw[] = [
     path: '/',
     name: 'Landing',
     component: Landing
+  },
+  {
+    // The public user guide - open to everyone, signed in or not
+    path: '/guide',
+    name: 'Guide',
+    component: Guide
+  },
+  {
+    // "Who it's for" pages - /for/schools, /for/teachers, /for/students (data/audiences.ts)
+    path: '/for/:who',
+    name: 'ForAudience',
+    component: () => import('../pages/ForAudience.vue')
+  },
+  {
+    // A parent's private weekly update on their child - opened from the school's link, no login
+    path: '/parent/:token',
+    name: 'ParentView',
+    component: () => import('../pages/ParentView.vue')
   },
   {
     path: '/login',
@@ -194,6 +214,12 @@ const routes: RouteRecordRaw[] = [
       { path: 'chat', name: 'StudentChat', component: StudentChat },
       { path: 'reports', name: 'StudentReports', component: StudentReports },
       { path: 'learning-map', name: 'StudentLearningMap', component: StudentLearningMap },
+      { path: 'live-quiz', name: 'StudentLiveQuiz', component: () => import('../pages/student/LiveQuiz.vue') },
+      { path: 'live-quiz/:id', name: 'StudentLiveQuizPlay', component: () => import('../pages/student/LiveQuiz.vue') },
+      { path: 'revision', name: 'StudentRevision', component: () => import('../pages/student/Revision.vue') },
+      { path: 'notices', name: 'StudentNotices', component: () => import('../pages/common/Noticeboard.vue') },
+      { path: 'my-notes', name: 'StudentMyNotes', component: () => import('../pages/student/MyNotes.vue') },
+      { path: 'exam-plan', name: 'StudentExamPlan', component: () => import('../pages/student/ExamPlan.vue') },
       { path: 'downloads', name: 'StudentDownloads', component: StudentDownloads },
       { path: 'settings', name: 'StudentSettings', component: StudentSettings },
       { path: 'search', name: 'StudentSearch', component: StudentSearch },
@@ -259,6 +285,12 @@ const routes: RouteRecordRaw[] = [
       { path: 'constructs', name: 'TeacherConstructs', component: TeacherConstructs },
       { path: 'coverage', name: 'TeacherCoverage', component: TeacherCoverage },
       { path: 'class-map', name: 'TeacherClassMap', component: TeacherClassMap },
+      { path: 'live-quiz', name: 'TeacherLiveQuiz', component: () => import('../pages/teacher/LiveQuiz.vue') },
+      { path: 'live-quiz/:id', name: 'TeacherLiveQuizHost', component: () => import('../pages/teacher/LiveQuizHost.vue') },
+      { path: 'early-warning', name: 'TeacherEarlyWarning', component: () => import('../pages/teacher/EarlyWarning.vue') },
+      { path: 'notices', name: 'TeacherNotices', component: () => import('../pages/common/Noticeboard.vue') },
+      { path: 'scheme', name: 'TeacherScheme', component: () => import('../pages/teacher/Scheme.vue') },
+      { path: 'enote-questions', name: 'TeacherENoteQuestions', component: () => import('../pages/teacher/ENoteQuestions.vue') },
       { path: 'settings', name: 'TeacherSettings', component: TeacherSettings },
       { path: 'enotes', name: 'ENotes', component: ENotes },
       { path: 'enotes/builder/:id', name: 'ENoteBuilder', component: ENoteBuilder },
@@ -297,6 +329,8 @@ const routes: RouteRecordRaw[] = [
       { path: 'charts', name: 'HODCharts', component: HODCharts },
       { path: 'live-classes', name: 'HODLiveClasses', component: HODLiveClasses },
       { path: 'chat', name: 'HODChat', component: HODChat },
+      { path: 'early-warning', name: 'HODEarlyWarning', component: () => import('../pages/teacher/EarlyWarning.vue') },
+      { path: 'notices', name: 'HODNotices', component: () => import('../pages/common/Noticeboard.vue') },
       { path: 'marksheet', name: 'HODMarksheet', component: HODMarksheet },
       { path: 'physical-exams', name: 'HODPhysicalExams', component: HODPhysicalExams },
       { path: 'search', name: 'HODSearch', component: HODSearch }
@@ -324,6 +358,10 @@ const routes: RouteRecordRaw[] = [
       { path: 'promotion', name: 'AdminPromotion', component: AdminPromotion },
       { path: 'reports', name: 'AdminReports', component: AdminReports },
       { path: 'audit-logs', name: 'AdminAuditLogs', component: AdminAuditLogs },
+      { path: 'demo-requests', name: 'AdminDemoRequests', component: AdminDemoRequests },
+      { path: 'parent-links', name: 'AdminParentLinks', component: () => import('../pages/admin/ParentLinks.vue') },
+      { path: 'notices', name: 'AdminNotices', component: () => import('../pages/common/Noticeboard.vue') },
+      { path: 'exam-dates', name: 'AdminExamDates', component: () => import('../pages/admin/ExamDates.vue') },
       { path: 'permissions', name: 'AdminPermissions', component: AdminPermissions },
       { path: 'settings', name: 'AdminSettings', component: AdminSettings },
       { path: 'backup', name: 'AdminBackup', component: AdminBackup },
@@ -353,7 +391,18 @@ const routes: RouteRecordRaw[] = [
 const router = createRouter({
   // BASE_URL is '/' in both dev and the production build (see vite.config.ts's `base`).
   history: createWebHistory(import.meta.env.BASE_URL),
-  routes
+  routes,
+  // Only the public pages scroll here: a #section link (/#demo, /guide#teacher) goes to it, and
+  // moving between the website and the guide starts at the top. Everything else is left alone,
+  // so in-app pages that update their own query string keep their place.
+  scrollBehavior(to, from, savedPosition) {
+    const isPublic = (path: string) => path === '/' || path === '/guide' || path.startsWith('/for/')
+    if (!isPublic(to.path)) return false
+    if (savedPosition) return savedPosition
+    if (to.hash) return { el: to.hash, top: 80, behavior: to.path === from.path ? 'smooth' : 'auto' }
+    if (to.path !== from.path) return { top: 0 }
+    return false
+  }
 })
 
 // Navigation guard
@@ -431,6 +480,14 @@ router.beforeEach((to, from, next) => {
     to.name !== 'TeacherChangePassword'
   ) {
     next('/teacher/change-password')
+    return
+  }
+
+  // A signed-in user may still go back to the website from the guide or a /for/* page (its
+  // "eSpace home" links); opening the site fresh still takes them to their dashboard.
+  const fromPublicPage = from.matched.length > 0 && (from.path === '/guide' || from.path.startsWith('/for/'))
+  if (authStore.isAuthenticated && to.path === '/' && fromPublicPage) {
+    next()
     return
   }
 

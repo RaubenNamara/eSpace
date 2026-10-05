@@ -7,9 +7,11 @@ deployment:
     - /bin/mkdir -p $DEPLOYPATH/backend/routes
     - /bin/mkdir -p $DEPLOYPATH/backend/config
     - /bin/mkdir -p $DEPLOYPATH/backend/public
+    - /bin/mkdir -p $DEPLOYPATH/backend/scripts
     - /bin/mkdir -p $DEPLOYPATH/assets
     - /bin/cp -rf frontend/dist/. $DEPLOYPATH/
     - /bin/cp -rf backend/app/. $DEPLOYPATH/backend/app/
     - /bin/cp -rf backend/routes/. $DEPLOYPATH/backend/routes/
     - /bin/cp -rf backend/config/. $DEPLOYPATH/backend/config/
     - /bin/cp -rf backend/public/. $DEPLOYPATH/backend/public/
+    - /bin/cp -rf backend/scripts/. $DEPLOYPATH/backend/scripts/

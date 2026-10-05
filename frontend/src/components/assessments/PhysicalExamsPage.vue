@@ -1,256 +1,220 @@
 <template>
-  <div>
-    <div v-if="!activeExam">
-      <div class="flex items-center gap-2 mb-1">
-        <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight whitespace-nowrap flex-shrink-0">Physical Exams</h1>
-
-        <div class="flex flex-nowrap items-center gap-2 overflow-x-auto -mx-1 px-1 sm:mx-0 sm:px-0 min-w-0">
-          <select v-model="selectedTermId" class="flex-shrink-0 max-w-[92px] truncate px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
-            <option :value="null">Terms</option>
-            <option v-for="term in terms" :key="term.id" :value="term.id">
-              {{ term.name }}{{ term.academic_year ? ` - ${term.academic_year}` : '' }}{{ term.is_current ? ' (Current)' : '' }}
-            </option>
-          </select>
-          <select v-model="selectedClassId" class="flex-shrink-0 max-w-[92px] truncate px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
-            <option :value="null">Class</option>
-            <option v-for="cls in classes" :key="cls.id" :value="cls.id">
-              {{ cls.name }}{{ cls.stream_name ? ` - ${cls.stream_name}` : '' }}
-            </option>
-          </select>
-          <select v-model="selectedSubjectId" class="flex-shrink-0 max-w-[92px] truncate px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
-            <option :value="null">Subject</option>
-            <option v-for="subj in subjects" :key="subj.id" :value="subj.id">{{ subj.name }}</option>
-          </select>
-          <button
-            v-if="canQuery"
-            @click="showCreateForm = true"
-            class="flex-shrink-0 px-2.5 py-1 text-xs font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 whitespace-nowrap"
-          >
-            + New Exam
+  <!-- Physical exams (teacher, HOD and admin): tests sat on paper - their marks typed in here, and
+       whether each counts on report cards. Opens on a class straight away, never blank. -->
+  <div class="w-full">
+    <!-- ===== The exams of a class and subject ===== -->
+    <template v-if="!activeExam">
+      <PageHeader title="Physical Exams" description="Tests sat on paper - type in the marks and choose whether each one counts on report cards." icon="pencil" accent="amber">
+        <template #actions>
+          <button v-if="canQuery" type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold bg-amber-500 text-white hover:bg-amber-600 shadow-sm shadow-amber-500/20" @click="openCreate">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            <span class="hidden sm:inline">New exam</span><span class="sm:hidden">New</span>
           </button>
-        </div>
-      </div>
-      <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">
-        Record marks for exams/tests students sat on paper, and control whether each one counts on report cards.
-      </p>
+        </template>
+        <template #filters>
+          <PickerDropdown v-if="termOptions.length" v-model="termId" label="Term" :options="termOptions" align="right" />
+          <PickerDropdown v-if="classOptions.length" v-model="classId" label="Class" :options="classOptions" align="right" />
+          <PickerDropdown v-if="subjectOptions.length" v-model="subjectId" label="Subject" :options="subjectOptions" align="right" />
+        </template>
+      </PageHeader>
 
-      <div v-if="showCreateForm" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-4">
-        <h2 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">New Physical Exam</h2>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
-          <div>
-            <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Title</label>
-            <input v-model="createForm.title" type="text" placeholder="e.g. Mid-Term CAT 1" class="w-full px-2.5 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+      <div v-if="error" class="mb-4 flex items-start gap-3 rounded-xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-900/20 p-3">
+        <AppIcon name="warning" class="w-5 h-5 text-rose-500 flex-shrink-0" />
+        <p class="flex-1 text-sm text-rose-700 dark:text-rose-200">{{ error }}</p>
+      </div>
+
+      <Skeleton v-if="booting || loading" variant="list" :count="3" />
+      <EmptyState v-else-if="!canQuery" icon="pencil" tone="amber" title="Nothing to show yet" message="Physical exams appear for the classes and subjects you teach." />
+      <EmptyState v-else-if="!exams.length" icon="pencil" tone="amber" title="No physical exams yet" message="Record a test the class sat on paper - a CAT, a mid-term, a practical - and type in everyone's marks.">
+        <button type="button" class="px-4 py-2 rounded-xl text-sm font-semibold bg-amber-500 text-white hover:bg-amber-600" @click="openCreate">Add the first exam</button>
+      </EmptyState>
+
+      <ul v-else class="space-y-3">
+        <li v-for="exam in exams" :key="exam.id" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+          <!-- Date -->
+          <div class="flex items-center gap-3 sm:w-auto min-w-0 flex-1">
+            <div class="w-14 h-14 flex-shrink-0 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-200 flex flex-col items-center justify-center">
+              <span class="text-[10px] font-bold uppercase">{{ monthOf(exam.exam_date) }}</span>
+              <span class="text-xl font-extrabold leading-none">{{ dayOf(exam.exam_date) }}</span>
+            </div>
+            <div class="min-w-0">
+              <p class="text-sm font-bold text-gray-900 dark:text-white truncate">{{ exam.title }}</p>
+              <p class="text-[11px] text-gray-500 dark:text-gray-400">Out of {{ Number(exam.max_score) }}<template v-if="exam.avg_score !== null && exam.avg_score !== undefined"> · average {{ exam.avg_score }} ({{ Math.round(exam.avg_score / exam.max_score * 100) }}%)</template></p>
+              <!-- Marking progress -->
+              <div v-if="exam.class_size" class="mt-1.5 flex items-center gap-2 max-w-xs">
+                <span class="flex-1 h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden"><span class="block h-full rounded-full" :class="exam.marked_count === exam.class_size ? 'bg-emerald-500' : 'bg-amber-500'" :style="{ width: `${(exam.marked_count || 0) / exam.class_size * 100}%` }"></span></span>
+                <span class="text-[11px] text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ exam.marked_count || 0 }}/{{ exam.class_size }} marked</span>
+              </div>
+            </div>
           </div>
-          <div>
-            <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Max Score</label>
-            <input v-model.number="createForm.max_score" type="number" min="1" step="0.5" class="w-full px-2.5 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+          <div class="flex items-center gap-3 justify-between sm:justify-end">
+            <!-- Counts on report cards -->
+            <button type="button" role="switch" :aria-checked="exam.include_on_report" class="inline-flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-gray-300" :title="exam.include_on_report ? 'Counts on report cards - tap to leave it off' : 'Not on report cards - tap to include it'" @click="toggleIncludeOnReport(exam)">
+              <span class="relative w-9 h-5 rounded-full transition-colors" :class="exam.include_on_report ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'">
+                <span class="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all" :class="exam.include_on_report ? 'left-[18px]' : 'left-0.5'"></span>
+              </span>
+              On report cards
+            </button>
+            <div class="flex items-center gap-1">
+              <button type="button" class="px-3 py-1.5 rounded-lg text-xs font-semibold" :class="exam.marked_count === exam.class_size ? 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700' : 'bg-amber-500 text-white hover:bg-amber-600'" @click="openMarksheet(exam)">
+                {{ exam.marked_count ? (exam.marked_count === exam.class_size ? 'Edit marks' : 'Continue marking') : 'Enter marks' }}
+              </button>
+              <ActionMenu :items="[{ label: 'Delete exam', icon: 'trash', danger: true, run: () => removeExam(exam) }]" :label="`More for ${exam.title}`" />
+            </div>
           </div>
-          <div>
-            <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Exam Date</label>
-            <input v-model="createForm.exam_date" type="date" class="w-full px-2.5 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
-          </div>
-        </div>
-        <label class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 mb-3">
-          <input v-model="createForm.include_on_report" type="checkbox" class="rounded border-gray-300 dark:border-gray-600">
-          Show on report cards
-        </label>
-        <div class="flex items-center gap-2">
-          <button @click="submitCreate" :disabled="creating" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">
-            {{ creating ? 'Creating...' : 'Create' }}
-          </button>
-          <button @click="showCreateForm = false" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-            Cancel
-          </button>
-        </div>
-      </div>
+        </li>
+      </ul>
+    </template>
 
-      <div v-if="error" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6 text-red-600 dark:text-red-400 text-sm">
-        {{ error }}
-      </div>
-
-      <div v-if="loading" class="flex items-center justify-center py-16">
-        <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
-      </div>
-
-      <div v-else-if="!canQuery" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center text-gray-500 dark:text-gray-400">
-        Select a term, class/stream and subject to view physical exams.
-      </div>
-
-      <div v-else class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <table class="w-full text-sm border-collapse">
-          <thead>
-            <tr class="bg-gray-50 dark:bg-gray-700">
-              <th class="border border-gray-200 dark:border-gray-600 px-3 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Title</th>
-              <th class="border border-gray-200 dark:border-gray-600 px-3 py-2 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap">Date</th>
-              <th class="border border-gray-200 dark:border-gray-600 px-3 py-2 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap">Max Score</th>
-              <th class="border border-gray-200 dark:border-gray-600 px-3 py-2 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap">On Report</th>
-              <th class="border border-gray-200 dark:border-gray-600 px-3 py-2 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap"></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="exam in exams" :key="exam.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/40">
-              <td class="border border-gray-200 dark:border-gray-600 px-3 py-2 font-medium text-gray-900 dark:text-white">{{ exam.title }}</td>
-              <td class="border border-gray-200 dark:border-gray-600 px-3 py-2 text-center text-gray-700 dark:text-gray-300 whitespace-nowrap">{{ formatDate(exam.exam_date) }}</td>
-              <td class="border border-gray-200 dark:border-gray-600 px-3 py-2 text-center text-gray-700 dark:text-gray-300">{{ exam.max_score }}</td>
-              <td class="border border-gray-200 dark:border-gray-600 px-3 py-2 text-center">
-                <label class="inline-flex items-center gap-1.5 cursor-pointer">
-                  <input type="checkbox" :checked="exam.include_on_report" @change="toggleIncludeOnReport(exam)" class="rounded border-gray-300 dark:border-gray-600">
-                </label>
-              </td>
-              <td class="border border-gray-200 dark:border-gray-600 px-3 py-2 text-center whitespace-nowrap">
-                <button @click="openMarksheet(exam)" class="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline mr-3">Enter Marks</button>
-                <button @click="removeExam(exam)" class="text-xs font-medium text-red-600 dark:text-red-400 hover:underline">Delete</button>
-              </td>
-            </tr>
-            <tr v-if="exams.length === 0">
-              <td colspan="5" class="border border-gray-200 dark:border-gray-600 px-3 py-8 text-center text-gray-400">
-                No physical exams recorded for this selection yet.
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Marksheet entry -->
-    <div v-else>
-      <div class="flex items-center gap-2 mb-1">
-        <button @click="closeMarksheet" class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline flex-shrink-0">&larr; Back</button>
-        <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight truncate">{{ activeExam.title }}</h1>
-      </div>
-      <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">
-        {{ activeExam.subject_name }} &middot; {{ activeExam.class_name }}{{ activeExam.stream_name ? ' - ' + activeExam.stream_name : '' }} &middot; Out of {{ activeExam.max_score }}
-      </p>
-
-      <div v-if="marksheetLoading" class="flex items-center justify-center py-16">
-        <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
-      </div>
-
-      <div v-else class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <table class="w-full text-sm border-collapse">
-          <thead>
-            <tr class="bg-gray-50 dark:bg-gray-700">
-              <th class="border border-gray-200 dark:border-gray-600 px-3 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Student</th>
-              <th class="border border-gray-200 dark:border-gray-600 px-3 py-2 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap">Score (/{{ activeExam.max_score }})</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="student in marksheetStudents" :key="student.student_id" class="hover:bg-gray-50 dark:hover:bg-gray-700/40">
-              <td class="border border-gray-200 dark:border-gray-600 px-3 py-2">
-                <p class="font-medium text-gray-900 dark:text-white">{{ student.first_name }} {{ student.last_name }}</p>
-                <p class="text-xs text-gray-400 dark:text-gray-500">{{ student.admission_number }}</p>
-              </td>
-              <td class="border border-gray-200 dark:border-gray-600 px-3 py-2 text-center">
-                <input
-                  v-model.number="student.score"
-                  type="number" min="0" :max="activeExam.max_score" step="0.5"
-                  class="w-24 px-2 py-1 text-sm text-center border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
-                >
-              </td>
-            </tr>
-            <tr v-if="marksheetStudents.length === 0">
-              <td colspan="2" class="border border-gray-200 dark:border-gray-600 px-3 py-8 text-center text-gray-400">
-                No students found in this class.
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="mt-4">
-        <button @click="saveMarksheet" :disabled="savingMarks" class="px-4 py-2 text-sm font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">
-          {{ savingMarks ? 'Saving...' : 'Save Marks' }}
+    <!-- ===== Typing in the marks ===== -->
+    <template v-else>
+      <div class="flex items-start gap-3 mb-4">
+        <button type="button" class="mt-0.5 p-2 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800" aria-label="Back to exams" @click="closeMarksheet">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
         </button>
+        <div class="min-w-0 flex-1">
+          <h1 class="text-lg font-bold text-gray-900 dark:text-white truncate">{{ activeExam.title }}</h1>
+          <p class="text-xs text-gray-500 dark:text-gray-400">{{ activeExam.subject_name }} · {{ activeExam.class_name }}{{ activeExam.stream_name ? `-${activeExam.stream_name}` : '' }} · out of {{ Number(activeExam.max_score) }}</p>
+        </div>
       </div>
+
+      <Skeleton v-if="marksheetLoading" variant="list" :count="6" />
+
+      <template v-else>
+        <StatStrip :items="markStats" class="mb-3" />
+        <input v-model="markSearch" type="search" placeholder="Find a learner" class="w-full sm:max-w-xs mb-3 px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+
+        <EmptyState v-if="!marksheetStudents.length" compact icon="users" tone="gray" title="No students in this class" />
+        <ul v-else class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700 mb-24">
+          <li v-for="student in shownMarkRows" :key="student.student_id" class="px-3 sm:px-4 py-2 flex items-center gap-3">
+            <div class="min-w-0 flex-1">
+              <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ niceName(`${student.first_name} ${student.last_name}`) }}</p>
+              <p class="text-[11px] text-gray-400">{{ student.admission_number }}</p>
+            </div>
+            <span v-if="scoreState(student.score) === 'over'" class="text-[11px] font-semibold text-rose-600 dark:text-rose-300">over {{ Number(activeExam.max_score) }}</span>
+            <span v-else-if="student.score !== null && student.score !== undefined && (student.score as any) !== ''" class="text-[11px] tabular-nums w-10 text-right" :class="pctTone(student.score)">{{ Math.round(Number(student.score) / activeExam.max_score * 100) }}%</span>
+            <!-- Enter moves to the next learner, so a whole class can be typed in one go -->
+            <input
+              :ref="(el) => setInputRef(student.student_id, el)"
+              v-model.number="student.score"
+              type="number"
+              inputmode="decimal"
+              min="0"
+              :max="activeExam.max_score"
+              step="0.5"
+              placeholder="–"
+              class="w-20 px-2 py-1.5 text-sm text-center font-semibold rounded-lg border bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-amber-500"
+              :class="scoreState(student.score) === 'over' ? 'border-rose-400' : 'border-gray-300 dark:border-gray-600'"
+              @input="dirty = true"
+              @keydown.enter.prevent="focusNext(student.student_id)"
+            >
+          </li>
+        </ul>
+
+        <!-- Save bar, always in reach -->
+        <div class="fixed bottom-0 inset-x-0 z-30 lg:left-auto lg:right-6 lg:bottom-6 lg:inset-x-auto">
+          <div class="mx-auto lg:mx-0 max-w-xl flex items-center gap-3 px-4 py-3 bg-white/95 dark:bg-gray-800/95 backdrop-blur border-t lg:border border-gray-200 dark:border-gray-700 lg:rounded-2xl shadow-lg">
+            <p class="flex-1 text-xs" :class="dirty ? 'text-amber-700 dark:text-amber-300 font-semibold' : 'text-gray-500 dark:text-gray-400'">
+              {{ overCount ? `${overCount} mark${overCount === 1 ? ' is' : 's are'} over ${Number(activeExam.max_score)}` : dirty ? 'Unsaved changes' : 'All marks saved' }}
+            </p>
+            <button type="button" :disabled="savingMarks || !!overCount || !dirty" class="px-5 py-2 rounded-xl text-sm font-semibold bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-50" @click="saveMarksheet">
+              {{ savingMarks ? 'Saving…' : 'Save marks' }}
+            </button>
+          </div>
+        </div>
+      </template>
+    </template>
+
+    <!-- New exam -->
+    <div v-if="showCreateForm" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4" @click.self="showCreateForm = false">
+      <form class="w-full sm:max-w-md bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-2xl shadow-2xl p-5" @submit.prevent="submitCreate">
+        <h2 class="text-base font-bold text-gray-900 dark:text-white">New physical exam</h2>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">{{ classLabel }} · {{ subjectLabel }} · {{ termLabel }}</p>
+        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Title</label>
+        <input v-model="createForm.title" type="text" required placeholder="e.g. Mid-term CAT 1" class="w-full mb-3 px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white">
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Out of</label>
+            <input v-model.number="createForm.max_score" type="number" min="1" step="0.5" required class="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Date sat</label>
+            <input v-model="createForm.exam_date" type="date" required class="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white">
+          </div>
+        </div>
+        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 mb-5 cursor-pointer">
+          <input v-model="createForm.include_on_report" type="checkbox" class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-amber-500 focus:ring-amber-500">
+          Counts on report cards
+        </label>
+        <div class="flex justify-end gap-2">
+          <button type="button" class="px-4 py-2 rounded-xl text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700" @click="showCreateForm = false">Cancel</button>
+          <button type="submit" :disabled="creating" class="px-4 py-2 rounded-xl text-sm font-semibold bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-50">{{ creating ? 'Creating…' : 'Create and enter marks' }}</button>
+        </div>
+      </form>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, nextTick, type ComponentPublicInstance } from 'vue'
 import axios from 'axios'
-import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
+import { useConfirmStore } from '@/stores/confirm'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StatStrip, { type StatItem } from '@/components/ui/StatStrip.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
+import Skeleton from '@/components/ui/Skeleton.vue'
+import ActionMenu from '@/components/ui/ActionMenu.vue'
+import PickerDropdown from '@/components/common/PickerDropdown.vue'
+import AppIcon from '@/components/common/AppIcon.vue'
+import { niceName } from '@/components/dashboard/teacher/time'
+import { useClassSubjectPicker } from '@/composables/useClassSubjectPicker'
 import type { PhysicalExam, PhysicalExamMarksheetStudent } from '@/types/physicalExam'
 
-interface Term {
-  id: number
-  name: string
-  academic_year: string | null
-  is_current: number | boolean
-}
+// The list adds how far the marking has got (PhysicalAssessmentService::listForClassSubject)
+type ExamRow = PhysicalExam & { marked_count?: number | null; avg_score?: number | null; class_size?: number | null }
 
-interface ClassOption {
-  id: number
-  name: string
-  stream_name?: string | null
-}
-
-interface SubjectOption {
-  id: number
-  name: string
-}
-
-const authStore = useAuthStore()
 const toast = useToastStore()
-const roleBase = () => (authStore.userRole === 'teacher' ? 'teacher' : authStore.userRole === 'hod' ? 'hod' : 'admin')
+const confirmDialog = useConfirmStore()
+const { roleBase, termId, classId, subjectId, termOptions, classOptions, subjectOptions, load: loadChoices, rememberChoice } = useClassSubjectPicker('physical-exams')
 
-const terms = ref<Term[]>([])
-const classes = ref<ClassOption[]>([])
-const subjects = ref<SubjectOption[]>([])
+const canQuery = computed(() => !!(termId.value && classId.value && subjectId.value))
+const labelOf = (opts: { value: number; label: string }[], id: number | null) => opts.find(o => o.value === id)?.label ?? ''
+const classLabel = computed(() => labelOf(classOptions.value, classId.value))
+const subjectLabel = computed(() => labelOf(subjectOptions.value, subjectId.value))
+const termLabel = computed(() => labelOf(termOptions.value, termId.value))
 
-const selectedTermId = ref<number | null>(null)
-const selectedClassId = ref<number | null>(null)
-const selectedSubjectId = ref<number | null>(null)
-
-const canQuery = computed(() => !!(selectedTermId.value && selectedClassId.value && selectedSubjectId.value))
-
-const exams = ref<PhysicalExam[]>([])
+const exams = ref<ExamRow[]>([])
+const booting = ref(true)
 const loading = ref(false)
 const error = ref<string | null>(null)
 
 const showCreateForm = ref(false)
 const creating = ref(false)
-const createForm = ref({ title: '', max_score: 100, exam_date: '', include_on_report: true })
+const today = () => new Date().toISOString().slice(0, 10)
+const createForm = ref({ title: '', max_score: 100, exam_date: today(), include_on_report: true })
 
-const activeExam = ref<PhysicalExam | null>(null)
+const activeExam = ref<ExamRow | null>(null)
 const marksheetStudents = ref<PhysicalExamMarksheetStudent[]>([])
 const marksheetLoading = ref(false)
 const savingMarks = ref(false)
+const dirty = ref(false)
+const markSearch = ref('')
 
-const formatDate = (d: string) => new Date(d).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
-
-const loadTerms = async () => {
-  const res = await axios.get(`/api/${roleBase()}/report-cards/terms`)
-  terms.value = res.data.data.terms
-  const current = terms.value.find(t => t.is_current)
-  selectedTermId.value = current ? current.id : null
-}
-
-const loadClasses = async () => {
-  const base = roleBase()
-  const url = base === 'hod' ? '/api/hod/performance/classes' : `/api/${base}/classes`
-  const res = await axios.get(url)
-  classes.value = base === 'hod' ? res.data.data.classes : res.data.data
-}
-
-const loadSubjects = async () => {
-  const base = roleBase()
-  const url = base === 'admin' ? '/api/admin/subjects' : `/api/${base}/performance/subjects`
-  const res = await axios.get(url)
-  subjects.value = base === 'admin' ? res.data.data : res.data.data.subjects
-}
+const monthOf = (d: string) => new Date(d).toLocaleDateString(undefined, { month: 'short' })
+const dayOf = (d: string) => new Date(d).getDate()
 
 const loadExams = async () => {
   if (!canQuery.value) {
     exams.value = []
     return
   }
+  rememberChoice()
   loading.value = true
   error.value = null
   try {
     const res = await axios.get(`/api/${roleBase()}/physical-exams`, {
-      params: { class_id: selectedClassId.value, subject_id: selectedSubjectId.value, term_id: selectedTermId.value },
+      params: { class_id: classId.value, subject_id: subjectId.value, term_id: termId.value },
     })
     exams.value = res.data.data.exams
   } catch (err: any) {
@@ -261,23 +225,31 @@ const loadExams = async () => {
   }
 }
 
+const openCreate = () => {
+  createForm.value = { title: '', max_score: 100, exam_date: today(), include_on_report: true }
+  showCreateForm.value = true
+}
+
 const submitCreate = async () => {
   if (!createForm.value.title.trim() || !createForm.value.max_score || !createForm.value.exam_date) {
-    toast.error('Title, max score and exam date are all required')
+    toast.error('Title, out of and date are all needed')
     return
   }
   creating.value = true
   try {
-    await axios.post(`/api/${roleBase()}/physical-exams`, {
+    const res = await axios.post(`/api/${roleBase()}/physical-exams`, {
       ...createForm.value,
-      class_id: selectedClassId.value,
-      subject_id: selectedSubjectId.value,
-      term_id: selectedTermId.value,
+      class_id: classId.value,
+      subject_id: subjectId.value,
+      term_id: termId.value,
     })
-    toast.success('Physical exam created')
     showCreateForm.value = false
-    createForm.value = { title: '', max_score: 100, exam_date: '', include_on_report: true }
     await loadExams()
+    // Straight on to typing the marks in
+    const createdId = res.data?.data?.exam?.id ?? res.data?.data?.id
+    const created = exams.value.find(e => e.id === createdId) ?? exams.value.find(e => e.title === createForm.value.title)
+    toast.success('Exam created - now type in the marks')
+    if (created) openMarksheet(created)
   } catch (err: any) {
     toast.error(err.response?.data?.message || 'Failed to create physical exam')
   } finally {
@@ -285,18 +257,19 @@ const submitCreate = async () => {
   }
 }
 
-const toggleIncludeOnReport = async (exam: PhysicalExam) => {
+const toggleIncludeOnReport = async (exam: ExamRow) => {
   const next = !exam.include_on_report
   try {
     await axios.put(`/api/${roleBase()}/physical-exams/${exam.id}`, { include_on_report: next })
     exam.include_on_report = next
+    toast.success(next ? 'Counts on report cards now' : 'Left off report cards')
   } catch (err: any) {
     toast.error(err.response?.data?.message || 'Failed to update exam')
   }
 }
 
-const removeExam = async (exam: PhysicalExam) => {
-  if (!confirm(`Delete "${exam.title}"? This removes its marks and drops it from any report card.`)) return
+const removeExam = async (exam: ExamRow) => {
+  if (!await confirmDialog.open({ title: 'Delete exam', message: `Delete "${exam.title}"? Its marks are removed and it drops off any report card.`, confirmLabel: 'Delete', danger: true })) return
   try {
     await axios.delete(`/api/${roleBase()}/physical-exams/${exam.id}`)
     toast.success('Physical exam deleted')
@@ -306,12 +279,57 @@ const removeExam = async (exam: PhysicalExam) => {
   }
 }
 
-const openMarksheet = async (exam: PhysicalExam) => {
+// ---- Typing in the marks ----
+const inputRefs = new Map<number, HTMLInputElement>()
+const setInputRef = (id: number, el: Element | ComponentPublicInstance | null) => {
+  if (el instanceof HTMLInputElement) inputRefs.set(id, el)
+  else inputRefs.delete(id)
+}
+const shownMarkRows = computed(() => {
+  const q = markSearch.value.trim().toLowerCase()
+  return marksheetStudents.value.filter(s => !q || `${s.first_name} ${s.last_name} ${s.admission_number}`.toLowerCase().includes(q))
+})
+const focusNext = (id: number) => {
+  const rows = shownMarkRows.value
+  const i = rows.findIndex(r => r.student_id === id)
+  const next = rows[i + 1]
+  if (next) {
+    const el = inputRefs.get(next.student_id)
+    el?.focus()
+    el?.select()
+  }
+}
+const hasScore = (v: unknown) => v !== null && v !== undefined && v !== ''
+const scoreState = (v: unknown) => (hasScore(v) && activeExam.value && Number(v) > Number(activeExam.value.max_score) ? 'over' : 'ok')
+const overCount = computed(() => marksheetStudents.value.filter(s => scoreState(s.score) === 'over').length)
+const pctTone = (v: unknown) => {
+  const pct = activeExam.value ? Number(v) / Number(activeExam.value.max_score) * 100 : 0
+  return pct >= 70 ? 'text-emerald-600 dark:text-emerald-300' : pct >= 50 ? 'text-amber-600 dark:text-amber-300' : 'text-rose-600 dark:text-rose-300'
+}
+const markStats = computed<StatItem[]>(() => {
+  const scored = marksheetStudents.value.filter(s => hasScore(s.score)).map(s => Number(s.score))
+  const max = Number(activeExam.value?.max_score || 0)
+  const avg = scored.length ? scored.reduce((a, b) => a + b, 0) / scored.length : null
+  return [
+    { label: 'Marked', value: `${scored.length}/${marksheetStudents.value.length}`, tone: 'amber' },
+    { label: 'Average', value: avg === null ? '–' : `${Math.round(avg * 10) / 10}`, tone: 'sky', hint: avg === null || !max ? undefined : `${Math.round(avg / max * 100)}%` },
+    { label: 'Highest', value: scored.length ? Math.max(...scored) : '–', tone: 'emerald' },
+    { label: 'Lowest', value: scored.length ? Math.min(...scored) : '–', tone: 'rose' }
+  ]
+})
+
+const openMarksheet = async (exam: ExamRow) => {
   activeExam.value = exam
+  markSearch.value = ''
+  dirty.value = false
   marksheetLoading.value = true
   try {
     const res = await axios.get(`/api/${roleBase()}/physical-exams/${exam.id}/marksheet`)
     marksheetStudents.value = res.data.data.students
+    await nextTick()
+    // Start where the marking left off: the first learner without a mark
+    const first = marksheetStudents.value.find(s => !hasScore(s.score))
+    if (first && window.matchMedia('(pointer: fine)').matches) inputRefs.get(first.student_id)?.focus()
   } catch (err: any) {
     toast.error(err.response?.data?.message || 'Failed to load marksheet')
     activeExam.value = null
@@ -320,18 +338,22 @@ const openMarksheet = async (exam: PhysicalExam) => {
   }
 }
 
-const closeMarksheet = () => {
+const closeMarksheet = async () => {
+  if (dirty.value && !await confirmDialog.open({ title: 'Leave without saving?', message: 'Your unsaved marks will be lost.', confirmLabel: 'Leave', danger: true })) return
   activeExam.value = null
   marksheetStudents.value = []
+  dirty.value = false
+  await loadExams()
 }
 
 const saveMarksheet = async () => {
-  if (!activeExam.value) return
+  if (!activeExam.value || overCount.value) return
   savingMarks.value = true
   try {
     await axios.put(`/api/${roleBase()}/physical-exams/${activeExam.value.id}/marksheet`, {
-      scores: marksheetStudents.value.map(s => ({ student_id: s.student_id, score: s.score })),
+      scores: marksheetStudents.value.map(s => ({ student_id: s.student_id, score: hasScore(s.score) ? s.score : null })),
     })
+    dirty.value = false
     toast.success('Marks saved')
   } catch (err: any) {
     toast.error(err.response?.data?.message || 'Failed to save marks')
@@ -340,9 +362,15 @@ const saveMarksheet = async () => {
   }
 }
 
-watch([selectedClassId, selectedSubjectId, selectedTermId], loadExams)
+watch([classId, subjectId, termId], loadExams)
 
 onMounted(async () => {
-  await Promise.all([loadTerms(), loadClasses(), loadSubjects()])
+  try {
+    await loadChoices()
+  } catch (err: any) {
+    error.value = err.response?.data?.message || 'Failed to load classes and subjects'
+  } finally {
+    booting.value = false
+  }
 })
 </script>

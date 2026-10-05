@@ -65,7 +65,7 @@ class StudentController extends Controller
 
         $search = $this->query('search', '');
         $page = (int) $this->query('page', 1);
-        $limit = (int) $this->query('limit', 20);
+        $limit = max(1, min(5000, (int) $this->query('limit', 20)));
 
         $where = ['sde.department_id = :department_id', "sde.status = 'active'", 'sde.deleted_at IS NULL', 's.deleted_at IS NULL'];
         $params = ['department_id' => $departmentId];

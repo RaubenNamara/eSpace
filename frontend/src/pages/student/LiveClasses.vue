@@ -1,136 +1,109 @@
 <template>
-  <div>
-    <!-- Header - a plain title/subtitle row, matching the compact style used on the teacher
-         dashboard; the live/upcoming/past counts fold into the subtitle. -->
-    <div class="mb-4">
-      <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Live Classes</h1>
-      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 flex flex-wrap items-center gap-x-1.5">
-        <span>Join real-time sessions from your teachers</span>
-        <template v-if="!loading && classes.length > 0">
-          <span>&middot;</span>
-          <span v-if="liveNow.length > 0" class="inline-flex items-center gap-1 text-red-600 dark:text-red-400 font-medium">
-            <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>{{ liveNow.length }} live now
-          </span>
-          <span v-if="liveNow.length > 0">&middot;</span>
-          <span>{{ upcoming.length }} upcoming &middot; {{ past.length }} past</span>
-        </template>
-      </p>
-    </div>
+  <div class="w-full">
+    <PageHeader title="Live Classes" description="Real-time lessons with your teachers - join when they go live, catch the recording if you miss one." icon="video" accent="rose">
+      <StatStrip v-if="classes.length" :items="statItems" />
+    </PageHeader>
 
-    <div v-if="autoJoinNotice" class="mb-6 flex items-start gap-3 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4">
-      <svg class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-      </svg>
+    <div v-if="autoJoinNotice" class="mb-5 flex items-start gap-3 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4">
+      <AppIcon name="warning" class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
       <p class="text-sm text-amber-800 dark:text-amber-200">{{ autoJoinNotice }}</p>
     </div>
 
-    <div v-if="loading" class="text-center py-16">
-      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
-      <p class="mt-4 text-gray-600 dark:text-gray-400">Loading live classes...</p>
+    <Skeleton v-if="loading" variant="list" :count="3" />
+
+    <div v-else-if="error" class="flex items-start gap-3 rounded-xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-900/20 p-4">
+      <AppIcon name="warning" class="w-5 h-5 text-rose-500 flex-shrink-0" />
+      <p class="flex-1 text-sm text-rose-700 dark:text-rose-200">{{ error }}</p>
+      <button type="button" class="text-sm font-semibold text-rose-700 dark:text-rose-200 hover:underline" @click="loadClasses">Try again</button>
     </div>
 
-    <div v-else-if="error" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 flex items-start gap-3">
-      <svg class="w-6 h-6 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-      </svg>
-      <p class="text-red-800 dark:text-red-200">{{ error }}</p>
-    </div>
-
-    <div v-else-if="classes.length === 0" class="text-center py-16 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-      <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-        <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-        </svg>
-      </div>
-      <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No live classes yet</h3>
-      <p class="text-gray-500 dark:text-gray-400">Your teachers haven't scheduled any live sessions.</p>
-    </div>
+    <EmptyState v-else-if="!classes.length" icon="video" tone="rose" title="No live classes yet" message="When a teacher schedules a live lesson for your class it shows here - and you'll get a notification when it starts." />
 
     <template v-else>
-      <!-- Live Now -->
-      <div v-if="liveNow.length > 0" class="mb-10">
-        <h2 class="flex items-center gap-2 text-sm font-semibold text-red-600 dark:text-red-400 uppercase tracking-wide mb-4">
-          <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-          Live Now
-        </h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div
-            v-for="cls in liveNow"
-            :key="cls.id"
-            class="rounded-2xl p-5 bg-red-600 text-white shadow-lg shadow-red-500/20"
-          >
-            <div class="flex items-start justify-between gap-2 mb-2">
-              <h3 class="text-lg font-bold leading-tight">{{ cls.title }}</h3>
-              <span class="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-semibold bg-white/20 flex-shrink-0">
-                <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span> LIVE
-              </span>
+      <!-- Live now -->
+      <div v-for="cls in liveNow" :key="`live-${cls.id}`" class="mb-4 rounded-2xl bg-gradient-to-r from-red-600 to-rose-600 text-white p-4 sm:p-5 shadow-lg shadow-red-500/20">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+          <div class="flex items-center gap-3 flex-1 min-w-0">
+            <span class="relative flex w-3 h-3 flex-shrink-0"><span class="absolute inset-0 rounded-full bg-white animate-ping opacity-70"></span><span class="relative w-3 h-3 rounded-full bg-white"></span></span>
+            <div class="min-w-0">
+              <p class="text-[11px] font-bold uppercase tracking-widest text-red-100">Live now · started {{ elapsed(cls) }} ago</p>
+              <p class="text-lg font-bold leading-tight truncate">{{ cls.title }}</p>
+              <p class="text-xs text-red-100 truncate">{{ cls.subject_name }}<template v-if="teacherName(cls)"> · {{ teacherName(cls) }}</template></p>
             </div>
-            <p class="text-sm text-white/80 mb-4">
-              {{ cls.subject_name }} · {{ teacherName(cls) }}
-            </p>
-            <button
-              @click="joinClass(cls)"
-              :disabled="actingId === cls.id || isAlreadyJoined(cls)"
-              class="w-full py-2.5 rounded-lg bg-white text-red-600 font-semibold hover:bg-red-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-white"
-            >
-              {{ actingId === cls.id ? 'Joining...' : (isAlreadyJoined(cls) ? 'Already Joined' : 'Join Now') }}
-            </button>
           </div>
+          <button
+            type="button"
+            :disabled="actingId === cls.id || isAlreadyJoined(cls)"
+            class="px-6 py-2.5 rounded-xl text-sm font-bold bg-white text-red-700 hover:bg-red-50 disabled:opacity-70 disabled:cursor-not-allowed"
+            @click="joinClass(cls)"
+          >{{ actingId === cls.id ? 'Joining…' : (isAlreadyJoined(cls) ? 'You\'re in - check the other tab' : 'Join now') }}</button>
         </div>
       </div>
 
-      <!-- Upcoming -->
-      <div v-if="upcoming.length > 0" class="mb-10">
-        <h2 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">Upcoming</h2>
-        <div class="space-y-3">
-          <div
-            v-for="cls in upcoming"
-            :key="cls.id"
-            class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 flex items-center justify-between gap-4"
-          >
-            <div class="min-w-0">
-              <h3 class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ cls.title }}</h3>
-              <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ cls.subject_name }} · {{ teacherName(cls) }}</p>
-            </div>
-            <div class="text-right flex-shrink-0">
-              <p class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ formatSchedule(cls.scheduled_start, cls.scheduled_end) }}</p>
-              <span class="inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">Scheduled</span>
-            </div>
-          </div>
+      <!-- Next up -->
+      <div v-if="nextUp" class="mb-5 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5 flex items-center gap-4">
+        <div class="text-center flex-shrink-0 w-14 rounded-xl bg-rose-50 dark:bg-rose-900/20 py-2">
+          <p class="text-[10px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-300">{{ dayShort(nextUp.scheduled_start) }}</p>
+          <p class="text-2xl font-extrabold text-gray-900 dark:text-white leading-none">{{ new Date(nextUp.scheduled_start).getDate() }}</p>
+        </div>
+        <div class="min-w-0 flex-1">
+          <p class="text-[11px] font-bold uppercase tracking-wider text-gray-400">Next up · {{ countdown(nextUp.scheduled_start) }}</p>
+          <p class="text-base font-bold text-gray-900 dark:text-white truncate">{{ nextUp.title }}</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ timeRange(nextUp) }} · {{ nextUp.subject_name }}<template v-if="teacherName(nextUp)"> · {{ teacherName(nextUp) }}</template></p>
         </div>
       </div>
+
+      <!-- Upcoming, day by day -->
+      <section v-if="laterUpcoming.length" class="mb-6">
+        <h2 class="text-sm font-bold text-gray-900 dark:text-white mb-2">Coming up</h2>
+        <div v-for="day in groupByDay(laterUpcoming)" :key="day.label" class="mb-3">
+          <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5">{{ day.label }}</p>
+          <ul class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700">
+            <li v-for="cls in day.items" :key="cls.id" class="p-3 sm:p-4 flex items-center gap-3">
+              <div class="w-16 flex-shrink-0">
+                <p class="text-xs font-semibold text-gray-700 dark:text-gray-200">{{ clockOf(cls.scheduled_start) }}</p>
+                <p class="text-[10px] text-gray-400">to {{ clockOf(cls.scheduled_end) }}</p>
+              </div>
+              <div class="min-w-0 flex-1">
+                <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ cls.title }}</p>
+                <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ cls.subject_name }}<template v-if="teacherName(cls)"> · {{ teacherName(cls) }}</template></p>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </section>
 
       <!-- Past -->
-      <div v-if="past.length > 0">
-        <h2 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">Past Sessions</h2>
-        <div class="space-y-3">
-          <div
-            v-for="cls in past"
-            :key="cls.id"
-            class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 flex items-center justify-between gap-4"
-          >
-            <div class="min-w-0">
-              <h3 class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ cls.title }}</h3>
-              <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ cls.subject_name }} · {{ teacherName(cls) }} · {{ formatSchedule(cls.scheduled_start, cls.scheduled_end) }}</p>
+      <section v-if="past.length">
+        <button type="button" class="w-full flex items-center gap-2 mb-2 text-left" @click="showPast = !showPast">
+          <h2 class="flex-1 text-sm font-bold text-gray-900 dark:text-white">Past classes <span class="font-medium text-gray-400">{{ past.length }}</span><span v-if="recordedCount" class="ml-2 text-xs font-medium text-rose-600 dark:text-rose-300">{{ recordedCount }} with recordings</span></h2>
+          <svg class="w-4 h-4 text-gray-400 transition-transform" :class="{ 'rotate-180': showPast }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </button>
+        <ul v-if="showPast" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700">
+          <li v-for="cls in past" :key="cls.id" class="p-3 sm:p-4 flex items-center gap-3">
+            <div class="w-16 flex-shrink-0">
+              <p class="text-xs font-semibold text-gray-700 dark:text-gray-200">{{ shortDate(cls.scheduled_start) }}</p>
+              <p class="text-[10px] text-gray-400">{{ clockOf(cls.scheduled_start) }}</p>
             </div>
-            <div class="flex items-center gap-2 flex-shrink-0">
-              <span
-                class="px-2 py-0.5 rounded-full text-xs font-medium"
-                :class="cls.status === 'cancelled' ? 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'"
-              >
-                {{ cls.status === 'cancelled' ? 'Cancelled' : 'Ended' }}
-              </span>
-              <button
-                v-if="cls.is_recorded && cls.status === 'ended'"
-                @click="openRecordings(cls)"
-                class="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-xs font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                Recordings
-              </button>
+            <div class="min-w-0 flex-1">
+              <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ cls.title }}</p>
+              <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">
+                {{ cls.subject_name }} ·
+                <span :class="cls.status === 'cancelled' ? 'text-rose-600 dark:text-rose-300' : ''">{{ cls.status === 'cancelled' ? 'Cancelled' : cls.status === 'ended' ? 'Ended' : 'Didn\'t go ahead' }}</span>
+              </p>
             </div>
-          </div>
-        </div>
-      </div>
+            <button
+              v-if="cls.is_recorded && cls.status === 'ended'"
+              type="button"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-50 text-rose-700 hover:bg-rose-100 dark:bg-rose-900/30 dark:text-rose-200"
+              @click="openRecordings(cls)"
+            >
+              <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>
+              Watch
+            </button>
+          </li>
+        </ul>
+      </section>
     </template>
 
     <!-- Recordings Modal -->
@@ -172,6 +145,11 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StatStrip, { type StatItem } from '@/components/ui/StatStrip.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
+import Skeleton from '@/components/ui/Skeleton.vue'
+import AppIcon from '@/components/common/AppIcon.vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import type { LiveClass, LiveClassRecording } from '@/types/liveclass'
@@ -233,34 +211,76 @@ const startPopupWatcher = () => {
   }, 2000)
 }
 
+// Ticks every 30s so the countdown and "started … ago" move
+const now = ref(Date.now())
+const ticker = setInterval(() => { now.value = Date.now() }, 30000)
+
 onUnmounted(() => {
   if (popupWatcher) clearInterval(popupWatcher)
+  clearInterval(ticker)
 })
 
 const liveNow = computed(() => classes.value.filter(c => c.status === 'started'))
+const at = (v: string) => new Date(v).getTime()
+// Scheduled and not over yet; a scheduled class whose time has passed counts as past
 const upcoming = computed(() =>
   classes.value
-    .filter(c => c.status === 'scheduled')
-    .sort((a, b) => new Date(a.scheduled_start).getTime() - new Date(b.scheduled_start).getTime())
+    .filter(c => c.status === 'scheduled' && at(c.scheduled_end) >= now.value)
+    .sort((a, b) => at(a.scheduled_start) - at(b.scheduled_start))
 )
 const past = computed(() =>
   classes.value
-    .filter(c => c.status === 'ended' || c.status === 'cancelled')
-    .sort((a, b) => new Date(b.scheduled_start).getTime() - new Date(a.scheduled_start).getTime())
+    .filter(c => c.status === 'ended' || c.status === 'cancelled' || (c.status === 'scheduled' && at(c.scheduled_end) < now.value))
+    .sort((a, b) => at(b.scheduled_start) - at(a.scheduled_start))
 )
+const nextUp = computed(() => upcoming.value[0] ?? null)
+const laterUpcoming = computed(() => upcoming.value.slice(1))
+const recordedCount = computed(() => past.value.filter(c => c.is_recorded && c.status === 'ended').length)
+const showPast = ref(false)
+
+const statItems = computed<StatItem[]>(() => [
+  { label: 'Live now', value: liveNow.value.length, tone: 'rose' },
+  { label: 'Coming up', value: upcoming.value.length, tone: 'sky' },
+  { label: 'Past', value: past.value.length, tone: 'gray', hint: recordedCount.value ? `${recordedCount.value} recorded` : undefined }
+])
+
+const clockOf = (v: string) => new Date(v).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+const timeRange = (c: LiveClass) => `${clockOf(c.scheduled_start)}–${clockOf(c.scheduled_end)}`
+const shortDate = (v: string) => new Date(v).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
+const dayShort = (v: string) => new Date(v).toLocaleDateString(undefined, { weekday: 'short' })
+const dayLabelOf = (v: string) => {
+  const d = new Date(v).toDateString()
+  if (d === new Date().toDateString()) return 'Today'
+  if (d === new Date(Date.now() + 86400000).toDateString()) return 'Tomorrow'
+  return new Date(v).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
+}
+const groupByDay = (list: LiveClass[]) => {
+  const out: { label: string; items: LiveClass[] }[] = []
+  for (const c of list) {
+    const label = dayLabelOf(c.scheduled_start)
+    const day = out.find(x => x.label === label)
+    if (day) day.items.push(c)
+    else out.push({ label, items: [c] })
+  }
+  return out
+}
+const countdown = (v: string) => {
+  const mins = Math.round((at(v) - now.value) / 60000)
+  if (mins <= 0) return 'starting any moment'
+  if (mins < 60) return `starts in ${mins} min`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `starts in ${hours} h ${mins % 60} min`
+  const days = Math.round(hours / 24)
+  return days === 1 ? 'tomorrow' : `in ${days} days`
+}
+const elapsed = (c: LiveClass) => {
+  const mins = Math.max(0, Math.round((now.value - at(c.actual_start || c.scheduled_start)) / 60000))
+  return mins < 60 ? `${mins} min` : `${Math.floor(mins / 60)} h ${mins % 60} min`
+}
 
 const teacherName = (cls: LiveClass) => {
   if (!cls.teacher_first_name) return ''
   return `${cls.teacher_first_name} ${cls.teacher_last_name || ''}`.trim()
-}
-
-const formatSchedule = (start: string, end: string) => {
-  const s = new Date(start)
-  const e = new Date(end)
-  const dateStr = s.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-  const startTime = s.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-  const endTime = e.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-  return `${dateStr} · ${startTime} - ${endTime}`
 }
 
 const formatDate = (dateString: string) => {

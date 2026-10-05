@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace eSpace\App\Controllers\Teacher;
 
+use eSpace\App\Services\ENotePageHistory;
 use eSpace\App\Controllers\Controller;
 use eSpace\App\Services\NotificationService;
 use eSpace\App\Utils\HtmlSanitizer;
@@ -1551,10 +1552,18 @@ class ENoteController extends Controller
                     ->execute(['topic_id' => $linkedId]);
             }
 
+            $restoredFrom = isset($data['restored_from']) ? (int) $data['restored_from'] : null;
+            ENotePageHistory::recordEvent(
+                $db, $topicId, $pageId, $teacherId, $restoredFrom ? 'restore' : 'create',
+                $sanitizedData['title'], $sanitizedData['content'], $nextOrder,
+                $restoredFrom ? 'Brought back a deleted page #' . $restoredFrom : null
+            );
+
             $this->success([
                 'id' => $pageId,
                 'title' => $sanitizedData['title'],
-                'order_number' => $sanitizedData['order_number']
+                'order_number' => $sanitizedData['order_number'],
+                'revision' => 0
             ], 'Page created successfully');
         } catch (\PDOException $e) {
             error_log("Failed to create page: " . $e->getMessage());
@@ -1585,7 +1594,7 @@ class ENoteController extends Controller
         $db = $this->getDb();
 
         // Verify page belongs to teacher's topic
-        $sql = "SELECT ep.id, ep.topic_id, ep.order_number, et.content_group_id
+        $sql = "SELECT ep.id, ep.topic_id, ep.order_number, ep.title, ep.content, ep.revision, ep.updated_at, et.content_group_id
                 FROM enote_pages ep
                 INNER JOIN enote_topics et ON ep.topic_id = et.id
                 WHERE ep.id = :id AND et.teacher_id = :teacher_id AND ep.deleted_at IS NULL AND et.deleted_at IS NULL";
@@ -1600,6 +1609,28 @@ class ENoteController extends Controller
         }
 
         $topicId = (int) $page['topic_id'];
+
+        // A save from a copy of the page that is older than what's stored (the same page open in
+        // another tab or on another device) would silently wipe the newer work - refuse it and
+        // hand back what's stored, so the builder can let the teacher choose.
+        if (isset($data['base_revision']) && (int) $data['base_revision'] !== (int) $page['revision']
+            && (array_key_exists('content', $data) || !empty($data['title']))) {
+            $this->json([
+                'success' => false,
+                'code' => 'stale_page',
+                'message' => 'This page was changed somewhere else (another tab or device) since you opened it.',
+                'data' => [
+                    'page' => [
+                        'id' => (int) $page['id'],
+                        'title' => html_entity_decode((string) $page['title'], ENT_QUOTES, 'UTF-8'),
+                        'content' => (string) $page['content'],
+                        'revision' => (int) $page['revision'],
+                        'updated_at' => $page['updated_at'],
+                    ],
+                ],
+            ], 409);
+            return;
+        }
 
         // Sanitize input
         $updates = [];
@@ -1627,6 +1658,10 @@ class ENoteController extends Controller
             return;
         }
 
+        $contentChanged = isset($params['content']) || isset($params['title']);
+        if ($contentChanged) {
+            $updates[] = 'revision = revision + 1';
+        }
         $updates[] = 'updated_at = NOW()';
         $sql = "UPDATE enote_pages SET " . implode(', ', $updates) . " WHERE id = :id";
 
@@ -1645,6 +1680,7 @@ class ENoteController extends Controller
             if (!empty($linkedIds)) {
                 $syncFields = array_intersect_key($params, array_flip(['title', 'content', 'is_active']));
                 $syncSql = "UPDATE enote_pages SET " . implode(', ', $updates) . " WHERE topic_id = :topic_id AND order_number = :order_number AND deleted_at IS NULL";
+                // (`revision = revision + 1` is in $updates, so linked copies open elsewhere are protected too)
                 foreach ($linkedIds as $linkedId) {
                     $db->prepare($syncSql)->execute(array_merge($syncFields, [
                         'topic_id' => $linkedId,
@@ -1654,7 +1690,20 @@ class ENoteController extends Controller
                 }
             }
 
-            $this->success([], 'Page updated successfully');
+            if ($contentChanged) {
+                ENotePageHistory::recordEdit(
+                    $db,
+                    $page,
+                    html_entity_decode((string) ($params['title'] ?? $page['title']), ENT_QUOTES, 'UTF-8'),
+                    (string) ($params['content'] ?? $page['content']),
+                    $teacherId,
+                    !empty($data['new_version'])
+                );
+            }
+
+            $this->success([
+                'revision' => (int) $page['revision'] + ($contentChanged ? 1 : 0),
+            ], 'Page updated successfully');
         } catch (\PDOException $e) {
             error_log("Failed to update page: " . $e->getMessage());
             $this->error('Failed to update page', 500);
@@ -1682,7 +1731,7 @@ class ENoteController extends Controller
         $db = $this->getDb();
 
         // Verify page belongs to teacher's topic
-        $sql = "SELECT ep.id, ep.topic_id, ep.order_number, et.content_group_id
+        $sql = "SELECT ep.id, ep.topic_id, ep.order_number, ep.title, ep.content, et.content_group_id
                 FROM enote_pages ep
                 INNER JOIN enote_topics et ON ep.topic_id = et.id
                 WHERE ep.id = :id AND et.teacher_id = :teacher_id AND ep.deleted_at IS NULL AND et.deleted_at IS NULL";
@@ -1732,6 +1781,8 @@ class ENoteController extends Controller
                     "UPDATE enote_topics SET total_pages = total_pages - 1, updated_at = NOW() WHERE id = :topic_id"
                 )->execute(['topic_id' => $linkedId]);
             }
+
+            ENotePageHistory::recordEvent($db, $topicId, $id, $teacherId, 'delete', (string) $page['title'], (string) $page['content'], $deletedOrder);
 
             $this->success([], 'Page deleted successfully');
         } catch (\PDOException $e) {
@@ -1819,6 +1870,11 @@ class ENoteController extends Controller
                     ->execute(['topic_id' => $linkedId]);
             }
 
+            ENotePageHistory::recordEvent(
+                $db, $topicId, $newPageId, $teacherId, 'duplicate', $page['title'] . ' (Copy)', (string) $page['content'], $nextOrder,
+                'Copy of page ' . (int) $page['order_number']
+            );
+
             $this->success([
                 'id' => $newPageId,
                 'title' => $page['title'] . ' (Copy)',
@@ -1871,11 +1927,23 @@ class ENoteController extends Controller
         // Capture each page's order_number as it stands *before* this reorder, so a linked
         // topic's page currently at that same old position can be moved to the same new one.
         $oldOrderByPageId = [];
-        if (!empty($linkedIds)) {
+        $stmt = $db->prepare("SELECT id, order_number FROM enote_pages WHERE topic_id = :topic_id AND deleted_at IS NULL");
+        $stmt->execute(['topic_id' => $topicId]);
+        foreach ($stmt->fetchAll() as $row) {
+            $oldOrderByPageId[(int) $row['id']] = (int) $row['order_number'];
+        }
+
+        // Each linked topic's pages, keyed by their position *before* this reorder. Moving them one
+        // UPDATE ... WHERE order_number = :old at a time used to collide: after the first page moved
+        // into position 2, the page already at 2 was matched too, so a swap left both copies at
+        // the same position - and every later edit or delete at that position hit both pages
+        // (pages that looked duplicated, or vanished). Resolving ids up front avoids that.
+        $linkedByOldOrder = [];
+        foreach ($linkedIds as $linkedId) {
             $stmt = $db->prepare("SELECT id, order_number FROM enote_pages WHERE topic_id = :topic_id AND deleted_at IS NULL");
-            $stmt->execute(['topic_id' => $topicId]);
+            $stmt->execute(['topic_id' => $linkedId]);
             foreach ($stmt->fetchAll() as $row) {
-                $oldOrderByPageId[(int) $row['id']] = (int) $row['order_number'];
+                $linkedByOldOrder[$linkedId][(int) $row['order_number']] = (int) $row['id'];
             }
         }
 
@@ -1891,15 +1959,16 @@ class ENoteController extends Controller
                 $stmt = $db->prepare($sql);
                 $stmt->execute(['id' => $pageId, 'order_number' => $newOrder, 'topic_id' => $topicId]);
 
-                // Mirror this page's new position onto every linked topic's page that was at the
-                // same old position (see duplicateTopic()).
-                if (!empty($linkedIds) && isset($oldOrderByPageId[$pageId])) {
+                if (isset($oldOrderByPageId[$pageId])) {
                     $oldOrder = $oldOrderByPageId[$pageId];
                     foreach ($linkedIds as $linkedId) {
+                        $linkedPageId = $linkedByOldOrder[$linkedId][$oldOrder] ?? null;
+                        if ($linkedPageId === null) {
+                            continue;
+                        }
                         $db->prepare(
-                            "UPDATE enote_pages SET order_number = :order_number, updated_at = NOW()
-                             WHERE topic_id = :topic_id AND order_number = :old_order AND deleted_at IS NULL"
-                        )->execute(['order_number' => $newOrder, 'topic_id' => $linkedId, 'old_order' => $oldOrder]);
+                            "UPDATE enote_pages SET order_number = :order_number, updated_at = NOW() WHERE id = :id"
+                        )->execute(['order_number' => $newOrder, 'id' => $linkedPageId]);
                     }
                 }
             }
@@ -1913,6 +1982,18 @@ class ENoteController extends Controller
 
             foreach ($linkedIds as $linkedId) {
                 $db->prepare("UPDATE enote_topics SET updated_at = NOW() WHERE id = :topic_id")->execute(['topic_id' => $linkedId]);
+            }
+
+            // Only worth a line in the history when something actually changed place
+            $moved = 0;
+            foreach ($data['page_orders'] as $pageOrder) {
+                $was = $oldOrderByPageId[(int) $pageOrder['id']] ?? null;
+                if ($was !== null && $was !== (int) $pageOrder['order_number']) {
+                    $moved++;
+                }
+            }
+            if ($moved > 0 || empty($oldOrderByPageId)) {
+                ENotePageHistory::recordEvent($db, $topicId, null, $teacherId, 'move', null, null, null, 'Changed the order of the pages');
             }
 
             $this->success([], 'Pages reordered successfully');

@@ -1,146 +1,116 @@
 <template>
-  <div>
-    <!-- Header - icon and title share a row with the status filter, so the dropdown lines up
-         exactly with the heading; the subtitle drops to its own line underneath. -->
-    <div class="flex items-center gap-2 mb-1">
-      <div class="flex items-center gap-2 flex-shrink-0">
-        <div class="hidden sm:flex w-7 h-7 rounded-lg bg-indigo-600 items-center justify-center flex-shrink-0">
-          <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-          </svg>
+  <!-- Every assessment set in the department - by whom, for which class, how many have handed in -
+       with each one's submissions and a preview one tap away. -->
+  <div class="w-full">
+    <PageHeader title="Assessments" description="Everything your department's teachers have set - who set it, for which class, and how many have handed in." icon="pencil" accent="indigo" :active-filters="teacher ? 1 : 0">
+      <StatStrip v-if="!loading && assignments.length" v-model="status" :items="statItems" />
+      <template #filters>
+        <select v-model="teacher" class="w-full sm:w-56 py-2 pl-3 pr-8 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white" aria-label="Teacher">
+          <option value="">All teachers</option>
+          <option v-for="t in teachers" :key="t" :value="t">{{ t }}</option>
+        </select>
+      </template>
+    </PageHeader>
+
+    <DataTable
+      :columns="columns"
+      :rows="shown"
+      :loading="loading"
+      :search-keys="['title', 'teacher_name', 'subject_name', 'class_name']"
+      search-placeholder="Search assessments"
+      :page-size="25"
+      :initial-sort="{ key: 'due_date', dir: 'desc' }"
+      empty-title="No assessments here"
+      empty-message="Assessments your teachers publish show up here."
+    >
+      <template #cell-title="{ row }">
+        <span class="flex items-center gap-2 min-w-0">
+          <span v-if="row.category" class="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200">{{ row.category }}</span>
+          <span class="font-semibold text-gray-900 dark:text-white truncate">{{ row.title }}</span>
+        </span>
+      </template>
+      <template #cell-subject_class="{ row }">
+        <span class="text-gray-700 dark:text-gray-200">{{ row.subject_name || '-' }}</span><span v-if="row.class_name" class="text-gray-400"> · {{ row.class_name }}</span>
+      </template>
+      <template #cell-due_date="{ row }">
+        <span class="whitespace-nowrap text-gray-600 dark:text-gray-300">{{ row.due_date ? shortDate(row.due_date) : '-' }}</span>
+      </template>
+      <template #cell-submissions_count="{ row }">
+        <span class="font-semibold tabular-nums">{{ row.submissions_count }}</span>
+      </template>
+      <template #cell-status="{ row }">
+        <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold capitalize" :class="STATUS[row.status] || STATUS.archived">{{ row.status }}</span>
+      </template>
+      <template #actions="{ row }">
+        <div class="flex items-center gap-1.5 justify-end">
+          <RouterLink :to="`/hod/assessments/${row.id}/submissions`" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">Submissions</RouterLink>
+          <RouterLink :to="`/hod/assessments/${row.id}/preview`" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700">Preview</RouterLink>
         </div>
-        <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight whitespace-nowrap">Assessments</h1>
-      </div>
-
-      <select v-model="statusFilter" class="flex-shrink-0 max-w-[92px] truncate px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white">
-        <option value="">Status</option>
-        <option value="draft">Draft</option>
-        <option value="published">Published</option>
-        <option value="archived">Archived</option>
-      </select>
-    </div>
-    <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Assignments set by teachers in your department</p>
-
-    <div v-if="loading" class="text-center py-16">
-      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-      <p class="mt-4 text-gray-600 dark:text-gray-400">Loading assessments...</p>
-    </div>
-
-    <div v-else-if="filteredAssignments.length === 0" class="text-center py-16 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-      <p class="text-gray-500 dark:text-gray-400">{{ assignments.length === 0 ? 'No assessments in your department yet' : 'No assessments match this filter' }}</p>
-    </div>
-
-    <div v-else class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden overflow-x-auto">
-      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-        <thead class="bg-gray-50 dark:bg-gray-950/40">
-          <tr>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Assignment</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Teacher</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Subject / Class</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Due</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Marks</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Submissions</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Action</th>
-          </tr>
-        </thead>
-        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-          <tr v-for="a in filteredAssignments" :key="a.id" class="hover:bg-gray-50 dark:hover:bg-gray-900/30">
-            <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white max-w-xs truncate">{{ a.title }}</td>
-            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ a.teacher_name }}</td>
-            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
-              {{ a.subject_name || 'N/A' }}<span v-if="a.class_name" class="text-gray-400 dark:text-gray-500"> · {{ a.class_name }}</span>
-            </td>
-            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{{ formatDate(a.due_date) }}</td>
-            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ a.total_marks }}</td>
-            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ a.submissions_count }}</td>
-            <td class="px-6 py-4">
-              <span class="px-2 py-1 rounded-full text-xs font-medium" :class="statusBadge(a.status)">{{ capitalize(a.status) }}</span>
-            </td>
-            <td class="px-6 py-4 text-right space-x-2 whitespace-nowrap">
-              <RouterLink
-                :to="`/hod/assessments/${a.id}/submissions`"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-xs font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                </svg>
-                Submissions
-              </RouterLink>
-              <RouterLink
-                :to="`/hod/assessments/${a.id}/preview`"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 transition-colors"
-              >
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                </svg>
-                Preview
-              </RouterLink>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+      </template>
+    </DataTable>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import axios from 'axios'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StatStrip, { type StatItem } from '@/components/ui/StatStrip.vue'
+import DataTable, { type Column } from '@/components/ui/DataTable.vue'
+import { useToastStore } from '@/stores/toast'
 
-interface AssignmentRow {
+interface Row {
   id: number
   title: string
   status: string
   due_date: string
   total_marks: number
-  category: string
+  category: string | null
   subject_name: string | null
   class_name: string | null
   teacher_name: string
   submissions_count: number
 }
 
-const API_BASE = '/api/hod'
-
-const assignments = ref<AssignmentRow[]>([])
-const loading = ref(false)
-const statusFilter = ref('')
-
-const filteredAssignments = computed(() => {
-  if (!statusFilter.value) return assignments.value
-  return assignments.value.filter(a => a.status === statusFilter.value)
-})
-
-const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
-
-const statusBadge = (status: string) => {
-  if (status === 'published') return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-  if (status === 'draft') return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-  return 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+const STATUS: Record<string, string> = {
+  published: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
+  draft: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+  archived: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
 }
+const columns: Column[] = [
+  { key: 'title', label: 'Assessment', sortable: true, mobile: 'title' },
+  { key: 'teacher_name', label: 'Teacher', sortable: true, mobile: 'subtitle' },
+  { key: 'subject_class', label: 'Subject · class', value: (r: Row) => `${r.subject_name || ''} ${r.class_name || ''}` },
+  { key: 'due_date', label: 'Due', sortable: true },
+  { key: 'submissions_count', label: 'Handed in', sortable: true, align: 'center' },
+  { key: 'status', label: 'Status', sortable: true }
+]
 
-const formatDate = (dateString: string) => {
-  if (!dateString) return 'N/A'
-  return new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-}
+const toast = useToastStore()
+const assignments = ref<Row[]>([])
+const loading = ref(true)
+const status = ref<string | null>(null)
+const teacher = ref('')
 
-const loadAssignments = async () => {
-  loading.value = true
+const teachers = computed(() => [...new Set(assignments.value.map(a => a.teacher_name).filter(Boolean))].sort())
+const byTeacher = computed(() => assignments.value.filter(a => !teacher.value || a.teacher_name === teacher.value))
+const statItems = computed<StatItem[]>(() => [
+  { label: 'Published', value: byTeacher.value.filter(a => a.status === 'published').length, key: 'published', tone: 'emerald' },
+  { label: 'Drafts', value: byTeacher.value.filter(a => a.status === 'draft').length, key: 'draft', tone: 'amber' },
+  { label: 'Archived', value: byTeacher.value.filter(a => a.status === 'archived').length, key: 'archived', tone: 'gray' },
+  { label: 'Handed in', value: byTeacher.value.reduce((n, a) => n + Number(a.submissions_count || 0), 0), key: 'all', tone: 'indigo', hint: 'submissions in all' }
+])
+const shown = computed(() => byTeacher.value.filter(a => !status.value || status.value === 'all' || a.status === status.value))
+const shortDate = (d: string) => new Date(d.replace(' ', 'T')).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+
+onMounted(async () => {
   try {
-    const response = await axios.get(`${API_BASE}/assignments`)
-    if (response.data.success) {
-      assignments.value = response.data.data.assignments || []
-    }
-  } catch (error) {
-    console.error('Failed to load assessments:', error)
+    const response = await axios.get('/api/hod/assignments')
+    assignments.value = (response.data.data.assignments || []).map((a: Row) => ({ ...a, submissions_count: Number(a.submissions_count) || 0 }))
+  } catch (err: any) {
+    toast.error(err.response?.data?.message || 'Could not load the assessments')
   } finally {
     loading.value = false
   }
-}
-
-onMounted(() => {
-  loadAssignments()
 })
 </script>

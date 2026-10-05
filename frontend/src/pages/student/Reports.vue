@@ -1,9 +1,6 @@
 <template>
-  <div class="p-6">
-    <div v-if="!activeReport" class="mb-4">
-      <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">My Report Cards</h1>
-      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">View your summative assessment reports by term</p>
-    </div>
+  <div class="w-full">
+    <PageHeader v-if="!activeReport" title="My Report Cards" description="Your end-of-term reports - your results on every learning outcome, competency and construct, ready to print." icon="document" accent="indigo" />
 
     <div v-if="error" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6 text-red-600 dark:text-red-400 text-sm">
       {{ error }}
@@ -14,9 +11,9 @@
     </div>
 
     <div v-else-if="!activeReport">
-      <div v-if="reportList.length === 0" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center text-gray-500 dark:text-gray-400">
-        No report cards have been generated for you yet. Check back once your teacher publishes one.
-      </div>
+      <EmptyState v-if="reportList.length === 0" icon="document" tone="indigo" title="No report cards yet" message="Your report card appears here once your class teacher generates it at the end of term. Until then, your Learning Map shows how you're doing.">
+        <RouterLink to="/student/learning-map" class="px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700">Open my Learning Map</RouterLink>
+      </EmptyState>
       <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <button
           v-for="entry in reportList"
@@ -60,6 +57,8 @@
 </template>
 
 <script setup lang="ts">
+import PageHeader from '@/components/ui/PageHeader.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import ReportCard from '@/components/reportcard/ReportCard.vue'

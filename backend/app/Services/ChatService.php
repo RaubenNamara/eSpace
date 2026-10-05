@@ -285,6 +285,7 @@ class ChatService
         foreach ($conversations as $conv) {
             $displayName = $conv['name'];
             $presence = ['is_online' => false, 'last_active_at' => null];
+            $other = null;
 
             if ($conv['type'] === 'direct') {
                 $stmt = $db->prepare(
@@ -334,6 +335,9 @@ class ChatService
                 'updated_at' => $conv['updated_at'],
                 'is_online' => $presence['is_online'],
                 'last_active_at' => $presence['last_active_at'],
+                // Who a direct chat is with (lets a list be split into students and colleagues)
+                'other_id' => $other ? (int) $other['user_id'] : null,
+                'other_role' => $other ? $other['user_role'] : null,
                 'last_message' => $lastMessage ? [
                     'message' => $lastMessage['message'],
                     'attachment_type' => $lastMessage['attachment_type'],

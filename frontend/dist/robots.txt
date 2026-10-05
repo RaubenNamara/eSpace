@@ -1,0 +1,14 @@
+# eSpace - only the public website is for search engines; the app needs a sign-in.
+User-agent: *
+Allow: /$
+Allow: /guide
+Allow: /for/
+Allow: /og-image.png
+Disallow: /student
+Disallow: /teacher
+Disallow: /hod
+Disallow: /admin
+Disallow: /login
+Disallow: /api
+
+Sitemap: https://espace.stmark.sc.ug/sitemap.xml

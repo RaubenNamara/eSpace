@@ -1,185 +1,139 @@
 <template>
-  <div>
-    <!-- Header - Term selector shares a row with the heading instead of a separate filter bar
-         below it. -->
-    <div class="flex items-center gap-2 mb-1">
-      <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight whitespace-nowrap flex-shrink-0">Report Cards</h1>
-
-      <div class="flex flex-nowrap items-center gap-2 overflow-x-auto -mx-1 px-1 sm:mx-0 sm:px-0 min-w-0">
-        <label class="text-xs font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap flex-shrink-0">Term</label>
-        <select v-model="selectedTermId" class="flex-shrink-0 max-w-[110px] truncate px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
-          <option :value="null">Select...</option>
-          <option v-for="term in terms" :key="term.id" :value="term.id">
-            {{ term.name }}{{ term.academic_year ? ` - ${term.academic_year}` : '' }}{{ term.is_current ? ' (Current)' : '' }}
-          </option>
+  <!-- Report cards for the department's learners, by term: who has one, their level, and the
+       report itself (view, print, download as PDF). -->
+  <div class="w-full">
+    <PageHeader title="Report cards" description="Your department's learners for a term - who has a report card yet, and each one to view, print or download." icon="document" accent="indigo">
+      <StatStrip v-if="!loading && students.length" v-model="filter" :items="statItems" />
+      <template #filters>
+        <select v-model="termId" class="w-full sm:w-64 py-2 pl-3 pr-8 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white" aria-label="Term">
+          <option v-for="t in terms" :key="t.id" :value="t.id">{{ t.name }}{{ t.academic_year ? ` · ${t.academic_year}` : '' }}{{ t.is_current ? ' (current)' : '' }}</option>
         </select>
-      </div>
-    </div>
-    <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">View learners' summative assessment reports for your department.</p>
+      </template>
+    </PageHeader>
 
-    <div v-if="error" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6 text-red-600 dark:text-red-400 text-sm">
-      {{ error }}
-    </div>
+    <div v-if="error" class="mb-4 rounded-2xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-900/20 p-4 text-sm text-rose-800 dark:text-rose-200">{{ error }}</div>
 
-    <div v-if="loadingStudents" class="flex items-center justify-center py-12">
-      <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
-    </div>
+    <EmptyState v-if="!loading && !terms.length" icon="document" tone="gray" title="No terms set up yet" message="Report cards appear once the school's terms are set up." />
+    <DataTable
+      v-else
+      :columns="columns"
+      :rows="shown"
+      :loading="loading"
+      :search-keys="['name', 'admission_number']"
+      search-placeholder="Search learners"
+      :page-size="30"
+      :initial-sort="{ key: 'name', dir: 'asc' }"
+      empty-title="No learners for this term"
+      empty-message="Learners enrolled in your department for this term show up here."
+    >
+      <template #cell-status="{ row }">
+        <span v-if="row.report_card_id" class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">Ready{{ row.performance_level ? ` · ${row.performance_level}` : '' }}</span>
+        <span v-else class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">Not generated</span>
+      </template>
+      <template #actions="{ row }">
+        <button v-if="row.report_card_id" type="button" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700" @click="view(row.id)">View</button>
+      </template>
+    </DataTable>
 
-    <div v-else-if="!selectedTermId" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center text-gray-500 dark:text-gray-400">
-      Select a term to see students in your department.
-    </div>
-
-    <div v-else class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-      <div class="overflow-x-auto">
-      <table class="w-full">
-        <thead class="bg-gray-50 dark:bg-gray-700">
-          <tr>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Student</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Admission No</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-          <tr v-for="student in students" :key="student.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-            <td class="px-6 py-4 font-medium text-gray-900 dark:text-white">{{ student.first_name }} {{ student.last_name }}</td>
-            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ student.admission_number }}</td>
-            <td class="px-6 py-4">
-              <span v-if="student.report_card_id" class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
-                Generated{{ student.performance_level ? ` - ${student.performance_level}` : '' }}
-              </span>
-              <span v-else class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-                Not generated
-              </span>
-            </td>
-            <td class="px-6 py-4 text-right whitespace-nowrap">
-              <button
-                v-if="student.report_card_id"
-                @click="viewReport(student.id)"
-                class="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-              >
-                View
-              </button>
-            </td>
-          </tr>
-          <tr v-if="students.length === 0">
-            <td colspan="4" class="px-6 py-10 text-center text-gray-400">No students found in your department for this term.</td>
-          </tr>
-        </tbody>
-      </table>
-      </div>
-    </div>
-
-    <!-- Report viewer modal -->
-    <div v-if="activeReport" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div class="bg-transparent max-w-5xl w-full my-8">
+    <!-- The report -->
+    <div v-if="active" class="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto" @click.self="active = null">
+      <div class="max-w-5xl w-full my-6">
         <div class="flex justify-end mb-2 gap-2">
-          <button
-            :disabled="downloading"
-            @click="downloadPdf"
-            class="px-3 py-1.5 text-xs font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
-          >
-            {{ downloading ? 'Preparing PDF...' : 'Download PDF' }}
-          </button>
-          <button @click="printReport" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600">
-            Print
-          </button>
-          <button @click="activeReport = null" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600">
-            Close
-          </button>
+          <button :disabled="downloading" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50" @click="download">{{ downloading ? 'Preparing PDF…' : 'Download PDF' }}</button>
+          <button class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600" @click="print">Print</button>
+          <button class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600" @click="active = null">Close</button>
         </div>
-        <ReportCard ref="reportCardRef" :report="activeReport" />
+        <ReportCard ref="reportCardRef" :report="active" />
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import axios from 'axios'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StatStrip, { type StatItem } from '@/components/ui/StatStrip.vue'
+import DataTable, { type Column } from '@/components/ui/DataTable.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
 import ReportCard from '@/components/reportcard/ReportCard.vue'
 import { downloadElementAsPdf, sanitizeFilename } from '@/utils/reportCardPdf'
+import { niceName } from '@/components/dashboard/teacher/time'
 import type { ReportCard as ReportCardType, ReportCardStudentEntry } from '@/types/reportCard'
 
-interface Term {
-  id: number
-  name: string
-  academic_year: string | null
-  is_current: number | boolean
-}
+interface Term { id: number; name: string; academic_year: string | null; is_current: number | boolean }
+type Row = ReportCardStudentEntry & { name: string }
 
-const API_BASE = '/api/hod'
+const columns: Column[] = [
+  { key: 'name', label: 'Learner', sortable: true, mobile: 'title' },
+  { key: 'admission_number', label: 'Admission no.', sortable: true, mobile: 'subtitle' },
+  { key: 'status', label: 'Report card', sortable: true, value: (r: Row) => (r.report_card_id ? 1 : 0) }
+]
 
 const terms = ref<Term[]>([])
-const students = ref<ReportCardStudentEntry[]>([])
-const selectedTermId = ref<number | null>(null)
-
-const loadingStudents = ref(false)
-const downloading = ref(false)
-const error = ref<string | null>(null)
-
-const activeReport = ref<ReportCardType | null>(null)
+const termId = ref<number | null>(null)
+const students = ref<Row[]>([])
+const loading = ref(true)
+const error = ref('')
+const filter = ref<string | null>(null)
+const active = ref<ReportCardType | null>(null)
 const reportCardRef = ref<InstanceType<typeof ReportCard> | null>(null)
+const downloading = ref(false)
 
-const loadTerms = async () => {
-  const res = await axios.get(`${API_BASE}/report-cards/terms`)
-  terms.value = res.data.data.terms
-  const current = terms.value.find(t => t.is_current)
-  selectedTermId.value = current ? current.id : (terms.value[0]?.id ?? null)
-}
+const statItems = computed<StatItem[]>(() => [
+  { label: 'Learners', value: students.value.length, key: 'all', tone: 'indigo' },
+  { label: 'Ready', value: students.value.filter(s => s.report_card_id).length, key: 'ready', tone: 'emerald' },
+  { label: 'Not generated', value: students.value.filter(s => !s.report_card_id).length, key: 'missing', tone: 'amber', hint: 'class teachers generate them' }
+])
+const shown = computed(() => students.value.filter(s => filter.value === 'ready' ? !!s.report_card_id : filter.value === 'missing' ? !s.report_card_id : true))
 
 const loadStudents = async () => {
-  if (!selectedTermId.value) {
-    students.value = []
-    return
-  }
-  loadingStudents.value = true
-  error.value = null
+  if (!termId.value) { students.value = []; loading.value = false; return }
+  loading.value = true
+  error.value = ''
   try {
-    const res = await axios.get(`${API_BASE}/report-cards/students`, { params: { term_id: selectedTermId.value } })
-    students.value = res.data.data.students
+    const res = await axios.get('/api/hod/report-cards/students', { params: { term_id: termId.value } })
+    students.value = (res.data.data.students || []).map((s: ReportCardStudentEntry) => ({ ...s, name: niceName(`${s.first_name} ${s.last_name}`) }))
   } catch (err: any) {
-    error.value = err.response?.data?.message || 'Failed to load students'
+    error.value = err.response?.data?.message || 'Could not load the learners'
     students.value = []
   } finally {
-    loadingStudents.value = false
+    loading.value = false
   }
 }
 
-watch(selectedTermId, () => {
-  loadStudents()
-})
-
-const viewReport = async (studentId: number) => {
-  if (!selectedTermId.value) return
-  error.value = null
+const view = async (studentId: number) => {
   try {
-    const res = await axios.get(`${API_BASE}/report-cards/${studentId}/${selectedTermId.value}`)
-    activeReport.value = res.data.data
+    const res = await axios.get(`/api/hod/report-cards/${studentId}/${termId.value}`)
+    active.value = res.data.data
   } catch (err: any) {
-    error.value = err.response?.data?.message || 'Failed to load report'
+    error.value = err.response?.data?.message || 'Could not open the report card'
   }
 }
-
-const printReport = () => {
-  window.print()
-}
-
-const downloadPdf = async () => {
-  if (!reportCardRef.value?.rootEl || !activeReport.value) return
+const print = () => window.print()
+const download = async () => {
+  if (!reportCardRef.value?.rootEl || !active.value) return
   downloading.value = true
   try {
-    const name = `${activeReport.value.student.first_name}_${activeReport.value.student.last_name}_${activeReport.value.term.name}`
+    const name = `${active.value.student.first_name}_${active.value.student.last_name}_${active.value.term.name}`
     await downloadElementAsPdf(reportCardRef.value.rootEl, `${sanitizeFilename(name)}_ReportCard.pdf`)
-  } catch (err: any) {
-    error.value = 'Failed to generate PDF'
+  } catch {
+    error.value = 'Could not make the PDF'
   } finally {
     downloading.value = false
   }
 }
 
+watch(termId, loadStudents)
 onMounted(async () => {
-  await loadTerms()
-  await loadStudents()
+  try {
+    const res = await axios.get('/api/hod/report-cards/terms')
+    terms.value = res.data.data.terms || []
+    termId.value = terms.value.find(t => t.is_current)?.id ?? terms.value[0]?.id ?? null
+    if (!termId.value) loading.value = false
+  } catch (err: any) {
+    error.value = err.response?.data?.message || 'Could not load the terms'
+    loading.value = false
+  }
 })
 </script>

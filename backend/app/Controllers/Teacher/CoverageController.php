@@ -31,7 +31,7 @@ class CoverageController extends Controller
     }
 
     /** @return int[] */
-    private function departmentIds($db, int $teacherId): array
+    public function departmentIds($db, int $teacherId): array
     {
         $stmt = $db->prepare(
             "SELECT department_id FROM teacher_department_assignments WHERE teacher_id = ? AND deleted_at IS NULL
@@ -100,7 +100,7 @@ class CoverageController extends Controller
     }
 
     /** This year's topics for a subject, grouped by class level, with what covers each */
-    private function topicsFor($db, int $subjectId): array
+    public function topicsFor($db, int $subjectId): array
     {
         $stmt = $db->prepare(
             "SELECT ct.id, ct.topic, ct.theme_branch, ct.term_id, t.name AS term_name, c.name AS class_name, ay.name AS academic_year

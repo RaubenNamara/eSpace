@@ -167,6 +167,17 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.54 8.46a5 5 0 010 7.07M18.36 5.64a9 9 0 010 12.73"></path>
           </svg>
         </button>
+        <!-- Questions and answers on this topic -->
+        <button
+          v-if="qaRole"
+          @click="qaOpen = true"
+          class="relative p-1.5 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
+          title="Questions on this topic"
+          aria-label="Questions on this topic"
+        >
+          <AppIcon name="chat" class="w-5 h-5 text-white" />
+          <span v-if="qaCount" class="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-amber-400 text-[10px] font-bold leading-4 text-slate-900">{{ qaCount }}</span>
+        </button>
         <button
           @click="toggleFullscreen"
           class="hidden sm:flex p-1.5 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
@@ -973,10 +984,21 @@
       </div>
     </div>
   </div>
+  <TopicQuestions
+    v-if="qaRole && topicId"
+    :open="qaOpen"
+    :topic-id="topicId"
+    :role="qaRole"
+    :page-id="currentPage?.id ?? null"
+    :page-number="currentPage?.order_number ?? null"
+    @close="qaOpen = false"
+    @count="n => (qaCount = n)"
+  />
 </template>
 
 <script setup lang="ts">
 import AppIcon from '@/components/common/AppIcon.vue'
+import TopicQuestions from '@/components/enotes/TopicQuestions.vue'
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
@@ -1023,6 +1045,11 @@ const pageFooter = computed(() => {
 })
 const pages = ref<ENotePage[]>([])
 const currentPage = ref<ENotePage | null>(null)
+
+// Questions and answers on the topic: students reading it, and teachers previewing it
+const qaRole = computed<'student' | 'teacher' | null>(() => (isStudentMode.value ? 'student' : previewRole.value === 'teacher' ? 'teacher' : null))
+const qaOpen = ref(false)
+const qaCount = ref(0)
 const isFullscreen = ref(false)
 const showToc = ref(false)
 // Desktop-only, session-scoped (not persisted) - a reader who collapses the contents rail to

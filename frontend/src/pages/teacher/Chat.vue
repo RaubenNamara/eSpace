@@ -1,5 +1,6 @@
 <template>
-  <div class="h-[calc(100vh-6rem)] -m-6 flex bg-gray-100 dark:bg-gray-950 p-2 sm:p-4">
+  <!-- Cancels the layout's padding (16px on a phone, 24px from sm up) to fill the screen edge to edge -->
+  <div class="h-[calc(100dvh-5rem)] sm:h-[calc(100vh-6rem)] -m-4 sm:-m-6 flex bg-gray-100 dark:bg-gray-950 p-2 sm:p-4">
     <div class="flex-1 flex rounded-2xl border border-gray-200 dark:border-black/40 shadow-lg overflow-hidden bg-white dark:bg-[#111b21]">
       <!-- Sidebar -->
       <div class="w-full md:w-80 lg:w-96 flex-shrink-0 md:border-r border-gray-200 dark:border-white/5 bg-white dark:bg-[#111b21] flex flex-col" :class="activeConversation ? 'hidden md:flex' : 'flex'">
@@ -12,7 +13,7 @@
           </button>
         </div>
 
-        <div class="px-3 py-2 bg-white dark:bg-[#111b21]">
+        <div class="px-3 pt-2 pb-1 bg-white dark:bg-[#111b21]">
           <div class="relative">
             <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
@@ -24,6 +25,17 @@
               class="w-full pl-9 pr-3 py-1.5 rounded-lg text-sm bg-gray-100 dark:bg-[#202c33] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 border-0 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             >
           </div>
+          <!-- Quick filters -->
+          <div class="mt-2 flex gap-1.5 overflow-x-auto [scrollbar-width:none]">
+            <button
+              v-for="f in chatFilters"
+              :key="f.key"
+              type="button"
+              class="flex-shrink-0 px-3 py-1 rounded-full text-xs font-semibold transition-colors"
+              :class="chatFilter === f.key ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-[#202c33] dark:text-gray-300 dark:hover:bg-[#2a3942]'"
+              @click="chatFilter = f.key"
+            >{{ f.label }}<span v-if="f.count" class="ml-1 opacity-80">{{ f.count }}</span></button>
+          </div>
         </div>
 
         <div class="flex-1 overflow-y-auto">
@@ -32,7 +44,7 @@
             <p class="text-sm text-gray-500 dark:text-gray-400">No chats yet. Tap the + to message a colleague or a student.</p>
           </div>
           <div v-else-if="filteredConversations.length === 0" class="text-center py-16 px-6">
-            <p class="text-sm text-gray-500 dark:text-gray-400">No chats match "{{ conversationSearch }}".</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400">{{ conversationSearch ? `No chats match "${conversationSearch}".` : 'No chats here yet.' }}</p>
           </div>
           <ConversationListItem
             v-for="conv in filteredConversations"
@@ -174,10 +186,29 @@ const contactTabs = computed(() => [
   { key: 'students', label: 'Students', contacts: students.value }
 ])
 
+// Quick filters: unread, students, colleagues, groups (class chats and group chats)
+type ChatFilter = 'all' | 'unread' | 'students' | 'colleagues' | 'groups'
+const chatFilter = ref<ChatFilter>('all')
+const otherRole = (c: Conversation) => c.other_role ?? c.participants?.find(p => p.role === 'student')?.role
+const kindOf = (c: Conversation): Exclude<ChatFilter, 'all' | 'unread'> =>
+  c.type !== 'direct' ? 'groups' : otherRole(c) === 'student' ? 'students' : 'colleagues'
+const chatFilters = computed(() => {
+  const count = (k: ChatFilter) => conversations.value.filter(c => (k === 'unread' ? (c.unread_count || 0) > 0 : kindOf(c) === k)).length
+  return [
+    { key: 'all' as ChatFilter, label: 'All', count: 0 },
+    { key: 'unread' as ChatFilter, label: 'Unread', count: count('unread') },
+    { key: 'students' as ChatFilter, label: 'Students', count: 0 },
+    { key: 'colleagues' as ChatFilter, label: 'Colleagues', count: 0 },
+    { key: 'groups' as ChatFilter, label: 'Groups', count: 0 }
+  ].filter(f => f.key === 'all' || f.key === 'unread' || count(f.key) > 0)
+})
+
 const filteredConversations = computed(() => {
   const q = conversationSearch.value.trim().toLowerCase()
-  if (!q) return conversations.value
-  return conversations.value.filter(c => c.name.toLowerCase().includes(q))
+  return conversations.value.filter(c =>
+    (!q || c.name.toLowerCase().includes(q)) &&
+    (chatFilter.value === 'all' ||
+      (chatFilter.value === 'unread' ? (c.unread_count || 0) > 0 : kindOf(c) === chatFilter.value)))
 })
 
 const initials = (name: string) => name.split(/\s+/).filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?'

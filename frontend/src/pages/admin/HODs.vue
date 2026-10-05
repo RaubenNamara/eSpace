@@ -1,530 +1,494 @@
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-950">
-    <div class="px-4 sm:px-6 lg:px-8 py-8">
-      <!-- Header -->
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-        <div>
-          <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Heads of Department</h1>
-          <p class="text-gray-600 dark:text-gray-400 mt-1">Manage department heads and their assignments</p>
-        </div>
-        <div class="flex flex-wrap gap-3">
-          <button
-            @click="openAssignTeacherModal"
-            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
-            Assign Teacher as HOD
-          </button>
-          <button
-            @click="openCreateModal"
-            class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-          >
-            Add HOD
-          </button>
-        </div>
-      </div>
+  <!-- Who heads each department - and which departments still have no one. -->
+  <div class="w-full">
+    <PageHeader title="Heads of Department" description="Who heads each department, and which departments still have no one." icon="users" accent="indigo">
+      <template #actions>
+        <button type="button" class="btn-secondary" @click="openAssignTeacherModal">Make a teacher HOD</button>
+        <button type="button" class="btn-primary" @click="openCreateModal">Add HOD</button>
+      </template>
+      <StatStrip v-if="!loading" v-model="quick" :items="statItems" />
+    </PageHeader>
 
-      <!-- Filters -->
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
-        <div class="flex space-x-4">
-          <input
-            v-model="search"
-            type="text"
-            placeholder="Search HODs..."
-            class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
-            @input="debouncedSearch"
-          >
-          <select
-            v-model="filterDepartment"
-            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
-            @change="fetchHODs"
-          >
-            <option value="">All Departments</option>
-            <option v-if="departments.length === 0" disabled>No departments available</option>
-            <option v-for="dept in departments" :key="dept.id" :value="dept.id">
-              {{ dept.name }}
-            </option>
-          </select>
-        </div>
-      </div>
+    <!-- Departments nobody heads -->
+    <div v-if="!loading && uncovered.length" class="mb-4 rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-4 py-3">
+      <p class="text-sm font-semibold text-amber-900 dark:text-amber-100">{{ uncovered.length }} department{{ uncovered.length === 1 ? ' has' : 's have' }} no head</p>
+      <p class="mt-1 flex flex-wrap gap-1.5">
+        <span v-for="d in uncovered" :key="d.id" class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-700 text-amber-800 dark:text-amber-200">{{ d.name }}</span>
+      </p>
+    </div>
 
-      <!-- HODs Table -->
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-        <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead class="bg-gray-50 dark:bg-gray-950">
-            <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Username</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Email</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Department</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-            <tr v-for="hod in hods" :key="hod.id">
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="flex items-center">
-                  <div class="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                    {{ getInitials(hod.first_name, hod.last_name) }}
-                  </div>
-                  <div class="ml-4">
-                    <div class="text-sm font-medium text-gray-900 dark:text-white">{{ hod.first_name }} {{ hod.last_name }}</div>
-                    <div v-if="hod.teacher_id" class="text-xs text-gray-500 dark:text-gray-400">Also a Teacher</div>
-                  </div>
-                </div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ hod.username }}</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ hod.email }}</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ hod.department_name }}</td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <span :class="hod.is_active ? 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300'" class="px-2 py-1 text-xs font-semibold rounded-full">
-                  {{ hod.is_active ? 'Active' : 'Inactive' }}
-                </span>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                <button @click="editHOD(hod)" class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300 mr-3">Edit</button>
-                <button @click="deassignHOD(hod.id)" class="text-orange-600 dark:text-orange-400 hover:text-orange-900 dark:hover:text-orange-300" title="Remove HOD role">De-assign</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        </div>
-      </div>
+    <DataTable
+      :columns="columns"
+      :rows="shown"
+      :loading="loading"
+      :search-keys="['name', 'username', 'email', 'department_name']"
+      search-placeholder="Search heads of department"
+      :page-size="25"
+      :initial-sort="{ key: 'department_name', dir: 'asc' }"
+      empty-title="No heads of department here"
+      :empty-message="hods.length ? 'Nothing matches this filter.' : 'Add one, or make an existing teacher a HOD.'"
+    >
+      <template #cell-name="{ row }">
+        <span class="flex items-center gap-2.5 min-w-0">
+          <span class="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 text-[11px] font-bold flex items-center justify-center flex-shrink-0">{{ initials(row.name) }}</span>
+          <span class="min-w-0">
+            <span class="block font-semibold text-gray-900 dark:text-white truncate">{{ row.name }}</span>
+            <span class="block text-[11px] text-gray-400 truncate">{{ row.email || `@${row.username}` }}</span>
+          </span>
+        </span>
+      </template>
+      <template #cell-teacher_id="{ row }">
+        <span v-if="row.teacher_id" class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">Also teaches</span>
+        <span v-else class="text-gray-400 text-xs">HOD only</span>
+      </template>
+      <template #cell-is_active="{ row }">
+        <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold" :class="row.is_active ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'">{{ row.is_active ? 'Active' : 'Inactive' }}</span>
+      </template>
+      <template #actions="{ row }">
+        <ActionMenu :label="`Actions for ${row.name}`" :items="[
+          { label: 'Edit', icon: 'pencil', run: () => editHOD(row) },
+          { label: 'Remove as HOD', icon: 'trash', danger: true, divider: true, run: () => deassignHOD(row.id) }
+        ]" />
+      </template>
+    </DataTable>
 
-      <!-- Create HOD Modal -->
-      <div v-if="showCreateModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-          <!-- Header -->
-          <div class="bg-indigo-600 px-6 py-5 flex-shrink-0">
-            <div class="flex items-center justify-between">
-              <div>
-                <h2 class="text-2xl font-bold text-white">Add New Head of Department</h2>
-                <p class="text-indigo-100 text-sm mt-1">Create a new HOD account and assign department</p>
-              </div>
-              <button @click="showCreateModal = false" class="text-white/80 hover:text-white transition-colors">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+    <!-- Create HOD Modal -->
+    <div v-if="showCreateModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+        <!-- Header -->
+        <div class="bg-indigo-600 px-6 py-5 flex-shrink-0">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-2xl font-bold text-white">Add New Head of Department</h2>
+              <p class="text-indigo-100 text-sm mt-1">Create a new HOD account and assign department</p>
+            </div>
+            <button @click="showCreateModal = false" class="text-white/80 hover:text-white transition-colors">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Form -->
+        <form @submit.prevent="createHOD" class="flex-1 flex flex-col min-h-0">
+          <!-- Form Content -->
+          <div class="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-6 min-h-0">
+            <!-- Personal Information -->
+            <div class="md:col-span-2">
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                 </svg>
-              </button>
+                Personal Information
+              </h3>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">First Name <span class="text-red-500">*</span></label>
+              <input
+                v-model="formData.first_name"
+                type="text"
+                placeholder="Enter first name"
+                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 dark:bg-gray-700 dark:text-white"
+              >
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Last Name <span class="text-red-500">*</span></label>
+              <input
+                v-model="formData.last_name"
+                type="text"
+                placeholder="Enter last name"
+                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 dark:bg-gray-700 dark:text-white"
+              >
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Username <span class="text-red-500">*</span></label>
+              <input
+                v-model="formData.username"
+                type="text"
+                placeholder="Choose a username"
+                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 dark:bg-gray-700 dark:text-white"
+              >
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email <span class="text-red-500">*</span></label>
+              <input
+                v-model="formData.email"
+                type="email"
+                placeholder="email@example.com"
+                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 dark:bg-gray-700 dark:text-white"
+              >
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Phone</label>
+              <input
+                v-model="formData.phone"
+                type="tel"
+                placeholder="+1 234 567 8900"
+                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 dark:bg-gray-700 dark:text-white"
+              >
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Password <span class="text-red-500">*</span></label>
+              <input
+                v-model="formData.password"
+                type="password"
+                placeholder="Minimum 8 characters"
+                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 dark:bg-gray-700 dark:text-white"
+              >
+            </div>
+
+            <!-- Department Assignment -->
+            <div class="md:col-span-2 mt-4">
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                </svg>
+                Department Assignment
+              </h3>
+            </div>
+
+            <div class="md:col-span-1">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Department <span class="text-red-500">*</span></label>
+              <select
+                v-model="formData.department_id"
+                :disabled="loadingDepartments"
+                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
+              >
+                <option value="">Select Department</option>
+                <option v-if="loadingDepartments" disabled>Loading departments...</option>
+                <option v-else-if="departments.length === 0" disabled>No departments available</option>
+                <option v-for="dept in departments" :key="dept.id" :value="dept.id">
+                  {{ dept.name }}
+                </option>
+              </select>
+              <p v-if="!loadingDepartments && departments.length === 0" class="text-xs text-red-500 dark:text-red-400 mt-1">No departments available. Please create departments first.</p>
+            </div>
+
+            <div class="md:col-span-1">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Appointed Date <span class="text-red-500">*</span></label>
+              <input
+                v-model="formData.appointed_date"
+                type="date"
+                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 dark:bg-gray-700 dark:text-white"
+              >
+            </div>
+
+            <!-- Teacher Linking -->
+            <div class="md:col-span-2 mt-4">
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                </svg>
+                Teacher Role Linking (Optional)
+              </h3>
+            </div>
+
+            <div class="md:col-span-2">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Link to Existing Teacher Account</label>
+              <select
+                v-model="formData.teacher_id"
+                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white dark:bg-gray-700 dark:text-white"
+              >
+                <option value="">No Teacher Link - HOD Only</option>
+                <option v-for="teacher in teachers" :key="teacher.id" :value="teacher.id">
+                  {{ teacher.first_name }} {{ teacher.last_name }} ({{ teacher.employee_number }})
+                </option>
+              </select>
+              <p class="text-sm text-gray-500 dark:text-gray-400 mt-2 flex items-start">
+                <svg class="w-4 h-4 mr-1 mt-0.5 text-indigo-500 dark:text-indigo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                Link this HOD to an existing teacher account to enable dual-role access. The HOD will be able to switch between HOD and Teacher modes.
+              </p>
             </div>
           </div>
 
-          <!-- Form -->
-          <form @submit.prevent="createHOD" class="flex-1 flex flex-col min-h-0">
-            <!-- Form Content -->
-            <div class="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-6 min-h-0">
-              <!-- Personal Information -->
-              <div class="md:col-span-2">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                  <svg class="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                  </svg>
-                  Personal Information
-                </h3>
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">First Name <span class="text-red-500">*</span></label>
-                <input
-                  v-model="formData.first_name"
-                  type="text"
-                  placeholder="Enter first name"
-                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 dark:bg-gray-700 dark:text-white"
-                >
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Last Name <span class="text-red-500">*</span></label>
-                <input
-                  v-model="formData.last_name"
-                  type="text"
-                  placeholder="Enter last name"
-                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 dark:bg-gray-700 dark:text-white"
-                >
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Username <span class="text-red-500">*</span></label>
-                <input
-                  v-model="formData.username"
-                  type="text"
-                  placeholder="Choose a username"
-                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 dark:bg-gray-700 dark:text-white"
-                >
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email <span class="text-red-500">*</span></label>
-                <input
-                  v-model="formData.email"
-                  type="email"
-                  placeholder="email@example.com"
-                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 dark:bg-gray-700 dark:text-white"
-                >
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Phone</label>
-                <input
-                  v-model="formData.phone"
-                  type="tel"
-                  placeholder="+1 234 567 8900"
-                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 dark:bg-gray-700 dark:text-white"
-                >
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Password <span class="text-red-500">*</span></label>
-                <input
-                  v-model="formData.password"
-                  type="password"
-                  placeholder="Minimum 8 characters"
-                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 dark:bg-gray-700 dark:text-white"
-                >
-              </div>
-
-              <!-- Department Assignment -->
-              <div class="md:col-span-2 mt-4">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                  <svg class="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                  </svg>
-                  Department Assignment
-                </h3>
-              </div>
-
-              <div class="md:col-span-1">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Department <span class="text-red-500">*</span></label>
-                <select
-                  v-model="formData.department_id"
-                  :disabled="loadingDepartments"
-                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
-                >
-                  <option value="">Select Department</option>
-                  <option v-if="loadingDepartments" disabled>Loading departments...</option>
-                  <option v-else-if="departments.length === 0" disabled>No departments available</option>
-                  <option v-for="dept in departments" :key="dept.id" :value="dept.id">
-                    {{ dept.name }}
-                  </option>
-                </select>
-                <p v-if="!loadingDepartments && departments.length === 0" class="text-xs text-red-500 dark:text-red-400 mt-1">No departments available. Please create departments first.</p>
-              </div>
-
-              <div class="md:col-span-1">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Appointed Date <span class="text-red-500">*</span></label>
-                <input
-                  v-model="formData.appointed_date"
-                  type="date"
-                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 dark:bg-gray-700 dark:text-white"
-                >
-              </div>
-
-              <!-- Teacher Linking -->
-              <div class="md:col-span-2 mt-4">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                  <svg class="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-                  </svg>
-                  Teacher Role Linking (Optional)
-                </h3>
-              </div>
-
-              <div class="md:col-span-2">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Link to Existing Teacher Account</label>
-                <select
-                  v-model="formData.teacher_id"
-                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white dark:bg-gray-700 dark:text-white"
-                >
-                  <option value="">No Teacher Link - HOD Only</option>
-                  <option v-for="teacher in teachers" :key="teacher.id" :value="teacher.id">
-                    {{ teacher.first_name }} {{ teacher.last_name }} ({{ teacher.employee_number }})
-                  </option>
-                </select>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mt-2 flex items-start">
-                  <svg class="w-4 h-4 mr-1 mt-0.5 text-indigo-500 dark:text-indigo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                  </svg>
-                  Link this HOD to an existing teacher account to enable dual-role access. The HOD will be able to switch between HOD and Teacher modes.
-                </p>
-              </div>
-            </div>
-
-            <!-- Footer -->
-            <div class="px-6 py-4 bg-gray-50 dark:bg-gray-950 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3 flex-shrink-0">
-              <button
-                type="button"
-                @click="showCreateModal = false"
-                class="w-full sm:w-auto px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                class="w-full sm:w-auto px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-200 font-medium shadow-lg shadow-indigo-500/30"
-              >
-                Create HOD Account
-              </button>
-            </div>
-          </form>
-        </div>
+          <!-- Footer -->
+          <div class="px-6 py-4 bg-gray-50 dark:bg-gray-950 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3 flex-shrink-0">
+            <button
+              type="button"
+              @click="showCreateModal = false"
+              class="w-full sm:w-auto px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="w-full sm:w-auto px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-200 font-medium shadow-lg shadow-indigo-500/30"
+            >
+              Create HOD Account
+            </button>
+          </div>
+        </form>
       </div>
+    </div>
 
-      <!-- Assign Teacher as HOD Modal -->
-      <div v-if="showAssignTeacherModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-          <!-- Header -->
-          <div class="bg-green-600 px-6 py-5 flex-shrink-0">
-            <div class="flex items-center justify-between">
-              <div>
-                <h2 class="text-2xl font-bold text-white">Assign Teacher as HOD</h2>
-                <p class="text-green-100 text-sm mt-1">Select a teacher to promote to Head of Department</p>
-              </div>
-              <button @click="showAssignTeacherModal = false" class="text-white/80 hover:text-white transition-colors">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-              </button>
+    <!-- Assign Teacher as HOD Modal -->
+    <div v-if="showAssignTeacherModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+        <!-- Header -->
+        <div class="bg-green-600 px-6 py-5 flex-shrink-0">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-2xl font-bold text-white">Assign Teacher as HOD</h2>
+              <p class="text-green-100 text-sm mt-1">Select a teacher to promote to Head of Department</p>
+            </div>
+            <button @click="showAssignTeacherModal = false" class="text-white/80 hover:text-white transition-colors">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Form -->
+        <form @submit.prevent="assignTeacherAsHOD" class="flex-1 flex flex-col min-h-0">
+          <!-- Form Content -->
+          <div class="flex-1 overflow-y-auto p-6 space-y-6 min-h-0">
+            <!-- Teacher Selection -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Teacher <span class="text-red-500">*</span></label>
+              <select
+                v-model="assignTeacherData.teacher_id"
+                :disabled="loadingTeachers"
+                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-white dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
+              >
+                <option value="">Select a teacher</option>
+                <option v-if="loadingTeachers" disabled>Loading teachers...</option>
+                <option v-else-if="availableTeachers.length === 0" disabled>No available teachers</option>
+                <option v-for="teacher in availableTeachers" :key="teacher.id" :value="teacher.id">
+                  {{ teacher.first_name }} {{ teacher.last_name }} ({{ teacher.employee_number }})
+                </option>
+              </select>
+              <p v-if="!loadingTeachers && availableTeachers.length === 0" class="text-xs text-red-500 dark:text-red-400 mt-1">No available teachers. All teachers are already HODs or no teachers exist.</p>
+            </div>
+
+            <!-- Department Selection -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Department <span class="text-red-500">*</span></label>
+              <select
+                v-model="assignTeacherData.department_id"
+                :disabled="loadingDepartments"
+                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-white dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
+              >
+                <option value="">Select Department</option>
+                <option v-if="loadingDepartments" disabled>Loading departments...</option>
+                <option v-else-if="departments.length === 0" disabled>No departments available</option>
+                <option v-for="dept in departments" :key="dept.id" :value="dept.id">
+                  {{ dept.name }}
+                </option>
+              </select>
+            </div>
+
+            <!-- Appointment Date -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Appointment Date <span class="text-red-500">*</span></label>
+              <input
+                v-model="assignTeacherData.appointed_date"
+                type="date"
+                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 dark:bg-gray-700 dark:text-white"
+              >
             </div>
           </div>
 
-          <!-- Form -->
-          <form @submit.prevent="assignTeacherAsHOD" class="flex-1 flex flex-col min-h-0">
-            <!-- Form Content -->
-            <div class="flex-1 overflow-y-auto p-6 space-y-6 min-h-0">
-              <!-- Teacher Selection -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Teacher <span class="text-red-500">*</span></label>
-                <select
-                  v-model="assignTeacherData.teacher_id"
-                  :disabled="loadingTeachers"
-                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-white dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
-                >
-                  <option value="">Select a teacher</option>
-                  <option v-if="loadingTeachers" disabled>Loading teachers...</option>
-                  <option v-else-if="availableTeachers.length === 0" disabled>No available teachers</option>
-                  <option v-for="teacher in availableTeachers" :key="teacher.id" :value="teacher.id">
-                    {{ teacher.first_name }} {{ teacher.last_name }} ({{ teacher.employee_number }})
-                  </option>
-                </select>
-                <p v-if="!loadingTeachers && availableTeachers.length === 0" class="text-xs text-red-500 dark:text-red-400 mt-1">No available teachers. All teachers are already HODs or no teachers exist.</p>
-              </div>
-
-              <!-- Department Selection -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Department <span class="text-red-500">*</span></label>
-                <select
-                  v-model="assignTeacherData.department_id"
-                  :disabled="loadingDepartments"
-                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-white dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
-                >
-                  <option value="">Select Department</option>
-                  <option v-if="loadingDepartments" disabled>Loading departments...</option>
-                  <option v-else-if="departments.length === 0" disabled>No departments available</option>
-                  <option v-for="dept in departments" :key="dept.id" :value="dept.id">
-                    {{ dept.name }}
-                  </option>
-                </select>
-              </div>
-
-              <!-- Appointment Date -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Appointment Date <span class="text-red-500">*</span></label>
-                <input
-                  v-model="assignTeacherData.appointed_date"
-                  type="date"
-                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 dark:bg-gray-700 dark:text-white"
-                >
-              </div>
-            </div>
-
-            <!-- Footer -->
-            <div class="px-6 py-4 bg-gray-50 dark:bg-gray-950 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3 flex-shrink-0">
-              <button
-                type="button"
-                @click="showAssignTeacherModal = false"
-                class="w-full sm:w-auto px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                class="w-full sm:w-auto px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200 font-medium shadow-lg shadow-green-500/30"
-              >
-                Assign as HOD
-              </button>
-            </div>
-          </form>
-        </div>
+          <!-- Footer -->
+          <div class="px-6 py-4 bg-gray-50 dark:bg-gray-950 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3 flex-shrink-0">
+            <button
+              type="button"
+              @click="showAssignTeacherModal = false"
+              class="w-full sm:w-auto px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="w-full sm:w-auto px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200 font-medium shadow-lg shadow-green-500/30"
+            >
+              Assign as HOD
+            </button>
+          </div>
+        </form>
       </div>
+    </div>
 
-      <!-- Edit HOD Modal -->
-      <div v-if="showEditModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-          <!-- Header -->
-          <div class="bg-indigo-600 px-6 py-5 flex-shrink-0">
-            <div class="flex items-center justify-between">
-              <div>
-                <h2 class="text-2xl font-bold text-white">Edit Head of Department</h2>
-                <p class="text-indigo-100 text-sm mt-1">Update HOD information and department assignment</p>
-              </div>
-              <button @click="showEditModal = false" class="text-white/80 hover:text-white transition-colors">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+    <!-- Edit HOD Modal -->
+    <div v-if="showEditModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+        <!-- Header -->
+        <div class="bg-indigo-600 px-6 py-5 flex-shrink-0">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-2xl font-bold text-white">Edit Head of Department</h2>
+              <p class="text-indigo-100 text-sm mt-1">Update HOD information and department assignment</p>
+            </div>
+            <button @click="showEditModal = false" class="text-white/80 hover:text-white transition-colors">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Form -->
+        <form @submit.prevent="updateHOD" class="flex-1 flex flex-col min-h-0">
+          <!-- Form Content -->
+          <div class="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-6 min-h-0">
+            <!-- Personal Information -->
+            <div class="md:col-span-2">
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                 </svg>
-              </button>
+                Personal Information
+              </h3>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">First Name <span class="text-red-500">*</span></label>
+              <input
+                v-model="editFormData.first_name"
+                type="text"
+                placeholder="Enter first name"
+                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 dark:bg-gray-700 dark:text-white"
+              >
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Last Name <span class="text-red-500">*</span></label>
+              <input
+                v-model="editFormData.last_name"
+                type="text"
+                placeholder="Enter last name"
+                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 dark:bg-gray-700 dark:text-white"
+              >
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Username <span class="text-red-500">*</span></label>
+              <input
+                v-model="editFormData.username"
+                type="text"
+                placeholder="Choose a username"
+                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 dark:bg-gray-700 dark:text-white"
+              >
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email <span class="text-red-500">*</span></label>
+              <input
+                v-model="editFormData.email"
+                type="email"
+                placeholder="email@example.com"
+                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 dark:bg-gray-700 dark:text-white"
+              >
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Phone</label>
+              <input
+                v-model="editFormData.phone"
+                type="tel"
+                placeholder="+1 234 567 8900"
+                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 dark:bg-gray-700 dark:text-white"
+              >
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Password (leave blank to keep current)</label>
+              <input
+                v-model="editFormData.password"
+                type="password"
+                placeholder="Minimum 8 characters"
+                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 dark:bg-gray-700 dark:text-white"
+              >
+            </div>
+
+            <!-- Department Assignment -->
+            <div class="md:col-span-2 mt-4">
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                </svg>
+                Department Assignment
+              </h3>
+            </div>
+
+            <div class="md:col-span-1">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Department <span class="text-red-500">*</span></label>
+              <select
+                v-model="editFormData.department_id"
+                :disabled="loadingDepartments"
+                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
+              >
+                <option value="">Select Department</option>
+                <option v-if="loadingDepartments" disabled>Loading departments...</option>
+                <option v-else-if="departments.length === 0" disabled>No departments available</option>
+                <option v-for="dept in departments" :key="dept.id" :value="dept.id">
+                  {{ dept.name }}
+                </option>
+              </select>
+            </div>
+
+            <div class="md:col-span-1">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Appointed Date <span class="text-red-500">*</span></label>
+              <input
+                v-model="editFormData.appointed_date"
+                type="date"
+                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 dark:bg-gray-700 dark:text-white"
+              >
+            </div>
+
+            <div class="md:col-span-1">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
+              <select
+                v-model="editFormData.is_active"
+                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white dark:bg-gray-700 dark:text-white"
+              >
+                <option :value="1">Active</option>
+                <option :value="0">Inactive</option>
+              </select>
             </div>
           </div>
 
-          <!-- Form -->
-          <form @submit.prevent="updateHOD" class="flex-1 flex flex-col min-h-0">
-            <!-- Form Content -->
-            <div class="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-6 min-h-0">
-              <!-- Personal Information -->
-              <div class="md:col-span-2">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                  <svg class="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                  </svg>
-                  Personal Information
-                </h3>
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">First Name <span class="text-red-500">*</span></label>
-                <input
-                  v-model="editFormData.first_name"
-                  type="text"
-                  placeholder="Enter first name"
-                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 dark:bg-gray-700 dark:text-white"
-                >
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Last Name <span class="text-red-500">*</span></label>
-                <input
-                  v-model="editFormData.last_name"
-                  type="text"
-                  placeholder="Enter last name"
-                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 dark:bg-gray-700 dark:text-white"
-                >
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Username <span class="text-red-500">*</span></label>
-                <input
-                  v-model="editFormData.username"
-                  type="text"
-                  placeholder="Choose a username"
-                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 dark:bg-gray-700 dark:text-white"
-                >
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email <span class="text-red-500">*</span></label>
-                <input
-                  v-model="editFormData.email"
-                  type="email"
-                  placeholder="email@example.com"
-                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 dark:bg-gray-700 dark:text-white"
-                >
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Phone</label>
-                <input
-                  v-model="editFormData.phone"
-                  type="tel"
-                  placeholder="+1 234 567 8900"
-                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 dark:bg-gray-700 dark:text-white"
-                >
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Password (leave blank to keep current)</label>
-                <input
-                  v-model="editFormData.password"
-                  type="password"
-                  placeholder="Minimum 8 characters"
-                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 dark:bg-gray-700 dark:text-white"
-                >
-              </div>
-
-              <!-- Department Assignment -->
-              <div class="md:col-span-2 mt-4">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                  <svg class="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                  </svg>
-                  Department Assignment
-                </h3>
-              </div>
-
-              <div class="md:col-span-1">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Department <span class="text-red-500">*</span></label>
-                <select
-                  v-model="editFormData.department_id"
-                  :disabled="loadingDepartments"
-                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
-                >
-                  <option value="">Select Department</option>
-                  <option v-if="loadingDepartments" disabled>Loading departments...</option>
-                  <option v-else-if="departments.length === 0" disabled>No departments available</option>
-                  <option v-for="dept in departments" :key="dept.id" :value="dept.id">
-                    {{ dept.name }}
-                  </option>
-                </select>
-              </div>
-
-              <div class="md:col-span-1">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Appointed Date <span class="text-red-500">*</span></label>
-                <input
-                  v-model="editFormData.appointed_date"
-                  type="date"
-                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 dark:bg-gray-700 dark:text-white"
-                >
-              </div>
-
-              <div class="md:col-span-1">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
-                <select
-                  v-model="editFormData.is_active"
-                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white dark:bg-gray-700 dark:text-white"
-                >
-                  <option :value="1">Active</option>
-                  <option :value="0">Inactive</option>
-                </select>
-              </div>
-            </div>
-
-            <!-- Footer -->
-            <div class="px-6 py-4 bg-gray-50 dark:bg-gray-950 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3 flex-shrink-0">
-              <button
-                type="button"
-                @click="showEditModal = false"
-                class="w-full sm:w-auto px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                class="w-full sm:w-auto px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-200 font-medium shadow-lg shadow-indigo-500/30"
-              >
-                Update HOD
-              </button>
-            </div>
-          </form>
-        </div>
+          <!-- Footer -->
+          <div class="px-6 py-4 bg-gray-50 dark:bg-gray-950 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3 flex-shrink-0">
+            <button
+              type="button"
+              @click="showEditModal = false"
+              class="w-full sm:w-auto px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="w-full sm:w-auto px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-200 font-medium shadow-lg shadow-indigo-500/30"
+            >
+              Update HOD
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import apiService from '@/services/api'
 import { useToastStore } from '@/stores/toast'
 import { useConfirmStore } from '@/stores/confirm'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StatStrip, { type StatItem } from '@/components/ui/StatStrip.vue'
+import DataTable, { type Column } from '@/components/ui/DataTable.vue'
+import ActionMenu from '@/components/ui/ActionMenu.vue'
+import { niceName, initials } from '@/components/dashboard/teacher/time'
 
 const toast = useToastStore()
 const confirmDialog = useConfirmStore()
@@ -564,14 +528,13 @@ const hods = ref<HOD[]>([])
 const departments = ref<Department[]>([])
 const teachers = ref<Teacher[]>([])
 const availableTeachers = ref<Teacher[]>([])
-const search = ref('')
-const filterDepartment = ref('')
+const loading = ref(true)
+const quick = ref<string | null>(null)
 const showCreateModal = ref(false)
 const showAssignTeacherModal = ref(false)
 const showEditModal = ref(false)
 const loadingDepartments = ref(false)
 const loadingTeachers = ref(false)
-const searchTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
 
 const formData = ref({
   first_name: '',
@@ -604,27 +567,35 @@ const editFormData = ref({
   is_active: 1
 })
 
+// Every HOD at once - search and filters happen in the table
 const fetchHODs = async () => {
   try {
-    const params: any = {}
-    if (search.value) params.search = search.value
-    if (filterDepartment.value) params.department_id = filterDepartment.value
-
-    const response = await apiService.get('/admin/hods', params)
+    const response = await apiService.get('/admin/hods')
     if (response.data.success) {
       hods.value = response.data.data.hods || []
     }
-  } catch (error) {
-    console.error('Failed to fetch HODs:', error)
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Could not load the heads of department')
+  } finally {
+    loading.value = false
   }
 }
 
-const debouncedSearch = () => {
-  if (searchTimeout.value) clearTimeout(searchTimeout.value)
-  searchTimeout.value = setTimeout(() => {
-    fetchHODs()
-  }, 400)
-}
+const columns: Column[] = [
+  { key: 'name', label: 'Head of department', sortable: true, mobile: 'title' },
+  { key: 'department_name', label: 'Department', sortable: true, mobile: 'subtitle' },
+  { key: 'teacher_id', label: 'Teaching', sortable: true, value: (r: HOD) => (r.teacher_id ? 1 : 0) },
+  { key: 'is_active', label: 'Status', sortable: true, value: (r: HOD) => (r.is_active ? 1 : 0) }
+]
+const rows = computed(() => hods.value.map(h => ({ ...h, name: niceName(`${h.first_name} ${h.last_name}`) })))
+const uncovered = computed(() => departments.value.filter(d => !hods.value.some(h => Number(h.department_id) === Number(d.id))))
+const statItems = computed<StatItem[]>(() => [
+  { label: 'Heads', value: hods.value.length, key: 'all', tone: 'indigo' },
+  { label: 'Also teach', value: hods.value.filter(h => h.teacher_id).length, key: 'teach', tone: 'sky' },
+  { label: 'Inactive', value: hods.value.filter(h => !h.is_active).length, key: 'inactive', tone: 'gray' },
+  { label: 'Departments with no head', value: uncovered.value.length, tone: 'amber', hint: `of ${departments.value.length}` }
+])
+const shown = computed(() => rows.value.filter(h => quick.value === 'teach' ? !!h.teacher_id : quick.value === 'inactive' ? !h.is_active : true))
 
 const fetchDepartments = async () => {
   loadingDepartments.value = true
@@ -848,10 +819,6 @@ const assignTeacherAsHOD = async () => {
   }
 }
 
-const getInitials = (firstName?: string | null, lastName?: string | null) => {
-  const initials = `${firstName?.[0] || ''}${lastName?.[0] || ''}`
-  return initials ? initials.toUpperCase() : '?'
-}
 
 onMounted(() => {
   fetchHODs()

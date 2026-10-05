@@ -29,7 +29,9 @@
         </button>
         <div class="min-w-0">
           <h1 class="text-base sm:text-xl font-semibold text-gray-900 dark:text-white truncate">{{ topic?.title }}</h1>
-          <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">{{ topic?.subject_name }}</p>
+          <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">
+            {{ topic?.subject_name }}<template v-if="lastEditedLabel"><span class="mx-1 text-gray-300 dark:text-gray-600">·</span><button type="button" class="hover:underline" title="See everything you changed" @click="openHistory">{{ lastEditedLabel }}</button></template>
+          </p>
         </div>
       </div>
 
@@ -94,6 +96,19 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
           </svg>
+        </button>
+
+        <button
+          v-if="topic"
+          type="button"
+          @click="openHistory"
+          class="px-2.5 sm:px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-1.5 sm:gap-2"
+          title="Every save, drafts included - and deleted pages, ready to bring back"
+        >
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <span class="hidden sm:inline">History</span>
         </button>
 
         <button
@@ -187,8 +202,8 @@
                   <p class="text-sm font-medium text-gray-900 dark:text-white truncate">
                     Page {{ page.order_number }}
                   </p>
-                  <p class="text-xs text-gray-500 dark:text-gray-400">
-                    {{ getPageWordCount(page.content) }} words
+                  <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
+                    {{ getPageWordCount(page.content) }} words<template v-if="page.updated_at"> · {{ timeAgo(page.updated_at) }}</template>
                   </p>
                 </div>
               </div>
@@ -821,6 +836,29 @@
       @close="showCoverEditor = false"
       @saved="onCoverSaved"
     />
+    <ENoteHistoryPanel
+      v-if="topic"
+      :open="showHistory"
+      :topic-id="topic.id"
+      :current-page-id="currentPage?.id ?? null"
+      @close="showHistory = false"
+      @restore="restoreFromHistory"
+    />
+
+    <!-- The page was saved somewhere else (another tab or device) since this copy was opened -->
+    <div v-if="staleConflict" class="fixed inset-0 z-[70] bg-black/50 flex items-center justify-center p-4">
+      <div class="w-full max-w-md rounded-2xl bg-white dark:bg-gray-800 shadow-2xl p-5">
+        <h3 class="text-base font-bold text-gray-900 dark:text-white">This page was changed somewhere else</h3>
+        <p class="mt-1.5 text-sm text-gray-600 dark:text-gray-300">
+          Page {{ staleConflict.pageNumber }} was saved from another tab or device {{ timeAgo(staleConflict.server.updated_at) }}, after you opened it here.
+          Choose which one to keep - the other stays in History, so nothing is lost.
+        </p>
+        <div class="mt-4 flex flex-col sm:flex-row gap-2">
+          <button type="button" class="flex-1 px-3 py-2 rounded-lg text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700" @click="resolveConflict('mine')">Keep what's on this screen</button>
+          <button type="button" class="flex-1 px-3 py-2 rounded-lg text-sm font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700" @click="resolveConflict('theirs')">Use the other version</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -830,6 +868,8 @@ import { useRouter, useRoute, onBeforeRouteLeave } from 'vue-router'
 import axios from 'axios'
 import CKEditor from '@/components/teacher/CKEditor.vue'
 import ENoteCoverEditor from '@/components/enotes/ENoteCoverEditor.vue'
+import ENoteHistoryPanel, { type HistoryVersion } from '@/components/enotes/ENoteHistoryPanel.vue'
+import { timeAgo } from '@/components/dashboard/teacher/time'
 import NarrationControls from '@/components/enotes/NarrationControls.vue'
 import AoiScenarioSuggest from '@/components/assignment/AoiScenarioSuggest.vue'
 import { addScenarioQuestion, markingGuideJson, totalMarks, type AoiSuggestion } from '@/utils/aoiDraft'
@@ -905,6 +945,7 @@ const onCoverSaved = (coverDesign: string | null) => {
 const topicLoadFailed = ref(false)
 const loadTopic = async () => {
   topicLoadFailed.value = false
+  const keepPageId = currentPage.value?.id ?? null
   try {
     console.log('Loading topic:', topicId.value)
     const response = await axios.get(`${API_BASE}/teacher/enotes/topics/${topicId.value}`)
@@ -923,8 +964,10 @@ const loadTopic = async () => {
       console.log('Pages loaded:', pages.value.length)
 
       if (pages.value.length > 0) {
-        // ?page=<id> (from Reading insights) opens on that page
-        const wanted = Number(route.query.page)
+        // Stay on the page being edited (a reload after a move or copy used to jump back to page 1,
+        // which looked like the page had vanished); on first open, ?page=<id> (from Reading
+        // insights) picks the page
+        const wanted = keepPageId ?? Number(route.query.page)
         currentPage.value = pages.value.find(p => p.id === wanted) ?? pages.value[0]
         console.log('Current page set:', currentPage.value)
       } else {
@@ -960,7 +1003,8 @@ const onNarrationGenerated = (narration: ENotePageNarration) => {
 }
 
 const selectPage = async (pageId: number) => {
-  await flushAutosave()
+  // Leaving a page whose save failed would strand its edits - stay put (the error toast says why)
+  if (currentPage.value?.id !== pageId && !await flushAutosave()) return
   currentPage.value = pages.value.find(p => p.id === pageId) || null
 }
 
@@ -972,7 +1016,7 @@ const addPage = async () => {
   if (addingPage.value) return
   addingPage.value = true
   try {
-    await flushAutosave()
+    if (!await flushAutosave()) return
 
     const newPage: ENotePageForm = {
       title: 'Page',
@@ -998,20 +1042,27 @@ const addPage = async () => {
   }
 }
 
-const updatePage = async (): Promise<boolean> => {
-  if (!currentPage.value) return true
+// `newVersion` keeps this save as its own entry in History (used when settling a clash)
+const updatePage = async (opts: { page?: ENotePage; newVersion?: boolean } = {}): Promise<boolean> => {
+  // The page being saved - currentPage may move on while the request is in flight
+  const page = opts.page ?? currentPage.value
+  if (!page) return true
 
   try {
     autosaveStatus.value = 'saving'
     hasUnsavedChanges.value = false
 
-    const updateData: Partial<ENotePageForm> = {
-      title: currentPage.value.title,
-      content: currentPage.value.content || '',
-      is_active: currentPage.value.is_active
+    const updateData: Partial<ENotePageForm> & { base_revision?: number; new_version?: boolean } = {
+      title: page.title,
+      content: page.content || '',
+      is_active: page.is_active,
+      base_revision: page.revision ?? 0,
+      ...(opts.newVersion ? { new_version: true } : {})
     }
 
-    await axios.put(`${API_BASE}/teacher/enotes/pages/${currentPage.value.id}`, updateData)
+    const res = await axios.put(`${API_BASE}/teacher/enotes/pages/${page.id}`, updateData)
+    if (typeof res.data?.data?.revision === 'number') page.revision = res.data.data.revision
+    page.updated_at = new Date().toISOString()
 
     autosaveStatus.value = 'saved'
 
@@ -1022,11 +1073,88 @@ const updatePage = async (): Promise<boolean> => {
     }, 2000)
     return true
   } catch (error: any) {
+    hasUnsavedChanges.value = true
+    if (error?.response?.status === 409 && error.response.data?.code === 'stale_page') {
+      autosaveStatus.value = 'error'
+      staleConflict.value = { page, pageNumber: page.order_number, server: error.response.data.data.page }
+      return false
+    }
     console.error('Failed to update page:', error)
     autosaveStatus.value = 'error'
-    hasUnsavedChanges.value = true
     toast.error(error?.response?.data?.message || 'Your changes could not be saved. Check your connection and try again.')
     return false
+  }
+}
+
+// ---- "Changed somewhere else": keep this screen's version, or take the stored one ----
+interface StalePage { id: number; title: string; content: string; revision: number; updated_at: string }
+const staleConflict = ref<{ page: ENotePage; pageNumber: number; server: StalePage } | null>(null)
+const resolveConflict = async (choice: 'mine' | 'theirs') => {
+  const c = staleConflict.value
+  if (!c) return
+  staleConflict.value = null
+  c.page.revision = c.server.revision
+  // Either way, what's on this screen is saved as its own version first - so it is in History
+  // even when the other version is the one kept (the other version is already there)
+  if (!await updatePage({ page: c.page, newVersion: true })) return
+  if (choice === 'mine') {
+    toast.success('Kept your version - the other one is in History')
+    return
+  }
+  c.page.title = c.server.title
+  c.page.content = resolveContentAssetUrls(c.server.content)
+  if (currentPage.value?.id === c.page.id && editorInstance) editorInstance.setData(c.page.content)
+  if (await updatePage({ page: c.page, newVersion: true })) toast.success('Using the other version - yours is in History if you need it')
+}
+
+// ---- History ----
+const showHistory = ref(false)
+const openHistory = async () => {
+  // So the latest edit is in the list too
+  await flushAutosave()
+  showHistory.value = true
+}
+
+// When this page - or failing that, the topic - was last changed
+const lastEditedLabel = computed(() => {
+  const at = currentPage.value?.updated_at || topic.value?.updated_at
+  return at ? `Edited ${timeAgo(at)}` : ''
+})
+
+const restoreFromHistory = async (version: HistoryVersion, pageDeleted: boolean, done: (ok: boolean) => void) => {
+  try {
+    if (!await flushAutosave()) { done(false); return }
+    const content = version.content || ''
+    const title = version.title || 'Page'
+    if (pageDeleted || version.page_id === null) {
+      // A deleted page comes back as a new page at the end of the topic
+      const res = await axios.post(`${API_BASE}/teacher/enotes/topics/${topicId.value}/pages`, { title, content, restored_from: version.page_id })
+      await loadTopic()
+      if (res.data?.data?.id) currentPage.value = pages.value.find(p => p.id === res.data.data.id) ?? currentPage.value
+      toast.success('Page brought back - it is at the end of the topic')
+      done(true)
+      return
+    }
+    const target = pages.value.find(p => p.id === version.page_id)
+    if (!target) { toast.error('That page is no longer in this topic'); done(false); return }
+    target.title = title
+    target.content = resolveContentAssetUrls(content)
+    if (currentPage.value?.id === target.id) {
+      if (editorInstance) editorInstance.setData(target.content)
+    } else {
+      // The editor remounts per page and starts from the page's (now restored) content
+      currentPage.value = target
+      await nextTick()
+    }
+    if (await updatePage()) {
+      toast.success(`Page ${target.order_number} is back to the version from ${new Date(version.at.replace(' ', 'T')).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}`)
+      done(true)
+    } else {
+      done(false)
+    }
+  } catch (err: any) {
+    toast.error(err?.response?.data?.message || 'Could not restore that version')
+    done(false)
   }
 }
 
@@ -1039,7 +1167,8 @@ const scheduleAutosave = () => {
   autosaveStatus.value = 'idle'
 
   autosaveTimeout.value = window.setTimeout(() => {
-    updatePage()
+    // While the "changed somewhere else" choice is open, saving again would only ask again
+    if (!staleConflict.value) updatePage()
   }, 2000)
 }
 
@@ -1089,6 +1218,7 @@ const onSaveShortcut = (e: KeyboardEvent) => {
 }
 
 const duplicatePage = async (pageId: number) => {
+  if (!await flushAutosave()) return
   try {
     await axios.post(`${API_BASE}/teacher/enotes/pages/${pageId}/duplicate`)
     await loadTopic()
@@ -1098,15 +1228,18 @@ const duplicatePage = async (pageId: number) => {
 }
 
 const deletePage = async (pageId: number) => {
-  if (!await confirmDialog.open({ title: 'Delete page', message: 'Are you sure you want to delete this page?', confirmLabel: 'Delete', danger: true })) return
+  if (!await flushAutosave()) return
+  if (!await confirmDialog.open({ title: 'Delete page', message: 'Delete this page? You can bring it back any time from History.', confirmLabel: 'Delete', danger: true })) return
 
   try {
+    const at = pages.value.findIndex(p => p.id === pageId)
     await axios.delete(`${API_BASE}/teacher/enotes/pages/${pageId}`)
     await loadTopic()
 
-    if (currentPage.value?.id === pageId) {
-      currentPage.value = pages.value.length > 0 ? pages.value[0] : null
+    if (!pages.value.some(p => p.id === currentPage.value?.id)) {
+      currentPage.value = pages.value[Math.min(Math.max(at, 0), pages.value.length - 1)] ?? null
     }
+    toast.success('Page deleted - it can be brought back from History')
   } catch (error) {
     console.error('Failed to delete page:', error)
     toast.error('Failed to delete page. Please try again.')
@@ -1116,7 +1249,7 @@ const deletePage = async (pageId: number) => {
 const previousPage = async () => {
   if (!hasPreviousPage.value || !currentPage.value) return
 
-  await flushAutosave()
+  if (!await flushAutosave()) return
   const currentIndex = pages.value.findIndex(p => p.id === currentPage.value!.id)
   if (currentIndex > 0) {
     currentPage.value = pages.value[currentIndex - 1]
@@ -1126,7 +1259,7 @@ const previousPage = async () => {
 const nextPage = async () => {
   if (!hasNextPage.value || !currentPage.value) return
 
-  await flushAutosave()
+  if (!await flushAutosave()) return
   const currentIndex = pages.value.findIndex(p => p.id === currentPage.value!.id)
   if (currentIndex < pages.value.length - 1) {
     currentPage.value = pages.value[currentIndex + 1]
@@ -1268,6 +1401,7 @@ const onDragOver = () => {
 
 const onDrop = async (dropIndex: number) => {
   if (draggedIndex.value === null || draggedIndex.value === dropIndex) return
+  if (!await flushAutosave()) { draggedIndex.value = null; return }
 
   const dragIndex = draggedIndex.value
   const newPages = [...pages.value]
@@ -1309,6 +1443,7 @@ const onEditorError = (error: any) => {
 
 const movePageUp = async (index: number) => {
   if (index === 0) return
+  if (!await flushAutosave()) return
 
   const newPages = [...pages.value]
   const [page] = newPages.splice(index, 1)
@@ -1334,6 +1469,7 @@ const movePageUp = async (index: number) => {
 
 const movePageDown = async (index: number) => {
   if (index === pages.value.length - 1) return
+  if (!await flushAutosave()) return
 
   const newPages = [...pages.value]
   const [page] = newPages.splice(index, 1)

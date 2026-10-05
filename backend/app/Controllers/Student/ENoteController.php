@@ -86,7 +86,7 @@ class ENoteController extends Controller
      * student must have a department enrollment matching the topic's department where,
      * if the topic targets a specific class, that enrollment's class also matches.
      */
-    private function visibilityClause(): string
+    public static function visibilityClause(): string
     {
         return "et.status = 'published' AND et.deleted_at IS NULL AND EXISTS (
             SELECT 1 FROM student_department_enrollments sde
@@ -157,6 +157,8 @@ class ENoteController extends Controller
                        s.name as subject_name, s.code as subject_code,
                        t.first_name as teacher_first_name, t.last_name as teacher_last_name,
                        prog.current_page_id AS resume_page_id,
+                       prog.percentage_completed AS progress_percent, prog.completed_at AS progress_completed_at,
+                       prog.last_read_at AS progress_last_read_at,
                        (SELECT COUNT(*) FROM enote_pages rp
                          INNER JOIN enote_pages cp ON cp.id = prog.current_page_id
                          WHERE rp.topic_id = et.id AND rp.is_active = 1 AND rp.deleted_at IS NULL

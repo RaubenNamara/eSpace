@@ -19,22 +19,14 @@
       >
         <!-- Top logo -->
         <div class="animate-fade-down">
-          <router-link to="/" class="inline-flex items-center gap-4">
-            <div
-              class="flex h-14 w-14 items-center justify-center rounded-2xl bg-white p-1.5 shadow-xl ring-1 ring-black/5"
-            >
-              <img src="/images/stmark-logo.jpg" alt="St Mark's College Namagoma crest" class="h-full w-full rounded-xl object-contain">
-            </div>
-
-            <div>
-              <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-                Smacon e-Space
-              </h1>
-              <p class="text-xs font-medium uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                St Mark's College Namagoma
-              </p>
-            </div>
-          </router-link>
+          <!-- eSpace is the brand; the badge says whose school space this is -->
+          <div class="flex flex-wrap items-center gap-4">
+            <router-link to="/" aria-label="eSpace home"><Wordmark size="lg" /></router-link>
+            <span class="inline-flex items-center gap-2 rounded-full bg-white/90 dark:bg-white/10 border border-slate-200 dark:border-white/10 pl-1 pr-3 py-1 shadow-sm">
+                <img src="/images/stmark-logo.jpg" alt="" class="h-6 w-6 rounded-full object-contain bg-white">
+                <span class="text-xs font-semibold text-slate-700 dark:text-slate-200">St Mark's College Namagoma</span>
+              </span>
+          </div>
         </div>
 
         <!-- Hero content -->
@@ -212,7 +204,7 @@
         <div
           class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400"
         >
-          <p>© {{ currentYear }} St Mark's College Namagoma. All rights reserved.</p>
+          <p>© {{ currentYear }} eSpace. All rights reserved.</p>
           <p>Empowering learners for lifelong learning.</p>
         </div>
       </section>
@@ -224,20 +216,13 @@
         <div class="w-full max-w-[460px] animate-card-in">
           <!-- Mobile logo -->
           <div class="mb-8 flex justify-center lg:hidden">
-            <router-link to="/" class="inline-flex items-center gap-3">
-              <div
-                class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white p-1.5 shadow-lg ring-1 ring-black/5"
-              >
-                <img src="/images/stmark-logo.jpg" alt="St Mark's College Namagoma crest" class="h-full w-full rounded-xl object-contain">
-              </div>
-
-              <div>
-                <h1 class="text-xl font-bold text-slate-900 dark:text-white">Smacon e-Space</h1>
-                <p class="text-xs font-medium text-slate-500 dark:text-slate-400">
-                  St Mark's College Namagoma
-                </p>
-              </div>
-            </router-link>
+            <div class="flex flex-col items-center gap-3">
+              <router-link to="/" aria-label="eSpace home"><Wordmark size="lg" /></router-link>
+              <span class="inline-flex items-center gap-2 rounded-full bg-white/90 dark:bg-white/10 border border-slate-200 dark:border-white/10 pl-1 pr-3 py-1 shadow-sm">
+                <img src="/images/stmark-logo.jpg" alt="" class="h-6 w-6 rounded-full object-contain bg-white">
+                <span class="text-xs font-semibold text-slate-700 dark:text-slate-200">St Mark's College Namagoma</span>
+              </span>
+            </div>
           </div>
 
           <!-- Login card -->
@@ -292,7 +277,7 @@
               </h2>
 
               <p class="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
-                Enter your credentials to access your Smacon e-Space account.
+                Enter your credentials to access your school's eSpace.
               </p>
             </div>
 
@@ -506,7 +491,7 @@
                   v-if="!isLoading"
                   class="flex items-center justify-center gap-2"
                 >
-                  Sign in to Smacon e-Space
+                  Sign in to eSpace
 
                   <svg
                     class="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1"
@@ -571,7 +556,7 @@
           <div
             class="mt-7 flex flex-col items-center justify-center gap-2 text-center text-xs text-slate-500 dark:text-slate-400 sm:flex-row sm:gap-4"
           >
-            <span>© {{ currentYear }} St Mark's College Namagoma</span>
+            <span>© {{ currentYear }} eSpace</span>
 
             <span class="hidden h-1 w-1 rounded-full bg-slate-300 dark:bg-slate-600 sm:block"></span>
 
@@ -598,6 +583,7 @@
 </template>
 
 <script setup lang="ts">
+import Wordmark from '@/components/brand/Wordmark.vue'
 import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'

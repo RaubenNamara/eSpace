@@ -1,35 +1,13 @@
 <template>
   <div>
-      <!-- Header - icon and title share a row with the search box, matching the compact style
-           used across the teacher/HOD modules; the subtitle (with counts folded in) sits on its
-           own line underneath. -->
-      <div class="flex items-center gap-2 mb-1">
-        <div class="flex items-center gap-2 flex-shrink-0">
-          <div class="hidden sm:flex w-7 h-7 rounded-lg bg-indigo-600 items-center justify-center flex-shrink-0">
-            <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-            </svg>
+      <PageHeader title="Videos" description="Video lessons from your teachers - watch any time, and save them to watch offline." icon="video" accent="violet">
+        <template #filters>
+          <div class="relative">
+            <svg class="w-4 h-4 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"></path></svg>
+            <input v-model="searchQuery" type="search" placeholder="Search videos" class="w-full md:w-56 pl-8 pr-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-violet-500">
           </div>
-          <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight whitespace-nowrap">Videos</h1>
-        </div>
-
-        <div class="flex-1 flex justify-center min-w-0">
-          <div class="relative flex-shrink min-w-0 w-32 sm:w-80">
-            <svg class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-            </svg>
-            <input
-              v-model="searchQuery"
-              type="text"
-              placeholder="Search..."
-              class="w-full pl-8 pr-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-            >
-          </div>
-        </div>
-      </div>
-      <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">
-        Video lessons shared by your teachers<span v-if="!loading && subjectGroups.length > 0"> &middot; {{ videos.length }} {{ videos.length === 1 ? 'video' : 'videos' }} &middot; {{ subjectGroups.length }} {{ subjectGroups.length === 1 ? 'subject' : 'subjects' }}</span>
-      </p>
+        </template>
+      </PageHeader>
 
       <!-- Loading: an empty shelf while videos arrive -->
       <div v-if="loading" class="space-y-8">
@@ -92,6 +70,7 @@
 </template>
 
 <script setup lang="ts">
+import PageHeader from '@/components/ui/PageHeader.vue'
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import VideoPlayerModal from '@/components/video/VideoPlayerModal.vue'

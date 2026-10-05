@@ -36,7 +36,7 @@
 
       <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div
-          v-for="a in awards.slice(0, 4)"
+          v-for="a in awards.slice(0, 2)"
           :key="a.id"
           class="rounded-xl p-4 text-white shadow-sm"
           :class="BADGE_COLORS[a.badge_type]"

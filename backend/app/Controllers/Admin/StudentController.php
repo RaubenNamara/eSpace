@@ -41,7 +41,7 @@ class StudentController extends Controller
         $search = $this->query('search', '');
         $classId = $this->query('class_id', '');
         $page = (int) $this->query('page', 1);
-        $limit = (int) $this->query('limit', 20);
+        $limit = max(1, min(10000, (int) $this->query('limit', 20)));
 
         // Build query - query students table directly
         $where = ['s.deleted_at IS NULL'];

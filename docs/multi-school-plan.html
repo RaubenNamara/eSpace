@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>eSpace - Multi-school (SaaS) plan</title>
+<style>
+  @page { size: A4; margin: 18mm 17mm 18mm 17mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Arial, sans-serif; color: #1e293b; font-size: 10.5pt; line-height: 1.5; margin: 0; }
+  h1 { font-size: 26pt; margin: 0; letter-spacing: -0.02em; color: #0f172a; }
+  h2 { font-size: 15pt; color: #0f172a; margin: 20px 0 8px; padding-top: 6px; border-top: 2px solid #e2e8f0; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; color: #4338ca; margin: 16px 0 4px; page-break-after: avoid; }
+  p { margin: 6px 0; }
+  ul, ol { margin: 6px 0 6px 0; padding-left: 20px; }
+  li { margin: 3px 0; }
+  .eyebrow { font-size: 8.5pt; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #4f46e5; }
+  .cover { border-bottom: 4px solid #4f46e5; padding-bottom: 14px; margin-bottom: 8px; }
+  .meta { color: #64748b; font-size: 9.5pt; margin-top: 6px; }
+  .logo { font-weight: 800; font-size: 13pt; color: #0f172a; }
+  .logo b { color: #4f46e5; }
+  .box { border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; margin: 10px 0; page-break-inside: avoid; }
+  .box.key { border-left: 4px solid #4f46e5; background: #f8fafc; }
+  .box.warn { border-left: 4px solid #d97706; background: #fffbeb; }
+  .box.ok { border-left: 4px solid #059669; background: #f0fdf4; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 9.5pt; page-break-inside: auto; }
+  th, td { border: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { background: #f1f5f9; color: #334155; font-weight: 700; }
+  tr { page-break-inside: avoid; }
+  thead { display: table-header-group; }
+  .keep { page-break-inside: avoid; break-inside: avoid; }
+  code { font-family: Consolas, monospace; font-size: 9pt; background: #f1f5f9; padding: 1px 4px; border-radius: 3px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .pill { display: inline-block; font-size: 8pt; font-weight: 700; padding: 1px 7px; border-radius: 99px; background: #eef2ff; color: #3730a3; }
+  .check li { list-style: none; margin-left: -18px; }
+  .check li::before { content: "\2610  "; color: #4f46e5; }
+  .small { font-size: 9pt; color: #64748b; }
+  .page-break { page-break-before: always; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="logo"><b>e</b>Space</div>
+  <p class="eyebrow" style="margin-top:18px">Product plan</p>
+  <h1>eSpace for many schools</h1>
+  <p style="font-size:12pt;color:#475569;margin-top:6px">How eSpace becomes one system that many schools use - each with its own space, all sharing the content that St Mark's built.</p>
+  <p class="meta">Prepared 5 October 2026 · For the eSpace team · Status: agreed direction, to be built after the current round of improvements</p>
+</div>
+
+<h2>1. In short</h2>
+<div class="box key">
+  <ul>
+    <li><b>One system, many schools.</b> Every school uses the same eSpace, at its own web address (for example <code>stmark.&lt;espace-domain&gt;</code>, <code>kings.&lt;espace-domain&gt;</code>).</li>
+    <li><b>Each school is separate.</b> Every school has its own database: its students, teachers, marks, chats and reports are never visible to another school.</li>
+    <li><b>St Mark's is the master school.</b> Its teaching content - curriculum, eNotes, eLibrary, Item Bank, Virtual Lab - is the master copy. It also stays our test school: new features go to St Mark's first.</li>
+    <li><b>New schools start with St Mark's content.</b> Their teachers can read it and edit it. Edits stay in their school only; the master at St Mark's never changes.</li>
+    <li><b>Master updates flow out.</b> When St Mark's improves a topic, schools that have not edited it get the new version automatically; schools that edited it are told and can choose.</li>
+    <li><b>A developer console</b> - only for the eSpace team - to enrol, import, suspend and delete schools, and update them all at once.</li>
+  </ul>
+</div>
+
+<h2>2. Decisions already made</h2>
+<table>
+  <tr><th style="width:30%">Question</th><th>Decision</th></tr>
+  <tr><td>How are schools kept apart?</td><td><b>One database per school</b>, all running the same code. The school is chosen from the web address. Rejected: one shared database with a school column on every table (too risky - one missed filter shows another school's students); a separate copy of the code per school (every update deployed many times).</td></tr>
+  <tr><td>Where does shared content come from?</td><td><b>St Mark's</b> is the master school.</td></tr>
+  <tr><td>Can other schools change the content?</td><td><b>Yes - in their own school only.</b> The first edit makes the item "edited locally"; the master is untouched.</td></tr>
+  <tr><td>How do schools get the content?</td><td><b>Copied into each school</b> when it is enrolled, and kept in step by a sync (section 5). Not read live from St Mark's: if St Mark's deletes something, other schools keep theirs, and each school stays fast and independent.</td></tr>
+  <tr><td>What is never shared?</td><td>Anything about people: students, teachers' accounts, marks and submissions, Learning Maps, chats, notices, parent links, report cards, logs.</td></tr>
+  <tr><td>Domain</td><td>eSpace gets its own new domain (to be chosen). Schools get a subdomain of it.</td></tr>
+</table>
+
+<h2>3. To settle before we build</h2>
+<div class="box warn">
+  <ol>
+    <li><b>Content agreement with St Mark's.</b> Most master content was written by St Mark's teachers, and St Mark's is a client. Agree in writing that content made on eSpace may be shared with other eSpace schools - for example with credit ("Notes by St Mark's College", shown automatically) and/or a discount for St Mark's.</li>
+    <li><b>The domain name</b> - buy it, and set a wildcard subdomain (<code>*.&lt;domain&gt;</code>) pointing to the eSpace folder.</li>
+    <li><b>Hosting</b> - check how many databases the hosting plan allows, and create a cPanel API token so the console can create a school's database by itself. (Without a token: create each database by hand in cPanel and paste its name into the console.)</li>
+    <li><b>Pricing</b> - price per learner per term (already on the website), trial length, and what happens when a school stops paying (suspend after N days).</li>
+    <li><b>Email for the platform</b> - an address for school-admin invitations and the weekly parent digest across all schools.</li>
+  </ol>
+</div>
+
+<h2>4. How it works - architecture</h2>
+<h3>4.1 Finding the school</h3>
+<ul>
+  <li>Every request looks at the web address: <code>kings.&lt;domain&gt;</code> → school "kings" → its database.</li>
+  <li>A small <b>platform database</b> holds the list of schools and how to reach each one's database. It holds no student data.</li>
+  <li>The main website (<code>&lt;domain&gt;</code>, no subdomain) shows the public landing site and the guide, as now.</li>
+  <li>Locally we test with <code>stmark.localhost</code> and <code>demo.localhost</code> - no domain needed to build it.</li>
+</ul>
+
+<h3>4.2 What changes in the code</h3>
+<table>
+  <tr><th style="width:28%">Area</th><th>Change</th></tr>
+  <tr><td>Database connection</td><td>Chosen per request from the school's record, instead of one fixed database in <code>.env</code>.</td></tr>
+  <tr><td>Uploaded files</td><td>Each school's uploads in its own folder: <code>uploads/&lt;school&gt;/...</code>. Shared master files (book PDFs, images in notes) referenced, not copied, where possible to save space.</td></tr>
+  <tr><td>Sign-in</td><td>Sessions tied to the school's subdomain, so a login at one school never works at another.</td></tr>
+  <tr><td>School name, crest, colours</td><td>Already per school (<code>school_settings</code>) - just lives in each school's database.</td></tr>
+  <tr><td>Scheduled jobs</td><td>The weekly parent digest (and future jobs) runs once for every active school.</td></tr>
+  <tr><td>Everything else</td><td>Unchanged: every page keeps working as it does today, because each school's database looks exactly like St Mark's.</td></tr>
+</table>
+
+<h3>4.3 Platform database (new)</h3>
+<table>
+  <tr><th style="width:28%">Table</th><th>Holds</th></tr>
+  <tr><td><code>platform_admins</code></td><td>The eSpace team's console logins (separate from any school admin).</td></tr>
+  <tr><td><code>schools</code></td><td>Name, subdomain, database name, status (trial / active / suspended), plan, learner limit, contact, created and last-active dates, whether it is the master school.</td></tr>
+  <tr><td><code>school_migrations</code></td><td>Which database updates each school has had - so "update all schools" knows what to run.</td></tr>
+  <tr><td><code>content_sync_log</code></td><td>Each push of master content: when, what, which schools took it.</td></tr>
+  <tr><td><code>platform_audit</code></td><td>Who in the team enrolled, suspended or deleted which school, and when.</td></tr>
+</table>
+
+<h2>5. Shared content - copy and keep in step</h2>
+<h3>5.1 What is shared</h3>
+<div class="grid2">
+  <div class="box ok"><b>Shared from St Mark's (content)</b>
+    <ul>
+      <li>Curriculum: topics, learning outcomes, competencies, constructs</li>
+      <li>eNotes: topics, pages, narration, images</li>
+      <li>eLibrary books and Item Bank papers</li>
+      <li>Videos (links / files)</li>
+      <li>Virtual Lab experiments and templates</li>
+      <li>Question bank and AOI scenarios (optional)</li>
+    </ul>
+  </div>
+  <div class="box warn"><b>Never shared (people and results)</b>
+    <ul>
+      <li>Students, teachers, HODs, admins</li>
+      <li>Submissions, marks, Learning Maps, report cards</li>
+      <li>Chats, notices, parent links, notifications</li>
+      <li>Reading progress, notes, highlights</li>
+      <li>Logs and settings</li>
+    </ul>
+  </div>
+</div>
+
+<h3>5.2 How each copied item is tracked</h3>
+<p>Every shared content row in a school's database gets four small fields:</p>
+<table>
+  <tr><th style="width:28%">Field</th><th>Meaning</th></tr>
+  <tr><td><code>master_id</code></td><td>The item's id at St Mark's (empty for the school's own new items).</td></tr>
+  <tr><td><code>master_version</code></td><td>Which version of the master this copy is based on.</td></tr>
+  <tr><td><code>edited_locally</code></td><td>Set the first time a teacher at this school changes the item.</td></tr>
+  <tr><td><code>source_credit</code></td><td>"St Mark's College Namagoma" - shown on the item if agreed (section 3).</td></tr>
+</table>
+
+<h3>5.3 What happens when ...</h3>
+<table>
+  <tr><th style="width:34%">Event</th><th>Result</th></tr>
+  <tr><td>A school is enrolled</td><td>It receives a copy of the master content packs we choose (all, or by subject / class level).</td></tr>
+  <tr><td>A teacher at another school edits a note</td><td>Their copy becomes "edited locally". St Mark's master is untouched. Other schools are untouched.</td></tr>
+  <tr><td>A school adds its own new note</td><td>It is theirs only (no <code>master_id</code>).</td></tr>
+  <tr><td>St Mark's improves a master item</td><td>Its version goes up. At the next sync, schools that have <b>not</b> edited it get the new version automatically.</td></tr>
+  <tr><td>... and a school <b>had</b> edited it</td><td>They keep their version and see a notice: "St Mark's updated this topic - compare / switch to the new version / keep mine".</td></tr>
+  <tr><td>St Mark's deletes a master item</td><td>Other schools keep their copy (it simply stops receiving updates).</td></tr>
+  <tr><td>Sync runs</td><td>From the console ("Push master updates"), or on a schedule. Each run is logged.</td></tr>
+</table>
+
+<h2>6. The developer console</h2>
+<p>A separate area, only for the eSpace team, at <code>console.&lt;domain&gt;</code>.</p>
+<table>
+  <tr><th style="width:28%">Screen</th><th>What it does</th></tr>
+  <tr><td>Schools</td><td>Every school: status, learners, teachers, storage used, last activity, plan. Search and filter.</td></tr>
+  <tr><td>Enrol a school</td><td>Name, subdomain, crest, colours, first admin's name and email, plan. Creates the database from the template, runs all migrations, copies the chosen content packs, creates the admin account, sends the invitation.</td></tr>
+  <tr><td>School page</td><td>Details, usage, the content it has edited, its migration status; actions: open as support (logged), suspend / reactivate, delete.</td></tr>
+  <tr><td>Suspend</td><td>Blocks sign-in with a friendly message; keeps all data.</td></tr>
+  <tr><td>Delete</td><td>Takes and downloads a full backup first, asks for the school's name to be typed, then removes the database and files. Logged.</td></tr>
+  <tr><td>Update all schools</td><td>Runs new database migrations on every school, one by one, with a dry run first and a result per school.</td></tr>
+  <tr><td>Master content</td><td>What St Mark's has changed since the last push; push to all schools or chosen ones.</td></tr>
+  <tr><td>Usage and billing</td><td>Learners per school per term, for invoicing; trial end dates; overdue schools.</td></tr>
+  <tr><td>Team</td><td>Console accounts for the four of us, and the audit log.</td></tr>
+</table>
+
+<h2>7. Onboarding a new school</h2>
+<ol>
+  <li><b>Enrol</b> in the console (section 6) - the school's space exists within minutes.</li>
+  <li><b>Set up the year:</b> academic year, terms, departments, subjects (pre-filled from St Mark's, editable).</li>
+  <li><b>Classes and streams in bulk:</b> e.g. S.1-S.6 × East / West / North in one step.</li>
+  <li><b>Import staff</b> from Excel/CSV: name, email/phone, department, role (teacher / HOD), subjects. Preview with errors highlighted before saving; logins created.</li>
+  <li><b>Import students</b> from Excel/CSV: name, admission number, class, stream, gender. Preview, then save; usernames and first passwords created and printable as login slips.</li>
+  <li><b>Assign teachers</b> to classes and subjects.</li>
+  <li><b>Check and hand over:</b> a checklist page confirms each step, then the school admin takes over. Training follows module by module.</li>
+</ol>
+
+<div class="keep">
+<h2>8. Build plan</h2>
+<table>
+  <tr><th style="width:6%">#</th><th style="width:26%">Phase</th><th>Delivers</th><th style="width:16%">Estimate</th></tr>
+  <tr><td>1</td><td>School-aware eSpace</td><td>School chosen by web address; per-school database connection, uploads folder and sessions; platform database; St Mark's set up as school #1 (master). Tested locally with two schools.</td><td>2-3 days</td></tr>
+  <tr><td>2</td><td>Developer console</td><td>Console login; schools list; enrol (database from template, migrations, admin account); suspend; delete with backup; update all schools; audit log.</td><td>3-4 days</td></tr>
+  <tr><td>3</td><td>Onboarding tools</td><td>Bulk classes and streams; staff and student import with preview and login slips; set-up checklist.</td><td>2-3 days</td></tr>
+  <tr><td>4</td><td>Shared content</td><td>Master tracking fields; copy content packs at enrolment; "edited locally"; push master updates; "St Mark's updated this" notice with compare / switch / keep; credit line.</td><td>3-4 days</td></tr>
+  <tr><td>5</td><td>Usage and billing</td><td>Learners per school per term; trial and overdue view; suspend-after-overdue rule.</td><td>1-2 days</td></tr>
+  <tr><td>6</td><td>Go-live</td><td>New domain and wildcard subdomain; St Mark's moved to <code>stmark.&lt;domain&gt;</code> (old address redirects); first new school enrolled.</td><td>1 day + checks</td></tr>
+</table>
+<p class="small">Total: about 2-3 weeks of work, built and tested phase by phase on localhost. Nothing changes for St Mark's until phase 6.</p>
+</div>
+
+<h2>9. Safeguards</h2>
+<ul>
+  <li><b>Isolation tests:</b> automated checks that a login, link or file from one school never opens another school's data.</li>
+  <li><b>Backups:</b> every school backed up on a schedule; always before a delete or a migration run.</li>
+  <li><b>Migrations:</b> dry run first; run school by school; stop and report on the first failure; never leave a school half-updated.</li>
+  <li><b>Support access:</b> the team can open a school only through the console, and every visit is logged.</li>
+  <li><b>Content sync:</b> never overwrites a school's local edits; every push logged and reversible for unedited items.</li>
+  <li><b>Performance:</b> each school is its own database, so one busy school does not slow the others; watch total server load as schools grow.</li>
+</ul>
+
+<div class="keep">
+<h2>10. Go-live checklist</h2>
+<ul class="check">
+  <li>Content-sharing agreement signed with St Mark's</li>
+  <li>Domain bought; wildcard subdomain pointing to eSpace</li>
+  <li>cPanel API token created (or manual database steps agreed); database limit checked</li>
+  <li>Platform email address set up</li>
+  <li>Phases 1-5 tested locally with St Mark's plus two demo schools</li>
+  <li>Full backup of St Mark's taken</li>
+  <li>St Mark's moved to its new address; old address redirects; St Mark's admin informed</li>
+  <li>First new school enrolled, imported and handed over</li>
+  <li>Pricing, trial and suspension rules written down</li>
+</ul>
+</div>
+
+<p class="small" style="margin-top:24px;border-top:1px solid #e2e8f0;padding-top:8px">eSpace · Multi-school plan · Keep this document in <code>docs/</code> and update it when a decision changes.</p>
+</body>
+</html>

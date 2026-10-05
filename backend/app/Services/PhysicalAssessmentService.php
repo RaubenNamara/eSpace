@@ -98,7 +98,11 @@ class PhysicalAssessmentService
     public function listForClassSubject(int $classId, int $subjectId, int $termId): array
     {
         $stmt = $this->getDb()->prepare(
-            "SELECT pa.*, sub.name AS subject_name, c.name AS class_name, c.stream_name
+            "SELECT pa.*, sub.name AS subject_name, c.name AS class_name, c.stream_name,
+                    -- How far the marking has got: marks entered, their average, and the class size
+                    (SELECT COUNT(*) FROM physical_assessment_scores pas WHERE pas.physical_assessment_id = pa.id AND pas.score IS NOT NULL) AS marked_count,
+                    (SELECT AVG(pas.score) FROM physical_assessment_scores pas WHERE pas.physical_assessment_id = pa.id AND pas.score IS NOT NULL) AS avg_score,
+                    (SELECT COUNT(*) FROM students st WHERE st.class_id = pa.class_id AND st.deleted_at IS NULL) AS class_size
              FROM physical_assessments pa
              INNER JOIN subjects sub ON sub.id = pa.subject_id
              INNER JOIN classes c ON c.id = pa.class_id
@@ -192,6 +196,10 @@ class PhysicalAssessmentService
             'include_on_report' => (bool) $row['include_on_report'],
             'created_by' => (int) $row['created_by'],
             'created_by_role' => $row['created_by_role'],
+            // Only on the list (listForClassSubject)
+            'marked_count' => isset($row['marked_count']) ? (int) $row['marked_count'] : null,
+            'avg_score' => isset($row['avg_score']) ? round((float) $row['avg_score'], 1) : null,
+            'class_size' => isset($row['class_size']) ? (int) $row['class_size'] : null,
         ];
     }
 }

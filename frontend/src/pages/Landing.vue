@@ -1,506 +1,665 @@
 <template>
-  <div class="min-h-screen bg-white font-sans text-slate-900 antialiased dark:bg-slate-950 dark:text-white">
-    <!-- Nav -->
-    <header
-      class="fixed inset-x-0 top-0 z-50 border-b border-slate-200 bg-white/80 backdrop-blur-xl transition-transform duration-300 dark:border-white/10 dark:bg-slate-950/80"
-      :class="{ '-translate-y-full': headerHidden }"
-    >
-      <div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-6 lg:px-8">
-        <router-link to="/" class="inline-flex items-center gap-3">
-          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-white p-1 shadow-lg ring-1 ring-black/5">
-            <img src="/images/stmark-logo.jpg" alt="St Mark's College Namagoma crest" class="h-full w-full rounded-lg object-contain">
-          </div>
-          <div class="leading-tight">
-            <span class="block text-base font-bold tracking-tight text-slate-900 dark:text-white">Smacon e-Space</span>
-            <span class="block text-[10px] font-medium uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">St Mark's College Namagoma</span>
-          </div>
-        </router-link>
+  <!-- The public eSpace website: what eSpace is, a tour, every module, who it's for, pricing, the
+       team, and a way for a school to ask for a demo. eSpace is the product; schools (St Mark's
+       first) are clients. Words for most sections live in data/site.ts. -->
+  <div class="site-plain min-h-screen bg-white font-sans text-slate-900 antialiased dark:bg-slate-950 dark:text-white overflow-x-hidden">
+    <SiteHeader />
 
-        <nav class="hidden items-center gap-8 md:flex">
-          <a href="#about" class="text-sm font-medium text-slate-600 transition hover:text-slate-900 dark:text-slate-300 dark:hover:text-white">About</a>
-          <a href="#features" class="text-sm font-medium text-slate-600 transition hover:text-slate-900 dark:text-slate-300 dark:hover:text-white">Features</a>
-          <a href="#roles" class="text-sm font-medium text-slate-600 transition hover:text-slate-900 dark:text-slate-300 dark:hover:text-white">Who it's for</a>
-        </nav>
-
-        <div class="flex items-center gap-3">
-          <router-link
-            to="/login"
-            class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 hover:shadow-md"
-          >
-            Log in
-          </router-link>
-        </div>
-      </div>
-    </header>
-
-    <!-- Hero -->
-    <section class="relative overflow-hidden pt-28 pb-16 sm:pt-40 sm:pb-32">
-      <div
-        class="pointer-events-none absolute inset-0 opacity-[0.035] dark:opacity-[0.05]"
-        :style="{
-          backgroundImage: 'linear-gradient(currentColor 1px, transparent 1px), linear-gradient(90deg, currentColor 1px, transparent 1px)',
-          backgroundSize: '52px 52px'
-        }"
-      ></div>
-
-      <div class="relative mx-auto grid max-w-7xl grid-cols-1 items-center gap-16 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
-        <div class="animate-fade-up">
-          <div class="mb-7 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-medium text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
-            <span class="relative flex h-2.5 w-2.5">
-              <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-slate-400 opacity-75 dark:bg-slate-500"></span>
-              <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-slate-500 dark:bg-slate-400"></span>
-            </span>
-            Built for every school
-          </div>
-
-          <h1 class="max-w-xl text-4xl font-bold leading-tight tracking-tight text-slate-900 dark:text-white sm:text-5xl xl:text-6xl xl:leading-[1.08]">
-            Learn without limits.
-          </h1>
-
-          <p class="mt-6 max-w-xl text-base leading-8 text-slate-600 dark:text-slate-300 xl:text-lg">
-            Smacon e-Space is the digital learning environment designed to extend learning beyond the classroom and place every learner at the centre of a modern, interactive, and engaging educational experience.
-          </p>
-
-          <div class="mt-9 flex flex-wrap items-center gap-4">
-            <router-link
-              to="/login"
-              class="group inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 hover:shadow-md hover:-translate-y-0.5"
-            >
-              Log in to Smacon e-Space
-              <svg class="h-4 w-4 transition group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
-              </svg>
-            </router-link>
-            <a
-              href="#features"
-              class="inline-flex items-center gap-2 rounded-xl border-2 border-slate-300 bg-white px-6 py-3.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-white/15 dark:bg-white/[0.04] dark:text-white dark:hover:bg-white/[0.08]"
-            >
-              Explore features
-            </a>
-          </div>
-
-          <div class="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-slate-500 dark:text-slate-400">
-            <div v-for="trust in trustPoints" :key="trust" class="flex items-center gap-2">
-              <svg class="h-4 w-4 text-slate-400 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-              </svg>
-              {{ trust }}
-            </div>
-          </div>
+    <main id="top">
+      <!-- ===== Hero ===== -->
+      <section class="relative pt-28 sm:pt-36 pb-16 sm:pb-24">
+        <div class="absolute inset-0 -z-10 overflow-hidden" aria-hidden="true">
+          <div class="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(100,116,139,0.15)_1px,transparent_0)] [background-size:28px_28px] [mask-image:linear-gradient(to_bottom,black,transparent_75%)]"></div>
         </div>
 
-        <!-- Hero visual: abstract product preview -->
-        <div class="relative hidden animate-fade-up-slow lg:block">
-          <div class="relative mx-auto max-w-md">
-            <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-slate-900">
-              <div class="mb-4 flex items-center gap-2">
-                <span class="h-2.5 w-2.5 rounded-full bg-slate-300 dark:bg-slate-600"></span>
-                <span class="h-2.5 w-2.5 rounded-full bg-slate-300 dark:bg-slate-600"></span>
-                <span class="h-2.5 w-2.5 rounded-full bg-slate-300 dark:bg-slate-600"></span>
-                <span class="ml-3 h-2 flex-1 rounded-full bg-slate-100 dark:bg-white/10"></span>
-              </div>
-
-              <div class="grid grid-cols-3 gap-3 mb-3">
-                <div v-for="tile in previewTiles" :key="tile.label" class="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100 dark:bg-white/[0.06] dark:ring-white/10">
-                  <div class="mb-2 h-7 w-7 rounded-lg bg-indigo-600"></div>
-                  <p class="text-[10px] font-medium text-slate-500 dark:text-slate-400">{{ tile.label }}</p>
-                  <p class="text-sm font-bold text-slate-900 dark:text-white">{{ tile.value }}</p>
-                </div>
-              </div>
-
-              <div class="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-100 dark:bg-white/[0.06] dark:ring-white/10">
-                <div class="mb-3 flex items-center justify-between">
-                  <p class="text-xs font-medium text-slate-600 dark:text-slate-300">Weekly activity</p>
-                  <span class="text-[10px] text-slate-400 dark:text-slate-500">&#9650; live</span>
-                </div>
-                <div class="flex items-end gap-1.5 h-16">
-                  <div v-for="(bar, i) in chartBars" :key="i" class="flex-1 rounded-t-md bg-indigo-500 opacity-80" :style="{ height: bar + '%' }"></div>
-                </div>
-              </div>
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+          <div class="reveal">
+            <span class="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-white/70 px-3 py-1 text-xs font-semibold text-indigo-700 shadow-sm dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-200">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              Built for the competency-based curriculum
+            </span>
+            <h1 class="mt-5 font-jakarta text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.05]">
+              Every lesson,<br>every learner,<br>
+              <span class="text-indigo-600 dark:text-indigo-400">one space.</span>
+            </h1>
+            <p class="mt-5 max-w-xl text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed">
+              eSpace is a complete digital school: notes, books, videos and live lessons for students; LOA, AOI and EOC assessment and marking for teachers; and a live Learning Map that shows everyone exactly where each learner stands.
+            </p>
+            <div class="mt-8 flex flex-wrap gap-3">
+              <a href="#demo" class="inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition">
+                Request a demo
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
+              </a>
+              <button type="button" class="inline-flex items-center gap-2.5 px-5 py-3 rounded-2xl text-sm font-bold text-slate-800 bg-white border border-slate-200 shadow-sm hover:border-slate-300 dark:bg-white/5 dark:text-white dark:border-white/15 transition" @click="watchTour(0)">
+                <span class="w-6 h-6 rounded-full bg-slate-900 text-white dark:bg-white dark:text-slate-900 flex items-center justify-center"><svg class="w-3 h-3 ml-0.5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg></span>
+                Watch the 30-second tour
+              </button>
             </div>
-
-            <!-- Floating chat card -->
-            <div class="absolute -bottom-6 -left-8 w-52 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-xl animate-float dark:border-white/10 dark:bg-slate-900/90">
-              <div class="flex items-center gap-2 mb-2">
-                <div class="h-7 w-7 rounded-full bg-slate-200 dark:bg-slate-700"></div>
-                <div class="flex-1">
-                  <div class="h-2 w-16 rounded-full bg-slate-100 dark:bg-white/20 mb-1"></div>
-                  <div class="h-1.5 w-10 rounded-full bg-slate-100 dark:bg-white/10"></div>
-                </div>
-              </div>
-              <div class="h-1.5 w-full rounded-full bg-slate-100 dark:bg-white/10 mb-1.5"></div>
-              <div class="h-1.5 w-3/4 rounded-full bg-slate-100 dark:bg-white/10"></div>
-            </div>
-
-            <!-- Floating badge -->
-            <div class="absolute -top-5 -right-4 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 shadow-xl animate-float-slow dark:border-white/10 dark:bg-slate-900/90">
-              <div class="flex items-center gap-2">
-                <svg class="h-4 w-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-                <span class="text-xs font-semibold text-slate-900 dark:text-white">Assignment graded</span>
-              </div>
+            <!-- A client -->
+            <div class="mt-10 flex items-center gap-3">
+              <img src="/images/stmark-logo.jpg" alt="" width="40" height="40" class="w-10 h-10 rounded-xl object-contain bg-white p-0.5 shadow ring-1 ring-black/5">
+              <p class="text-sm text-slate-500 dark:text-slate-400 leading-snug">Trusted by <span class="font-semibold text-slate-800 dark:text-slate-100">St Mark's College Namagoma</span><br class="hidden sm:block"> - every class, every subject.</p>
             </div>
           </div>
-        </div>
-      </div>
-    </section>
 
-    <!-- About -->
-    <section id="about" class="relative overflow-hidden bg-slate-100 py-12 dark:bg-slate-900 sm:py-28">
-      <div class="relative mx-auto grid max-w-7xl grid-cols-1 items-center gap-16 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
-        <div class="text-center lg:text-left">
-          <h2 class="text-3xl font-bold leading-tight tracking-tight text-slate-900 dark:text-white sm:text-4xl lg:text-5xl">
-            Your School's eSpace
-          </h2>
-          <p class="mx-auto mt-5 max-w-lg text-base leading-7 text-slate-600 dark:text-slate-300 sm:text-lg lg:mx-0">
-            Empowering students and teachers with interactive, browser-based access to notes and textbooks,
-            with nothing to download or install.
-          </p>
-
-          <div class="mt-8 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
-            <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 dark:border-white/15 dark:bg-white/10 dark:text-white">
-              <svg class="h-4 w-4 text-slate-400 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
-              Interactive notes &amp; textbooks
-            </span>
-            <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 dark:border-white/15 dark:bg-white/10 dark:text-white">
-              <svg class="h-4 w-4 text-slate-400 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-              Works in any browser
-            </span>
-            <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 dark:border-white/15 dark:bg-white/10 dark:text-white">
-              <svg class="h-4 w-4 text-slate-400 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4M9 9v.01M9 12v.01M9 15v.01M9 18v.01"/></svg>
-              Built for schools like yours
-            </span>
-          </div>
-        </div>
-
-        <!-- Visual: browser-window mockup of a notes page, echoing the hero's device preview -->
-        <div class="relative hidden animate-fade-up-slow lg:block">
-          <div class="relative mx-auto max-w-md">
-            <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-slate-800">
-              <div class="mb-4 flex items-center gap-2">
-                <span class="h-2.5 w-2.5 rounded-full bg-slate-300 dark:bg-slate-600"></span>
-                <span class="h-2.5 w-2.5 rounded-full bg-slate-300 dark:bg-slate-600"></span>
-                <span class="h-2.5 w-2.5 rounded-full bg-slate-300 dark:bg-slate-600"></span>
-                <span class="ml-3 flex h-6 flex-1 items-center rounded-full bg-slate-100 px-3 dark:bg-white/10">
-                  <svg class="mr-1.5 h-3 w-3 text-slate-400 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-                  <span class="text-[10px] text-slate-500 dark:text-slate-300">e-space.stmarks.ac.ug/enotes</span>
+          <!-- Product preview: a few eSpace pieces, floating -->
+          <div class="reveal relative mx-auto w-full max-w-lg lg:max-w-none h-[31rem] sm:h-[30rem]" aria-hidden="true">
+            <div class="absolute inset-x-4 sm:inset-x-10 top-6 rounded-3xl bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-white/10 shadow-xl shadow-slate-900/5 backdrop-blur p-5 float-a">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-[11px] font-medium text-slate-400">Good morning,</p>
+                  <p class="font-jakarta text-lg font-bold">Ashley</p>
+                </div>
+                <span class="px-2 py-1 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300">5-day streak</span>
+              </div>
+              <div class="mt-4 grid grid-cols-4 gap-2">
+                <div v-for="q in HERO_TILES" :key="q.label" class="rounded-xl bg-slate-50 dark:bg-white/5 p-2 text-center">
+                  <span class="mx-auto mb-1 w-7 h-7 rounded-lg flex items-center justify-center bg-white text-slate-600 dark:bg-white/10 dark:text-slate-300"><AppIcon :name="q.icon" class="w-4 h-4" /></span>
+                  <span class="text-[10px] font-semibold text-slate-600 dark:text-slate-300">{{ q.label }}</span>
+                </div>
+              </div>
+              <div class="mt-4 flex items-center gap-3 rounded-2xl bg-indigo-600 p-3 text-white">
+                <span class="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center"><AppIcon name="book" class="w-5 h-5" /></span>
+                <span class="flex-1 min-w-0">
+                  <span class="block text-[10px] font-bold uppercase tracking-wider text-indigo-100">Continue reading</span>
+                  <span class="block text-sm font-bold truncate">Measurements in Physics</span>
+                  <span class="mt-1 block h-1 rounded-full bg-white/25"><span class="block h-1 w-2/3 rounded-full bg-white"></span></span>
                 </span>
               </div>
-
-              <div class="mb-3 flex items-center justify-between">
-                <span class="rounded-md bg-indigo-600 px-2.5 py-1 text-[10px] font-semibold text-white">Chapter 4</span>
-                <span class="text-[10px] text-slate-400 dark:text-slate-500">Page 3 of 12</span>
-              </div>
-
-              <div class="space-y-2 rounded-xl bg-slate-50 p-4 ring-1 ring-slate-100 dark:bg-white/[0.06] dark:ring-white/10">
-                <p class="text-xs font-bold text-slate-900 dark:text-white">Data Communication</p>
-                <div class="h-1.5 w-full rounded-full bg-slate-200 dark:bg-white/10"></div>
-                <div class="h-1.5 w-11/12 rounded-full bg-slate-200 dark:bg-white/10"></div>
-                <div class="h-1.5 w-full rounded-full bg-slate-200 dark:bg-white/10"></div>
-                <div class="h-1.5 w-4/5 rounded-full bg-slate-200 dark:bg-white/10"></div>
-                <div class="mt-3 h-16 rounded-lg bg-slate-100 ring-1 ring-slate-200 dark:bg-white/5 dark:ring-white/10"></div>
-                <div class="h-1.5 w-full rounded-full bg-slate-200 dark:bg-white/10"></div>
-                <div class="h-1.5 w-3/5 rounded-full bg-slate-200 dark:bg-white/10"></div>
-              </div>
-
-              <div class="mt-3 flex items-center justify-between rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100 dark:bg-white/[0.06] dark:ring-white/10">
-                <div class="flex items-center gap-2">
-                  <div class="h-7 w-7 rounded-full bg-slate-200 dark:bg-slate-600"></div>
-                  <div class="h-1.5 w-16 rounded-full bg-slate-200 dark:bg-white/10"></div>
+            </div>
+            <div class="absolute left-0 bottom-2 sm:bottom-6 w-44 sm:w-48 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-xl p-4 float-b">
+              <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Learning Map</p>
+              <div class="flex items-center gap-3">
+                <svg class="w-14 h-14 -rotate-90" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.5" fill="none" stroke-width="4" class="stroke-slate-100 dark:stroke-white/10" /><circle cx="18" cy="18" r="15.5" fill="none" stroke-width="4" stroke-linecap="round" stroke="#10b981" stroke-dasharray="68 97.4" /></svg>
+                <div>
+                  <p class="font-jakarta text-xl font-extrabold">70%</p>
+                  <p class="text-[10px] text-slate-500">outcomes achieved</p>
                 </div>
-                <svg class="h-4 w-4 text-slate-400 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
               </div>
             </div>
+            <div class="absolute right-0 sm:-right-2 bottom-[8.5rem] sm:bottom-16 w-52 sm:w-56 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-xl p-4 float-c">
+              <p class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400"><span class="w-2 h-2 rounded-full bg-red-500"></span>Live now</p>
+              <p class="mt-1 text-sm font-bold">Photosynthesis Q&amp;A</p>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400">Biology · S.2</p>
+              <span class="mt-3 inline-flex px-3 py-1 rounded-lg bg-slate-900 text-white dark:bg-white dark:text-slate-900 text-xs font-bold">Join now</span>
+            </div>
+          </div>
+        </div>
+      </section>
 
-            <!-- Floating "no install" badge -->
-            <div class="absolute -bottom-6 -left-8 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 shadow-xl animate-float dark:border-white/10 dark:bg-slate-800/95">
-              <div class="flex items-center gap-2">
-                <svg class="h-4 w-4 text-slate-400 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.6 9h16.8M3.6 15h16.8M11.5 3a17 17 0 000 18M12.5 3a17 17 0 010 18"/></svg>
-                <span class="text-xs font-semibold text-slate-900 dark:text-white">Read from any device</span>
+      <!-- ===== Numbers ===== -->
+      <section class="border-y border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-white/[0.02]">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 grid grid-cols-2 lg:grid-cols-4 gap-6">
+          <div v-for="n in NUMBERS" :key="n.label" class="reveal text-center lg:text-left">
+            <p class="font-jakarta text-xl sm:text-3xl xl:text-4xl font-extrabold whitespace-nowrap text-slate-900 dark:text-white">{{ n.value }}</p>
+            <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">{{ n.label }}</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Why ===== -->
+      <section id="features" class="py-20 sm:py-28 scroll-mt-20">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="reveal max-w-2xl">
+            <p :class="EYEBROW">Why schools choose eSpace</p>
+            <h2 :class="H2">Teaching, learning and leading - finally in one place.</h2>
+          </div>
+          <div class="mt-12 grid lg:grid-cols-3 gap-5">
+            <div v-for="p in PILLARS" :key="p.title" class="reveal group rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.03] p-6 sm:p-7 hover:-translate-y-1 hover:shadow-lg transition">
+              <span class="w-12 h-12 rounded-2xl flex items-center justify-center bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300"><AppIcon :name="p.icon" class="w-6 h-6" /></span>
+              <h3 class="mt-5 font-jakarta text-xl font-bold">{{ p.title }}</h3>
+              <p class="mt-2 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{{ p.text }}</p>
+              <ul class="mt-4 space-y-2">
+                <li v-for="b in p.points" :key="b" class="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
+                  <AppIcon name="check-circle" class="w-4 h-4 mt-0.5 flex-shrink-0 text-indigo-500" />{{ b }}
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Tour ===== -->
+      <section id="tour" class="py-20 sm:py-28 bg-slate-50 dark:bg-white/[0.02] border-y border-slate-200 dark:border-white/10 scroll-mt-20">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="reveal text-center max-w-2xl mx-auto mb-10">
+            <p :class="EYEBROW">See it in action</p>
+            <h2 :class="H2">A look inside eSpace</h2>
+          </div>
+          <ProductTour class="reveal" @watch="watchTour" />
+        </div>
+      </section>
+
+      <!-- ===== Try a lesson ===== -->
+      <section id="try" class="py-20 sm:py-28 scroll-mt-20">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="reveal max-w-2xl mb-10">
+            <p :class="EYEBROW">Try it yourself</p>
+            <h2 :class="H2">Read a lesson like a student.</h2>
+            <p class="mt-3 text-slate-600 dark:text-slate-400">Turn the pages, listen to the narration, then hand in the quick check - and watch your outcomes fill in, the way they do on a learner's Learning Map.</p>
+          </div>
+          <ENoteSample class="reveal" />
+        </div>
+      </section>
+
+      <!-- ===== Modules ===== -->
+      <section id="modules" class="py-20 sm:py-28 bg-slate-50 dark:bg-white/[0.02] border-y border-slate-200 dark:border-white/10 scroll-mt-20">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="reveal flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+            <div class="max-w-2xl">
+              <p :class="EYEBROW">The modules</p>
+              <h2 :class="H2">{{ MODULES.length }} modules. One sign-in.</h2>
+              <p class="mt-3 text-slate-600 dark:text-slate-400">Every part of school life that happens on a screen - built to work together, so what a student reads, attempts and achieves all lands on the same Learning Map.</p>
+            </div>
+            <div class="flex gap-1.5 overflow-x-auto [scrollbar-width:none] -mx-4 px-4 lg:mx-0 lg:px-0" role="tablist" aria-label="Module groups">
+              <button
+                v-for="c in [{ key: 'all', label: 'All' }, ...CATEGORIES]"
+                :key="c.key"
+                type="button"
+                role="tab"
+                :aria-selected="moduleFilter === c.key"
+                class="flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition"
+                :class="moduleFilter === c.key ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300 dark:bg-white/5 dark:text-slate-300 dark:border-white/10'"
+                @click="moduleFilter = c.key"
+              >{{ c.label }}</button>
+            </div>
+          </div>
+
+          <TransitionGroup tag="div" name="mod" class="mt-10 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <button v-for="m in visibleModules" :key="m.key" type="button" class="group flex flex-col text-left rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-5 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-900/5 hover:border-indigo-200 dark:hover:border-indigo-400/30 focus-visible:ring-2 focus-visible:ring-indigo-500 transition" :aria-label="`${m.name} - more about this module`" @click="openModule(m)">
+              <span class="w-11 h-11 rounded-xl flex items-center justify-center bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300"><AppIcon :name="m.icon" class="w-5 h-5" /></span>
+              <h3 class="mt-4 font-jakarta text-base font-bold">{{ m.name }}</h3>
+              <p class="mt-1.5 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{{ m.short }}</p>
+              <p class="mt-3 flex flex-wrap gap-1">
+                <span v-for="r in m.roles" :key="r" class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300">{{ ROLE_LABEL[r] }}</span>
+              </p>
+              <span class="mt-auto pt-4 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-300">
+                More about {{ m.name }}
+                <svg class="w-3.5 h-3.5 group-hover:translate-x-0.5 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+              </span>
+            </button>
+          </TransitionGroup>
+          <!-- Phones see the first six, then the rest on request -->
+          <div v-if="visibleModules.length < shownModules.length" class="mt-6 text-center sm:hidden">
+            <button type="button" class="px-5 py-2.5 rounded-xl text-sm font-semibold bg-white border border-slate-200 text-slate-700 dark:bg-white/5 dark:border-white/10 dark:text-slate-200" @click="allModules = true">Show all {{ shownModules.length }} modules</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Who it's for ===== -->
+      <section id="roles" class="py-20 sm:py-28 scroll-mt-20">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="reveal text-center max-w-2xl mx-auto">
+            <p :class="EYEBROW">Who it's for</p>
+            <h2 :class="H2">A space for everyone in the school</h2>
+          </div>
+          <div class="reveal mt-10 flex justify-center">
+            <div class="inline-flex gap-1 p-1 rounded-2xl bg-slate-100 dark:bg-white/5 overflow-x-auto max-w-full [scrollbar-width:none]" role="tablist">
+              <button v-for="r in ROLES" :key="r.key" type="button" role="tab" :aria-selected="roleTab === r.key" class="flex-shrink-0 px-5 py-2.5 rounded-xl text-sm font-semibold transition" :class="roleTab === r.key ? 'bg-white text-slate-900 shadow dark:bg-slate-800 dark:text-white' : 'text-slate-500 dark:text-slate-400'" @click="roleTab = r.key">{{ r.label }}</button>
+            </div>
+          </div>
+          <Transition name="fade" mode="out-in">
+            <div :key="activeRole.key" class="mt-10 grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+              <div>
+                <h3 class="font-jakarta text-2xl sm:text-3xl font-extrabold tracking-tight">{{ activeRole.headline }}</h3>
+                <p class="mt-3 text-slate-600 dark:text-slate-400 leading-relaxed">{{ activeRole.text }}</p>
+                <ul class="mt-6 grid sm:grid-cols-2 gap-3">
+                  <li v-for="p in activeRole.points" :key="p" class="flex items-start gap-2.5 rounded-xl bg-slate-50 dark:bg-white/5 p-3 text-sm text-slate-700 dark:text-slate-200">
+                    <AppIcon name="check-circle" class="w-4 h-4 mt-0.5 flex-shrink-0 text-indigo-500" />{{ p }}
+                  </li>
+                </ul>
+                <div class="mt-6 flex flex-wrap gap-x-6 gap-y-2">
+                  <router-link :to="activeRole.page" class="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 dark:text-indigo-300 hover:underline">
+                    eSpace for {{ activeRole.label.toLowerCase() }}
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                  </router-link>
+                  <router-link :to="`/guide#${activeRole.key}`" class="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:underline">Read the guide</router-link>
+                </div>
+              </div>
+              <div class="rounded-3xl p-6 sm:p-8 bg-slate-900 text-white dark:bg-white/5 dark:border dark:border-white/10">
+                <p class="text-xs font-bold uppercase tracking-widest opacity-80">A day with eSpace</p>
+                <ol class="mt-5 space-y-4">
+                  <li v-for="(s, i) in activeRole.day" :key="s.time" class="flex gap-4">
+                    <span class="flex-shrink-0 w-14 text-sm font-bold opacity-90">{{ s.time }}</span>
+                    <span class="flex-1 pb-4" :class="i < activeRole.day.length - 1 ? 'border-b border-white/20' : ''">
+                      <span class="block text-sm font-semibold">{{ s.what }}</span>
+                    </span>
+                  </li>
+                </ol>
               </div>
             </div>
+          </Transition>
+        </div>
+      </section>
 
-            <!-- Floating badge -->
-            <div class="absolute -top-5 -right-4 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 shadow-xl animate-float-slow dark:border-white/10 dark:bg-slate-800/95">
-              <div class="flex items-center gap-2">
-                <svg class="h-4 w-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-                <span class="text-xs font-semibold text-slate-900 dark:text-white">Progress saved</span>
+      <!-- ===== Curriculum + try the Learning Map ===== -->
+      <section id="learning-map" class="py-20 sm:py-28 bg-slate-900 text-white scroll-mt-20">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="grid lg:grid-cols-2 gap-12 items-center">
+            <div class="reveal">
+              <p class="text-sm font-bold uppercase tracking-widest text-indigo-300">Competency-based, by design</p>
+              <h2 class="mt-3 font-jakarta text-3xl sm:text-4xl font-extrabold tracking-tight">From one learning outcome to the end-of-term report.</h2>
+              <p class="mt-4 text-slate-300 leading-relaxed">Teachers link each assessment to the curriculum. eSpace does the rest: every marked answer updates the learner's Learning Map, shows the class what to reteach, and feeds straight into the report card.</p>
+            </div>
+            <div class="reveal grid gap-3">
+              <div v-for="(c, i) in CBC" :key="c.code" class="flex items-start gap-4 rounded-2xl bg-white/5 border border-white/10 p-4" :style="{ marginLeft: `${i * 1.25}rem` }">
+                <span class="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center font-jakarta text-sm font-extrabold bg-white/10 text-white">{{ c.code }}</span>
+                <span>
+                  <span class="block font-semibold">{{ c.name }}</span>
+                  <span class="block text-sm text-slate-400">{{ c.text }}</span>
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="reveal mt-16">
+            <div class="flex flex-wrap items-end justify-between gap-2 mb-4">
+              <p class="font-jakarta text-xl font-bold">Try it: mark a class</p>
+              <p class="text-sm text-slate-400">Press "Mark" and watch the Learning Map fill in. Sample learners.</p>
+            </div>
+            <LearningMapDemo />
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== How it works ===== -->
+      <section id="how" class="py-20 sm:py-28 scroll-mt-20">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="reveal text-center max-w-2xl mx-auto">
+            <p :class="EYEBROW">How it works</p>
+            <h2 :class="H2">Your school, live in weeks - not terms</h2>
+          </div>
+          <div class="mt-12 grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <div v-for="(s, i) in STEPS" :key="s.title" class="reveal relative rounded-3xl border border-slate-200 dark:border-white/10 p-6">
+              <span class="font-jakarta text-5xl font-extrabold text-slate-100 dark:text-white/10 absolute top-4 right-5">{{ i + 1 }}</span>
+              <span class="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300 flex items-center justify-center"><AppIcon :name="s.icon" class="w-5 h-5" /></span>
+              <h3 class="mt-4 font-jakarta text-lg font-bold">{{ s.title }}</h3>
+              <p class="mt-1.5 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{{ s.text }}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Client, with live totals ===== -->
+      <section id="proof" class="pb-20 sm:pb-28 scroll-mt-20">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="reveal relative overflow-hidden rounded-3xl bg-slate-900">
+            <picture>
+              <source srcset="/images/stmark-campus.webp" type="image/webp">
+              <img src="/images/stmark-campus.jpg" alt="St Mark's College Namagoma campus" loading="lazy" decoding="async" class="absolute inset-0 w-full h-full object-cover">
+            </picture>
+            <div class="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/80 to-slate-950/40"></div>
+            <div class="relative p-8 sm:p-12 lg:p-16 text-white">
+              <div class="max-w-2xl">
+                <div class="flex items-center gap-3">
+                  <img src="/images/stmark-logo.jpg" alt="" width="48" height="48" loading="lazy" class="w-12 h-12 rounded-xl object-contain bg-white p-0.5">
+                  <div>
+                    <p class="font-bold">St Mark's College Namagoma</p>
+                    <p class="text-xs text-slate-300">Running on eSpace</p>
+                  </div>
+                </div>
+                <p class="mt-6 font-jakarta text-2xl sm:text-3xl font-bold leading-snug">Every class, every subject - on one platform.</p>
+                <p class="mt-4 text-sm sm:text-base text-slate-300 leading-relaxed">At St Mark's, students read their notes, revise from the library, join live lessons and hand in their assessments on eSpace - and teachers follow each class, outcome by outcome, through to the end-of-term report card.</p>
+              </div>
+              <!-- Live from eSpace - only figures big enough to mean something -->
+              <div v-if="liveStats.length" class="mt-10 flex flex-wrap gap-px rounded-2xl overflow-hidden bg-white/10 max-w-4xl">
+                <div v-for="s in liveStats" :key="s.key" class="flex-1 basis-[45%] sm:basis-0 bg-slate-950/70 backdrop-blur px-4 py-4 sm:px-5">
+                  <p class="font-jakarta text-2xl sm:text-3xl font-extrabold tabular-nums">{{ s.shown.toLocaleString() }}</p>
+                  <p class="text-xs sm:text-sm text-slate-300">{{ s.label }}</p>
+                </div>
+              </div>
+              <p v-if="liveStats.length" class="mt-3 text-[11px] text-slate-400">Live totals from eSpace.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Your data ===== -->
+      <section id="trust" class="py-20 sm:py-28 bg-slate-50 dark:bg-white/[0.02] border-y border-slate-200 dark:border-white/10 scroll-mt-20">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="reveal max-w-2xl">
+            <p :class="EYEBROW">Your data, your school</p>
+            <h2 :class="H2">Safe, private - and built for the phones and connections learners really have.</h2>
+          </div>
+          <div class="mt-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-8">
+            <div v-for="t in TRUST" :key="t.title" class="reveal flex gap-4">
+              <span class="flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center bg-white border border-slate-200 text-indigo-600 dark:bg-white/5 dark:border-white/10 dark:text-indigo-300"><AppIcon :name="t.icon" class="w-5 h-5" /></span>
+              <div>
+                <h3 class="font-jakarta text-base font-bold">{{ t.title }}</h3>
+                <p class="mt-1 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{{ t.text }}</p>
               </div>
             </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- Features -->
-    <section id="features" class="relative bg-white py-12 dark:bg-slate-950 sm:py-28">
-      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div class="mx-auto max-w-2xl text-center">
-          <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Everything in one place</p>
-          <h2 class="mt-3 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
-            Built for how schools actually work
-          </h2>
-          <p class="mt-4 text-base leading-7 text-slate-600 dark:text-slate-300">
-            From daily lessons to end-of-term report cards, Smacon e-Space connects every part of the learning journey.
-          </p>
-        </div>
-
-        <div class="mt-10 grid grid-cols-2 gap-3 sm:mt-16 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">
-          <div
-            v-for="feature in productFeatures"
-            :key="feature.title"
-            class="group rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-lg dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700 sm:p-5"
-          >
-            <div class="mb-2.5 flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm sm:mb-4 sm:h-11 sm:w-11">
-              <svg class="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="feature.icon"/>
-              </svg>
+      <!-- ===== Pricing ===== -->
+      <section id="pricing" class="py-20 sm:py-28 scroll-mt-20">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="reveal text-center max-w-2xl mx-auto">
+            <p :class="EYEBROW">Pricing</p>
+            <h2 :class="H2">Simple, per learner, everything included</h2>
+          </div>
+          <div class="reveal mt-12 grid lg:grid-cols-[1.1fr_1fr] rounded-3xl border border-slate-200 dark:border-white/10 overflow-hidden">
+            <div class="p-8 sm:p-10">
+              <p class="font-jakarta text-2xl sm:text-3xl font-extrabold">{{ PRICING.model }}</p>
+              <p class="mt-3 text-slate-600 dark:text-slate-400 leading-relaxed">{{ PRICING.note }}</p>
+              <ul class="mt-6 grid sm:grid-cols-2 gap-x-6 gap-y-3">
+                <li v-for="i in PRICING.included" :key="i" class="flex items-start gap-2.5 text-sm text-slate-700 dark:text-slate-200">
+                  <AppIcon name="check-circle" class="w-4 h-4 mt-0.5 flex-shrink-0 text-indigo-500" />{{ i }}
+                </li>
+              </ul>
+              <a href="#demo" class="mt-8 inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition">Get a quote for your school</a>
             </div>
-            <h3 class="text-xs font-semibold text-slate-900 dark:text-white sm:text-sm">{{ feature.title }}</h3>
-            <p class="mt-1 text-[11px] leading-4 text-slate-500 dark:text-slate-400 sm:mt-1.5 sm:text-xs sm:leading-5">{{ feature.description }}</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Roles -->
-    <section id="roles" class="relative overflow-hidden bg-slate-100 py-12 dark:bg-slate-900 sm:py-28">
-      <div class="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div class="mx-auto max-w-2xl text-center">
-          <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">One platform, four experiences</p>
-          <h2 class="mt-3 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
-            Built for every role in your school
-          </h2>
-        </div>
-
-        <div class="mt-10 grid grid-cols-2 gap-3 sm:mt-16 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">
-          <div
-            v-for="role in roles"
-            :key="role.title"
-            class="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-lg dark:border-white/10 dark:bg-white/[0.04] dark:hover:border-white/20 dark:hover:bg-white/[0.07] sm:p-6"
-          >
-            <div class="mb-2.5 flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-white sm:mb-4 sm:h-11 sm:w-11">
-              <svg class="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="role.icon"/>
-              </svg>
+            <div class="p-8 sm:p-10 bg-slate-50 dark:bg-white/[0.03] border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-white/10">
+              <p class="text-sm font-bold uppercase tracking-widest text-slate-400">How it goes</p>
+              <ol class="mt-6 space-y-6">
+                <li v-for="(s, i) in PRICING.steps" :key="s.title" class="flex gap-4">
+                  <span class="flex-shrink-0 w-8 h-8 rounded-full bg-slate-900 text-white dark:bg-white dark:text-slate-900 flex items-center justify-center text-sm font-bold">{{ i + 1 }}</span>
+                  <span>
+                    <span class="block font-semibold">{{ s.title }}</span>
+                    <span class="block text-sm text-slate-600 dark:text-slate-400">{{ s.text }}</span>
+                  </span>
+                </li>
+              </ol>
             </div>
-            <h3 class="text-sm font-semibold text-slate-900 dark:text-white sm:text-base">{{ role.title }}</h3>
-            <p class="mt-1 text-xs leading-4 text-slate-500 dark:text-slate-400 sm:mt-2 sm:text-sm sm:leading-6">{{ role.description }}</p>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- CTA band -->
-    <section class="relative overflow-hidden bg-white py-10 dark:bg-slate-950 sm:py-20">
-      <div class="relative mx-auto flex max-w-4xl flex-col items-center gap-6 px-4 text-center sm:px-6 lg:px-8">
-        <h2 class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">Ready to get started?</h2>
-        <p class="max-w-xl text-base leading-7 text-slate-600 dark:text-slate-300">
-          Sign in with the account your school has set up for you and pick up right where you left off.
-        </p>
-        <router-link
-          to="/login"
-          class="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-7 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 hover:shadow-md hover:-translate-y-0.5"
-        >
-          Log in to Smacon e-Space
-          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
-          </svg>
-        </router-link>
-      </div>
-    </section>
-
-    <!-- Spacer so the fixed footer below doesn't permanently sit over the last section's
-         content - same reason the hero has top padding to clear the fixed header. -->
-    <div class="h-32 sm:h-20" aria-hidden="true"></div>
-
-    <!-- Footer - fixed like the header, but only slides into view once you've actually reached
-         the bottom of the page (see handleScroll), so it doesn't eat into mobile screen space
-         everywhere else. Same translucent-blur treatment as the header (border + backdrop
-         blur), just gray instead of white/slate - light gray in light mode rather than plain
-         white, so it doesn't read as just another white system panel. -->
-    <footer
-      class="fixed inset-x-0 bottom-0 z-50 border-t border-gray-200 bg-gray-100/90 py-6 backdrop-blur-xl transition-transform duration-300 dark:border-white/10 dark:bg-gray-900/90"
-      :class="{ 'translate-y-full': footerHidden }"
-    >
-      <div class="mx-auto flex max-w-7xl flex-col items-center gap-4 px-4 sm:px-6 lg:flex-row lg:justify-between lg:px-8">
-        <router-link to="/" class="inline-flex items-center gap-2.5">
-          <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-white p-1 shadow ring-1 ring-black/5">
-            <img src="/images/stmark-logo.jpg" alt="St Mark's College Namagoma crest" class="h-full w-full rounded object-contain">
+      <!-- ===== What's new ===== -->
+      <section id="new" class="pb-20 sm:pb-28 scroll-mt-20">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="reveal flex flex-wrap items-end justify-between gap-4">
+            <div class="max-w-2xl">
+              <p :class="EYEBROW">What's new</p>
+              <h2 :class="H2">eSpace gets better every week.</h2>
+            </div>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Every school gets each improvement the day it ships.</p>
           </div>
-          <span class="text-sm font-bold text-slate-900 dark:text-white">Smacon e-Space</span>
-        </router-link>
-
-        <nav class="flex flex-wrap items-center justify-center gap-6">
-          <a href="#about" class="text-sm font-medium text-slate-600 transition hover:text-slate-900 dark:text-slate-300 dark:hover:text-white">About</a>
-          <a href="#features" class="text-sm font-medium text-slate-600 transition hover:text-slate-900 dark:text-slate-300 dark:hover:text-white">Features</a>
-          <a href="#roles" class="text-sm font-medium text-slate-600 transition hover:text-slate-900 dark:text-slate-300 dark:hover:text-white">Who it's for</a>
-          <router-link to="/login" class="text-sm font-medium text-slate-600 transition hover:text-slate-900 dark:text-slate-300 dark:hover:text-white">Log in</router-link>
-        </nav>
-
-        <div class="flex flex-col items-center gap-0.5 text-center lg:items-end lg:text-right">
-          <p class="text-xs text-slate-500 dark:text-slate-400">&copy; {{ currentYear }} St Mark's College Namagoma. All rights reserved.</p>
-          <p class="text-xs text-slate-400 dark:text-slate-500">Learn without limits.</p>
+          <ol class="mt-10 relative border-l-2 border-slate-200 dark:border-white/10 ml-2 sm:ml-3 space-y-8">
+            <li v-for="c in shownChanges" :key="c.date + c.title" class="reveal relative pl-7 sm:pl-9">
+              <span class="absolute -left-[0.6875rem] top-0.5 w-5 h-5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 flex items-center justify-center"><span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span></span>
+              <div class="grid sm:grid-cols-[9rem_1fr] gap-x-6 gap-y-1">
+                <p class="text-sm text-slate-500 dark:text-slate-400"><time :datetime="c.date">{{ niceDate(c.date) }}</time></p>
+                <div>
+                  <p class="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-300"><AppIcon :name="c.icon" class="w-3.5 h-3.5" />{{ c.area }}</p>
+                  <h3 class="mt-1 font-jakarta text-lg font-bold">{{ c.title }}</h3>
+                  <p class="mt-1 text-sm text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl">{{ c.text }}</p>
+                </div>
+              </div>
+            </li>
+          </ol>
+          <div v-if="CHANGELOG.length > 4" class="mt-8 ml-9 sm:ml-12">
+            <button type="button" class="text-sm font-semibold text-indigo-600 dark:text-indigo-300 hover:underline" @click="allChanges = !allChanges">{{ allChanges ? 'Show less' : `Show all ${CHANGELOG.length} updates` }}</button>
+          </div>
         </div>
-      </div>
-    </footer>
+      </section>
+
+      <!-- ===== Team ===== -->
+      <section id="team" class="py-20 sm:py-28 bg-slate-50 dark:bg-white/[0.02] border-y border-slate-200 dark:border-white/10 scroll-mt-20">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="grid lg:grid-cols-[1fr_1.4fr] gap-10 lg:gap-16 items-start">
+            <div class="reveal lg:sticky lg:top-28">
+              <p :class="EYEBROW">Meet the team</p>
+              <h2 :class="H2">Four people. One mission.</h2>
+              <p class="mt-3 text-slate-600 dark:text-slate-400">An executive director and three stakeholders who build eSpace and stay close to the schools that use it - you talk to the people who make it.</p>
+              <div class="mt-8 rounded-2xl border-l-4 border-indigo-500 bg-white dark:bg-white/5 p-5">
+                <p class="font-jakarta font-bold">{{ STORY.title }}</p>
+                <p v-for="p in STORY.paragraphs" :key="p" class="mt-2 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{{ p }}</p>
+              </div>
+            </div>
+            <div>
+              <!-- The executive director leads, in a larger card -->
+              <div v-if="teamLead" class="reveal rounded-3xl bg-slate-900 text-white dark:bg-white/5 dark:border dark:border-white/10 p-6 sm:p-8 flex flex-col sm:flex-row items-center sm:items-start gap-6 text-center sm:text-left">
+                <div class="flex-shrink-0 w-32 h-32 sm:w-36 sm:h-36 rounded-full p-1 bg-white/15">
+                  <img v-if="teamLead.photo" :src="teamLead.photo" :alt="teamLead.name" width="136" height="136" loading="lazy" class="w-full h-full rounded-full object-cover border-4 border-slate-900">
+                  <span v-else class="w-full h-full rounded-full bg-slate-800 flex items-center justify-center font-jakarta text-4xl font-extrabold text-white">{{ initials(teamLead.name) }}</span>
+                </div>
+                <div class="min-w-0">
+                  <span class="inline-flex px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest bg-white/10 text-indigo-200">{{ teamLead.role }}</span>
+                  <h3 class="mt-3 font-jakarta text-2xl sm:text-3xl font-extrabold">{{ teamLead.name }}</h3>
+                  <p class="mt-3 text-sm sm:text-base text-slate-300 leading-relaxed">{{ teamLead.bio }}</p>
+                </div>
+              </div>
+
+              <!-- Then the stakeholders -->
+              <p class="reveal mt-8 mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">Stakeholders</p>
+              <div class="grid sm:grid-cols-3 gap-4">
+                <div v-for="m in teamStakeholders" :key="m.name" class="reveal rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-5 text-center">
+                  <div class="mx-auto w-16 h-16 rounded-full p-0.5 bg-slate-200 dark:bg-white/10">
+                    <img v-if="m.photo" :src="m.photo" :alt="m.name" width="60" height="60" loading="lazy" class="w-full h-full rounded-full object-cover border-2 border-white dark:border-slate-900">
+                    <span v-else class="w-full h-full rounded-full bg-white dark:bg-slate-900 flex items-center justify-center font-jakarta text-lg font-extrabold text-slate-700 dark:text-slate-200">{{ initials(m.name) }}</span>
+                  </div>
+                  <h3 class="mt-3 font-jakarta text-base font-bold">{{ m.name }}</h3>
+                  <p class="text-xs font-semibold text-indigo-600 dark:text-indigo-300">{{ m.role }}</p>
+                  <p class="mt-2 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">{{ m.bio }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== FAQ ===== -->
+      <section id="faq" class="py-20 sm:py-28 scroll-mt-20">
+        <div class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+          <div class="reveal text-center">
+            <p :class="EYEBROW">Questions</p>
+            <h2 :class="H2">Asked by schools like yours</h2>
+          </div>
+          <div class="mt-10 divide-y divide-slate-200 dark:divide-white/10 border-y border-slate-200 dark:border-white/10">
+            <div v-for="(f, i) in FAQ" :key="f.q">
+              <button type="button" class="w-full flex items-center justify-between gap-4 py-5 text-left" :aria-expanded="openFaq === i" @click="openFaq = openFaq === i ? -1 : i">
+                <span class="font-semibold text-slate-900 dark:text-white">{{ f.q }}</span>
+                <span class="w-7 h-7 flex-shrink-0 rounded-full border border-slate-300 dark:border-white/20 flex items-center justify-center transition" :class="openFaq === i ? 'rotate-45 bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900' : ''">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 5v14m7-7H5"></path></svg>
+                </span>
+              </button>
+              <p v-if="openFaq === i" class="pb-5 -mt-1 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{{ f.a }}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Request a demo ===== -->
+      <section id="demo" class="pb-20 sm:pb-28 scroll-mt-20">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <DemoForm class="reveal" />
+        </div>
+      </section>
+    </main>
+
+    <SiteFooter />
+    <TourPlayer :open="tourOpen" :start="tourStart" @close="tourOpen = false" />
+    <ModuleSheet :module="openedModule" :list="shownModules" @close="openedModule = null" @step="stepModule" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import axios from 'axios'
+import AppIcon from '@/components/common/AppIcon.vue'
+import SiteHeader from '@/components/site/SiteHeader.vue'
+import SiteFooter from '@/components/site/SiteFooter.vue'
+import ProductTour from '@/components/site/ProductTour.vue'
+import TourPlayer from '@/components/site/TourPlayer.vue'
+import ModuleSheet from '@/components/site/ModuleSheet.vue'
+import ENoteSample from '@/components/site/ENoteSample.vue'
+import LearningMapDemo from '@/components/site/LearningMapDemo.vue'
+import DemoForm from '@/components/site/DemoForm.vue'
+import { useReveal } from '@/components/site/useReveal'
+import { useSiteScale } from '@/components/site/useSiteScale'
+import { MODULES, CATEGORIES, ROLE_LABEL, type ModuleCategory, type EModule } from '@/data/modules'
+import { CHANGELOG } from '@/data/changelog'
+import { teamLead, teamStakeholders } from '@/data/team'
+import { PRICING, TRUST, STORY, STAT_LABELS } from '@/data/site'
 
-const currentYear = computed(() => new Date().getFullYear())
+const EYEBROW = 'text-sm font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-300'
+const H2 = 'mt-3 font-jakarta text-3xl sm:text-4xl font-extrabold tracking-tight'
 
-// Header hides while scrolling down and reappears while scrolling up (or near the very top, so
-// a small nudge doesn't make the nav vanish). The footer is independent of direction - it only
-// shows once you've actually reached the bottom of the page, staying out of the way everywhere
-// else so it doesn't compete with the header for mobile screen space.
-const HEADER_SHOW_THRESHOLD_PX = 80
-const FOOTER_SHOW_DISTANCE_FROM_BOTTOM_PX = 24
-const headerHidden = ref(false)
-const footerHidden = ref(true)
-let lastScrollY = 0
+const HERO_TILES = [
+  { label: 'eNotes', icon: 'document' },
+  { label: 'Library', icon: 'book' },
+  { label: 'Videos', icon: 'video' },
+  { label: 'Tests', icon: 'pencil' }
+]
 
-const handleScroll = () => {
-  const currentScrollY = window.scrollY
-  const scrollingDown = currentScrollY > lastScrollY
-  const scrollingUp = currentScrollY < lastScrollY
+const NUMBERS = [
+  { value: `${MODULES.length}`, label: 'modules in one sign-in' },
+  { value: '4', label: 'roles: students, teachers, HODs, admins' },
+  { value: 'Offline', label: 'notes and books work without internet' },
+  { value: 'LOA·AOI·EOC', label: 'competency-based assessment built in' }
+]
 
-  if (currentScrollY < HEADER_SHOW_THRESHOLD_PX) {
-    headerHidden.value = false
-  } else if (scrollingDown) {
-    headerHidden.value = true
-  } else if (scrollingUp) {
-    headerHidden.value = false
-  }
+const PILLARS = [
+  { title: 'Learn anywhere', icon: 'book', text: 'Notes, textbooks, past papers and videos that students open on any phone or computer - even offline.', points: ['Read page by page, with narration', 'Save for offline, sync later', 'Continue where you stopped'] },
+  { title: 'Teach with insight', icon: 'map', text: 'Set competency-based work, mark it on screen, and see straight away which outcomes the class still needs.', points: ['LOA, AOI and EOC assessments', 'Mark typed, drawn or uploaded work', 'Reteach the outcomes that need it'] },
+  { title: 'Lead with clarity', icon: 'chart', text: 'Heads of department and administrators see coverage, engagement and results across every class, as it happens.', points: ['Curriculum coverage by topic', 'Engagement and quiet learners', 'Report cards in a few clicks'] }
+]
 
-  const distanceFromBottom = document.documentElement.scrollHeight - (currentScrollY + window.innerHeight)
-  footerHidden.value = distanceFromBottom > FOOTER_SHOW_DISTANCE_FROM_BOTTOM_PX
+// The product tour, full screen
+const tourOpen = ref(false)
+const tourStart = ref(0)
+const watchTour = (i: number) => { tourStart.value = i; tourOpen.value = true }
 
-  lastScrollY = currentScrollY
+// A module card opens its detail sheet; the arrows step through the modules being shown
+const openedModule = ref<EModule | null>(null)
+const openModule = (m: EModule) => { openedModule.value = m }
+const stepModule = (d: number) => {
+  const list = shownModules.value
+  const i = list.findIndex(m => m.key === openedModule.value?.key)
+  openedModule.value = list[(i + d + list.length) % list.length]
 }
 
-onMounted(() => {
-  lastScrollY = window.scrollY
-  window.addEventListener('scroll', handleScroll, { passive: true })
-  handleScroll()
-})
+// What's new: the latest four, the rest on request
+const allChanges = ref(false)
+const shownChanges = computed(() => (allChanges.value ? CHANGELOG : CHANGELOG.slice(0, 4)))
+const niceDate = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
 
-onBeforeUnmount(() => {
-  window.removeEventListener('scroll', handleScroll)
-})
+const moduleFilter = ref<ModuleCategory | 'all'>('all')
+const shownModules = computed(() => moduleFilter.value === 'all' ? MODULES : MODULES.filter(m => m.category === moduleFilter.value))
+// On a phone the full list is long - six to start with
+const isPhone = ref(false)
+const allModules = ref(false)
+const visibleModules = computed(() => (isPhone.value && !allModules.value ? shownModules.value.slice(0, 6) : shownModules.value))
 
-const trustPoints = ['Secure access', 'Easy collaboration', 'Available anywhere']
-
-const previewTiles = [
-  { label: 'Classes', value: '12' },
-  { label: 'Students', value: '486' },
-  { label: 'Live now', value: '3' }
-]
-
-const chartBars = [45, 70, 55, 85, 60, 95, 75]
-
-// Monochrome throughout (black in light mode, white in dark mode) - no per-module color.
-const productFeatures = [
+const ROLES = [
   {
-    title: 'eNotes',
-    description: 'Rich, narrated topic notes students can read or listen to, anywhere.',
-    icon: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z'
+    key: 'student', label: 'Students', page: '/for/students',
+    headline: 'Everything for your classes, in your pocket.',
+    text: 'Your notes, books, videos and assessments in one place - with a Learning Map that shows exactly what you can already do and what to work on next.',
+    points: ['Continue reading where you stopped', 'Join live classes in one tap', 'Attempt and hand in assessments', 'See your marks and Learning Map', 'Save notes to read offline', 'Earn badges for improving'],
+    day: [{ time: '7:30', what: 'Reads the next pages of Physics eNotes on the way in' }, { time: '11:00', what: 'Joins the live Biology Q&A from the dashboard' }, { time: '4:00', what: 'Hands in the LOA on measurements before the deadline' }, { time: '8:00', what: 'Sees it marked - and a new outcome turns green' }]
   },
   {
-    title: 'Live Classes',
-    description: 'Secure, interactive video lessons with attendance built in.',
-    icon: 'M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z'
+    key: 'teacher', label: 'Teachers', page: '/for/teachers',
+    headline: 'Spend your time teaching - not chasing paper.',
+    text: 'Write eNotes, share books and videos, set competency-based assessments and mark them on screen. eSpace keeps track of who has read, watched and handed in.',
+    points: ['Write interactive eNotes', 'Build LOA / AOI / EOC assessments', 'Mark on screen, with annotations', 'See who needs support, by outcome', 'Run live classes with attendance', 'Message any student directly'],
+    day: [{ time: '7:00', what: 'Dashboard: 11 scripts to mark, 1 live class today' }, { time: '10:00', what: 'Marks the S.1 LOA on screen between lessons' }, { time: '2:00', what: 'Learning Map flags one outcome - creates a support group' }, { time: '5:00', what: 'Messages the three students who haven\'t opened the notes' }]
   },
   {
-    title: 'Assignments',
-    description: 'Create, submit and grade work with instant feedback loops.',
-    icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'
+    key: 'hod', label: 'HODs', page: '/for/teachers',
+    headline: 'Your whole department, at a glance.',
+    text: 'See curriculum coverage, engagement and results across every teacher and class in your department - and approve what goes out to students.',
+    points: ['Department-wide dashboards', 'Approve shared content', 'Curriculum coverage by topic', 'Marksheets for any class', 'Engagement across classes', 'Teach your own classes too'],
+    day: [{ time: '8:00', what: 'Checks coverage: two topics still have no AOI' }, { time: '12:00', what: 'Approves new eLibrary books for S.3' }, { time: '3:00', what: 'Compares marksheets across all streams' }]
   },
   {
-    title: 'Virtual Lab',
-    description: 'Run real science experiments in a 3D browser-based lab.',
-    icon: 'M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 20.25a48.286 48.286 0 01-8.135-.673c-1.718-.293-2.3-2.379-1.067-3.61L5 14.5'
-  },
-  {
-    title: 'eLibrary',
-    description: 'A digital book collection students can browse and read online.',
-    icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253'
-  },
-  {
-    title: 'Item Bank',
-    description: 'A shared, department-approved bank of practice questions.',
-    icon: 'M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'
-  },
-  {
-    title: 'Messaging',
-    description: 'Direct and class-group chat between students, teachers and staff.',
-    icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z'
-  },
-  {
-    title: 'Report Cards',
-    description: 'CBC-style weighted grading with printable term report cards.',
-    icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'
+    key: 'admin', label: 'Admins', page: '/for/schools',
+    headline: 'Run the school\'s digital space with ease.',
+    text: 'Set up classes, streams, subjects and terms, manage every account, generate report cards and keep an eye on the whole school.',
+    points: ['Classes, streams, subjects, terms', 'Students, teachers and HODs', 'Promotion between years', 'Report cards and settings', 'School-wide analytics', 'System logs and backups'],
+    day: [{ time: 'Start of term', what: 'Opens the new term and promotes students in one go' }, { time: 'Weekly', what: 'Reviews engagement across the school' }, { time: 'End of term', what: 'Generates and publishes report cards' }]
   }
+] as const
+const roleTab = ref<(typeof ROLES)[number]['key']>('student')
+const activeRole = computed(() => ROLES.find(r => r.key === roleTab.value) ?? ROLES[0])
+
+const CBC = [
+  { code: 'LOA', name: 'Learning Outcome Assessment', text: 'Short checks on single outcomes - each one updates the learner\'s map.' },
+  { code: 'AOI', name: 'Activity of Integration', text: 'Real-life tasks that show a topic\'s competency in action.' },
+  { code: 'EOC', name: 'Elements of Construct', text: 'End-of-chapter work against the assessment objectives.' },
+  { code: 'RC', name: 'Report card', text: 'Generated from all of the above - nothing typed in twice.' }
 ]
 
-const roles = [
-  {
-    title: 'Students',
-    description: 'Attend classes, submit assignments, track grades and access every resource in one dashboard.',
-    icon: 'M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222'
-  },
-  {
-    title: 'Teachers',
-    description: 'Build lessons, grade work, run live classes and monitor every student\'s progress.',
-    icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253'
-  },
-  {
-    title: 'Heads of Department',
-    description: 'Oversee teachers and students in your department, and approve shared content.',
-    icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'
-  },
-  {
-    title: 'Administrators',
-    description: 'Manage the whole school — accounts, departments, classes, promotions and reports.',
-    icon: 'M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z'
-  }
+const STEPS = [
+  { title: 'We set up your school', icon: 'wrench', text: 'Classes, streams, subjects, terms and accounts - imported and ready, with your crest on every report.' },
+  { title: 'Teachers add content', icon: 'upload', text: 'eNotes, books, videos and assessments, linked to the curriculum. We train every teacher.' },
+  { title: 'Students learn anywhere', icon: 'book', text: 'On any phone or computer, in school or at home - and offline when the internet drops.' },
+  { title: 'Everyone sees progress', icon: 'chart', text: 'Learning Maps, coverage and engagement update as work is marked - right through to report cards.' }
 ]
+
+const initials = (name: string) => name.split(/\s+/).filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase()
+
+const FAQ = [
+  { q: 'Do students need a computer?', a: 'No. eSpace works on any smartphone, tablet or computer with a browser. Notes and books can be saved to the device to read without internet, and anything done offline is sent when the device reconnects.' },
+  { q: 'How much does it cost?', a: 'One price per learner, per term, depending on the size of your school - with every module, setup, training and support included. Request a demo and we will send a quote with a plan for your first term.' },
+  { q: 'Does it follow the competency-based curriculum?', a: 'Yes - it\'s built around it. Assessments are tagged as LOA, AOI or EOC and linked to learning outcomes, topics and constructs, and every marked result feeds the Learning Map and the report card.' },
+  { q: 'How long does it take to get started?', a: 'Usually a few weeks. We set up your classes, subjects and accounts, then train teachers module by module. Your school can start with eNotes and assessments and grow from there.' },
+  { q: 'Who owns our school\'s content and data?', a: 'Your school does. Your notes, books, assessments and results belong to you, are only visible to your own staff and students, and can be exported.' },
+  { q: 'Can parents or the school leadership see progress?', a: 'School leadership - heads of department and administrators - have their own views of coverage, engagement and results. Report cards can be printed for parents at the end of every term.' }
+]
+
+const openFaq = ref(0)
+
+// Live totals, counted up when they come into view
+const stats = ref<Record<string, number>>({})
+const countUp = ref(0)
+const liveStats = computed(() => STAT_LABELS
+  .filter(s => (stats.value[s.key] ?? 0) >= s.min)
+  .slice(0, 4)
+  .map(s => ({ ...s, shown: Math.round((stats.value[s.key] ?? 0) * countUp.value) })))
+
+let statObserver: IntersectionObserver | null = null
+const runCountUp = () => {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { countUp.value = 1; return }
+  const start = performance.now()
+  const frame = (t: number) => {
+    const p = Math.min(1, (t - start) / 1400)
+    countUp.value = 1 - Math.pow(1 - p, 3)
+    if (p < 1) requestAnimationFrame(frame)
+  }
+  requestAnimationFrame(frame)
+}
+
+onMounted(async () => {
+  isPhone.value = window.matchMedia('(max-width: 639px)').matches
+  try {
+    const { data } = await axios.get('/api/public/stats')
+    stats.value = data?.data ?? {}
+  } catch {
+    // No totals - the section reads fine without them
+  }
+  const el = document.getElementById('proof')
+  if (el && 'IntersectionObserver' in window) {
+    statObserver = new IntersectionObserver(entries => {
+      if (entries.some(e => e.isIntersecting)) { runCountUp(); statObserver?.disconnect() }
+    }, { threshold: 0.3 })
+    statObserver.observe(el)
+  } else {
+    countUp.value = 1
+  }
+})
+onBeforeUnmount(() => statObserver?.disconnect())
+
+useReveal()
+
+useSiteScale()
 </script>
 
 <style scoped>
-@keyframes fade-up {
-  from { opacity: 0; transform: translateY(24px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.animate-fade-up {
-  animation: fade-up 0.7s ease-out both;
-}
-.animate-fade-up-slow {
-  animation: fade-up 0.9s 0.15s ease-out both;
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-}
-.animate-float {
-  animation: float 5s ease-in-out infinite;
-}
-.animate-float-slow {
-  animation: float 6.5s 0.5s ease-in-out infinite;
-}
-
+@keyframes floaty { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+.float-a { animation: floaty 7s ease-in-out infinite; }
+.float-b { animation: floaty 6s ease-in-out infinite 0.8s; }
+.float-c { animation: floaty 6.5s ease-in-out infinite 1.6s; }
 @media (prefers-reduced-motion: reduce) {
-  .animate-fade-up,
-  .animate-fade-up-slow,
-  .animate-float,
-  .animate-float-slow {
-    animation: none;
-  }
+  .float-a, .float-b, .float-c { animation: none; }
 }
+
+.mod-enter-active, .mod-leave-active { transition: all 0.3s ease; }
+.mod-enter-from, .mod-leave-to { opacity: 0; transform: scale(0.96); }
+.mod-leave-active { position: absolute; }
+.fade-enter-active, .fade-leave-active { transition: opacity 0.25s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 </style>

@@ -62,7 +62,7 @@ class TeacherController extends Controller
         $departmentId = $this->query('department_id', '');
         $isActive = $this->query('is_active', '');
         $page = (int) $this->query('page', 1);
-        $limit = (int) $this->query('limit', 20);
+        $limit = max(1, min(2000, (int) $this->query('limit', 20)));
 
         $db = $this->getDb();
         

@@ -12,129 +12,63 @@
 
       <!-- Logo/brand header - desktop/tablet only; the mobile drawer skips straight to nav. -->
       <div class="relative hidden lg:block px-4 py-4 border-b app-frame-divider flex-shrink-0">
+        <!-- The eSpace word logo; just the "e" mark when the sidebar is folded to icons -->
         <div class="flex items-center gap-3" :class="{ 'justify-center': isIconOnly }">
-          <div class="relative w-9 h-9 flex-shrink-0 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/25">
-            <svg class="w-[18px] h-[18px] text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-            </svg>
-          </div>
-          <div v-if="!isIconOnly" class="min-w-0">
-            <h1 class="text-sm font-bold text-slate-900 dark:text-white tracking-tight leading-tight">eSpace</h1>
-            <p class="text-[10.5px] text-slate-600 dark:text-white/40 capitalize font-medium tracking-wide leading-tight mt-0.5">{{ userRole }} Console</p>
+          <img v-if="isIconOnly" src="/favicon.svg" alt="eSpace" class="w-9 h-9 rounded-xl shadow-lg shadow-indigo-500/25">
+          <div v-else class="min-w-0">
+            <h1 class="leading-none"><Wordmark size="sm" /></h1>
+            <p class="text-[10.5px] text-slate-600 dark:text-white/40 capitalize font-medium tracking-wide leading-tight mt-1">{{ userRole }} Console</p>
           </div>
         </div>
       </div>
 
       <nav class="sidebar-nav font-jakarta relative flex-1 overflow-y-auto px-3 py-4">
-        <!-- System Administration -->
-        <div v-if="isAdmin" class="mb-6">
-          <div class="mx-3 mb-2.5 h-px bg-slate-300 dark:bg-white/10"></div>
-          <div class="space-y-0.5">
-            <router-link
-              v-for="item in adminMenu"
-              :key="item.path"
-              :to="item.path"
-              :title="isIconOnly ? item.label : undefined"
-              class="flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-xl transition-all duration-150 text-sm font-medium group"
-              :class="[isActive(item.path) ? 'bg-indigo-500/10 dark:bg-white/12 text-indigo-700 dark:text-white shadow-inner shadow-indigo-500/5 dark:shadow-white/5' : 'text-slate-800 dark:text-white/55 hover:bg-black/5 dark:hover:bg-white/[0.07] hover:text-slate-900 dark:hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
-            >
-              <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-all duration-150"
-                :class="isActive(item.path) ? 'bg-indigo-500 text-white shadow shadow-indigo-500/30 dark:shadow-indigo-500/40' : 'text-slate-600 dark:text-white/40 group-hover:text-slate-900 dark:group-hover:text-white/80'"
-              >
-                <component :is="iconMap[item.icon]" class="w-4 h-4" />
-              </div>
-              <span v-if="!isIconOnly" class="truncate">{{ item.label }}</span>
-            </router-link>
-          </div>
-        </div>
+        <!-- The menu in named groups. Open, a group is just its items under a thin line (the
+             names stay out of the way); the line is also the fold - click it and the group folds
+             up into a single row with its name, so a teacher can tuck away what they don't use.
+             Folds are remembered per role. With the sidebar narrowed to icons there is nowhere
+             for a name to go, so every group stays open there. -->
+        <section v-for="group in menuGroups" :key="group.key" class="nav-group" :class="{ 'is-folded': isFolded(group.key) }">
+          <button
+            v-if="!isIconOnly"
+            type="button"
+            class="nav-fold"
+            :aria-expanded="!isFolded(group.key)"
+            :aria-controls="`nav-group-${group.key}`"
+            :title="isFolded(group.key) ? `Show ${group.name}` : `Fold ${group.name} away`"
+            @click="toggleFold(group.key)"
+          >
+            <span class="nav-fold-line" aria-hidden="true"></span>
+            <span class="nav-fold-label">
+              <span class="truncate">{{ group.name }}</span>
+              <span v-if="groupHasActive(group)" class="w-1.5 h-1.5 rounded-full bg-indigo-500 flex-shrink-0" title="You are on a page in here"></span>
+              <span class="ml-auto text-[10px] font-semibold text-slate-400 dark:text-white/30 tabular-nums">{{ group.items.length }}</span>
+            </span>
+            <svg class="nav-fold-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M19 9l-7 7-7-7"></path></svg>
+          </button>
+          <div v-else class="mx-3 mb-2.5 h-px bg-slate-300 dark:bg-white/10"></div>
 
-        <!-- Dashboard -->
-        <div v-if="dashboardMenu.length > 0" class="mb-6">
-          <div class="mx-3 mb-2.5 h-px bg-slate-300 dark:bg-white/10"></div>
-          <div class="space-y-0.5">
-            <router-link
-              v-for="item in dashboardMenu"
-              :key="item.path"
-              :to="item.path"
-              :title="isIconOnly ? item.label : undefined"
-              class="flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-xl transition-all duration-150 text-sm font-medium group"
-              :class="[isActive(item.path) ? 'bg-indigo-500/10 dark:bg-white/12 text-indigo-700 dark:text-white shadow-inner shadow-indigo-500/5 dark:shadow-white/5' : 'text-slate-800 dark:text-white/55 hover:bg-black/5 dark:hover:bg-white/[0.07] hover:text-slate-900 dark:hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
-            >
-              <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-all duration-150"
-                :class="isActive(item.path) ? 'bg-indigo-500 text-white shadow shadow-indigo-500/30 dark:shadow-indigo-500/40' : 'text-slate-600 dark:text-white/40 group-hover:text-slate-900 dark:group-hover:text-white/80'"
+          <div :id="`nav-group-${group.key}`" class="nav-fold-body" :inert="!isIconOnly && isFolded(group.key) ? true : undefined">
+            <div class="nav-fold-inner space-y-0.5">
+              <router-link
+                v-for="(item, i) in group.items"
+                :key="item.path"
+                :to="item.path"
+                :title="isIconOnly ? item.label : undefined"
+                :style="{ '--i': i }"
+                class="nav-item flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-xl transition-all duration-150 text-sm font-medium group"
+                :class="[isActive(item.path) ? 'bg-indigo-500/10 dark:bg-white/12 text-indigo-700 dark:text-white shadow-inner shadow-indigo-500/5 dark:shadow-white/5' : 'text-slate-800 dark:text-white/55 hover:bg-black/5 dark:hover:bg-white/[0.07] hover:text-slate-900 dark:hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
               >
-                <component :is="iconMap[item.icon]" class="w-4 h-4" />
-              </div>
-              <span v-if="!isIconOnly" class="truncate">{{ item.label }}</span>
-            </router-link>
+                <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-all duration-150"
+                  :class="isActive(item.path) ? 'bg-indigo-500 text-white shadow shadow-indigo-500/30 dark:shadow-indigo-500/40' : 'text-slate-600 dark:text-white/40 group-hover:text-slate-900 dark:group-hover:text-white/80'"
+                >
+                  <component :is="iconMap[item.icon]" class="w-4 h-4" />
+                </div>
+                <span v-if="!isIconOnly" class="truncate">{{ item.label }}</span>
+              </router-link>
+            </div>
           </div>
-        </div>
-
-        <!-- Academic Management -->
-        <div class="mb-6">
-          <div class="mx-3 mb-2.5 h-px bg-slate-300 dark:bg-white/10"></div>
-          <div class="space-y-0.5">
-            <router-link
-              v-for="item in academicMenu"
-              :key="item.path"
-              :to="item.path"
-              :title="isIconOnly ? item.label : undefined"
-              class="flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-xl transition-all duration-150 text-sm font-medium group"
-              :class="[isActive(item.path) ? 'bg-indigo-500/10 dark:bg-white/12 text-indigo-700 dark:text-white shadow-inner shadow-indigo-500/5 dark:shadow-white/5' : 'text-slate-800 dark:text-white/55 hover:bg-black/5 dark:hover:bg-white/[0.07] hover:text-slate-900 dark:hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
-            >
-              <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-all duration-150"
-                :class="isActive(item.path) ? 'bg-indigo-500 text-white shadow shadow-indigo-500/30 dark:shadow-indigo-500/40' : 'text-slate-600 dark:text-white/40 group-hover:text-slate-900 dark:group-hover:text-white/80'"
-              >
-                <component :is="iconMap[item.icon]" class="w-4 h-4" />
-              </div>
-              <span v-if="!isIconOnly" class="truncate">{{ item.label }}</span>
-            </router-link>
-          </div>
-        </div>
-
-        <!-- Learning Resources -->
-        <div class="mb-6">
-          <div class="mx-3 mb-2.5 h-px bg-slate-300 dark:bg-white/10"></div>
-          <div class="space-y-0.5">
-            <router-link
-              v-for="item in resourcesMenu"
-              :key="item.path"
-              :to="item.path"
-              :title="isIconOnly ? item.label : undefined"
-              class="flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-xl transition-all duration-150 text-sm font-medium group"
-              :class="[isActive(item.path) ? 'bg-indigo-500/10 dark:bg-white/12 text-indigo-700 dark:text-white shadow-inner shadow-indigo-500/5 dark:shadow-white/5' : 'text-slate-800 dark:text-white/55 hover:bg-black/5 dark:hover:bg-white/[0.07] hover:text-slate-900 dark:hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
-            >
-              <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-all duration-150"
-                :class="isActive(item.path) ? 'bg-indigo-500 text-white shadow shadow-indigo-500/30 dark:shadow-indigo-500/40' : 'text-slate-600 dark:text-white/40 group-hover:text-slate-900 dark:group-hover:text-white/80'"
-              >
-                <component :is="iconMap[item.icon]" class="w-4 h-4" />
-              </div>
-              <span v-if="!isIconOnly" class="truncate">{{ item.label }}</span>
-            </router-link>
-          </div>
-        </div>
-
-        <!-- Assessment & Analytics -->
-        <div class="mb-6">
-          <div class="mx-3 mb-2.5 h-px bg-slate-300 dark:bg-white/10"></div>
-          <div class="space-y-0.5">
-            <router-link
-              v-for="item in assessmentMenu"
-              :key="item.path"
-              :to="item.path"
-              :title="isIconOnly ? item.label : undefined"
-              class="flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-xl transition-all duration-150 text-sm font-medium group"
-              :class="[isActive(item.path) ? 'bg-indigo-500/10 dark:bg-white/12 text-indigo-700 dark:text-white shadow-inner shadow-indigo-500/5 dark:shadow-white/5' : 'text-slate-800 dark:text-white/55 hover:bg-black/5 dark:hover:bg-white/[0.07] hover:text-slate-900 dark:hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
-            >
-              <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-all duration-150"
-                :class="isActive(item.path) ? 'bg-indigo-500 text-white shadow shadow-indigo-500/30 dark:shadow-indigo-500/40' : 'text-slate-600 dark:text-white/40 group-hover:text-slate-900 dark:group-hover:text-white/80'"
-              >
-                <component :is="iconMap[item.icon]" class="w-4 h-4" />
-              </div>
-              <span v-if="!isIconOnly" class="truncate">{{ item.label }}</span>
-            </router-link>
-          </div>
-        </div>
+        </section>
       </nav>
 
       <!-- Footer -->
@@ -414,6 +348,8 @@
 </template>
 
 <script setup lang="ts">
+import { usePersistedRef } from '@/composables/usePersistedRef'
+import Wordmark from '@/components/brand/Wordmark.vue'
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
@@ -573,7 +509,6 @@ onBeforeUnmount(() => {
   if (messagesTimer) clearInterval(messagesTimer)
 })
 const isDarkMode = computed(() => themeStore.isDarkMode)
-const isAdmin = computed(() => authStore.userRole === 'admin' || authStore.userRole === 'super_admin')
 
 const userRole = computed(() => authStore.userRole || 'Guest')
 const activeRole = computed(() => authStore.activeRole || authStore.userRole || 'Guest')
@@ -597,172 +532,174 @@ const openProfileSection = (section: 'photo' | 'password') => {
   showProfileDropdown.value = false
 }
 
-// Academic Management Menu
-const academicMenu = computed(() => {
-  const role = authStore.userRole
-  
-  if (role === 'student') {
-    return [
+interface NavItem { path: string; label: string; icon: string }
+interface NavGroup { key: string; name: string; items: NavItem[] }
+
+// The sidebar, by role, in named groups (see the template for how a group folds away)
+const MENU: Record<string, NavGroup[]> = {
+  student: [
+    { key: 'home', name: 'Home', items: [
+      { path: '/student/dashboard', label: 'eClass', icon: 'DashboardIcon' }
+    ] },
+    { key: 'learning', name: 'Learning', items: [
       { path: '/student/live-classes', label: 'Live Classes', icon: 'VideoCameraIcon' },
       { path: '/student/enotes', label: 'eNotes', icon: 'NoteIcon' },
+      { path: '/student/my-notes', label: 'My notes', icon: 'NoteIcon' },
       { path: '/student/downloads', label: 'Downloads', icon: 'CloudArrowDownIcon' }
-    ]
-  } else if (role === 'teacher') {
-    return [
+    ] },
+    { key: 'revision', name: 'Revision', items: [
+      { path: '/student/assignments', label: 'Assessments', icon: 'DocumentTextIcon' },
+      { path: '/student/revision', label: 'Daily Revision', icon: 'BulbIcon' },
+      { path: '/student/live-quiz', label: 'Live Quiz', icon: 'BoltIcon' },
+      { path: '/student/exam-plan', label: 'Exam Planner', icon: 'TargetIcon' }
+    ] },
+    { key: 'resources', name: 'Resources', items: [
+      { path: '/student/library', label: 'eLibrary', icon: 'LibraryIcon' },
+      { path: '/student/videos', label: 'Videos', icon: 'VideoCameraIcon' },
+      { path: '/student/itembank', label: 'Item Bank', icon: 'QuestionMarkCircleIcon' },
+      { path: '/student/virtual-lab', label: 'Virtual Lab', icon: 'FlaskIcon' }
+    ] },
+    { key: 'progress', name: 'Progress', items: [
+      { path: '/student/reports', label: 'Reports', icon: 'ChartBarIcon' },
+      { path: '/student/academic-history', label: 'Academic History', icon: 'AcademicCapIcon' },
+      { path: '/student/achievements', label: 'Achievements', icon: 'TrophyIcon' },
+      { path: '/student/learning-map', label: 'Learning Map', icon: 'MapIcon' }
+    ] },
+    { key: 'community', name: 'Community', items: [
+      { path: '/student/chat', label: 'Chats', icon: 'ChatIcon' },
+      { path: '/student/notices', label: 'Noticeboard', icon: 'MegaphoneIcon' }
+    ] }
+  ],
+  teacher: [
+    { key: 'home', name: 'Home', items: [
+      { path: '/teacher/dashboard', label: 'Dashboard', icon: 'DashboardIcon' }
+    ] },
+    { key: 'teaching', name: 'Teaching', items: [
       { path: '/teacher/classes', label: 'My Classes', icon: 'BookOpenIcon' },
       { path: '/teacher/preview', label: 'Student View', icon: 'AcademicCapIcon' },
       { path: '/teacher/live-classes', label: 'Live Classes', icon: 'VideoCameraIcon' },
-      { path: '/teacher/videos', label: 'Videos', icon: 'VideoCameraIcon' }
-    ]
-  } else if (role === 'hod') {
-    return [
+      { path: '/teacher/live-quiz', label: 'Live Quiz', icon: 'BoltIcon' }
+    ] },
+    { key: 'content', name: 'Content', items: [
+      { path: '/teacher/enotes', label: 'eNotes', icon: 'NoteIcon' },
+      { path: '/teacher/enote-questions', label: 'Student questions', icon: 'ChatQuestionIcon' },
+      { path: '/teacher/library', label: 'eLibrary', icon: 'LibraryIcon' },
+      { path: '/teacher/videos', label: 'Videos', icon: 'VideoCameraIcon' },
+      { path: '/teacher/itembank', label: 'Item Bank', icon: 'QuestionMarkCircleIcon' },
+      { path: '/teacher/virtual-lab', label: 'Virtual Lab', icon: 'FlaskIcon' }
+    ] },
+    { key: 'assessment', name: 'Assessment', items: [
+      { path: '/teacher/assignments', label: 'Assessments', icon: 'DocumentTextIcon' },
+      { path: '/teacher/marksheet', label: 'Marksheet', icon: 'TableCellsIcon' },
+      { path: '/teacher/physical-exams', label: 'Physical Exams', icon: 'DocumentTextIcon' },
+      { path: '/teacher/reports', label: 'Reports', icon: 'ChartBarIcon' }
+    ] },
+    { key: 'insights', name: 'Insights', items: [
+      { path: '/teacher/class-map', label: 'Class Learning Map', icon: 'MapIcon' },
+      { path: '/teacher/early-warning', label: 'Early warning', icon: 'BellAlertIcon' },
+      { path: '/teacher/engagement', label: 'Engagement', icon: 'ChartIcon' },
+      { path: '/teacher/coverage', label: 'Coverage', icon: 'ChartBarIcon' },
+      { path: '/teacher/scheme', label: 'Scheme of work', icon: 'ClipboardListIcon' }
+    ] },
+    { key: 'community', name: 'Community', items: [
+      { path: '/teacher/chat', label: 'Chats', icon: 'ChatIcon' },
+      { path: '/teacher/notices', label: 'Noticeboard', icon: 'MegaphoneIcon' }
+    ] }
+  ],
+  hod: [
+    { key: 'home', name: 'Home', items: [
+      { path: '/hod/dashboard', label: 'Dashboard', icon: 'DashboardIcon' }
+    ] },
+    { key: 'department', name: 'Department', items: [
       { path: '/hod/teachers', label: 'Teachers', icon: 'UsersIcon' },
       { path: '/hod/students', label: 'Students', icon: 'AcademicCapIcon' },
       { path: '/hod/live-classes', label: 'Live Classes', icon: 'VideoCameraIcon' }
-    ]
-  } else if (role === 'admin' || role === 'super_admin') {
-    return [
+    ] },
+    { key: 'content', name: 'Content', items: [
+      { path: '/hod/enotes', label: 'eNotes', icon: 'NoteIcon' },
+      { path: '/hod/library', label: 'eLibrary', icon: 'LibraryIcon' },
+      { path: '/hod/videos', label: 'Videos', icon: 'VideoCameraIcon' },
+      { path: '/hod/itembank', label: 'Item Bank', icon: 'QuestionMarkCircleIcon' }
+    ] },
+    { key: 'assessment', name: 'Assessment', items: [
+      { path: '/hod/assessments', label: 'Assessments', icon: 'DocumentTextIcon' },
+      { path: '/hod/marksheet', label: 'Marksheet', icon: 'TableCellsIcon' },
+      { path: '/hod/physical-exams', label: 'Physical Exams', icon: 'DocumentTextIcon' },
+      { path: '/hod/reports', label: 'Reports', icon: 'ChartBarIcon' }
+    ] },
+    { key: 'insights', name: 'Insights', items: [
+      { path: '/hod/analytics', label: 'Analytics', icon: 'ChartIcon' },
+      { path: '/hod/early-warning', label: 'Early warning', icon: 'BellAlertIcon' },
+      { path: '/hod/charts', label: 'Engagement', icon: 'ChartIcon' }
+    ] },
+    { key: 'community', name: 'Community', items: [
+      { path: '/hod/chat', label: 'Chats', icon: 'ChatIcon' },
+      { path: '/hod/notices', label: 'Noticeboard', icon: 'MegaphoneIcon' }
+    ] }
+  ],
+  admin: [
+    { key: 'home', name: 'Home', items: [
+      { path: '/admin/dashboard', label: 'Dashboard', icon: 'DashboardIcon' }
+    ] },
+    { key: 'people', name: 'People', items: [
       { path: '/admin/students', label: 'Students', icon: 'AcademicCapIcon' },
       { path: '/admin/teachers', label: 'Teachers', icon: 'BriefcaseIcon' },
-      { path: '/admin/assign-teachers', label: 'Assign Teachers', icon: 'CheckCircleIcon' },
       { path: '/admin/hods', label: 'HODs', icon: 'UserGroupIcon' },
+      { path: '/admin/assign-teachers', label: 'Assign Teachers', icon: 'CheckCircleIcon' },
+      { path: '/admin/promotion', label: 'Student Promotion', icon: 'AcademicCapIcon' },
+      { path: '/admin/parent-links', label: 'Parents', icon: 'UserGroupIcon' }
+    ] },
+    { key: 'setup', name: 'School setup', items: [
       { path: '/admin/departments', label: 'Departments', icon: 'BuildingOfficeIcon' },
       { path: '/admin/subjects', label: 'Subjects', icon: 'BookIcon' },
       { path: '/admin/classes', label: 'Classes', icon: 'BuildingLibraryIcon' },
       { path: '/admin/academic-years', label: 'Academic Years', icon: 'CalendarIcon' },
       { path: '/admin/terms', label: 'Terms', icon: 'CalendarDaysIcon' },
-      { path: '/admin/enotes-curriculum', label: 'eNotes Curriculum Setup', icon: 'NoteIcon' },
-      { path: '/admin/promotion', label: 'Student Promotion', icon: 'AcademicCapIcon' },
-      { path: '/admin/live-classes', label: 'Live Classes', icon: 'VideoCameraIcon' }
-    ]
-  }
-  
-  return []
-})
-
-// Learning Resources Menu
-const resourcesMenu = computed(() => {
-  const role = authStore.userRole
-  
-  if (role === 'student') {
-    return [
-      { path: '/student/library', label: 'eLibrary', icon: 'LibraryIcon' },
-      { path: '/student/videos', label: 'Videos', icon: 'VideoCameraIcon' },
-      { path: '/student/itembank', label: 'Item Bank', icon: 'QuestionMarkCircleIcon' }
-    ]
-  } else if (role === 'teacher') {
-    return [
-      { path: '/teacher/library', label: 'eLibrary', icon: 'LibraryIcon' },
-      { path: '/teacher/itembank', label: 'Item Bank', icon: 'QuestionMarkCircleIcon' },
-      { path: '/teacher/enotes', label: 'eNotes', icon: 'NoteIcon' }
-    ]
-  } else if (role === 'hod') {
-    return [
-      { path: '/hod/enotes', label: 'eNotes', icon: 'NoteIcon' },
-      { path: '/hod/library', label: 'eLibrary', icon: 'LibraryIcon' },
-      { path: '/hod/videos', label: 'Videos', icon: 'VideoCameraIcon' },
-      { path: '/hod/itembank', label: 'Item Bank', icon: 'QuestionMarkCircleIcon' }
-    ]
-  } else if (role === 'admin' || role === 'super_admin') {
-    return [
+      { path: '/admin/exam-dates', label: 'Exam dates', icon: 'TargetIcon' },
+      { path: '/admin/enotes-curriculum', label: 'eNotes Curriculum Setup', icon: 'NoteIcon' }
+    ] },
+    { key: 'content', name: 'Content', items: [
+      { path: '/admin/notes', label: 'eNotes', icon: 'NoteIcon' },
       { path: '/admin/library', label: 'eLibrary', icon: 'LibraryIcon' },
       { path: '/admin/videos', label: 'Videos', icon: 'VideoCameraIcon' },
       { path: '/admin/itembank', label: 'Item Bank', icon: 'QuestionMarkCircleIcon' },
-      { path: '/admin/notes', label: 'eNotes', icon: 'NoteIcon' }
-    ]
-  }
-  
-  return []
-})
-
-// Assessment & Analytics Menu
-const assessmentMenu = computed(() => {
-  const role = authStore.userRole
-  
-  if (role === 'student') {
-    return [
-      { path: '/student/assignments', label: 'Assessments', icon: 'DocumentTextIcon' },
-      { path: '/student/learning-map', label: 'Learning Map', icon: 'MapIcon' },
-      { path: '/student/virtual-lab', label: 'Virtual Lab', icon: 'FlaskIcon' },
-      { path: '/student/reports', label: 'Reports', icon: 'ChartBarIcon' },
-      { path: '/student/achievements', label: 'Achievements', icon: 'TrophyIcon' },
-      { path: '/student/academic-history', label: 'Academic History', icon: 'AcademicCapIcon' },
-      { path: '/student/chat', label: 'Chats', icon: 'ChatIcon' }
-    ]
-  } else if (role === 'teacher') {
-    return [
-      { path: '/teacher/assignments', label: 'Assessments', icon: 'DocumentTextIcon' },
-      { path: '/teacher/class-map', label: 'Class Learning Map', icon: 'MapIcon' },
-      { path: '/teacher/coverage', label: 'Coverage', icon: 'ChartBarIcon' },
-      { path: '/teacher/virtual-lab', label: 'Virtual Lab', icon: 'FlaskIcon' },
-      { path: '/teacher/reports', label: 'Reports', icon: 'ChartBarIcon' },
-      { path: '/teacher/engagement', label: 'Engagement', icon: 'ChartIcon' },
-      { path: '/teacher/marksheet', label: 'Marksheet', icon: 'TableCellsIcon' },
-      { path: '/teacher/physical-exams', label: 'Physical Exams', icon: 'DocumentTextIcon' },
-      { path: '/teacher/chat', label: 'Chats', icon: 'ChatIcon' }
-    ]
-  } else if (role === 'hod') {
-    return [
-      { path: '/hod/assessments', label: 'Assessments', icon: 'DocumentTextIcon' },
-      { path: '/hod/analytics', label: 'Analytics', icon: 'ChartIcon' },
-      { path: '/hod/reports', label: 'Reports', icon: 'ChartBarIcon' },
-      { path: '/hod/charts', label: 'Engagement', icon: 'ChartIcon' },
-      { path: '/hod/marksheet', label: 'Marksheet', icon: 'TableCellsIcon' },
-      { path: '/hod/physical-exams', label: 'Physical Exams', icon: 'DocumentTextIcon' },
-      { path: '/hod/chat', label: 'Chats', icon: 'ChatIcon' }
-    ]
-  } else if (role === 'admin' || role === 'super_admin') {
-    return [
+      { path: '/admin/live-classes', label: 'Live Classes', icon: 'VideoCameraIcon' },
+      { path: '/admin/virtual-lab', label: 'Virtual Lab', icon: 'FlaskIcon' }
+    ] },
+    { key: 'assessment', name: 'Assessment', items: [
       { path: '/admin/assessments', label: 'Assessments', icon: 'DocumentTextIcon' },
-      { path: '/admin/virtual-lab', label: 'Virtual Lab', icon: 'FlaskIcon' },
-      { path: '/admin/reports', label: 'Reports', icon: 'ChartBarIcon' },
-      { path: '/admin/charts', label: 'Engagement', icon: 'ChartIcon' },
       { path: '/admin/marksheet', label: 'Marksheet', icon: 'TableCellsIcon' },
       { path: '/admin/physical-exams', label: 'Physical Exams', icon: 'DocumentTextIcon' },
+      { path: '/admin/reports', label: 'Reports', icon: 'ChartBarIcon' },
       { path: '/admin/rewards', label: 'Rewards & Badges', icon: 'TrophyIcon' },
-      { path: '/admin/chat', label: 'Chats', icon: 'ChatIcon' }
-    ]
-  }
-
-  return []
-})
-
-// System Administration Menu (Admin only)
-const adminMenu = computed(() => {
-  const role = authStore.userRole
-  
-  if (role === 'admin' || role === 'super_admin') {
-    return [
-      { path: '/admin/dashboard', label: 'Dashboard', icon: 'DashboardIcon' },
+      { path: '/admin/charts', label: 'Engagement', icon: 'ChartIcon' }
+    ] },
+    { key: 'community', name: 'Community', items: [
+      { path: '/admin/chat', label: 'Chats', icon: 'ChatIcon' },
+      { path: '/admin/notices', label: 'Noticeboard', icon: 'MegaphoneIcon' }
+    ] },
+    { key: 'system', name: 'System', items: [
       { path: '/admin/users', label: 'Admin', icon: 'UsersIcon' },
       { path: '/admin/settings', label: 'Settings', icon: 'CogIcon' },
+      { path: '/admin/demo-requests', label: 'Demo requests', icon: 'BriefcaseIcon' },
       { path: '/admin/logs', label: 'System Logs', icon: 'DocumentIcon' }
-    ]
-  }
-  
-  return []
-})
+    ] }
+  ]
+}
 
-// Dashboard menu for non-admin roles
-const dashboardMenu = computed(() => {
-  const role = authStore.userRole
-  
-  if (role === 'student') {
-    return [
-      { path: '/student/dashboard', label: 'eClass', icon: 'DashboardIcon' }
-    ]
-  } else if (role === 'teacher') {
-    return [
-      { path: '/teacher/dashboard', label: 'Dashboard', icon: 'DashboardIcon' }
-    ]
-  } else if (role === 'hod') {
-    return [
-      { path: '/hod/dashboard', label: 'Dashboard', icon: 'DashboardIcon' }
-    ]
-  }
-  
-  return []
-})
+const menuRole = computed(() => (authStore.userRole === 'super_admin' ? 'admin' : authStore.userRole || ''))
+const menuGroups = computed<NavGroup[]>(() => MENU[menuRole.value] || [])
+
+// Folded groups, remembered per role in this browser
+const foldStore = usePersistedRef<Record<string, string[]>>('sidebar-folds', {})
+const isFolded = (key: string) => !isIconOnly.value && (foldStore.value[menuRole.value] || []).includes(key)
+const toggleFold = (key: string) => {
+  const folded = new Set(foldStore.value[menuRole.value] || [])
+  if (folded.has(key)) folded.delete(key)
+  else folded.add(key)
+  foldStore.value = { ...foldStore.value, [menuRole.value]: [...folded] }
+}
+const groupHasActive = (group: NavGroup) => isFolded(group.key) && group.items.some(item => isActive(item.path))
 
 function isActive(path: string): boolean {
   return route.path === path || route.path.startsWith(path + '/')
@@ -881,9 +818,23 @@ const DocumentIcon = icon(['M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.58
 
 const TableCellsIcon = icon(['M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5M8.25 4.5v15M15.75 4.5v15'], '0 0 24 24')
 
+const MegaphoneIcon = icon(['M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z'])
+
+const TargetIcon = icon(['M12 21a9 9 0 100-18 9 9 0 000 18z', 'M12 17a5 5 0 100-10 5 5 0 000 10z', 'M12 13a1 1 0 100-2 1 1 0 000 2z'])
+
+const ClipboardListIcon = icon(['M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01'])
+
+const ChatQuestionIcon = icon(['M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01', 'M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z'])
+
+const BoltIcon = icon(['M13 10V3L4 14h7v7l9-11h-7z'])
+
+const BulbIcon = icon(['M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z'])
+
+const BellAlertIcon = icon(['M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9'])
+
 const MapIcon = icon(['M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7'])
 
-export { MapIcon, DashboardIcon, BookOpenIcon, DocumentTextIcon, LibraryIcon, NoteIcon, QuestionMarkCircleIcon, ChatIcon, ChartBarIcon, CogIcon, UsersIcon, VideoCameraIcon, ChartIcon, AcademicCapIcon, BookIcon, CheckCircleIcon, BriefcaseIcon, UserGroupIcon, BuildingOfficeIcon, BuildingLibraryIcon, CalendarIcon, CalendarDaysIcon, KeyIcon, CloudArrowUpIcon, CloudArrowDownIcon, DocumentIcon, TrophyIcon, FlaskIcon, TableCellsIcon }
+export { MegaphoneIcon, TargetIcon, ClipboardListIcon, ChatQuestionIcon, BoltIcon, BulbIcon, BellAlertIcon, MapIcon, DashboardIcon, BookOpenIcon, DocumentTextIcon, LibraryIcon, NoteIcon, QuestionMarkCircleIcon, ChatIcon, ChartBarIcon, CogIcon, UsersIcon, VideoCameraIcon, ChartIcon, AcademicCapIcon, BookIcon, CheckCircleIcon, BriefcaseIcon, UserGroupIcon, BuildingOfficeIcon, BuildingLibraryIcon, CalendarIcon, CalendarDaysIcon, KeyIcon, CloudArrowUpIcon, CloudArrowDownIcon, DocumentIcon, TrophyIcon, FlaskIcon, TableCellsIcon }
 
 // Sidebar menu items reference icons by name (e.g. icon: 'BookOpenIcon') so the menu arrays stay
 // plain, serialisable data - <component :is="item.icon"> can't resolve a local script-setup
@@ -894,11 +845,102 @@ const iconMap: Record<string, any> = {
   ChatIcon, ChartBarIcon, CogIcon, UsersIcon, VideoCameraIcon, ChartIcon, AcademicCapIcon, BookIcon,
   CheckCircleIcon, BriefcaseIcon, UserGroupIcon, BuildingOfficeIcon, BuildingLibraryIcon,
   CalendarIcon, CalendarDaysIcon, KeyIcon, CloudArrowUpIcon, CloudArrowDownIcon, DocumentIcon, TrophyIcon, FlaskIcon,
-  TableCellsIcon, MapIcon
+  TableCellsIcon, MapIcon, BoltIcon, BulbIcon, BellAlertIcon, MegaphoneIcon, TargetIcon, ClipboardListIcon, ChatQuestionIcon
 }
 </script>
 
 <style scoped>
+/* ---- Sidebar groups and their fold ---- */
+.nav-group { margin-bottom: 1.25rem; transition: margin 0.35s ease; }
+.nav-group.is-folded { margin-bottom: 0.35rem; }
+
+/* Open: a thin line (the group's name hidden), with a chevron that shows on hover.
+   Folded: the line gives way to the group's name in a soft row. */
+.nav-fold {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: calc(100% - 0.75rem);
+  margin: 0 0.375rem 0.55rem;
+  min-height: 0.9rem;
+  padding: 0 0.375rem;
+  border-radius: 0.75rem;
+  color: rgb(100 116 139);
+  transition: background-color 0.2s, padding 0.3s ease, margin 0.3s ease;
+}
+.nav-fold:focus-visible { outline: 2px solid rgb(99 102 241); outline-offset: 1px; }
+.nav-fold-line {
+  flex: 1 1 auto;
+  height: 1px;
+  background: rgb(203 213 225);
+  transform-origin: left;
+  transition: transform 0.3s ease, opacity 0.2s ease;
+}
+.dark .nav-fold-line { background: rgba(255, 255, 255, 0.1); }
+.nav-fold-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 0 1 0;
+  min-width: 0;
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: opacity 0.25s ease 0.05s, max-width 0.3s ease;
+}
+.nav-fold-chevron {
+  width: 0.8rem;
+  height: 0.8rem;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.2s, transform 0.3s ease;
+}
+.nav-fold:hover .nav-fold-chevron,
+.nav-fold:focus-visible .nav-fold-chevron { opacity: 0.75; }
+.nav-fold:hover .nav-fold-line { background: rgb(148 163 184); }
+.dark .nav-fold:hover .nav-fold-line { background: rgba(255, 255, 255, 0.22); }
+/* Touch screens have no hover - keep the chevron faintly visible so the fold can be found */
+@media (hover: none) { .nav-fold-chevron { opacity: 0.45; } }
+
+.is-folded .nav-fold {
+  min-height: 2rem;
+  margin-bottom: 0;
+  padding: 0 0.6rem 0 0.9rem;
+  background: rgba(15, 23, 42, 0.035);
+}
+.dark .is-folded .nav-fold { background: rgba(255, 255, 255, 0.04); color: rgba(255, 255, 255, 0.5); }
+.is-folded .nav-fold:hover { background: rgba(15, 23, 42, 0.07); color: rgb(30 41 59); }
+.dark .is-folded .nav-fold:hover { background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.85); }
+.is-folded .nav-fold-line { transform: scaleX(0); opacity: 0; flex: 0 0 0; }
+.is-folded .nav-fold-label { flex: 1 1 auto; max-width: 100%; opacity: 1; }
+.is-folded .nav-fold-chevron { opacity: 0.6; transform: rotate(-90deg); }
+
+/* The fold itself: the group's height closes up while its items tip back like a page
+   folding away, one after another */
+.nav-fold-body {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.38s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.is-folded .nav-fold-body { grid-template-rows: 0fr; }
+.nav-fold-inner { min-height: 0; overflow: hidden; perspective: 700px; }
+.nav-fold-body .nav-item {
+  transform-origin: top center;
+  transition: background-color 0.15s, color 0.15s, box-shadow 0.15s,
+    transform 0.34s cubic-bezier(0.3, 0.7, 0.4, 1) calc(var(--i, 0) * 22ms),
+    opacity 0.26s ease calc(var(--i, 0) * 22ms);
+}
+.is-folded .nav-fold-body .nav-item { transform: rotateX(-80deg) translateY(-0.4rem); opacity: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-fold-body, .nav-fold-body .nav-item, .nav-fold, .nav-fold-line, .nav-fold-label, .nav-fold-chevron { transition: none; }
+}
+
 .sidebar-nav {
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.12) transparent;

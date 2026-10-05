@@ -179,6 +179,10 @@ class DashboardController extends Controller
         if (!empty($startedLiveClasses)) {
             $liveClassService = new LiveClassService();
             foreach ($startedLiveClasses as $row) {
+                // No BBB meeting to ask about - nothing to check
+                if (empty($row['meeting_id'])) {
+                    continue;
+                }
                 $liveClassService->reconcileStatus((int) $row['id'], $row['meeting_id'], $row['actual_start']);
             }
         }

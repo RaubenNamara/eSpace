@@ -36,6 +36,7 @@
           placeholder="Feedback for this question..."
           @input="onQuestionFeedbackInput(question.id)"
         ></textarea>
+        <CommentChips v-if="!locked" :current="feedbackInput[question.id] || ''" @insert="t => addComment(question.id, t)" />
       </div>
     </div>
 
@@ -54,6 +55,7 @@
       placeholder="Overall feedback for the student..."
       @input="onGeneralFeedbackInput"
     ></textarea>
+    <CommentChips v-if="!locked" :current="generalFeedback" :show="6" @insert="addGeneralComment" />
     <div v-if="saveStatus" class="marking-panel__status">{{ saveStatus }}</div>
 
     <div class="marking-panel__actions">
@@ -84,6 +86,7 @@ import axios from 'axios'
 import type { AssignmentQuestion } from '@/types'
 import { computeGradeSummary } from '@/utils/grading'
 import { useToastStore } from '@/stores/toast'
+import CommentChips from './CommentChips.vue'
 
 const toast = useToastStore()
 
@@ -167,6 +170,17 @@ function onMarksInput(questionId: number, value: string) {
 
 function onQuestionFeedbackInput(questionId: number) {
   scheduleMarksSave(questionId)
+}
+
+// A comment from the bank goes on the end of what's already written
+const joinComment = (current: string, text: string) => (current.trim() ? `${current.trim()} ${text}` : text)
+function addComment(questionId: number, text: string) {
+  feedbackInput.value[questionId] = joinComment(feedbackInput.value[questionId] || '', text)
+  scheduleMarksSave(questionId)
+}
+function addGeneralComment(text: string) {
+  generalFeedback.value = joinComment(generalFeedback.value, text)
+  onGeneralFeedbackInput()
 }
 
 function scheduleMarksSave(questionId: number) {
