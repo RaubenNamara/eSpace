@@ -587,7 +587,7 @@
                           </li>
                         </ul>
                       </div>
-                      <div class="prose prose-sm sm:prose-base dark:prose-invert max-w-none">
+                      <div class="prose prose-sm sm:prose-base dark:prose-invert max-w-none" :class="{ 'notebook-paper rounded-lg': topic?.page_style === 'notebook' }">
                         <!-- Every page, the one being read included, is drawn the same way, so a
                              highlight lands on the same words wherever it was made; the AI Tutor
                              marks its paragraph on this drawn page (see markTutorBlocks) -->

@@ -269,3 +269,102 @@ html.dark .site-plain .bg-white.border {
 @media (min-width: 1800px) { html.site-scale { font-size: 18px; } }
 @media (min-width: 2200px) { html.site-scale { font-size: 20px; } }
 @media (min-width: 2800px) { html.site-scale { font-size: 22.5px; } }
+
+/* ---- Notebook page style ----------------------------------------------------------------------
+   A topic (or a student's summary) can be set to look like a handwritten exercise book: ruled
+   lines, a red margin, a handwriting-style hand (Patrick Hand, SIL Open Font License - see
+   public/fonts/PatrickHand-OFL.txt) and blue headings. Lines are 1.75rem apart and text sits on
+   them because line-height matches. */
+@font-face {
+  font-family: 'Patrick Hand';
+  src: url('/fonts/PatrickHand-Regular.ttf') format('truetype');
+  font-display: swap;
+}
+:is(.notebook-paper, .nb-editor .ck-content) {
+  --nb-line: 1.75rem;
+  --nb-rule: rgba(96, 165, 250, 0.35);
+  --nb-margin: rgba(239, 68, 68, 0.55);
+  --nb-ink: #1f2937;
+  --nb-head: #1d4ed8;
+  background-color: #fffdf7 !important;
+  background-image:
+    linear-gradient(to right, transparent 2.6rem, var(--nb-margin) 2.6rem, var(--nb-margin) calc(2.6rem + 1.5px), transparent calc(2.6rem + 1.5px)),
+    repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--nb-line) - 1px), var(--nb-rule) calc(var(--nb-line) - 1px), var(--nb-rule) var(--nb-line)) !important;
+  background-position: 0 0, 0 0.35rem !important;
+  padding: 0.35rem 1rem 1rem 3.4rem !important;
+  font-family: 'Patrick Hand', 'Comic Sans MS', cursive !important;
+  font-size: 1.15rem !important;
+  line-height: var(--nb-line) !important;
+  color: var(--nb-ink) !important;
+}
+.dark :is(.notebook-paper, .nb-editor .ck-content) {
+  --nb-rule: rgba(147, 197, 253, 0.18);
+  --nb-margin: rgba(248, 113, 113, 0.45);
+  --nb-ink: #e5e7eb;
+  --nb-head: #93c5fd;
+  background-color: #1b2130 !important;
+}
+:is(.notebook-paper, .nb-editor .ck-content) p,
+:is(.notebook-paper, .nb-editor .ck-content) li,
+:is(.notebook-paper, .nb-editor .ck-content) td,
+:is(.notebook-paper, .nb-editor .ck-content) th,
+:is(.notebook-paper, .nb-editor .ck-content) blockquote {
+  font-family: inherit !important;
+  font-size: inherit !important;
+  line-height: var(--nb-line) !important;
+  color: var(--nb-ink) !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+:is(.notebook-paper, .nb-editor .ck-content) h1,
+:is(.notebook-paper, .nb-editor .ck-content) h2,
+:is(.notebook-paper, .nb-editor .ck-content) h3,
+:is(.notebook-paper, .nb-editor .ck-content) h4 {
+  font-family: inherit !important;
+  color: var(--nb-head) !important;
+  font-weight: 400 !important;
+  line-height: var(--nb-line) !important;
+  margin: var(--nb-line) 0 0 !important;
+}
+:is(.notebook-paper, .nb-editor .ck-content) h1 { font-size: 1.6rem !important; text-align: center; text-decoration: underline; text-underline-offset: 6px; margin-top: 0 !important; }
+:is(.notebook-paper, .nb-editor .ck-content) h2 { font-size: 1.35rem !important; }
+:is(.notebook-paper, .nb-editor .ck-content) h3,
+:is(.notebook-paper, .nb-editor .ck-content) h4 { font-size: 1.2rem !important; }
+:is(.notebook-paper, .nb-editor .ck-content) strong,
+:is(.notebook-paper, .nb-editor .ck-content) b { color: var(--nb-head); font-weight: 400; }
+:is(.notebook-paper, .nb-editor .ck-content) ul,
+:is(.notebook-paper, .nb-editor .ck-content) ol { margin: 0 !important; padding-left: 1.5rem !important; }
+:is(.notebook-paper, .nb-editor .ck-content) code,
+:is(.notebook-paper, .nb-editor .ck-content) pre { font-family: inherit !important; background: transparent !important; color: var(--nb-ink) !important; }
+:is(.notebook-paper, .nb-editor .ck-content) img,
+:is(.notebook-paper, .nb-editor .ck-content) figure,
+:is(.notebook-paper, .nb-editor .ck-content) iframe,
+:is(.notebook-paper, .nb-editor .ck-content) table { margin-top: var(--nb-line) !important; margin-bottom: var(--nb-line) !important; }
+/* A small sample of the notebook look, for pickers */
+.nb-swatch {
+  padding: 0.15rem 0.3rem 0.15rem 1.15rem;
+  font-family: 'Patrick Hand', 'Comic Sans MS', cursive;
+  color: #1f2937;
+  background-color: #fffdf7;
+  background-image:
+    linear-gradient(to right, transparent 0.85rem, rgba(239, 68, 68, 0.55) 0.85rem, rgba(239, 68, 68, 0.55) calc(0.85rem + 1px), transparent calc(0.85rem + 1px)),
+    repeating-linear-gradient(to bottom, transparent 0, transparent calc(0.7rem - 1px), rgba(96, 165, 250, 0.4) calc(0.7rem - 1px), rgba(96, 165, 250, 0.4) 0.7rem);
+  background-position: 0 0, 0 0.15rem;
+}
+.dark .nb-swatch { color: #e5e7eb; background-color: #1b2130; }
+/* Typing a summary on notebook paper: the lines scroll with the text */
+.nb-textarea {
+  font-family: 'Patrick Hand', 'Comic Sans MS', cursive !important;
+  font-size: 1.05rem !important;
+  line-height: 1.6rem !important;
+  color: #1f2937 !important;
+  border-color: rgba(96, 165, 250, 0.45) !important;
+  padding: 0.3rem 0.75rem 0.3rem 2.4rem !important;
+  background-color: #fffdf7 !important;
+  background-image:
+    linear-gradient(to right, transparent 1.9rem, rgba(239, 68, 68, 0.55) 1.9rem, rgba(239, 68, 68, 0.55) calc(1.9rem + 1.5px), transparent calc(1.9rem + 1.5px)),
+    repeating-linear-gradient(to bottom, transparent 0, transparent calc(1.6rem - 1px), rgba(96, 165, 250, 0.4) calc(1.6rem - 1px), rgba(96, 165, 250, 0.4) 1.6rem) !important;
+  background-position: 0 0, 0 0.3rem !important;
+  background-attachment: local !important;
+}
+.dark .nb-textarea { color: #e5e7eb !important; background-color: #1b2130 !important; }

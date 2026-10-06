@@ -4,6 +4,10 @@
   <div class="w-full max-w-4xl">
     <PageHeader title="My notes" description="Everything you wrote while reading - by subject and topic. Download them as a PDF to keep, even after you finish school." icon="pencil" accent="indigo">
       <template #actions>
+        <div class="inline-flex rounded-xl border border-gray-300 dark:border-gray-600 overflow-hidden text-sm font-semibold" role="group" aria-label="How your notes look">
+          <button type="button" class="px-3 py-2" :class="notesStyle === 'plain' ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300'" @click="notesStyle = 'plain'">Plain</button>
+          <button type="button" class="px-3 py-2" :class="notesStyle === 'notebook' ? 'bg-blue-700 text-white' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300'" style="font-family: 'Patrick Hand', cursive" @click="notesStyle = 'notebook'">Notebook</button>
+        </div>
         <button type="button" :disabled="!notes.length || making" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50" @click="download">
           <AppIcon name="download" class="w-4 h-4" />{{ making ? 'Making the PDF…' : 'Download PDF' }}
         </button>
@@ -27,7 +31,7 @@
       <section v-for="g in groups" :key="g.subject">
         <h2 class="mb-2 text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ g.subject }}</h2>
         <div class="space-y-3">
-          <article v-for="s in g.sources" :key="s.key" class="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5">
+          <article v-for="s in g.sources" :key="s.key" class="rounded-2xl border border-gray-200 dark:border-gray-700 p-4 sm:p-5" :class="notesStyle === 'notebook' ? 'notebook-paper' : 'bg-white dark:bg-gray-800'">
             <div class="flex items-start gap-3">
               <span class="w-9 h-9 flex-shrink-0 rounded-xl flex items-center justify-center bg-indigo-50 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-300"><AppIcon :name="s.kind === 'enote' ? 'document' : s.kind === 'book' ? 'book' : 'clipboard'" class="w-4 h-4" /></span>
               <div class="min-w-0 flex-1">
@@ -58,10 +62,12 @@ import EmptyState from '@/components/ui/EmptyState.vue'
 import Skeleton from '@/components/ui/Skeleton.vue'
 import AppIcon from '@/components/common/AppIcon.vue'
 import { timeAgo } from '@/components/dashboard/teacher/time'
-import { buildMyNotesPdf, type MyNote } from '@/utils/myNotesPdf'
+import { buildMyNotesPdf, buildNotebookPdf, type MyNote } from '@/utils/myNotesPdf'
+import { useNotesStyle } from '@/composables/useNotesStyle'
 import { useToastStore } from '@/stores/toast'
 
 const toast = useToastStore()
+const notesStyle = useNotesStyle()
 const notes = ref<MyNote[]>([])
 const student = ref<{ name: string; class_label: string | null; admission_number: string | null }>({ name: '', class_label: null, admission_number: null })
 const school = ref<string | null>(null)
@@ -94,11 +100,13 @@ const groups = computed(() => {
 const niceTitle = (t: string) => (t === t.toUpperCase() ? t.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : t)
 const openLink = (s: { kind: string; source_id: number }) => (s.kind === 'enote' ? `/student/enotes/${s.source_id}` : s.kind === 'book' ? '/student/library' : '/student/itembank')
 
-const download = () => {
+const download = async () => {
   making.value = true
   try {
-    // What's on screen: a search or filter downloads just those
-    const doc = buildMyNotesPdf(shown.value, student.value, school.value)
+    // What's on screen: a search or filter downloads just those - plain, or as a notebook
+    const doc = notesStyle.value === 'notebook'
+      ? await buildNotebookPdf(shown.value, student.value, school.value)
+      : buildMyNotesPdf(shown.value, student.value, school.value)
     const name = (student.value.name || 'my').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-')
     doc.save(`${name}-notes-${new Date().toISOString().slice(0, 10)}.pdf`)
   } catch {

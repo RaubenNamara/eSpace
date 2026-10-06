@@ -50,6 +50,16 @@
             </p>
             <div class="flex items-center gap-2 flex-shrink-0">
               <span class="text-[11px] text-gray-400">{{ status === 'saving' ? 'Saving…' : status === 'saved' ? 'Saved' : '' }}</span>
+              <button
+                type="button"
+                class="p-1 rounded-lg transition-colors"
+                :class="notesStyle === 'notebook' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' : 'text-gray-500 hover:bg-black/5 dark:hover:bg-white/10'"
+                :title="notesStyle === 'notebook' ? 'Plain page' : 'Write on notebook paper'"
+                :aria-pressed="notesStyle === 'notebook'"
+                @click="notesStyle = notesStyle === 'notebook' ? 'plain' : 'notebook'"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4h11a1 1 0 011 1v14a1 1 0 01-1 1H7M7 4v16M7 4H5m2 16H5M10 9h6M10 13h6"></path></svg>
+              </button>
               <SummaryColorPicker :model-value="color" @update:model-value="emit('update:color', $event)" />
               <button type="button" @click="emit('update:open', false)" class="p-1 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-colors" title="Fold the note away">
                 <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -65,7 +75,7 @@
             maxlength="2000"
             placeholder="What did you understand from this page? (only you can see this)"
             class="flex-1 w-full text-sm px-3 py-2 rounded-lg border placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 resize-none"
-            :class="style.box"
+            :class="notesStyle === 'notebook' ? 'nb-textarea' : style.box"
           ></textarea>
         </div>
       </div>
@@ -76,6 +86,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import SummaryColorPicker from '@/components/enotes/SummaryColorPicker.vue'
+import { useNotesStyle } from '@/composables/useNotesStyle'
 import { summaryStyleOf, type SummaryColor } from '@/composables/useSummaryColor'
 
 const props = withDefaults(defineProps<{
@@ -108,6 +119,7 @@ const emit = defineEmits<{
 
 const hasText = computed(() => !!props.modelValue.trim())
 const style = computed(() => summaryStyleOf(props.color))
+const notesStyle = useNotesStyle()
 
 const onInput = (e: Event) => {
   emit('update:modelValue', (e.target as HTMLTextAreaElement).value)

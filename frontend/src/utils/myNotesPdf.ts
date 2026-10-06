@@ -118,3 +118,127 @@ export function buildMyNotesPdf(notes: MyNote[], who: { name: string; class_labe
   }
   return doc
 }
+
+// ---- Notebook style: ruled A4 paper, a red margin, handwriting-style text, blue headings ----
+
+let handFont: string | null = null
+// Patrick Hand (SIL Open Font License - public/fonts/PatrickHand-OFL.txt), fetched once
+async function loadHandFont(): Promise<string> {
+  if (handFont) return handFont
+  const res = await fetch('/fonts/PatrickHand-Regular.ttf')
+  if (!res.ok) throw new Error('font')
+  const bytes = new Uint8Array(await res.arrayBuffer())
+  let bin = ''
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
+  handFont = btoa(bin)
+  return handFont
+}
+
+/**
+ * The same notes as buildMyNotesPdf(), written out like an exercise book: every line of writing
+ * sits on a ruled line, headings in blue, the student's name and date in the corner.
+ */
+export async function buildNotebookPdf(notes: MyNote[], who: { name: string; class_label: string | null; admission_number: string | null }, school: string | null): Promise<jsPDF> {
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+  doc.addFileToVFS('PatrickHand.ttf', await loadHandFont())
+  doc.addFont('PatrickHand.ttf', 'PatrickHand', 'normal')
+  doc.setFont('PatrickHand', 'normal')
+
+  const W = 210
+  const H = 297
+  const LINE = 8 // mm between rules
+  const TOP = 30 // first rule
+  const MARGIN_X = 26 // the red margin
+  const LEFT = MARGIN_X + 4
+  const RIGHT = W - 14
+  const width = RIGHT - LEFT
+  const title = (s: string) => s.replace(/\b\w+/g, w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+  const INK: [number, number, number] = [31, 41, 55]
+  const BLUE: [number, number, number] = [29, 78, 216]
+
+  let row = 0 // which ruled line we're on
+  const lastRow = Math.floor((H - 16 - TOP) / LINE)
+
+  const paper = (pageNo: number) => {
+    doc.setFillColor(255, 253, 247)
+    doc.rect(0, 0, W, H, 'F')
+    doc.setDrawColor(191, 219, 254)
+    doc.setLineWidth(0.25)
+    for (let yy = TOP; yy < H - 10; yy += LINE) doc.line(0, yy, W, yy)
+    doc.setDrawColor(248, 113, 113)
+    doc.setLineWidth(0.4)
+    doc.line(MARGIN_X, 0, MARGIN_X, H)
+    // Corner, like the "DATE / PAGE" box of an exercise book
+    doc.setTextColor(...BLUE)
+    doc.setFontSize(10)
+    doc.text(`Page ${pageNo}`, RIGHT, 12, { align: 'right' })
+    doc.text(new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }), RIGHT, 17, { align: 'right' })
+  }
+  const yOf = (r: number) => TOP + r * LINE - 1.6
+  const nextRow = (n = 1) => {
+    row += n
+    if (row > lastRow) {
+      doc.addPage()
+      paper(doc.getNumberOfPages())
+      row = 1
+    }
+  }
+  const write = (text: string, opts: { size?: number; color?: [number, number, number]; x?: number; align?: 'center' } = {}) => {
+    doc.setFontSize(opts.size ?? 14)
+    doc.setTextColor(...(opts.color ?? INK))
+    if (opts.align === 'center') doc.text(text, W / 2 + MARGIN_X / 2, yOf(row), { align: 'center' })
+    else doc.text(text, opts.x ?? LEFT, yOf(row))
+  }
+
+  paper(1)
+  // Title, centred and underlined
+  row = 1
+  write('My notes', { size: 22, color: BLUE, align: 'center' })
+  const tw = doc.getTextWidth('My notes')
+  doc.setDrawColor(...BLUE)
+  doc.setLineWidth(0.4)
+  doc.line(W / 2 + MARGIN_X / 2 - tw / 2, yOf(row) + 1.4, W / 2 + MARGIN_X / 2 + tw / 2, yOf(row) + 1.4)
+  nextRow()
+  write([title(who.name), who.class_label, who.admission_number, school ? title(school) : null].filter(Boolean).join('  ·  '), { size: 11, color: [100, 116, 139], align: 'center' })
+  nextRow(2)
+
+  let subject = ''
+  let source = ''
+  let n = 0
+  for (const note of notes) {
+    if (note.subject !== subject) {
+      subject = note.subject
+      source = ''
+      n++
+      if (row > 3) nextRow()
+      write(`${n}.  ${subject}`, { size: 17, color: BLUE })
+      nextRow()
+    }
+    const key = `${note.kind}:${note.source_id}`
+    if (key !== source) {
+      source = key
+      doc.setFontSize(14.5)
+      for (const l of doc.splitTextToSize(`${title(note.source)} :`, width) as string[]) {
+        write(l, { size: 14.5, color: BLUE })
+        nextRow()
+      }
+    }
+    const label = `Page ${note.page}${note.page_title && note.page_title.toLowerCase() !== 'page' ? ` - ${note.page_title}` : ''}`
+    write(label, { size: 11, color: [100, 116, 139], x: LEFT + 4 })
+    nextRow()
+    doc.setFontSize(14)
+    for (const para of note.text.trim().split(/\n+/)) {
+      const lines = doc.splitTextToSize(para, width - 8) as string[]
+      lines.forEach((l, i) => {
+        if (i === 0) {
+          write('•', { x: LEFT + 2 })
+        }
+        write(l, { x: LEFT + 7 })
+        nextRow()
+      })
+    }
+    nextRow()
+  }
+
+  return doc
+}

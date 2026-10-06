@@ -268,7 +268,7 @@
       <div class="flex-1 flex flex-col overflow-hidden">
         <div class="flex-1 overflow-y-auto p-4 sm:p-6">
           <div v-if="currentPage" class="max-w-4xl xl:max-w-6xl 2xl:max-w-[1600px] mx-auto">
-            <div class="mb-4">
+            <div class="mb-4" :class="{ 'nb-editor': topic?.page_style === 'notebook' }">
               <CKEditor
                 v-if="currentPage"
                 :key="currentPage.id"
@@ -447,6 +447,30 @@
             @voice-changed="onNarrationVoiceChanged"
             @narration-generated="onNarrationGenerated"
           />
+
+          <!-- How the pages look to students: the printed book, or a handwritten-style notebook -->
+          <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+            <h3 class="text-sm font-medium text-gray-900 dark:text-white mb-2">How students see the pages</h3>
+            <div class="grid grid-cols-2 gap-2">
+              <button
+                v-for="opt in PAGE_STYLES"
+                :key="opt.value"
+                type="button"
+                class="rounded-xl border p-1.5 text-left transition-colors"
+                :class="(topic?.page_style || 'book') === opt.value ? 'border-indigo-500 ring-2 ring-indigo-100 dark:ring-indigo-900/40' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'"
+                :aria-pressed="(topic?.page_style || 'book') === opt.value"
+                @click="setPageStyle(opt.value)"
+              >
+                <span class="block h-14 rounded-lg overflow-hidden text-[9px] leading-[0.7rem]" :class="opt.value === 'notebook' ? 'nb-swatch' : 'bg-[#fbf6ec] dark:bg-gray-900 p-1.5 font-serif text-gray-700 dark:text-gray-300'">
+                  <span class="block" :class="opt.value === 'notebook' ? 'text-[#1d4ed8] dark:text-[#93c5fd]' : 'font-bold'">What is an array?</span>
+                  <span class="block">A list of items in order.</span>
+                  <span class="block">Each has an index.</span>
+                </span>
+                <span class="mt-1 block text-xs font-semibold text-gray-800 dark:text-gray-100">{{ opt.label }}</span>
+              </button>
+            </div>
+            <p class="mt-1.5 text-[11px] text-gray-500 dark:text-gray-400">The editor shows the same look while you write.</p>
+          </div>
 
           <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
             <h3 class="text-sm font-medium text-gray-900 dark:text-white mb-2">Topic Info</h3>
@@ -1105,6 +1129,24 @@ const resolveConflict = async (choice: 'mine' | 'theirs') => {
   c.page.content = resolveContentAssetUrls(c.server.content)
   if (currentPage.value?.id === c.page.id && editorInstance) editorInstance.setData(c.page.content)
   if (await updatePage({ page: c.page, newVersion: true })) toast.success('Using the other version - yours is in History if you need it')
+}
+
+// ---- Page style (book or notebook) ----
+const PAGE_STYLES = [
+  { value: 'book' as const, label: 'Printed book' },
+  { value: 'notebook' as const, label: 'Notebook' }
+]
+const setPageStyle = async (style: 'book' | 'notebook') => {
+  if (!topic.value || (topic.value.page_style || 'book') === style) return
+  const previous = topic.value.page_style || 'book'
+  topic.value.page_style = style
+  try {
+    await axios.put(`${API_BASE}/teacher/enotes/topics/${topic.value.id}`, { page_style: style })
+    toast.success(style === 'notebook' ? 'Students now see these pages as a notebook' : 'Students now see these pages as a printed book')
+  } catch (err: any) {
+    topic.value.page_style = previous
+    toast.error(err?.response?.data?.message || 'Could not change the page style')
+  }
 }
 
 // ---- History ----

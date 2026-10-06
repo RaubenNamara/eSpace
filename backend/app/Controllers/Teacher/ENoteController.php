@@ -1070,6 +1070,16 @@ class ENoteController extends Controller
             }
         }
 
+        // How the pages look to students: the printed book, or a ruled notebook
+        if (array_key_exists('page_style', $data)) {
+            if (!in_array($data['page_style'], ['book', 'notebook'], true)) {
+                $this->validationError(['page_style' => 'Choose book or notebook']);
+                return;
+            }
+            $updates[] = 'page_style = :page_style';
+            $params['page_style'] = $data['page_style'];
+        }
+
         if (empty($updates)) {
             $this->error('No fields to update', 400);
             return;
@@ -1096,7 +1106,7 @@ class ENoteController extends Controller
             // Mirror a title/competency/learning-outcomes edit onto every topic linked to this one
             // (see duplicateTopic()) - class assignment and publish status stay independent per
             // stream, but the content itself is meant to be the same lesson everywhere.
-            $syncFields = array_intersect_key($params, array_flip(['title', 'description', 'learning_outcomes', 'cover_design']));
+            $syncFields = array_intersect_key($params, array_flip(['title', 'description', 'learning_outcomes', 'cover_design', 'page_style']));
             if (!empty($syncFields)) {
                 $linkedIds = $this->getLinkedTopicIds($id, $topic['content_group_id'] !== null ? (int) $topic['content_group_id'] : null, $teacherId);
                 if (!empty($linkedIds)) {
