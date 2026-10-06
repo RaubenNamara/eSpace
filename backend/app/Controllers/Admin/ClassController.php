@@ -46,6 +46,25 @@ class ClassController extends Controller
 
         try {
             $classes = $this->classModel->all([], ['created_at' => 'DESC']);
+
+            // Each class's size, subjects and class teacher, for the list
+            $db = \eSpace\Config\Database::getInstance();
+            $rows = $db->query(
+                "SELECT c.id,
+                        (SELECT COUNT(*) FROM students st WHERE st.class_id = c.id AND st.deleted_at IS NULL) AS students_count,
+                        (SELECT COUNT(DISTINCT cs.subject_id) FROM class_subjects cs WHERE cs.class_id = c.id) AS subjects_count,
+                        (SELECT CONCAT(t.first_name, ' ', t.last_name) FROM teachers t WHERE t.id = c.class_teacher_id AND t.deleted_at IS NULL) AS class_teacher_name
+                   FROM classes c WHERE c.deleted_at IS NULL"
+            )->fetchAll(\PDO::FETCH_ASSOC);
+            $byId = array_column($rows, null, 'id');
+            foreach ($classes as &$class) {
+                $r = $byId[$class['id']] ?? [];
+                $class['students_count'] = (int) ($r['students_count'] ?? 0);
+                $class['subjects_count'] = (int) ($r['subjects_count'] ?? 0);
+                $class['class_teacher_name'] = $r['class_teacher_name'] ?? null;
+            }
+            unset($class);
+
             $this->success($classes, 'Classes retrieved successfully');
         } catch (\Exception $e) {
             error_log("ClassController::index - Error: " . $e->getMessage());

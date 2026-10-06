@@ -47,13 +47,9 @@
       <p class="mt-4 text-gray-600 dark:text-gray-400">Loading assessments...</p>
     </div>
 
-    <div v-else-if="assignments.length === 0" class="text-center py-16 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-      <p class="text-gray-500 dark:text-gray-400">No assessments found</p>
-    </div>
+    <EmptyState v-else-if="assignments.length === 0" icon="clipboard" tone="gray" title="No assessments found" />
 
-    <div v-else-if="filteredAssignments.length === 0" class="text-center py-16 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-      <p class="text-gray-500 dark:text-gray-400">No assessments match this filter</p>
-    </div>
+    <EmptyState v-else-if="filteredAssignments.length === 0" icon="clipboard" tone="gray" title="No assessments match this filter" />
 
     <div v-else>
       <div class="flex items-center justify-between mb-4">
@@ -173,6 +169,7 @@
 </template>
 
 <script setup lang="ts">
+import EmptyState from '@/components/ui/EmptyState.vue'
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 

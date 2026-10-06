@@ -6,9 +6,7 @@
       <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
     </div>
 
-    <div v-else-if="classes.length === 0" class="text-center py-16 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-      <p class="text-gray-500 dark:text-gray-400">No live classes for this class yet.</p>
-    </div>
+    <EmptyState v-else-if="classes.length === 0" icon="video" tone="gray" title="No live classes for this class yet." />
 
     <template v-else>
       <div v-if="liveNow.length > 0" class="mb-8">
@@ -55,6 +53,7 @@
 </template>
 
 <script setup lang="ts">
+import EmptyState from '@/components/ui/EmptyState.vue'
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'

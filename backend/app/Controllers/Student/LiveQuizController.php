@@ -66,7 +66,10 @@ class LiveQuizController extends Controller
         }
         try {
             $ids = $this->input('option_ids', []);
-            $this->success(LiveQuizService::answer($this->getDb(), $quiz, (int) $this->getCurrentUserId(), is_array($ids) ? $ids : []));
+            $result = LiveQuizService::answer($this->getDb(), $quiz, (int) $this->getCurrentUserId(), is_array($ids) ? $ids : []);
+            // Playing a live quiz counts as a learning day
+            \eSpace\App\Services\RewardService::recordLearningDay((int) $this->getCurrentUserId());
+            $this->success($result);
         } catch (\InvalidArgumentException $e) {
             $this->error($e->getMessage(), 422);
         }

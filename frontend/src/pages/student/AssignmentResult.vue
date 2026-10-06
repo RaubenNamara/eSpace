@@ -48,6 +48,13 @@
         <h3 class="font-medium text-indigo-900 dark:text-indigo-200 mb-1">Teacher Feedback</h3>
         <p class="text-indigo-800 dark:text-indigo-300 text-sm whitespace-pre-line break-words text-justify">{{ submission.feedback }}</p>
       </div>
+      <VoiceNote
+        v-if="(mode === 'result' || oversightRole) && submission.voice_feedback_path"
+        class="mb-4 sm:mb-6"
+        readonly
+        :path="submission.voice_feedback_path"
+        :seconds="submission.voice_feedback_seconds"
+      />
 
       <!-- Questions -->
       <div class="space-y-4 sm:space-y-6">
@@ -130,6 +137,7 @@
 </template>
 
 <script setup lang="ts">
+import VoiceNote from '@/components/assignment/VoiceNote.vue'
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'

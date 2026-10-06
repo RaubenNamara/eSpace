@@ -46,6 +46,27 @@ class SubjectController extends Controller
 
         try {
             $subjects = $this->subjectModel->all([], ['created_at' => 'DESC']);
+
+            // How much each subject is in use - classes teaching it, teachers assigned, eNote
+            // topics and assessments - so the list shows which subjects are live and which are empty
+            $db = \eSpace\Config\Database::getInstance();
+            $rows = $db->query(
+                "SELECT s.id,
+                        (SELECT COUNT(DISTINCT cs.class_id) FROM class_subjects cs WHERE cs.subject_id = s.id) AS classes_count,
+                        (SELECT COUNT(DISTINCT cs.teacher_id) FROM class_subjects cs WHERE cs.subject_id = s.id AND cs.teacher_id IS NOT NULL) AS teachers_count,
+                        (SELECT COUNT(*) FROM enote_topics t WHERE t.subject_id = s.id AND t.deleted_at IS NULL) AS enotes_count,
+                        (SELECT COUNT(*) FROM assignments a WHERE a.subject_id = s.id AND a.deleted_at IS NULL) AS assessments_count
+                   FROM subjects s WHERE s.deleted_at IS NULL"
+            )->fetchAll(\PDO::FETCH_ASSOC);
+            $byId = array_column($rows, null, 'id');
+            foreach ($subjects as &$subject) {
+                $r = $byId[$subject['id']] ?? [];
+                foreach (['classes_count', 'teachers_count', 'enotes_count', 'assessments_count'] as $k) {
+                    $subject[$k] = (int) ($r[$k] ?? 0);
+                }
+            }
+            unset($subject);
+
             $this->success($subjects, 'Subjects retrieved successfully');
         } catch (\Exception $e) {
             error_log("SubjectController::index - Error: " . $e->getMessage());

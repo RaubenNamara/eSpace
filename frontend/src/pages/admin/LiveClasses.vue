@@ -97,9 +97,7 @@
       <p class="mt-4 text-gray-600 dark:text-gray-400">Loading live classes...</p>
     </div>
 
-    <div v-else-if="filteredClasses.length === 0" class="text-center py-16 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-      <p class="text-gray-500 dark:text-gray-400">{{ classes.length === 0 ? 'No live classes scheduled school-wide yet' : 'No classes match this filter' }}</p>
-    </div>
+    <EmptyState v-else-if="filteredClasses.length === 0" icon="video" tone="gray" title="{{ classes.length === 0 ? 'No live classes scheduled school-wide yet' : 'No classes match this filter' }}" />
 
     <div v-else class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
       <div class="overflow-x-auto">
@@ -269,6 +267,7 @@
 </template>
 
 <script setup lang="ts">
+import EmptyState from '@/components/ui/EmptyState.vue'
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import type { LiveClass, LiveClassAttendanceRow, LiveClassRecording, LiveClassSummary, BBBServerStatus } from '@/types/liveclass'

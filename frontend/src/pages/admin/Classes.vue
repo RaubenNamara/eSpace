@@ -1,68 +1,54 @@
 <template>
   <div class="w-full">
-    <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-6">Classes</h1>
+    <!-- Every class and stream: its size, subjects and class teacher -->
+    <PageHeader title="Classes" description="Every class and stream - how many learners, how many subjects, and who the class teacher is." icon="users" accent="indigo" :active-filters="levelFilter ? 1 : 0">
+      <template #actions>
+        <button type="button" class="btn-primary" @click="openClassModal()">Add class</button>
+      </template>
+      <StatStrip v-if="classes.length" v-model="quick" :items="statItems" />
+      <template #filters>
+        <select v-model="levelFilter" class="w-full sm:w-44 py-2 pl-3 pr-8 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white" aria-label="Level">
+          <option value="">O and A Level</option>
+          <option value="O Level">O Level</option>
+          <option value="A Level">A Level</option>
+        </select>
+      </template>
+    </PageHeader>
 
-    <div class="flex justify-between items-center mb-6">
-      <button
-        @click="openClassModal()"
-        class="btn-primary"
-      >
-        Add Class
-      </button>
-    </div>
-
-      <!-- Classes Table -->
-      <div class="w-full bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-        <div class="overflow-x-auto">
-        <table class="w-full min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead class="bg-gray-50 dark:bg-gray-950">
-            <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Stream</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Level</th>
-              <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-            <tr v-for="classItem in classes" :key="classItem.id">
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                {{ classItem.name }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                {{ classItem.stream_name || 'N/A' }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                <span :class="[
-                  'px-2 py-1 text-xs rounded-full',
-                  classItem.level === 'A Level' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                ]">
-                  {{ classItem.level }}
-                </span>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                <button
-                  @click="openClassModal(classItem)"
-                  class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-4"
-                >
-                  Edit
-                </button>
-                <button
-                  @click="confirmDeleteClass(classItem)"
-                  class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                >
-                  Delete
-                </button>
-              </td>
-            </tr>
-            <tr v-if="classes.length === 0">
-              <td colspan="4" class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
-                No classes found
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        </div>
-      </div>
+    <DataTable
+      :columns="columns"
+      :rows="shown"
+      :loading="fetching"
+      :search-keys="['name', 'stream_name', 'class_teacher_name']"
+      search-placeholder="Search classes"
+      :page-size="40"
+      :initial-sort="{ key: 'name', dir: 'asc' }"
+      empty-title="No classes here"
+      :empty-message="classes.length ? 'Nothing matches this filter.' : 'Add your first class - students and subjects are attached to classes.'"
+    >
+      <template #cell-name="{ row }">
+        <span class="block font-semibold text-gray-900 dark:text-white">{{ row.name }}<span v-if="row.stream_name" class="font-normal text-gray-400"> · {{ row.stream_name }}</span></span>
+      </template>
+      <template #cell-level="{ row }">
+        <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold" :class="row.level === 'A Level' ? 'bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300' : 'bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300'">{{ row.level }}</span>
+      </template>
+      <template #cell-class_teacher_name="{ row }">
+        <span v-if="row.class_teacher_name" class="text-gray-700 dark:text-gray-200">{{ niceName(row.class_teacher_name) }}</span>
+        <span v-else class="text-amber-600 dark:text-amber-400 text-xs font-semibold">None yet</span>
+      </template>
+      <template #cell-students_count="{ row }">
+        <span class="tabular-nums" :class="row.students_count ? 'font-semibold text-gray-900 dark:text-white' : 'text-gray-300 dark:text-gray-600'">{{ row.students_count }}</span>
+      </template>
+      <template #cell-subjects_count="{ row }">
+        <span class="tabular-nums" :class="row.subjects_count ? 'font-semibold text-gray-900 dark:text-white' : 'text-gray-300 dark:text-gray-600'">{{ row.subjects_count }}</span>
+      </template>
+      <template #actions="{ row }">
+        <ActionMenu :label="`Actions for ${row.name}`" :items="[
+          { label: 'Edit', icon: 'pencil', run: () => openClassModal(row) },
+          { label: 'Delete', icon: 'trash', danger: true, divider: true, run: () => confirmDeleteClass(row) }
+        ]" />
+      </template>
+    </DataTable>
 
     <!-- Class Modal -->
     <div v-if="showClassModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -164,14 +150,49 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import apiService from '@/services/api'
 import type { Class, AcademicYear } from '@/types'
 import { useToastStore } from '@/stores/toast'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StatStrip, { type StatItem } from '@/components/ui/StatStrip.vue'
+import DataTable, { type Column } from '@/components/ui/DataTable.vue'
+import ActionMenu from '@/components/ui/ActionMenu.vue'
+import { usePersistedRef } from '@/composables/usePersistedRef'
+import { niceName } from '@/components/dashboard/teacher/time'
+
+type ClassRow = Class & { students_count?: number; subjects_count?: number; class_teacher_name?: string | null }
 
 const toast = useToastStore()
 
-const classes = ref<Class[]>([])
+const classes = ref<ClassRow[]>([])
+const fetching = ref(true)
+const quick = ref<string | null>(null)
+const levelFilter = usePersistedRef<string>('admin-classes-level', '')
+
+const columns: Column[] = [
+  { key: 'name', label: 'Class', sortable: true, mobile: 'title', value: (r: ClassRow) => `${r.name} ${r.stream_name || ''}` },
+  { key: 'level', label: 'Level', sortable: true },
+  { key: 'class_teacher_name', label: 'Class teacher', sortable: true, mobile: 'subtitle', value: (r: ClassRow) => r.class_teacher_name || '' },
+  { key: 'students_count', label: 'Learners', sortable: true, align: 'center' },
+  { key: 'subjects_count', label: 'Subjects', sortable: true, align: 'center' }
+]
+const inLevel = computed(() => classes.value.filter(c => !levelFilter.value || c.level === levelFilter.value))
+const statItems = computed<StatItem[]>(() => [
+  { label: 'Classes', value: inLevel.value.length, key: 'all', tone: 'indigo' },
+  { label: 'Learners', value: inLevel.value.reduce((n, c) => n + (c.students_count || 0), 0).toLocaleString(), tone: 'sky' },
+  { label: 'No class teacher', value: inLevel.value.filter(c => !c.class_teacher_name).length, key: 'noteacher', tone: 'amber' },
+  { label: 'No subjects assigned', value: inLevel.value.filter(c => !c.subjects_count).length, key: 'nosubjects', tone: 'rose', hint: 'set in Assign Teachers' },
+  { label: 'Empty', value: inLevel.value.filter(c => !c.students_count).length, key: 'empty', tone: 'gray', hint: 'no learners' }
+])
+const shown = computed(() => inLevel.value.filter(c => {
+  switch (quick.value) {
+    case 'noteacher': return !c.class_teacher_name
+    case 'nosubjects': return !c.subjects_count
+    case 'empty': return !c.students_count
+    default: return true
+  }
+}))
 const academicYears = ref<AcademicYear[]>([])
 const loading = ref(false)
 
@@ -217,6 +238,7 @@ const fetchClasses = async () => {
     toast.error('Failed to fetch classes')
   } finally {
     loading.value = false
+    fetching.value = false
   }
 }
 

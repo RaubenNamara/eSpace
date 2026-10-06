@@ -1,14 +1,8 @@
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-950">
-    <div class="px-4 sm:px-6 lg:px-8 py-8 max-w-5xl 2xl:max-w-[100rem] mx-auto">
-      <!-- Header -->
-      <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Assign Teachers to Classes</h1>
-        <p class="text-gray-600 dark:text-gray-400 mt-1 max-w-3xl">
-          Pick a teacher and a subject, then check every class stream they should teach it in.
-          A teacher can only be assigned a subject that belongs to their own department.
-        </p>
-      </div>
+  <div class="w-full">
+    <div>
+      <PageHeader title="Assign teachers" description="Pick a teacher and a subject, then check every class stream they should teach it in. A teacher can only be assigned a subject that belongs to their own department." icon="teacher" accent="indigo">
+      </PageHeader>
 
       <!-- Toast Notification -->
       <transition name="toast">
@@ -176,6 +170,7 @@
 </template>
 
 <script setup lang="ts">
+import PageHeader from '@/components/ui/PageHeader.vue'
 import { ref, computed, onMounted } from 'vue'
 import { apiService } from '../../services/api'
 import { useConfirmStore } from '@/stores/confirm'

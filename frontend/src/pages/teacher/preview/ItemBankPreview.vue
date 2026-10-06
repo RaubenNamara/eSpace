@@ -10,9 +10,7 @@
     </div>
 
     <template v-else-if="!activeSubjectId">
-      <div v-if="subjectGroups.length === 0" class="text-center py-16 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-        <p class="text-gray-500 dark:text-gray-400">No published item bank resources for this class yet.</p>
-      </div>
+      <EmptyState v-if="subjectGroups.length === 0" icon="clipboard" tone="gray" title="No published item bank resources for this class yet." />
       <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
         <button
           v-for="group in subjectGroups"
@@ -47,6 +45,7 @@
 </template>
 
 <script setup lang="ts">
+import EmptyState from '@/components/ui/EmptyState.vue'
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'

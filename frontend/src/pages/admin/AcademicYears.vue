@@ -1,182 +1,22 @@
 <template>
   <div>
-    <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-6">Academic Years & Terms</h1>
-    
-    <!-- Tabs -->
-    <div class="mb-6 border-b border-gray-200 dark:border-gray-700">
-      <nav class="flex space-x-8">
-        <button
-          @click="activeTab = 'academic-years'"
-          :class="[
-            'py-4 px-1 border-b-2 font-medium text-sm',
-            activeTab === 'academic-years'
-              ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-              : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-          ]"
-        >
-          Academic Years
-        </button>
-        <button
-          @click="activeTab = 'terms'"
-          :class="[
-            'py-4 px-1 border-b-2 font-medium text-sm',
-            activeTab === 'terms'
-              ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-              : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-          ]"
-        >
-          Terms
-        </button>
-      </nav>
-    </div>
-
-    <!-- Academic Years Tab -->
-    <div v-if="activeTab === 'academic-years'">
-      <div class="flex justify-between items-center mb-6">
-        <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Academic Years</h2>
-        <button
-          @click="openAcademicYearModal()"
-          class="btn-primary"
-        >
-          Add Academic Year
-        </button>
-      </div>
-
-      <!-- Academic Years Table -->
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-        <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead class="bg-gray-50 dark:bg-gray-950">
-            <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Start Date</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">End Date</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Terms</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-              <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-            <tr v-for="academicYear in academicYears" :key="academicYear.id">
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                {{ academicYear.name }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                {{ formatDate(academicYear.start_date) }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                {{ formatDate(academicYear.end_date) }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                {{ academicYear.term_count || 0 }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                <span v-if="academicYear.is_current === 1" class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                  Current
-                </span>
-                <span v-else class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                  Inactive
-                </span>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                <button
-                  @click="openAcademicYearModal(academicYear)"
-                  class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-4"
-                >
-                  Edit
-                </button>
-                <button
-                  @click="confirmDeleteAcademicYear(academicYear)"
-                  class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                >
-                  Delete
-                </button>
-              </td>
-            </tr>
-            <tr v-if="academicYears.length === 0">
-              <td colspan="6" class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
-                No academic years found
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- Terms Tab -->
-    <div v-if="activeTab === 'terms'">
-      <div class="flex justify-between items-center mb-6">
-        <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Terms</h2>
-        <button
-          @click="openTermModal()"
-          class="btn-primary"
-        >
-          Add Term
-        </button>
-      </div>
-
-      <!-- Terms Table -->
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-        <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead class="bg-gray-50 dark:bg-gray-950">
-            <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Academic Year</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Start Date</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">End Date</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-              <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-            <tr v-for="term in terms" :key="term.id">
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                {{ term.name }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                {{ term.academic_year?.name || 'N/A' }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                {{ formatDate(term.start_date) }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                {{ formatDate(term.end_date) }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                <span v-if="term.is_current === 1" class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                  Current
-                </span>
-                <span v-else class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                  Inactive
-                </span>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                <button
-                  @click="openTermModal(term)"
-                  class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-4"
-                >
-                  Edit
-                </button>
-                <button
-                  @click="confirmDeleteTerm(term)"
-                  class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                >
-                  Delete
-                </button>
-              </td>
-            </tr>
-            <tr v-if="terms.length === 0">
-              <td colspan="6" class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
-                No terms found
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        </div>
-      </div>
-    </div>
+    <PageHeader title="Academic years & terms" description="The school calendar - each year with its terms on a timeline. Click a term to change its dates." icon="clock" accent="indigo">
+      <template #actions>
+        <button type="button" class="btn-secondary" @click="openTermModal()">Add term</button>
+        <button type="button" class="btn-primary" @click="openAcademicYearModal()">Add year</button>
+      </template>
+    </PageHeader>
+    <SchoolCalendar
+      :years="academicYears"
+      :terms="terms"
+      :loading="fetching"
+      :year-actions="true"
+      @add-term="addTermTo"
+      @edit-term="openTermModal"
+      @delete-term="confirmDeleteTerm"
+      @edit-year="openAcademicYearModal"
+      @delete-year="confirmDeleteAcademicYear"
+    />
 
     <!-- Academic Year Modal -->
     <div v-if="showAcademicYearModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -356,13 +196,16 @@ import { ref, onMounted } from 'vue'
 import apiService from '@/services/api'
 import type { AcademicYear, Term } from '@/types'
 import { useToastStore } from '@/stores/toast'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import SchoolCalendar from '@/components/admin/SchoolCalendar.vue'
 
 const toast = useToastStore()
 
-const activeTab = ref<'academic-years' | 'terms'>('academic-years')
 const academicYears = ref<AcademicYear[]>([])
 const terms = ref<Term[]>([])
 const loading = ref(false)
+// First load only - `loading` is also the modals' saving flag
+const fetching = ref(true)
 
 // Academic Year Modal
 const showAcademicYearModal = ref(false)
@@ -390,11 +233,6 @@ const showDeleteModal = ref(false)
 const deleteTargetType = ref('')
 const deleteTargetId = ref<number | null>(null)
 
-const formatDate = (dateString: string) => {
-  if (!dateString) return 'N/A'
-  const date = new Date(dateString)
-  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-}
 
 const fetchAcademicYears = async () => {
   loading.value = true
@@ -427,6 +265,7 @@ const fetchTerms = async () => {
     console.error('Failed to fetch terms:', error)
     toast.error('Failed to fetch terms')
   } finally {
+    fetching.value = false
     loading.value = false
   }
 }
@@ -493,6 +332,12 @@ const saveAcademicYear = async () => {
   } finally {
     loading.value = false
   }
+}
+
+// "+ Term" on a year: a new term with that year already chosen
+const addTermTo = (year: AcademicYear) => {
+  openTermModal()
+  termForm.value.academic_year_id = String(year.id)
 }
 
 const openTermModal = (term?: Term) => {

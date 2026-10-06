@@ -190,7 +190,22 @@ class RewardService
             $count++;
             $expected = date('Y-m-d', strtotime($expected . ' -1 day'));
         }
-        return ['days' => $count, 'today' => $learnedToday];
+        // The last seven days (oldest first) and the longest run in the window, for the streak card
+        $set = array_flip($days);
+        $week = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $d = date('Y-m-d', strtotime("-{$i} days"));
+            $week[] = ['day' => $d, 'learned' => isset($set[$d])];
+        }
+        $best = 0;
+        $run = 0;
+        $prev = null;
+        foreach (array_reverse($days) as $d) {
+            $run = ($prev !== null && $d === date('Y-m-d', strtotime($prev . ' +1 day'))) ? $run + 1 : 1;
+            $best = max($best, $run);
+            $prev = $d;
+        }
+        return ['days' => $count, 'today' => $learnedToday, 'week' => $week, 'best' => $best];
     }
 
     /**

@@ -1,31 +1,10 @@
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-950">
-    <div class="px-4 sm:px-6 lg:px-8 py-8 2xl:max-w-[110rem] 2xl:mx-auto">
-      <!-- Header -->
-      <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">eLibrary</h1>
-        <p class="text-gray-600 dark:text-gray-400 mt-1">Every PDF resource uploaded by teachers across the school, for review and moderation.</p>
-      </div>
+  <div class="w-full">
+    <div>
+      <PageHeader title="eLibrary" description="Every PDF resource uploaded by teachers across the school, for review and moderation." icon="book" accent="indigo">
+      </PageHeader>
 
-      <!-- Stats -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-          <p class="text-sm text-gray-600 dark:text-gray-400">Total Books</p>
-          <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ stats.total }}</p>
-        </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-          <p class="text-sm text-gray-600 dark:text-gray-400">Draft</p>
-          <p class="text-3xl font-bold text-yellow-600 dark:text-yellow-400">{{ stats.draft }}</p>
-        </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-          <p class="text-sm text-gray-600 dark:text-gray-400">Published</p>
-          <p class="text-3xl font-bold text-green-600 dark:text-green-400">{{ stats.published }}</p>
-        </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-          <p class="text-sm text-gray-600 dark:text-gray-400">Archived</p>
-          <p class="text-3xl font-bold text-gray-600 dark:text-gray-400">{{ stats.archived }}</p>
-        </div>
-      </div>
+      <StatStrip class="mb-4" :items="[{ label: 'All', value: stats.total, tone: 'indigo' }, { label: 'Published', value: stats.published, tone: 'emerald' }, { label: 'Drafts', value: stats.draft, tone: 'amber' }, { label: 'Archived', value: stats.archived, tone: 'gray' }]" />
 
       <!-- Filters -->
       <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6 border border-gray-100 dark:border-gray-700">
@@ -236,6 +215,8 @@
 </template>
 
 <script setup lang="ts">
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StatStrip from '@/components/ui/StatStrip.vue'
 import { ref, computed, onMounted } from 'vue'
 import { apiService } from '../../services/api'
 import LibraryDocumentViewer from '../../components/library/LibraryDocumentViewer.vue'

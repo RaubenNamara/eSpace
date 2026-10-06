@@ -1,123 +1,56 @@
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-950">
-    <div class="px-4 sm:px-6 lg:px-8 py-8">
-      <!-- Header -->
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-        <div>
-          <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Subjects Management</h1>
-          <p class="text-gray-600 dark:text-gray-400 mt-1">Create and manage academic subjects</p>
-        </div>
-        <button
-          @click="showCreateModal = true"
-          class="btn-primary"
-        >
-          Create Subject
-        </button>
+  <!-- The school's subjects - which department each sits in and how much it is in use. -->
+  <div class="w-full">
+    <PageHeader title="Subjects" description="Every subject, its department, and how much it is in use - classes, teachers, eNotes and assessments." icon="book" accent="indigo" :active-filters="deptFilter ? 1 : 0">
+      <template #actions>
+        <button type="button" class="btn-primary" @click="showCreateModal = true">Add subject</button>
+      </template>
+      <StatStrip v-if="!loading && subjects.length" v-model="quick" :items="statItems" />
+      <template #filters>
+        <select v-model="deptFilter" class="w-full sm:w-60 py-2 pl-3 pr-8 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white" aria-label="Department">
+          <option value="">All departments</option>
+          <option v-for="d in departments" :key="d.id" :value="String(d.id)">{{ d.name }}</option>
+        </select>
+      </template>
+    </PageHeader>
+
+    <transition name="toast">
+      <div v-if="successMessage" class="fixed top-6 right-6 z-50 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-emerald-200 dark:border-emerald-800 p-4 flex items-center gap-3 min-w-[260px] max-w-[calc(100vw-3rem)]">
+        <p class="flex-1 text-sm text-gray-700 dark:text-gray-200">{{ successMessage }}</p>
+        <button class="text-gray-400 hover:text-gray-600" aria-label="Close" @click="successMessage = ''">✕</button>
       </div>
+    </transition>
 
-      <!-- Toast Notification -->
-      <transition name="toast">
-        <div
-          v-if="successMessage"
-          class="fixed top-6 right-6 z-50 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-green-200 dark:border-green-800 p-4 flex items-center gap-4 min-w-[280px] max-w-[calc(100vw-3rem)]"
-        >
-          <div class="flex-shrink-0 w-10 h-10 bg-green-100 dark:bg-green-900/40 rounded-full flex items-center justify-center">
-            <svg class="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-            </svg>
-          </div>
-          <div class="flex-1">
-            <p class="font-semibold text-gray-900 dark:text-white">Success!</p>
-            <p class="text-sm text-gray-600 dark:text-gray-400">{{ successMessage }}</p>
-          </div>
-          <button
-            @click="successMessage = ''"
-            class="flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
-          </button>
-        </div>
-      </transition>
+    <DataTable
+      :columns="columns"
+      :rows="shown"
+      :loading="loading && !subjects.length"
+      :search-keys="['name', 'code', 'department']"
+      search-placeholder="Search subjects"
+      :page-size="30"
+      :initial-sort="{ key: 'name', dir: 'asc' }"
+      empty-title="No subjects here"
+      :empty-message="subjects.length ? 'Nothing matches this filter.' : 'Add your first subject - classes, teachers and eNotes all hang off it.'"
+    >
+      <template #cell-name="{ row }">
+        <span class="block font-semibold text-gray-900 dark:text-white">{{ row.name }}</span>
+        <span v-if="row.code" class="block text-[11px] text-gray-400">{{ row.code }}</span>
+      </template>
+      <template #cell-department="{ row }">
+        <span v-if="row.department" class="text-gray-700 dark:text-gray-200">{{ row.department }}</span>
+        <span v-else class="text-amber-600 dark:text-amber-400 text-xs font-semibold">No department</span>
+      </template>
+      <template v-for="k in COUNT_KEYS" :key="k" #[`cell-${k}`]="{ row }">
+        <span class="tabular-nums" :class="row[k] ? 'text-gray-900 dark:text-white font-semibold' : 'text-gray-300 dark:text-gray-600'">{{ row[k] }}</span>
+      </template>
+      <template #actions="{ row }">
+        <ActionMenu :label="`Actions for ${row.name}`" :items="[
+          { label: 'Edit', icon: 'pencil', run: () => editSubject(row) },
+          { label: 'Delete', icon: 'trash', danger: true, divider: true, run: () => deleteSubject(row) }
+        ]" />
+      </template>
+    </DataTable>
 
-      <!-- Subjects Table -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden border border-gray-100 dark:border-gray-700">
-        <!-- Loading State -->
-        <div v-if="loading" class="p-12 text-center">
-          <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div>
-          <p class="mt-4 text-gray-500 dark:text-gray-400">Loading subjects...</p>
-        </div>
-
-        <!-- Empty State -->
-        <div v-else-if="subjects.length === 0" class="p-12 text-center">
-          <svg class="mx-auto h-16 w-16 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-          </svg>
-          <h3 class="mt-4 text-lg font-medium text-gray-900 dark:text-white">No subjects found</h3>
-          <p class="mt-2 text-gray-500 dark:text-gray-400">Get started by creating your first subject.</p>
-          <button
-            @click="showCreateModal = true"
-            class="mt-4 btn-primary"
-          >
-            Create Subject
-          </button>
-        </div>
-
-        <!-- Subjects Table -->
-        <div v-else class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700">
-          <thead class="bg-gray-50 dark:bg-gray-950">
-            <tr>
-              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Name</th>
-              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Department</th>
-              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Created</th>
-              <th class="px-6 py-4 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
-            <tr
-              v-for="subject in subjects"
-              :key="subject.id"
-              class="hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors duration-150"
-            >
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm font-semibold text-gray-900 dark:text-white">{{ subject.name }}</div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                {{ getDepartmentName(subject.department_id) }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                {{ formatDate(subject.created_at) }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-right">
-                <div class="flex items-center justify-end gap-2">
-                  <button
-                    @click="editSubject(subject)"
-                    class="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors duration-150"
-                    title="Edit"
-                  >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                    </svg>
-                  </button>
-                  <button
-                    @click="deleteSubject(subject)"
-                    class="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors duration-150"
-                    title="Delete"
-                  >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                    </svg>
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        </div>
-      </div>
-    </div>
 
     <!-- Create Subject Modal -->
     <div v-if="showCreateModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -222,16 +155,54 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { apiService } from '../../services/api'
 import type { Subject, Department } from '../../types'
 import { useToastStore } from '@/stores/toast'
 import { useConfirmStore } from '@/stores/confirm'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StatStrip, { type StatItem } from '@/components/ui/StatStrip.vue'
+import DataTable, { type Column } from '@/components/ui/DataTable.vue'
+import ActionMenu from '@/components/ui/ActionMenu.vue'
+import { usePersistedRef } from '@/composables/usePersistedRef'
+
+type SubjectRow = Subject & { code?: string; classes_count?: number; teachers_count?: number; enotes_count?: number; assessments_count?: number }
+const COUNT_KEYS = ['classes_count', 'teachers_count', 'enotes_count', 'assessments_count'] as const
 
 const toast = useToastStore()
 const confirmDialog = useConfirmStore()
 
-const subjects = ref<Subject[]>([])
+const subjects = ref<SubjectRow[]>([])
+const quick = ref<string | null>(null)
+const deptFilter = usePersistedRef<string>('admin-subjects-dept', '')
+
+const columns: Column[] = [
+  { key: 'name', label: 'Subject', sortable: true, mobile: 'title' },
+  { key: 'department', label: 'Department', sortable: true, mobile: 'subtitle' },
+  { key: 'classes_count', label: 'Classes', sortable: true, align: 'center' },
+  { key: 'teachers_count', label: 'Teachers', sortable: true, align: 'center' },
+  { key: 'enotes_count', label: 'eNotes', sortable: true, align: 'center' },
+  { key: 'assessments_count', label: 'Assessments', sortable: true, align: 'center' }
+]
+const rows = computed(() => subjects.value.map(s => {
+  const d = departments.value.find(x => x.id === s.department_id)
+  return { ...s, department: d ? d.name : '' }
+}))
+const inDept = computed(() => rows.value.filter(s => !deptFilter.value || String(s.department_id) === deptFilter.value))
+const statItems = computed<StatItem[]>(() => [
+  { label: 'Subjects', value: inDept.value.length, key: 'all', tone: 'indigo' },
+  { label: 'Not assigned to a class', value: inDept.value.filter(s => !s.classes_count).length, key: 'noclass', tone: 'amber', hint: 'set in Assign Teachers' },
+  { label: 'No teacher assigned', value: inDept.value.filter(s => !s.teachers_count).length, key: 'noteacher', tone: 'rose', hint: 'set in Assign Teachers' },
+  { label: 'No eNotes yet', value: inDept.value.filter(s => !s.enotes_count).length, key: 'noenotes', tone: 'gray' }
+])
+const shown = computed(() => inDept.value.filter(s => {
+  switch (quick.value) {
+    case 'noclass': return !s.classes_count
+    case 'noteacher': return !s.teachers_count
+    case 'noenotes': return !s.enotes_count
+    default: return true
+  }
+}))
 const departments = ref<Department[]>([])
 const loading = ref(false)
 const successMessage = ref('')
@@ -278,11 +249,6 @@ const fetchSubjects = async () => {
   }
 }
 
-const getDepartmentName = (departmentId: number | undefined) => {
-  if (!departmentId) return 'No Department'
-  const dept = departments.value.find(d => d.id === departmentId)
-  return dept ? `${dept.name} (${dept.code})` : 'Unknown'
-}
 
 const createSubject = async () => {
   loading.value = true
@@ -371,9 +337,6 @@ const deleteSubject = async (subject: Subject) => {
   }
 }
 
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString()
-}
 
 onMounted(() => {
   fetchDepartments()

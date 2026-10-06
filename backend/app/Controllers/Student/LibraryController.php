@@ -182,6 +182,8 @@ class LibraryController extends Controller
              ON DUPLICATE KEY UPDATE last_read_at = NOW()"
         );
         $stmt->execute(['book_id' => $bookId, 'student_id' => $studentId]);
+        // Reading a book counts as a learning day
+        \eSpace\App\Services\RewardService::recordLearningDay($studentId);
     }
 
     /**

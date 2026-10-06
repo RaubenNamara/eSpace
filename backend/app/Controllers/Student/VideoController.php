@@ -215,6 +215,10 @@ class VideoController extends Controller
             'watched_seconds' => $watchedSeconds,
             'completed_at' => $completedNow ? date('Y-m-d H:i:s') : null,
         ]);
+        // Watching a lesson video counts as a learning day
+        if ($percentage >= 25) {
+            \eSpace\App\Services\RewardService::recordLearningDay((int) $studentId);
+        }
 
         $this->success(['recorded' => true]);
     }

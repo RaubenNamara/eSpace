@@ -10,6 +10,7 @@
             <p class="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">Reading insights</p>
             <h2 class="text-base font-bold text-gray-900 dark:text-white truncate">{{ data?.topic.title || 'eNote' }}</h2>
             <p v-if="data" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ data.readers }} student{{ data.readers === 1 ? '' : 's' }} opened it · {{ data.completed }} finished</p>
+            <RouterLink :to="`/teacher/enotes/${topicId}/explanations`" class="mt-1 inline-flex text-xs font-semibold text-indigo-600 dark:text-indigo-300 hover:underline">In their own words - what students said each page means →</RouterLink>
           </div>
           <button type="button" class="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700" aria-label="Close" @click="$emit('close')">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>

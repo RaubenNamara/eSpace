@@ -1,9 +1,7 @@
 <template>
-  <div class="p-6">
-    <div class="mb-6">
-      <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Reports</h1>
-      <p class="text-gray-600 dark:text-gray-400">Student competency reports (LOA/AOI/EOC) and summative report cards.</p>
-    </div>
+  <div class="w-full">
+    <PageHeader title="Reports" description="Student competency reports (LOA/AOI/EOC) and summative report cards." icon="chart" accent="indigo">
+    </PageHeader>
 
     <!-- ============================= Student Competency Reports (LOA/AOI/EOC) ============================= -->
     <div class="mb-10">
@@ -319,6 +317,7 @@
 </template>
 
 <script setup lang="ts">
+import PageHeader from '@/components/ui/PageHeader.vue'
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import axios from 'axios'
 import ReportCard from '@/components/reportcard/ReportCard.vue'

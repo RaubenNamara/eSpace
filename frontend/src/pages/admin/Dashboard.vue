@@ -1,136 +1,40 @@
-﻿<template>
+<template>
   <div>
     <!-- The topbar already shows this admin's name and photo, so this line is a quick personal
          greeting rather than a redundant "Admin Dashboard" title. The old "Preview as Student"
          button was dropped too - it just linked to /admin/assessments, already one click away
          in the sidebar's Assessment & Analytics section. -->
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-      <h1 class="text-xl font-bold text-gray-900 dark:text-white">{{ greeting }}, {{ authStore.userName }}</h1>
-      <div class="flex flex-nowrap gap-2 sm:gap-3 w-full sm:w-auto">
-        <button
-          @click="openViewEnrolledModal"
-          class="flex-1 sm:flex-initial justify-center px-2.5 sm:px-4 py-2 sm:py-2.5 bg-green-600 text-white font-semibold rounded-lg shadow-sm hover:bg-green-700 hover:shadow-md transition-colors duration-150 flex items-center text-sm sm:text-base"
-        >
-          <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-          </svg>
-          <span class="sm:hidden truncate">Enrolled</span>
-          <span class="hidden sm:inline">View Enrolled Students</span>
-        </button>
-        <button
-          @click="openEnrollModal"
-          class="btn-primary flex-1 sm:flex-initial justify-center flex items-center text-sm sm:text-base !px-2.5 sm:!px-4 !py-2 sm:!py-2.5"
-        >
-          <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-          </svg>
-          <span class="sm:hidden truncate">Enroll</span>
-          <span class="hidden sm:inline">Enroll Students</span>
-        </button>
+    <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
+      <div class="min-w-0">
+        <p class="text-[11px] font-bold uppercase tracking-widest text-gray-400">{{ todayLabel }}</p>
+        <h1 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{{ greeting }}, {{ authStore.userName }}</h1>
+        <p v-if="currentTerm" class="mt-1 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
+          <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>{{ currentTerm }}
+        </p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" class="btn-secondary !py-2" @click="openViewEnrolledModal">Enrolled students</button>
+        <button type="button" class="btn-primary !py-2" @click="openEnrollModal">Enrol students</button>
       </div>
     </div>
 
-    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4 mb-6">
-      <QuickLink to="/admin/students" label="Students" icon="students" color="indigo" />
-      <QuickLink to="/admin/teachers" label="Teachers" icon="teachers" color="indigo" />
-      <QuickLink to="/admin/classes" label="Classes" icon="classes" color="indigo" />
-      <QuickLink to="/admin/live-classes" label="Live Classes" icon="live" color="indigo" />
-      <QuickLink to="/admin/library" label="eLibrary" icon="library" color="indigo" />
-      <QuickLink to="/admin/notes" label="eNotes" icon="notes" color="indigo" />
-      <QuickLink to="/admin/itembank" label="Item Bank" icon="itembank" color="indigo" />
-      <QuickLink to="/admin/reports" label="Reports" icon="reports" color="indigo" />
-    </div>
+    <StatStrip class="mb-4" :items="figureItems" />
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-      <RouterLink to="/admin/students" class="group card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 border border-transparent">
-        <div class="flex items-center justify-between">
-          <template v-if="loadingAnalytics">
-            <div class="flex-1">
-              <div class="h-3.5 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
-              <div class="h-7 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-            </div>
-            <div class="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse flex-shrink-0"></div>
-          </template>
-          <template v-else>
-            <div>
-              <p class="text-gray-500 dark:text-gray-400 text-sm">Total Enrollments</p>
-              <p class="text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400"><CountUp :value="analytics.total_enrollments" /></p>
-            </div>
-            <div class="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
-              <svg class="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
-              </svg>
-            </div>
-          </template>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+      <SetupChecklist class="lg:col-span-2" @figures="onFigures" />
+      <section class="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5">
+        <h2 class="text-sm font-bold text-gray-900 dark:text-white mb-3">Go to</h2>
+        <div class="grid grid-cols-2 gap-2.5">
+          <QuickLink to="/admin/students" label="Students" icon="students" color="indigo" />
+          <QuickLink to="/admin/teachers" label="Teachers" icon="teachers" color="indigo" />
+          <QuickLink to="/admin/classes" label="Classes" icon="classes" color="indigo" />
+          <QuickLink to="/admin/live-classes" label="Live Classes" icon="live" color="indigo" />
+          <QuickLink to="/admin/library" label="eLibrary" icon="library" color="indigo" />
+          <QuickLink to="/admin/notes" label="eNotes" icon="notes" color="indigo" />
+          <QuickLink to="/admin/itembank" label="Item Bank" icon="itembank" color="indigo" />
+          <QuickLink to="/admin/reports" label="Reports" icon="reports" color="indigo" />
         </div>
-      </RouterLink>
-      <RouterLink to="/admin/students" class="group card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 border border-transparent">
-        <div class="flex items-center justify-between">
-          <template v-if="loadingAnalytics">
-            <div class="flex-1">
-              <div class="h-3.5 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
-              <div class="h-7 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-            </div>
-            <div class="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse flex-shrink-0"></div>
-          </template>
-          <template v-else>
-            <div>
-              <p class="text-gray-500 dark:text-gray-400 text-sm">Recent Enrollments (7 days)</p>
-              <p class="text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400"><CountUp :value="analytics.recent_enrollments" /></p>
-            </div>
-            <div class="w-12 h-12 bg-green-100 dark:bg-green-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
-              <svg class="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
-              </svg>
-            </div>
-          </template>
-        </div>
-      </RouterLink>
-      <RouterLink to="/admin/departments" class="group card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 border border-transparent">
-        <div class="flex items-center justify-between">
-          <template v-if="loadingAnalytics">
-            <div class="flex-1">
-              <div class="h-3.5 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
-              <div class="h-7 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-            </div>
-            <div class="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse flex-shrink-0"></div>
-          </template>
-          <template v-else>
-            <div>
-              <p class="text-gray-500 dark:text-gray-400 text-sm">Departments</p>
-              <p class="text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400"><CountUp :value="analytics.by_department.length" /></p>
-            </div>
-            <div class="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
-              <svg class="w-6 h-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-              </svg>
-            </div>
-          </template>
-        </div>
-      </RouterLink>
-      <RouterLink to="/admin/classes" class="group card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 border border-transparent">
-        <div class="flex items-center justify-between">
-          <template v-if="loadingAnalytics">
-            <div class="flex-1">
-              <div class="h-3.5 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
-              <div class="h-7 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-            </div>
-            <div class="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse flex-shrink-0"></div>
-          </template>
-          <template v-else>
-            <div>
-              <p class="text-gray-500 dark:text-gray-400 text-sm">Active Classes</p>
-              <p class="text-2xl font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400"><CountUp :value="analytics.by_class.length" /></p>
-            </div>
-            <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
-              <svg class="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-              </svg>
-            </div>
-          </template>
-        </div>
-      </RouterLink>
+      </section>
     </div>
 
     <!-- Curriculum mastery across the school (or one department) -->
@@ -151,7 +55,7 @@
         <div class="h-64">
           <Bar v-if="!loadingAnalytics && analytics.by_department.length > 0" :data="departmentChartData" :options="chartOptions" />
           <div v-else-if="loadingAnalytics" class="flex items-center justify-center h-full text-gray-500">Loading...</div>
-          <div v-else class="flex items-center justify-center h-full text-gray-500">No data available</div>
+          <EmptyState v-else compact :card="false" icon="chart" tone="gray" title="Nothing to show yet" message="This fills in as students are enrolled." />
         </div>
       </div>
 
@@ -161,7 +65,7 @@
         <div class="h-64">
           <Bar v-if="!loadingAnalytics && analytics.by_academic_year.length > 0" :data="yearChartData" :options="chartOptions" />
           <div v-else-if="loadingAnalytics" class="flex items-center justify-center h-full text-gray-500">Loading...</div>
-          <div v-else class="flex items-center justify-center h-full text-gray-500">No data available</div>
+          <EmptyState v-else compact :card="false" icon="chart" tone="gray" title="Nothing to show yet" message="This fills in as students are enrolled." />
         </div>
       </div>
     </div>
@@ -172,7 +76,7 @@
       <div class="h-64">
         <Bar v-if="!loadingAnalytics && analytics.by_class.length > 0" :data="classChartData" :options="chartOptions" />
         <div v-else-if="loadingAnalytics" class="flex items-center justify-center h-full text-gray-500">Loading...</div>
-        <div v-else class="flex items-center justify-center h-full text-gray-500">No data available</div>
+        <EmptyState v-else compact :card="false" icon="chart" tone="gray" title="Nothing to show yet" message="This fills in as students are enrolled." />
       </div>
     </div>
     <!-- View Enrolled Students Modal -->
@@ -657,12 +561,14 @@
 </template>
 
 <script setup lang="ts">
+import EmptyState from '@/components/ui/EmptyState.vue'
 import { ref, onMounted, computed } from 'vue'
-import CountUp from '@/components/common/CountUp.vue'
 import { useLiveRefresh } from '@/composables/useLiveRefresh'
 import apiService from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import QuickLink from '@/components/dashboard/QuickLink.vue'
+import StatStrip, { type StatItem } from '@/components/ui/StatStrip.vue'
+import SetupChecklist, { type SetupFigures } from '@/components/admin/SetupChecklist.vue'
 import MasteryOverviewCard from '@/components/dashboard/MasteryOverviewCard.vue'
 import { Bar } from 'vue-chartjs'
 import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ArcElement } from 'chart.js'
@@ -1356,5 +1262,24 @@ onMounted(() => {
   fetchAnalytics()
   fetchDepartments()
 })
+
+// ---- Headline figures and the current term (they come with the setup checklist) ----
+const figures = ref<SetupFigures | null>(null)
+const currentTerm = ref<string | null>(null)
+const onFigures = (f: SetupFigures, term: string | null) => { figures.value = f; currentTerm.value = term }
+// A share as a whole percent, never showing a real handful of people as 0%
+const share = (n: number, of: number) => { const p = (n / of) * 100; return n > 0 && p < 1 ? 'under 1%' : `${Math.round(p)}%` }
+const figureItems = computed<StatItem[]>(() => {
+  const f = figures.value
+  const v = (n: number | undefined) => (f ? (n ?? 0).toLocaleString() : '…')
+  return [
+    { label: 'Learners', value: v(f?.students), tone: 'indigo' },
+    { label: 'Teachers', value: v(f?.teachers), tone: 'violet' },
+    { label: 'Classes', value: v(f?.classes), tone: 'sky' },
+    { label: 'Learners active this week', value: v(f?.students_active_week), tone: 'emerald', hint: f && f.students ? `${share(f.students_active_week, f.students)} of learners` : undefined },
+    { label: 'Teachers active this week', value: v(f?.teachers_active_week), tone: 'amber', hint: f && f.teachers ? `${share(f.teachers_active_week, f.teachers)} of teachers` : undefined }
+  ]
+})
+const todayLabel = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
 </script>
 

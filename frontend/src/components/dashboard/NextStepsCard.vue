@@ -25,6 +25,23 @@
       </div>
     </div>
 
+    <!-- The last seven days: which ones had some learning in them -->
+    <div v-if="streak?.week?.length" class="mb-3 flex items-center gap-3 rounded-lg bg-orange-50/50 dark:bg-orange-900/10 px-3 py-2">
+      <div class="flex gap-1.5" role="img" :aria-label="`Learned on ${streak.week.filter(d => d.learned).length} of the last 7 days`">
+        <span v-for="d in streak.week" :key="d.day" class="flex flex-col items-center gap-0.5">
+          <span class="w-5 h-5 rounded-full flex items-center justify-center" :class="d.learned ? 'bg-orange-500 text-white' : d.day === streak.week[6].day ? 'border-2 border-dashed border-orange-300 dark:border-orange-700' : 'bg-gray-200 dark:bg-gray-700'">
+            <AppIcon v-if="d.learned" name="flame" class="w-3 h-3" />
+          </span>
+          <span class="text-[9px] font-semibold text-gray-400">{{ dayLetter(d.day) }}</span>
+        </span>
+      </div>
+      <p class="text-[11px] text-gray-600 dark:text-gray-300 leading-snug">
+        <template v-if="!streak.today">Read a page, revise or answer a question today to {{ streak.days ? 'keep it going' : 'start one' }}.</template>
+        <template v-else>Done for today.</template>
+        <span v-if="(streak.best || 0) > 1" class="block text-gray-400">Best: {{ streak.best }} days in a row</span>
+      </p>
+    </div>
+
     <p v-if="!steps.length" class="text-sm text-gray-600 dark:text-gray-300 py-2">
       Nothing waiting right now. <RouterLink to="/student/learning-map" class="font-semibold text-indigo-600 dark:text-indigo-300 hover:underline">Look at your Learning Map</RouterLink> to see how you're doing.
     </p>
@@ -84,9 +101,10 @@ const markOpened = (step: Step) => {
 
 const steps = ref<Step[]>([])
 const total = ref(0)
-const streak = ref<{ days: number; today: boolean } | null>(null)
+const streak = ref<{ days: number; today: boolean; week?: { day: string; learned: boolean }[]; best?: number } | null>(null)
+const dayLetter = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString(undefined, { weekday: 'narrow' })
 const streakHint = computed(() => !streak.value || streak.value.days === 0
-  ? 'Read notes or answer an assessment to start a streak'
+  ? 'Read notes, revise, play a live quiz or answer an assessment to start a streak'
   : streak.value.today ? 'You learned something today - keep it going tomorrow' : 'Learn something today to keep your streak')
 const loaded = ref(false)
 

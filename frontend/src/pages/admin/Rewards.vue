@@ -1,9 +1,7 @@
 <template>
-  <div class="p-4 sm:p-6">
-    <div class="mb-6">
-      <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1">Rewards &amp; Badges</h1>
-      <p class="text-sm text-gray-500 dark:text-gray-400">Badges are awarded automatically whenever marks are graded and returned. Monitor, override or revoke them here, and configure the rules that drive them.</p>
-    </div>
+  <div class="w-full">
+    <PageHeader title="Rewards &amp; badges" description="Badges are awarded automatically whenever marks are graded and returned. Monitor, override or revoke them here, and configure the rules that drive them." icon="trophy" accent="indigo">
+    </PageHeader>
 
     <!-- Tabs -->
     <div class="flex gap-2 mb-6 border-b border-gray-200 dark:border-gray-700">
@@ -369,6 +367,7 @@
 </template>
 
 <script setup lang="ts">
+import PageHeader from '@/components/ui/PageHeader.vue'
 import BadgeIcon from '@/components/common/BadgeIcon.vue'
 import { ref, computed, watch, onMounted } from 'vue'
 import axios from 'axios'

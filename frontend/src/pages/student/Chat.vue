@@ -65,7 +65,7 @@
             </button>
             <div class="relative flex-shrink-0">
               <div class="w-9 h-9 rounded-full bg-emerald-600 flex items-center justify-center text-white text-sm font-semibold">
-                <AppIcon v-if="activeConversation.type === 'class'" name="users" class="w-5 h-5" /><template v-else>{{ initials(activeConversation.name) }}</template>
+                <AppIcon v-if="activeConversation.type === 'class' || activeConversation.type === 'group'" name="users" class="w-5 h-5" /><template v-else>{{ initials(activeConversation.name) }}</template>
               </div>
               <span
                 v-if="activeConversation.type === 'direct' && activeConversation.is_online"
@@ -74,7 +74,7 @@
             </div>
             <div class="min-w-0 flex-1">
               <h2 class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ activeConversation.name }}</h2>
-              <p v-if="activeConversation.type === 'class'" class="text-xs text-gray-500 dark:text-gray-400">Class group</p>
+              <p v-if="activeConversation.type === 'class' || activeConversation.type === 'group'" class="text-xs text-gray-500 dark:text-gray-400">{{ activeConversation.type === 'group' ? 'Study group' : 'Class group' }}</p>
               <p v-else-if="activeConversation.is_online" class="text-xs text-emerald-600 dark:text-emerald-400">Online</p>
             </div>
 
@@ -106,7 +106,7 @@
                 :key="msg.id"
                 :id="`msg-${msg.id}`"
                 :message="msg"
-                :show-sender-name="activeConversation.type === 'class' && !msg.is_mine"
+                :show-sender-name="(activeConversation.type === 'class' || activeConversation.type === 'group') && !msg.is_mine"
                 @reply="replyingTo = $event"
                 @scroll-to="scrollToMessage"
                 @preview-image="previewImage = $event"
@@ -150,6 +150,7 @@
 <script setup lang="ts">
 import AppIcon from '@/components/common/AppIcon.vue'
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { useRoute } from 'vue-router'
 import axios from 'axios'
 import ConversationListItem from '@/components/chat/ConversationListItem.vue'
 import MessageBubble from '@/components/chat/MessageBubble.vue'
@@ -160,6 +161,7 @@ import type { Conversation, ChatMessage, ChatContact, ChatClassGroup } from '@/t
 import { useToastStore } from '@/stores/toast'
 import { useConfirmStore } from '@/stores/confirm'
 
+const route = useRoute()
 const toast = useToastStore()
 const confirmDialog = useConfirmStore()
 
@@ -373,6 +375,10 @@ onMounted(() => {
   loadingConversations.value = true
   Promise.all([loadConversations(), loadContacts(), loadClassGroups()]).finally(() => {
     loadingConversations.value = false
+    // ?conversation=<id> (from Study groups) opens that conversation
+    const wanted = Number(route.query.conversation)
+    const conv = wanted ? conversations.value.find(c => c.id === wanted) : null
+    if (conv) openConversation(conv)
   })
 
   conversationPollTimer = window.setInterval(loadConversations, 8000)

@@ -402,7 +402,7 @@
             <div class="reveal lg:sticky lg:top-28">
               <p :class="EYEBROW">Meet the team</p>
               <h2 :class="H2">Four people. One mission.</h2>
-              <p class="mt-3 text-slate-600 dark:text-slate-400">An executive director and three stakeholders who build eSpace and stay close to the schools that use it - you talk to the people who make it.</p>
+              <p class="mt-3 text-slate-600 dark:text-slate-400">An executive director and a product and technology team who build eSpace and stay close to the schools that use it - you talk to the people who make it.</p>
               <div class="mt-8 rounded-2xl border-l-4 border-indigo-500 bg-white dark:bg-white/5 p-5">
                 <p class="font-jakarta font-bold">{{ STORY.title }}</p>
                 <p v-for="p in STORY.paragraphs" :key="p" class="mt-2 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{{ p }}</p>
@@ -422,8 +422,8 @@
                 </div>
               </div>
 
-              <!-- Then the stakeholders -->
-              <p class="reveal mt-8 mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">Stakeholders</p>
+              <!-- Then the rest of the team -->
+              <p class="reveal mt-8 mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">Product &amp; technology</p>
               <div class="grid sm:grid-cols-3 gap-4">
                 <div v-for="m in teamStakeholders" :key="m.name" class="reveal rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-5 text-center">
                   <div class="mx-auto w-16 h-16 rounded-full p-0.5 bg-slate-200 dark:bg-white/10">
@@ -590,7 +590,11 @@ const STEPS = [
   { title: 'Everyone sees progress', icon: 'chart', text: 'Learning Maps, coverage and engagement update as work is marked - right through to report cards.' }
 ]
 
-const initials = (name: string) => name.split(/\s+/).filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase()
+// First and last name only, so a long name still makes two letters
+const initials = (name: string) => {
+  const w = name.split(/\s+/).filter(Boolean)
+  return ((w[0]?.[0] || '') + (w.length > 1 ? w[w.length - 1][0] : '')).toUpperCase()
+}
 
 const FAQ = [
   { q: 'Do students need a computer?', a: 'No. eSpace works on any smartphone, tablet or computer with a browser. Notes and books can be saved to the device to read without internet, and anything done offline is sent when the device reconnects.' },

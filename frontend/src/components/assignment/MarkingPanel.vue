@@ -56,6 +56,13 @@
       @input="onGeneralFeedbackInput"
     ></textarea>
     <CommentChips v-if="!locked" :current="generalFeedback" :show="6" @insert="addGeneralComment" />
+    <VoiceNote
+      class="mt-3"
+      :path="initialVoicePath"
+      :seconds="initialVoiceSeconds"
+      :disabled="locked"
+      :endpoint="`/api/teacher/assignments/${assignmentId}/submissions/${submissionId}/voice-feedback`"
+    />
     <div v-if="saveStatus" class="marking-panel__status">{{ saveStatus }}</div>
 
     <div class="marking-panel__actions">
@@ -86,6 +93,7 @@ import axios from 'axios'
 import type { AssignmentQuestion } from '@/types'
 import { computeGradeSummary } from '@/utils/grading'
 import { useToastStore } from '@/stores/toast'
+import VoiceNote from '@/components/assignment/VoiceNote.vue'
 import CommentChips from './CommentChips.vue'
 
 const toast = useToastStore()
@@ -106,10 +114,14 @@ interface Props {
   status: string
   totalMarks: number
   initialFeedback?: string
+  initialVoicePath?: string | null
+  initialVoiceSeconds?: number | null
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  initialFeedback: ''
+  initialFeedback: '',
+  initialVoicePath: null,
+  initialVoiceSeconds: null
 })
 
 const emit = defineEmits<{

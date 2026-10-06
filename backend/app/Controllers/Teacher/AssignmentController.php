@@ -1421,13 +1421,19 @@ class AssignmentController extends Controller
 
             $newAssignmentId = Database::lastInsertId();
 
-            // Duplicate questions
-            $sql = "SELECT * FROM assignment_questions WHERE assignment_id = :assignment_id AND deleted_at IS NULL ORDER BY display_order";
+            // Duplicate questions - parents first, so each sub-question of a scenario can point at
+            // its parent's copy (copying parent_question_id as-is left the copy's sub-questions
+            // hanging off the original assessment's scenario)
+            $sql = "SELECT * FROM assignment_questions WHERE assignment_id = :assignment_id AND deleted_at IS NULL ORDER BY parent_question_id IS NOT NULL, display_order";
             $stmt = $db->prepare($sql);
             $stmt->execute(['assignment_id' => $assignmentId]);
             $questions = $stmt->fetchAll();
 
+            $newIdFor = [];
             foreach ($questions as $question) {
+                if ($question['parent_question_id'] !== null && !isset($newIdFor[(int) $question['parent_question_id']])) {
+                    continue; // its scenario was deleted
+                }
                 // Carry over the original question's attachment if it had one, otherwise fall
                 // back to the default answer document for free-response types (same rule as
                 // creating a brand-new question).
@@ -1446,7 +1452,7 @@ class AssignmentController extends Controller
                 $stmt = $db->prepare($sql);
                 $stmt->execute([
                     'assignment_id' => $newAssignmentId,
-                    'parent_question_id' => $question['parent_question_id'],
+                    'parent_question_id' => $question['parent_question_id'] !== null ? $newIdFor[(int) $question['parent_question_id']] : null,
                     'question_type' => $question['question_type'],
                     'question_text' => $question['question_text'],
                     'scenario_text' => $question['scenario_text'],
@@ -1458,6 +1464,7 @@ class AssignmentController extends Controller
                 ]);
 
                 $newQuestionId = Database::lastInsertId();
+                $newIdFor[(int) $question['id']] = (int) $newQuestionId;
 
                 // Duplicate options for this question
                 $sql = "SELECT * FROM assignment_question_options WHERE question_id = :question_id ORDER BY display_order";

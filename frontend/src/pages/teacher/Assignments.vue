@@ -2,6 +2,9 @@
   <div class="w-full">
     <PageHeader title="Assessments" description="Set work, see who has handed in, and mark - the ones waiting on you come first." icon="clipboard" accent="violet" :active-filters="activeFilterCount">
       <template #actions>
+        <RouterLink to="/teacher/term-copy" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700" title="Reuse a term you've already taught">
+          <span class="hidden sm:inline">Copy a past term</span><span class="sm:hidden">Copy term</span>
+        </RouterLink>
         <button type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold bg-violet-600 text-white hover:bg-violet-700 shadow-sm shadow-violet-500/20" @click="router.push('/teacher/assignments/create')">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
           <span class="hidden sm:inline">New assessment</span><span class="sm:hidden">New</span>

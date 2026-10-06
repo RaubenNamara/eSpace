@@ -651,6 +651,8 @@
                         </div>
                       </div>
 
+                      <ExplainItBack v-if="isStudentMode && topic" :topic-id="topic.id" :page-id="page.id" />
+
                       <!-- Student's own private summary of this page - never seen by the teacher/HOD.
                            Folded away as a tab at the foot of the page ("My summary" when there is
                            one, "Add my summary" when not); clicking it unfolds the note. -->
@@ -999,6 +1001,7 @@
 <script setup lang="ts">
 import AppIcon from '@/components/common/AppIcon.vue'
 import TopicQuestions from '@/components/enotes/TopicQuestions.vue'
+import ExplainItBack from '@/components/enotes/ExplainItBack.vue'
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'

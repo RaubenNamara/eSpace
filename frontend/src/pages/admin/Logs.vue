@@ -1,11 +1,8 @@
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-950">
-    <div class="px-4 sm:px-6 lg:px-8 py-8">
-      <!-- Header -->
-      <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">System Logs</h1>
-        <p class="text-gray-600 dark:text-gray-400 mt-1">Login history for every account across the school.</p>
-      </div>
+  <div class="w-full">
+    <div>
+      <PageHeader title="System logs" description="Login history for every account across the school." icon="document" accent="indigo">
+      </PageHeader>
 
       <!-- Filters -->
       <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6 border border-gray-100 dark:border-gray-700">
@@ -113,6 +110,7 @@
 </template>
 
 <script setup lang="ts">
+import PageHeader from '@/components/ui/PageHeader.vue'
 import { ref, onMounted } from 'vue'
 import { apiService } from '../../services/api'
 

@@ -6,7 +6,7 @@
          a gold border and a recessed edge (.app-frame-sidebar in assets/style.css). -->
     <aside
       v-if="!shouldHideAppChrome"
-      class="overflow-hidden fixed left-0 top-3 bottom-3 lg:left-3 lg:top-3 lg:bottom-3 rounded-r-2xl lg:rounded-2xl app-frame-sidebar backdrop-blur-xl transform transition-all duration-300 z-50 flex flex-col"
+      class="print:hidden overflow-hidden fixed left-0 top-3 bottom-3 lg:left-3 lg:top-3 lg:bottom-3 rounded-r-2xl lg:rounded-2xl app-frame-sidebar backdrop-blur-xl transform transition-all duration-300 z-50 flex flex-col"
       :class="[isIconOnly ? 'w-16' : 'w-48 md:w-56', { '-translate-x-full': !sidebarOpen, 'translate-x-0': sidebarOpen }]"
     >
 
@@ -96,7 +96,7 @@
       v-if="sidebarOpen && !shouldHideAppChrome"
       @click="sidebarCollapsed = !sidebarCollapsed"
       :title="isIconOnly ? 'Expand sidebar' : 'Collapse sidebar'"
-      class="hidden lg:flex fixed top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white dark:bg-slate-800 border border-slate-400 dark:border-white/10 shadow-md items-center justify-center text-slate-600 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-500/50 transition-all duration-300 z-50"
+      class="print:!hidden hidden lg:flex fixed top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white dark:bg-slate-800 border border-slate-400 dark:border-white/10 shadow-md items-center justify-center text-slate-600 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-500/50 transition-all duration-300 z-50"
       :style="{ left: sidebarToggleLeftPx + 'px' }"
     >
       <svg class="w-3.5 h-3.5 transition-transform duration-300" :class="{ 'rotate-180': isIconOnly }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -113,14 +113,14 @@
 
     <!-- Main Content -->
     <div
-      class="min-h-screen flex flex-col transition-all duration-300 ml-0"
+      class="print:!ml-0 min-h-screen flex flex-col transition-all duration-300 ml-0"
       :class="shouldHideAppChrome ? '' : { 'lg:ml-[248px]': sidebarOpen && !sidebarCollapsed, 'lg:ml-[88px]': sidebarOpen && sidebarCollapsed }"
     >
       <!-- Top Bar - hides on scroll-down and reappears on scroll-up (like the Landing header),
            so it doesn't permanently eat vertical space on long pages. -->
       <header
         v-if="!shouldHideAppChrome"
-        class="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-40 transition-transform duration-300"
+        class="print:hidden bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-40 transition-transform duration-300"
         :class="[{ '-translate-y-full': headerHidden }, isImmersiveReader ? 'hidden lg:block' : '']"
       >
         <div class="flex items-center justify-between px-6 py-3">
@@ -137,6 +137,15 @@
 
           <!-- Global Search (student/teacher only) -->
           <GlobalSearchBar v-if="userRole === 'student' || userRole === 'teacher' || userRole === 'hod' || userRole === 'admin'" class="hidden md:block flex-1 mx-4" />
+          <button
+            v-if="menuGroups.length"
+            type="button"
+            class="hidden lg:inline-flex items-center gap-1.5 mr-3 px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+            title="Jump to any page or search (Ctrl/Cmd + K)"
+            @click="paletteRef?.show()"
+          >
+            Go to <kbd class="px-1 rounded bg-gray-100 dark:bg-gray-700 text-[10px]">{{ isMacKey ? '⌘' : 'Ctrl' }} K</kbd>
+          </button>
 
           <div class="flex items-center space-x-4">
             <!-- Mobile search shortcut -->
@@ -324,7 +333,34 @@
               </div>
             </div>
           </div>
-        </div>
+          <!-- Students on a phone: the places they go most, one thumb-tap away at the bottom of the
+       screen; "More" opens the full menu. Hidden while reading (the reader has its own controls). -->
+  <nav
+    v-if="showStudentTabs"
+    class="lg:hidden print:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-t border-gray-200 dark:border-gray-800 pb-[env(safe-area-inset-bottom)]"
+    aria-label="Main"
+  >
+    <div class="grid grid-cols-5">
+      <RouterLink
+        v-for="tab in STUDENT_TABS"
+        :key="tab.path"
+        :to="tab.path"
+        class="relative flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-semibold"
+        :class="isActive(tab.path) || tab.also.some(p => isActive(p)) ? 'text-indigo-600 dark:text-indigo-300' : 'text-gray-500 dark:text-gray-400'"
+      >
+        <span v-if="isActive(tab.path) || tab.also.some(p => isActive(p))" class="absolute top-0 inset-x-6 h-0.5 rounded-full bg-indigo-500"></span>
+        <component :is="iconMap[tab.icon]" class="w-5 h-5" />
+        {{ tab.label }}
+        <span v-if="tab.path === '/student/chat' && chatBadge.unreadCount > 0" class="absolute top-1 right-[calc(50%-1.25rem)] min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] leading-4 text-center">{{ chatBadge.unreadCount > 9 ? '9+' : chatBadge.unreadCount }}</span>
+      </RouterLink>
+      <button type="button" class="flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-semibold text-gray-500 dark:text-gray-400" aria-label="Open the full menu" @click="sidebarOpen = true">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+        More
+      </button>
+    </div>
+  </nav>
+  <CommandPalette v-if="menuGroups.length" ref="paletteRef" :groups="menuGroups" :icons="iconMap" :role="menuRole" :actions="paletteActions" />
+  </div>
       </header>
 
       <ProfileSettingsModal v-if="showProfileModal" :focus-section="profileModalFocusSection" @close="showProfileModal = false" />
@@ -340,7 +376,7 @@
         Sending {{ offline.pending }} {{ offline.pending === 1 ? 'change' : 'changes' }} you made offline…
       </div>
 
-      <main class="flex-1" :class="shouldHideAppChrome ? 'p-0' : (isImmersiveReader ? 'p-0 lg:p-6' : 'p-4 sm:p-6')">
+      <main class="flex-1 print:!p-0" :class="[shouldHideAppChrome ? 'p-0' : (isImmersiveReader ? 'p-0 lg:p-6' : 'p-4 sm:p-6'), showStudentTabs ? 'pb-24 lg:pb-6' : '']">
         <router-view />
       </main>
     </div>
@@ -360,6 +396,7 @@ import { useReadModeStore } from '../stores/readMode'
 import ProfileSettingsModal from '../components/profile/ProfileSettingsModal.vue'
 import NotificationPanel from '../components/notifications/NotificationPanel.vue'
 import GlobalSearchBar from '../components/search/GlobalSearchBar.vue'
+import CommandPalette, { type PaletteAction } from '../components/common/CommandPalette.vue'
 import { resolveAssetUrl } from '@/utils/url'
 import { offline } from '@/utils/offline/enotes'
 
@@ -567,12 +604,14 @@ const MENU: Record<string, NavGroup[]> = {
     ] },
     { key: 'community', name: 'Community', items: [
       { path: '/student/chat', label: 'Chats', icon: 'ChatIcon' },
+      { path: '/student/study-groups', label: 'Study groups', icon: 'UserGroupIcon' },
       { path: '/student/notices', label: 'Noticeboard', icon: 'MegaphoneIcon' }
     ] }
   ],
   teacher: [
     { key: 'home', name: 'Home', items: [
-      { path: '/teacher/dashboard', label: 'Dashboard', icon: 'DashboardIcon' }
+      { path: '/teacher/dashboard', label: 'Dashboard', icon: 'DashboardIcon' },
+      { path: '/teacher/planner', label: 'My week', icon: 'CalendarIcon' }
     ] },
     { key: 'teaching', name: 'Teaching', items: [
       { path: '/teacher/classes', label: 'My Classes', icon: 'BookOpenIcon' },
@@ -628,6 +667,7 @@ const MENU: Record<string, NavGroup[]> = {
       { path: '/hod/reports', label: 'Reports', icon: 'ChartBarIcon' }
     ] },
     { key: 'insights', name: 'Insights', items: [
+      { path: '/hod/term-report', label: 'Term report', icon: 'ClipboardListIcon' },
       { path: '/hod/analytics', label: 'Analytics', icon: 'ChartIcon' },
       { path: '/hod/early-warning', label: 'Early warning', icon: 'BellAlertIcon' },
       { path: '/hod/charts', label: 'Engagement', icon: 'ChartIcon' }
@@ -699,6 +739,48 @@ const toggleFold = (key: string) => {
   else folded.add(key)
   foldStore.value = { ...foldStore.value, [menuRole.value]: [...folded] }
 }
+// ---- Students' bottom tab bar on phones ----
+const STUDENT_TABS = [
+  { path: '/student/dashboard', label: 'Home', icon: 'DashboardIcon', also: [] as string[] },
+  { path: '/student/enotes', label: 'Learn', icon: 'NoteIcon', also: ['/student/library', '/student/videos', '/student/live-classes', '/student/my-notes'] },
+  { path: '/student/revision', label: 'Revise', icon: 'BulbIcon', also: ['/student/assignments', '/student/live-quiz', '/student/exam-plan', '/student/itembank'] },
+  { path: '/student/chat', label: 'Chats', icon: 'ChatIcon', also: ['/student/study-groups', '/student/notices'] }
+]
+const showStudentTabs = computed(() => menuRole.value === 'student' && !shouldHideAppChrome.value && !isImmersiveReader.value)
+
+// ---- The command palette (Ctrl/Cmd + K) ----
+const paletteRef = ref<InstanceType<typeof CommandPalette> | null>(null)
+const isMacKey = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
+const paletteActions = computed<PaletteAction[]>(() => {
+  const go = (path: string) => () => router.push(path)
+  const common: PaletteAction[] = [{ label: themeStore.isDarkMode ? 'Switch to light mode' : 'Switch to dark mode', hint: 'Appearance', run: () => themeStore.toggleTheme() }]
+  const byRole: Record<string, PaletteAction[]> = {
+    student: [
+      { label: "Do today's revision", hint: 'Daily Revision', run: go('/student/revision') },
+      { label: 'Join a live quiz', hint: 'Live Quiz', run: go('/student/live-quiz') },
+      { label: 'Start a study group', hint: 'Study groups', run: go('/student/study-groups') },
+      { label: 'Download my notes as PDF', hint: 'My notes', run: go('/student/my-notes') }
+    ],
+    teacher: [
+      { label: 'New assessment', hint: 'Assessments', run: go('/teacher/assignments/create') },
+      { label: 'Plan my week', hint: 'My week', run: go('/teacher/planner') },
+      { label: 'Host a live quiz', hint: 'Live Quiz', run: go('/teacher/live-quiz') },
+      { label: 'Copy a past term', hint: 'Assessments', run: go('/teacher/term-copy') }
+    ],
+    hod: [
+      { label: 'Print the term report', hint: 'Term report', run: go('/hod/term-report') },
+      { label: 'Who needs attention', hint: 'Early warning', run: go('/hod/early-warning') }
+    ],
+    admin: [
+      { label: 'Finish setting up the school', hint: 'Dashboard checklist', run: go('/admin/dashboard') },
+      { label: 'Add a student', hint: 'Students', run: go('/admin/students') },
+      { label: 'Add a teacher', hint: 'Teachers', run: go('/admin/teachers') },
+      { label: 'Post a notice', hint: 'Noticeboard', run: go('/admin/notices') }
+    ]
+  }
+  return [...(byRole[menuRole.value] || []), ...common]
+})
+
 const groupHasActive = (group: NavGroup) => isFolded(group.key) && group.items.some(item => isActive(item.path))
 
 function isActive(path: string): boolean {

@@ -1,20 +1,16 @@
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-950">
-    <div class="px-4 sm:px-6 lg:px-8 py-8">
-      <!-- Header -->
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-        <div>
-          <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Admin Management</h1>
-          <p class="text-gray-600 dark:text-gray-400 mt-1">Create and manage admin users</p>
-          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Your role: <span class="font-medium">{{ currentUserRole?.toUpperCase() }}</span></p>
-        </div>
-        <button
-          @click="showCreateModal = true"
-          class="btn-primary self-start sm:self-auto flex-shrink-0"
-        >
-          Create Admin
-        </button>
-      </div>
+  <div class="w-full">
+    <div>
+      <PageHeader title="Admin accounts" description="Create and manage admin users" icon="key" accent="indigo">
+        <template #actions>
+          <button
+                  @click="showCreateModal = true"
+                  class="btn-primary self-start sm:self-auto flex-shrink-0"
+                >
+                  Create Admin
+                </button>
+        </template>
+      </PageHeader>
 
       <!-- Toast Notification -->
       <transition name="toast">
@@ -338,6 +334,7 @@
 </template>
 
 <script setup lang="ts">
+import PageHeader from '@/components/ui/PageHeader.vue'
 import { ref, onMounted, watch, computed } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import { apiService } from '../../services/api'

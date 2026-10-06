@@ -45,6 +45,9 @@ const TeacherLiveClasses = () => import('../pages/teacher/LiveClasses.vue')
 const TeacherAssignments = () => import('../pages/teacher/Assignments.vue')
 const AssignmentBuilder = () => import('../pages/teacher/AssignmentBuilder.vue')
 const AssignmentSubmissions = () => import('../pages/teacher/AssignmentSubmissions.vue')
+const MarkByQuestion = () => import('../pages/teacher/MarkByQuestion.vue')
+const TeacherPlanner = () => import('../pages/teacher/Planner.vue')
+const TermCopy = () => import('../pages/teacher/TermCopy.vue')
 const TeacherLibrary = () => import('../pages/teacher/Library.vue')
 const TeacherVideos = () => import('../pages/teacher/Videos.vue')
 const TeacherNotes = () => import('../pages/teacher/Notes.vue')
@@ -217,6 +220,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'live-quiz', name: 'StudentLiveQuiz', component: () => import('../pages/student/LiveQuiz.vue') },
       { path: 'live-quiz/:id', name: 'StudentLiveQuizPlay', component: () => import('../pages/student/LiveQuiz.vue') },
       { path: 'revision', name: 'StudentRevision', component: () => import('../pages/student/Revision.vue') },
+      { path: 'study-groups', name: 'StudentStudyGroups', component: () => import('../pages/student/StudyGroups.vue') },
       { path: 'notices', name: 'StudentNotices', component: () => import('../pages/common/Noticeboard.vue') },
       { path: 'my-notes', name: 'StudentMyNotes', component: () => import('../pages/student/MyNotes.vue') },
       { path: 'exam-plan', name: 'StudentExamPlan', component: () => import('../pages/student/ExamPlan.vue') },
@@ -256,6 +260,9 @@ const routes: RouteRecordRaw[] = [
       { path: 'assignments/:id', name: 'AssignmentView', component: AssignmentBuilder },
       { path: 'assignments/:id/edit', name: 'AssignmentEdit', component: AssignmentBuilder },
       { path: 'assignments/:id/submissions', name: 'AssignmentSubmissions', component: AssignmentSubmissions },
+      { path: 'assignments/:id/mark-by-question', name: 'MarkByQuestion', component: MarkByQuestion },
+      { path: 'planner', name: 'TeacherPlanner', component: TeacherPlanner },
+      { path: 'term-copy', name: 'TermCopy', component: TermCopy },
       { path: 'assignments/:id/preview', name: 'TeacherAssignmentPreview', component: StudentAssignmentAnswer, meta: { previewRole: 'teacher' } },
       {
         // Nested (not flat siblings) so the module content renders inside StudentPreview's own
@@ -294,6 +301,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'settings', name: 'TeacherSettings', component: TeacherSettings },
       { path: 'enotes', name: 'ENotes', component: ENotes },
       { path: 'enotes/builder/:id', name: 'ENoteBuilder', component: ENoteBuilder },
+      { path: 'enotes/:id/explanations', name: 'ENoteExplanations', component: () => import('../pages/teacher/ENoteExplanations.vue') },
       { path: 'enotes/preview/:id', name: 'ENotePreview', component: ENotePreview, meta: { immersiveReader: true } },
       { path: 'search', name: 'TeacherSearch', component: TeacherSearch },
       { path: 'marksheet', name: 'TeacherMarksheet', component: TeacherMarksheet },
@@ -316,6 +324,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'students', name: 'HODStudents', component: HODStudents },
       { path: 'subjects', name: 'HODSubjects', component: HODSubjects },
       { path: 'reports', name: 'HODReports', component: HODReports },
+      { path: 'term-report', name: 'HODTermReport', component: () => import('../pages/hod/TermReport.vue') },
       { path: 'approvals', name: 'HODApprovals', component: HODApprovals },
       { path: 'library', name: 'HODLibrary', component: HODLibrary },
       { path: 'enotes', name: 'HODENotes', component: HODENotes },

@@ -243,6 +243,8 @@ class RevisionController extends Controller
             "INSERT INTO revision_days (student_id, day, right_count, card_count) VALUES (?, ?, ?, ?)
              ON DUPLICATE KEY UPDATE right_count = right_count + VALUES(right_count), card_count = card_count + VALUES(card_count)"
         )->execute([$studentId, $this->today(), $right, $total]);
+        // A revision session is a learning day for the main streak too
+        \eSpace\App\Services\RewardService::recordLearningDay((int) $studentId);
         $this->success($this->streak($db, $studentId));
     }
 }
