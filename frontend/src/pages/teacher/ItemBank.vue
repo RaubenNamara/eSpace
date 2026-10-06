@@ -2,7 +2,11 @@
   <div class="w-full">
     <PageHeader title="Item Bank" description="Past papers, practice questions and revision packs - students open them right in eSpace." icon="clipboard" accent="amber" :active-filters="activeFilterCount">
       <template #actions>
-        <button type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold bg-amber-600 text-white hover:bg-amber-700 shadow-sm shadow-amber-500/20" @click="openCreateModal">
+        <button type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold border border-amber-300 dark:border-amber-700 bg-white dark:bg-gray-800 text-amber-800 dark:text-amber-200 hover:bg-amber-50 dark:hover:bg-amber-900/30" title="Write questions in eSpace, page by page, with answers students can check" @click="openCreateModal('paper')">
+          <AppIcon name="pencil" class="w-4 h-4" />
+          <span class="hidden sm:inline">Write a paper</span><span class="sm:hidden">Write</span>
+        </button>
+        <button type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold bg-amber-600 text-white hover:bg-amber-700 shadow-sm shadow-amber-500/20" @click="openCreateModal('pdf')">
           <AppIcon name="upload" class="w-4 h-4" />
           <span class="hidden sm:inline">Add a paper</span><span class="sm:hidden">Add</span>
         </button>
@@ -22,7 +26,7 @@
     <Skeleton v-if="loading && !resources.length" variant="cards" :count="6" />
 
     <EmptyState v-else-if="!resources.length" icon="clipboard" tone="amber" title="No papers yet" message="Add a PDF - a past paper, a set of practice questions, a revision pack - and students open it in the browser. The first page becomes its cover.">
-      <button type="button" class="px-4 py-2 rounded-xl text-sm font-semibold bg-amber-600 text-white hover:bg-amber-700" @click="openCreateModal">Add your first paper</button>
+      <button type="button" class="px-4 py-2 rounded-xl text-sm font-semibold bg-amber-600 text-white hover:bg-amber-700" @click="openCreateModal('pdf')">Add your first paper</button>
     </EmptyState>
 
     <template v-else>
@@ -82,7 +86,7 @@
             :key="resource.id"
             :label="resource.title"
             :title="`Updated ${formatDate(resource.updated_at || resource.created_at)}`"
-            @open="previewResource = resource"
+            @open="openResource(resource)"
           >
             <template #cover="{ size }">
               <ShelfBook
@@ -163,7 +167,7 @@
         <h2 class="text-sm font-bold text-gray-900 dark:text-white mb-2">Who's opened them</h2>
         <ul class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700">
           <li v-for="resource in readingList" :key="resource.id" class="p-3 flex items-center gap-3">
-            <button type="button" class="w-10 h-[53px] flex-shrink-0 overflow-hidden rounded-sm" :title="`Open ${resource.title}`" @click="previewResource = resource">
+            <button type="button" class="w-10 h-[53px] flex-shrink-0 overflow-hidden rounded-sm" :title="`Open ${resource.title}`" @click="openResource(resource)">
               <span class="block origin-top-left scale-[0.43] pointer-events-none">
                 <ShelfBook flat size="sm" :title="resource.title" :seed="resource.id" :label="subjectTag(resource.subject_name, resource.subject_code)" :cover-image="resource.cover_image" :pages="resource.total_pages" />
               </span>
@@ -203,7 +207,7 @@
       <div class="bg-white dark:bg-gray-800 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
-            {{ editingResource ? 'Edit Resource' : 'Upload Item Bank' }}
+            {{ editingResource ? 'Edit Resource' : paperMode ? 'Write a paper' : 'Upload Item Bank' }}
           </h3>
           <button @click="closeResourceModal" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
             <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -310,7 +314,10 @@
               <span class="text-sm text-gray-700 dark:text-gray-300">Allow students to download this file</span>
             </label>
 
-            <div v-if="!editingResource" class="mb-4">
+            <p v-if="!editingResource && paperMode" class="mb-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-xs text-amber-900 dark:text-amber-100">
+              Next you'll write the questions one page at a time - with choices, short answers or a model answer - and students check their answers as they go. Any question can also be placed on an eNote page.
+            </p>
+            <div v-if="!editingResource && !paperMode" class="mb-4">
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">PDF file *</label>
               <label
                 class="flex flex-col items-center justify-center gap-2 px-4 py-6 rounded-xl border-2 border-dashed cursor-pointer text-center transition-colors"
@@ -359,7 +366,7 @@
                 :disabled="saving"
                 class="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {{ saving ? (uploadProgress > 0 ? `Uploading... ${uploadProgress}%` : 'Saving...') : (editingResource ? 'Update Resource' : 'Upload') }}
+                {{ saving ? (uploadProgress > 0 ? `Uploading... ${uploadProgress}%` : 'Saving...') : (editingResource ? 'Update Resource' : paperMode ? 'Start writing' : 'Upload') }}
               </button>
             </div>
           </form>
@@ -394,6 +401,7 @@ import AppIcon from '@/components/common/AppIcon.vue'
 import AudiencePanel from '@/components/common/AudiencePanel.vue'
 import ItemBankPdfViewer from '@/components/itembank/ItemBankPdfViewer.vue'
 import TeacherClassSelector from '@/components/teacher/TeacherClassSelector.vue'
+import { useRouter } from 'vue-router'
 import BulkActionBar from '@/components/common/BulkActionBar.vue'
 import ItemBankTopicsPicker from '@/components/itembank/ItemBankTopicsPicker.vue'
 import Bookshelf from '@/components/library/Bookshelf.vue'
@@ -430,6 +438,7 @@ const search = ref('')
 const dragging = ref(false)
 const readersFor = ref<ItemBankResource | null>(null)
 
+const router = useRouter()
 const showResourceModal = ref(false)
 const editingResource = ref<ItemBankResource | null>(null)
 const topicsPicker = ref<InstanceType<typeof ItemBankTopicsPicker> | null>(null)
@@ -731,7 +740,15 @@ const loadAssignments = async () => {
   }
 }
 
-const openCreateModal = () => {
+// 'pdf' uploads a paper; 'paper' writes one in eSpace (questions added in its builder)
+const paperMode = ref(false)
+const openResource = (resource: ItemBankResource) => {
+  if (resource.question_type === 'paper') router.push(`/teacher/itembank/papers/${resource.id}`)
+  else previewResource.value = resource
+}
+
+const openCreateModal = (kind: 'pdf' | 'paper' = 'pdf') => {
+  paperMode.value = kind === 'paper'
   editingResource.value = null
   // The subject on view is the likely one
   resourceForm.value = { title: '', description: '', subject_id: subjectFilter.value, classTarget: { scope: 'stream', class_id: null, class_group_name: null }, status: 'draft', allow_download: false, file: null }
@@ -797,6 +814,20 @@ const saveResource = async () => {
         allow_download: resourceForm.value.allow_download
       })
       if (!(await topicsPicker.value?.save() ?? true)) toast.warning('Saved, but the topics could not be saved - try again')
+    } else if (paperMode.value) {
+      const res = await axios.post(`${API_BASE}/teacher/itembank`, {
+        kind: 'paper',
+        title: resourceForm.value.title,
+        description: resourceForm.value.description,
+        subject_id: resourceForm.value.subject_id,
+        scope: resourceForm.value.classTarget.scope,
+        class_id: resourceForm.value.classTarget.class_id,
+        class_group_name: resourceForm.value.classTarget.class_group_name,
+        status: 'draft'
+      })
+      closeResourceModal()
+      router.push(`/teacher/itembank/papers/${res.data.data.id}`)
+      return
     } else {
       if (!resourceForm.value.file) {
         toast.warning('Please select a PDF file')

@@ -46,7 +46,7 @@ class ItemBankController extends Controller
      * from before a student joined still shows; a closed enrollment stops surfacing anything
      * published after the student left). See 068_extend_student_department_enrollments.sql.
      */
-    private function visibilityClause(): string
+    public static function visibilityClause(): string
     {
         return "q.status = 'published' AND q.deleted_at IS NULL AND EXISTS (
             SELECT 1 FROM student_department_enrollments sde
@@ -110,7 +110,7 @@ class ItemBankController extends Controller
         $cover = ItemBankCover::select($db);
         $download = ItemBankDownload::select($db);
         $sql = "SELECT q.id, q.subject_id, q.class_id, q.question_text as title, q.explanation as description,
-                       q.file_path, q.file_type, q.file_size, {$cover}, {$download}, q.published_at, q.created_at,
+                       q.file_path, q.file_type, q.file_size, q.question_type, {$cover}, {$download}, q.published_at, q.created_at,
                        s.name as subject_name, s.code as subject_code,
                        t.first_name as teacher_first_name, t.last_name as teacher_last_name
                 FROM item_bank_questions q
@@ -151,7 +151,7 @@ class ItemBankController extends Controller
         $cover = ItemBankCover::select($db);
         $download = ItemBankDownload::select($db);
         $sql = "SELECT q.id, q.subject_id, q.class_id, q.question_text as title, q.explanation as description,
-                       q.file_path, q.file_type, q.file_size, {$cover}, {$download}, q.published_at, q.created_at,
+                       q.file_path, q.file_type, q.file_size, q.question_type, {$cover}, {$download}, q.published_at, q.created_at,
                        s.name as subject_name, s.code as subject_code,
                        t.first_name as teacher_first_name, t.last_name as teacher_last_name
                 FROM item_bank_questions q

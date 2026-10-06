@@ -2,6 +2,12 @@
   <div class="w-full">
     <PageHeader title="eNotes" description="Interactive notes your students read page by page - with narration, highlights and progress." icon="document" accent="indigo" :active-filters="activeFilterCount">
       <template #actions>
+        <!-- Questions students asked on these eNotes, waiting for an answer -->
+        <RouterLink to="/teacher/enote-questions" class="relative inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700" title="Questions students asked on your eNotes">
+          <AppIcon name="chat" class="w-4 h-4" />
+          <span class="hidden sm:inline">Student questions</span>
+          <span v-if="waitingQuestions" class="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold leading-[18px] text-center">{{ waitingQuestions > 9 ? '9+' : waitingQuestions }}</span>
+        </RouterLink>
         <button type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30" title="eNotes shared by colleagues in your department" @click="showShared = true">
           <AppIcon name="users" class="w-4 h-4" />
           <span class="hidden sm:inline">Shared by colleagues</span>
@@ -1434,6 +1440,10 @@ const confirmDuplicate = async () => {
     duplicating.value = false
   }
 }
+
+// How many student questions on these eNotes are waiting for an answer
+const waitingQuestions = ref(0)
+axios.get('/api/teacher/enote-questions').then(res => { waitingQuestions.value = (res.data.data.questions || []).length }).catch(() => {})
 
 onMounted(async () => {
   // Warm the builder chunk (and the CKEditor bundle it imports) in the background while the

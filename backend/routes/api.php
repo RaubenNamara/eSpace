@@ -148,6 +148,9 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
 
         // Item Bank
         Router::get('/itembank', 'eSpace\App\Controllers\Student\ItemBankController@index');
+        Router::get('/itembank/{id}/paper', 'eSpace\App\Controllers\ItemBankPaperController@studentPaper');
+        Router::post('/itembank/{id}/pages/{n}/answer', 'eSpace\App\Controllers\ItemBankPaperController@answer');
+        Router::get('/enotes/topics/{id}/practice', 'eSpace\App\Controllers\ItemBankPaperController@enotePractice');
         Router::get('/itembank/{id}/notes', 'eSpace\App\Controllers\Student\PageNoteController@listItemBankNotes');
         Router::get('/itembank/{id}/pages/{pageNumber}/note', 'eSpace\App\Controllers\Student\PageNoteController@getItemBankNote');
         Router::put('/itembank/{id}/pages/{pageNumber}/note', 'eSpace\App\Controllers\Student\PageNoteController@saveItemBankNote');
@@ -424,6 +427,14 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::post('/itembank/bulk-download', 'eSpace\App\Controllers\Teacher\ItemBankController@bulkDownload');
         Router::post('/itembank/bulk-delete', 'eSpace\App\Controllers\Teacher\ItemBankController@bulkDelete');
         Router::post('/itembank/bulk-export', 'eSpace\App\Controllers\Teacher\ItemBankController@bulkExport');
+        Router::get('/itembank/linkable', 'eSpace\App\Controllers\ItemBankPaperController@linkable');
+        Router::get('/itembank/{id}/pages', 'eSpace\App\Controllers\ItemBankPaperController@pages');
+        Router::post('/itembank/{id}/pages/reorder', 'eSpace\App\Controllers\ItemBankPaperController@reorder');
+        Router::post('/itembank/{id}/pages', 'eSpace\App\Controllers\ItemBankPaperController@addPage');
+        Router::put('/itembank/pages/{pageId}', 'eSpace\App\Controllers\ItemBankPaperController@updatePage');
+        Router::delete('/itembank/pages/{pageId}', 'eSpace\App\Controllers\ItemBankPaperController@deletePage');
+        Router::get('/enotes/pages/{pageId}/items', 'eSpace\App\Controllers\ItemBankPaperController@enotePageItems');
+        Router::put('/enotes/pages/{pageId}/items', 'eSpace\App\Controllers\ItemBankPaperController@saveEnotePageItems');
         Router::get('/itembank/{id}/readers', 'eSpace\App\Controllers\Teacher\ItemBankController@readers');
         Router::get('/itembank/{id}', 'eSpace\App\Controllers\Teacher\ItemBankController@show');
         Router::get('/class-map/options', 'eSpace\App\Controllers\Teacher\ClassMapController@options');

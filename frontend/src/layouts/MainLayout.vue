@@ -610,18 +610,14 @@ const MENU: Record<string, NavGroup[]> = {
   ],
   teacher: [
     { key: 'home', name: 'Home', items: [
-      { path: '/teacher/dashboard', label: 'Dashboard', icon: 'DashboardIcon' },
-      { path: '/teacher/planner', label: 'My week', icon: 'CalendarIcon' }
+      { path: '/teacher/dashboard', label: 'Dashboard', icon: 'DashboardIcon' }
     ] },
     { key: 'teaching', name: 'Teaching', items: [
       { path: '/teacher/classes', label: 'My Classes', icon: 'BookOpenIcon' },
-      { path: '/teacher/preview', label: 'Student View', icon: 'AcademicCapIcon' },
-      { path: '/teacher/live-classes', label: 'Live Classes', icon: 'VideoCameraIcon' },
-      { path: '/teacher/live-quiz', label: 'Live Quiz', icon: 'BoltIcon' }
+      { path: '/teacher/live-classes', label: 'Live Classes', icon: 'VideoCameraIcon' }
     ] },
     { key: 'content', name: 'Content', items: [
       { path: '/teacher/enotes', label: 'eNotes', icon: 'NoteIcon' },
-      { path: '/teacher/enote-questions', label: 'Student questions', icon: 'ChatQuestionIcon' },
       { path: '/teacher/library', label: 'eLibrary', icon: 'LibraryIcon' },
       { path: '/teacher/videos', label: 'Videos', icon: 'VideoCameraIcon' },
       { path: '/teacher/itembank', label: 'Item Bank', icon: 'QuestionMarkCircleIcon' },
@@ -635,14 +631,12 @@ const MENU: Record<string, NavGroup[]> = {
     ] },
     { key: 'insights', name: 'Insights', items: [
       { path: '/teacher/class-map', label: 'Class Learning Map', icon: 'MapIcon' },
-      { path: '/teacher/early-warning', label: 'Early warning', icon: 'BellAlertIcon' },
       { path: '/teacher/engagement', label: 'Engagement', icon: 'ChartIcon' },
       { path: '/teacher/coverage', label: 'Coverage', icon: 'ChartBarIcon' },
       { path: '/teacher/scheme', label: 'Scheme of work', icon: 'ClipboardListIcon' }
     ] },
     { key: 'community', name: 'Community', items: [
-      { path: '/teacher/chat', label: 'Chats', icon: 'ChatIcon' },
-      { path: '/teacher/notices', label: 'Noticeboard', icon: 'MegaphoneIcon' }
+      { path: '/teacher/chat', label: 'Chats', icon: 'ChatIcon' }
     ] }
   ],
   hod: [
@@ -764,7 +758,6 @@ const paletteActions = computed<PaletteAction[]>(() => {
     teacher: [
       { label: 'New assessment', hint: 'Assessments', run: go('/teacher/assignments/create') },
       { label: 'Plan my week', hint: 'My week', run: go('/teacher/planner') },
-      { label: 'Host a live quiz', hint: 'Live Quiz', run: go('/teacher/live-quiz') },
       { label: 'Copy a past term', hint: 'Assessments', run: go('/teacher/term-copy') }
     ],
     hod: [

@@ -214,6 +214,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'enotes', name: 'StudentENotes', component: StudentENotes },
       { path: 'enotes/:id', name: 'StudentENoteTopic', component: ENotePreview, meta: { studentMode: true, immersiveReader: true } },
       { path: 'itembank', name: 'StudentItemBank', component: StudentItemBank },
+      { path: 'itembank/:id/paper', name: 'StudentPaperReader', component: () => import('../pages/student/PaperReader.vue') },
       { path: 'chat', name: 'StudentChat', component: StudentChat },
       { path: 'reports', name: 'StudentReports', component: StudentReports },
       { path: 'learning-map', name: 'StudentLearningMap', component: StudentLearningMap },
@@ -262,6 +263,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'assignments/:id/submissions', name: 'AssignmentSubmissions', component: AssignmentSubmissions },
       { path: 'assignments/:id/mark-by-question', name: 'MarkByQuestion', component: MarkByQuestion },
       { path: 'planner', name: 'TeacherPlanner', component: TeacherPlanner },
+      { path: 'itembank/papers/:id', name: 'PaperBuilder', component: () => import('../pages/teacher/PaperBuilder.vue') },
       { path: 'term-copy', name: 'TermCopy', component: TermCopy },
       { path: 'assignments/:id/preview', name: 'TeacherAssignmentPreview', component: StudentAssignmentAnswer, meta: { previewRole: 'teacher' } },
       {

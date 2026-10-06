@@ -609,6 +609,9 @@
                         ></div>
                       </div>
 
+                      <!-- Questions from the Item Bank the teacher placed on this page -->
+                      <PagePractice v-if="isStudentMode && topic" :topic-id="topic.id" :page-id="page.id" />
+
                       <!-- The assessments attached here, always reachable from the page: this page's
                            Learning Outcome Assessment, and on the last page the topic's Activity of
                            Integration. Not attempted yet (or skipped at the prompt) -> Attempt /
@@ -1002,6 +1005,7 @@
 import AppIcon from '@/components/common/AppIcon.vue'
 import TopicQuestions from '@/components/enotes/TopicQuestions.vue'
 import ExplainItBack from '@/components/enotes/ExplainItBack.vue'
+import PagePractice from '@/components/enotes/PagePractice.vue'
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'

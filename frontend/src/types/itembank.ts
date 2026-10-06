@@ -15,6 +15,8 @@ export interface ItemBankResource {
   department_id?: number | null
   file_path: string
   file_type: string
+  /** 'pdf' = an uploaded paper; 'paper' = written in eSpace, question by question */
+  question_type?: 'pdf' | 'paper' | string
   file_size: number | null
   // Same as LibraryBook: the PDF's first page captured automatically ('auto_' files) or a picture
   // the teacher uploaded; null = printed cover. total_pages gives the shelf book its thickness.

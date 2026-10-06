@@ -60,7 +60,10 @@
       <TodayTiles class="mb-5" :today="overview.today" :live-today="overview.live_today" :mark-next="overview.mark_next" :agenda="overview.agenda" />
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
         <MarkNext class="lg:col-span-2" :items="overview.mark_next" :total="overview.today.to_mark" />
-        <AgendaCard :items="overview.agenda" />
+        <div class="space-y-4">
+          <AgendaCard :items="overview.agenda" />
+          <EarlyWarningCard />
+        </div>
       </div>
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
         <ClassHealth class="lg:col-span-2" :classes="overview.classes" />
@@ -256,6 +259,7 @@ import StatStrip, { type StatItem } from '@/components/ui/StatStrip.vue'
 import TodayTiles from '@/components/dashboard/teacher/TodayTiles.vue'
 import MarkNext from '@/components/dashboard/teacher/MarkNext.vue'
 import AgendaCard from '@/components/dashboard/teacher/AgendaCard.vue'
+import EarlyWarningCard from '@/components/dashboard/teacher/EarlyWarningCard.vue'
 import ClassHealth, { type ClassHealthItem } from '@/components/dashboard/teacher/ClassHealth.vue'
 import ActivityFeed from '@/components/dashboard/teacher/ActivityFeed.vue'
 import { useToastStore } from '@/stores/toast'
@@ -329,7 +333,8 @@ const quickLinks = [
 const quickCreate = [
   { label: 'New assessment', to: '/teacher/assignments/create', icon: 'clipboard', primary: true },
   { label: 'New eNote', to: '/teacher/enotes', icon: 'book', primary: false },
-  { label: 'Schedule class', to: '/teacher/live-classes', icon: 'video', primary: false }
+  { label: 'Schedule class', to: '/teacher/live-classes', icon: 'video', primary: false },
+  { label: 'My week', to: '/teacher/planner', icon: 'clock', primary: false }
 ]
 
 const loadingAnalytics = ref(false)

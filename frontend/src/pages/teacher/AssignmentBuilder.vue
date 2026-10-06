@@ -563,6 +563,15 @@
                 Questions
               </h2>
               <button
+                v-if="!isPreview && !form.assessment_category && form.subject_id"
+                type="button"
+                @click="itemBankGroup = { label: 'this assessment', curriculum_topic_id: null, learning_outcome_id: null }"
+                class="px-3 py-2 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors text-sm"
+                title="Use questions written in the Item Bank"
+              >
+                From Item Bank
+              </button>
+              <button
                 v-if="!isPreview && !form.assessment_category"
                 @click="showAddQuestionModal = true"
                 class="px-3.5 sm:px-4 py-2.5 sm:py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2 shadow-sm text-sm sm:text-base"
@@ -603,6 +612,15 @@
                     From bank
                   </button>
                   <button
+                    v-if="form.subject_id"
+                    type="button"
+                    @click="itemBankGroup = group"
+                    class="px-3 py-1.5 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 text-sm rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                    title="Use questions written in the Item Bank"
+                  >
+                    From Item Bank
+                  </button>
+                  <button
                     type="button"
                     @click="openAddQuestionForGroup(group)"
                     class="px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors"
@@ -611,6 +629,14 @@
                   </button>
                 </div>
               </div>
+              <ItemPickerModal
+                v-if="itemBankGroup && form.subject_id"
+                mode="assessment"
+                :subject-id="Number(form.subject_id)"
+                @close="itemBankGroup = null"
+                @pick="p => addFromItemBank(p.item_id, [p.item_page])"
+                @pick-all="p => addFromItemBank(p.item_id, p.pages)"
+              />
               <QuestionBankPicker
                 v-if="bankGroup && form.subject_id"
                 :subject-id="form.subject_id"
@@ -1234,13 +1260,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
 import CKEditor from '@/components/teacher/CKEditor.vue'
 import AoiScenarioSuggest from '@/components/assignment/AoiScenarioSuggest.vue'
 import { scenarioHtml, markingGuideJson, type AoiSuggestion } from '@/utils/aoiDraft'
 import QuestionBankPicker, { type BankQuestion } from '@/components/assignment/QuestionBankPicker.vue'
+import ItemPickerModal from '@/components/enotes/ItemPickerModal.vue'
+import { fetchPaper, toAssessmentQuestion } from '@/utils/itemBankQuestions'
 import PdfAnnotationViewer from '@/components/assignment/PdfAnnotationViewer.vue'
 import type { AssignmentQuestion, QuestionType, Subject, ResponseType, AttachmentType } from '@/types'
 import type { ClassTarget } from '@/components/teacher/TeacherClassSelector.vue'
@@ -2248,6 +2276,58 @@ const addFromBank = (q: BankQuestion, done: (ok: boolean) => void) => {
   done(true)
 }
 
+// ---- Questions from papers written in the Item Bank ----
+// Written once in the Item Bank, used here: each comes in as an ordinary question of this
+// assessment (tagged with the outcome / topic group it was added under), saved with the rest.
+const itemBankGroup = ref<{ label: string; curriculum_topic_id: number | null; learning_outcome_id: number | null } | null>(null)
+const addFromItemBank = async (itemId: number, pageNumbers: number[], group = itemBankGroup.value) => {
+  let paper
+  try {
+    paper = await fetchPaper(itemId)
+  } catch {
+    showToast('error', 'Could not open that paper')
+    return
+  }
+  const now = new Date().toISOString()
+  let added = 0
+  for (const n of pageNumbers) {
+    const page = paper.pages.find(p => p.page_number === n)
+    const q = page ? toAssessmentQuestion(page) : null
+    if (!q) continue
+    if (q.marks > remainingMarksBudget.value) {
+      showToast('error', `Question ${n} is ${q.marks} marks, but only ${remainingMarksBudget.value} are left out of the 100-mark total.`)
+      break
+    }
+    const base = Date.now() + added
+    questions.value.push({
+      id: base,
+      assignment_id: 0,
+      parent_question_id: undefined,
+      question_type: q.question_type,
+      question_text: q.question_text,
+      scenario_text: '',
+      marks: q.marks,
+      display_order: questions.value.length,
+      allow_drawing: q.allow_drawing,
+      response_type: 'text',
+      attachment_type: 'none',
+      attachment_path: undefined,
+      options: q.options.map((o, idx) => ({ id: 0, question_id: 0, option_text: o.option_text, is_correct: o.is_correct, display_order: idx, created_at: now, updated_at: now })),
+      sub_questions: [],
+      curriculum_topic_id: group?.curriculum_topic_id ?? undefined,
+      learning_outcome_id: group?.learning_outcome_id ?? undefined,
+      created_at: now,
+      updated_at: now,
+      deleted_at: undefined
+    } as any)
+    added++
+  }
+  if (added) {
+    itemBankGroup.value = null
+    showToast('success', `${added} question${added === 1 ? '' : 's'} added from the Item Bank - save to keep ${added === 1 ? 'it' : 'them'}`)
+  }
+}
+
 // ---- Suggested AOI scenarios ----
 const showAoiSuggest = ref(false)
 // The topic(s) the scenario is for: the question's own topic, else every topic the AOI assesses
@@ -2780,6 +2860,14 @@ onMounted(async () => {
     await loadAssignment()
     if (isPreview.value) {
       showPreviewModal.value = true
+    }
+    const fromItem = Number(route.query.itembank)
+    const fromPage = Number(route.query.itembank_page)
+    if (fromItem && fromPage) {
+      await nextTick()
+      // Under the assessment's first outcome / topic, when it has one
+      await addFromItemBank(fromItem, [fromPage], curriculumQuestionGroups.value[0] || null)
+      router.replace({ query: {} })
     }
   }
 })

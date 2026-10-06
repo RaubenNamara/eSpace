@@ -54,8 +54,8 @@
           <template #details>
             <p class="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug">{{ resource.title }}</p>
             <p v-if="resource.teacher_first_name" class="text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ resource.teacher_first_name }} {{ resource.teacher_last_name }}</p>
-            <p class="text-[11px] text-gray-400 dark:text-gray-500">PDF<template v-if="resource.total_pages"> &middot; {{ resource.total_pages }} pages</template><template v-else-if="resource.file_size"> &middot; {{ formatFileSize(resource.file_size) }}</template></p>
-            <SaveOfflineButton :item="resource" kind="itembank" />
+            <p class="text-[11px] text-gray-400 dark:text-gray-500">{{ resource.question_type === 'paper' ? 'Questions to try' : 'PDF' }}<template v-if="resource.total_pages"> &middot; {{ resource.total_pages }} {{ resource.question_type === 'paper' ? 'questions' : 'pages' }}</template><template v-else-if="resource.file_size"> &middot; {{ formatFileSize(resource.file_size) }}</template></p>
+            <SaveOfflineButton v-if="resource.question_type !== 'paper'" :item="resource" kind="itembank" />
           </template>
         </ShelfSlot>
       </Bookshelf>
@@ -110,7 +110,7 @@ import { orderShelves, isRecent } from '@/utils/shelfOrder'
 import SaveOfflineButton from '@/components/offline/SaveOfflineButton.vue'
 import { offline } from '@/utils/offline/enotes'
 import { docKey } from '@/utils/offline/docs'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 interface SubjectGroup {
   id: number
@@ -133,7 +133,13 @@ const previewResource = ref<ItemBankResource | null>(null)
 // The book being opened (BookOpenTransition plays first). Once it has opened, the reader is put up
 // underneath and the animation cleared off the top of it.
 const opening = ref<{ item: ItemBankResource; el: HTMLElement | null } | null>(null)
+const router = useRouter()
 const openItem = (item: ItemBankResource, el: HTMLElement | null) => {
+  // A paper written in eSpace opens question by question, not in the PDF reader
+  if (item.question_type === 'paper') {
+    router.push(`/student/itembank/${item.id}/paper`)
+    return
+  }
   if (opening.value || previewResource.value) return
   opening.value = { item, el }
 }

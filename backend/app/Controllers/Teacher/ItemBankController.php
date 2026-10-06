@@ -152,7 +152,7 @@ class ItemBankController extends Controller
         $cover = ItemBankCover::select($db);
         $download = ItemBankDownload::select($db);
         $sql = "SELECT q.id, q.subject_id, q.class_id, q.class_group_name, q.department_id, q.question_text as title,
-                       q.explanation as description, q.file_path, q.file_type, q.file_size, {$cover}, {$download},
+                       q.explanation as description, q.file_path, q.file_type, q.file_size, q.question_type, {$cover}, {$download},
                        q.status, q.published_at, q.created_at, q.updated_at,
                        s.name as subject_name,
                        s.code as subject_code,
@@ -240,7 +240,7 @@ class ItemBankController extends Controller
         $cover = ItemBankCover::select($db);
         $download = ItemBankDownload::select($db);
         $sql = "SELECT q.id, q.subject_id, q.class_id, q.class_group_name, q.department_id, q.question_text as title,
-                       q.explanation as description, q.file_path, q.file_type, q.file_size, {$cover}, {$download},
+                       q.explanation as description, q.file_path, q.file_type, q.file_size, q.question_type, {$cover}, {$download},
                        q.status, q.published_at, q.created_at, q.updated_at,
                        s.name as subject_name,
                        s.code as subject_code,
@@ -313,7 +313,10 @@ class ItemBankController extends Controller
             return;
         }
 
-        $upload = $this->handleUpload();
+        // A paper written in eSpace (kind = paper) has no file - its questions are added page by
+        // page afterwards (see ItemBankPaperController)
+        $isPaper = ($data['kind'] ?? '') === 'paper';
+        $upload = $isPaper ? ['url' => null, 'type' => null, 'size' => null, 'path' => null] : $this->handleUpload();
         if ($upload === null) {
             return; // handleUpload() already sent the error response
         }
@@ -339,7 +342,7 @@ class ItemBankController extends Controller
                      file_path, file_type, file_size{$downloadColumn}, explanation, correct_answer, created_by,
                      is_approved, status, published_at, created_at, updated_at)
                 VALUES
-                    (:subject_id, :class_id, :class_group_name, :department_id, :title, 'pdf', 'medium',
+                    (:subject_id, :class_id, :class_group_name, :department_id, :title, :question_type, 'medium',
                      :file_path, :file_type, :file_size{$downloadValue}, :description, NULL, :created_by,
                      1, :status, :published_at, NOW(), NOW())";
 
@@ -352,6 +355,7 @@ class ItemBankController extends Controller
                 'class_group_name' => $sanitizedData['class_group_name'],
                 'department_id' => $sanitizedData['department_id'],
                 'title' => $sanitizedData['title'],
+                'question_type' => $isPaper ? 'paper' : 'pdf',
                 'file_path' => $upload['url'],
                 'file_type' => $upload['type'],
                 'file_size' => $upload['size'],
@@ -385,7 +389,9 @@ class ItemBankController extends Controller
                 'status' => $sanitizedData['status']
             ], 'Resource uploaded successfully');
         } catch (\PDOException $e) {
-            @unlink($upload['path']);
+            if ($upload['path']) {
+                @unlink($upload['path']);
+            }
             error_log('Failed to save item bank resource: ' . $e->getMessage());
             $this->error('Failed to save resource', 500);
         }

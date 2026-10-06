@@ -420,6 +420,8 @@
             </p>
           </div>
 
+          <PagePracticeLinks v-if="topic" :page-id="currentPage.id" :subject-id="topic.subject_id ?? null" allow-assess @assess="useItemAsAssessment" />
+
           <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
             <h3 class="text-sm font-medium text-gray-900 dark:text-white mb-2">Statistics</h3>
             <div class="space-y-2 text-sm">
@@ -667,6 +669,7 @@
         <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700">
           <h2 class="text-base font-bold text-gray-900 dark:text-white">Learning Outcome Assessment</h2>
           <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Attached to Page {{ currentPage?.order_number }} - students are prompted the moment they finish reading this page.</p>
+          <p v-if="pendingItem" class="mt-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 px-2.5 py-1.5 text-[11px] text-amber-900 dark:text-amber-100">The Item Bank question you chose goes into this assessment - you'll see it next, ready to save.</p>
         </div>
         <div class="p-5 space-y-4">
           <div>
@@ -751,6 +754,7 @@
         <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700">
           <h2 class="text-base font-bold text-gray-900 dark:text-white">AOI Assessment</h2>
           <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Linked to "{{ topic?.title }}" - shown to students at the end of this topic.</p>
+          <p v-if="pendingItem" class="mt-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 px-2.5 py-1.5 text-[11px] text-amber-900 dark:text-amber-100">The Item Bank question you chose goes into this assessment - you'll see it next, ready to save.</p>
         </div>
         <div class="p-5 space-y-4">
           <div class="grid grid-cols-2 gap-3">
@@ -895,6 +899,7 @@ import ENoteCoverEditor from '@/components/enotes/ENoteCoverEditor.vue'
 import ENoteHistoryPanel, { type HistoryVersion } from '@/components/enotes/ENoteHistoryPanel.vue'
 import { timeAgo } from '@/components/dashboard/teacher/time'
 import NarrationControls from '@/components/enotes/NarrationControls.vue'
+import PagePracticeLinks from '@/components/enotes/PagePracticeLinks.vue'
 import AoiScenarioSuggest from '@/components/assignment/AoiScenarioSuggest.vue'
 import { addScenarioQuestion, markingGuideJson, totalMarks, type AoiSuggestion } from '@/utils/aoiDraft'
 import { autoEmbedYoutube, resolveContentAssetUrls } from '@/utils/richContent'
@@ -1704,6 +1709,42 @@ const defaultAcademicYear = (): string => {
   return academicYears.value.some(y => y.academic_year === currentYear) ? currentYear : ''
 }
 
+// ---- An Item Bank question used as this page's LOA or the topic's AOI ----
+// The assessment is the ordinary one (marked, on the Learning Map); the question is copied into it
+// in the assessment builder, which opens with it added (?itembank=&itembank_page=).
+const pendingItem = ref<{ item_id: number; item_page: number } | null>(null)
+const editWithItem = (assignmentId: number | string) => {
+  const item = pendingItem.value
+  pendingItem.value = null
+  return item
+    ? { path: `/teacher/assignments/${assignmentId}/edit`, query: { itembank: String(item.item_id), itembank_page: String(item.item_page) } }
+    : `/teacher/assignments/${assignmentId}/edit`
+}
+const useItemAsAssessment = async (pick: { item_id: number; item_page: number; purpose: string }) => {
+  if (!topic.value || !currentPage.value) return
+  if (!await flushAutosave()) return
+  pendingItem.value = { item_id: pick.item_id, item_page: pick.item_page }
+  if (pick.purpose === 'loa') {
+    if (currentPage.value.linked_assignment) {
+      // This page already has its LOA - add the question to it
+      router.push(editWithItem(currentPage.value.linked_assignment.id))
+      return
+    }
+    if (!topic.value.curriculum_topic_id) {
+      pendingItem.value = null
+      toast.error('Link this topic to the curriculum first (Curriculum Link in this panel) - a Learning Outcome Assessment needs its outcome.')
+      return
+    }
+    openLoaModal()
+  } else if (pick.purpose === 'aoi') {
+    if (topic.value.linked_assignment) {
+      router.push(editWithItem(topic.value.linked_assignment.id))
+      return
+    }
+    openAoiModal()
+  }
+}
+
 const openLoaModal = () => {
   loaError.value = ''
   loaForm.value = { learning_outcome_id: '', academic_year: defaultAcademicYear(), weight: '', startMode: 'now', open_at: '', due_date: '' }
@@ -1740,7 +1781,7 @@ const createLoaAssessment = async () => {
       learning_outcome_ids: [Number(loaForm.value.learning_outcome_id)]
     })
     showLoaModal.value = false
-    router.push(`/teacher/assignments/${assignmentId}/edit`)
+    router.push(editWithItem(assignmentId))
   } catch (err: any) {
     loaError.value = err.response?.data?.message || 'Failed to create assessment'
   } finally {
@@ -1756,6 +1797,10 @@ const aoiForm = ref<{ academic_year: string; weight: string; startMode: 'now' | 
   academic_year: '', weight: '', startMode: 'now', open_at: '', due_date: ''
 })
 const creatingAoi = ref(false)
+watch([() => showLoaModal.value, () => showAoiModal.value], ([loa, aoi]) => {
+  // Closing the form without creating drops the pending question
+  if (!loa && !aoi && !creatingLoa.value && !creatingAoi.value) pendingItem.value = null
+})
 const aoiError = ref('')
 
 // A suggested scenario to start the AOI from (optional)
@@ -1804,7 +1849,7 @@ const createAoiAssessment = async () => {
       await addScenarioQuestion(assignmentId, aoiScenario.value, topic.value.curriculum_topic_id ?? null)
     }
     showAoiModal.value = false
-    router.push(`/teacher/assignments/${assignmentId}/edit`)
+    router.push(editWithItem(assignmentId))
   } catch (err: any) {
     aoiError.value = err.response?.data?.message || 'Failed to create assessment'
   } finally {
