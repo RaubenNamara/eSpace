@@ -72,7 +72,7 @@ import { apiService } from '@/services/api'
 interface Item { key: string; title: string; count: number; done: boolean; detail: string; link: string; examples: string[] }
 export interface SetupFigures { students: number; teachers: number; classes: number; students_active_week: number; teachers_active_week: number }
 
-const emit = defineEmits<{ figures: [figures: SetupFigures, currentTerm: string | null] }>()
+const emit = defineEmits<{ figures: [figures: SetupFigures, currentTerm: string | null]; progress: [done: number, total: number] }>()
 
 const items = ref<Item[]>([])
 const loading = ref(true)
@@ -91,6 +91,7 @@ const load = async () => {
     const res = await apiService.get('/admin/setup-checklist')
     items.value = res.data.data.items || []
     emit('figures', res.data.data.figures, res.data.data.current_term)
+    emit('progress', done.value, items.value.length)
   } catch {
     items.value = []
   } finally {

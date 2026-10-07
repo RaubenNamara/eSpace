@@ -38,7 +38,10 @@
               <span class="text-xl font-extrabold leading-none">{{ dayOf(exam.exam_date) }}</span>
             </div>
             <div class="min-w-0">
-              <p class="text-sm font-bold text-gray-900 dark:text-white truncate">{{ exam.title }}</p>
+              <p class="text-sm font-bold text-gray-900 dark:text-white truncate">
+                {{ exam.title }}
+                <span v-if="exam.assessment_category" class="ml-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold align-middle bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200" title="Counts towards UNEB continuous assessment">{{ exam.assessment_category === 'PROJECT' ? 'Project' : 'AOI' }}</span>
+              </p>
               <p class="text-[11px] text-gray-500 dark:text-gray-400">Out of {{ Number(exam.max_score) }}<template v-if="exam.avg_score !== null && exam.avg_score !== undefined"> · average {{ exam.avg_score }} ({{ Math.round(exam.avg_score / exam.max_score * 100) }}%)</template></p>
               <!-- Marking progress -->
               <div v-if="exam.class_size" class="mt-1.5 flex items-center gap-2 max-w-xs">
@@ -142,6 +145,11 @@
             <input v-model="createForm.exam_date" type="date" required class="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white">
           </div>
         </div>
+        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">What kind of work is it?</label>
+        <div class="grid grid-cols-3 gap-1.5 mb-1">
+          <button v-for="k in KINDS" :key="k.value" type="button" class="px-2 py-2 rounded-xl text-xs font-semibold border transition-colors" :class="createForm.assessment_category === k.value ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'" @click="createForm.assessment_category = k.value">{{ k.label }}</button>
+        </div>
+        <p class="text-[11px] text-gray-500 dark:text-gray-400 mb-3">{{ createForm.assessment_category ? "Counts towards each learner's UNEB continuous assessment." : 'A test or exam - it does not count towards UNEB continuous assessment.' }}</p>
         <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 mb-5 cursor-pointer">
           <input v-model="createForm.include_on_report" type="checkbox" class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-amber-500 focus:ring-amber-500">
           Counts on report cards
@@ -192,7 +200,12 @@ const error = ref<string | null>(null)
 const showCreateForm = ref(false)
 const creating = ref(false)
 const today = () => new Date().toISOString().slice(0, 10)
-const createForm = ref({ title: '', max_score: 100, exam_date: today(), include_on_report: true })
+const KINDS = [
+  { value: '', label: 'Test / exam' },
+  { value: 'AOI', label: 'AOI (paper)' },
+  { value: 'PROJECT', label: 'Project' }
+]
+const createForm = ref({ title: '', assessment_category: '', max_score: 100, exam_date: today(), include_on_report: true })
 
 const activeExam = ref<ExamRow | null>(null)
 const marksheetStudents = ref<PhysicalExamMarksheetStudent[]>([])
@@ -226,7 +239,7 @@ const loadExams = async () => {
 }
 
 const openCreate = () => {
-  createForm.value = { title: '', max_score: 100, exam_date: today(), include_on_report: true }
+  createForm.value = { title: '', assessment_category: '', max_score: 100, exam_date: today(), include_on_report: true }
   showCreateForm.value = true
 }
 

@@ -22,8 +22,20 @@
     </div>
 
     <div v-else class="grid lg:grid-cols-[16rem_1fr] gap-4 items-start">
-      <!-- The questions -->
-      <aside class="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-2 lg:sticky lg:top-20">
+      <!-- The questions: a row of numbers on a phone, the full list beside the editor on a laptop -->
+      <div class="lg:hidden flex items-center gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
+        <button
+          v-for="(p, i) in pages"
+          :key="`m${p.id}`"
+          type="button"
+          class="flex-shrink-0 w-9 h-9 rounded-full text-sm font-bold border-2"
+          :class="current?.id === p.id ? 'border-amber-500 bg-amber-500 text-white' : hasKey(p) ? 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200' : 'border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300'"
+          :aria-label="`Question ${i + 1}`"
+          @click="select(p.id)"
+        >{{ i + 1 }}</button>
+        <button type="button" class="flex-shrink-0 h-9 px-3 rounded-full text-sm font-semibold bg-amber-600 text-white" @click="addQuestion">+ Add</button>
+      </div>
+      <aside class="hidden lg:block rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-2 lg:sticky lg:top-20">
         <ol class="space-y-1 max-h-[60vh] overflow-y-auto">
           <li v-for="(p, i) in pages" :key="p.id">
             <button
@@ -173,7 +185,8 @@ const current = computed(() => pages.value.find(p => p.id === currentId.value) |
 const currentIndex = computed(() => pages.value.findIndex(p => p.id === currentId.value))
 const saveLabel = computed(() => ({ idle: '', saving: 'Saving…', saved: 'All changes saved', error: 'Not saved' }[saving.value]))
 
-const glimpse = (p: Q) => (p.content || '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 90)
+// Inline tags (bold, italics...) vanish without a gap; block ones become spaces
+const glimpse = (p: Q) => (p.content || '').replace(/<\/?(strong|b|em|i|u|s|sub|sup|span|mark|a)\b[^>]*>/gi, '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 90)
 const hasKey = (p: Q) => {
   switch (p.answer_type) {
     case 'single': return typeof p.correct === 'number'

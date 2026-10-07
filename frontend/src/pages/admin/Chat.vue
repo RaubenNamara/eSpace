@@ -6,7 +6,7 @@
         <div class="px-4 py-4 border-b border-gray-200 dark:border-white/5 bg-white dark:bg-[#202c33]">
           <h1 class="text-xl font-bold text-gray-900 dark:text-white">Chat Monitoring</h1>
           <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 mb-3">School-wide conversations</p>
-          <select v-model="departmentFilter" @change="loadConversations" class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-red-500 dark:bg-[#2a3942] dark:text-white">
+          <select v-model="departmentFilter" @change="loadConversations" class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-[#2a3942] dark:text-white">
             <option value="">All Departments</option>
             <option v-for="dept in departments" :key="dept.id" :value="dept.id">{{ dept.name }}</option>
           </select>
@@ -21,7 +21,7 @@
               v-model="conversationSearch"
               type="text"
               placeholder="Search conversations"
-              class="w-full pl-9 pr-3 py-1.5 rounded-lg text-sm bg-gray-100 dark:bg-[#202c33] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 border-0 focus:outline-none focus:ring-1 focus:ring-red-500"
+              class="w-full pl-9 pr-3 py-1.5 rounded-lg text-sm bg-gray-100 dark:bg-[#202c33] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 border-0 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             >
           </div>
         </div>
@@ -39,7 +39,7 @@
             :key="conv.id"
             @click="openConversation(conv)"
             class="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors border-b border-gray-100 dark:border-white/5"
-            :class="activeConversation?.id === conv.id ? 'bg-red-50 dark:bg-[#2a3942]' : 'hover:bg-gray-50 dark:hover:bg-[#182229]'"
+            :class="activeConversation?.id === conv.id ? 'bg-indigo-50 dark:bg-[#2a3942]' : 'hover:bg-gray-50 dark:hover:bg-[#182229]'"
           >
             <div class="w-11 h-11 rounded-full bg-gray-500 flex items-center justify-center text-white flex-shrink-0">
               <svg v-if="conv.type === 'class'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

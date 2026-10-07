@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teacher dashboard - proposal</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body { font-family: Inter, system-ui, sans-serif; background: #f4f5fb; }
+  .jk { font-family: 'Plus Jakarta Sans', Inter, sans-serif; }
+  .card { background: #fff; border: 1px solid #e7e9f2; border-radius: 1.1rem; }
+  .side { background: linear-gradient(180deg, #fbf5ea, #f6ecdb); border: 1px solid #ead9b9; }
+  .ring { --p: 62; background: conic-gradient(#4f46e5 calc(var(--p) * 1%), #e8e9f5 0); }
+  .tl-hour { color: #9aa0b4; font-size: 10px; }
+</style>
+</head>
+<body class="p-3">
+<div class="flex gap-4">
+  <!-- Sidebar (as it is today, after the clean-up) -->
+  <aside class="side hidden lg:flex flex-col w-56 rounded-2xl p-3 shrink-0 h-[calc(100vh-1.5rem)] sticky top-3">
+    <div class="px-2 py-2"><p class="jk text-lg font-extrabold text-[#2b2f8f]">eSpace<span class="text-indigo-500">.</span></p><p class="text-[10px] text-slate-500">Teacher Console</p></div>
+    <nav class="mt-3 space-y-0.5 text-[13px] text-slate-700">
+      <p class="px-3 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-700 font-semibold">▦ Dashboard</p>
+      <div class="mx-3 my-2 h-px bg-slate-300/70"></div>
+      <p class="px-3 py-1.5">My Classes</p><p class="px-3 py-1.5">Live Classes</p>
+      <div class="mx-3 my-2 h-px bg-slate-300/70"></div>
+      <p class="px-3 py-1.5">eNotes</p><p class="px-3 py-1.5">eLibrary</p><p class="px-3 py-1.5">Videos</p><p class="px-3 py-1.5">Item Bank</p><p class="px-3 py-1.5">Virtual Lab</p>
+      <div class="mx-3 my-2 h-px bg-slate-300/70"></div>
+      <p class="px-3 py-1.5">Assessments</p><p class="px-3 py-1.5">Marksheet</p><p class="px-3 py-1.5">Physical Exams</p><p class="px-3 py-1.5">Reports</p>
+      <div class="mx-3 my-2 h-px bg-slate-300/70"></div>
+      <p class="px-3 py-1.5">Class Learning Map</p><p class="px-3 py-1.5">Engagement</p><p class="px-3 py-1.5">Coverage</p><p class="px-3 py-1.5">Scheme of work</p>
+    </nav>
+  </aside>
+
+  <main class="flex-1 min-w-0 space-y-4">
+    <!-- 1. The day, in one line -->
+    <section class="card overflow-hidden">
+      <div class="p-5 sm:p-6 flex flex-col lg:flex-row lg:items-center gap-5">
+        <div class="flex-1 min-w-0">
+          <p class="text-[11px] font-bold uppercase tracking-widest text-slate-400">Tuesday 6 October · Term 3, week 5</p>
+          <h1 class="jk mt-1 text-2xl sm:text-[28px] font-extrabold text-slate-900">Good morning, Namara</h1>
+          <p class="mt-2 text-[15px] text-slate-600 leading-relaxed">
+            You teach <b class="text-slate-900">2 lessons</b> today, have <b class="text-slate-900">12 scripts</b> to mark,
+            and <b class="text-rose-600">3 students</b> could use a word.
+          </p>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-indigo-600 text-white">ICT · ICT001</span>
+            <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700">🔥 Taught 4 of 5 planned topics this week</span>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2 lg:w-[19rem]">
+          <button class="col-span-2 flex items-center justify-center gap-2 rounded-xl bg-indigo-600 text-white py-2.5 text-sm font-semibold shadow-sm shadow-indigo-500/30">＋ New assessment</button>
+          <button class="rounded-xl border border-slate-200 py-2 text-[13px] font-semibold text-slate-700">New eNote</button>
+          <button class="rounded-xl border border-slate-200 py-2 text-[13px] font-semibold text-slate-700">Schedule class</button>
+          <button class="rounded-xl border border-slate-200 py-2 text-[13px] font-semibold text-slate-700">My week</button>
+          <button class="rounded-xl border border-slate-200 py-2 text-[13px] font-semibold text-slate-700">Mark by question</button>
+        </div>
+      </div>
+
+      <!-- Today as a timeline -->
+      <div class="border-t border-slate-100 bg-slate-50/60 px-5 sm:px-6 py-4">
+        <div class="flex items-center justify-between mb-2">
+          <p class="text-xs font-bold text-slate-700">Today</p>
+          <p class="text-[11px] text-slate-400">Now 9:40</p>
+        </div>
+        <ul class="sm:hidden space-y-2">
+          <li class="flex items-center gap-3"><span class="w-12 text-[11px] font-bold text-slate-500">10:00</span><span class="flex-1 rounded-lg bg-sky-100 border border-sky-200 px-2.5 py-1.5 text-xs"><b class="text-sky-800">Live · S.2 B</b> <span class="text-sky-700">Networks</span></span></li>
+          <li class="flex items-center gap-3"><span class="w-12 text-[11px] font-bold text-slate-500">12:30</span><span class="flex-1 rounded-lg bg-indigo-100 border border-indigo-200 px-2.5 py-1.5 text-xs"><b class="text-indigo-800">Live · S.1 A</b> <span class="text-indigo-700">Hardware basics</span></span></li>
+          <li class="flex items-center gap-3"><span class="w-12 text-[11px] font-bold text-slate-500">16:00</span><span class="flex-1 rounded-lg bg-amber-100 border border-amber-200 px-2.5 py-1.5 text-xs"><b class="text-amber-800">Due · S.3</b> <span class="text-amber-700">Protocols test</span></span></li>
+        </ul>
+        <div class="relative h-16 hidden sm:block">
+          <div class="absolute inset-x-0 top-7 h-px bg-slate-200"></div>
+          <div class="absolute inset-x-0 top-0 flex justify-between">
+            <span class="tl-hour">8:00</span><span class="tl-hour">10:00</span><span class="tl-hour">12:00</span><span class="tl-hour">14:00</span><span class="tl-hour">16:00</span><span class="tl-hour">18:00</span>
+          </div>
+          <div class="absolute top-4 bottom-0 w-0.5 bg-rose-500" style="left:16.5%"><span class="absolute -top-1 -left-1 w-2.5 h-2.5 rounded-full bg-rose-500"></span></div>
+          <div class="absolute top-5 h-9 rounded-lg bg-sky-100 border border-sky-200 px-2 py-1" style="left:20%;width:13%">
+            <p class="text-[10px] font-bold text-sky-800 leading-tight">10:00 Live · S.2 B</p><p class="text-[10px] text-sky-700 truncate">Networks</p>
+          </div>
+          <div class="absolute top-5 h-9 rounded-lg bg-indigo-100 border border-indigo-200 px-2 py-1" style="left:46%;width:14%">
+            <p class="text-[10px] font-bold text-indigo-800 leading-tight">12:30 Live · S.1 A</p><p class="text-[10px] text-indigo-700 truncate">Hardware basics</p>
+          </div>
+          <div class="absolute top-5 h-9 rounded-lg bg-amber-100 border border-amber-200 px-2 py-1" style="left:78%;width:14%">
+            <p class="text-[10px] font-bold text-amber-800 leading-tight">16:00 Due · S.3</p><p class="text-[10px] text-amber-700 truncate">Protocols test</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+      <!-- 2. Marking -->
+      <section class="card p-5 xl:col-span-2">
+        <div class="flex items-center gap-4">
+          <div class="ring w-20 h-20 rounded-full grid place-items-center shrink-0" style="--p:62">
+            <div class="w-[62px] h-[62px] rounded-full bg-white grid place-items-center">
+              <p class="jk text-xl font-extrabold text-slate-900 leading-none">62%</p>
+            </div>
+          </div>
+          <div class="flex-1 min-w-0">
+            <h2 class="jk text-base font-bold text-slate-900">Marking</h2>
+            <p class="text-sm text-slate-500">20 of 32 scripts marked this week · <b class="text-slate-800">12 waiting</b>, oldest 3 days</p>
+          </div>
+          <button class="hidden sm:block rounded-xl bg-slate-900 text-white px-3.5 py-2 text-[13px] font-semibold">Mark next</button>
+        </div>
+        <ul class="mt-4 divide-y divide-slate-100">
+          <li class="flex items-center gap-3 py-2.5">
+            <span class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-700 grid place-items-center text-xs font-bold">S.3</span>
+            <div class="flex-1 min-w-0"><p class="text-sm font-semibold text-slate-900">Network protocols test</p><p class="text-xs text-slate-500">7 to mark · handed in 31 of 38</p></div>
+            <div class="w-28 hidden sm:block"><div class="h-1.5 rounded-full bg-slate-100"><div class="h-full w-[80%] rounded-full bg-emerald-500"></div></div><p class="mt-1 text-[10px] text-slate-400 text-right">82% in</p></div>
+            <button class="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-700">By question</button>
+          </li>
+          <li class="flex items-center gap-3 py-2.5">
+            <span class="w-9 h-9 rounded-xl bg-violet-50 text-violet-700 grid place-items-center text-xs font-bold">S.1</span>
+            <div class="flex-1 min-w-0"><p class="text-sm font-semibold text-slate-900">Computer hardware · LOA</p><p class="text-xs text-slate-500">4 to mark · handed in 70 of 80</p></div>
+            <div class="w-28 hidden sm:block"><div class="h-1.5 rounded-full bg-slate-100"><div class="h-full w-[88%] rounded-full bg-emerald-500"></div></div><p class="mt-1 text-[10px] text-slate-400 text-right">88% in</p></div>
+            <button class="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-700">By question</button>
+          </li>
+          <li class="flex items-center gap-3 py-2.5">
+            <span class="w-9 h-9 rounded-xl bg-sky-50 text-sky-700 grid place-items-center text-xs font-bold">S.2</span>
+            <div class="flex-1 min-w-0"><p class="text-sm font-semibold text-slate-900">School website practical</p><p class="text-xs text-slate-500">1 to mark · handed in 40 of 43</p></div>
+            <div class="w-28 hidden sm:block"><div class="h-1.5 rounded-full bg-slate-100"><div class="h-full w-[93%] rounded-full bg-emerald-500"></div></div><p class="mt-1 text-[10px] text-slate-400 text-right">93% in</p></div>
+            <button class="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-700">By question</button>
+          </li>
+        </ul>
+      </section>
+
+      <!-- 3. Who needs a word -->
+      <section class="card p-5">
+        <div class="flex items-center justify-between">
+          <h2 class="jk text-base font-bold text-slate-900">Needs a word</h2>
+          <span class="px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 text-xs font-bold">3</span>
+        </div>
+        <ul class="mt-3 space-y-2.5">
+          <li class="flex items-center gap-3">
+            <span class="w-9 h-9 rounded-full bg-rose-100 text-rose-700 grid place-items-center text-xs font-bold">BO</span>
+            <div class="flex-1 min-w-0"><p class="text-sm font-semibold text-slate-900">Brian Okello <span class="font-normal text-slate-400">S.3</span></p><p class="text-xs text-rose-600">Down 18 points · 2 deadlines missed</p></div>
+            <button class="text-xs font-semibold text-indigo-600">Message</button>
+          </li>
+          <li class="flex items-center gap-3">
+            <span class="w-9 h-9 rounded-full bg-amber-100 text-amber-700 grid place-items-center text-xs font-bold">GN</span>
+            <div class="flex-1 min-w-0"><p class="text-sm font-semibold text-slate-900">Grace Nakato <span class="font-normal text-slate-400">S.1</span></p><p class="text-xs text-amber-600">Not signed in for 9 days</p></div>
+            <button class="text-xs font-semibold text-indigo-600">Message</button>
+          </li>
+          <li class="flex items-center gap-3">
+            <span class="w-9 h-9 rounded-full bg-rose-100 text-rose-700 grid place-items-center text-xs font-bold">AK</span>
+            <div class="flex-1 min-w-0"><p class="text-sm font-semibold text-slate-900">Amani Kato <span class="font-normal text-slate-400">S.2</span></p><p class="text-xs text-rose-600">Average 34% on returned work</p></div>
+            <button class="text-xs font-semibold text-indigo-600">Message</button>
+          </li>
+        </ul>
+        <a class="mt-4 block text-xs font-semibold text-indigo-600">Everyone on the early-warning list →</a>
+      </section>
+    </div>
+
+    <!-- 4. Your classes, at a glance -->
+    <section>
+      <div class="flex items-baseline justify-between mb-2">
+        <h2 class="jk text-base font-bold text-slate-900">Your classes</h2>
+        <a class="text-xs font-semibold text-indigo-600">Class Learning Map →</a>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+        <article class="card p-4">
+          <div class="flex items-start justify-between"><div><p class="jk text-lg font-extrabold text-slate-900">S.1 A</p><p class="text-xs text-slate-500">ICT · 80 learners</p></div><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700">On track</span></div>
+          <p class="mt-3 text-[11px] font-semibold text-slate-500">Outcomes achieved</p>
+          <div class="mt-1 h-2 rounded-full bg-slate-100"><div class="h-full w-[71%] rounded-full bg-emerald-500"></div></div>
+          <div class="mt-3 grid grid-cols-3 text-center"><div><p class="text-sm font-bold text-slate-900">71%</p><p class="text-[10px] text-slate-400">mastery</p></div><div><p class="text-sm font-bold text-slate-900">88%</p><p class="text-[10px] text-slate-400">hand in</p></div><div><p class="text-sm font-bold text-slate-900">64%</p><p class="text-[10px] text-slate-400">read notes</p></div></div>
+        </article>
+        <article class="card p-4">
+          <div class="flex items-start justify-between"><div><p class="jk text-lg font-extrabold text-slate-900">S.2 B</p><p class="text-xs text-slate-500">ICT · 43 learners</p></div><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700">Watch</span></div>
+          <p class="mt-3 text-[11px] font-semibold text-slate-500">Outcomes achieved</p>
+          <div class="mt-1 h-2 rounded-full bg-slate-100"><div class="h-full w-[52%] rounded-full bg-amber-500"></div></div>
+          <div class="mt-3 grid grid-cols-3 text-center"><div><p class="text-sm font-bold text-slate-900">52%</p><p class="text-[10px] text-slate-400">mastery</p></div><div><p class="text-sm font-bold text-slate-900">93%</p><p class="text-[10px] text-slate-400">hand in</p></div><div><p class="text-sm font-bold text-slate-900">41%</p><p class="text-[10px] text-slate-400">read notes</p></div></div>
+        </article>
+        <article class="card p-4">
+          <div class="flex items-start justify-between"><div><p class="jk text-lg font-extrabold text-slate-900">S.3</p><p class="text-xs text-slate-500">ICT · 38 learners</p></div><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700">2 at risk</span></div>
+          <p class="mt-3 text-[11px] font-semibold text-slate-500">Outcomes achieved</p>
+          <div class="mt-1 h-2 rounded-full bg-slate-100"><div class="h-full w-[38%] rounded-full bg-rose-500"></div></div>
+          <div class="mt-3 grid grid-cols-3 text-center"><div><p class="text-sm font-bold text-slate-900">38%</p><p class="text-[10px] text-slate-400">mastery</p></div><div><p class="text-sm font-bold text-slate-900">82%</p><p class="text-[10px] text-slate-400">hand in</p></div><div><p class="text-sm font-bold text-slate-900">29%</p><p class="text-[10px] text-slate-400">read notes</p></div></div>
+        </article>
+        <article class="card p-4 border-dashed grid place-items-center text-center">
+          <div><p class="text-sm font-semibold text-slate-700">This week's topics</p><p class="mt-1 text-xs text-slate-500">4 of 5 taught</p>
+            <ul class="mt-2 text-left text-xs space-y-1"><li class="text-emerald-700">✓ Input devices</li><li class="text-emerald-700">✓ Output devices</li><li class="text-slate-600">○ Storage media</li></ul>
+            <a class="mt-2 inline-block text-xs font-semibold text-indigo-600">Open My week →</a></div>
+        </article>
+      </div>
+    </section>
+
+    <!-- 5. Recently -->
+    <section class="card p-4">
+      <div class="flex items-center gap-2 mb-2"><h2 class="jk text-sm font-bold text-slate-900">Recently</h2><span class="text-xs text-slate-400">what your students did</span></div>
+      <div class="flex gap-2 overflow-x-auto">
+        <span class="shrink-0 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200 text-xs text-slate-600"><b class="text-slate-800">Faith A.</b> handed in Protocols test · 10 min</span>
+        <span class="shrink-0 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200 text-xs text-slate-600"><b class="text-slate-800">5 students</b> finished "Computer hardware" · 1 h</span>
+        <span class="shrink-0 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200 text-xs text-slate-600"><b class="text-slate-800">Ivan M.</b> asked a question on page 3 · 2 h</span>
+        <span class="shrink-0 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200 text-xs text-slate-600"><b class="text-slate-800">S.2 B</b> study group started · 3 h</span>
+      </div>
+    </section>
+  </main>
+</div>
+</body>
+</html>

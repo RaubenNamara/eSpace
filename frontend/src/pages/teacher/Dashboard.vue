@@ -1,49 +1,32 @@
 <template>
   <div class="w-full">
-    <!-- Header: the day, a greeting, the department, and the three things a teacher starts most -->
-    <header class="mb-5 flex flex-col lg:flex-row lg:items-end gap-4">
-      <div class="flex-1 min-w-0">
-        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">{{ todayLabel }}</p>
-        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">{{ greeting }}, {{ firstName }}</h1>
-        <div v-if="analytics.department" class="mt-2 flex flex-wrap items-center gap-2 text-xs">
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-600 text-white font-semibold">
-            {{ analytics.department.name }}
-            <span class="text-indigo-200 font-medium">{{ analytics.department.code }}</span>
-          </span>
-          <!-- Department switcher - only when the teacher belongs to more than one -->
-          <select
-            v-if="myDepartments.length > 1"
-            :value="activeDepartmentId"
-            :disabled="switchingDepartment"
-            class="rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2.5 py-1 text-xs focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
-            @change="switchDepartment(($event.target as HTMLSelectElement).value)"
-          >
-            <option v-for="dept in myDepartments" :key="dept.id" :value="dept.id">{{ dept.name }}{{ dept.is_primary ? ' (Primary)' : '' }}</option>
-          </select>
-          <button type="button" class="font-semibold text-indigo-600 dark:text-indigo-300 hover:underline underline-offset-2" @click="openViewEnrolledModal">View enrolled students</button>
-        </div>
-      </div>
-      <div class="flex flex-wrap gap-2">
-        <RouterLink v-for="a in quickCreate" :key="a.to" :to="a.to" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-colors" :class="a.primary ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-500/20' : 'bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'">
-          <AppIcon :name="a.icon" class="w-4 h-4" />
-          {{ a.label }}
-        </RouterLink>
-      </div>
-    </header>
+    <!-- 1. The day: date, greeting, one sentence of what's ahead, the things a teacher starts most,
+            and today on a timeline underneath -->
+    <DashboardHero :date="todayLabel" :title="`${greeting}, ${firstName}`" :parts="daySentence" :chips="heroChips" :actions="quickCreate">
+      <template #chips>
+        <!-- Department switcher - only when the teacher belongs to more than one -->
+        <select
+          v-if="myDepartments.length > 1"
+          :value="activeDepartmentId"
+          :disabled="switchingDepartment"
+          class="rounded-full border-0 ring-1 ring-amber-900/15 dark:ring-amber-200/10 bg-white/70 dark:bg-gray-800/60 text-gray-700 dark:text-gray-200 pl-2.5 pr-7 py-1 text-xs font-semibold focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+          @change="switchDepartment(($event.target as HTMLSelectElement).value)"
+        >
+          <option v-for="dept in myDepartments" :key="dept.id" :value="dept.id">{{ dept.name }}{{ dept.is_primary ? ' (Primary)' : '' }}</option>
+        </select>
+      </template>
+      <div v-if="!overview && !overviewError" class="h-14 rounded-lg bg-gray-100 dark:bg-gray-700/50 animate-pulse"></div>
+      <TodayTimeline v-else-if="overview" :items="overview.agenda" />
+      <p v-else class="text-xs text-gray-500 dark:text-gray-400">Today's plan couldn't load.</p>
+    </DashboardHero>
     <NoticeBanner role="teacher" />
 
-    <!-- Quick links - the teacher's most-used modules, first thing, as small tiles -->
-    <nav class="grid grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-3 mb-5" aria-label="Quick links">
-      <QuickLink v-for="q in quickLinks" :key="q.to" compact :to="q.to" :label="q.label" :icon="q.icon" color="indigo" />
-    </nav>
-
-    <!-- Today, and what to do next -->
     <div v-if="!overview && !overviewError" class="space-y-4 mb-6">
-      <Skeleton variant="tiles" :count="4" />
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div class="lg:col-span-2"><Skeleton variant="list" :count="4" /></div>
+      <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        <div class="xl:col-span-2"><Skeleton variant="list" :count="4" /></div>
         <Skeleton variant="list" :count="3" />
       </div>
+      <Skeleton variant="tiles" :count="4" />
     </div>
     <EmptyState
       v-else-if="!overview"
@@ -57,59 +40,20 @@
       <button type="button" class="px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700" @click="retryOverview">Try again</button>
     </EmptyState>
     <template v-else>
-      <TodayTiles class="mb-5" :today="overview.today" :live-today="overview.live_today" :mark-next="overview.mark_next" :agenda="overview.agenda" />
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-        <MarkNext class="lg:col-span-2" :items="overview.mark_next" :total="overview.today.to_mark" />
-        <div class="space-y-4">
-          <AgendaCard :items="overview.agenda" />
-          <EarlyWarningCard />
+      <!-- 2. Marking, and who needs a word -->
+      <!-- (all caught up: marking shrinks to a strip and "Recently" moves up under it) -->
+      <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-5">
+        <div class="xl:col-span-2 flex flex-col gap-4 min-w-0">
+          <MarkingCard :class="marking.waiting ? 'flex-1' : ''" :data="marking" :next="overview.mark_next[0] || null" />
+          <ActivityFeed v-if="!marking.waiting" class="flex-1" :items="overview.activity" />
         </div>
+        <EarlyWarningCard class="min-w-0" :limit="marking.waiting ? 4 : 2" @count="needWord = $event" />
       </div>
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
-        <ClassHealth class="lg:col-span-2" :classes="overview.classes" />
-        <ActivityFeed :items="overview.activity" />
-      </div>
+      <!-- 3. Each class at a glance, and this week's topics -->
+      <ClassHealth class="mb-5" :classes="overview.classes" :week="overview.week_topics || null" />
+      <!-- 4. What students did lately -->
+      <ActivityFeed v-if="marking.waiting" class="mb-8" :items="overview.activity" />
     </template>
-
-    <!-- Your students: who's enrolled with you, by class level and stream -->
-    <section class="mb-8">
-      <h2 class="text-sm font-bold text-gray-900 dark:text-white mb-3">Your students</h2>
-      <Skeleton v-if="loadingAnalytics && !analytics.total_enrollments" variant="tiles" :count="4" />
-      <template v-else>
-        <StatStrip class="mb-4" :items="studentStats" />
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 sm:p-5">
-            <p class="text-sm font-semibold text-gray-900 dark:text-white">Students per class</p>
-            <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Each bar is a class level; its colours are the streams - hover for the numbers.</p>
-            <div class="h-64">
-              <Bar v-if="analytics.by_class.length" :data="levelChartData" :options="stackedOptions" />
-              <EmptyState v-else :card="false" compact icon="users" tone="gray" title="No students enrolled yet" />
-            </div>
-          </div>
-          <div class="space-y-4">
-            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 sm:p-5">
-              <p class="text-sm font-semibold text-gray-900 dark:text-white mb-3">Gender</p>
-              <template v-if="hasGenderData">
-                <div class="flex h-3 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-700">
-                  <span v-for="g in genderShares" :key="g.label" :style="{ width: `${g.percent}%`, background: g.color }"></span>
-                </div>
-                <div class="mt-3 grid grid-cols-3 gap-2 text-center">
-                  <div v-for="g in genderShares" :key="g.label">
-                    <p class="text-lg font-bold" :style="{ color: g.color }">{{ g.percent }}%</p>
-                    <p class="text-[11px] text-gray-500 dark:text-gray-400">{{ g.label }} · {{ g.count.toLocaleString() }}</p>
-                  </div>
-                </div>
-              </template>
-              <p v-else class="text-xs text-gray-400">No data yet</p>
-            </div>
-            <div v-if="analytics.by_academic_year.length > 1" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 sm:p-5">
-              <p class="text-sm font-semibold text-gray-900 dark:text-white mb-2">By year</p>
-              <div class="h-40"><Bar :data="yearChartData" :options="chartOptions" /></div>
-            </div>
-          </div>
-        </div>
-      </template>
-    </section>
 
     <!-- View Enrolled Students Modal -->
     <div v-if="showViewEnrolledModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
@@ -247,28 +191,21 @@
 import { ref, onMounted, computed } from 'vue'
 import NoticeBanner from '@/components/dashboard/NoticeBanner.vue'
 import { useLiveRefresh } from '@/composables/useLiveRefresh'
-import { Bar } from 'vue-chartjs'
-import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale } from 'chart.js'
 import apiService from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
-import AppIcon from '@/components/common/AppIcon.vue'
-import QuickLink from '@/components/dashboard/QuickLink.vue'
 import Skeleton from '@/components/ui/Skeleton.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
-import StatStrip, { type StatItem } from '@/components/ui/StatStrip.vue'
-import TodayTiles from '@/components/dashboard/teacher/TodayTiles.vue'
-import MarkNext from '@/components/dashboard/teacher/MarkNext.vue'
-import AgendaCard from '@/components/dashboard/teacher/AgendaCard.vue'
+import DashboardHero, { type HeroChip, type HeroPart } from '@/components/dashboard/DashboardHero.vue'
+import TodayTimeline, { type AgendaItem } from '@/components/dashboard/teacher/TodayTimeline.vue'
+import MarkingCard, { type MarkingSummary } from '@/components/dashboard/teacher/MarkingCard.vue'
 import EarlyWarningCard from '@/components/dashboard/teacher/EarlyWarningCard.vue'
-import ClassHealth, { type ClassHealthItem } from '@/components/dashboard/teacher/ClassHealth.vue'
+import ClassHealth, { type ClassHealthItem, type WeekTopics } from '@/components/dashboard/teacher/ClassHealth.vue'
 import ActivityFeed from '@/components/dashboard/teacher/ActivityFeed.vue'
 import { useToastStore } from '@/stores/toast'
 import { useConfirmStore } from '@/stores/confirm'
 
 const toast = useToastStore()
 const confirmDialog = useConfirmStore()
-
-ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale)
 
 const authStore = useAuthStore()
 
@@ -285,7 +222,9 @@ interface Overview {
   today: { to_mark: number; live_today: number; due_week: number; support: { groups: number; members: number; revised: number } }
   live_today: { id: number; title: string; at: string; status: string; class_name: string | null }[]
   mark_next: { submission_id: number; assignment_id: number; assignment: string; category: string | null; student: string; class_name: string | null; submitted_at: string | null }[]
-  agenda: { kind: 'live' | 'due'; id: number; title: string; at: string; class_name: string | null; status?: string; category?: string | null; submitted?: number }[]
+  marking?: MarkingSummary | null
+  week_topics?: WeekTopics | null
+  agenda: AgendaItem[]
   classes: ClassHealthItem[]
   activity: { kind: 'submission' | 'enote' | 'revised' | 'message'; at: string; who: string; what: string; to: string }[]
 }
@@ -320,22 +259,55 @@ const firstName = computed(() => {
   return n === n.toUpperCase() ? n.charAt(0) + n.slice(1).toLowerCase() : n
 })
 const todayLabel = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-const quickLinks = [
-  { to: '/teacher/classes', label: 'My Classes', icon: 'classes' },
-  { to: '/teacher/live-classes', label: 'Live Classes', icon: 'live' },
-  { to: '/teacher/enotes', label: 'eNotes', icon: 'notes' },
-  { to: '/teacher/library', label: 'eLibrary', icon: 'library' },
-  { to: '/teacher/itembank', label: 'Item Bank', icon: 'itembank' },
-  { to: '/teacher/assignments', label: 'Assessments', icon: 'check' },
-  { to: '/teacher/reports', label: 'Reports', icon: 'reports' },
-  { to: '/teacher/chat', label: 'Chats', icon: 'chat' }
-]
 const quickCreate = [
-  { label: 'New assessment', to: '/teacher/assignments/create', icon: 'clipboard', primary: true },
-  { label: 'New eNote', to: '/teacher/enotes', icon: 'book', primary: false },
-  { label: 'Schedule class', to: '/teacher/live-classes', icon: 'video', primary: false },
-  { label: 'My week', to: '/teacher/planner', icon: 'clock', primary: false }
+  { label: 'New assessment', to: '/teacher/assignments/create', icon: 'clipboard' },
+  { label: 'New eNote', to: '/teacher/enotes', icon: 'book' },
+  { label: 'Schedule class', to: '/teacher/live-classes', icon: 'video' },
+  { label: 'My week', to: '/teacher/planner', icon: 'clock' },
+  { label: 'Item Bank', to: '/teacher/itembank', icon: 'document' }
 ]
+const heroChips = computed<HeroChip[]>(() => {
+  const out: HeroChip[] = []
+  if (analytics.value.department) out.push({ text: `${analytics.value.department.name} · ${analytics.value.department.code}`, tone: 'solid' })
+  const w = overview.value?.week_topics
+  if (w?.total) out.push({ text: `Taught ${w.taught} of ${w.total} planned topics`, icon: 'flame' })
+  if (analytics.value.department) out.push({ text: analytics.value.total_enrollments ? `${analytics.value.total_enrollments.toLocaleString()} students enrolled` : 'View enrolled students', icon: 'users', onClick: openViewEnrolledModal })
+  return out
+})
+
+// Students flagged in early warning (the card fetches them and reports the count)
+const needWord = ref<number | null>(null)
+
+// Older servers send no marking summary: build one from the queue
+const marking = computed<MarkingSummary>(() => overview.value?.marking || {
+  marked_week: 0,
+  waiting: overview.value?.today.to_mark || 0,
+  oldest_at: overview.value?.mark_next[0]?.submitted_at || null,
+  by_assignment: []
+})
+
+// "You teach 2 lessons today, have 12 scripts to mark, and 3 students could use a word."
+const daySentence = computed(() => {
+  const o = overview.value
+  if (!o) return []
+  const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
+  const bits: HeroPart[][] = []
+  const lessons = o.today.live_today
+  const dueToday = o.agenda.filter(a => a.kind === 'due' && new Date(a.at.replace(' ', 'T')).toDateString() === new Date().toDateString()).length
+  if (lessons) bits.push([{ text: 'you teach ' }, { text: plural(lessons, 'live lesson', 'live lessons'), strong: true }, { text: ' today' }])
+  if (dueToday) bits.push([{ text: plural(dueToday, 'assessment closes', 'assessments close'), strong: true }, { text: ' today' }])
+  if (o.today.to_mark) bits.push([{ text: 'you have ' }, { text: plural(o.today.to_mark, 'script', 'scripts'), strong: true }, { text: ' to mark' }])
+  if (needWord.value) bits.push([{ text: plural(needWord.value, 'student', 'students'), strong: true, alert: true }, { text: ' could use a word' }])
+  if (!bits.length) return [{ text: 'A clear day: nothing to mark and nothing scheduled. A good time to plan ahead.' }]
+  const out: HeroPart[] = []
+  bits.forEach((b, i) => {
+    if (i > 0) out.push({ text: i === bits.length - 1 ? ', and ' : ', ' })
+    out.push(...b)
+  })
+  out.push({ text: '.' })
+  out[0] = { ...out[0], text: out[0].text.charAt(0).toUpperCase() + out[0].text.slice(1) }
+  return out
+})
 
 const loadingAnalytics = ref(false)
 const loadingEnrolled = ref(false)
@@ -366,95 +338,6 @@ const viewFilters = ref({
   class_id: '',
   stream_name: ''
 })
-
-const hasGenderData = computed(() => {
-  const { male, female, other } = analytics.value.by_gender
-  return male + female + other > 0
-})
-
-// Students per class level, each level's streams stacked
-const STREAM_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#0ea5e9', '#8b5cf6', '#14b8a6', '#f97316', '#84cc16', '#e11d48']
-const levelChartData = computed(() => {
-  const rows = analytics.value.by_class as { class_name: string; stream_name: string | null; count: number }[]
-  const levels = [...new Set(rows.map(r => r.class_name))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
-  const streams = [...new Set(rows.map(r => r.stream_name || '—'))].sort()
-  return {
-    labels: levels,
-    datasets: streams.map((st, i) => ({
-      label: st === '—' ? 'Students' : `Stream ${st}`,
-      data: levels.map(l => rows.filter(r => r.class_name === l && (r.stream_name || '—') === st).reduce((n, r) => n + Number(r.count), 0)),
-      backgroundColor: STREAM_COLORS[i % STREAM_COLORS.length],
-      borderRadius: 4,
-      borderSkipped: false as const,
-      maxBarThickness: 56
-    }))
-  }
-})
-const stackedOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: { display: false },
-    tooltip: { filter: (item: any) => item.raw > 0 }
-  },
-  scales: {
-    x: { stacked: true, grid: { display: false } },
-    y: { stacked: true, beginAtZero: true, grid: { color: 'rgba(0, 0, 0, 0.05)' } }
-  }
-}
-const studentStats = computed<StatItem[]>(() => [
-  { label: 'Students', value: analytics.value.total_enrollments, tone: 'indigo' },
-  { label: 'Class levels', value: uniqueClassCount.value, tone: 'sky' },
-  { label: 'Streams', value: analytics.value.by_class.length, tone: 'violet' },
-  { label: 'New this week', value: analytics.value.recent_enrollments, tone: 'emerald' }
-])
-const genderShares = computed(() => {
-  const g = analytics.value.by_gender
-  const total = g.male + g.female + g.other || 1
-  return [
-    { label: 'Boys', count: g.male, percent: Math.round(g.male / total * 100), color: '#3b82f6' },
-    { label: 'Girls', count: g.female, percent: Math.round(g.female / total * 100), color: '#ec4899' },
-    { label: 'Other', count: g.other, percent: Math.round(g.other / total * 100), color: '#9ca3af' }
-  ].filter(x => x.count > 0)
-})
-
-const uniqueClassCount = computed(() => new Set(analytics.value.by_class.map((c: any) => c.class_name)).size)
-
-const yearChartData = computed(() => ({
-  labels: analytics.value.by_academic_year.map((y: any) => y.academic_year),
-  datasets: [{
-    label: 'Students',
-    data: analytics.value.by_academic_year.map((y: any) => y.count),
-    backgroundColor: '#10B981',
-    borderRadius: 8
-  }]
-}))
-
-
-const chartOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      display: false
-    }
-  },
-  scales: {
-    y: {
-      beginAtZero: true,
-      grid: {
-        display: true,
-        color: 'rgba(0, 0, 0, 0.05)'
-      }
-    },
-    x: {
-      grid: {
-        display: false
-      }
-    }
-  }
-}
-
 
 // silent: the live refresh (no loading state; the counters just move to the new numbers)
 const loadAnalytics = async (silent = false) => {

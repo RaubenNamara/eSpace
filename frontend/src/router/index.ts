@@ -308,6 +308,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'search', name: 'TeacherSearch', component: TeacherSearch },
       { path: 'marksheet', name: 'TeacherMarksheet', component: TeacherMarksheet },
       { path: 'physical-exams', name: 'TeacherPhysicalExams', component: TeacherPhysicalExams },
+      { path: 'uneb-assessment', name: 'TeacherUnebAssessment', component: () => import('../pages/common/UnebAssessment.vue') },
       { path: 'virtual-lab', name: 'TeacherVirtualLab', component: TeacherVirtualLab },
       { path: 'virtual-lab/playground', name: 'TeacherVirtualLabPlayground', component: StudentVirtualLabPlayground },
       // A teacher doing an experiment exactly like a student (same page; nothing saved, no submit)
@@ -344,6 +345,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'notices', name: 'HODNotices', component: () => import('../pages/common/Noticeboard.vue') },
       { path: 'marksheet', name: 'HODMarksheet', component: HODMarksheet },
       { path: 'physical-exams', name: 'HODPhysicalExams', component: HODPhysicalExams },
+      { path: 'uneb-assessment', name: 'HODUnebAssessment', component: () => import('../pages/common/UnebAssessment.vue') },
       { path: 'search', name: 'HODSearch', component: HODSearch }
     ]
   },
@@ -388,6 +390,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'chat', name: 'AdminChat', component: AdminChat },
       { path: 'marksheet', name: 'AdminMarksheet', component: AdminMarksheet },
       { path: 'physical-exams', name: 'AdminPhysicalExams', component: AdminPhysicalExams },
+      { path: 'uneb-assessment', name: 'AdminUnebAssessment', component: () => import('../pages/common/UnebAssessment.vue') },
       { path: 'rewards', name: 'AdminRewards', component: AdminRewards },
       { path: 'virtual-lab', name: 'AdminVirtualLab', component: AdminVirtualLab },
       { path: 'search', name: 'AdminSearch', component: AdminSearch }

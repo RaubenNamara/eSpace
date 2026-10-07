@@ -24,7 +24,7 @@ class DashboardOverviewController extends Controller
 {
 
 
-    private const MAX_CLASSES = 6;
+    private const MAX_CLASSES = 7;
 
     /**
      * Run one section of the overview; if its queries fail (a table or column from a migration
@@ -178,6 +178,8 @@ class DashboardOverviewController extends Controller
                 'class_name' => $l['class_group_name'] ? $l['class_group_name'] . ' (all streams)' : $l['class_name'],
             ], $liveToday),
             'mark_next' => $markNext,
+            'marking' => $this->safe(fn() => $this->marking($db, $teacherId, $waiting), null, 'marking'),
+            'week_topics' => $this->safe(fn() => $this->weekTopics($db, $teacherId), null, 'week topics'),
             'agenda' => array_slice($agenda, 0, 8),
             'classes' => $this->safe(fn() => $this->classHealth($db, $teacherId, $departmentId, $subjectIds), [], 'classes'),
             'activity' => $this->safe(fn() => $this->activity($db, $teacherId), [], 'activity'),
@@ -234,6 +236,8 @@ class DashboardOverviewController extends Controller
                 }
             }
 
+            $engagement = $this->classEngagement($db, $teacherId, $classId, (string) $c['name'], $ids);
+
             $out[] = [
                 'class_id' => $classId,
                 'level' => $c['name'],
@@ -243,6 +247,8 @@ class DashboardOverviewController extends Controller
                 'outcome_results' => $health['outcome_results'],
                 'achieved_percent' => $health['achieved_percent'],
                 'need_support' => $health['need_support'],
+                'hand_in_percent' => $engagement['hand_in_percent'],
+                'notes_read_percent' => $engagement['notes_read_percent'],
                 'most_improved' => $top !== null ? ['name' => $names[$top] ?? '', 'improvement' => $growth[$top]['improvement']] : null,
                 'subject_id' => $subjectIds[0],
             ];
@@ -250,6 +256,138 @@ class DashboardOverviewController extends Controller
         // Classes with results first, then by name; a handful
         usort($out, fn($a, $b) => ($b['outcome_results'] > 0) <=> ($a['outcome_results'] > 0) ?: strcmp($a['class_name'], $b['class_name']));
         return array_slice($out, 0, self::MAX_CLASSES);
+    }
+
+    /**
+     * Marking this week: how many scripts were marked since Monday, how many wait (and since when),
+     * and the assessments they wait in - each with how many students have handed in out of those
+     * it was set for
+     */
+    private function marking($db, int $teacherId, array $waiting): array
+    {
+        $monday = date('Y-m-d', strtotime('monday this week'));
+        $stmt = $db->prepare(
+            "SELECT COUNT(*) FROM assignment_submissions sb
+             INNER JOIN assignments a ON a.id = sb.assignment_id AND a.teacher_id = ? AND a.deleted_at IS NULL
+             WHERE sb.deleted_at IS NULL AND COALESCE(sb.marked_at, sb.graded_at) >= ?"
+        );
+        $stmt->execute([$teacherId, $monday]);
+        $markedWeek = (int) $stmt->fetchColumn();
+
+        $byAssignment = [];
+        foreach ($waiting as $w) {
+            $id = (int) $w['assignment_id'];
+            $byAssignment[$id] ??= ['assignment_id' => $id, 'title' => $w['title'], 'category' => $w['assessment_category'], 'class_name' => $w['class_name'], 'waiting' => 0, 'oldest_at' => $w['submitted_at']];
+            $byAssignment[$id]['waiting']++;
+        }
+        // Most waiting first, a handful
+        usort($byAssignment, fn($a, $b) => $b['waiting'] <=> $a['waiting'] ?: strcmp((string) $a['oldest_at'], (string) $b['oldest_at']));
+        $byAssignment = array_slice($byAssignment, 0, 4);
+
+        if ($byAssignment) {
+            $ids = array_column($byAssignment, 'assignment_id');
+            // Handed in, and the students it was set for (the stream, or every stream of the level)
+            $stmt = $db->prepare(
+                "SELECT a.id, a.class_group_name, c.name AS level,
+                        (SELECT COUNT(DISTINCT s.student_id) FROM assignment_submissions s
+                          WHERE s.assignment_id = a.id AND s.deleted_at IS NULL AND s.status <> 'in_progress') AS submitted,
+                        (SELECT COUNT(DISTINCT sde.student_id) FROM student_department_enrollments sde
+                           INNER JOIN classes ec ON ec.id = sde.class_id
+                          WHERE sde.status = 'active' AND sde.deleted_at IS NULL AND sde.department_id = sj.department_id
+                            AND (sde.class_id = a.class_id OR (a.class_group_name IS NOT NULL AND ec.name = a.class_group_name))) AS expected
+                 FROM assignments a
+                 LEFT JOIN classes c ON c.id = a.class_id
+                 LEFT JOIN subjects sj ON sj.id = a.subject_id
+                 WHERE a.id IN (" . self::in($ids) . ")"
+            );
+            $stmt->execute($ids);
+            $counts = [];
+            foreach ($stmt->fetchAll() as $r) {
+                $counts[(int) $r['id']] = $r;
+            }
+            foreach ($byAssignment as &$a) {
+                $r = $counts[$a['assignment_id']] ?? null;
+                $a['submitted'] = $r ? (int) $r['submitted'] : 0;
+                $a['expected'] = $r ? max((int) $r['expected'], (int) $r['submitted']) : 0;
+                if ($r && $r['class_group_name']) {
+                    $a['class_name'] = $r['class_group_name'];
+                }
+            }
+            unset($a);
+        }
+
+        return [
+            'marked_week' => $markedWeek,
+            'waiting' => count($waiting),
+            'oldest_at' => $waiting ? $waiting[0]['submitted_at'] : null,
+            'by_assignment' => $byAssignment,
+        ];
+    }
+
+    /** The scheme-of-work topics planned for this week, and which are taught */
+    private function weekTopics($db, int $teacherId): array
+    {
+        $stmt = $db->prepare(
+            "SELECT ct.topic, se.class_level, se.taught_at
+             FROM scheme_entries se
+             INNER JOIN enote_curriculum_topics ct ON ct.id = se.curriculum_topic_id
+             WHERE se.teacher_id = ? AND se.week_start = ?
+             ORDER BY se.taught_at IS NULL, se.class_level, ct.topic"
+        );
+        $stmt->execute([$teacherId, date('Y-m-d', strtotime('monday this week'))]);
+        $topics = array_map(fn($r) => ['topic' => $r['topic'], 'class_level' => $r['class_level'], 'taught' => $r['taught_at'] !== null], $stmt->fetchAll());
+        return [
+            'total' => count($topics),
+            'taught' => count(array_filter($topics, fn($t) => $t['taught'])),
+            'topics' => array_slice($topics, 0, 5),
+        ];
+    }
+
+    /**
+     * For one stream, over the teacher's work of the last eight weeks: the share of set work its
+     * students handed in, and how far through the teacher's eNotes they have read
+     *
+     * @param int[] $studentIds
+     * @return array{hand_in_percent: ?int, notes_read_percent: ?int}
+     */
+    private function classEngagement($db, int $teacherId, int $classId, string $level, array $studentIds): array
+    {
+        $out = ['hand_in_percent' => null, 'notes_read_percent' => null];
+        $since = date('Y-m-d', strtotime('-8 weeks'));
+
+        $stmt = $db->prepare(
+            "SELECT id FROM assignments
+             WHERE teacher_id = ? AND deleted_at IS NULL AND status = 'published' AND COALESCE(published_at, created_at) >= ?
+               AND (class_id = ? OR class_group_name = ?)"
+        );
+        $stmt->execute([$teacherId, $since, $classId, $level]);
+        $assignmentIds = array_map('intval', array_column($stmt->fetchAll(), 'id'));
+        if ($assignmentIds) {
+            $stmt = $db->prepare(
+                "SELECT COUNT(DISTINCT assignment_id, student_id) FROM assignment_submissions
+                 WHERE deleted_at IS NULL AND status <> 'in_progress'
+                   AND assignment_id IN (" . self::in($assignmentIds) . ") AND student_id IN (" . self::in($studentIds) . ")"
+            );
+            $stmt->execute([...$assignmentIds, ...$studentIds]);
+            $out['hand_in_percent'] = (int) min(100, round((int) $stmt->fetchColumn() / (count($assignmentIds) * count($studentIds)) * 100));
+        }
+
+        $stmt = $db->prepare(
+            "SELECT id FROM enote_topics
+             WHERE teacher_id = ? AND deleted_at IS NULL AND status = 'published' AND COALESCE(published_at, created_at) >= ?
+               AND (class_id = ? OR class_group_name = ?)"
+        );
+        $stmt->execute([$teacherId, $since, $classId, $level]);
+        $topicIds = array_map('intval', array_column($stmt->fetchAll(), 'id'));
+        if ($topicIds) {
+            $stmt = $db->prepare(
+                "SELECT COALESCE(SUM(LEAST(percentage_completed, 100)), 0) FROM enote_progress
+                 WHERE topic_id IN (" . self::in($topicIds) . ") AND student_id IN (" . self::in($studentIds) . ")"
+            );
+            $stmt->execute([...$topicIds, ...$studentIds]);
+            $out['notes_read_percent'] = (int) min(100, round((float) $stmt->fetchColumn() / (count($topicIds) * count($studentIds))));
+        }
+        return $out;
     }
 
     /** What's happened lately: submissions, eNotes finished, revisions done, messages */
@@ -312,7 +450,7 @@ class DashboardOverviewController extends Controller
             $items[] = ['kind' => 'message', 'at' => $r['at'], 'who' => trim((string) $r['who']) ?: 'Someone', 'what' => mb_substr(trim(strip_tags((string) $r['message'])), 0, 80), 'to' => '/teacher/chat'];
         }
         usort($items, fn($a, $b) => strcmp((string) $b['at'], (string) $a['at']));
-        // Six, to sit beside the class cards (three rows of two)
-        return array_slice($items, 0, 6);
+        // A row of the latest, for the strip at the foot of the dashboard
+        return array_slice($items, 0, 10);
     }
 }

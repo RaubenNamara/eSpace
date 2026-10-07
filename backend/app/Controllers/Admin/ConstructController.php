@@ -239,12 +239,12 @@ class ConstructController extends Controller
                  VALUES (:name, :department_id, :subject_id, :level, :assessment_objective, :description, :created_by, NOW(), NOW())"
             );
             $stmt->execute([
-                'name' => htmlspecialchars(trim($data['name']), ENT_QUOTES, 'UTF-8'),
+                'name' => strip_tags(trim($data['name'])),
                 'department_id' => (int) $data['department_id'],
                 'subject_id' => (int) $data['subject_id'],
                 'level' => $data['level'],
                 'assessment_objective' => $data['assessment_objective'],
-                'description' => isset($data['description']) ? htmlspecialchars(trim((string) $data['description']), ENT_QUOTES, 'UTF-8') : null,
+                'description' => isset($data['description']) ? strip_tags(trim((string) $data['description'])) : null,
                 'created_by' => $this->getCurrentUserId(),
             ]);
             $constructId = (int) $db->lastInsertId();
@@ -312,12 +312,12 @@ class ConstructController extends Controller
                  WHERE id = :id"
             );
             $stmt->execute([
-                'name' => htmlspecialchars(trim($data['name']), ENT_QUOTES, 'UTF-8'),
+                'name' => strip_tags(trim($data['name'])),
                 'department_id' => (int) $data['department_id'],
                 'subject_id' => (int) $data['subject_id'],
                 'level' => $data['level'],
                 'assessment_objective' => $data['assessment_objective'],
-                'description' => isset($data['description']) ? htmlspecialchars(trim((string) $data['description']), ENT_QUOTES, 'UTF-8') : null,
+                'description' => isset($data['description']) ? strip_tags(trim((string) $data['description'])) : null,
                 'id' => $id,
             ]);
 

@@ -1,40 +1,11 @@
 <template>
-  <div class="p-4 sm:p-6">
-    <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-      <div class="flex items-center gap-3">
-        <div class="hidden sm:flex w-11 h-11 rounded-xl bg-indigo-600 items-center justify-center shadow-lg shadow-indigo-500/30 flex-shrink-0">
-          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-          </svg>
-        </div>
-        <div>
-          <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">eNotes Curriculum Setup</h1>
-          <p class="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
-            Define the theme/branch, topic, competence, and learning outcomes teachers pick from when creating eNotes.
-          </p>
-        </div>
-      </div>
-      <div class="flex flex-col sm:flex-row gap-2 flex-shrink-0">
-        <button
-          @click="router.push('/admin/constructs')"
-          class="w-full sm:w-auto px-5 py-2.5 bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all duration-200 font-medium flex items-center justify-center gap-2"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
-          </svg>
-          <span>Construct</span>
-        </button>
-        <button
-          @click="openCreateModal"
-          class="btn-primary w-full sm:w-auto flex items-center justify-center gap-2"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-          </svg>
-          <span>Add Curriculum Topic</span>
-        </button>
-      </div>
-    </div>
+  <div class="w-full">
+    <PageHeader title="eNotes curriculum" description="The theme, topics, competences and learning outcomes teachers pick from when they write eNotes and set assessments." icon="book" accent="indigo">
+      <template #actions>
+        <button type="button" class="btn-secondary" @click="router.push('/admin/constructs')">Constructs</button>
+        <button type="button" class="btn-primary" @click="openCreateModal">Add a topic</button>
+      </template>
+    </PageHeader>
 
     <!-- Filters -->
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
@@ -518,6 +489,7 @@
 </template>
 
 <script setup lang="ts">
+import PageHeader from '@/components/ui/PageHeader.vue'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import apiService from '@/services/api'

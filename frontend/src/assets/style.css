@@ -368,3 +368,49 @@ html.dark .site-plain .bg-white.border {
   background-attachment: local !important;
 }
 .dark .nb-textarea { color: #e5e7eb !important; background-color: #1b2130 !important; }
+
+/* CKEditor in dark mode - its colours are CSS variables on :root, so html.dark (one notch more
+   specific) re-points them; this also covers its dropdowns and dialogs, which live outside the
+   editor in the page's body. */
+html.dark {
+  --ck-color-base-background: #1f2937;
+  --ck-color-base-foreground: #111827;
+  --ck-color-base-border: #374151;
+  --ck-color-base-action: #10b981;
+  --ck-color-base-focus: #6366f1;
+  --ck-color-base-text: #e5e7eb;
+  --ck-color-base-active: #4f46e5;
+  --ck-color-base-active-focus: #4338ca;
+  --ck-color-text: #e5e7eb;
+  --ck-color-shadow-drop: rgba(0, 0, 0, 0.4);
+  --ck-color-shadow-inner: rgba(0, 0, 0, 0.3);
+  --ck-color-toolbar-background: #1f2937;
+  --ck-color-toolbar-border: #374151;
+  --ck-color-button-default-background: transparent;
+  --ck-color-button-default-hover-background: #374151;
+  --ck-color-button-default-active-background: #4b5563;
+  --ck-color-button-on-background: #312e81;
+  --ck-color-button-on-hover-background: #3730a3;
+  --ck-color-button-on-color: #c7d2fe;
+  --ck-color-button-action-background: #4f46e5;
+  --ck-color-dropdown-panel-background: #1f2937;
+  --ck-color-dropdown-panel-border: #374151;
+  --ck-color-split-button-hover-background: #374151;
+  --ck-color-split-button-hover-border: #4b5563;
+  --ck-color-input-background: #111827;
+  --ck-color-input-border: #4b5563;
+  --ck-color-input-text: #e5e7eb;
+  --ck-color-input-disabled-background: #1f2937;
+  --ck-color-list-background: #1f2937;
+  --ck-color-list-button-hover-background: #374151;
+  --ck-color-list-button-on-background: #312e81;
+  --ck-color-list-button-on-text: #e0e7ff;
+  --ck-color-panel-background: #1f2937;
+  --ck-color-panel-border: #374151;
+  --ck-color-labeled-field-label-background: #1f2937;
+  --ck-color-tooltip-background: #111827;
+  --ck-color-tooltip-text: #f9fafb;
+  --ck-color-focus-border: #6366f1;
+  --ck-color-engine-placeholder-text: #6b7280;
+}
+html.dark .ck.ck-editor__editable:not(.ck-editor__nested-editable) { color: #e5e7eb; }

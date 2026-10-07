@@ -1,44 +1,38 @@
 <template>
   <div>
-    <!-- The topbar already shows this admin's name and photo, so this line is a quick personal
-         greeting rather than a redundant "Admin Dashboard" title. The old "Preview as Student"
-         button was dropped too - it just linked to /admin/assessments, already one click away
-         in the sidebar's Assessment & Analytics section. -->
-    <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
-      <div class="min-w-0">
-        <p class="text-[11px] font-bold uppercase tracking-widest text-gray-400">{{ todayLabel }}</p>
-        <h1 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{{ greeting }}, {{ authStore.userName }}</h1>
-        <p v-if="currentTerm" class="mt-1 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
-          <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>{{ currentTerm }}
-        </p>
-      </div>
-      <div class="flex flex-wrap gap-2">
-        <button type="button" class="btn-secondary !py-2" @click="openViewEnrolledModal">Enrolled students</button>
-        <button type="button" class="btn-primary !py-2" @click="openEnrollModal">Enrol students</button>
-      </div>
-    </div>
-
-    <StatStrip class="mb-4" :items="figureItems" />
-
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-      <SetupChecklist class="lg:col-span-2" @figures="onFigures" />
-      <section class="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5">
-        <h2 class="text-sm font-bold text-gray-900 dark:text-white mb-3">Go to</h2>
-        <div class="grid grid-cols-2 gap-2.5">
-          <QuickLink to="/admin/students" label="Students" icon="students" color="indigo" />
-          <QuickLink to="/admin/teachers" label="Teachers" icon="teachers" color="indigo" />
-          <QuickLink to="/admin/classes" label="Classes" icon="classes" color="indigo" />
-          <QuickLink to="/admin/live-classes" label="Live Classes" icon="live" color="indigo" />
-          <QuickLink to="/admin/library" label="eLibrary" icon="library" color="indigo" />
-          <QuickLink to="/admin/notes" label="eNotes" icon="notes" color="indigo" />
-          <QuickLink to="/admin/itembank" label="Item Bank" icon="itembank" color="indigo" />
-          <QuickLink to="/admin/reports" label="Reports" icon="reports" color="indigo" />
+    <!-- 1. The school today, and how many learners and teachers were in this week -->
+    <DashboardHero :date="todayLabel" :title="`${greeting}, ${firstName}`" :parts="daySentence" :chips="heroChips" :actions="heroActions">
+      <p class="text-xs font-bold text-gray-700 dark:text-gray-200 mb-2.5">Signed in this week</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
+        <div v-for="r in activity" :key="r.label">
+          <div class="flex items-baseline justify-between gap-2 text-xs mb-1">
+            <span class="font-semibold text-gray-700 dark:text-gray-200">{{ r.label }}</span>
+            <span class="text-gray-500 dark:text-gray-400"><b class="text-gray-900 dark:text-white tabular-nums">{{ r.active.toLocaleString() }}</b> of {{ r.total.toLocaleString() }} · {{ r.share }}</span>
+          </div>
+          <div class="h-2 rounded-full bg-gray-200/70 dark:bg-gray-700 overflow-hidden">
+            <div class="h-full rounded-full bg-indigo-600 dark:bg-indigo-400 transition-all duration-700" :style="{ width: `${r.total ? Math.max(r.active ? 1.5 : 0, (r.active / r.total) * 100) : 0}%` }"></div>
+          </div>
         </div>
-      </section>
+      </div>
+    </DashboardHero>
+
+    <!-- 2. Finishing setup, beside where the learners are -->
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-5">
+      <SetupChecklist class="xl:col-span-2 min-w-0" @figures="onFigures" @progress="(d: number, t: number) => (setup = { done: d, total: t })" />
+      <EnrolmentCard
+        class="min-w-0"
+        :loading="loadingAnalytics"
+        :total="analytics.total_enrollments"
+        :recent="analytics.recent_enrollments"
+        :by-department="analytics.by_department"
+        :by-class="analytics.by_class"
+        :by-year="analytics.by_academic_year"
+        @open="openViewEnrolledModal"
+      />
     </div>
 
-    <!-- Curriculum mastery across the school (or one department) -->
-    <MasteryOverviewCard endpoint="/api/admin/mastery-overview" :params="masteryDepartment ? { department_id: masteryDepartment } : {}" show-department>
+    <!-- 3. Curriculum mastery across the school (or one department) -->
+    <MasteryOverviewCard class="!rounded-2xl" endpoint="/api/admin/mastery-overview" :params="masteryDepartment ? { department_id: masteryDepartment } : {}" show-department>
       <template #filter>
         <select v-model="masteryDepartment" class="px-2.5 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white">
           <option :value="0">All departments</option>
@@ -47,38 +41,6 @@
       </template>
     </MasteryOverviewCard>
 
-    <!-- Analytics Charts -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-      <!-- Enrollments by Department -->
-      <div class="card">
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Enrollments by Department</h3>
-        <div class="h-64">
-          <Bar v-if="!loadingAnalytics && analytics.by_department.length > 0" :data="departmentChartData" :options="chartOptions" />
-          <div v-else-if="loadingAnalytics" class="flex items-center justify-center h-full text-gray-500">Loading...</div>
-          <EmptyState v-else compact :card="false" icon="chart" tone="gray" title="Nothing to show yet" message="This fills in as students are enrolled." />
-        </div>
-      </div>
-
-      <!-- Enrollments by Academic Year -->
-      <div class="card">
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Enrollments by Academic Year</h3>
-        <div class="h-64">
-          <Bar v-if="!loadingAnalytics && analytics.by_academic_year.length > 0" :data="yearChartData" :options="chartOptions" />
-          <div v-else-if="loadingAnalytics" class="flex items-center justify-center h-full text-gray-500">Loading...</div>
-          <EmptyState v-else compact :card="false" icon="chart" tone="gray" title="Nothing to show yet" message="This fills in as students are enrolled." />
-        </div>
-      </div>
-    </div>
-
-    <!-- Enrollments by Class -->
-    <div class="card mb-8">
-      <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Enrollments by Class</h3>
-      <div class="h-64">
-        <Bar v-if="!loadingAnalytics && analytics.by_class.length > 0" :data="classChartData" :options="chartOptions" />
-        <div v-else-if="loadingAnalytics" class="flex items-center justify-center h-full text-gray-500">Loading...</div>
-        <EmptyState v-else compact :card="false" icon="chart" tone="gray" title="Nothing to show yet" message="This fills in as students are enrolled." />
-      </div>
-    </div>
     <!-- View Enrolled Students Modal -->
     <div v-if="showViewEnrolledModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-2 sm:p-4">
       <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[95vh] sm:max-h-[90vh] flex flex-col">
@@ -561,24 +523,19 @@
 </template>
 
 <script setup lang="ts">
-import EmptyState from '@/components/ui/EmptyState.vue'
 import { ref, onMounted, computed } from 'vue'
 import { useLiveRefresh } from '@/composables/useLiveRefresh'
 import apiService from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
-import QuickLink from '@/components/dashboard/QuickLink.vue'
-import StatStrip, { type StatItem } from '@/components/ui/StatStrip.vue'
+import DashboardHero, { type HeroAction, type HeroChip, type HeroPart } from '@/components/dashboard/DashboardHero.vue'
+import EnrolmentCard from '@/components/admin/EnrolmentCard.vue'
 import SetupChecklist, { type SetupFigures } from '@/components/admin/SetupChecklist.vue'
 import MasteryOverviewCard from '@/components/dashboard/MasteryOverviewCard.vue'
-import { Bar } from 'vue-chartjs'
-import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ArcElement } from 'chart.js'
 import { useToastStore } from '@/stores/toast'
 import { useConfirmStore } from '@/stores/confirm'
 
 const toast = useToastStore()
 const confirmDialog = useConfirmStore()
-
-ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ArcElement)
 
 interface Department {
   id: number
@@ -1180,84 +1137,6 @@ const deenrollStudents = async () => {
   }
 }
 
-// Chart data
-const departmentChartData = computed(() => ({
-  labels: analytics.value.by_department.map((d: any) => d.department),
-  datasets: [{
-    label: 'Enrollments',
-    data: analytics.value.by_department.map((d: any) => d.count),
-    backgroundColor: [
-      'rgba(99, 102, 241, 0.8)',
-      'rgba(16, 185, 129, 0.8)',
-      'rgba(245, 158, 11, 0.8)',
-      'rgba(239, 68, 68, 0.8)',
-      'rgba(139, 92, 246, 0.8)',
-    ],
-    borderColor: [
-      'rgba(99, 102, 241, 1)',
-      'rgba(16, 185, 129, 1)',
-      'rgba(245, 158, 11, 1)',
-      'rgba(239, 68, 68, 1)',
-      'rgba(139, 92, 246, 1)',
-    ],
-    borderWidth: 1
-  }]
-}))
-
-const yearChartData = computed(() => ({
-  labels: analytics.value.by_academic_year.map((y: any) => y.academic_year),
-  datasets: [{
-    label: 'Enrollments',
-    data: analytics.value.by_academic_year.map((y: any) => y.count),
-    backgroundColor: 'rgba(99, 102, 241, 0.8)',
-    borderColor: 'rgba(99, 102, 241, 1)',
-    borderWidth: 1
-  }]
-}))
-
-const classChartData = computed(() => ({
-  labels: analytics.value.by_class.map((c: any) => c.stream_name ? `${c.class_name} ${c.stream_name}` : c.class_name),
-  datasets: [{
-    label: 'Enrollments',
-    data: analytics.value.by_class.map((c: any) => c.count),
-    backgroundColor: [
-      'rgba(99, 102, 241, 0.8)',
-      'rgba(16, 185, 129, 0.8)',
-      'rgba(245, 158, 11, 0.8)',
-      'rgba(239, 68, 68, 0.8)',
-      'rgba(139, 92, 246, 0.8)',
-      'rgba(236, 72, 153, 0.8)',
-    ],
-    borderColor: [
-      'rgba(99, 102, 241, 1)',
-      'rgba(16, 185, 129, 1)',
-      'rgba(245, 158, 11, 1)',
-      'rgba(239, 68, 68, 1)',
-      'rgba(139, 92, 246, 1)',
-      'rgba(236, 72, 153, 1)',
-    ],
-    borderWidth: 1
-  }]
-}))
-
-const chartOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      display: false
-    }
-  },
-  scales: {
-    y: {
-      beginAtZero: true,
-      ticks: {
-        precision: 0
-      }
-    }
-  }
-}
-
 onMounted(() => {
   fetchAnalytics()
   fetchDepartments()
@@ -1269,17 +1148,46 @@ const currentTerm = ref<string | null>(null)
 const onFigures = (f: SetupFigures, term: string | null) => { figures.value = f; currentTerm.value = term }
 // A share as a whole percent, never showing a real handful of people as 0%
 const share = (n: number, of: number) => { const p = (n / of) * 100; return n > 0 && p < 1 ? 'under 1%' : `${Math.round(p)}%` }
-const figureItems = computed<StatItem[]>(() => {
+const setup = ref<{ done: number; total: number } | null>(null)
+const heroActions: HeroAction[] = [
+  { label: 'Enrol students', icon: 'users', onClick: () => openEnrollModal() },
+  { label: 'Enrolled', icon: 'clipboard', onClick: () => openViewEnrolledModal() },
+  { to: '/admin/teachers', label: 'Teachers', icon: 'teacher' },
+  { to: '/admin/notices', label: 'Post a notice', icon: 'speaker' },
+  { to: '/admin/settings', label: 'Settings', icon: 'wrench' }
+]
+const heroChips = computed<HeroChip[]>(() => {
+  const out: HeroChip[] = []
+  if (currentTerm.value) out.push({ text: currentTerm.value, tone: 'solid' })
+  out.push({ text: 'Administrator', icon: 'key' })
+  if (setup.value && setup.value.done < setup.value.total) out.push({ text: `Setup ${setup.value.done} of ${setup.value.total}`, tone: 'warn' })
+  return out
+})
+const firstName = computed(() => {
+  const n = String(authStore.userName || '').split(' ')[0] || ''
+  return n ? n.charAt(0).toUpperCase() + n.slice(1) : 'there'
+})
+const activity = computed(() => {
   const f = figures.value
-  const v = (n: number | undefined) => (f ? (n ?? 0).toLocaleString() : '…')
   return [
-    { label: 'Learners', value: v(f?.students), tone: 'indigo' },
-    { label: 'Teachers', value: v(f?.teachers), tone: 'violet' },
-    { label: 'Classes', value: v(f?.classes), tone: 'sky' },
-    { label: 'Learners active this week', value: v(f?.students_active_week), tone: 'emerald', hint: f && f.students ? `${share(f.students_active_week, f.students)} of learners` : undefined },
-    { label: 'Teachers active this week', value: v(f?.teachers_active_week), tone: 'amber', hint: f && f.teachers ? `${share(f.teachers_active_week, f.teachers)} of teachers` : undefined }
+    { label: 'Learners', active: f?.students_active_week ?? 0, total: f?.students ?? 0, share: f && f.students ? share(f.students_active_week, f.students) : '…', bar: '' },
+    { label: 'Teachers', active: f?.teachers_active_week ?? 0, total: f?.teachers ?? 0, share: f && f.teachers ? share(f.teachers_active_week, f.teachers) : '…', bar: '' }
   ]
 })
-const todayLabel = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
+// "3,363 learners and 114 teachers in 37 classes. 6 setup steps are left - the list below takes you to each."
+const daySentence = computed(() => {
+  type Part = HeroPart
+  const f = figures.value
+  if (!f) return [{ text: 'Getting the school ready…' }] as Part[]
+  const out: Part[] = [
+    { text: `${f.students.toLocaleString()} learners`, strong: true }, { text: ' and ' },
+    { text: `${f.teachers.toLocaleString()} teachers`, strong: true }, { text: ` in ${f.classes.toLocaleString()} classes. ` }
+  ]
+  const left = setup.value ? setup.value.total - setup.value.done : 0
+  if (left) out.push({ text: `${left} setup ${left === 1 ? 'step is' : 'steps are'} left`, strong: true, alert: true }, { text: ' - each one links straight to where it is fixed.' })
+  else if (setup.value) out.push({ text: 'Setup is complete.' })
+  return out
+})
+const todayLabel = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 </script>
 

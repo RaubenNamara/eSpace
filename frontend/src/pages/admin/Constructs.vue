@@ -1,34 +1,14 @@
 <template>
-  <div class="p-4 sm:p-6">
-    <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-      <div class="flex items-center gap-3">
-        <button @click="router.push('/admin/enotes-curriculum')" title="Back to eNotes Curriculum" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0">
-          <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-          </svg>
-        </button>
-        <div class="hidden sm:flex w-11 h-11 rounded-xl bg-indigo-600 items-center justify-center shadow-lg shadow-indigo-500/30 flex-shrink-0">
-          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
-          </svg>
-        </div>
-        <div>
-          <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Constructs</h1>
-          <p class="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
-            Define EOC building blocks - a competency tied to a level, department, subject, assessment objective, and curriculum topics.
-          </p>
-        </div>
-      </div>
-      <button
-        @click="openCreateModal"
-        class="btn-primary w-full sm:w-auto flex items-center justify-center gap-2 flex-shrink-0"
-      >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-        </svg>
-        <span>New Construct</span>
-      </button>
-    </div>
+  <div class="w-full">
+    <button type="button" class="mb-3 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white" @click="router.push('/admin/enotes-curriculum')">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+      eNotes curriculum
+    </button>
+    <PageHeader title="Constructs" description="The building blocks of Elements of Construct (EOC) - a competency tied to a level, department, subject, assessment objective and curriculum topics." icon="kit" accent="indigo">
+      <template #actions>
+        <button type="button" class="btn-primary" @click="openCreateModal">New construct</button>
+      </template>
+    </PageHeader>
 
     <!-- Filters -->
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
@@ -83,7 +63,7 @@
           <span class="tag-pill bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ c.topic_count ?? 0 }} topic{{ (c.topic_count ?? 0) === 1 ? '' : 's' }}</span>
         </div>
         <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">{{ c.department_name }} &middot; {{ c.subject_name }}</p>
-        <p v-if="c.description" class="text-sm text-gray-600 dark:text-gray-300 line-clamp-3">{{ c.description }}</p>
+        <p v-if="c.description" class="text-sm text-gray-600 dark:text-gray-300 line-clamp-3">{{ decode(c.description) }}</p>
       </div>
     </div>
 
@@ -242,7 +222,7 @@
         </div>
 
         <div class="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
-          <p v-if="detail.description" class="text-sm text-gray-600 dark:text-gray-300">{{ detail.description }}</p>
+          <p v-if="detail.description" class="text-sm text-gray-600 dark:text-gray-300">{{ decode(detail.description) }}</p>
 
           <div>
             <h4 class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide mb-3">Topics</h4>
@@ -300,12 +280,15 @@
 </template>
 
 <script setup lang="ts">
+import PageHeader from '@/components/ui/PageHeader.vue'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import apiService from '@/services/api'
 import type { Construct, ConstructMeta, ConstructForm, ConstructTopicOption } from '@/types/construct'
 import { useToastStore } from '@/stores/toast'
 
+// Descriptions are stored HTML-escaped (Qur&#039;an) - shown as the text they stand for
+const decode = (s: string) => { const t = document.createElement('textarea'); t.innerHTML = s; return t.value }
 const toast = useToastStore()
 
 const router = useRouter()

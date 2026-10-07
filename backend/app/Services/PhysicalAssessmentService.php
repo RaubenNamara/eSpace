@@ -23,14 +23,15 @@ class PhysicalAssessmentService
         $db = $this->getDb();
         $stmt = $db->prepare(
             "INSERT INTO physical_assessments
-                (subject_id, class_id, term_id, title, max_score, exam_date, include_on_report, created_by, created_by_role, created_at, updated_at)
-             VALUES (:subject_id, :class_id, :term_id, :title, :max_score, :exam_date, :include_on_report, :created_by, :created_by_role, NOW(), NOW())"
+                (subject_id, class_id, term_id, title, assessment_category, max_score, exam_date, include_on_report, created_by, created_by_role, created_at, updated_at)
+             VALUES (:subject_id, :class_id, :term_id, :title, :assessment_category, :max_score, :exam_date, :include_on_report, :created_by, :created_by_role, NOW(), NOW())"
         );
         $stmt->execute([
             'subject_id' => $data['subject_id'],
             'class_id' => $data['class_id'],
             'term_id' => $data['term_id'],
             'title' => trim((string) $data['title']),
+            'assessment_category' => self::category($data['assessment_category'] ?? null),
             'max_score' => $data['max_score'],
             'exam_date' => $data['exam_date'],
             'include_on_report' => !empty($data['include_on_report']) ? 1 : 0,
@@ -52,6 +53,10 @@ class PhysicalAssessmentService
                 $fields[] = "{$field} = :{$field}";
                 $params[$field] = $field === 'title' ? trim((string) $data[$field]) : $data[$field];
             }
+        }
+        if (array_key_exists('assessment_category', $data)) {
+            $fields[] = 'assessment_category = :assessment_category';
+            $params['assessment_category'] = self::category($data['assessment_category']);
         }
         if (array_key_exists('include_on_report', $data)) {
             $fields[] = 'include_on_report = :include_on_report';
@@ -180,6 +185,13 @@ class PhysicalAssessmentService
         }
     }
 
+    /** A paper Activity of Integration or project work counts towards UNEB continuous assessment */
+    private static function category(mixed $value): ?string
+    {
+        $value = strtoupper(trim((string) $value));
+        return in_array($value, ['AOI', 'PROJECT'], true) ? $value : null;
+    }
+
     private function formatExam(array $row): array
     {
         return [
@@ -191,6 +203,7 @@ class PhysicalAssessmentService
             'stream_name' => $row['stream_name'],
             'term_id' => (int) $row['term_id'],
             'title' => $row['title'],
+            'assessment_category' => $row['assessment_category'] ?? null,
             'max_score' => (float) $row['max_score'],
             'exam_date' => $row['exam_date'],
             'include_on_report' => (bool) $row['include_on_report'],

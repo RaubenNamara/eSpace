@@ -7,6 +7,8 @@ export interface PhysicalExam {
   stream_name: string | null
   term_id: number
   title: string
+  // A paper Activity of Integration or project work counts towards UNEB continuous assessment
+  assessment_category?: 'AOI' | 'PROJECT' | null
   max_score: number
   exam_date: string
   include_on_report: boolean

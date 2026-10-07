@@ -38,6 +38,20 @@
     </div>
     <p v-if="groups.length" class="mt-4 text-xs text-gray-400">Study group chats can be seen by your school's heads of department, like every chat in eSpace.</p>
 
+    <!-- Change a group's date -->
+    <div v-if="dateFor" class="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4" @click.self="dateFor = null">
+      <form class="w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl bg-white dark:bg-gray-800 p-5" @submit.prevent="saveDate">
+        <h2 class="text-base font-bold text-gray-900 dark:text-white">When are you revising this by?</h2>
+        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400 truncate">{{ dateFor.goal }}</p>
+        <input v-model="newDate" type="date" :min="today" class="mt-4 w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white">
+        <div class="mt-5 flex items-center gap-2">
+          <button v-if="dateFor.target_date" type="button" class="text-xs font-semibold text-gray-500 hover:underline" @click="newDate = ''; saveDate()">No date</button>
+          <button type="button" class="ml-auto btn-secondary" @click="dateFor = null">Cancel</button>
+          <button type="submit" class="btn-primary" :disabled="!newDate">Save</button>
+        </div>
+      </form>
+    </div>
+
     <!-- Start a group -->
     <div v-if="showNew" class="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4" @click.self="showNew = false">
       <form class="w-full sm:max-w-lg max-h-[92vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-white dark:bg-gray-800 p-5" @submit.prevent="create">
@@ -172,11 +186,19 @@ const create = async () => {
   }
 }
 
-const changeDate = async (g: Group) => {
-  const value = window.prompt('New date (YYYY-MM-DD) - leave empty for no date', g.target_date || '')
-  if (value === null) return
+// Changing a group's date - a small sheet with a date picker
+const dateFor = ref<Group | null>(null)
+const newDate = ref('')
+const changeDate = (g: Group) => {
+  dateFor.value = g
+  newDate.value = g.target_date || ''
+}
+const saveDate = async () => {
+  const g = dateFor.value
+  if (!g) return
   try {
-    await axios.put(`/api/student/study-groups/${g.id}`, { target_date: value.trim() })
+    await axios.put(`/api/student/study-groups/${g.id}`, { target_date: newDate.value })
+    dateFor.value = null
     await load()
   } catch (err: any) {
     toast.error(err.response?.data?.message || 'Could not change the date')

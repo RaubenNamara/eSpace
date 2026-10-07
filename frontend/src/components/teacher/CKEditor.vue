@@ -995,6 +995,30 @@ onBeforeUnmount(() => {
   font-weight: 500;
 }
 
+/* Dark mode (the editor's own controls take their colours from html.dark in assets/style.css) */
+.dark .ckeditor-wrapper :deep(.ck-editor__editable) {
+  color: #e5e7eb;
+  background-color: #111827;
+  border-top-color: #374151;
+}
+.dark .ckeditor-wrapper :deep(.ck-toolbar) {
+  border-color: #374151;
+  background-color: #1f2937;
+}
+.dark .ckeditor-wrapper :deep(.ck-editor__main) {
+  border-color: #374151;
+}
+.dark .ckeditor-wrapper :deep(iframe),
+.dark .ckeditor-wrapper :deep(p iframe) {
+  border-color: #374151;
+  background: #1f2937;
+}
+.dark .word-count-footer {
+  background-color: #1f2937;
+  border-color: #374151;
+  color: #9ca3af;
+}
+
 /* Responsive toolbar - a single row that scrolls horizontally rather than wrapping onto extra
    rows (which would eat most of the screen) or grouping into a dropdown (see
    shouldNotGroupWhenFull above for why that dropdown doesn't work well here). */

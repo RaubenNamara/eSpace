@@ -1,26 +1,18 @@
 <template>
   <div>
-    <!-- Header -->
-    <div class="flex items-center gap-4 mb-6 flex-wrap">
-      <div class="w-12 h-12 rounded-xl bg-red-600 flex items-center justify-center shadow-sm flex-shrink-0">
-        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-        </svg>
-      </div>
-      <div class="flex-1 min-w-0">
-        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white leading-tight">Live Classes</h1>
-        <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">School-wide oversight of live sessions</p>
-      </div>
-      <span
-        v-if="serverStatus"
-        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
-        :class="serverStatus.reachable ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'"
-        :title="serverStatus.message"
-      >
-        <span class="w-1.5 h-1.5 rounded-full" :class="serverStatus.reachable ? 'bg-green-500' : 'bg-red-500'"></span>
-        BBB Server: {{ serverStatus.reachable ? 'Online' : (serverStatus.configured ? 'Unreachable' : 'Not configured') }}
-      </span>
-    </div>
+    <PageHeader title="Live classes" description="Every live session across the school - what's on now, coming up, attendance and recordings." icon="video" accent="rose">
+      <template #actions>
+        <span
+          v-if="serverStatus"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
+          :class="serverStatus.reachable ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-rose-50 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300'"
+          :title="serverStatus.message"
+        >
+          <span class="w-1.5 h-1.5 rounded-full" :class="serverStatus.reachable ? 'bg-emerald-500' : 'bg-rose-500'"></span>
+          Live server: {{ serverStatus.reachable ? 'online' : (serverStatus.configured ? 'unreachable' : 'not set up') }}
+        </span>
+      </template>
+    </PageHeader>
 
     <!-- Dashboard summary -->
     <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
@@ -267,6 +259,7 @@
 </template>
 
 <script setup lang="ts">
+import PageHeader from '@/components/ui/PageHeader.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'

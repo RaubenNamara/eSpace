@@ -185,9 +185,9 @@ class ENoteCurriculumController extends Controller
             'subject_id' => (int) $data['subject_id'],
             'academic_year_id' => (int) $data['academic_year_id'],
             'term_id' => (int) $data['term_id'],
-            'theme_branch' => htmlspecialchars(trim($data['theme_branch']), ENT_QUOTES, 'UTF-8'),
-            'topic' => htmlspecialchars(trim($data['topic']), ENT_QUOTES, 'UTF-8'),
-            'competence' => htmlspecialchars(trim($data['competence']), ENT_QUOTES, 'UTF-8')
+            'theme_branch' => strip_tags(trim($data['theme_branch'])),
+            'topic' => strip_tags(trim($data['topic'])),
+            'competence' => strip_tags(trim($data['competence']))
         ];
 
         $db = $this->getDb();
@@ -297,9 +297,9 @@ class ENoteCurriculumController extends Controller
             'academic_year_id' => (int) $data['academic_year_id'],
             'class_id' => (int) $data['class_id'],
             'term_id' => (int) $data['term_id'],
-            'theme_branch' => htmlspecialchars(trim($data['theme_branch']), ENT_QUOTES, 'UTF-8'),
-            'topic' => htmlspecialchars(trim($data['topic']), ENT_QUOTES, 'UTF-8'),
-            'competence' => htmlspecialchars(trim($data['competence']), ENT_QUOTES, 'UTF-8')
+            'theme_branch' => strip_tags(trim($data['theme_branch'])),
+            'topic' => strip_tags(trim($data['topic'])),
+            'competence' => strip_tags(trim($data['competence']))
         ];
 
         try {
@@ -348,7 +348,7 @@ class ENoteCurriculumController extends Controller
         foreach ($outcomes as $outcome) {
             $text = trim((string) $outcome);
             if ($text !== '') {
-                $cleaned[] = htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
+                $cleaned[] = strip_tags($text);
             }
         }
         return $cleaned;

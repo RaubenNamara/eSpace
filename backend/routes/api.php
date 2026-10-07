@@ -500,6 +500,12 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/report-cards/{studentId}/{termId}', 'eSpace\App\Controllers\Teacher\ReportCardController@show');
 
         // Physical (offline) exams
+        // UNEB school-based assessment (continuous assessment readiness, evidence, export)
+        Router::get('/sba/options', 'eSpace\App\Controllers\SchoolBasedAssessmentController@options');
+        Router::get('/sba', 'eSpace\App\Controllers\SchoolBasedAssessmentController@index');
+        Router::get('/sba/export', 'eSpace\App\Controllers\SchoolBasedAssessmentController@export');
+        Router::post('/sba/evidence', 'eSpace\App\Controllers\SchoolBasedAssessmentController@uploadEvidence');
+        Router::delete('/sba/evidence/{id}', 'eSpace\App\Controllers\SchoolBasedAssessmentController@deleteEvidence');
         Router::get('/physical-exams', 'eSpace\App\Controllers\Teacher\PhysicalAssessmentController@index');
         Router::post('/physical-exams', 'eSpace\App\Controllers\Teacher\PhysicalAssessmentController@create');
         Router::put('/physical-exams/{id}', 'eSpace\App\Controllers\Teacher\PhysicalAssessmentController@update');
@@ -651,6 +657,13 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/report-cards/{studentId}/{termId}', 'eSpace\App\Controllers\HOD\ReportCardController@show');
 
         // Physical (offline) exams (department-scoped)
+        // UNEB school-based assessment (continuous assessment readiness, evidence, export)
+        Router::get('/sba/options', 'eSpace\App\Controllers\SchoolBasedAssessmentController@options');
+        Router::get('/sba', 'eSpace\App\Controllers\SchoolBasedAssessmentController@index');
+        Router::get('/sba/export', 'eSpace\App\Controllers\SchoolBasedAssessmentController@export');
+        Router::post('/sba/evidence', 'eSpace\App\Controllers\SchoolBasedAssessmentController@uploadEvidence');
+        Router::delete('/sba/evidence/{id}', 'eSpace\App\Controllers\SchoolBasedAssessmentController@deleteEvidence');
+        Router::put('/sba/learner-ids', 'eSpace\App\Controllers\SchoolBasedAssessmentController@saveLearnerIds');
         Router::get('/physical-exams', 'eSpace\App\Controllers\HOD\PhysicalAssessmentController@index');
         Router::post('/physical-exams', 'eSpace\App\Controllers\HOD\PhysicalAssessmentController@create');
         Router::put('/physical-exams/{id}', 'eSpace\App\Controllers\HOD\PhysicalAssessmentController@update');
@@ -894,6 +907,14 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::put('/report-cards/{studentId}/{termId}/head-teacher-comment', 'eSpace\App\Controllers\Admin\ReportCardController@updateHeadTeacherComment');
 
         // Physical (offline) exams
+        // UNEB school-based assessment (continuous assessment readiness, evidence, export)
+        Router::get('/sba/options', 'eSpace\App\Controllers\SchoolBasedAssessmentController@options');
+        Router::get('/sba', 'eSpace\App\Controllers\SchoolBasedAssessmentController@index');
+        Router::get('/sba/export', 'eSpace\App\Controllers\SchoolBasedAssessmentController@export');
+        Router::post('/sba/evidence', 'eSpace\App\Controllers\SchoolBasedAssessmentController@uploadEvidence');
+        Router::delete('/sba/evidence/{id}', 'eSpace\App\Controllers\SchoolBasedAssessmentController@deleteEvidence');
+        Router::put('/sba/learner-ids', 'eSpace\App\Controllers\SchoolBasedAssessmentController@saveLearnerIds');
+        Router::put('/sba/settings', 'eSpace\App\Controllers\SchoolBasedAssessmentController@saveSettings');
         Router::get('/physical-exams', 'eSpace\App\Controllers\Admin\PhysicalAssessmentController@index');
         Router::post('/physical-exams', 'eSpace\App\Controllers\Admin\PhysicalAssessmentController@create');
         Router::put('/physical-exams/{id}', 'eSpace\App\Controllers\Admin\PhysicalAssessmentController@update');

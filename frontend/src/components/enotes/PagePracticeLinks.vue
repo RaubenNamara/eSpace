@@ -42,7 +42,7 @@ const items = ref<Linked[]>([])
 const loading = ref(false)
 const picking = ref(false)
 
-const glimpse = (html?: string) => (html || '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80)
+const glimpse = (html?: string) => (html || '').replace(/<\/?(strong|b|em|i|u|s|sub|sup|span|mark|a)\b[^>]*>/gi, '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80)
 
 const load = async () => {
   loading.value = true

@@ -627,6 +627,7 @@ const MENU: Record<string, NavGroup[]> = {
       { path: '/teacher/assignments', label: 'Assessments', icon: 'DocumentTextIcon' },
       { path: '/teacher/marksheet', label: 'Marksheet', icon: 'TableCellsIcon' },
       { path: '/teacher/physical-exams', label: 'Physical Exams', icon: 'DocumentTextIcon' },
+      { path: '/teacher/uneb-assessment', label: 'UNEB assessment', icon: 'CheckCircleIcon' },
       { path: '/teacher/reports', label: 'Reports', icon: 'ChartBarIcon' }
     ] },
     { key: 'insights', name: 'Insights', items: [
@@ -658,6 +659,7 @@ const MENU: Record<string, NavGroup[]> = {
       { path: '/hod/assessments', label: 'Assessments', icon: 'DocumentTextIcon' },
       { path: '/hod/marksheet', label: 'Marksheet', icon: 'TableCellsIcon' },
       { path: '/hod/physical-exams', label: 'Physical Exams', icon: 'DocumentTextIcon' },
+      { path: '/hod/uneb-assessment', label: 'UNEB assessment', icon: 'CheckCircleIcon' },
       { path: '/hod/reports', label: 'Reports', icon: 'ChartBarIcon' }
     ] },
     { key: 'insights', name: 'Insights', items: [
@@ -704,6 +706,7 @@ const MENU: Record<string, NavGroup[]> = {
       { path: '/admin/assessments', label: 'Assessments', icon: 'DocumentTextIcon' },
       { path: '/admin/marksheet', label: 'Marksheet', icon: 'TableCellsIcon' },
       { path: '/admin/physical-exams', label: 'Physical Exams', icon: 'DocumentTextIcon' },
+      { path: '/admin/uneb-assessment', label: 'UNEB assessment', icon: 'CheckCircleIcon' },
       { path: '/admin/reports', label: 'Reports', icon: 'ChartBarIcon' },
       { path: '/admin/rewards', label: 'Rewards & Badges', icon: 'TrophyIcon' },
       { path: '/admin/charts', label: 'Engagement', icon: 'ChartIcon' }

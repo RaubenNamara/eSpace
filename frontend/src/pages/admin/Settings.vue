@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-6">Settings</h1>
+    <PageHeader title="Settings" description="The school's profile - its name, logo and contact details, shown on report cards and other documents." icon="wrench" accent="indigo" />
 
     <!-- Toast -->
     <transition name="toast">
@@ -17,7 +17,7 @@
       </div>
     </transition>
 
-    <div class="card max-w-3xl">
+    <div class="card max-w-3xl rounded-2xl">
       <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">School Profile</h2>
       <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
         Shown on every report card header and other school-branded documents.
@@ -26,7 +26,7 @@
       <!-- Logo -->
       <div class="flex items-center gap-5 mb-6 pb-6 border-b border-gray-100 dark:border-gray-700">
         <div class="w-20 h-20 rounded-xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden flex-shrink-0 border border-gray-200 dark:border-gray-600">
-          <img v-if="settings.logo_path" :src="resolveAssetUrl(settings.logo_path)" alt="School logo" class="w-full h-full object-contain">
+          <img v-if="settings.logo_path && !logoBroken" :src="resolveAssetUrl(settings.logo_path)" alt="School logo" class="w-full h-full object-contain" @error="logoBroken = true">
           <svg v-else class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M14 8h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
           </svg>
@@ -106,11 +106,14 @@
 </template>
 
 <script setup lang="ts">
+import PageHeader from '@/components/ui/PageHeader.vue'
 import { ref, onMounted } from 'vue'
 import apiService from '@/services/api'
 import { resolveAssetUrl } from '@/utils/url'
 import { useToastStore } from '@/stores/toast'
 
+// A logo whose file is missing (e.g. a copied database) shows the empty logo box, not a broken picture
+const logoBroken = ref(false)
 const toast = useToastStore()
 
 interface SchoolSettings {
@@ -198,6 +201,7 @@ const handleLogoSelect = async (event: Event) => {
     })
     if (response.data.success) {
       settings.value.logo_path = response.data.data.logo_path
+      logoBroken.value = false
       showSuccess('Logo updated')
     } else {
       toast.error(response.data.message || 'Failed to upload logo')

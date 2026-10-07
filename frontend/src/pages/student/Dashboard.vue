@@ -1,39 +1,24 @@
 <template>
   <div class="w-full">
-    <!-- Greeting -->
-    <div class="mb-5 flex flex-col sm:flex-row sm:items-end gap-2">
-      <div class="flex-1 min-w-0">
-        <p class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ today }}</p>
-        <h1 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight">{{ greeting }}, {{ firstName }}</h1>
-      </div>
-      <div v-if="data" class="flex flex-wrap gap-1.5">
-        <span v-if="admissionNumber" class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300">No. {{ admissionNumber }}</span>
-        <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-200">{{ data.stats.classes_enrolled }} {{ data.stats.classes_enrolled === 1 ? 'class' : 'classes' }}</span>
-      </div>
-    </div>
+    <!-- 1. The day: date, greeting, one sentence of where things stand, the one thing to do first,
+            and the week underneath -->
+    <!-- A live class running now leads -->
+    <RouterLink v-if="data && data.stats.live_now > 0" to="/student/live-classes" class="mb-3 flex items-center gap-3 px-5 py-2.5 rounded-2xl bg-red-600 text-white shadow-md shadow-red-500/20 hover:bg-red-700">
+      <span class="relative flex w-2.5 h-2.5 flex-shrink-0"><span class="absolute inset-0 rounded-full bg-white animate-ping opacity-70"></span><span class="relative w-2.5 h-2.5 rounded-full bg-white"></span></span>
+      <p class="text-sm font-semibold flex-1 truncate">{{ data.live_now[0]?.title || 'A live class' }}{{ data.stats.live_now > 1 ? ` and ${data.stats.live_now - 1} more` : '' }} - live now</p>
+      <span class="px-3 py-1 rounded-lg bg-white text-red-700 text-xs font-bold">Join</span>
+    </RouterLink>
+    <DashboardHero :date="today" :title="`${greeting}, ${firstName}`" :parts="daySentence" :chips="heroChips" :actions="heroActions">
+      <div v-if="loading && !data" class="h-24 rounded-lg bg-gray-100 dark:bg-gray-700/50 animate-pulse"></div>
+      <StudentWeek v-else-if="data" :work="data.upcoming_assignments" :live="data.upcoming_live_classes" />
+      <p v-else class="text-xs text-gray-500 dark:text-gray-400">Your week couldn't load.</p>
+    </DashboardHero>
 
     <NoticeBanner role="student" />
-    <!-- Quick links: small tiles, the first thing to reach for -->
-    <div class="grid grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-3 mb-5">
-      <QuickLink compact to="/student/live-classes" label="Live" icon="live" color="red" />
-      <QuickLink compact to="/student/notes" label="eNotes" icon="notes" color="amber" />
-      <QuickLink compact to="/student/library" label="eLibrary" icon="library" :badge="data?.stats.library_resources" color="emerald" />
-      <QuickLink compact to="/student/videos" label="Videos" icon="video" color="pink" />
-      <QuickLink compact to="/student/itembank" label="Item Bank" icon="itembank" :badge="data?.stats.itembank_resources" color="violet" />
-      <QuickLink compact to="/student/assignments" label="Assessments" icon="pending" :badge="data?.stats.assignments_pending" color="indigo" />
-      <QuickLink compact to="/student/reports" label="Reports" icon="reports" color="sky" />
-      <QuickLink compact to="/student/chat" label="Chats" icon="chat" :badge="data?.stats.unread_messages" color="teal" />
-    </div>
 
-    <!-- Loading skeleton -->
-    <div v-if="loading" class="space-y-4">
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div v-for="i in 4" :key="i" class="h-24 rounded-xl bg-gray-200 dark:bg-gray-700 animate-pulse"></div>
-      </div>
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div class="lg:col-span-2 h-64 rounded-xl bg-gray-200 dark:bg-gray-700 animate-pulse"></div>
-        <div class="h-64 rounded-xl bg-gray-200 dark:bg-gray-700 animate-pulse"></div>
-      </div>
+    <div v-if="loading && !data" class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div class="lg:col-span-2 h-56 rounded-2xl bg-gray-200 dark:bg-gray-700 animate-pulse"></div>
+      <div class="h-56 rounded-2xl bg-gray-200 dark:bg-gray-700 animate-pulse"></div>
     </div>
 
     <div v-else-if="error" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 flex items-start gap-3">
@@ -44,115 +29,55 @@
     </div>
 
     <template v-else-if="data">
-      <!-- Live now banner -->
-      <RouterLink
-        v-if="data.stats.live_now > 0"
-        to="/student/live-classes"
-        class="block mb-5 rounded-2xl p-4 sm:p-5 bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-lg shadow-red-500/20 hover:opacity-95 transition-opacity"
-      >
-        <div class="flex items-center gap-3">
-          <span class="relative flex w-3 h-3 flex-shrink-0"><span class="absolute inset-0 rounded-full bg-white animate-ping opacity-70"></span><span class="relative w-3 h-3 rounded-full bg-white"></span></span>
-          <p class="text-sm sm:text-base font-semibold flex-1">
-            {{ data.live_now[0]?.title || 'A live class' }}{{ data.stats.live_now > 1 ? ` and ${data.stats.live_now - 1} more` : '' }} - live now
-          </p>
-          <span class="px-3 py-1.5 rounded-lg bg-white text-red-700 text-xs font-bold">Join</span>
+      <!-- 2. What to do next, beside today's revision and the next exam -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
+        <NextStepsCard class="lg:col-span-2 !mb-0 min-w-0" />
+        <div class="flex flex-col gap-4 min-w-0">
+          <ExamCountdownCard class="!mb-0" />
+          <DailyFiveCard class="!mb-0 flex-1" />
         </div>
-      </RouterLink>
-
-      <!-- Four figures -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5">
-        <StatTile label="To do" :value="data.stats.assignments_pending" icon="pending" color="amber" to="/student/assignments" />
-        <StatTile label="Done" :value="data.stats.assignments_completed" icon="check" color="emerald" to="/student/assignments" />
-        <StatTile label="Average" :value="data.stats.average_score !== null ? `${data.stats.average_score}%` : '–'" icon="score" color="violet" to="/student/reports" />
-        <StatTile label="Live soon" :value="data.upcoming_live_classes.length" icon="live" color="red" to="/student/live-classes" />
       </div>
 
-      <!-- Two columns that always end together: in each, one card takes up the difference -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-x-5">
-        <!-- Main column: what to do, the map, how it's going, badges and the lab -->
-        <div class="lg:col-span-2 min-w-0 flex flex-col">
-          <NextStepsCard />
-          <LearningMapCard />
-          <div class="mb-6">
-            <PerformanceTrend
-              :graded-count="data.performance.graded_count"
-              :trend="data.performance.trend"
-              :trend-delta="data.performance.trend_delta"
-              :scores="data.performance.scores"
-            />
-          </div>
-          <!-- Badges and the lab side by side, so the two columns end together -->
-          <div class="grid sm:grid-cols-2 gap-5 mb-6 lg:flex-1 [&>*]:min-w-0">
-            <MyAchievements class="h-full" />
-            <VirtualLabWidget class="h-full" />
-          </div>
-        </div>
+      <!-- 3. How it's going -->
+      <div class="flex items-center gap-2.5 mb-3">
+        <span class="w-8 h-8 flex-shrink-0 rounded-xl flex items-center justify-center bg-indigo-600 text-white shadow-sm shadow-indigo-500/20"><AppIcon name="trend" class="w-4 h-4" /></span>
+        <h2 class="text-base font-bold text-gray-900 dark:text-white">How you're doing</h2>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
+        <ScoresCard
+          :average="data.stats.average_score"
+          :graded-count="data.performance.graded_count"
+          :trend="data.performance.trend"
+          :trend-delta="data.performance.trend_delta"
+          :scores="data.performance.scores"
+        />
+        <LearningMapCard class="lg:col-span-2 !mb-0 !rounded-2xl" />
+      </div>
 
-        <!-- Side column: today's revision, what's coming, new books -->
-        <div class="min-w-0 flex flex-col">
-          <ExamCountdownCard />
-          <DailyFiveCard />
-          <section class="mb-6 lg:flex-1 flex flex-col bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4">
-            <div class="flex items-center gap-2 mb-3">
-              <h2 class="flex-1 text-sm font-bold text-gray-900 dark:text-white">Coming up</h2>
-              <RouterLink to="/student/assignments" class="text-xs font-semibold text-indigo-600 dark:text-indigo-300 hover:underline">All</RouterLink>
-            </div>
-            <p v-if="!agenda.length" class="py-4 text-center text-xs text-gray-500 dark:text-gray-400">Nothing due and no live classes coming up - a good time to read ahead.</p>
-            <ul v-else class="space-y-2">
-              <li v-for="item in agenda" :key="item.key">
-                <RouterLink :to="item.to" class="flex items-center gap-3 rounded-xl p-2 -mx-2 hover:bg-gray-50 dark:hover:bg-gray-700/40">
-                  <span class="w-10 h-10 flex-shrink-0 rounded-xl flex flex-col items-center justify-center" :class="item.kind === 'live' ? 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-200' : 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-200'">
-                    <span class="text-[9px] font-bold uppercase leading-none">{{ item.month }}</span>
-                    <span class="text-sm font-extrabold leading-tight">{{ item.day }}</span>
-                  </span>
-                  <span class="min-w-0 flex-1">
-                    <span class="block text-sm font-semibold text-gray-900 dark:text-white truncate">{{ item.title }}</span>
-                    <span class="block text-[11px] truncate" :class="item.overdue ? 'text-rose-600 dark:text-rose-300 font-semibold' : 'text-gray-500 dark:text-gray-400'">{{ item.sub }}</span>
-                  </span>
-                </RouterLink>
-              </li>
-            </ul>
-            <!-- This week at a glance, at the foot of the card -->
-            <div class="mt-auto pt-4">
-              <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400">This week</p>
-              <div class="grid grid-cols-7 gap-1 text-center">
-                <div v-for="d in week" :key="d.key" class="rounded-lg py-1.5" :class="d.today ? 'bg-indigo-600 text-white' : 'bg-gray-50 dark:bg-gray-700/40 text-gray-600 dark:text-gray-300'">
-                  <p class="text-[10px] font-semibold uppercase" :class="d.today ? 'text-indigo-100' : 'text-gray-400'">{{ d.name }}</p>
-                  <p class="text-sm font-bold leading-tight">{{ d.date }}</p>
-                  <p class="mt-0.5 h-1.5 flex justify-center gap-0.5">
-                    <span v-if="d.work" class="w-1.5 h-1.5 rounded-full" :class="d.today ? 'bg-white' : 'bg-amber-500'" title="Work due"></span>
-                    <span v-if="d.live" class="w-1.5 h-1.5 rounded-full" :class="d.today ? 'bg-white' : 'bg-rose-500'" title="Live class"></span>
-                  </p>
-                </div>
-              </div>
-              <p class="mt-2 flex items-center gap-3 text-[10px] text-gray-500 dark:text-gray-400">
-                <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Work due</span>
-                <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>Live class</span>
-              </p>
-            </div>
-          </section>
-
-          <!-- New in the eLibrary -->
-          <section v-if="data.recent_library.length > 0" class="mb-6 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4">
-            <div class="flex items-center gap-2 mb-3">
-              <h2 class="flex-1 text-sm font-bold text-gray-900 dark:text-white">New in the eLibrary</h2>
-              <RouterLink to="/student/library" class="text-xs font-semibold text-indigo-600 dark:text-indigo-300 hover:underline">Browse</RouterLink>
-            </div>
-            <ul class="space-y-1">
-              <li v-for="book in data.recent_library.slice(0, 4)" :key="book.id">
-                <RouterLink to="/student/library" class="flex items-center gap-3 rounded-xl p-2 -mx-2 hover:bg-gray-50 dark:hover:bg-gray-700/40">
-                  <span class="w-9 h-9 flex-shrink-0 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200 flex items-center justify-center">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
-                  </span>
-                  <span class="min-w-0 flex-1">
-                    <span class="block text-sm font-semibold text-gray-900 dark:text-white truncate">{{ book.title }}</span>
-                    <span class="block text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ book.subject_name }}</span>
-                  </span>
-                </RouterLink>
-              </li>
-            </ul>
-          </section>
-        </div>
+      <!-- 4. Badges, the lab and new books -->
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-8 [&>*]:min-w-0">
+        <MyAchievements class="!rounded-2xl !shadow-none !p-5" />
+        <VirtualLabWidget class="!shadow-none" />
+        <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 md:col-span-2 xl:col-span-1">
+          <div class="flex items-center gap-2 mb-3">
+            <h2 class="flex-1 font-bold text-gray-900 dark:text-white">New in the eLibrary</h2>
+            <RouterLink to="/student/library" class="text-xs font-semibold text-indigo-600 dark:text-indigo-300 hover:underline">Browse →</RouterLink>
+          </div>
+          <p v-if="!data.recent_library.length" class="text-xs text-gray-500 dark:text-gray-400">New books from your teachers show up here.</p>
+          <ul v-else class="space-y-1">
+            <li v-for="book in data.recent_library.slice(0, 4)" :key="book.id">
+              <RouterLink to="/student/library" class="flex items-center gap-3 rounded-xl p-2 -mx-2 hover:bg-gray-50 dark:hover:bg-gray-700/40">
+                <span class="w-9 h-11 flex-shrink-0 rounded-md bg-gradient-to-br from-emerald-400 to-teal-600 text-white shadow-sm flex items-center justify-center">
+                  <AppIcon name="book" class="w-4 h-4" />
+                </span>
+                <span class="min-w-0 flex-1">
+                  <span class="block text-sm font-semibold text-gray-900 dark:text-white truncate">{{ niceTitle(book.title) }}</span>
+                  <span class="block text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ book.subject_name }}</span>
+                </span>
+              </RouterLink>
+            </li>
+          </ul>
+        </section>
       </div>
     </template>
   </div>
@@ -168,11 +93,12 @@ import DailyFiveCard from '@/components/dashboard/DailyFiveCard.vue'
 import ExamCountdownCard from '@/components/dashboard/ExamCountdownCard.vue'
 import axios from 'axios'
 import { useAuthStore } from '@/stores/auth'
-import StatTile from '@/components/dashboard/StatTile.vue'
-import QuickLink from '@/components/dashboard/QuickLink.vue'
+import AppIcon from '@/components/common/AppIcon.vue'
+import DashboardHero, { type HeroAction, type HeroChip, type HeroPart } from '@/components/dashboard/DashboardHero.vue'
+import StudentWeek from '@/components/dashboard/StudentWeek.vue'
+import ScoresCard from '@/components/dashboard/ScoresCard.vue'
 import MyAchievements from '@/components/dashboard/MyAchievements.vue'
 import VirtualLabWidget from '@/components/dashboard/VirtualLabWidget.vue'
-import PerformanceTrend from '@/components/dashboard/PerformanceTrend.vue'
 
 interface DashboardData {
   stats: {
@@ -207,46 +133,76 @@ const firstName = computed(() => {
   return name ? name.charAt(0).toUpperCase() + name.slice(1).toLowerCase() : 'there'
 })
 
-// What's coming, soonest first: work due (overdue included) and live classes
-const agenda = computed(() => {
-  if (!data.value) return []
-  const now = Date.now()
-  const at = (v: string) => new Date(v.replace(' ', 'T')).getTime()
-  const parts = (t: number) => ({ month: new Date(t).toLocaleDateString(undefined, { month: 'short' }), day: new Date(t).getDate() })
-  const when = (t: number) => `${new Date(t).toLocaleDateString(undefined, { weekday: 'short' })} ${new Date(t).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`
-  const items = [
-    ...data.value.upcoming_assignments.map(a => {
-      const t = at(a.due_date)
-      return { key: `a${a.id}`, kind: 'work' as const, t, title: a.title, to: `/student/assignments/${a.id}/answer`, overdue: t < now,
-        sub: `${a.subject_name} · ${t < now ? 'overdue' : `due ${when(t)}`}`, ...parts(t) }
-    }),
-    ...data.value.upcoming_live_classes.map(l => {
-      const t = at(l.scheduled_start)
-      return { key: `l${l.id}`, kind: 'live' as const, t, title: l.title, to: '/student/live-classes', overdue: false,
-        sub: `Live · ${l.subject_name} · ${when(t)}`, ...parts(t) }
-    })
-  ]
-  return items.sort((p, q) => p.t - q.t).slice(0, 5)
-})
+const today = computed(() => new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }))
+const toDate = (v: string) => new Date(v.replace(' ', 'T'))
+const clock = (d: Date) => d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
 
-const today = computed(() => new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }))
+const overdueWork = computed(() => (data.value?.upcoming_assignments ?? []).filter(a => toDate(a.due_date) < new Date()))
+const nextWork = computed(() => (data.value?.upcoming_assignments ?? []).slice().sort((p, q) => toDate(p.due_date).getTime() - toDate(q.due_date).getTime())[0] || null)
+const liveToday = computed(() => (data.value?.upcoming_live_classes ?? []).filter(l => toDate(l.scheduled_start).toDateString() === new Date().toDateString()))
 
-// Monday to Sunday of this week, with a dot on days that have work due or a live class
-const week = computed(() => {
-  const start = new Date()
-  start.setHours(0, 0, 0, 0)
-  start.setDate(start.getDate() - ((start.getDay() + 6) % 7))
-  const todayKey = new Date().toDateString()
-  const at = (v: string) => new Date(v.replace(' ', 'T')).toDateString()
-  const work = new Set((data.value?.upcoming_assignments ?? []).map(a => at(a.due_date)))
-  const live = new Set((data.value?.upcoming_live_classes ?? []).map(l => at(l.scheduled_start)))
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(start)
-    d.setDate(start.getDate() + i)
-    const key = d.toDateString()
-    return { key, name: d.toLocaleDateString(undefined, { weekday: 'narrow' }), date: d.getDate(), today: key === todayKey, work: work.has(key), live: live.has(key) }
+// "You have 1 piece of work to do (1 overdue), a live class at 2:00 PM, and your average is 71.5% and rising."
+const daySentence = computed(() => {
+  const d = data.value
+  if (!d) return []
+  type Part = HeroPart
+  const bits: Part[][] = []
+  const todo = d.stats.assignments_pending
+  if (todo) {
+    const b: Part[] = [{ text: 'you have ' }, { text: `${todo} ${todo === 1 ? 'piece' : 'pieces'} of work`, strong: true }, { text: ' to do' }]
+    if (overdueWork.value.length) b.push({ text: ' - ' }, { text: `${overdueWork.value.length} overdue`, strong: true, alert: true })
+    bits.push(b)
+  }
+  if (liveToday.value.length) {
+    bits.push(liveToday.value.length === 1
+      ? [{ text: 'a live class at ' }, { text: clock(toDate(liveToday.value[0].scheduled_start)), strong: true }]
+      : [{ text: `${liveToday.value.length} live classes`, strong: true }, { text: ' today' }])
+  }
+  if (d.stats.average_score !== null) {
+    const trend = d.performance.trend === 'improving' ? ' and rising' : d.performance.trend === 'declining' ? ', a little lower lately' : ''
+    bits.push([{ text: 'your average is ' }, { text: `${d.stats.average_score}%`, strong: true }, { text: trend }])
+  }
+  if (!todo && !liveToday.value.length) bits.unshift([{ text: 'you are all caught up' }])
+  const out: Part[] = []
+  bits.forEach((b, i) => {
+    if (i > 0) out.push({ text: i === bits.length - 1 ? ', and ' : ', ' })
+    out.push(...b)
   })
+  out.push({ text: '.' })
+  out[0] = { ...out[0], text: out[0].text.charAt(0).toUpperCase() + out[0].text.slice(1) }
+  return out
 })
+
+// The one thing to do first: join a live class, catch up overdue work, the next piece due, or revise
+const primary = computed(() => {
+  const d = data.value
+  if (d && d.stats.live_now > 0) return { label: 'Join live class', to: '/student/live-classes', icon: 'video', danger: true }
+  const w = overdueWork.value[0] || nextWork.value
+  if (w) return { label: `${overdueWork.value.length ? 'Catch up' : 'Start'}: ${w.title}`, to: `/student/assignments/${w.id}/answer`, icon: 'clipboard', danger: overdueWork.value.length > 0 }
+  return { label: "Start today's revision", to: '/student/revision', icon: 'flame', danger: false }
+})
+const actions = computed(() => [
+  { label: 'eNotes', to: '/student/notes', icon: 'book', badge: 0 },
+  { label: 'My notes', to: '/student/my-notes', icon: 'pencil', badge: 0 },
+  { label: 'Item Bank', to: '/student/itembank', icon: 'document', badge: 0 },
+  { label: 'Chats', to: '/student/chat', icon: 'chat', badge: data.value?.stats.unread_messages || 0 }
+])
+const heroChips = computed<HeroChip[]>(() => {
+  const d = data.value
+  if (!d) return []
+  const out: HeroChip[] = []
+  if (admissionNumber.value) out.push({ text: `No. ${admissionNumber.value}`, tone: 'solid' })
+  out.push({ text: `${d.stats.classes_enrolled} ${d.stats.classes_enrolled === 1 ? 'class' : 'classes'}`, icon: 'users' })
+  out.push({ text: `${d.stats.assignments_completed} done`, icon: 'clipboard' })
+  return out
+})
+const heroActions = computed<HeroAction[]>(() => {
+  if (!data.value) return []
+  const p = primary.value
+  return [{ label: p.label, to: p.to, icon: p.icon, danger: p.danger }, ...actions.value]
+})
+// "HISTORY BOOK 1" -> "History Book 1"
+const niceTitle = (t: string) => (t === t.toUpperCase() ? t.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : t)
 
 const greeting = computed(() => {
   const hour = new Date().getHours()
