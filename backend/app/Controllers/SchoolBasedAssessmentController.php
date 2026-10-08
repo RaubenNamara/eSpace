@@ -183,7 +183,8 @@ class SchoolBasedAssessmentController extends Controller
             $this->validationError(['file' => 'The file is larger than 8 MB']);
             return;
         }
-        $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']) ?: '';
+        // MimeType falls back to the file's magic bytes on hosts without the fileinfo extension (the live server)
+        $mime = \eSpace\App\Utils\MimeType::detect($file['tmp_name'], (string) $file['name']);
         $ext = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'application/pdf' => 'pdf'][$mime] ?? null;
         if (!$ext) {
             $this->validationError(['file' => 'Only photos (JPG, PNG, WebP) and PDFs']);

@@ -135,6 +135,9 @@ class SchoolLibraryController extends TeacherLibraryController
                 $departments[$dep]['levels'] = array_values($byName);
             }
         }
-        $this->success(['role' => $this->role(), 'departments' => array_values($departments)]);
+        // Every class level the school has, so the form can say which ones a department has no learners in
+        $allLevels = array_column($db->query('SELECT DISTINCT name FROM classes WHERE deleted_at IS NULL')->fetchAll(\PDO::FETCH_ASSOC), 'name');
+        usort($allLevels, 'strnatcmp');
+        $this->success(['role' => $this->role(), 'departments' => array_values($departments), 'all_levels' => $allLevels]);
     }
 }

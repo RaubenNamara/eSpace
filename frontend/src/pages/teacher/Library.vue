@@ -318,6 +318,9 @@
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ role === 'teacher' ? 'Class *' : 'Who is it for? *' }}</label>
                 <TeacherClassSelector v-if="role === 'teacher'" v-model="bookForm.classTarget" />
                 <DepartmentAudiencePicker v-else v-model="bookForm.classTarget" :levels="formDepartment?.levels || []" :disabled="!formDepartment" />
+                <p v-if="formDepartment && missingLevels.length" class="mt-1 text-[11px] text-amber-700 dark:text-amber-300">
+                  No {{ missingLevels.join(', ') }} learners are enrolled in {{ formDepartment.name }} yet{{ role === 'admin' ? ' - enrol them (Dashboard → Enrol students) and those classes appear here' : '' }}.
+                </p>
               </div>
             </div>
 
@@ -494,7 +497,7 @@ const COPY = {
   admin: { description: "The school's books, in every department - upload one and choose the department and who it's for.", emptyTitle: "The school's shelves are empty", emptyMessage: "Add a textbook for a department - the whole department, every stream of a class, or one stream. Teachers' books show up here too." }
 }
 
-interface LibraryOptions { departments: { id: number; name: string; code: string; subjects: { id: number; name: string; code: string }[]; levels: AudienceLevel[] }[] }
+interface LibraryOptions { departments: { id: number; name: string; code: string; subjects: { id: number; name: string; code: string }[]; levels: AudienceLevel[] }[]; all_levels?: string[] }
 const libOptions = ref<LibraryOptions | null>(null)
 const loadLibraryOptions = async () => {
   try {
@@ -568,6 +571,11 @@ const activeFilterCount = computed(() => (subjectFilter.value ? 1 : 0) + (depart
 const formDepartment = computed(() => {
   const deps = libOptions.value?.departments ?? []
   return role === 'hod' ? deps[0] || null : deps.find(d => String(d.id) === bookForm.value.department_id) || null
+})
+// Class levels the school has that this department has no learners in (so they can't be chosen)
+const missingLevels = computed(() => {
+  const have = new Set((formDepartment.value?.levels ?? []).map(l => l.name))
+  return (libOptions.value?.all_levels ?? []).filter(n => !have.has(n))
 })
 const subjectChoices = computed(() => (role === 'teacher' ? assignments.value?.subjects ?? [] : formDepartment.value?.subjects ?? []))
 const onFormDepartmentChange = () => {
