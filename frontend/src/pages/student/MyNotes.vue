@@ -43,52 +43,51 @@
         </button>
       </nav>
 
-      <!-- Each subject, its topics (and books and papers) as notebooks -->
-      <section v-for="g in visibleGroups" :key="g.subject" class="mb-8">
-        <div class="flex items-center gap-2.5 mb-3">
+      <!-- Each subject, then each topic (or book, or paper) it has notes on, then the notes
+           themselves - every note its own page -->
+      <section v-for="g in visibleGroups" :key="g.subject" class="mb-10">
+        <div class="flex items-center gap-2.5 mb-4">
           <span class="w-1.5 h-6 rounded-full" :style="{ background: tint(g.subject) }"></span>
-          <h2 class="flex-1 text-base font-bold text-gray-900 dark:text-white">{{ g.subject }}</h2>
+          <h2 class="flex-1 text-lg font-bold text-gray-900 dark:text-white">{{ g.subject }}</h2>
           <span class="text-xs text-gray-400">{{ g.sources.length }} {{ g.sources.length === 1 ? 'topic' : 'topics' }} · {{ g.count }} {{ g.count === 1 ? 'note' : 'notes' }}</span>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <button
-            v-for="s in g.sources"
-            :key="s.key"
-            type="button"
-            class="group relative text-left rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex hover:-translate-y-0.5 hover:shadow-lg transition-all"
-            :class="notesStyle === 'notebook' ? 'notebook-paper' : 'bg-white dark:bg-gray-800'"
-            @click="openBook(g.subject, s)"
-          >
-            <!-- the notebook's spine -->
-            <span class="w-3 flex-shrink-0" :style="{ background: tint(g.subject) }"></span>
-            <span class="flex-1 min-w-0 p-4">
-              <span class="flex items-start gap-2">
-                <span class="min-w-0 flex-1">
-                  <span class="block font-semibold text-gray-900 dark:text-white leading-snug line-clamp-2">{{ niceTitle(s.source) }}</span>
-                  <span class="block mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">{{ s.kind_label }} · {{ s.notes.length }} {{ s.notes.length === 1 ? 'page of notes' : 'pages of notes' }} · {{ timeAgo(latest(s.notes)) }}</span>
-                </span>
-                <AppIcon :name="s.kind === 'enote' ? 'document' : s.kind === 'book' ? 'book' : 'clipboard'" class="w-4 h-4 text-gray-400 flex-shrink-0" />
-              </span>
-              <span class="mt-2.5 block text-xs text-gray-600 dark:text-gray-300 line-clamp-2" :style="notesStyle === 'notebook' ? { fontFamily: 'Patrick Hand, cursive', fontSize: '0.95rem' } : undefined">“{{ s.notes[0].text }}”</span>
-              <span class="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-300 group-hover:underline">Read as a book →</span>
-            </span>
-          </button>
+
+        <div v-for="s in g.sources" :key="s.key" class="mb-6">
+          <div class="flex items-center gap-2 mb-2.5 pl-1">
+            <AppIcon :name="s.kind === 'enote' ? 'document' : s.kind === 'book' ? 'book' : 'clipboard'" class="w-4 h-4 text-gray-400 flex-shrink-0" />
+            <h3 class="min-w-0 flex-1 font-semibold text-gray-800 dark:text-gray-100 truncate">{{ niceTitle(s.source) }}</h3>
+            <span class="text-[11px] text-gray-400 flex-shrink-0">{{ s.kind_label }} · {{ s.notes.length }} {{ s.notes.length === 1 ? 'page' : 'pages' }}</span>
+            <router-link :to="openLink(s)" class="text-xs font-semibold text-indigo-600 dark:text-indigo-300 hover:underline flex-shrink-0">Open</router-link>
+          </div>
+
+          <div class="space-y-3">
+            <article
+              v-for="n in s.notes"
+              :key="n.id"
+              class="mn-page rounded-xl border overflow-hidden"
+              :class="notesStyle === 'notebook' ? 'notebook-paper border-blue-200 dark:border-blue-900' : 'mn-paper border-amber-900/10 dark:border-gray-700'"
+            >
+              <div class="px-5 sm:px-7 pt-5 pb-4">
+                <div class="flex items-start gap-2 pb-2 mb-3 border-b-2" :class="notesStyle === 'notebook' ? 'border-rose-300/70' : 'border-amber-700/20 dark:border-gray-600'">
+                  <span class="flex-shrink-0 mt-0.5 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider" :class="notesStyle === 'notebook' ? 'bg-blue-100 text-blue-800' : 'bg-amber-800 text-amber-50'">{{ n.kind === 'enote' ? `Page ${n.page}` : `p. ${n.page}` }}</span>
+                  <p class="min-w-0 flex-1 text-sm font-bold leading-snug" :class="notesStyle === 'notebook' ? 'mn-hand-title text-blue-900' : 'mn-serif-title text-stone-800 dark:text-gray-100'">{{ headingOf(n) }}</p>
+                </div>
+                <div :class="notesStyle === 'notebook' ? 'mn-hand' : 'mn-serif text-stone-800 dark:text-gray-100'">
+                  <p v-for="(para, j) in paragraphsOf(n.text)" :key="j" class="whitespace-pre-line" :class="{ 'mn-drop': j === 0 }">{{ para }}</p>
+                </div>
+                <div class="flex items-center gap-2 pt-2 mt-1 border-t text-[11px] text-stone-500 dark:text-gray-400" :class="notesStyle === 'notebook' ? 'border-blue-200' : 'border-amber-700/10 dark:border-gray-700'">
+                  <span class="flex-1">Written {{ timeAgo(n.updated_at) }}</span>
+                  <button type="button" class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/30" title="Delete this note" @click="removeNote(n)">
+                    <AppIcon name="trash" class="w-3.5 h-3.5" />Delete
+                  </button>
+                </div>
+              </div>
+            </article>
+          </div>
         </div>
       </section>
     </template>
 
-    <MyNotesBook
-      v-if="reading"
-      :title="niceTitle(reading.source)"
-      :subject="reading.subject"
-      :kind-label="reading.kind_label"
-      :notes="readingNotes"
-      :notebook="notesStyle === 'notebook'"
-      :owner="student.name"
-      :open-link="openLink(reading)"
-      @close="reading = null"
-      @deleted="onDeleted"
-    />
   </div>
 </template>
 
@@ -100,7 +99,7 @@ import StatStrip, { type StatItem } from '@/components/ui/StatStrip.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import Skeleton from '@/components/ui/Skeleton.vue'
 import AppIcon from '@/components/common/AppIcon.vue'
-import MyNotesBook from '@/components/notes/MyNotesBook.vue'
+import { useConfirmStore } from '@/stores/confirm'
 import { timeAgo } from '@/components/dashboard/teacher/time'
 import { buildMyNotesPdf, buildNotebookPdf, type MyNote } from '@/utils/myNotesPdf'
 import { useNotesStyle } from '@/composables/useNotesStyle'
@@ -154,16 +153,23 @@ const visibleGroups = computed(() => groups.value
 // One colour per subject, for its notebooks' spines
 const TINTS = ['#4f46e5', '#0d9488', '#b45309', '#be123c', '#7c3aed', '#0369a1', '#4d7c0f', '#c2410c']
 const tint = (subject: string) => TINTS[[...subject].reduce((h, c) => h + c.charCodeAt(0), 0) % TINTS.length]
-const latest = (list: MyNote[]) => list.reduce((m, n) => (n.updated_at > m ? n.updated_at : m), list[0]?.updated_at || '')
 
-// The notebook being read, as a book
-type Source = { key: string; kind: MyNote['kind']; kind_label: string; source: string; source_id: number; notes: MyNote[] }
-const reading = ref<(Source & { subject: string }) | null>(null)
-const readingNotes = computed(() => (reading.value ? notes.value.filter(n => `${n.kind}:${n.source_id}` === reading.value!.key) : []))
-const openBook = (subject: string, s: Source) => { reading.value = { ...s, subject } }
-const onDeleted = (id: string) => {
-  notes.value = notes.value.filter(n => n.id !== id)
-  if (!readingNotes.value.length) reading.value = null
+// A note's heading: its page's own title when it has one (the badge already says which page)
+const headingOf = (n: MyNote) => (n.page_title && !/^page\s*\d*$/i.test(n.page_title.trim()) ? n.page_title : 'My summary')
+// Paragraphs: a blank line in the note starts a new one
+const paragraphsOf = (text: string) => text.replace(/\r/g, '').split(/\n\s*\n/).map(p => p.trim()).filter(Boolean)
+
+// A student removes one of their own notes
+const confirmDialog = useConfirmStore()
+const removeNote = async (n: MyNote) => {
+  if (!await confirmDialog.open({ title: 'Delete this note', message: 'It will be gone from your notes for good.', confirmLabel: 'Delete', danger: true })) return
+  try {
+    await axios.delete(`/api/student/my-notes/${n.id}`)
+    notes.value = notes.value.filter(x => x.id !== n.id)
+    toast.success('Note deleted')
+  } catch (e: any) {
+    toast.error(e?.response?.data?.message || 'The note could not be deleted')
+  }
 }
 
 const niceTitle = (t: string) => (t === t.toUpperCase() ? t.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : t)
@@ -198,3 +204,59 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style scoped>
+.mn-paper {
+  background: linear-gradient(90deg, rgba(120, 90, 40, 0.05), transparent 5%), #fdfaf3;
+}
+.dark .mn-paper {
+  background: #1f2937;
+}
+.mn-serif-title {
+  font-family: Georgia, 'Times New Roman', serif;
+}
+.mn-hand-title {
+  font-family: 'Patrick Hand', cursive;
+  font-size: 1.05rem;
+}
+.mn-serif {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+.mn-serif > p {
+  margin: 0 0 0.9rem;
+}
+.mn-hand {
+  font-family: 'Patrick Hand', cursive;
+  font-size: 1.12rem;
+  line-height: 1.75rem;
+  color: #1e3a8a;
+}
+.mn-hand > p {
+  /* a whole ruled line between paragraphs */
+  margin: 0 0 1.75rem !important;
+}
+.mn-serif > p:last-child,
+.mn-hand > p:last-child {
+  margin-bottom: 0.5rem !important;
+}
+.mn-drop {
+  /* keep the big first letter inside its own paragraph */
+  display: flow-root;
+}
+.mn-drop::first-letter {
+  float: left;
+  font-size: 2.8em;
+  line-height: 0.9;
+  padding: 0.08em 0.1em 0 0;
+  font-weight: 700;
+  color: #92400e;
+}
+.dark .mn-serif .mn-drop::first-letter {
+  color: #fbbf24;
+}
+.notebook-paper .mn-drop::first-letter {
+  color: #be123c;
+}
+</style>
