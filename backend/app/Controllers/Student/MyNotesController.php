@@ -12,7 +12,8 @@ use eSpace\App\Controllers\Controller;
  * them all in one place and download them as a PDF to keep, even after they leave the school.
  * Only the student's own words: nothing from the notes or books themselves.
  *
- * GET /student/my-notes
+ * GET    /student/my-notes
+ * DELETE /student/my-notes/{id}   id as listed: e12 (eNote page), b3 (book page), p4 (Item Bank page)
  */
 class MyNotesController extends Controller
 {
@@ -100,5 +101,22 @@ class MyNotesController extends Controller
             ],
             'school' => $school ?: null,
         ]);
+    }
+
+    /** A student removes one of their own notes - only ever their own */
+    public function delete($id): void
+    {
+        $tables = ['e' => 'enote_page_notes', 'b' => 'library_page_notes', 'p' => 'item_bank_page_notes'];
+        if (!preg_match('/^([ebp])(\d+)$/', (string) $id, $m)) {
+            $this->notFound('Note not found');
+            return;
+        }
+        $stmt = $this->getDb()->prepare("DELETE FROM {$tables[$m[1]]} WHERE id = ? AND student_id = ?");
+        $stmt->execute([(int) $m[2], (int) $this->getCurrentUserId()]);
+        if (!$stmt->rowCount()) {
+            $this->notFound('Note not found');
+            return;
+        }
+        $this->success([], 'Note deleted');
     }
 }

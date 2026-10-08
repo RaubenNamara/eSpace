@@ -57,6 +57,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         // Exam countdown and revision plan; my notes (to read and download)
         Router::get('/exam-plan', 'eSpace\App\Controllers\Student\ExamPlanController@index');
         Router::get('/my-notes', 'eSpace\App\Controllers\Student\MyNotesController@index');
+        Router::delete('/my-notes/{id}', 'eSpace\App\Controllers\Student\MyNotesController@delete');
         // Questions and answers on eNote topics
         Router::get('/enotes/{id}/questions', 'eSpace\App\Controllers\ENoteQuestionController@index');
         Router::post('/enotes/{id}/questions', 'eSpace\App\Controllers\ENoteQuestionController@ask');
