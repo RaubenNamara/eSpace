@@ -31,12 +31,47 @@ class VideoController extends Controller
         return \eSpace\Config\Database::getInstance();
     }
 
-    private function getTeacherId(): ?int
+    /**
+     * The value the items this user manages are picked out by (see scopeClause()): for a teacher,
+     * their teachers.id. The School*Controller (HOD and admin) overrides it.
+     */
+    protected function getTeacherId(): ?int
     {
         if (($_SESSION['role'] ?? null) === 'hod') {
             return $_SESSION['teacher_id'] ?? null;
         }
         return $_SESSION['user_id'] ?? null;
+    }
+
+    /** Which items this user manages: a teacher's own. A HOD's department and an admin's whole school override it. */
+    protected function scopeClause(string $alias, string $placeholder): string
+    {
+        return "{$alias}teacher_id = {$placeholder}";
+    }
+
+    /** The department a new item goes to (and an edited one is checked against) */
+    protected function writeDepartmentId(array $data, ?int $current): ?int
+    {
+        return $this->getTeacherDepartmentId();
+    }
+
+    /** Whether an item must be aimed at a class (a teacher's must; a HOD or admin may give it to the whole department) */
+    protected function classTargetRequired(): bool
+    {
+        return true;
+    }
+
+    /** Whether an edit may move an item to another department (only an admin's) */
+    protected function canMoveDepartment(): bool
+    {
+        return false;
+    }
+
+    /** Who is recorded as adding a new item */
+    protected function uploaderColumns(): array
+    {
+        $id = $this->getTeacherId();
+        return ['teacher_id' => $id, 'uploader_role' => 'teacher', 'uploader_id' => $id];
     }
 
     /**
@@ -72,12 +107,18 @@ class VideoController extends Controller
 
         $db = $this->getDb();
 
-        $where = ['v.teacher_id = :teacher_id', 'v.deleted_at IS NULL'];
+        $where = [$this->scopeClause('v.', ':teacher_id'), 'v.deleted_at IS NULL'];
         $params = ['teacher_id' => $teacherId];
 
         if (!empty($status)) {
             $where[] = 'v.status = :status';
             $params['status'] = $status;
+        }
+
+        $departmentFilter = (int) $this->query('department_id', 0);
+        if ($departmentFilter) {
+            $where[] = 'v.department_id = :department_filter';
+            $params['department_filter'] = $departmentFilter;
         }
 
         if (!empty($subjectId)) {
@@ -101,6 +142,13 @@ class VideoController extends Controller
                        c.name as class_name,
                        c.level as class_level,
                        c.stream_name as class_stream_name,
+                       d.name as department_name,
+                       d.code as department_code,
+                       CASE v.uploader_role
+                           WHEN 'admin' THEN 'School admin'
+                           WHEN 'hod' THEN COALESCE(CONCAT(h.first_name, ' ', h.last_name), 'Head of department')
+                           ELSE CONCAT(t.first_name, ' ', t.last_name)
+                       END AS uploader_name,
                        (SELECT COUNT(DISTINCT sde.student_id) FROM student_department_enrollments sde
                         LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
                         WHERE " . self::AUDIENCE_MATCH . ") AS audience,
@@ -110,6 +158,9 @@ class VideoController extends Controller
                 FROM videos v
                 LEFT JOIN subjects s ON v.subject_id = s.id
                 LEFT JOIN classes c ON v.class_id = c.id
+                LEFT JOIN departments d ON d.id = v.department_id
+                LEFT JOIN teachers t ON t.id = v.teacher_id
+                LEFT JOIN hods h ON v.uploader_role = 'hod' AND h.id = v.uploader_id
                 LEFT JOIN (
                     SELECT video_id, COUNT(DISTINCT student_id) AS viewers,
                            COUNT(DISTINCT CASE WHEN completed_at IS NOT NULL THEN student_id END) AS completed,
@@ -190,7 +241,7 @@ class VideoController extends Controller
         }
 
         $db = $this->getDb();
-        $stmt = $db->prepare("SELECT id FROM videos WHERE id = :id AND teacher_id = :teacher_id AND deleted_at IS NULL");
+        $stmt = $db->prepare("SELECT id FROM videos WHERE id = :id AND " . $this->scopeClause('', ':teacher_id') . " AND deleted_at IS NULL");
         $stmt->execute(['id' => (int) $id, 'teacher_id' => $teacherId]);
         if (!$stmt->fetch()) {
             $this->notFound('Video not found');
@@ -256,7 +307,7 @@ class VideoController extends Controller
                 FROM videos v
                 LEFT JOIN subjects s ON v.subject_id = s.id
                 LEFT JOIN classes c ON v.class_id = c.id
-                WHERE v.id = :id AND v.teacher_id = :teacher_id AND v.deleted_at IS NULL";
+                WHERE v.id = :id AND " . $this->scopeClause('v.', ':teacher_id') . " AND v.deleted_at IS NULL";
 
         $stmt = $db->prepare($sql);
         $stmt->execute(['id' => $id, 'teacher_id' => $teacherId]);
@@ -297,9 +348,9 @@ class VideoController extends Controller
 
         $db = $this->getDb();
 
-        $departmentId = $this->getTeacherDepartmentId();
+        $departmentId = $this->writeDepartmentId($data, null);
         if (!$departmentId) {
-            $this->error('Teacher must be assigned to a department to upload videos', 403);
+            $this->error('Choose the department this is for', 403);
             return;
         }
 
@@ -313,7 +364,7 @@ class VideoController extends Controller
 
         // Verify class/class-level is real and present in the department (individual stream or
         // "All Streams" for a class level)
-        $classTarget = $this->resolveClassTarget($data, $departmentId);
+        $classTarget = $this->resolveClassTarget($data, $departmentId, $this->classTargetRequired());
         if (!$classTarget['ok']) {
             $this->validationError(['class_id' => $classTarget['message']]);
             return;
@@ -338,20 +389,19 @@ class VideoController extends Controller
 
         $sql = "INSERT INTO videos
                     (title, description, subject_id, class_id, class_group_name, department_id, file_path, file_name, file_size,
-                     mime_type, teacher_id, status, published_at, created_at, updated_at)
+                     mime_type, teacher_id, uploader_role, uploader_id, status, published_at, created_at, updated_at)
                 VALUES
                     (:title, :description, :subject_id, :class_id, :class_group_name, :department_id, :file_path, :file_name, :file_size,
-                     :mime_type, :teacher_id, :status, :published_at, NOW(), NOW())";
+                     :mime_type, :teacher_id, :uploader_role, :uploader_id, :status, :published_at, NOW(), NOW())";
 
         $stmt = $db->prepare($sql);
 
         try {
-            $stmt->execute(array_merge($sanitizedData, [
+            $stmt->execute(array_merge($sanitizedData, $this->uploaderColumns(), [
                 'file_path' => $upload['url'],
                 'file_name' => $upload['file_name'],
                 'file_size' => $upload['size'],
                 'mime_type' => $upload['mime_type'],
-                'teacher_id' => $teacherId,
                 'published_at' => $status === 'published' ? date('Y-m-d H:i:s') : null
             ]));
 
@@ -404,7 +454,7 @@ class VideoController extends Controller
 
         $db = $this->getDb();
 
-        $stmt = $db->prepare("SELECT id, status, title, department_id, class_id, class_group_name FROM videos WHERE id = :id AND teacher_id = :teacher_id AND deleted_at IS NULL");
+        $stmt = $db->prepare("SELECT id, status, title, department_id, class_id, class_group_name FROM videos WHERE id = :id AND " . $this->scopeClause('', ':teacher_id') . " AND deleted_at IS NULL");
         $stmt->execute(['id' => $id, 'teacher_id' => $teacherId]);
         $video = $stmt->fetch();
 
@@ -430,18 +480,43 @@ class VideoController extends Controller
             $params['description'] = $desc !== '' ? htmlspecialchars($desc, ENT_QUOTES, 'UTF-8') : null;
         }
 
+        // The item's department - an admin may move it to another one
+        $itemDepartment = (int) $video['department_id'];
+        $targetDepartment = $itemDepartment;
+        if ($this->canMoveDepartment() && !empty($data['department_id']) && (int) $data['department_id'] !== $itemDepartment) {
+            $targetDepartment = (int) $this->writeDepartmentId($data, $itemDepartment);
+            if (!$targetDepartment) {
+                $this->validationError(['department_id' => 'Department not found']);
+                return;
+            }
+            if (empty($data['subject_id']) || (!array_key_exists('class_id', $data) && !array_key_exists('scope', $data))) {
+                $this->validationError(['department_id' => 'Choose a subject and classes in the new department']);
+                return;
+            }
+            $updates[] = 'department_id = :department_id';
+            $params['department_id'] = $targetDepartment;
+        }
+
         if (!empty($data['subject_id'])) {
+            if ($this->canMoveDepartment() || ($_SESSION['role'] ?? '') === 'hod') {
+                $check = $db->prepare('SELECT id FROM subjects WHERE id = ? AND department_id = ?');
+                $check->execute([(int) $data['subject_id'], $targetDepartment]);
+                if (!$check->fetch()) {
+                    $this->validationError(['subject_id' => 'Subject not found in that department']);
+                    return;
+                }
+            }
             $updates[] = 'subject_id = :subject_id';
             $params['subject_id'] = (int) $data['subject_id'];
         }
 
         if (array_key_exists('class_id', $data) || array_key_exists('class_group_name', $data) || array_key_exists('scope', $data)) {
-            $departmentId = $this->getTeacherDepartmentId();
+            $departmentId = $this->canMoveDepartment() ? $targetDepartment : $this->writeDepartmentId($data, $itemDepartment);
             if (!$departmentId) {
                 $this->error('Teacher must be assigned to a department', 403);
                 return;
             }
-            $classTarget = $this->resolveClassTarget($data, $departmentId);
+            $classTarget = $this->resolveClassTarget($data, $departmentId, $this->classTargetRequired());
             if (!$classTarget['ok']) {
                 $this->validationError(['class_id' => $classTarget['message']]);
                 return;
@@ -478,7 +553,7 @@ class VideoController extends Controller
                 $classId = $params['class_id'] ?? (int) $video['class_id'];
                 $classGroupName = $params['class_group_name'] ?? $video['class_group_name'];
                 (new NotificationService())->notifyDepartmentClass(
-                    (int) $video['department_id'],
+                    (int) ($params['department_id'] ?? $video['department_id']),
                     $classId,
                     'new_video',
                     'New video uploaded',
@@ -515,7 +590,7 @@ class VideoController extends Controller
         $id = (int) $id;
         $db = $this->getDb();
 
-        $stmt = $db->prepare("SELECT id FROM videos WHERE id = :id AND teacher_id = :teacher_id AND deleted_at IS NULL");
+        $stmt = $db->prepare("SELECT id FROM videos WHERE id = :id AND " . $this->scopeClause('', ':teacher_id') . " AND deleted_at IS NULL");
         $stmt->execute(['id' => $id, 'teacher_id' => $teacherId]);
         if (!$stmt->fetch()) {
             $this->notFound('Video not found');
@@ -557,7 +632,7 @@ class VideoController extends Controller
         }
         $db = $this->getDb();
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
-        $stmt = $db->prepare("SELECT id FROM videos WHERE id IN ($placeholders) AND teacher_id = ? AND deleted_at IS NULL");
+        $stmt = $db->prepare("SELECT id FROM videos WHERE id IN ($placeholders) AND " . $this->scopeClause('', '?') . " AND deleted_at IS NULL");
         $stmt->execute([...$ids, $teacherId]);
         return array_map('intval', array_column($stmt->fetchAll(), 'id'));
     }
@@ -667,7 +742,7 @@ class VideoController extends Controller
         $ids = $this->sanitizeIds($data['ids'] ?? []);
 
         $db = $this->getDb();
-        $where = ['v.teacher_id = ?', 'v.deleted_at IS NULL'];
+        $where = [$this->scopeClause('v.', '?'), 'v.deleted_at IS NULL'];
         $params = [$teacherId];
 
         if (!empty($ids)) {

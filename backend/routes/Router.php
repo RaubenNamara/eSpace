@@ -234,8 +234,6 @@ class Router
      */
     private static function executeHandler(array|string $handler, array $params, array $middleware, string $pattern = ''): void
     {
-        error_log("Router: executeHandler called");
-        error_log("Handler: " . (is_array($handler) ? $handler[0] . '@' . $handler[1] : $handler));
         
         // Parse string handler format "Controller@method"
         if (is_string($handler) && str_contains($handler, '@')) {
@@ -248,9 +246,7 @@ class Router
         if (is_array($handler)) {
             [$controllerClass, $method] = $handler;
             try {
-                error_log("Instantiating controller: " . $controllerClass);
                 $controller = new $controllerClass();
-                error_log("Controller instantiated successfully");
             } catch (\Exception $e) {
                 error_log("Controller instantiation failed: " . $e->getMessage());
                 http_response_code(500);
@@ -267,7 +263,6 @@ class Router
             $method = $handler;
         }
 
-        error_log("Executing middleware");
         // Execute middleware
         foreach ($middleware as $mw) {
             $middlewareInstance = self::instantiateMiddleware($mw, $controller);
@@ -278,13 +273,9 @@ class Router
             }
         }
 
-        error_log("Executing handler method: " . $method);
         // Execute handler
         try {
             if ($controller) {
-                error_log("Controller is not null, type: " . get_class($controller));
-                error_log("Checking if method exists: " . $method);
-                error_log("Method exists: " . method_exists($controller, $method) ? 'yes' : 'no');
                 
                 if (!method_exists($controller, $method)) {
                     error_log("ERROR: Method does not exist!");
@@ -311,10 +302,7 @@ class Router
                     }
                 }
                 
-                error_log("Route parameters set: " . json_encode($routeParams));
-                error_log("Calling controller method directly");
                 $controller->$method(...$params);
-                error_log("Handler method executed successfully");
             } elseif (is_callable($handler)) {
                 call_user_func_array($handler, $params);
             }
@@ -331,7 +319,6 @@ class Router
             exit;
         }
         
-        error_log("executeHandler completed");
     }
 
     /**

@@ -6,6 +6,8 @@
 import type { ClassTarget } from '@/components/teacher/TeacherClassSelector.vue'
 
 export interface ItemBankResource {
+  // Who added it (a teacher's name, the HOD's, or 'School admin') and its department - HOD/admin lists
+  uploader_name?: string | null
   id: number
   title: string
   description: string | null
@@ -42,6 +44,8 @@ export interface ItemBankResource {
 }
 
 export interface ItemBankResourceForm {
+  // Admin only: which department it's for
+  department_id?: string
   title: string
   description: string
   subject_id: string

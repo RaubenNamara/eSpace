@@ -1,6 +1,6 @@
 <template>
   <div class="w-full">
-    <PageHeader title="Videos" description="Short lessons and demos for your classes - see who has watched them." icon="video" accent="violet" :active-filters="activeFilterCount">
+    <PageHeader title="Videos" :description="COPY[contentRole]" icon="video" accent="violet" :active-filters="activeFilterCount">
       <template #actions>
         <button type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold bg-violet-600 text-white hover:bg-violet-700 shadow-sm shadow-violet-500/20" @click="openCreateModal">
           <AppIcon name="upload" class="w-4 h-4" />
@@ -12,12 +12,13 @@
           <svg class="w-4 h-4 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"></path></svg>
           <input v-model="search" type="search" placeholder="Search videos" class="w-full md:w-48 pl-8 pr-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-violet-500">
         </div>
+        <PickerDropdown v-if="contentRole === 'admin'" v-model="departmentFilter" label="Department" :options="departmentOptions" align="right" />
         <PickerDropdown v-model="subjectFilter" label="Subject" :options="subjectOptions" align="right" />
       </template>
       <StatStrip v-model="statusFilter" :items="statItems" hide-when-empty />
     </PageHeader>
 
-    <p v-if="assignmentsError" class="mb-4 text-sm text-rose-600 dark:text-rose-300">{{ assignmentsError }}</p>
+    <p v-if="assignmentsError || optionsError" class="mb-4 text-sm text-rose-600 dark:text-rose-300">{{ assignmentsError || optionsError }}</p>
 
     <Skeleton v-if="loading && !videos.length" variant="cards" :count="8" />
 
@@ -94,6 +95,7 @@
               </button>
             </template>
             <template #footer>
+              <p v-if="contentRole !== 'teacher' && video.uploader_name" class="mt-1 text-[11px] text-gray-400 dark:text-gray-500 truncate">By {{ video.uploader_name }}</p>
               <!-- Published: how far the class has got, opening the full list -->
               <p v-if="video.status === 'published' && !video.audience" class="mt-1.5 text-[11px] text-gray-400">No students in this class yet</p>
               <button v-else-if="video.status === 'published'" type="button" class="mt-1.5 w-full text-left group/w" :title="'See who has watched'" @click="viewersFor = video">
@@ -154,6 +156,18 @@
               ></textarea>
             </div>
 
+            <div v-if="contentRole === 'admin'" class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Department *</label>
+              <select
+                v-model="videoForm.department_id"
+                required
+                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+                @change="onFormDepartmentChange"
+              >
+                <option value="">Select Department</option>
+                <option v-for="d in contentOptions?.departments || []" :key="d.id" :value="String(d.id)">{{ d.name }}</option>
+              </select>
+            </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Subject *</label>
@@ -161,19 +175,25 @@
                   v-model="videoForm.subject_id"
                   required
                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-                  :disabled="!assignments?.subjects || assignments.subjects.length === 0"
+                  :disabled="!subjectChoices.length"
                 >
                   <option value="">Select Subject</option>
-                  <option v-for="subject in assignments?.subjects" :key="subject.id" :value="subject.id">{{ subject.name }}</option>
+                  <option v-for="subject in subjectChoices" :key="subject.id" :value="String(subject.id)">{{ subject.name }}</option>
                 </select>
-                <p v-if="!assignments?.subjects || assignments.subjects.length === 0" class="text-xs text-red-600 dark:text-red-400 mt-1">
-                  No subjects available. Please ensure you are assigned to a department with subjects.
+                <p v-if="!subjectChoices.length" class="text-xs text-red-600 dark:text-red-400 mt-1">
+                  {{ contentRole === 'admin' ? (videoForm.department_id ? 'This department has no subjects yet.' : 'Choose the department first.') : 'No subjects available. Please ensure you are assigned to a department with subjects.' }}
                 </p>
               </div>
 
               <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Class *</label>
-                <TeacherClassSelector v-model="videoForm.classTarget" />
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ contentRole === 'teacher' ? 'Class *' : 'Who is it for? *' }}</label>
+                <TeacherClassSelector v-if="contentRole === 'teacher'" v-model="videoForm.classTarget" />
+                <template v-else>
+                  <DepartmentAudiencePicker v-model="videoForm.classTarget" :levels="formDepartment?.levels || []" :disabled="!formDepartment" />
+                  <p v-if="formDepartment && missingLevels.length" class="mt-1 text-[11px] text-amber-700 dark:text-amber-300">
+                    No {{ missingLevels.join(', ') }} learners are enrolled in {{ formDepartment.name }} yet{{ contentRole === 'admin' ? ' - enrol them (Dashboard → Enrol students) and those classes appear here' : '' }}.
+                  </p>
+                </template>
               </div>
             </div>
 
@@ -246,7 +266,7 @@
 
     <!-- Player -->
     <VideoPlayerModal v-if="playVideo" :video="playVideo" @close="playVideo = null" />
-    <AudiencePanel v-if="viewersFor" :title="viewersFor.title" :endpoint="`/api/teacher/videos/${viewersFor.id}/viewers`" :subtitle="`${audienceLabel(viewersFor)} · ${viewersFor.subject_name || ''}`" @close="viewersFor = null" />
+    <AudiencePanel v-if="viewersFor" :title="viewersFor.title" :endpoint="`${contentApi}/${viewersFor.id}/viewers`" :subtitle="`${audienceLabel(viewersFor)} · ${viewersFor.subject_name || ''}`" @close="viewersFor = null" />
   </div>
 </template>
 
@@ -262,6 +282,8 @@ import AppIcon from '@/components/common/AppIcon.vue'
 import AudiencePanel from '@/components/common/AudiencePanel.vue'
 import VideoPlayerModal from '@/components/video/VideoPlayerModal.vue'
 import TeacherClassSelector from '@/components/teacher/TeacherClassSelector.vue'
+import DepartmentAudiencePicker from '@/components/library/DepartmentAudiencePicker.vue'
+import { useContentRole, currentContentRole } from '@/composables/useContentRole'
 import BulkActionBar from '@/components/common/BulkActionBar.vue'
 import VideoTile from '@/components/video/VideoTile.vue'
 import { orderShelves } from '@/utils/shelfOrder'
@@ -287,8 +309,8 @@ const saving = ref(false)
 const uploading = ref(false)
 const uploadProgress = ref(0)
 
-const statusFilter = usePersistedRef<string | null>('teacher-videos:status', null)
-const subjectFilter = usePersistedRef<string>('teacher-videos:subject', '')
+const statusFilter = usePersistedRef<string | null>(`${currentContentRole()}-videos:status`, null)
+const subjectFilter = usePersistedRef<string>(`${currentContentRole()}-videos:subject`, '')
 const search = ref('')
 const dragging = ref(false)
 const viewersFor = ref<VideoResource | null>(null)
@@ -305,6 +327,20 @@ const videoForm = ref<VideoForm>({
   file: null
 })
 
+// The same page for a teacher (their own), a HOD (the department's) and an admin (the school's,
+// adding into any department) - see useContentRole
+const { role: contentRole, api: contentApi, options: contentOptions, optionsError, loadOptions, departmentFilter, departmentOptions, formDepartment, subjectChoices, missingLevels } =
+  useContentRole('videos', videoForm, () => assignments.value?.subjects ?? [])
+const COPY = {
+  teacher: 'Short lessons and demos for your classes - see who has watched them.',
+  hod: "Your department's videos - yours and your teachers' - for the whole department, a class or one stream.",
+  admin: "The school's videos, in every department - upload one and choose the department and who it's for."
+}
+const onFormDepartmentChange = () => {
+  videoForm.value.subject_id = ''
+  videoForm.value.classTarget = { scope: 'department', class_id: null, class_group_name: null }
+}
+
 const stats = computed(() => ({
   total: videos.value.length,
   draft: videos.value.filter(v => v.status === 'draft').length,
@@ -318,17 +354,21 @@ const statItems = computed<StatItem[]>(() => [
   { label: 'Draft', value: stats.value.draft, key: 'draft', tone: 'amber' },
   { label: 'Archived', value: stats.value.archived, key: 'archived', tone: 'gray' }
 ])
-const subjectOptions = computed<PickerOption<string>[]>(() => [
-  { value: '', label: 'All subjects' },
-  ...(assignments.value?.subjects ?? []).map(s => ({ value: String(s.id), label: s.name }))
-])
-const activeFilterCount = computed(() => (subjectFilter.value ? 1 : 0) + (search.value.trim() ? 1 : 0))
+// A teacher's subjects; for a HOD or admin, the subjects their items are in
+const subjectOptions = computed<PickerOption<string>[]>(() => {
+  const subjects = contentRole === 'teacher'
+    ? (assignments.value?.subjects ?? []).map(s => ({ id: s.id, name: s.name }))
+    : [...new Map(videos.value.filter(i => i.subject_id && (!departmentFilter.value || String(i.department_id) === departmentFilter.value)).map(i => [i.subject_id, { id: i.subject_id as number, name: i.subject_name || '' }])).values()].sort((a, b) => a.name.localeCompare(b.name))
+  return [{ value: '', label: 'All subjects' }, ...subjects.map(s => ({ value: String(s.id), label: s.name }))]
+})
+const activeFilterCount = computed(() => (subjectFilter.value ? 1 : 0) + (departmentFilter.value ? 1 : 0) + (search.value.trim() ? 1 : 0))
 
 const filteredVideos = computed(() => {
   const q = search.value.trim().toLowerCase()
   return videos.value.filter(video => {
     const matchesStatus = !statusFilter.value || video.status === statusFilter.value
     const matchesSubject = !subjectFilter.value || video.subject_id === parseInt(subjectFilter.value)
+    if (departmentFilter.value && String(video.department_id) !== departmentFilter.value) return false
     const matchesSearch = !q || video.title.toLowerCase().includes(q) || (video.description || '').toLowerCase().includes(q)
     return matchesStatus && matchesSubject && matchesSearch
   })
@@ -337,8 +377,8 @@ const filteredVideos = computed(() => {
 // One tab per class ("All Streams" videos under their class), then one shelf per subject.
 // A class is always open - the last one used, or the first - with "All" beside them.
 const ALL = '__all'
-const classOf = (video: VideoResource) => video.class_group_name || video.class_name || 'Unassigned'
-const activeClassName = usePersistedRef<string>('teacher-videos:class', '')
+const classOf = (video: VideoResource) => video.class_group_name || video.class_name || 'Whole department'
+const activeClassName = usePersistedRef<string>(`${currentContentRole()}-videos:class`, '')
 const classTabs = computed(() => {
   const names = [...new Set(videos.value.map(classOf))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
   return [
@@ -355,9 +395,12 @@ const activeClassVideos = computed(() => activeClassName.value === ALL
   ? filteredVideos.value
   : filteredVideos.value.filter(v => classOf(v) === activeClassName.value))
 
-const audienceLabel = (video: VideoResource) => video.class_group_name
-  ? `${video.class_group_name} (All Streams)`
-  : video.class_stream_name ? `${video.class_name}-${video.class_stream_name}` : (video.class_name || '')
+const audienceLabel = (video: VideoResource) => {
+  const who = video.class_group_name
+    ? `${video.class_group_name} (All Streams)`
+    : video.class_stream_name ? `${video.class_name}-${video.class_stream_name}` : (video.class_name || 'Whole department')
+  return contentRole === 'admin' && video.department_name && video.department_name !== video.subject_name ? `${video.department_name} · ${who}` : who
+}
 // Share of the class that has opened it
 const reach = (video: VideoResource) => video.audience ? Math.min(100, Math.round(((video.viewers || 0) / video.audience) * 100)) : 0
 const fileSize = (bytes: number) => bytes >= 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`
@@ -380,7 +423,7 @@ const bulkSetStatus = async (status: 'draft' | 'published' | 'archived') => {
   const ids = bulk.selectedArray()
   if (ids.length === 0) return
   try {
-    await axios.post(`${API_BASE}/teacher/videos/bulk-status`, { ids, status })
+    await axios.post(`${contentApi}/bulk-status`, { ids, status })
     toast.success(`${ids.length} video(s) updated`)
     bulk.clear()
     await loadVideos()
@@ -391,7 +434,7 @@ const bulkSetStatus = async (status: 'draft' | 'published' | 'archived') => {
 
 const publishOne = async (video: VideoResource) => {
   try {
-    await axios.post(`${API_BASE}/teacher/videos/bulk-status`, { ids: [video.id], status: 'published' })
+    await axios.post(`${contentApi}/bulk-status`, { ids: [video.id], status: 'published' })
     toast.success(`"${video.title}" is now visible to students`)
     await loadVideos()
   } catch (error: any) {
@@ -404,7 +447,7 @@ const bulkDeleteSelected = async () => {
   if (ids.length === 0) return
   if (!await confirmDialog.open({ title: 'Delete videos', message: `Are you sure you want to delete ${ids.length} video(s)? This cannot be undone.`, confirmLabel: 'Delete', danger: true })) return
   try {
-    await axios.post(`${API_BASE}/teacher/videos/bulk-delete`, { ids })
+    await axios.post(`${contentApi}/bulk-delete`, { ids })
     toast.success(`${ids.length} video(s) deleted`)
     bulk.clear()
     await loadVideos()
@@ -416,7 +459,7 @@ const bulkDeleteSelected = async () => {
 const bulkExport = async () => {
   const ids = bulk.selectedArray()
   try {
-    const response = await axios.post(`${API_BASE}/teacher/videos/bulk-export`, { ids }, { responseType: 'blob' })
+    const response = await axios.post(`${contentApi}/bulk-export`, { ids }, { responseType: 'blob' })
     downloadBlob(response.data, 'videos.csv')
   } catch (error) {
     toast.error('Failed to export videos')
@@ -432,7 +475,7 @@ const clearFilters = () => {
 const loadVideos = async () => {
   try {
     loading.value = true
-    const response = await axios.get(`${API_BASE}/teacher/videos`)
+    const response = await axios.get(`${contentApi}`)
     if (response.data.success) {
       videos.value = response.data.data.videos || []
     }
@@ -460,7 +503,7 @@ const loadAssignments = async () => {
 const openCreateModal = () => {
   editingVideo.value = null
   // The subject on view is the likely one
-  videoForm.value = { title: '', description: '', subject_id: subjectFilter.value, classTarget: { scope: 'stream', class_id: null, class_group_name: null }, status: 'draft', file: null }
+  videoForm.value = { title: '', description: '', subject_id: subjectFilter.value, department_id: contentRole === 'admin' ? departmentFilter.value : '', classTarget: contentRole === 'teacher' ? { scope: 'stream', class_id: null, class_group_name: null } : { scope: 'department', class_id: null, class_group_name: null }, status: 'draft', file: null }
   showVideoModal.value = true
 }
 
@@ -470,9 +513,10 @@ const editVideo = (video: VideoResource) => {
     title: video.title,
     description: video.description || '',
     subject_id: video.subject_id?.toString() || '',
+    department_id: video.department_id ? String(video.department_id) : '',
     classTarget: video.class_group_name
       ? { scope: 'all_streams', class_id: null, class_group_name: video.class_group_name }
-      : { scope: 'stream', class_id: video.class_id, class_group_name: null },
+      : video.class_id ? { scope: 'stream', class_id: video.class_id, class_group_name: null } : { scope: 'department', class_id: null, class_group_name: null },
     status: video.status,
     file: null
   }
@@ -504,10 +548,11 @@ const saveVideo = async () => {
     saving.value = true
 
     if (editingVideo.value) {
-      await axios.put(`${API_BASE}/teacher/videos/${editingVideo.value.id}`, {
+      await axios.put(`${contentApi}/${editingVideo.value.id}`, {
         title: videoForm.value.title,
         description: videoForm.value.description,
         subject_id: videoForm.value.subject_id,
+        ...(contentRole === 'admin' ? { department_id: videoForm.value.department_id } : {}),
         scope: videoForm.value.classTarget.scope,
         class_id: videoForm.value.classTarget.class_id,
         class_group_name: videoForm.value.classTarget.class_group_name,
@@ -522,6 +567,7 @@ const saveVideo = async () => {
       formData.append('title', videoForm.value.title)
       formData.append('description', videoForm.value.description)
       formData.append('subject_id', videoForm.value.subject_id)
+      if (contentRole === 'admin') formData.append('department_id', videoForm.value.department_id || '')
       formData.append('scope', videoForm.value.classTarget.scope)
       if (videoForm.value.classTarget.class_id !== null) formData.append('class_id', String(videoForm.value.classTarget.class_id))
       if (videoForm.value.classTarget.class_group_name !== null) formData.append('class_group_name', videoForm.value.classTarget.class_group_name)
@@ -530,7 +576,7 @@ const saveVideo = async () => {
 
       uploading.value = true
       uploadProgress.value = 0
-      await axios.post(`${API_BASE}/teacher/videos`, formData, {
+      await axios.post(`${contentApi}`, formData, {
         onUploadProgress: (event) => {
           if (event.total) uploadProgress.value = Math.round((event.loaded * 100) / event.total)
         }
@@ -551,7 +597,7 @@ const saveVideo = async () => {
 const deleteVideo = async (id: number) => {
   if (!await confirmDialog.open({ title: 'Delete video', message: 'Are you sure you want to delete this video?', confirmLabel: 'Delete', danger: true })) return
   try {
-    await axios.delete(`${API_BASE}/teacher/videos/${id}`)
+    await axios.delete(`${contentApi}/${id}`)
     await loadVideos()
     toast.success('Video deleted')
   } catch (error) {
@@ -561,6 +607,6 @@ const deleteVideo = async (id: number) => {
 }
 
 onMounted(async () => {
-  await Promise.all([loadVideos(), loadAssignments()])
+  await Promise.all([loadVideos(), contentRole === 'teacher' ? loadAssignments() : loadOptions()])
 })
 </script>

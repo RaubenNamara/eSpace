@@ -517,7 +517,6 @@ class StudentController extends Controller
      */
     public function enroll(): void
     {
-        error_log("StudentController::enroll - Starting enrollment process");
         
         if (!$this->isAdmin()) {
             error_log("StudentController::enroll - User is not admin");
@@ -526,7 +525,6 @@ class StudentController extends Controller
         }
 
         $data = $this->input();
-        error_log("StudentController::enroll - Input data: " . json_encode($data));
 
         // Validate required fields
         $errors = $this->validateRequired(['department_id', 'academic_year_id', 'class_id', 'student_ids']);
@@ -580,7 +578,6 @@ class StudentController extends Controller
         $academicYearName = $academicYear['name'];
         $classId = $data['class_id'];
 
-        error_log("StudentController::enroll - Processing " . count($studentIds) . " students for department $departmentId, year $academicYearName, class $classId");
 
         try {
             $enrolledCount = 0;
@@ -599,7 +596,6 @@ class StudentController extends Controller
                 $stmt = $this->db->prepare("SELECT id FROM student_department_enrollments WHERE student_id = ? AND department_id = ? AND academic_year = ? AND status = 'active' AND deleted_at IS NULL");
                 $stmt->execute([$studentId, $departmentId, $academicYearName]);
                 if ($stmt->fetch()) {
-                    error_log("StudentController::enroll - Student $studentId already enrolled");
                     $duplicateCount++;
                     continue;
                 }
@@ -612,10 +608,8 @@ class StudentController extends Controller
                 if ($result) {
                     $affectedRows = $stmt->rowCount();
                     if ($affectedRows > 0) {
-                        error_log("StudentController::enroll - Successfully enrolled student $studentId");
                         $enrolledCount++;
                     } else {
-                        error_log("StudentController::enroll - Student $studentId was a duplicate (INSERT IGNORE)");
                         $duplicateCount++;
                     }
                 } else {

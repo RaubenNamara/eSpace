@@ -56,6 +56,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 // Set JSON header
 header('Content-Type: application/json; charset=utf-8');
 
+// An upload bigger than the server's post_max_size is thrown away by PHP before any of our code
+// runs ($_POST and $_FILES arrive empty), which would otherwise surface as a confusing "choose a
+// file" or validation error. Say plainly that the file is too big, and what the limit is.
+$tooBig = (function (): ?array {
+    $length = (int) ($_SERVER['CONTENT_LENGTH'] ?? 0);
+    $limit = trim((string) ini_get('post_max_size'));
+    if ($length <= 0 || $limit === '' || $limit === '0') {
+        return null;
+    }
+    $bytes = (int) $limit;
+    $unit = strtolower(substr($limit, -1));
+    $bytes *= match ($unit) { 'g' => 1024 ** 3, 'm' => 1024 ** 2, 'k' => 1024, default => 1 };
+    return $length > $bytes ? ['size' => $length, 'limit' => $bytes] : null;
+})();
+if ($tooBig !== null && empty($_POST) && empty($_FILES)) {
+    $mb = fn (int $b) => $b >= 1024 ** 2 ? round($b / 1024 ** 2) . ' MB' : round($b / 1024) . ' KB';
+    http_response_code(413);
+    echo json_encode([
+        'success' => false,
+        'message' => "This file is {$mb($tooBig['size'])} - the server accepts uploads up to {$mb($tooBig['limit'])}. Use a smaller file or ask the administrator to raise the limit.",
+        'errors' => ['file' => 'File too large'],
+    ]);
+    exit;
+}
+
 // Load routes
 require_once __DIR__ . '/../routes/api.php';
 

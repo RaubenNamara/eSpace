@@ -1,8 +1,8 @@
 <template>
   <div class="w-full">
-    <PageHeader title="Item Bank" description="Past papers, practice questions and revision packs - students open them right in eSpace." icon="clipboard" accent="amber" :active-filters="activeFilterCount">
+    <PageHeader title="Item Bank" :description="COPY[contentRole]" icon="clipboard" accent="amber" :active-filters="activeFilterCount">
       <template #actions>
-        <button type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold border border-amber-300 dark:border-amber-700 bg-white dark:bg-gray-800 text-amber-800 dark:text-amber-200 hover:bg-amber-50 dark:hover:bg-amber-900/30" title="Write questions in eSpace, page by page, with answers students can check" @click="openCreateModal('paper')">
+        <button v-if="contentRole === 'teacher'" type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold border border-amber-300 dark:border-amber-700 bg-white dark:bg-gray-800 text-amber-800 dark:text-amber-200 hover:bg-amber-50 dark:hover:bg-amber-900/30" title="Write questions in eSpace, page by page, with answers students can check" @click="openCreateModal('paper')">
           <AppIcon name="pencil" class="w-4 h-4" />
           <span class="hidden sm:inline">Write a paper</span><span class="sm:hidden">Write</span>
         </button>
@@ -16,12 +16,13 @@
           <svg class="w-4 h-4 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"></path></svg>
           <input v-model="search" type="search" placeholder="Search papers" class="w-full md:w-48 pl-8 pr-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
         </div>
+        <PickerDropdown v-if="contentRole === 'admin'" v-model="departmentFilter" label="Department" :options="departmentOptions" align="right" />
         <PickerDropdown v-model="subjectFilter" label="Subject" :options="subjectOptions" align="right" />
       </template>
       <StatStrip v-model="statusFilter" :items="statItems" hide-when-empty />
     </PageHeader>
 
-    <p v-if="assignmentsError" class="mb-4 text-sm text-rose-600 dark:text-rose-300">{{ assignmentsError }}</p>
+    <p v-if="assignmentsError || optionsError" class="mb-4 text-sm text-rose-600 dark:text-rose-300">{{ assignmentsError || optionsError }}</p>
 
     <Skeleton v-if="loading && !resources.length" variant="cards" :count="6" />
 
@@ -125,6 +126,7 @@
               </div>
               <p class="mt-1 text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug">{{ resource.title }}</p>
               <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ audienceLabel(resource) }}</p>
+              <p v-if="contentRole !== 'teacher' && resource.uploader_name" class="text-[11px] text-gray-400 dark:text-gray-500 truncate">By {{ resource.uploader_name }}</p>
 
               <!-- Published: how far the class has got, opening the full list -->
               <template v-if="resource.status === 'published'">
@@ -272,6 +274,18 @@
               </div>
             </div>
 
+            <div v-if="contentRole === 'admin'" class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Department *</label>
+              <select
+                v-model="resourceForm.department_id"
+                required
+                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+                @change="onFormDepartmentChange"
+              >
+                <option value="">Select Department</option>
+                <option v-for="d in contentOptions?.departments || []" :key="d.id" :value="String(d.id)">{{ d.name }}</option>
+              </select>
+            </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Subject *</label>
@@ -279,19 +293,25 @@
                   v-model="resourceForm.subject_id"
                   required
                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-                  :disabled="!assignments?.subjects || assignments.subjects.length === 0"
+                  :disabled="!subjectChoices.length"
                 >
                   <option value="">Select Subject</option>
-                  <option v-for="subject in assignments?.subjects" :key="subject.id" :value="subject.id">{{ subject.name }}</option>
+                  <option v-for="subject in subjectChoices" :key="subject.id" :value="String(subject.id)">{{ subject.name }}</option>
                 </select>
-                <p v-if="!assignments?.subjects || assignments.subjects.length === 0" class="text-xs text-red-600 dark:text-red-400 mt-1">
-                  No subjects available. Please ensure you are assigned to a department with subjects.
+                <p v-if="!subjectChoices.length" class="text-xs text-red-600 dark:text-red-400 mt-1">
+                  {{ contentRole === 'admin' ? (resourceForm.department_id ? 'This department has no subjects yet.' : 'Choose the department first.') : 'No subjects available. Please ensure you are assigned to a department with subjects.' }}
                 </p>
               </div>
 
               <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Class *</label>
-                <TeacherClassSelector v-model="resourceForm.classTarget" />
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ contentRole === 'teacher' ? 'Class *' : 'Who is it for? *' }}</label>
+                <TeacherClassSelector v-if="contentRole === 'teacher'" v-model="resourceForm.classTarget" />
+                <template v-else>
+                  <DepartmentAudiencePicker v-model="resourceForm.classTarget" :levels="formDepartment?.levels || []" :disabled="!formDepartment" />
+                  <p v-if="formDepartment && missingLevels.length" class="mt-1 text-[11px] text-amber-700 dark:text-amber-300">
+                    No {{ missingLevels.join(', ') }} learners are enrolled in {{ formDepartment.name }} yet{{ contentRole === 'admin' ? ' - enrol them (Dashboard → Enrol students) and those classes appear here' : '' }}.
+                  </p>
+                </template>
               </div>
             </div>
 
@@ -380,7 +400,7 @@
       v-if="readersFor"
       :title="readersFor.title"
       :subtitle="`${audienceLabel(readersFor)} · ${readersFor.subject_name || ''}`"
-      :endpoint="`/api/teacher/itembank/${readersFor.id}/readers`"
+      :endpoint="`${contentApi}/${readersFor.id}/readers`"
       icon="clipboard"
       verb="opened"
       :tracks-progress="false"
@@ -401,6 +421,8 @@ import AppIcon from '@/components/common/AppIcon.vue'
 import AudiencePanel from '@/components/common/AudiencePanel.vue'
 import ItemBankPdfViewer from '@/components/itembank/ItemBankPdfViewer.vue'
 import TeacherClassSelector from '@/components/teacher/TeacherClassSelector.vue'
+import DepartmentAudiencePicker from '@/components/library/DepartmentAudiencePicker.vue'
+import { useContentRole, currentContentRole } from '@/composables/useContentRole'
 import { useRouter } from 'vue-router'
 import BulkActionBar from '@/components/common/BulkActionBar.vue'
 import ItemBankTopicsPicker from '@/components/itembank/ItemBankTopicsPicker.vue'
@@ -432,8 +454,8 @@ const loading = ref(false)
 const saving = ref(false)
 const uploadProgress = ref(0)
 
-const statusFilter = usePersistedRef<string | null>('teacher-itembank:status', null)
-const subjectFilter = usePersistedRef<string>('teacher-itembank:subject', '')
+const statusFilter = usePersistedRef<string | null>(`${currentContentRole()}-itembank:status`, null)
+const subjectFilter = usePersistedRef<string>(`${currentContentRole()}-itembank:subject`, '')
 const search = ref('')
 const dragging = ref(false)
 const readersFor = ref<ItemBankResource | null>(null)
@@ -453,6 +475,20 @@ const resourceForm = ref<ItemBankResourceForm>({
   file: null
 })
 
+// The same page for a teacher (their own), a HOD (the department's) and an admin (the school's,
+// adding into any department) - see useContentRole
+const { role: contentRole, api: contentApi, options: contentOptions, optionsError, loadOptions, departmentFilter, departmentOptions, formDepartment, subjectChoices, missingLevels } =
+  useContentRole('itembank', resourceForm, () => assignments.value?.subjects ?? [])
+const COPY = {
+  teacher: 'Past papers, practice questions and revision packs - students open them right in eSpace.',
+  hod: "Your department's papers and practice packs - yours and your teachers' - for the whole department, a class or one stream.",
+  admin: "The school's papers and practice packs, in every department - upload one and choose the department and who it's for."
+}
+const onFormDepartmentChange = () => {
+  resourceForm.value.subject_id = ''
+  resourceForm.value.classTarget = { scope: 'department', class_id: null, class_group_name: null }
+}
+
 const stats = computed(() => ({
   total: resources.value.length,
   draft: resources.value.filter(r => r.status === 'draft').length,
@@ -466,17 +502,21 @@ const statItems = computed<StatItem[]>(() => [
   { label: 'Draft', value: stats.value.draft, key: 'draft', tone: 'amber' },
   { label: 'Archived', value: stats.value.archived, key: 'archived', tone: 'gray' }
 ])
-const subjectOptions = computed<PickerOption<string>[]>(() => [
-  { value: '', label: 'All subjects' },
-  ...(assignments.value?.subjects ?? []).map(s => ({ value: String(s.id), label: s.name }))
-])
-const activeFilterCount = computed(() => (subjectFilter.value ? 1 : 0) + (search.value.trim() ? 1 : 0))
+// A teacher's subjects; for a HOD or admin, the subjects their items are in
+const subjectOptions = computed<PickerOption<string>[]>(() => {
+  const subjects = contentRole === 'teacher'
+    ? (assignments.value?.subjects ?? []).map(s => ({ id: s.id, name: s.name }))
+    : [...new Map(resources.value.filter(i => i.subject_id && (!departmentFilter.value || String(i.department_id) === departmentFilter.value)).map(i => [i.subject_id, { id: i.subject_id as number, name: i.subject_name || '' }])).values()].sort((a, b) => a.name.localeCompare(b.name))
+  return [{ value: '', label: 'All subjects' }, ...subjects.map(s => ({ value: String(s.id), label: s.name }))]
+})
+const activeFilterCount = computed(() => (subjectFilter.value ? 1 : 0) + (departmentFilter.value ? 1 : 0) + (search.value.trim() ? 1 : 0))
 
 const filteredResources = computed(() => {
   const q = search.value.trim().toLowerCase()
   return resources.value.filter(resource => {
     const matchesStatus = !statusFilter.value || resource.status === statusFilter.value
     const matchesSubject = !subjectFilter.value || resource.subject_id === parseInt(subjectFilter.value)
+    if (departmentFilter.value && String(resource.department_id) !== departmentFilter.value) return false
     const matchesSearch = !q || [resource.title, resource.description].some(t => (t || '').toLowerCase().includes(q))
     return matchesStatus && matchesSubject && matchesSearch
   })
@@ -485,8 +525,8 @@ const filteredResources = computed(() => {
 // One tab per class ("All Streams" papers under their class), then one shelf per subject.
 // A class is always open - the last one used, or the first - with "All" beside them.
 const ALL = '__all'
-const classOf = (resource: ItemBankResource) => resource.class_group_name || resource.class_name || 'Unassigned'
-const activeClassName = usePersistedRef<string>('teacher-itembank:class', '')
+const classOf = (resource: ItemBankResource) => resource.class_group_name || resource.class_name || 'Whole department'
+const activeClassName = usePersistedRef<string>(`${currentContentRole()}-itembank:class`, '')
 const classTabs = computed(() => {
   const names = [...new Set(resources.value.map(classOf))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
   return [
@@ -508,9 +548,12 @@ const reach = (resource: ItemBankResource) => resource.audience ? Math.min(100, 
 // Published first, the least-opened on top - that's where a nudge helps most
 const readingList = computed(() => [...activeClassResources.value].sort((a, b) =>
   (a.status === 'published' ? 0 : 1) - (b.status === 'published' ? 0 : 1) || reach(a) - reach(b)))
-const audienceLabel = (resource: ItemBankResource) => resource.class_group_name
-  ? `${resource.class_group_name} (All Streams)`
-  : resource.class_stream_name ? `${resource.class_name}-${resource.class_stream_name}` : (resource.class_name || '')
+const audienceLabel = (resource: ItemBankResource) => {
+  const who = resource.class_group_name
+    ? `${resource.class_group_name} (All Streams)`
+    : resource.class_stream_name ? `${resource.class_name}-${resource.class_stream_name}` : (resource.class_name || 'Whole department')
+  return contentRole === 'admin' && resource.department_name && resource.department_name !== resource.subject_name ? `${resource.department_name} · ${who}` : who
+}
 const statusChip = (status: string) => status === 'published'
   ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200'
   : status === 'draft' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
@@ -531,7 +574,7 @@ const bulkSetStatus = async (status: 'draft' | 'published' | 'archived') => {
   const ids = bulk.selectedArray()
   if (ids.length === 0) return
   try {
-    await axios.post(`${API_BASE}/teacher/itembank/bulk-status`, { ids, status })
+    await axios.post(`${contentApi}/bulk-status`, { ids, status })
     toast.success(`${ids.length} resource(s) updated`)
     bulk.clear()
     await loadResources()
@@ -545,7 +588,7 @@ const bulkSetDownload = async (allow: boolean) => {
   const ids = bulk.selectedArray()
   if (ids.length === 0) return
   try {
-    await axios.post(`${API_BASE}/teacher/itembank/bulk-download`, { ids, allow })
+    await axios.post(`${contentApi}/bulk-download`, { ids, allow })
     toast.success(`${ids.length} resource(s) ${allow ? 'can now be downloaded' : 'no longer downloadable'}`)
     bulk.clear()
     await loadResources()
@@ -556,7 +599,7 @@ const bulkSetDownload = async (allow: boolean) => {
 
 const publishOne = async (resource: ItemBankResource) => {
   try {
-    await axios.post(`${API_BASE}/teacher/itembank/bulk-status`, { ids: [resource.id], status: 'published' })
+    await axios.post(`${contentApi}/bulk-status`, { ids: [resource.id], status: 'published' })
     toast.success(`"${resource.title}" is now visible to students`)
     await loadResources()
   } catch (error: any) {
@@ -569,7 +612,7 @@ const bulkDeleteSelected = async () => {
   if (ids.length === 0) return
   if (!await confirmDialog.open({ title: 'Delete resources', message: `Are you sure you want to delete ${ids.length} resource(s)? This cannot be undone.`, confirmLabel: 'Delete', danger: true })) return
   try {
-    await axios.post(`${API_BASE}/teacher/itembank/bulk-delete`, { ids })
+    await axios.post(`${contentApi}/bulk-delete`, { ids })
     toast.success(`${ids.length} resource(s) deleted`)
     bulk.clear()
     await loadResources()
@@ -581,7 +624,7 @@ const bulkDeleteSelected = async () => {
 const bulkExport = async () => {
   const ids = bulk.selectedArray()
   try {
-    const response = await axios.post(`${API_BASE}/teacher/itembank/bulk-export`, { ids }, { responseType: 'blob' })
+    const response = await axios.post(`${contentApi}/bulk-export`, { ids }, { responseType: 'blob' })
     downloadBlob(response.data, 'item-bank.csv')
   } catch (error) {
     toast.error('Failed to export resources')
@@ -614,7 +657,7 @@ const formatFileSize = (bytes: number | null) => {
 const loadResources = async () => {
   try {
     loading.value = true
-    const response = await axios.get(`${API_BASE}/teacher/itembank`)
+    const response = await axios.get(`${contentApi}`)
     if (response.data.success) {
       resources.value = response.data.data.resources || []
       generateMissingCovers()
@@ -639,7 +682,7 @@ const uploadCover = async (resourceId: number, blob: Blob, auto: boolean, totalP
   data.append('cover', blob, auto ? 'first-page.jpg' : 'cover')
   data.append('auto', auto ? '1' : '0')
   if (totalPages) data.append('total_pages', String(totalPages))
-  const response = await axios.post(`${API_BASE}/teacher/itembank/${resourceId}/cover`, data)
+  const response = await axios.post(`${contentApi}/${resourceId}/cover`, data)
   const coverImage: string = response.data.data.cover_image
   for (const target of [resources.value.find(r => r.id === resourceId), editingResource.value?.id === resourceId ? editingResource.value : null]) {
     if (!target) continue
@@ -696,7 +739,7 @@ const useFirstPageCover = async () => {
     const { blob, totalPages } = await renderPdfCover(resolveAssetUrl(editingResource.value.file_path))
     // A deliberate choice, so it replaces a custom picture too: clear first, then upload as auto
     if (editingResource.value.cover_image && !isAutoCover(editingResource.value.cover_image)) {
-      await axios.delete(`${API_BASE}/teacher/itembank/${editingResource.value.id}/cover`)
+      await axios.delete(`${contentApi}/${editingResource.value.id}/cover`)
     }
     await uploadCover(editingResource.value.id, blob, true, totalPages)
     toast.success('Cover set to the first page')
@@ -711,7 +754,7 @@ const removeCover = async () => {
   if (!editingResource.value) return
   coverBusy.value = true
   try {
-    await axios.delete(`${API_BASE}/teacher/itembank/${editingResource.value.id}/cover`)
+    await axios.delete(`${contentApi}/${editingResource.value.id}/cover`)
     const id = editingResource.value.id
     editingResource.value.cover_image = null
     const listed = resources.value.find(r => r.id === id)
@@ -743,15 +786,17 @@ const loadAssignments = async () => {
 // 'pdf' uploads a paper; 'paper' writes one in eSpace (questions added in its builder)
 const paperMode = ref(false)
 const openResource = (resource: ItemBankResource) => {
-  if (resource.question_type === 'paper') router.push(`/teacher/itembank/papers/${resource.id}`)
-  else previewResource.value = resource
+  if (resource.question_type === 'paper') {
+    if (contentRole === 'teacher') router.push(`/teacher/itembank/papers/${resource.id}`)
+    else toast.info('This paper is written in eSpace - its teacher edits it in their Item Bank')
+  } else previewResource.value = resource
 }
 
 const openCreateModal = (kind: 'pdf' | 'paper' = 'pdf') => {
   paperMode.value = kind === 'paper'
   editingResource.value = null
   // The subject on view is the likely one
-  resourceForm.value = { title: '', description: '', subject_id: subjectFilter.value, classTarget: { scope: 'stream', class_id: null, class_group_name: null }, status: 'draft', allow_download: false, file: null }
+  resourceForm.value = { title: '', description: '', subject_id: subjectFilter.value, department_id: contentRole === 'admin' ? departmentFilter.value : '', classTarget: contentRole === 'teacher' ? { scope: 'stream', class_id: null, class_group_name: null } : { scope: 'department', class_id: null, class_group_name: null }, status: 'draft', allow_download: false, file: null }
   showResourceModal.value = true
 }
 
@@ -761,9 +806,10 @@ const editResource = (resource: ItemBankResource) => {
     title: resource.title,
     description: resource.description || '',
     subject_id: resource.subject_id?.toString() || '',
+    department_id: resource.department_id ? String(resource.department_id) : '',
     classTarget: resource.class_group_name
       ? { scope: 'all_streams', class_id: null, class_group_name: resource.class_group_name }
-      : { scope: 'stream', class_id: resource.class_id, class_group_name: null },
+      : resource.class_id ? { scope: 'stream', class_id: resource.class_id, class_group_name: null } : { scope: 'department', class_id: null, class_group_name: null },
     status: resource.status,
     allow_download: !!Number(resource.allow_download),
     file: null
@@ -803,10 +849,11 @@ const saveResource = async () => {
     uploadProgress.value = 0
 
     if (editingResource.value) {
-      await axios.put(`${API_BASE}/teacher/itembank/${editingResource.value.id}`, {
+      await axios.put(`${contentApi}/${editingResource.value.id}`, {
         title: resourceForm.value.title,
         description: resourceForm.value.description,
         subject_id: resourceForm.value.subject_id,
+        ...(contentRole === 'admin' ? { department_id: resourceForm.value.department_id } : {}),
         scope: resourceForm.value.classTarget.scope,
         class_id: resourceForm.value.classTarget.class_id,
         class_group_name: resourceForm.value.classTarget.class_group_name,
@@ -815,11 +862,12 @@ const saveResource = async () => {
       })
       if (!(await topicsPicker.value?.save() ?? true)) toast.warning('Saved, but the topics could not be saved - try again')
     } else if (paperMode.value) {
-      const res = await axios.post(`${API_BASE}/teacher/itembank`, {
+      const res = await axios.post(`${contentApi}`, {
         kind: 'paper',
         title: resourceForm.value.title,
         description: resourceForm.value.description,
         subject_id: resourceForm.value.subject_id,
+        ...(contentRole === 'admin' ? { department_id: resourceForm.value.department_id } : {}),
         scope: resourceForm.value.classTarget.scope,
         class_id: resourceForm.value.classTarget.class_id,
         class_group_name: resourceForm.value.classTarget.class_group_name,
@@ -837,6 +885,7 @@ const saveResource = async () => {
       formData.append('title', resourceForm.value.title)
       formData.append('description', resourceForm.value.description)
       formData.append('subject_id', resourceForm.value.subject_id)
+      if (contentRole === 'admin') formData.append('department_id', resourceForm.value.department_id || '')
       formData.append('scope', resourceForm.value.classTarget.scope)
       if (resourceForm.value.classTarget.class_id !== null) formData.append('class_id', String(resourceForm.value.classTarget.class_id))
       if (resourceForm.value.classTarget.class_group_name !== null) formData.append('class_group_name', resourceForm.value.classTarget.class_group_name)
@@ -844,7 +893,7 @@ const saveResource = async () => {
       formData.append('allow_download', resourceForm.value.allow_download ? '1' : '0')
       formData.append('file', resourceForm.value.file)
 
-      await axios.post(`${API_BASE}/teacher/itembank`, formData, {
+      await axios.post(`${contentApi}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (e) => {
           if (e.total) uploadProgress.value = Math.round((e.loaded * 100) / e.total)
@@ -866,7 +915,7 @@ const saveResource = async () => {
 const deleteResource = async (id: number) => {
   if (!await confirmDialog.open({ title: 'Delete resource', message: 'Are you sure you want to delete this resource?', confirmLabel: 'Delete', danger: true })) return
   try {
-    await axios.delete(`${API_BASE}/teacher/itembank/${id}`)
+    await axios.delete(`${contentApi}/${id}`)
     await loadResources()
     toast.success('Resource deleted')
   } catch (error) {
@@ -876,6 +925,6 @@ const deleteResource = async (id: number) => {
 }
 
 onMounted(async () => {
-  await Promise.all([loadResources(), loadAssignments()])
+  await Promise.all([loadResources(), contentRole === 'teacher' ? loadAssignments() : loadOptions()])
 })
 </script>

@@ -619,20 +619,33 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::delete('/library/{id}', 'eSpace\App\Controllers\SchoolLibraryController@delete');
 
         // Videos - department-scoped moderation
-        Router::get('/videos', 'eSpace\App\Controllers\HOD\VideoController@index');
-        Router::post('/videos/bulk-status', 'eSpace\App\Controllers\HOD\VideoController@bulkStatus');
-        Router::post('/videos/bulk-delete', 'eSpace\App\Controllers\HOD\VideoController@bulkDelete');
-        Router::post('/videos/bulk-export', 'eSpace\App\Controllers\HOD\VideoController@bulkExport');
-        Router::put('/videos/{id}', 'eSpace\App\Controllers\HOD\VideoController@update');
-        Router::delete('/videos/{id}', 'eSpace\App\Controllers\HOD\VideoController@delete');
+        // videos - the teacher's page over the department (HOD) or the whole school (admin), with upload
+        Router::get('/videos', 'eSpace\App\Controllers\SchoolVideoController@index');
+        Router::get('/videos/options', 'eSpace\App\Controllers\SchoolVideoController@options');
+        Router::post('/videos', 'eSpace\App\Controllers\SchoolVideoController@create');
+        Router::post('/videos/bulk-status', 'eSpace\App\Controllers\SchoolVideoController@bulkStatus');
+        Router::post('/videos/bulk-delete', 'eSpace\App\Controllers\SchoolVideoController@bulkDelete');
+        Router::post('/videos/bulk-export', 'eSpace\App\Controllers\SchoolVideoController@bulkExport');
+        Router::get('/videos/{id}/viewers', 'eSpace\App\Controllers\SchoolVideoController@viewers');
+        Router::get('/videos/{id}', 'eSpace\App\Controllers\SchoolVideoController@show');
+        Router::put('/videos/{id}', 'eSpace\App\Controllers\SchoolVideoController@update');
+        Router::delete('/videos/{id}', 'eSpace\App\Controllers\SchoolVideoController@delete');
 
         // Item Bank - department-scoped moderation
-        Router::get('/itembank', 'eSpace\App\Controllers\HOD\ItemBankController@index');
-        Router::post('/itembank/bulk-status', 'eSpace\App\Controllers\HOD\ItemBankController@bulkStatus');
-        Router::post('/itembank/bulk-delete', 'eSpace\App\Controllers\HOD\ItemBankController@bulkDelete');
-        Router::post('/itembank/bulk-export', 'eSpace\App\Controllers\HOD\ItemBankController@bulkExport');
-        Router::put('/itembank/{id}', 'eSpace\App\Controllers\HOD\ItemBankController@update');
-        Router::delete('/itembank/{id}', 'eSpace\App\Controllers\HOD\ItemBankController@delete');
+        // itembank - the teacher's page over the department (HOD) or the whole school (admin), with upload
+        Router::get('/itembank', 'eSpace\App\Controllers\SchoolItemBankController@index');
+        Router::get('/itembank/options', 'eSpace\App\Controllers\SchoolItemBankController@options');
+        Router::post('/itembank', 'eSpace\App\Controllers\SchoolItemBankController@create');
+        Router::post('/itembank/bulk-status', 'eSpace\App\Controllers\SchoolItemBankController@bulkStatus');
+        Router::post('/itembank/bulk-delete', 'eSpace\App\Controllers\SchoolItemBankController@bulkDelete');
+        Router::post('/itembank/bulk-export', 'eSpace\App\Controllers\SchoolItemBankController@bulkExport');
+        Router::post('/itembank/bulk-download', 'eSpace\App\Controllers\SchoolItemBankController@bulkDownload');
+        Router::get('/itembank/{id}/readers', 'eSpace\App\Controllers\SchoolItemBankController@readers');
+        Router::post('/itembank/{id}/cover', 'eSpace\App\Controllers\SchoolItemBankController@uploadCover');
+        Router::delete('/itembank/{id}/cover', 'eSpace\App\Controllers\SchoolItemBankController@deleteCover');
+        Router::get('/itembank/{id}', 'eSpace\App\Controllers\SchoolItemBankController@show');
+        Router::put('/itembank/{id}', 'eSpace\App\Controllers\SchoolItemBankController@update');
+        Router::delete('/itembank/{id}', 'eSpace\App\Controllers\SchoolItemBankController@delete');
 
         // Live Classes (BigBlueButton) - read-only oversight
         Router::get('/live-classes', 'eSpace\App\Controllers\HOD\LiveClassController@index');
@@ -780,9 +793,17 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::delete('/students/{id}', 'eSpace\App\Controllers\Admin\StudentController@delete');
         
         // Videos
-        Router::get('/videos', 'eSpace\App\Controllers\Admin\VideoController@index');
-        Router::post('/videos', 'eSpace\App\Controllers\Admin\VideoController@create');
-        Router::delete('/videos/{id}', 'eSpace\App\Controllers\Admin\VideoController@delete');
+        // videos - the teacher's page over the department (HOD) or the whole school (admin), with upload
+        Router::get('/videos', 'eSpace\App\Controllers\SchoolVideoController@index');
+        Router::get('/videos/options', 'eSpace\App\Controllers\SchoolVideoController@options');
+        Router::post('/videos', 'eSpace\App\Controllers\SchoolVideoController@create');
+        Router::post('/videos/bulk-status', 'eSpace\App\Controllers\SchoolVideoController@bulkStatus');
+        Router::post('/videos/bulk-delete', 'eSpace\App\Controllers\SchoolVideoController@bulkDelete');
+        Router::post('/videos/bulk-export', 'eSpace\App\Controllers\SchoolVideoController@bulkExport');
+        Router::get('/videos/{id}/viewers', 'eSpace\App\Controllers\SchoolVideoController@viewers');
+        Router::get('/videos/{id}', 'eSpace\App\Controllers\SchoolVideoController@show');
+        Router::put('/videos/{id}', 'eSpace\App\Controllers\SchoolVideoController@update');
+        Router::delete('/videos/{id}', 'eSpace\App\Controllers\SchoolVideoController@delete');
 
         // Library
         // eLibrary - the teacher's shelves over the department (HOD) or the whole school (admin), with upload
@@ -802,9 +823,20 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::delete('/library/{id}', 'eSpace\App\Controllers\SchoolLibraryController@delete');
 
         // Item Bank
-        Router::get('/itembank', 'eSpace\App\Controllers\Admin\ItemBankController@index');
-        Router::put('/itembank/{id}', 'eSpace\App\Controllers\Admin\ItemBankController@update');
-        Router::delete('/itembank/{id}', 'eSpace\App\Controllers\Admin\ItemBankController@delete');
+        // itembank - the teacher's page over the department (HOD) or the whole school (admin), with upload
+        Router::get('/itembank', 'eSpace\App\Controllers\SchoolItemBankController@index');
+        Router::get('/itembank/options', 'eSpace\App\Controllers\SchoolItemBankController@options');
+        Router::post('/itembank', 'eSpace\App\Controllers\SchoolItemBankController@create');
+        Router::post('/itembank/bulk-status', 'eSpace\App\Controllers\SchoolItemBankController@bulkStatus');
+        Router::post('/itembank/bulk-delete', 'eSpace\App\Controllers\SchoolItemBankController@bulkDelete');
+        Router::post('/itembank/bulk-export', 'eSpace\App\Controllers\SchoolItemBankController@bulkExport');
+        Router::post('/itembank/bulk-download', 'eSpace\App\Controllers\SchoolItemBankController@bulkDownload');
+        Router::get('/itembank/{id}/readers', 'eSpace\App\Controllers\SchoolItemBankController@readers');
+        Router::post('/itembank/{id}/cover', 'eSpace\App\Controllers\SchoolItemBankController@uploadCover');
+        Router::delete('/itembank/{id}/cover', 'eSpace\App\Controllers\SchoolItemBankController@deleteCover');
+        Router::get('/itembank/{id}', 'eSpace\App\Controllers\SchoolItemBankController@show');
+        Router::put('/itembank/{id}', 'eSpace\App\Controllers\SchoolItemBankController@update');
+        Router::delete('/itembank/{id}', 'eSpace\App\Controllers\SchoolItemBankController@delete');
 
         // Student Promotion
         Router::get('/promotion/students', 'eSpace\App\Controllers\Admin\PromotionController@students');

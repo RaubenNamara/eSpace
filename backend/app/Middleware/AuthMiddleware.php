@@ -19,9 +19,6 @@ class AuthMiddleware extends Middleware
      */
     public function handle(): bool
     {
-        error_log("AuthMiddleware: Checking authentication");
-        error_log("AuthMiddleware: Session data: " . json_encode($_SESSION));
-        error_log("AuthMiddleware: isAuthenticated: " . ($this->controller->isAuthenticated() ? 'true' : 'false'));
         
         if (!$this->controller->isAuthenticated()) {
             $this->controller->unauthorized('Authentication required');

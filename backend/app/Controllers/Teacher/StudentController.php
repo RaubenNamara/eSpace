@@ -341,7 +341,6 @@ class StudentController extends Controller
     public function enrolled(): void
     {
         error_log("Teacher enrolled: Starting request");
-        error_log("Teacher enrolled: Session data: " . json_encode($_SESSION));
         
         if (!$this->isAuthenticated()) {
             error_log("Teacher enrolled: Not authenticated");
