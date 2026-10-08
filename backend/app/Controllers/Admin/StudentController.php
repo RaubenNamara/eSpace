@@ -423,10 +423,15 @@ class StudentController extends Controller
         $classId = $this->query('class_id');
         $search = trim((string) $this->query('search', ''));
         $page = max(1, (int) $this->query('page', 1));
-        // Capped well above realistic per-department/year enrollment counts at this school
-        // (~4,200 active enrollments school-wide) so the "already enrolled" duplicate-check
-        // fetch (which needs every matching row, not one page) can still request them all.
         $limit = min(1000, max(1, (int) $this->query('limit', 50)));
+
+        // The Enrol window's "already enrolled?" check asks about just the learners it shows (a
+        // class), so the answer is always complete - a whole department can have 2,000+ rows a
+        // year, more than one capped page, and anyone past it wrongly looked enrolable
+        $onlyStudents = array_values(array_filter(array_map('intval', explode(',', (string) $this->query('student_ids', ''))), fn ($id) => $id > 0));
+        if ($onlyStudents) {
+            $limit = max($limit, min(5000, count($onlyStudents)));
+        }
 
         $whereClause = "se.deleted_at IS NULL AND se.status = 'active'";
         $params = [];
@@ -451,6 +456,11 @@ class StudentController extends Controller
         if ($classId) {
             $whereClause .= " AND se.class_id = ?";
             $params[] = $classId;
+        }
+
+        if ($onlyStudents) {
+            $whereClause .= ' AND se.student_id IN (' . implode(',', array_fill(0, count($onlyStudents), '?')) . ')';
+            array_push($params, ...$onlyStudents);
         }
 
         if ($search !== '') {

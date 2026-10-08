@@ -787,20 +787,30 @@ const filterStudentsByDepartment = async () => {
     return
   }
 
+  // No learners in the class: nothing to check (and no ids would mean "the whole department")
+  if (!students.value.length) {
+    filteredStudents.value = []
+    enrolledStudentIds.value = []
+    enrolledStudentDetails.value = {}
+    enrolledStudents.value = []
+    return
+  }
+
   // Fetch already enrolled students for this department and academic year, so the same student
   // can't be enrolled twice into the same department (their checkbox gets disabled below).
   try {
     // Deliberately not scoped by class_id here - the backend's duplicate check
     // (student + department + academic_year) ignores class_id too, so this must match it
     // exactly or a student enrolled under a different class_id would wrongly look available.
-    // limit is deliberately generous (not the modal's usual page size) - this check needs
-    // every matching enrollment, not one page, or a student beyond page 1 would wrongly
-    // look available for re-enrollment.
+    // Asked only about the learners this window shows (the chosen class), so the answer is
+    // never cut short: a department's whole year runs past any one page (GEOG had 2,300+),
+    // and anyone beyond it used to look enrolable, then be refused as "already enrolled".
     const response = await apiService.get('/admin/students/enrolled', {
       params: {
         department_id: enrollData.value.department_id,
         academic_year_id: enrollData.value.academic_year_id,
-        limit: 1000
+        student_ids: students.value.map(s => s.id).join(','),
+        limit: Math.max(50, students.value.length)
       }
     })
 
