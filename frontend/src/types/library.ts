@@ -33,6 +33,10 @@ export interface LibraryBook {
   class_level?: string
   class_stream_name?: string
   department_name?: string
+  department_code?: string
+  // Who added it: a teacher's name, the HOD's, or 'School admin'
+  uploader_name?: string | null
+  uploader_role?: 'teacher' | 'hod' | 'admin'
   teacher_first_name?: string
   teacher_last_name?: string
   // Teacher list only: who it's aimed at and how far they've got
@@ -46,6 +50,8 @@ export interface LibraryBookForm {
   title: string
   description: string
   subject_id: string
+  // Admin only: which department the book is for
+  department_id?: string
   classTarget: ClassTarget
   status: 'draft' | 'published' | 'archived'
   allow_download: boolean

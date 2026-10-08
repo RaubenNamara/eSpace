@@ -1,6 +1,6 @@
 <template>
   <div class="w-full">
-    <PageHeader title="eLibrary" description="Textbooks, notes and slides for your classes - students read them right in eSpace." icon="book" accent="emerald" :active-filters="activeFilterCount">
+    <PageHeader title="eLibrary" :description="COPY[role].description" icon="book" accent="emerald" :active-filters="activeFilterCount">
       <template #actions>
         <button type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm shadow-emerald-500/20" @click="openCreateModal">
           <AppIcon name="upload" class="w-4 h-4" />
@@ -12,6 +12,7 @@
           <svg class="w-4 h-4 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"></path></svg>
           <input v-model="search" type="search" placeholder="Search books" class="w-full md:w-48 pl-8 pr-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
         </div>
+        <PickerDropdown v-if="role === 'admin'" v-model="departmentFilter" label="Department" :options="departmentOptions" align="right" />
         <PickerDropdown v-model="subjectFilter" label="Subject" :options="subjectOptions" align="right" />
       </template>
       <StatStrip v-model="statusFilter" :items="statItems" hide-when-empty />
@@ -21,7 +22,7 @@
 
     <Skeleton v-if="loading && !books.length" variant="cards" :count="6" />
 
-    <EmptyState v-else-if="!books.length" icon="book" tone="emerald" title="Your shelves are empty" message="Add a PDF or PowerPoint - a textbook, revision notes, slides - and students read it in the browser. The first page becomes its cover.">
+    <EmptyState v-else-if="!books.length" icon="book" tone="emerald" :title="COPY[role].emptyTitle" :message="COPY[role].emptyMessage">
       <button type="button" class="px-4 py-2 rounded-xl text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700" @click="openCreateModal">Add your first book</button>
     </EmptyState>
 
@@ -124,6 +125,7 @@
               <p class="mt-1 text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug">{{ book.title }}</p>
               <p v-if="book.author" class="text-[11px] italic text-gray-500 dark:text-gray-400 truncate">{{ book.author }}</p>
               <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ audienceLabel(book) }}</p>
+              <p v-if="role !== 'teacher' && book.uploader_name" class="text-[11px] text-gray-400 dark:text-gray-500 truncate">By {{ book.uploader_name }}</p>
 
               <!-- Published: how far the class has got, opening the full list -->
               <template v-if="book.status === 'published'">
@@ -283,6 +285,18 @@
               </div>
             </div>
 
+            <div v-if="role === 'admin'" class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Department *</label>
+              <select
+                v-model="bookForm.department_id"
+                required
+                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+                @change="onFormDepartmentChange"
+              >
+                <option value="">Select Department</option>
+                <option v-for="d in libOptions?.departments || []" :key="d.id" :value="String(d.id)">{{ d.name }}</option>
+              </select>
+            </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Subject *</label>
@@ -290,19 +304,20 @@
                   v-model="bookForm.subject_id"
                   required
                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-                  :disabled="!assignments?.subjects || assignments.subjects.length === 0"
+                  :disabled="!subjectChoices.length"
                 >
                   <option value="">Select Subject</option>
-                  <option v-for="subject in assignments?.subjects" :key="subject.id" :value="subject.id">{{ subject.name }}</option>
+                  <option v-for="subject in subjectChoices" :key="subject.id" :value="String(subject.id)">{{ subject.name }}</option>
                 </select>
-                <p v-if="!assignments?.subjects || assignments.subjects.length === 0" class="text-xs text-red-600 dark:text-red-400 mt-1">
-                  No subjects available. Please ensure you are assigned to a department with subjects.
+                <p v-if="!subjectChoices.length" class="text-xs text-red-600 dark:text-red-400 mt-1">
+                  {{ role === 'admin' ? (bookForm.department_id ? 'This department has no subjects yet.' : 'Choose the department first.') : 'No subjects available. Please ensure you are assigned to a department with subjects.' }}
                 </p>
               </div>
 
               <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Class *</label>
-                <TeacherClassSelector v-model="bookForm.classTarget" />
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ role === 'teacher' ? 'Class *' : 'Who is it for? *' }}</label>
+                <TeacherClassSelector v-if="role === 'teacher'" v-model="bookForm.classTarget" />
+                <DepartmentAudiencePicker v-else v-model="bookForm.classTarget" :levels="formDepartment?.levels || []" :disabled="!formDepartment" />
               </div>
             </div>
 
@@ -423,7 +438,7 @@
       v-if="readersFor"
       :title="readersFor.title"
       :subtitle="`${audienceLabel(readersFor)} · ${readersFor.subject_name || ''}`"
-      :endpoint="`/api/teacher/library/${readersFor.id}/readers`"
+      :endpoint="`${libApi}/${readersFor.id}/readers`"
       icon="book"
       verb="read"
       @close="readersFor = null"
@@ -443,6 +458,8 @@ import AppIcon from '@/components/common/AppIcon.vue'
 import AudiencePanel from '@/components/common/AudiencePanel.vue'
 import LibraryDocumentViewer from '@/components/library/LibraryDocumentViewer.vue'
 import TeacherClassSelector from '@/components/teacher/TeacherClassSelector.vue'
+import DepartmentAudiencePicker, { type AudienceLevel } from '@/components/library/DepartmentAudiencePicker.vue'
+import { useAuthStore } from '@/stores/auth'
 import BulkActionBar from '@/components/common/BulkActionBar.vue'
 import Bookshelf from '@/components/library/Bookshelf.vue'
 import ShelfBook from '@/components/library/ShelfBook.vue'
@@ -466,6 +483,28 @@ const bulk = useBulkSelection<number>()
 
 const API_BASE = '/api'
 
+// The same shelves for a teacher (their own books), a HOD (the department's) and an admin (the
+// school's, uploading into any department)
+const authStore = useAuthStore()
+const role: 'teacher' | 'hod' | 'admin' = authStore.userRole === 'hod' ? 'hod' : authStore.userRole === 'teacher' ? 'teacher' : 'admin'
+const libApi = `${API_BASE}/${role}/library`
+const COPY = {
+  teacher: { description: 'Textbooks, notes and slides for your classes - students read them right in eSpace.', emptyTitle: 'Your shelves are empty', emptyMessage: 'Add a PDF or PowerPoint - a textbook, revision notes, slides - and students read it in the browser. The first page becomes its cover.' },
+  hod: { description: "Your department's books - yours and your teachers' - for the whole department, a class or one stream.", emptyTitle: "The department's shelves are empty", emptyMessage: 'Add a textbook or set of notes for the whole department, every stream of a class, or a single stream. The first page becomes its cover.' },
+  admin: { description: "The school's books, in every department - upload one and choose the department and who it's for.", emptyTitle: "The school's shelves are empty", emptyMessage: "Add a textbook for a department - the whole department, every stream of a class, or one stream. Teachers' books show up here too." }
+}
+
+interface LibraryOptions { departments: { id: number; name: string; code: string; subjects: { id: number; name: string; code: string }[]; levels: AudienceLevel[] }[] }
+const libOptions = ref<LibraryOptions | null>(null)
+const loadLibraryOptions = async () => {
+  try {
+    const response = await axios.get(`${libApi}/options`)
+    libOptions.value = response.data.data
+  } catch {
+    assignmentsError.value = 'Could not load departments and classes'
+  }
+}
+
 const books = ref<LibraryBook[]>([])
 const assignments = ref<ENoteAssignments | null>(null)
 const assignmentsError = ref<string | null>(null)
@@ -478,8 +517,9 @@ const replaceFileInput = ref<File | null>(null)
 const replacingFile = ref(false)
 const replaceProgress = ref(0)
 
-const statusFilter = usePersistedRef<string | null>('teacher-library:status', null)
-const subjectFilter = usePersistedRef<string>('teacher-library:subject', '')
+const statusFilter = usePersistedRef<string | null>(`${role}-library:status`, null)
+const subjectFilter = usePersistedRef<string>(`${role}-library:subject`, '')
+const departmentFilter = usePersistedRef<string>(`${role}-library:department`, '')
 const search = ref('')
 const dragging = ref(false)
 const readersFor = ref<LibraryBook | null>(null)
@@ -511,17 +551,36 @@ const statItems = computed<StatItem[]>(() => [
   { label: 'Draft', value: stats.value.draft, key: 'draft', tone: 'amber' },
   { label: 'Archived', value: stats.value.archived, key: 'archived', tone: 'gray' }
 ])
-const subjectOptions = computed<PickerOption<string>[]>(() => [
-  { value: '', label: 'All subjects' },
-  ...(assignments.value?.subjects ?? []).map(s => ({ value: String(s.id), label: s.name }))
+// A teacher's subjects; for a HOD or admin, the subjects their books are in
+const subjectOptions = computed<PickerOption<string>[]>(() => {
+  const subjects = role === 'teacher'
+    ? (assignments.value?.subjects ?? []).map(s => ({ id: s.id, name: s.name }))
+    : [...new Map(books.value.filter(b => b.subject_id && (!departmentFilter.value || String(b.department_id) === departmentFilter.value)).map(b => [b.subject_id, { id: b.subject_id as number, name: b.subject_name || '' }])).values()].sort((a, b) => a.name.localeCompare(b.name))
+  return [{ value: '', label: 'All subjects' }, ...subjects.map(s => ({ value: String(s.id), label: s.name }))]
+})
+const departmentOptions = computed<PickerOption<string>[]>(() => [
+  { value: '', label: 'All departments' },
+  ...(libOptions.value?.departments ?? []).map(d => ({ value: String(d.id), label: d.name }))
 ])
-const activeFilterCount = computed(() => (subjectFilter.value ? 1 : 0) + (search.value.trim() ? 1 : 0))
+const activeFilterCount = computed(() => (subjectFilter.value ? 1 : 0) + (departmentFilter.value ? 1 : 0) + (search.value.trim() ? 1 : 0))
+
+// The upload form: which department's subjects and classes to offer
+const formDepartment = computed(() => {
+  const deps = libOptions.value?.departments ?? []
+  return role === 'hod' ? deps[0] || null : deps.find(d => String(d.id) === bookForm.value.department_id) || null
+})
+const subjectChoices = computed(() => (role === 'teacher' ? assignments.value?.subjects ?? [] : formDepartment.value?.subjects ?? []))
+const onFormDepartmentChange = () => {
+  bookForm.value.subject_id = ''
+  bookForm.value.classTarget = { scope: 'department', class_id: null, class_group_name: null }
+}
 
 const filteredBooks = computed(() => {
   const q = search.value.trim().toLowerCase()
   return books.value.filter(book => {
     const matchesStatus = !statusFilter.value || book.status === statusFilter.value
     const matchesSubject = !subjectFilter.value || book.subject_id === parseInt(subjectFilter.value)
+    if (departmentFilter.value && String(book.department_id) !== departmentFilter.value) return false
     const matchesSearch = !q || [book.title, book.author, book.description].some(t => (t || '').toLowerCase().includes(q))
     return matchesStatus && matchesSubject && matchesSearch
   })
@@ -530,8 +589,8 @@ const filteredBooks = computed(() => {
 // One tab per class ("All Streams" books under their class), then one shelf per subject.
 // A class is always open - the last one used, or the first - with "All" beside them.
 const ALL = '__all'
-const classOf = (book: LibraryBook) => book.class_group_name || book.class_name || 'Unassigned'
-const activeClassName = usePersistedRef<string>('teacher-library:class', '')
+const classOf = (book: LibraryBook) => book.class_group_name || book.class_name || 'Whole department'
+const activeClassName = usePersistedRef<string>(`${role}-library:class`, '')
 const classTabs = computed(() => {
   const names = [...new Set(books.value.map(classOf))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
   return [
@@ -552,9 +611,12 @@ const activeClassBooks = computed(() => activeClassName.value === ALL
 const readingList = computed(() => [...activeClassBooks.value].sort((a, b) =>
   (a.status === 'published' ? 0 : 1) - (b.status === 'published' ? 0 : 1) || reach(a) - reach(b)))
 
-const audienceLabel = (book: LibraryBook) => book.class_group_name
-  ? `${book.class_group_name} (All Streams)`
-  : book.class_stream_name ? `${book.class_name}-${book.class_stream_name}` : (book.class_name || '')
+const audienceLabel = (book: LibraryBook) => {
+  const who = book.class_group_name
+    ? `${book.class_group_name} (All Streams)`
+    : book.class_stream_name ? `${book.class_name}-${book.class_stream_name}` : (book.class_name || 'Whole department')
+  return role === 'admin' && book.department_name && book.department_name !== book.subject_name ? `${book.department_name} · ${who}` : who
+}
 // Share of the class that has opened it
 const reach = (book: LibraryBook) => book.audience ? Math.min(100, Math.round(((book.readers || 0) / book.audience) * 100)) : 0
 const statusChip = (status: string) => status === 'published'
@@ -577,7 +639,7 @@ const bulkSetStatus = async (status: 'draft' | 'published' | 'archived') => {
   const ids = bulk.selectedArray()
   if (ids.length === 0) return
   try {
-    await axios.post(`${API_BASE}/teacher/library/bulk-status`, { ids, status })
+    await axios.post(`${libApi}/bulk-status`, { ids, status })
     toast.success(`${ids.length} resource(s) updated`)
     bulk.clear()
     await loadBooks()
@@ -591,7 +653,7 @@ const bulkSetDownload = async (allow: boolean) => {
   const ids = bulk.selectedArray()
   if (ids.length === 0) return
   try {
-    await axios.post(`${API_BASE}/teacher/library/bulk-download`, { ids, allow })
+    await axios.post(`${libApi}/bulk-download`, { ids, allow })
     toast.success(`${ids.length} resource(s) ${allow ? 'can now be downloaded' : 'no longer downloadable'}`)
     bulk.clear()
     await loadBooks()
@@ -602,7 +664,7 @@ const bulkSetDownload = async (allow: boolean) => {
 
 const publishOne = async (book: LibraryBook) => {
   try {
-    await axios.post(`${API_BASE}/teacher/library/bulk-status`, { ids: [book.id], status: 'published' })
+    await axios.post(`${libApi}/bulk-status`, { ids: [book.id], status: 'published' })
     toast.success(`"${book.title}" is now on your students' shelves`)
     await loadBooks()
   } catch (error: any) {
@@ -615,7 +677,7 @@ const bulkDeleteSelected = async () => {
   if (ids.length === 0) return
   if (!await confirmDialog.open({ title: 'Delete resources', message: `Are you sure you want to delete ${ids.length} resource(s)? This cannot be undone.`, confirmLabel: 'Delete', danger: true })) return
   try {
-    await axios.post(`${API_BASE}/teacher/library/bulk-delete`, { ids })
+    await axios.post(`${libApi}/bulk-delete`, { ids })
     toast.success(`${ids.length} resource(s) deleted`)
     bulk.clear()
     await loadBooks()
@@ -627,7 +689,7 @@ const bulkDeleteSelected = async () => {
 const bulkExport = async () => {
   const ids = bulk.selectedArray()
   try {
-    const response = await axios.post(`${API_BASE}/teacher/library/bulk-export`, { ids }, { responseType: 'blob' })
+    const response = await axios.post(`${libApi}/bulk-export`, { ids }, { responseType: 'blob' })
     downloadBlob(response.data, 'library.csv')
   } catch (error) {
     toast.error('Failed to export resources')
@@ -660,7 +722,7 @@ const formatFileSize = (bytes: number | null) => {
 const loadBooks = async () => {
   try {
     loading.value = true
-    const response = await axios.get(`${API_BASE}/teacher/library`)
+    const response = await axios.get(`${libApi}`)
     if (response.data.success) {
       books.value = response.data.data.books || []
       generateMissingCovers()
@@ -685,7 +747,7 @@ const uploadCover = async (bookId: number, blob: Blob, auto: boolean, totalPages
   data.append('cover', blob, auto ? 'first-page.jpg' : 'cover')
   data.append('auto', auto ? '1' : '0')
   if (totalPages) data.append('total_pages', String(totalPages))
-  const response = await axios.post(`${API_BASE}/teacher/library/${bookId}/cover`, data)
+  const response = await axios.post(`${libApi}/${bookId}/cover`, data)
   const coverImage: string = response.data.data.cover_image
   for (const target of [books.value.find(b => b.id === bookId), editingBook.value?.id === bookId ? editingBook.value : null]) {
     if (!target) continue
@@ -740,7 +802,7 @@ const useFirstPageCover = async () => {
     const { blob, totalPages } = await renderPdfCover(resolveAssetUrl(editingBook.value.file_path))
     // A deliberate choice, so it replaces a custom picture too: clear first, then upload as auto
     if (editingBook.value.cover_image && !isAutoCover(editingBook.value.cover_image)) {
-      await axios.delete(`${API_BASE}/teacher/library/${editingBook.value.id}/cover`)
+      await axios.delete(`${libApi}/${editingBook.value.id}/cover`)
     }
     await uploadCover(editingBook.value.id, blob, true, totalPages)
     toast.success('Cover set to the first page')
@@ -755,7 +817,7 @@ const removeCover = async () => {
   if (!editingBook.value) return
   coverBusy.value = true
   try {
-    await axios.delete(`${API_BASE}/teacher/library/${editingBook.value.id}/cover`)
+    await axios.delete(`${libApi}/${editingBook.value.id}/cover`)
     const id = editingBook.value.id
     editingBook.value.cover_image = null
     const listed = books.value.find(b => b.id === id)
@@ -790,7 +852,12 @@ const openCreateModal = () => {
   showReplaceFile.value = false
   replaceFileInput.value = null
   // The subject on view is the likely one
-  bookForm.value = { title: '', description: '', subject_id: subjectFilter.value, classTarget: { scope: 'stream', class_id: null, class_group_name: null }, status: 'draft', allow_download: false, author: '', file: null }
+  bookForm.value = {
+    title: '', description: '', subject_id: subjectFilter.value,
+    department_id: role === 'admin' ? departmentFilter.value : '',
+    classTarget: role === 'teacher' ? { scope: 'stream', class_id: null, class_group_name: null } : { scope: 'department', class_id: null, class_group_name: null },
+    status: 'draft', allow_download: false, author: '', file: null
+  }
   showBookModal.value = true
 }
 
@@ -803,9 +870,10 @@ const editBook = (book: LibraryBook) => {
     title: book.title,
     description: book.description || '',
     subject_id: book.subject_id?.toString() || '',
+    department_id: book.department_id ? String(book.department_id) : '',
     classTarget: book.class_group_name
       ? { scope: 'all_streams', class_id: null, class_group_name: book.class_group_name }
-      : { scope: 'stream', class_id: book.class_id, class_group_name: null },
+      : book.class_id ? { scope: 'stream', class_id: book.class_id, class_group_name: null } : { scope: 'department', class_id: null, class_group_name: null },
     status: book.status,
     allow_download: !!book.allow_download,
     author: book.author || '',
@@ -863,7 +931,7 @@ const replaceFile = async () => {
     const formData = new FormData()
     formData.append('file', replaceFileInput.value)
 
-    const response = await axios.post(`${API_BASE}/teacher/library/${editingBook.value.id}/replace-file`, formData, {
+    const response = await axios.post(`${libApi}/${editingBook.value.id}/replace-file`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
       onUploadProgress: (e) => {
         if (e.total) replaceProgress.value = Math.round((e.loaded * 100) / e.total)
@@ -894,10 +962,11 @@ const saveBook = async () => {
     uploadProgress.value = 0
 
     if (editingBook.value) {
-      await axios.put(`${API_BASE}/teacher/library/${editingBook.value.id}`, {
+      await axios.put(`${libApi}/${editingBook.value.id}`, {
         title: bookForm.value.title,
         description: bookForm.value.description,
         subject_id: bookForm.value.subject_id,
+        ...(role === 'admin' ? { department_id: bookForm.value.department_id } : {}),
         scope: bookForm.value.classTarget.scope,
         class_id: bookForm.value.classTarget.class_id,
         class_group_name: bookForm.value.classTarget.class_group_name,
@@ -914,6 +983,7 @@ const saveBook = async () => {
       formData.append('title', bookForm.value.title)
       formData.append('description', bookForm.value.description)
       formData.append('subject_id', bookForm.value.subject_id)
+      if (role === 'admin') formData.append('department_id', bookForm.value.department_id || '')
       formData.append('scope', bookForm.value.classTarget.scope)
       if (bookForm.value.classTarget.class_id !== null) formData.append('class_id', String(bookForm.value.classTarget.class_id))
       if (bookForm.value.classTarget.class_group_name !== null) formData.append('class_group_name', bookForm.value.classTarget.class_group_name)
@@ -922,7 +992,7 @@ const saveBook = async () => {
       formData.append('author', bookForm.value.author)
       formData.append('file', bookForm.value.file)
 
-      await axios.post(`${API_BASE}/teacher/library`, formData, {
+      await axios.post(`${libApi}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (e) => {
           if (e.total) uploadProgress.value = Math.round((e.loaded * 100) / e.total)
@@ -944,7 +1014,7 @@ const saveBook = async () => {
 const deleteBook = async (id: number) => {
   if (!await confirmDialog.open({ title: 'Delete book', message: 'Are you sure you want to delete this book?', confirmLabel: 'Delete', danger: true })) return
   try {
-    await axios.delete(`${API_BASE}/teacher/library/${id}`)
+    await axios.delete(`${libApi}/${id}`)
     await loadBooks()
     toast.success('Book deleted')
   } catch (error) {
@@ -954,6 +1024,6 @@ const deleteBook = async (id: number) => {
 }
 
 onMounted(async () => {
-  await Promise.all([loadBooks(), loadAssignments()])
+  await Promise.all([loadBooks(), role === 'teacher' ? loadAssignments() : loadLibraryOptions()])
 })
 </script>

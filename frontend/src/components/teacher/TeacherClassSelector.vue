@@ -77,7 +77,8 @@ import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import apiService from '@/services/api'
 
 export interface ClassTarget {
-  scope: 'stream' | 'all_streams'
+  // 'department': the whole department (HOD and admin eLibrary only)
+  scope: 'stream' | 'all_streams' | 'department'
   class_id: number | null
   class_group_name: string | null
 }

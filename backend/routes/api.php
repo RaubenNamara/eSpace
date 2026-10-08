@@ -602,12 +602,21 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/subjects/{id}', 'eSpace\App\Controllers\HOD\SubjectController@show');
 
         // eLibrary - department-scoped moderation
-        Router::get('/library', 'eSpace\App\Controllers\HOD\LibraryController@index');
-        Router::post('/library/bulk-status', 'eSpace\App\Controllers\HOD\LibraryController@bulkStatus');
-        Router::post('/library/bulk-delete', 'eSpace\App\Controllers\HOD\LibraryController@bulkDelete');
-        Router::post('/library/bulk-export', 'eSpace\App\Controllers\HOD\LibraryController@bulkExport');
-        Router::put('/library/{id}', 'eSpace\App\Controllers\HOD\LibraryController@update');
-        Router::delete('/library/{id}', 'eSpace\App\Controllers\HOD\LibraryController@delete');
+        // eLibrary - the teacher's shelves over the department (HOD) or the whole school (admin), with upload
+        Router::get('/library', 'eSpace\App\Controllers\SchoolLibraryController@index');
+        Router::get('/library/options', 'eSpace\App\Controllers\SchoolLibraryController@options');
+        Router::post('/library', 'eSpace\App\Controllers\SchoolLibraryController@create');
+        Router::post('/library/bulk-status', 'eSpace\App\Controllers\SchoolLibraryController@bulkStatus');
+        Router::post('/library/bulk-download', 'eSpace\App\Controllers\SchoolLibraryController@bulkDownload');
+        Router::post('/library/bulk-delete', 'eSpace\App\Controllers\SchoolLibraryController@bulkDelete');
+        Router::post('/library/bulk-export', 'eSpace\App\Controllers\SchoolLibraryController@bulkExport');
+        Router::get('/library/{id}/readers', 'eSpace\App\Controllers\SchoolLibraryController@readers');
+        Router::get('/library/{id}', 'eSpace\App\Controllers\SchoolLibraryController@show');
+        Router::put('/library/{id}', 'eSpace\App\Controllers\SchoolLibraryController@update');
+        Router::post('/library/{id}/replace-file', 'eSpace\App\Controllers\SchoolLibraryController@replaceFile');
+        Router::post('/library/{id}/cover', 'eSpace\App\Controllers\SchoolLibraryController@uploadCover');
+        Router::delete('/library/{id}/cover', 'eSpace\App\Controllers\SchoolLibraryController@deleteCover');
+        Router::delete('/library/{id}', 'eSpace\App\Controllers\SchoolLibraryController@delete');
 
         // Videos - department-scoped moderation
         Router::get('/videos', 'eSpace\App\Controllers\HOD\VideoController@index');
@@ -681,8 +690,6 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
 
 
         // Resource Approval
-        Router::get('/approvals/library', 'eSpace\App\Controllers\HOD\ApprovalController@library');
-        Router::put('/approvals/library/{id}', 'eSpace\App\Controllers\HOD\ApprovalController@approveLibrary');
         Router::get('/approvals/notes', 'eSpace\App\Controllers\HOD\ApprovalController@notes');
         Router::put('/approvals/notes/{id}', 'eSpace\App\Controllers\HOD\ApprovalController@approveNotes');
         Router::get('/approvals/itembank', 'eSpace\App\Controllers\HOD\ApprovalController@itemBank');
@@ -778,10 +785,21 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::delete('/videos/{id}', 'eSpace\App\Controllers\Admin\VideoController@delete');
 
         // Library
-        Router::get('/library', 'eSpace\App\Controllers\Admin\LibraryController@index');
-        Router::put('/library/{id}', 'eSpace\App\Controllers\Admin\LibraryController@update');
-        Router::put('/library/{id}/class', 'eSpace\App\Controllers\Admin\LibraryController@assignClass');
-        Router::delete('/library/{id}', 'eSpace\App\Controllers\Admin\LibraryController@delete');
+        // eLibrary - the teacher's shelves over the department (HOD) or the whole school (admin), with upload
+        Router::get('/library', 'eSpace\App\Controllers\SchoolLibraryController@index');
+        Router::get('/library/options', 'eSpace\App\Controllers\SchoolLibraryController@options');
+        Router::post('/library', 'eSpace\App\Controllers\SchoolLibraryController@create');
+        Router::post('/library/bulk-status', 'eSpace\App\Controllers\SchoolLibraryController@bulkStatus');
+        Router::post('/library/bulk-download', 'eSpace\App\Controllers\SchoolLibraryController@bulkDownload');
+        Router::post('/library/bulk-delete', 'eSpace\App\Controllers\SchoolLibraryController@bulkDelete');
+        Router::post('/library/bulk-export', 'eSpace\App\Controllers\SchoolLibraryController@bulkExport');
+        Router::get('/library/{id}/readers', 'eSpace\App\Controllers\SchoolLibraryController@readers');
+        Router::get('/library/{id}', 'eSpace\App\Controllers\SchoolLibraryController@show');
+        Router::put('/library/{id}', 'eSpace\App\Controllers\SchoolLibraryController@update');
+        Router::post('/library/{id}/replace-file', 'eSpace\App\Controllers\SchoolLibraryController@replaceFile');
+        Router::post('/library/{id}/cover', 'eSpace\App\Controllers\SchoolLibraryController@uploadCover');
+        Router::delete('/library/{id}/cover', 'eSpace\App\Controllers\SchoolLibraryController@deleteCover');
+        Router::delete('/library/{id}', 'eSpace\App\Controllers\SchoolLibraryController@delete');
 
         // Item Bank
         Router::get('/itembank', 'eSpace\App\Controllers\Admin\ItemBankController@index');
