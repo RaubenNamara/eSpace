@@ -7,7 +7,8 @@
       </div>
       <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight">Virtual Lab</h1>
     </div>
-    <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Share library experiments with departments, oversee every teacher's experiments, and manage the 3D apparatus catalogue.</p>
+    <p v-if="isHod" class="text-xs text-gray-500 dark:text-gray-400 mb-4">The Virtual Lab experiments of {{ hodDepartment?.name || 'your department' }}: publish them to its classes and see where each one is published.</p>
+    <p v-else class="text-xs text-gray-500 dark:text-gray-400 mb-4">Share library experiments with departments, oversee every teacher's experiments, and manage the 3D apparatus catalogue.</p>
 
     <!-- Tabs -->
     <div class="inline-flex flex-wrap gap-1 mb-5 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-1 shadow-sm">
@@ -94,7 +95,7 @@
             :class="sourceFilter === o.key ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'"
           >{{ o.label }}</button>
         </div>
-        <select v-model="expFilters.status" class="input-field text-sm w-auto">
+        <select v-if="!isHod" v-model="expFilters.status" class="input-field text-sm w-auto">
           <option value="">All statuses</option>
           <option value="draft">Draft</option>
           <option value="published">Published</option>
@@ -102,7 +103,7 @@
         </select>
       </div>
 
-      <div v-if="visibleExperiments.length" class="flex items-center gap-2 mb-3">
+      <div v-if="visibleExperiments.length && !isHod" class="flex items-center gap-2 mb-3">
         <label class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none">
           <input type="checkbox" :checked="allSelected" @change="toggleAll" class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500">
           Select all
@@ -142,7 +143,7 @@
               :class="selected.has(e.id) ? 'border-indigo-300 dark:border-indigo-700 ring-1 ring-indigo-100 dark:ring-indigo-900/40' : 'border-gray-200 dark:border-gray-700'"
             >
               <div class="flex items-start gap-3">
-                <input type="checkbox" :checked="selected.has(e.id)" @click.stop @change="toggle(e.id)" class="mt-3 w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 flex-shrink-0" :aria-label="`Select ${e.title}`">
+                <input v-if="!isHod" type="checkbox" :checked="selected.has(e.id)" @click.stop @change="toggle(e.id)" class="mt-3 w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 flex-shrink-0" :aria-label="`Select ${e.title}`">
                 <span class="w-10 h-10 rounded-xl flex items-center justify-center text-white flex-shrink-0" :class="CATEGORY_COLORS[e.category]"><AppIcon :name="CATEGORY_ICONS[e.category]" class="w-5 h-5" /></span>
 
                 <div class="min-w-0 flex-1">
@@ -179,13 +180,13 @@
                         v-for="p in g.items"
                         :key="p.assignment_id"
                         class="inline-flex items-center gap-1 pl-2 py-0.5 rounded-full text-[11px] font-medium"
-                        :class="[p.by_admin ? 'bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300' : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300', p.by_admin ? 'pr-0.5' : 'pr-2']"
+                        :class="[p.by_admin || p.by_hod ? 'bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300' : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300', p.by_admin || p.by_hod ? 'pr-0.5' : 'pr-2']"
                         :title="`${p.class_label} - published by ${p.published_by}${p.term_name ? ', ' + p.term_name : ''}${p.due_date ? ', due ' + formatDate(p.due_date) : ''} - ${p.submitted_count} submitted`"
                       >
                         {{ p.class_label }}
                         <span class="opacity-70">&middot; {{ p.published_by }}</span>
                         <button
-                          v-if="p.by_admin"
+                          v-if="p.by_admin || p.by_hod"
                           @click.stop="withdraw(e, p)"
                           class="w-4 h-4 rounded-full flex items-center justify-center hover:bg-violet-200 dark:hover:bg-violet-800"
                           :aria-label="`Withdraw from ${p.class_label}`"
@@ -199,7 +200,7 @@
 
                 <div class="flex flex-col sm:flex-row items-end sm:items-center gap-1.5 flex-shrink-0" @click.stop>
                   <button
-                    v-if="e.is_template"
+                    v-if="e.is_template && !isHod"
                     @click="openShare(e)"
                     class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-sky-600 text-white hover:bg-sky-700"
                     title="Choose which departments' teachers can use and publish this experiment"
@@ -214,6 +215,7 @@
                   >
                     <AppIcon name="send" class="w-3.5 h-3.5" /> Publish to class
                   </button>
+                  <template v-if="!isHod">
                   <button
                     v-if="e.status !== 'disabled'"
                     @click="setStatus(e, 'disabled')"
@@ -231,6 +233,7 @@
                   >
                     <AppIcon name="trash" class="w-3.5 h-3.5" /> Delete
                   </button>
+                  </template>
                 </div>
               </div>
             </div>
@@ -337,7 +340,8 @@
         </div>
         <div class="px-5 py-3 overflow-y-auto flex-1 space-y-3">
           <p class="text-xs text-gray-500 dark:text-gray-400">Students of the department in the chosen class will see it straight away. The experiment is also shared with the department, so its teachers can follow and mark the class's work.</p>
-          <label class="block">
+          <p v-if="isHod" class="text-sm text-gray-700 dark:text-gray-200"><span class="text-xs font-semibold text-gray-600 dark:text-gray-300">Department:</span> {{ hodDepartment?.name }}</p>
+          <label v-else class="block">
             <span class="text-xs font-semibold text-gray-600 dark:text-gray-300">Department</span>
             <select v-model.number="publishForm.department_id" class="input-field w-full text-sm mt-1">
               <option :value="0" disabled>Choose a department</option>
@@ -399,7 +403,7 @@
 import AppIcon from '@/components/common/AppIcon.vue'
 import BulkActionBar from '@/components/common/BulkActionBar.vue'
 import { ref, reactive, computed, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
 import { CATEGORY_ICONS, CATEGORY_LABELS, CATEGORY_COLORS } from '@/types/virtualLab'
 import type { ExperimentSummary, ExperimentPublication, LabObjectDef, LabCategory } from '@/types/virtualLab'
@@ -407,8 +411,15 @@ import { useToastStore } from '@/stores/toast'
 import { useConfirmStore } from '@/stores/confirm'
 
 const router = useRouter()
+const route = useRoute()
 
-const API_BASE = '/api/admin/virtual-lab'
+// The same page serves the admin (whole school) and a HOD (their own department only:
+// publishing to its classes, no sharing, hiding or deleting) - see meta.labRole
+const isHod = route.meta.labRole === 'hod'
+const roleBase = isHod ? 'hod' : 'admin'
+const hodDepartment = ref<{ id: number; name: string } | null>(null)
+
+const API_BASE = `/api/${roleBase}/virtual-lab`
 const toast = useToastStore()
 const confirmDialog = useConfirmStore()
 
@@ -423,7 +434,7 @@ interface Analytics {
 }
 
 type TabKey = 'overview' | 'experiments' | 'apparatus'
-const activeTab = ref<TabKey>('overview')
+const activeTab = ref<TabKey>(isHod ? 'experiments' : 'overview')
 
 const analytics = ref<Analytics | null>(null)
 const objects = ref<LabObjectDef[]>([])
@@ -433,7 +444,8 @@ const loadingObjects = ref(false)
 const expFilters = ref({ search: '', category: '', status: '' })
 const search = ref('')
 
-const tabs = computed<{ key: TabKey; label: string; icon: string; count: number | null }[]>(() => [
+const tabs = computed<{ key: TabKey; label: string; icon: string; count: number | null }[]>(() => allTabs.value.filter(t => !isHod || t.key !== 'overview'))
+const allTabs = computed<{ key: TabKey; label: string; icon: string; count: number | null }[]>(() => [
   { key: 'overview', label: 'Overview', icon: 'chart', count: null },
   // One per card once loaded (teachers' copies are folded into their library card)
   { key: 'experiments', label: 'Experiments', icon: 'beaker', count: experiments.value.length || (analytics.value?.total_experiments ?? null) },
@@ -511,7 +523,7 @@ const goToExperiments = (category?: string) => {
 
 // Opens the experiment exactly like a student would see it (3D diagram + guided procedure) -
 // read-only, nothing is saved, same sandboxed route the teacher's "Try it like a student" uses.
-const openExperiment = (e: ExperimentSummary) => router.push(`/admin/virtual-lab/practice/${e.id}`)
+const openExperiment = (e: ExperimentSummary) => router.push(`/${roleBase}/virtual-lab/practice/${e.id}`)
 
 // --- Sharing library experiments with departments ---
 interface Department { id: number; name: string }
@@ -594,7 +606,7 @@ const canPublish = computed(() => !!publishForm.department_id && !!publishForm.t
 const loadTerms = async () => {
   if (terms.value.length) return
   try {
-    const res = await axios.get('/api/admin/terms')
+    const res = await axios.get(isHod ? `${API_BASE}/terms` : '/api/admin/terms')
     const list = Array.isArray(res.data.data) ? res.data.data : res.data.data?.terms || []
     terms.value = list.map((t: any) => ({
       id: Number(t.id),
@@ -611,8 +623,12 @@ const openPublish = async (e: ExperimentSummary) => {
   Object.assign(publishForm, { department_id: 0, term_id: 0, due_date: '', marks: '' })
   selectedLevels.clear()
   selectedClassIds.clear()
-  await Promise.all([loadDepartments(), loadTerms()])
+  await Promise.all([isHod ? Promise.resolve() : loadDepartments(), loadTerms()])
   publishForm.term_id = terms.value.find(t => t.is_current)?.id ?? 0
+  if (isHod) {
+    publishForm.department_id = hodDepartment.value?.id ?? 0
+    return
+  }
   // Start from the department it is already shared with, when there is just one
   const shared = e.shared_departments || []
   if (shared.length === 1) publishForm.department_id = shared[0].id
@@ -625,7 +641,7 @@ watch(() => publishForm.department_id, async (id) => {
   if (!id) return
   loadingClasses.value = true
   try {
-    const res = await axios.get(`${API_BASE}/departments/${id}/classes`)
+    const res = await axios.get(isHod ? `${API_BASE}/classes` : `${API_BASE}/departments/${id}/classes`)
     deptClasses.value = res.data.data.classes
   } catch {
     toast.error('Could not load the classes')
@@ -718,6 +734,7 @@ const toggleAll = () => {
 
 // --- Loading ---
 const loadAnalytics = async () => {
+  if (isHod) return
   const res = await axios.get(`${API_BASE}/analytics`)
   analytics.value = res.data.data
 }
@@ -739,6 +756,7 @@ const loadExperiments = async () => {
     for (const [k, v] of Object.entries(expFilters.value)) if (v) params[k] = v
     const res = await axios.get(`${API_BASE}/experiments`, { params })
     experiments.value = res.data.data.experiments
+    if (res.data.data.department) hodDepartment.value = res.data.data.department
     const ids = new Set(experiments.value.map(e => e.id))
     for (const id of [...selected]) if (!ids.has(id)) selected.delete(id)
   } finally {
@@ -841,5 +859,6 @@ watch(activeTab, (tab) => {
 onMounted(() => {
   loadAnalytics()
   loadObjects()
+  if (isHod) loadExperiments()
 })
 </script>

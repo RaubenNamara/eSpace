@@ -99,6 +99,8 @@ function routeForNotification(n: NotificationItem): { path: string; query?: Reco
     case 'new_video':
     case 'new_video_resource':
       return { path: `${base}/videos` }
+    case 'new_virtual_lab':
+      return { path: `${base}/virtual-lab/${data.assignment_id}` }
     case 'new_library_resource':
       return { path: `${base}/library` }
     case 'new_item_bank_resource':

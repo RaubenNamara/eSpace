@@ -261,6 +261,7 @@
                     {{ a.experiment_title }} &middot;
                     <span v-if="a.class_group_name" class="text-green-600 dark:text-green-400">{{ a.class_group_name }} (All Streams)</span>
                     <span v-else>{{ a.class_name }}</span>
+                    <span v-if="a.published_by_hod" class="ml-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300" title="Published by your HOD to your department - you can follow and mark it">HOD</span>
                     <span v-if="a.published_by_admin" class="ml-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300" title="Published by the admin to your department - you can follow and mark it">Admin</span>
                   </p>
                   <p class="text-xs text-gray-400 dark:text-gray-500">{{ a.attempt_count }} attempts &middot; {{ a.submitted_count }} submitted &middot; {{ a.graded_count }} graded</p>

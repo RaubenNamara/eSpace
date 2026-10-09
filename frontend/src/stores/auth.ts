@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { User, LoginCredentials, RegisterData, AuthPayload, AuthApiResponse } from '../types'
 import { apiService } from '../services/api'
+import { detachPush } from '@/utils/push'
 
 // Helper to normalize auth API responses
 const getAuthPayload = (
@@ -194,6 +195,9 @@ export const useAuthStore = defineStore('auth', () => {
   async function logout() {
     isLoading.value = true
     error.value = null
+
+    // Stop this browser getting the signed-in user's notifications (shared computers)
+    await detachPush()
 
     try {
       await apiService.logout()

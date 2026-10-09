@@ -149,6 +149,7 @@ export interface ExperimentPublication {
   department_id: number | null
   department_name: string | null
   by_admin: boolean
+  by_hod?: boolean
   published_by: string
   term_name: string | null
   due_date: string | null
@@ -255,6 +256,7 @@ export interface TeacherAssignment {
   class_name: string | null
   /** Published by the admin to a class of the teacher's department (any of its teachers may mark it) */
   published_by_admin?: boolean
+  published_by_hod?: boolean
   term_id: number
   due_date: string | null
   marks: number

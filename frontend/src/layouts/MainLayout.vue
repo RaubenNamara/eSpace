@@ -380,6 +380,50 @@
         <router-view />
       </main>
     </div>
+
+    <!-- Ask (once) to turn on browser notifications for this device -->
+    <div
+      v-if="showPushPrompt && !labAlert && !shouldHideAppChrome"
+      class="fixed z-[9997] right-4 left-4 sm:left-auto sm:w-96 bottom-24 lg:bottom-6 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl ring-1 ring-indigo-200 dark:ring-indigo-800 p-4"
+    >
+      <div class="flex items-start gap-3">
+        <span class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center flex-shrink-0">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 00-4-5.7V5a2 2 0 10-4 0v.3A6 6 0 006 11v3.2c0 .5-.2 1-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+        </span>
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-bold text-gray-900 dark:text-white">Turn on notifications</p>
+          <p class="text-sm text-gray-600 dark:text-gray-300 mt-0.5">Get alerts for new practicals, assessments, notes and marks on this device - even when eSpace is closed.</p>
+          <div class="flex gap-2 mt-3">
+            <button type="button" :disabled="enablingPush" @click="turnOnPush" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60">{{ enablingPush ? 'Turning on...' : 'Turn on' }}</button>
+            <button type="button" @click="dismissPushPrompt" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">Not now</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- New Virtual Lab practical published to the student's class -->
+    <transition enter-from-class="opacity-0 translate-y-3" enter-active-class="transition duration-300" leave-to-class="opacity-0 translate-y-3" leave-active-class="transition duration-200">
+      <div
+        v-if="labAlert && !shouldHideAppChrome"
+        role="alert"
+        class="fixed z-[9998] right-4 left-4 sm:left-auto sm:w-96 bottom-24 lg:bottom-6 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl ring-1 ring-violet-200 dark:ring-violet-800 p-4"
+      >
+        <div class="flex items-start gap-3">
+          <span class="w-10 h-10 rounded-xl bg-violet-600 text-white flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v6.5L4.5 18A2 2 0 006.3 21h11.4a2 2 0 001.8-3L15 9.5V3M8 3h8M7 15h10" /></svg>
+          </span>
+          <div class="min-w-0 flex-1">
+            <p class="text-sm font-bold text-gray-900 dark:text-white">{{ labAlert.title }}</p>
+            <p class="text-sm text-gray-600 dark:text-gray-300 mt-0.5">{{ labAlert.message }}</p>
+            <div class="flex gap-2 mt-3">
+              <button type="button" @click="openLabAlert" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-violet-600 text-white hover:bg-violet-700">Open practical</button>
+              <button type="button" @click="labAlert = null" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">Later</button>
+            </div>
+          </div>
+          <button type="button" @click="labAlert = null" aria-label="Close" class="w-7 h-7 -mt-1 -mr-1 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">✕</button>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -399,10 +443,13 @@ import GlobalSearchBar from '../components/search/GlobalSearchBar.vue'
 import CommandPalette, { type PaletteAction } from '../components/common/CommandPalette.vue'
 import { resolveAssetUrl } from '@/utils/url'
 import { offline } from '@/utils/offline/enotes'
+import { pushSupported, pushPermission, pushAvailable, enablePush, syncPush } from '@/utils/push'
+import { useToastStore } from '@/stores/toast'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const toast = useToastStore()
 const themeStore = useThemeStore()
 const chatBadge = useChatBadgeStore()
 const readModeStore = useReadModeStore()
@@ -492,10 +539,50 @@ let notificationsTimer: ReturnType<typeof setInterval> | null = null
 
 const fetchUnreadNotificationCount = () => {
   axios.get('/api/notifications/unread-count')
-    .then(res => { unreadNotificationCount.value = res.data.data.count })
+    .then(res => {
+      const count = res.data.data.count
+      const grew = count > unreadNotificationCount.value || !labAlertChecked
+      unreadNotificationCount.value = count
+      if (grew && count > 0) checkLabAlert()
+    })
     .catch(() => {
       // Best-effort - the badge just stays at its last known value.
     })
+}
+
+// Pop-up alert when a Virtual Lab practical is published to a student's class: each unread
+// 'new_virtual_lab' notification pops up once (remembered per browser); it stays in the bell
+// list until read either way.
+interface LabAlert { id: number; title: string; message: string; assignmentId: number }
+const labAlert = ref<LabAlert | null>(null)
+let labAlertChecked = false
+const LAB_ALERTS_KEY = 'espace_lab_alerts_shown'
+const shownLabAlerts = (): number[] => {
+  try { return JSON.parse(localStorage.getItem(LAB_ALERTS_KEY) || '[]') } catch { return [] }
+}
+const checkLabAlert = () => {
+  if (authStore.userRole !== 'student') return
+  labAlertChecked = true
+  axios.get('/api/notifications', { params: { unread_only: '1', limit: 20 } })
+    .then(res => {
+      const list = res.data.data?.notifications ?? res.data.data ?? []
+      const shown = shownLabAlerts()
+      const next = (Array.isArray(list) ? list : []).find((n: any) => n.type === 'new_virtual_lab' && !shown.includes(Number(n.id)))
+      if (!next) return
+      const data = typeof next.data === 'string' ? JSON.parse(next.data) : (next.data || {})
+      labAlert.value = { id: Number(next.id), title: next.title, message: next.message, assignmentId: Number(data.assignment_id) }
+      try { localStorage.setItem(LAB_ALERTS_KEY, JSON.stringify([...shown, Number(next.id)].slice(-200))) } catch { /* private mode */ }
+    })
+    .catch(() => { /* best-effort */ })
+}
+const openLabAlert = () => {
+  const a = labAlert.value
+  if (!a) return
+  labAlert.value = null
+  axios.put(`/api/notifications/${a.id}/read`)
+    .then(() => { unreadNotificationCount.value = Math.max(0, unreadNotificationCount.value - 1) })
+    .catch(() => { /* best-effort */ })
+  router.push(`/student/virtual-lab/${a.assignmentId}`)
 }
 
 const handleOutsideNotificationClick = (event: MouseEvent) => {
@@ -534,9 +621,53 @@ onMounted(() => {
 
   chatBadge.refresh()
   messagesTimer = setInterval(() => chatBadge.refresh(), MESSAGES_POLL_INTERVAL_MS)
+
+  setupPushNotifications()
 })
 
+// --- Browser (Web Push) notifications - see utils/push.ts ---
+// Students are asked once (again after 14 days if they chose "Not now"); a browser that already
+// allowed them is re-registered for whoever signs in on it. Tapping a notification while eSpace is
+// open routes this tab there (public/push-sw.js posts the url).
+const PUSH_PROMPT_KEY = 'espace_push_prompt_dismissed_at'
+const showPushPrompt = ref(false)
+const enablingPush = ref(false)
+const onSwMessage = (e: MessageEvent) => {
+  if (e.data?.type === 'espace-open-url' && typeof e.data.url === 'string') {
+    const u = new URL(e.data.url)
+    if (u.origin === location.origin) router.push(u.pathname + u.search)
+  }
+}
+const setupPushNotifications = async () => {
+  if (!pushSupported()) return
+  navigator.serviceWorker.addEventListener('message', onSwMessage)
+  await syncPush()
+  if (authStore.userRole !== 'student' || pushPermission() !== 'default') return
+  let dismissedAt = 0
+  try { dismissedAt = Number(localStorage.getItem(PUSH_PROMPT_KEY) || 0) } catch { /* private mode */ }
+  if (Date.now() - dismissedAt < 14 * 24 * 3600 * 1000) return
+  if (await pushAvailable()) showPushPrompt.value = true
+}
+const turnOnPush = async () => {
+  enablingPush.value = true
+  try {
+    const on = await enablePush()
+    showPushPrompt.value = false
+    if (on) toast.success('Notifications are on for this device')
+    else if (pushPermission() === 'denied') toast.info('Notifications are blocked - you can allow them in your browser\'s site settings')
+  } catch {
+    toast.error('Could not turn on notifications on this device')
+  } finally {
+    enablingPush.value = false
+  }
+}
+const dismissPushPrompt = () => {
+  showPushPrompt.value = false
+  try { localStorage.setItem(PUSH_PROMPT_KEY, String(Date.now())) } catch { /* private mode */ }
+}
+
 onBeforeUnmount(() => {
+  if (pushSupported()) navigator.serviceWorker.removeEventListener('message', onSwMessage)
   window.removeEventListener('resize', applyResponsiveSidebar)
   window.removeEventListener('scroll', handleHeaderScroll)
   if (presenceTimer) clearInterval(presenceTimer)
@@ -653,7 +784,8 @@ const MENU: Record<string, NavGroup[]> = {
       { path: '/hod/enotes', label: 'eNotes', icon: 'NoteIcon' },
       { path: '/hod/library', label: 'eLibrary', icon: 'LibraryIcon' },
       { path: '/hod/videos', label: 'Videos', icon: 'VideoCameraIcon' },
-      { path: '/hod/itembank', label: 'Item Bank', icon: 'QuestionMarkCircleIcon' }
+      { path: '/hod/itembank', label: 'Item Bank', icon: 'QuestionMarkCircleIcon' },
+      { path: '/hod/virtual-lab', label: 'Virtual Lab', icon: 'FlaskIcon' }
     ] },
     { key: 'assessment', name: 'Assessment', items: [
       { path: '/hod/assessments', label: 'Assessments', icon: 'DocumentTextIcon' },

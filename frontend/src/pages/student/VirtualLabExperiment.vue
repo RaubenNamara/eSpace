@@ -32,7 +32,7 @@
           <!-- Progress bar -->
           <!-- A teacher doing the experiment like a student: same lab, nothing saved, no submit -->
           <div v-if="isPractice" class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-3 py-2 text-xs sm:text-sm text-amber-800 dark:text-amber-200">
-            <span class="font-semibold inline-flex items-center gap-1"><AppIcon name="teacher" class="w-4 h-4" /> {{ practiceRole === 'admin' ? 'Admin review' : 'Teacher practice' }}</span>
+            <span class="font-semibold inline-flex items-center gap-1"><AppIcon name="teacher" class="w-4 h-4" /> {{ practiceRole === 'admin' ? 'Admin review' : practiceRole === 'hod' ? 'HOD review' : 'Teacher practice' }}</span>
             <span class="flex-1 min-w-[12rem]">You are viewing this experiment's diagram and procedure the way a student does it. Nothing is saved and it can't be submitted.</span>
             <button type="button" @click="restartPractice" class="px-2.5 py-1 rounded-lg bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-700 font-semibold hover:bg-amber-100 dark:hover:bg-amber-900/40">↺ Start again</button>
           </div>
@@ -265,7 +265,6 @@
                   :scene-objects="attempt.experiment.scene_objects"
                   :object-catalog="objectCatalog"
                   :read-only="sceneReadOnly"
-                  :force-placed="practiceRole === 'admin'"
                   v-bind="isBulbExperiment || isGravityExperiment || isEmfExperiment ? { currentStep } : {}"
                   cupboard
                   wall-shelves
@@ -684,7 +683,10 @@ const router = useRouter()
 // and can't be submitted. meta.practiceRole picks which role's API/back-link to use (default
 // 'teacher' - the original practice route predates the admin one).
 const isPractice = computed(() => route.meta.practice === true)
-const practiceRole = computed<'teacher' | 'admin'>(() => (route.meta.practiceRole as 'admin') === 'admin' ? 'admin' : 'teacher')
+const practiceRole = computed<'teacher' | 'admin' | 'hod'>(() => {
+  const r = route.meta.practiceRole
+  return r === 'admin' || r === 'hod' ? r : 'teacher'
+})
 const practiceApiBase = computed(() => `/api/${practiceRole.value}/virtual-lab`)
 const backLink = computed(() => (isPractice.value ? `/${practiceRole.value}/virtual-lab` : '/student/virtual-lab'))
 let practiceNextId = -1

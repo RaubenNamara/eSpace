@@ -124,7 +124,8 @@ class VirtualLabController extends Controller
         $adminId = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null;
         try {
             $this->service()->addSharedDepartment((int) $id, $departmentId, $adminId);
-            $assignmentId = $this->service()->publishExperiment(
+            $service = $this->service();
+            $assignmentId = $service->publishExperiment(
                 (int) $id,
                 $classTarget['class_id'],
                 $classTarget['class_group_name'],
@@ -135,6 +136,10 @@ class VirtualLabController extends Controller
                 $departmentId,
                 $adminId
             );
+            // Alert the class's students - only when it is newly in front of them, not on a re-publish
+            if ($service->lastPublishWasNew()) {
+                $service->notifyStudentsOfAssignment($assignmentId);
+            }
             $this->success(['id' => $assignmentId], 'Experiment published');
         } catch (\RuntimeException $e) {
             $this->error($e->getMessage(), 400);
@@ -170,23 +175,7 @@ class VirtualLabController extends Controller
             $this->unauthorized();
             return;
         }
-        $db = \eSpace\Config\Database::getInstance();
-        $stmt = $db->prepare(
-            "SELECT DISTINCT c.id, c.name, c.stream_name
-             FROM classes c
-             INNER JOIN student_department_enrollments se ON se.class_id = c.id
-             WHERE se.department_id = :dept AND se.deleted_at IS NULL AND c.deleted_at IS NULL
-             ORDER BY c.name, c.stream_name"
-        );
-        $stmt->execute(['dept' => (int) $id]);
-        $classes = array_map(fn ($r) => [
-            'id' => (int) $r['id'],
-            'name' => $r['name'],
-            'stream_name' => $r['stream_name'],
-            'label' => trim($r['name'] . ($r['stream_name'] ? ' - ' . $r['stream_name'] : '')),
-        ], $stmt->fetchAll());
-        $levels = array_values(array_unique(array_map(fn ($c) => $c['name'], $classes)));
-        $this->success(['classes' => $classes, 'class_levels' => $levels]);
+        $this->success($this->service()->departmentClasses((int) $id));
     }
 
     /**

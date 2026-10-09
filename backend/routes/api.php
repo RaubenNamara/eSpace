@@ -51,6 +51,10 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
     Router::get('/notifications/unread-count', 'eSpace\App\Controllers\NotificationController@unreadCount');
     Router::put('/notifications/{id}/read', 'eSpace\App\Controllers\NotificationController@markAsRead');
     Router::put('/notifications/read-all', 'eSpace\App\Controllers\NotificationController@markAllAsRead');
+    // Browser (Web Push) notifications for this device - see WebPushService
+    Router::get('/push/public-key', 'eSpace\App\Controllers\PushController@publicKey');
+    Router::post('/push/subscribe', 'eSpace\App\Controllers\PushController@subscribe');
+    Router::post('/push/unsubscribe', 'eSpace\App\Controllers\PushController@unsubscribe');
 
     // Student routes
     Router::group(['prefix' => '/student', 'middleware' => ['role:student']], function () {
@@ -571,6 +575,15 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/mastery-overview', 'eSpace\App\Controllers\HOD\MasteryOverviewController@index');
         Router::get('/term-report', 'eSpace\App\Controllers\HOD\TermReportController@index');
         Router::get('/early-warning', 'eSpace\App\Controllers\Teacher\EarlyWarningController@index');
+        // Virtual Lab - the department's experiments, publishing to its classes, practice view
+        Router::get('/virtual-lab/experiments', 'eSpace\App\Controllers\HOD\VirtualLabController@experiments');
+        Router::get('/virtual-lab/classes', 'eSpace\App\Controllers\HOD\VirtualLabController@classes');
+        Router::get('/virtual-lab/terms', 'eSpace\App\Controllers\HOD\VirtualLabController@terms');
+        Router::get('/virtual-lab/objects', 'eSpace\App\Controllers\HOD\VirtualLabController@objects');
+        Router::post('/virtual-lab/experiments/{id}/publish', 'eSpace\App\Controllers\HOD\VirtualLabController@publish');
+        Router::delete('/virtual-lab/assignments/{id}', 'eSpace\App\Controllers\HOD\VirtualLabController@withdrawAssignment');
+        Router::get('/virtual-lab/experiments/{id}', 'eSpace\App\Controllers\HOD\VirtualLabController@experimentDetail');
+        Router::post('/virtual-lab/experiments/{id}/practice/action', 'eSpace\App\Controllers\HOD\VirtualLabController@practiceAction');
         
         // Department Management
         Router::get('/department/info', 'eSpace\App\Controllers\HOD\DepartmentController@getDepartmentInfo');

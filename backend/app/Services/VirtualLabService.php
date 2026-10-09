@@ -22,6 +22,9 @@ namespace eSpace\App\Services;
  */
 class VirtualLabService
 {
+    /** Whether the last publishExperiment() put the experiment in front of a class it wasn't live in */
+    private bool $lastPublishWasNew = false;
+
     private function getDb()
     {
         return \eSpace\Config\Database::getInstance();
@@ -253,14 +256,15 @@ class VirtualLabService
         }
         $in = implode(',', array_map('intval', $experimentIds));
         $rows = $this->getDb()->query(
-            "SELECT a.id, a.experiment_id, a.class_id, a.class_group_name, a.teacher_id, a.term_id, a.due_date, a.status,
+            "SELECT a.id, a.experiment_id, a.class_id, a.class_group_name, a.teacher_id, a.published_by_hod, a.term_id, a.due_date, a.status,
                     c.name AS class_name, c.stream_name, d.id AS department_id, d.name AS department_name,
-                    CONCAT(t.first_name, ' ', t.last_name) AS teacher_name, tm.name AS term_name,
+                    CONCAT(t.first_name, ' ', t.last_name) AS teacher_name, CONCAT(h.first_name, ' ', h.last_name) AS hod_name, tm.name AS term_name,
                     (SELECT COUNT(*) FROM virtual_lab_attempts att WHERE att.assignment_id = a.id AND att.status IN ('submitted','graded')) AS submitted_count
              FROM virtual_lab_assignments a
              LEFT JOIN classes c ON c.id = a.class_id
              LEFT JOIN departments d ON d.id = COALESCE(a.department_id, (SELECT department_id FROM subjects WHERE id = a.subject_id))
              LEFT JOIN teachers t ON t.id = a.teacher_id
+             LEFT JOIN hods h ON h.id = a.published_by_hod
              LEFT JOIN terms tm ON tm.id = a.term_id
              WHERE a.experiment_id IN ($in) AND a.deleted_at IS NULL
              ORDER BY a.created_at ASC"
@@ -274,8 +278,11 @@ class VirtualLabService
                     : trim(($r['class_name'] ?? 'Class') . ($r['stream_name'] ? ' - ' . $r['stream_name'] : '')),
                 'department_id' => $r['department_id'] !== null ? (int) $r['department_id'] : null,
                 'department_name' => $r['department_name'],
-                'by_admin' => $r['teacher_id'] === null,
-                'published_by' => $r['teacher_id'] === null ? 'Admin' : trim((string) $r['teacher_name']),
+                'by_admin' => $r['teacher_id'] === null && $r['published_by_hod'] === null,
+                'by_hod' => $r['teacher_id'] === null && $r['published_by_hod'] !== null,
+                'published_by' => $r['teacher_id'] !== null
+                    ? trim((string) $r['teacher_name'])
+                    : ($r['published_by_hod'] !== null ? 'HOD ' . trim((string) $r['hod_name']) : 'Admin'),
                 'term_name' => $r['term_name'],
                 'due_date' => $r['due_date'],
                 'submitted_count' => (int) $r['submitted_count'],
@@ -284,13 +291,63 @@ class VirtualLabService
         return $out;
     }
 
-    /** Withdraws a class assignment the admin published (teacher-published ones are left alone). */
-    public function withdrawAdminAssignment(int $assignmentId): bool
+    /**
+     * The classes (streams) with students enrolled in a department - the rule publishing validates
+     * against - and their class levels, for "all streams".
+     */
+    public function departmentClasses(int $departmentId): array
     {
         $stmt = $this->getDb()->prepare(
-            'UPDATE virtual_lab_assignments SET deleted_at = NOW(), updated_at = NOW() WHERE id = :id AND teacher_id IS NULL AND deleted_at IS NULL'
+            "SELECT DISTINCT c.id, c.name, c.stream_name
+             FROM classes c
+             INNER JOIN student_department_enrollments se ON se.class_id = c.id
+             WHERE se.department_id = :dept AND se.deleted_at IS NULL AND c.deleted_at IS NULL
+             ORDER BY c.name, c.stream_name"
         );
-        $stmt->execute(['id' => $assignmentId]);
+        $stmt->execute(['dept' => $departmentId]);
+        $classes = array_map(fn ($r) => [
+            'id' => (int) $r['id'],
+            'name' => $r['name'],
+            'stream_name' => $r['stream_name'],
+            'label' => trim($r['name'] . ($r['stream_name'] ? ' - ' . $r['stream_name'] : '')),
+        ], $stmt->fetchAll());
+        $levels = array_values(array_unique(array_map(fn ($c) => $c['name'], $classes)));
+        return ['classes' => $classes, 'class_levels' => $levels];
+    }
+
+    /**
+     * Whether an experiment belongs to a department's Virtual Lab: a library experiment shared with
+     * it, or any experiment with a live assignment in it.
+     */
+    public function experimentInDepartment(int $experimentId, int $departmentId): bool
+    {
+        if ($this->isSharedWithDepartment($experimentId, $departmentId)) {
+            return true;
+        }
+        $stmt = $this->getDb()->prepare(
+            'SELECT 1 FROM virtual_lab_assignments a
+             WHERE a.experiment_id = :e AND a.deleted_at IS NULL
+               AND COALESCE(a.department_id, (SELECT department_id FROM subjects WHERE id = a.subject_id)) = :d
+             LIMIT 1'
+        );
+        $stmt->execute(['e' => $experimentId, 'd' => $departmentId]);
+        return (bool) $stmt->fetchColumn();
+    }
+
+    /**
+     * Withdraws a class assignment the admin or a HOD published (teacher-published ones are left
+     * alone). A HOD passes their department, so they can only withdraw within it.
+     */
+    public function withdrawAdminAssignment(int $assignmentId, ?int $departmentId = null): bool
+    {
+        $sql = 'UPDATE virtual_lab_assignments SET deleted_at = NOW(), updated_at = NOW() WHERE id = :id AND teacher_id IS NULL AND deleted_at IS NULL';
+        $params = ['id' => $assignmentId];
+        if ($departmentId !== null) {
+            $sql .= ' AND department_id = :dept';
+            $params['dept'] = $departmentId;
+        }
+        $stmt = $this->getDb()->prepare($sql);
+        $stmt->execute($params);
         return $stmt->rowCount() > 0;
     }
 
@@ -803,7 +860,7 @@ class VirtualLabService
      * users.id in $adminUserId and the chosen $departmentId: students of that department in the
      * class see it, and every teacher of the department can follow and mark it.
      */
-    public function publishExperiment(int $experimentId, ?int $classId, ?string $classGroupName, ?int $teacherId, int $termId, ?string $dueDate, ?float $marksOverride, ?int $departmentId = null, ?int $adminUserId = null): int
+    public function publishExperiment(int $experimentId, ?int $classId, ?string $classGroupName, ?int $teacherId, int $termId, ?string $dueDate, ?float $marksOverride, ?int $departmentId = null, ?int $adminUserId = null, ?int $hodId = null): int
     {
         $experiment = $this->getExperimentDetail($experimentId);
         if (!$experiment) {
@@ -826,6 +883,7 @@ class VirtualLabService
             'subject_id' => $experiment['subject_id'],
             'teacher_id' => $teacherId,
             'published_by_admin' => $adminUserId,
+            'published_by_hod' => $hodId,
             'department_id' => $departmentId,
             'term_id' => $termId,
             'academic_year' => $academicYear,
@@ -835,11 +893,17 @@ class VirtualLabService
         ];
 
         if ($classId !== null) {
-            // unique_lab_assignment (experiment_id, class_id, term_id) covers this case natively.
+            // unique_lab_assignment (experiment_id, class_id, term_id) covers this case natively. A
+            // row withdrawn earlier (deleted_at set) is brought back rather than staying hidden.
+            $prior = $this->getDb()->prepare('SELECT deleted_at FROM virtual_lab_assignments WHERE experiment_id = :e AND class_id = :c AND term_id = :t');
+            $prior->execute(['e' => $experimentId, 'c' => $classId, 't' => $termId]);
+            $priorRow = $prior->fetch();
+            $this->lastPublishWasNew = !$priorRow || $priorRow['deleted_at'] !== null;
+
             $stmt = $this->getDb()->prepare(
-                'INSERT INTO virtual_lab_assignments (experiment_id, class_id, class_group_name, subject_id, department_id, teacher_id, published_by_admin, term_id, academic_year, due_date, marks, status, created_at, updated_at)
-                 VALUES (:experiment_id, :class_id, :class_group_name, :subject_id, :department_id, :teacher_id, :published_by_admin, :term_id, :academic_year, :due_date, :marks, :status, NOW(), NOW())
-                 ON DUPLICATE KEY UPDATE due_date = VALUES(due_date), marks = VALUES(marks), status = VALUES(status), subject_id = VALUES(subject_id), updated_at = NOW()'
+                'INSERT INTO virtual_lab_assignments (experiment_id, class_id, class_group_name, subject_id, department_id, teacher_id, published_by_admin, published_by_hod, term_id, academic_year, due_date, marks, status, created_at, updated_at)
+                 VALUES (:experiment_id, :class_id, :class_group_name, :subject_id, :department_id, :teacher_id, :published_by_admin, :published_by_hod, :term_id, :academic_year, :due_date, :marks, :status, NOW(), NOW())
+                 ON DUPLICATE KEY UPDATE due_date = VALUES(due_date), marks = VALUES(marks), status = VALUES(status), subject_id = VALUES(subject_id), deleted_at = NULL, updated_at = NOW()'
             );
             $stmt->execute($params);
 
@@ -857,27 +921,78 @@ class VirtualLabService
         // for this (experiment, class_group_name, term) by hand and update it instead of blindly
         // inserting a second row.
         $stmt = $this->getDb()->prepare(
-            'SELECT id FROM virtual_lab_assignments WHERE experiment_id = :e AND class_id IS NULL AND class_group_name = :g AND term_id = :t'
+            'SELECT id, deleted_at FROM virtual_lab_assignments WHERE experiment_id = :e AND class_id IS NULL AND class_group_name = :g AND term_id = :t'
         );
         $stmt->execute(['e' => $experimentId, 'g' => $classGroupName, 't' => $termId]);
         $existing = $stmt->fetch();
+        $this->lastPublishWasNew = !$existing || $existing['deleted_at'] !== null;
 
         if ($existing) {
             $stmt = $this->getDb()->prepare(
-                'UPDATE virtual_lab_assignments SET due_date = :due_date, marks = :marks, status = :status, subject_id = :subject_id, updated_at = NOW() WHERE id = :id'
+                'UPDATE virtual_lab_assignments SET due_date = :due_date, marks = :marks, status = :status, subject_id = :subject_id, deleted_at = NULL, updated_at = NOW() WHERE id = :id'
             );
             $stmt->execute(['due_date' => $dueDate, 'marks' => $params['marks'], 'status' => 'active', 'subject_id' => $params['subject_id'], 'id' => $existing['id']]);
             return (int) $existing['id'];
         }
 
         $stmt = $this->getDb()->prepare(
-            'INSERT INTO virtual_lab_assignments (experiment_id, class_id, class_group_name, subject_id, department_id, teacher_id, published_by_admin, term_id, academic_year, due_date, marks, status, created_at, updated_at)
-             VALUES (:experiment_id, NULL, :class_group_name, :subject_id, :department_id, :teacher_id, :published_by_admin, :term_id, :academic_year, :due_date, :marks, :status, NOW(), NOW())'
+            'INSERT INTO virtual_lab_assignments (experiment_id, class_id, class_group_name, subject_id, department_id, teacher_id, published_by_admin, published_by_hod, term_id, academic_year, due_date, marks, status, created_at, updated_at)
+             VALUES (:experiment_id, NULL, :class_group_name, :subject_id, :department_id, :teacher_id, :published_by_admin, :published_by_hod, :term_id, :academic_year, :due_date, :marks, :status, NOW(), NOW())'
         );
         // class_id is written as a literal NULL here, so it must not be passed as a parameter too
         unset($params['class_id']);
         $stmt->execute($params);
         return (int) \eSpace\Config\Database::lastInsertId();
+    }
+
+    public function lastPublishWasNew(): bool
+    {
+        return $this->lastPublishWasNew;
+    }
+
+    /**
+     * Notifies every student who can now see this class assignment - the same rule as their
+     * Virtual Lab list (department and class or class level, active enrolment, not withdrawn
+     * from the publishing teacher). Each student is notified once, however many enrolment rows.
+     */
+    public function notifyStudentsOfAssignment(int $assignmentId): int
+    {
+        $stmt = $this->getDb()->prepare(
+            "SELECT DISTINCT sde.student_id, e.title, e.id AS experiment_id, a.due_date
+             FROM virtual_lab_assignments a
+             INNER JOIN virtual_lab_experiments e ON e.id = a.experiment_id
+             INNER JOIN student_department_enrollments sde
+                ON sde.department_id = COALESCE(a.department_id, (SELECT department_id FROM subjects WHERE id = a.subject_id))
+               AND sde.status = 'active' AND sde.deleted_at IS NULL
+               AND (sde.class_id = a.class_id
+                    OR (a.class_group_name IS NOT NULL AND EXISTS (SELECT 1 FROM classes c WHERE c.id = sde.class_id AND c.name = a.class_group_name)))
+               AND a.created_at BETWEEN sde.start_date AND COALESCE(sde.end_date, NOW())
+             WHERE a.id = :id AND a.deleted_at IS NULL AND a.status = 'active'
+               AND NOT EXISTS (
+                   SELECT 1 FROM student_teacher_enrollments ste
+                   WHERE ste.student_id = sde.student_id AND ste.teacher_id = a.teacher_id
+                     AND ste.department_id = sde.department_id AND ste.status = 'withdrawn'
+               )"
+        );
+        $stmt->execute(['id' => $assignmentId]);
+        $rows = $stmt->fetchAll();
+        if (!$rows) {
+            return 0;
+        }
+        $title = $rows[0]['title'];
+        $due = $rows[0]['due_date'] ? ' Due ' . date('j M Y', strtotime($rows[0]['due_date'])) . '.' : '';
+        $notifications = new NotificationService();
+        foreach ($rows as $r) {
+            $notifications->notify(
+                (int) $r['student_id'],
+                'student',
+                'new_virtual_lab',
+                'New Virtual Lab practical',
+                "\"{$title}\" has been published to your class.{$due}",
+                ['assignment_id' => $assignmentId, 'experiment_id' => (int) $r['experiment_id']]
+            );
+        }
+        return count($rows);
     }
 
     public function listAssignmentsForTeacher(int $teacherId, array $filters = []): array
@@ -922,7 +1037,8 @@ class VirtualLabService
                 'class_name' => $row['class_group_name']
                     ? $row['class_group_name'] . ' (All Streams)'
                     : $row['class_name'] . ($row['stream_name'] ? ' - ' . $row['stream_name'] : ''),
-                'published_by_admin' => $row['teacher_id'] === null,
+                'published_by_admin' => $row['teacher_id'] === null && $row['published_by_hod'] === null,
+                'published_by_hod' => $row['teacher_id'] === null && $row['published_by_hod'] !== null,
                 'term_id' => (int) $row['term_id'],
                 'due_date' => $row['due_date'],
                 'marks' => (float) $row['marks'],

@@ -50,6 +50,8 @@ export default defineConfig(() => ({
         ]
       },
       workbox: {
+        // Browser (Web Push) notifications - public/push-sw.js shows them and opens eSpace on tap
+        importScripts: ['push-sw.js'],
         // .mjs and the standard fonts are the PDF reader's own (pdf.js worker) - kept so a PDF saved
         // for offline reading (utils/offline/docs.ts) opens with no network
         globPatterns: ['**/*.{js,mjs,css,html,ico,png,svg,woff2}', 'pdfjs/standard_fonts/*'],

@@ -140,7 +140,7 @@
 <script setup lang="ts">
 import AppIcon from '@/components/common/AppIcon.vue'
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import Breadcrumb, { type BreadcrumbItem } from '@/components/common/Breadcrumb.vue'
 import VirtualLabScene from '@/components/virtuallab/VirtualLabScene.vue'
@@ -155,6 +155,7 @@ interface CategoryGroup {
 }
 
 const route = useRoute()
+const router = useRouter()
 const { labMaximized, enterMaximize, exitMaximize } = useFullscreenLab()
 
 const assignments = ref<TeacherAssignment[]>([])
@@ -204,17 +205,10 @@ const breadcrumbItems = computed<BreadcrumbItem[]>(() => {
 
 const formatDate = (d: string) => new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 
-const openAssignment = async (a: TeacherAssignment) => {
-  activeAssignment.value = a
-  detailLoading.value = true
-  try {
-    const res = await axios.get(`/api/teacher/virtual-lab/assignments/${a.id}/preview`)
-    if (res.data.success) detail.value = res.data.data
-  } catch (error) {
-    console.error('Failed to load experiment preview:', error)
-  } finally {
-    detailLoading.value = false
-  }
+// Opens the full experiment page - the same one students, HODs and the admin see (brief, bench,
+// results table, graph and analysis), in practice mode so nothing is recorded
+const openAssignment = (a: TeacherAssignment) => {
+  router.push(`/teacher/virtual-lab/practice/${a.experiment_id}`)
 }
 
 const loadAssignments = async () => {

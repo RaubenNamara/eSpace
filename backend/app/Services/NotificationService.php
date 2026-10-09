@@ -34,6 +34,14 @@ class NotificationService
             'message' => $message,
             'data' => $data !== null ? json_encode($data) : null,
         ]);
+
+        // Also to the recipient's browsers/phones that turned notifications on (sent after the
+        // response - see WebPushService). A push problem must never stop the notification itself.
+        try {
+            WebPushService::queue($userId, $userRole, $title, $message, WebPushService::urlFor($type, $data, $userRole), $type);
+        } catch (\Throwable $e) {
+            error_log('WebPush queue: ' . $e->getMessage());
+        }
     }
 
     /**

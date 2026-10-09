@@ -325,7 +325,8 @@ class VirtualLabController extends Controller
         }
 
         try {
-            $assignmentId = $this->service()->publishExperiment(
+            $service = $this->service();
+            $assignmentId = $service->publishExperiment(
                 (int) $id,
                 $classTarget['class_id'],
                 $classTarget['class_group_name'],
@@ -334,6 +335,10 @@ class VirtualLabController extends Controller
                 $this->input('due_date'),
                 $this->input('marks') !== null ? (float) $this->input('marks') : null
             );
+            // Alert the class's students - only when it is newly in front of them, not on a re-publish
+            if ($service->lastPublishWasNew()) {
+                $service->notifyStudentsOfAssignment($assignmentId);
+            }
             // Publishing makes the teacher's own experiment "published" so it no longer shows as a
             // draft on their list (official templates keep their own status)
             if (!$ownership['is_template']) {

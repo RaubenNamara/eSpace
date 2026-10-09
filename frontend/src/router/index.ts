@@ -336,6 +336,9 @@ const routes: RouteRecordRaw[] = [
       { path: 'enotes/:id', name: 'HODENoteTopic', component: ENotePreview, meta: { previewRole: 'hod', immersiveReader: true } },
       { path: 'videos', name: 'HODVideos', component: HODVideos },
       { path: 'itembank', name: 'HODItemBank', component: HODItemBank },
+      // The admin's Virtual Lab page, limited to the HOD's department (meta.labRole)
+      { path: 'virtual-lab', name: 'HODVirtualLab', component: AdminVirtualLab, meta: { labRole: 'hod' } },
+      { path: 'virtual-lab/practice/:experimentId', name: 'HODVirtualLabPractice', component: StudentVirtualLabExperiment, meta: { practice: true, practiceRole: 'hod' } },
       { path: 'assessments', name: 'HODAssessments', component: HODAssessments },
       { path: 'assessments/:id/preview', name: 'HODAssignmentPreview', component: StudentAssignmentAnswer, meta: { previewRole: 'hod' } },
       { path: 'assessments/:id/submissions', name: 'HODAssignmentSubmissions', component: HODAssignmentSubmissions },
