@@ -62,6 +62,7 @@ import LabButton from './ui/LabButton.vue'
 import LabToggle from './ui/LabToggle.vue'
 import { dirFromAngle, reflect, refract, computeRayHit, angleFromNormalDeg, type Vec2 } from './opticsEngine'
 import type { SceneObjectConfig, LabObjectDef, LabAction } from '@/types/virtualLab'
+import type { CameraView } from './VirtualLabScene.vue'
 
 const props = defineProps<{
   sceneObjects: SceneObjectConfig[]
@@ -372,6 +373,7 @@ function onHover(ev: PointerEvent) {
 }
 
 function onPointerDown(ev: PointerEvent) {
+  if (handleFurnitureClick(ev)) return
   if (props.readOnly) return
   const t = pickTarget(ev)
   if (!t || !room.value || !pointOnPlane(ev, benchPlane, hitPt)) return
@@ -447,8 +449,10 @@ function resetOptics() {
   hasMoved.value = false
 }
 
-const { room, unsupported, pick, pointOnPlane } = useLabScene(
-  { cameraPosition: [0, 0.36, 0.34], target: [0, 0, 0.01], minDistance: 0.2, maxDistance: 1.2 },
+const HOME_POS: THREE.Vector3Tuple = [0, 0.36, 0.34]
+const HOME_TARGET: THREE.Vector3Tuple = [0, 0, 0.01]
+const { room, unsupported, pick, pointOnPlane, handleFurnitureClick } = useLabScene(
+  { cameraPosition: HOME_POS, target: HOME_TARGET, minDistance: 0.2, maxDistance: 12, cupboard: true, wallCabinets: true, shelfCatalog: () => props.objectCatalog, benchLength: 3 },
   (r) => {
     buildScene(r.scene)
     r.onFrame(syncScene)
@@ -467,5 +471,16 @@ onBeforeUnmount(() => {
 function setObjectState(key: string, patch: Record<string, any>) {
   if (key === rayBoxKey.value && 'state' in patch) rayBoxOn.value = patch.state === 'on'
 }
-defineExpose({ setObjectState })
+
+// Same room-navigation views as the Apparatus Playground / free-layout engine.
+function goToView(view: CameraView) {
+  const r = room.value
+  if (!r) return
+  if (view === 'bench') r.flyTo(new THREE.Vector3(...HOME_POS), new THREE.Vector3(...HOME_TARGET))
+  else if (view === 'entrance') r.flyTo(new THREE.Vector3(2.4, 0.95, 2.4), new THREE.Vector3(0, 0.25, 7))
+  else if (view === 'left') r.flyTo(new THREE.Vector3(-1.2, 1.0, 1.6), new THREE.Vector3(-7, 0.45, 1.6))
+  else r.flyTo(new THREE.Vector3(1.2, 1.0, 1.6), new THREE.Vector3(7, 0.45, 1.6))
+}
+
+defineExpose({ setObjectState, goToView })
 </script>

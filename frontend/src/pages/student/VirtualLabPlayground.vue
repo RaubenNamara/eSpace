@@ -75,6 +75,7 @@
               cupboard
               wall-shelves
               :bench-length="BENCH_LENGTH"
+              :dirty-keys="dirtyKeys"
               side-benches
               @action="onSceneAction"
               @take-chemical="takeChemical"
@@ -112,6 +113,25 @@
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 14L4 9l5-5M4 9h11a5 5 0 010 10h-3" /></svg>
               </button>
             </div>
+          </div>
+
+          <!-- Playground Notebook: what was heated, poured, connected, measured or switched -->
+          <div class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700">
+            <div class="flex items-center justify-between mb-2">
+              <p class="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Notebook</p>
+              <span class="text-[11px] text-gray-400 dark:text-gray-500">{{ notebookEntries.length }} recorded</span>
+            </div>
+            <p v-if="notebookNote" class="text-[11px] text-amber-700 dark:text-amber-300 mb-2">{{ notebookNote }}</p>
+            <p v-if="notebookEntries.length === 0" class="text-xs text-gray-400 dark:text-gray-500">Heat, pour, connect, measure or switch something and the result is recorded here.</p>
+            <ul v-else class="space-y-1.5 max-h-72 overflow-y-auto">
+              <li v-for="e in notebookEntries" :key="e.id" class="flex items-start justify-between gap-2 bg-gray-50 dark:bg-gray-950/40 rounded-lg px-2.5 py-1.5">
+                <div class="min-w-0">
+                  <p class="text-xs text-gray-700 dark:text-gray-200">{{ e.summary }}</p>
+                  <p class="text-[10px] text-gray-400 dark:text-gray-500">{{ formatTime(e.created_at) }}</p>
+                </div>
+                <button @click="removeNotebookEntry(e.id)" class="flex-shrink-0 text-[11px] font-medium text-red-500 hover:underline">Delete</button>
+              </li>
+            </ul>
           </div>
         </div>
       </div>
@@ -172,13 +192,23 @@ const BENCHES: Record<BenchKey, { label: string; rotY: number; x: number; z: num
 }
 /** Which bench each object on the benches stands on */
 const benchOf: Record<string, BenchKey> = {}
+/** Objects the student has carried by hand - they keep the place they were put */
+const freeKeys = new Set<string>()
+/** Used glassware that has not been washed yet */
+const dirtyKeys = ref<string[]>([])
+const markDirty = (key: string | null | undefined) => {
+  if (key && !dirtyKeys.value.includes(key) && WASHABLE_OBJECTS.includes(typeOf(key) ?? '')) dirtyKeys.value.push(key)
+}
+/** Glassware that gets dirty when used, and can be washed at a sink */
+const WASHABLE_OBJECTS = ['beaker', 'conical_flask', 'amber_conical_flask', 'round_bottom_flask', 'test_tube', 'measuring_cylinder']
 /** The bench new apparatus goes on - follows the camera view */
 const activeBench = ref<BenchKey>('front')
 
 function relayout() {
   ;(Object.keys(BENCHES) as BenchKey[]).forEach((bk) => {
     const bench = BENCHES[bk]
-    const onIt = sceneObjects.value.filter(o => (benchOf[o.key] ?? 'front') === bk)
+    // Items carried by hand (see onSceneAction 'move') stay where they were put
+    const onIt = sceneObjects.value.filter(o => (benchOf[o.key] ?? 'front') === bk && !freeKeys.has(o.key))
     const c = Math.cos(bench.rotY), sn = Math.sin(bench.rotY)
     onIt.forEach((o, i) => {
       const p = layoutPosition(i, onIt.length)
@@ -255,14 +285,74 @@ const putBack = (key: string) => {
 
 const removeFromScene = (key: string) => {
   sceneObjects.value = sceneObjects.value.filter(o => o.key !== key)
+  freeKeys.delete(key)
+  dirtyKeys.value = dirtyKeys.value.filter(k => k !== key)
   relayout()
 }
 
 const clearBench = () => {
   sceneObjects.value = []
+  freeKeys.clear()
+  dirtyKeys.value = []
 }
 
-const onSceneAction = (payload: { objectKey: string | null; action: string; value: string | null }) => {
+// --- Playground Notebook ----------------------------------------------------------------------
+// Results from what was tried on the bench (heated, poured, connected, measured, switched) are kept
+// per user. Nothing here is graded - it's a record of the student's own practice.
+interface NotebookEntry {
+  id: number
+  object_type: string | null
+  action: string
+  summary: string
+  readings: Record<string, unknown> | null
+  created_at: string
+}
+const NOTEBOOK_URL = `/api/${role}/virtual-lab/playground/notebook`
+const notebookEntries = ref<NotebookEntry[]>([])
+const notebookNote = ref<string | null>(null)
+
+/** What an object on the bench is called, for a notebook line */
+const nameOf = (key?: string | null) => {
+  const o = key ? sceneObjects.value.find(x => x.key === key) : undefined
+  if (!o) return 'an item'
+  return o.props?.display_name || catalogByType.value.get(o.object_type)?.display_name || o.object_type
+}
+const typeOf = (key?: string | null) => (key ? sceneObjects.value.find(x => x.key === key)?.object_type ?? null : null)
+
+const recordResult = async (rec: { objectKey?: string | null; action: string; summary: string; readings?: Record<string, unknown> | null }) => {
+  try {
+    const res = await axios.post(NOTEBOOK_URL, {
+      action: rec.action,
+      summary: rec.summary,
+      object_type: typeOf(rec.objectKey),
+      readings: rec.readings ?? null,
+    })
+    notebookEntries.value.unshift({
+      id: res.data.data.id,
+      object_type: typeOf(rec.objectKey),
+      action: rec.action,
+      summary: rec.summary,
+      readings: rec.readings ?? null,
+      created_at: new Date().toISOString(),
+    })
+    notebookNote.value = null
+  } catch {
+    notebookNote.value = 'Could not save that result to the notebook.'
+  }
+}
+
+const removeNotebookEntry = async (id: number) => {
+  try {
+    await axios.delete(`${NOTEBOOK_URL}/${id}`)
+    notebookEntries.value = notebookEntries.value.filter(e => e.id !== id)
+  } catch {
+    notebookNote.value = 'Could not delete that entry.'
+  }
+}
+
+const formatTime = (s: string) => new Date(s).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+
+const onSceneAction = (payload: { objectKey: string | null; action: string; value: string | null; unit?: string | null; label?: string | null; targetObjectKey?: string | null; source?: string | null; position?: { x: number; y: number; z: number } }) => {
   // Purely exploratory - nothing here is tracked or graded, just applied locally so switches,
   // bulbs and burners actually respond when clicked (mirrors the same local toggle used in the
   // real guided experiment player).
@@ -272,6 +362,57 @@ const onSceneAction = (payload: { objectKey: string | null; action: string; valu
   if (payload.action === 'heat' && payload.value) {
     sceneRef.value?.setObjectState(payload.objectKey!, { flame: 'on' })
   }
+
+  // Carried by hand: the item stays where it was put, and the scene keeps its height (in a basin)
+  if (payload.action === 'move' && payload.objectKey && payload.position) {
+    const carried = sceneObjects.value.find(o => o.key === payload.objectKey)
+    if (carried) carried.position = { ...payload.position }
+    freeKeys.add(payload.objectKey)
+  }
+  // Washed at a sink: clean again
+  if (payload.action === 'wash' && payload.objectKey) {
+    dirtyKeys.value = dirtyKeys.value.filter(k => k !== payload.objectKey)
+    flash(`${nameOf(payload.objectKey)} washed and clean`)
+    recordResult({ objectKey: payload.objectKey, action: 'wash', summary: `Washed ${nameOf(payload.objectKey)} at the sink` })
+  }
+
+  // Record what happened. The scene sends the selected object as objectKey, and the object it was
+  // used on as value (for heat, connect and measure) or the container it was poured into (pour).
+  if ((payload.action === 'switch_on' || payload.action === 'switch_off') && payload.objectKey) {
+    const on = payload.action === 'switch_on'
+    recordResult({ objectKey: payload.objectKey, action: payload.action, summary: `${nameOf(payload.objectKey)} switched ${on ? 'on' : 'off'}` })
+  } else if (payload.action === 'heat' && payload.objectKey && payload.value) {
+    recordResult({ objectKey: payload.value, action: 'heat', summary: `${nameOf(payload.value)} heated over ${nameOf(payload.objectKey)}` })
+  } else if (payload.action === 'connect' && payload.objectKey && payload.value) {
+    recordResult({ objectKey: payload.objectKey, action: 'connect', summary: `Connected ${nameOf(payload.objectKey)} to ${nameOf(payload.value)}` })
+  } else if (payload.action === 'pour' && payload.objectKey && payload.value) {
+    const from = payload.source ? ` from ${nameOf(payload.source)}` : ''
+    // Warning only: the pour still happens, but it is recorded as going into unwashed glassware
+    const dirty = dirtyKeys.value.includes(payload.objectKey)
+    if (dirty) flash(`${nameOf(payload.objectKey)} is dirty - wash it at a sink before using it again`)
+    recordResult({
+      objectKey: payload.objectKey,
+      action: 'pour',
+      summary: `Poured ${payload.value} ml${from} into ${nameOf(payload.objectKey)}${dirty ? ' - it had not been washed' : ''}`,
+      readings: { volume_ml: Number(payload.value), washed_first: !dirty },
+    })
+  } else if (payload.action === 'measure' && payload.value) {
+    const unit = payload.unit ? ` ${payload.unit}` : ''
+    recordResult({
+      objectKey: payload.targetObjectKey ?? payload.objectKey,
+      action: 'measure',
+      summary: `Measured ${nameOf(payload.targetObjectKey ?? payload.objectKey)} with ${payload.label || nameOf(payload.objectKey)}: ${payload.value}${unit}`,
+      readings: { value: payload.value, unit: payload.unit ?? null },
+    })
+  }
+
+  // Used glassware is dirty until it is washed (marked after recording, so the pour above
+  // could see whether it was already dirty)
+  if (payload.action === 'heat' && payload.value) markDirty(payload.value)
+  if (payload.action === 'pour') {
+    markDirty(payload.objectKey)
+    markDirty(payload.source)
+  }
 }
 
 onMounted(async () => {
@@ -280,6 +421,12 @@ onMounted(async () => {
     catalog.value = res.data.data.objects
   } finally {
     loadingCatalog.value = false
+  }
+  try {
+    const res = await axios.get(NOTEBOOK_URL)
+    notebookEntries.value = res.data.data.entries
+  } catch {
+    notebookNote.value = 'Could not load your notebook.'
   }
 })
 </script>

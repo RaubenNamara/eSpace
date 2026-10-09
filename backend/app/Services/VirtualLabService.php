@@ -159,7 +159,7 @@ class VirtualLabService
 
         $rows = $stmt->fetchAll();
         $ids = array_map(fn ($r) => (int) $r['id'], $rows);
-        $published = $this->publishedTargets($ids, isset($filters['published_by']) ? (int) $filters['published_by'] : null);
+        $published = $this->publishedTargets($ids, isset($filters['published_by']) ? (int) $filters['published_by'] : null, isset($filters['published_department']) ? (int) $filters['published_department'] : null);
         $sharedWith = $this->sharedDepartments($ids);
 
         return array_map(function ($row) use ($published, $sharedWith) {
@@ -190,6 +190,108 @@ class VirtualLabService
                 'created_at' => $row['created_at'],
             ];
         }, $rows);
+    }
+
+    /**
+     * The admin's list: one entry per experiment. A teacher's copy of a library experiment (same
+     * title and scene - copies keep no link to their source) is folded into the library card
+     * rather than shown again; its classes appear in the card's `publications`, its id in
+     * `copy_ids`. Read-only - no experiment row is changed.
+     */
+    public function listExperimentsForAdmin(array $filters = []): array
+    {
+        $rows = $this->listExperiments($filters);
+        $publications = $this->publicationDetails(array_map(fn ($r) => $r['id'], $rows));
+        $groupKey = fn ($r) => mb_strtolower(trim($r['title'])) . '|' . ($r['render_component'] ?? '');
+
+        $templates = [];
+        foreach ($rows as $i => $r) {
+            if ($r['is_template'] && !isset($templates[$groupKey($r)])) {
+                $templates[$groupKey($r)] = $i;
+            }
+        }
+
+        $out = [];
+        $indexOf = [];
+        foreach ($rows as $i => $r) {
+            $r['publications'] = $publications[$r['id']] ?? [];
+            $r['copy_ids'] = [];
+            $key = $groupKey($r);
+            if (!$r['is_template'] && isset($templates[$key])) {
+                continue;
+            }
+            $out[] = $r;
+            if ($r['is_template'] && ($templates[$key] ?? null) === $i) {
+                $indexOf[$key] = count($out) - 1;
+            }
+        }
+        // Fold each teacher copy into its library card
+        foreach ($rows as $r) {
+            $key = $groupKey($r);
+            if ($r['is_template'] || !isset($templates[$key], $indexOf[$key])) {
+                continue;
+            }
+            $card = &$out[$indexOf[$key]];
+            $card['copy_ids'][] = $r['id'];
+            $card['assignment_count'] += $r['assignment_count'];
+            $card['attempt_count'] += $r['attempt_count'];
+            $card['published_to'] = array_merge($card['published_to'], $r['published_to']);
+            $card['publications'] = array_merge($card['publications'], $publications[$r['id']] ?? []);
+            unset($card);
+        }
+        return $out;
+    }
+
+    /**
+     * Every live assignment of the given experiments with where it went and who published it,
+     * keyed by experiment id.
+     */
+    private function publicationDetails(array $experimentIds): array
+    {
+        if (empty($experimentIds)) {
+            return [];
+        }
+        $in = implode(',', array_map('intval', $experimentIds));
+        $rows = $this->getDb()->query(
+            "SELECT a.id, a.experiment_id, a.class_id, a.class_group_name, a.teacher_id, a.term_id, a.due_date, a.status,
+                    c.name AS class_name, c.stream_name, d.id AS department_id, d.name AS department_name,
+                    CONCAT(t.first_name, ' ', t.last_name) AS teacher_name, tm.name AS term_name,
+                    (SELECT COUNT(*) FROM virtual_lab_attempts att WHERE att.assignment_id = a.id AND att.status IN ('submitted','graded')) AS submitted_count
+             FROM virtual_lab_assignments a
+             LEFT JOIN classes c ON c.id = a.class_id
+             LEFT JOIN departments d ON d.id = COALESCE(a.department_id, (SELECT department_id FROM subjects WHERE id = a.subject_id))
+             LEFT JOIN teachers t ON t.id = a.teacher_id
+             LEFT JOIN terms tm ON tm.id = a.term_id
+             WHERE a.experiment_id IN ($in) AND a.deleted_at IS NULL
+             ORDER BY a.created_at ASC"
+        )->fetchAll();
+        $out = [];
+        foreach ($rows as $r) {
+            $out[(int) $r['experiment_id']][] = [
+                'assignment_id' => (int) $r['id'],
+                'class_label' => $r['class_group_name']
+                    ? $r['class_group_name'] . ' (All Streams)'
+                    : trim(($r['class_name'] ?? 'Class') . ($r['stream_name'] ? ' - ' . $r['stream_name'] : '')),
+                'department_id' => $r['department_id'] !== null ? (int) $r['department_id'] : null,
+                'department_name' => $r['department_name'],
+                'by_admin' => $r['teacher_id'] === null,
+                'published_by' => $r['teacher_id'] === null ? 'Admin' : trim((string) $r['teacher_name']),
+                'term_name' => $r['term_name'],
+                'due_date' => $r['due_date'],
+                'submitted_count' => (int) $r['submitted_count'],
+            ];
+        }
+        return $out;
+    }
+
+    /** Withdraws a class assignment the admin published (teacher-published ones are left alone). */
+    public function withdrawAdminAssignment(int $assignmentId): bool
+    {
+        $stmt = $this->getDb()->prepare(
+            'UPDATE virtual_lab_assignments SET deleted_at = NOW(), updated_at = NOW() WHERE id = :id AND teacher_id IS NULL AND deleted_at IS NULL'
+        );
+        $stmt->execute(['id' => $assignmentId]);
+        return $stmt->rowCount() > 0;
     }
 
     /**
@@ -226,6 +328,15 @@ class VirtualLabService
         return (bool) $stmt->fetchColumn();
     }
 
+    /** Shares a library experiment with one more department (no-op if it already is). */
+    public function addSharedDepartment(int $experimentId, int $departmentId, ?int $sharedBy): void
+    {
+        $this->getDb()->prepare(
+            'INSERT IGNORE INTO virtual_lab_experiment_departments (experiment_id, department_id, shared_by, created_at)
+             SELECT ?, d.id, ?, NOW() FROM departments d WHERE d.id = ?'
+        )->execute([$experimentId, $sharedBy, $departmentId]);
+    }
+
     /** Replaces the set of departments a library experiment is shared with. */
     public function setSharedDepartments(int $experimentId, array $departmentIds, ?int $sharedBy): void
     {
@@ -258,15 +369,21 @@ class VirtualLabService
      * Where each experiment is published, as readable labels ("S.5 - P1", or "S.1 (All Streams)"
      * when it went to a whole class group) - keyed by experiment id.
      */
-    private function publishedTargets(array $experimentIds, ?int $teacherId = null): array
+    private function publishedTargets(array $experimentIds, ?int $teacherId = null, ?int $adminDepartmentId = null): array
     {
         if (empty($experimentIds)) {
             return [];
         }
         $in = implode(',', array_map('intval', $experimentIds));
         // A teacher only sees the classes they published to themselves - a shared library
-        // experiment may also be published by colleagues
-        $byTeacher = $teacherId !== null ? ' AND a.teacher_id = ' . (int) $teacherId : '';
+        // experiment may also be published by colleagues - plus the classes the admin published it
+        // to in the teacher's department
+        $byTeacher = '';
+        if ($teacherId !== null) {
+            $byTeacher = $adminDepartmentId
+                ? ' AND (a.teacher_id = ' . (int) $teacherId . ' OR (a.teacher_id IS NULL AND a.department_id = ' . (int) $adminDepartmentId . '))'
+                : ' AND a.teacher_id = ' . (int) $teacherId;
+        }
         $stmt = $this->getDb()->query(
             "SELECT a.experiment_id, a.class_group_name, c.name AS class_name, c.stream_name
              FROM virtual_lab_assignments a
@@ -680,7 +797,13 @@ class VirtualLabService
         return (bool) $stmt->fetch();
     }
 
-    public function publishExperiment(int $experimentId, ?int $classId, ?string $classGroupName, int $teacherId, int $termId, ?string $dueDate, ?float $marksOverride): int
+    /**
+     * Publishes an experiment to a class (or every stream of a class level, $classGroupName).
+     * A teacher publishes with their $teacherId. An admin publishes with $teacherId null, their
+     * users.id in $adminUserId and the chosen $departmentId: students of that department in the
+     * class see it, and every teacher of the department can follow and mark it.
+     */
+    public function publishExperiment(int $experimentId, ?int $classId, ?string $classGroupName, ?int $teacherId, int $termId, ?string $dueDate, ?float $marksOverride, ?int $departmentId = null, ?int $adminUserId = null): int
     {
         $experiment = $this->getExperimentDetail($experimentId);
         if (!$experiment) {
@@ -702,6 +825,8 @@ class VirtualLabService
             'class_group_name' => $classGroupName,
             'subject_id' => $experiment['subject_id'],
             'teacher_id' => $teacherId,
+            'published_by_admin' => $adminUserId,
+            'department_id' => $departmentId,
             'term_id' => $termId,
             'academic_year' => $academicYear,
             'due_date' => $dueDate,
@@ -712,8 +837,8 @@ class VirtualLabService
         if ($classId !== null) {
             // unique_lab_assignment (experiment_id, class_id, term_id) covers this case natively.
             $stmt = $this->getDb()->prepare(
-                'INSERT INTO virtual_lab_assignments (experiment_id, class_id, class_group_name, subject_id, teacher_id, term_id, academic_year, due_date, marks, status, created_at, updated_at)
-                 VALUES (:experiment_id, :class_id, :class_group_name, :subject_id, :teacher_id, :term_id, :academic_year, :due_date, :marks, :status, NOW(), NOW())
+                'INSERT INTO virtual_lab_assignments (experiment_id, class_id, class_group_name, subject_id, department_id, teacher_id, published_by_admin, term_id, academic_year, due_date, marks, status, created_at, updated_at)
+                 VALUES (:experiment_id, :class_id, :class_group_name, :subject_id, :department_id, :teacher_id, :published_by_admin, :term_id, :academic_year, :due_date, :marks, :status, NOW(), NOW())
                  ON DUPLICATE KEY UPDATE due_date = VALUES(due_date), marks = VALUES(marks), status = VALUES(status), subject_id = VALUES(subject_id), updated_at = NOW()'
             );
             $stmt->execute($params);
@@ -746,8 +871,8 @@ class VirtualLabService
         }
 
         $stmt = $this->getDb()->prepare(
-            'INSERT INTO virtual_lab_assignments (experiment_id, class_id, class_group_name, subject_id, teacher_id, term_id, academic_year, due_date, marks, status, created_at, updated_at)
-             VALUES (:experiment_id, NULL, :class_group_name, :subject_id, :teacher_id, :term_id, :academic_year, :due_date, :marks, :status, NOW(), NOW())'
+            'INSERT INTO virtual_lab_assignments (experiment_id, class_id, class_group_name, subject_id, department_id, teacher_id, published_by_admin, term_id, academic_year, due_date, marks, status, created_at, updated_at)
+             VALUES (:experiment_id, NULL, :class_group_name, :subject_id, :department_id, :teacher_id, :published_by_admin, :term_id, :academic_year, :due_date, :marks, :status, NOW(), NOW())'
         );
         // class_id is written as a literal NULL here, so it must not be passed as a parameter too
         unset($params['class_id']);
@@ -757,8 +882,15 @@ class VirtualLabService
 
     public function listAssignmentsForTeacher(int $teacherId, array $filters = []): array
     {
-        $where = ['a.teacher_id = :teacher_id', 'a.deleted_at IS NULL', 'e.deleted_at IS NULL'];
+        $where = ['a.deleted_at IS NULL', 'e.deleted_at IS NULL'];
         $params = ['teacher_id' => $teacherId];
+        // Their own, plus what the admin published to a class of their (active) department
+        if (!empty($filters['department_id'])) {
+            $where[] = '(a.teacher_id = :teacher_id OR (a.teacher_id IS NULL AND a.department_id = :dept_id))';
+            $params['dept_id'] = (int) $filters['department_id'];
+        } else {
+            $where[] = 'a.teacher_id = :teacher_id';
+        }
         if (!empty($filters['term_id'])) {
             $where[] = 'a.term_id = :term_id';
             $params['term_id'] = (int) $filters['term_id'];
@@ -787,7 +919,10 @@ class VirtualLabService
                 'experiment_title' => $row['experiment_title'],
                 'category' => $row['category'],
                 'class_id' => (int) $row['class_id'],
-                'class_name' => $row['class_name'] . ($row['stream_name'] ? ' - ' . $row['stream_name'] : ''),
+                'class_name' => $row['class_group_name']
+                    ? $row['class_group_name'] . ' (All Streams)'
+                    : $row['class_name'] . ($row['stream_name'] ? ' - ' . $row['stream_name'] : ''),
+                'published_by_admin' => $row['teacher_id'] === null,
                 'term_id' => (int) $row['term_id'],
                 'due_date' => $row['due_date'],
                 'marks' => (float) $row['marks'],
@@ -858,13 +993,13 @@ class VirtualLabService
               )
               AND sde.student_id = :student_id AND sde.deleted_at IS NULL
               AND sde.status = 'active'
-              AND sde.department_id = (SELECT department_id FROM subjects WHERE id = a.subject_id)
+              AND sde.department_id = COALESCE(a.department_id, (SELECT department_id FROM subjects WHERE id = a.subject_id))
               AND a.created_at BETWEEN sde.start_date AND COALESCE(sde.end_date, NOW())
         )";
         $where[] = "NOT EXISTS (
             SELECT 1 FROM student_teacher_enrollments ste
             WHERE ste.student_id = :student_id_te AND ste.teacher_id = a.teacher_id
-              AND ste.department_id = (SELECT department_id FROM subjects WHERE id = a.subject_id)
+              AND ste.department_id = COALESCE(a.department_id, (SELECT department_id FROM subjects WHERE id = a.subject_id))
               AND ste.status = 'withdrawn'
         )";
         $params['student_id_te'] = $studentId;
@@ -926,15 +1061,38 @@ class VirtualLabService
      * assignment ("preview as student") instead of a student accessing theirs - authorized by
      * ownership (the assignment's teacher_id) rather than class enrollment.
      */
-    public function getAssignmentExperimentDetailForTeacher(int $teacherId, int $assignmentId): ?array
+    public function getAssignmentExperimentDetailForTeacher(int $teacherId, int $assignmentId, ?int $departmentId = null): ?array
     {
-        $stmt = $this->getDb()->prepare('SELECT experiment_id FROM virtual_lab_assignments WHERE id = :id AND teacher_id = :teacher_id');
-        $stmt->execute(['id' => $assignmentId, 'teacher_id' => $teacherId]);
+        $stmt = $this->getDb()->prepare(
+            'SELECT experiment_id FROM virtual_lab_assignments
+             WHERE id = :id AND (teacher_id = :teacher_id OR (teacher_id IS NULL AND department_id = :dept_id))'
+        );
+        $stmt->execute(['id' => $assignmentId, 'teacher_id' => $teacherId, 'dept_id' => (int) $departmentId]);
         $row = $stmt->fetch();
         if (!$row) {
             return null;
         }
         return $this->getExperimentDetail((int) $row['experiment_id']);
+    }
+
+    /**
+     * Whether a teacher may mark this attempt: they published its assignment, or the admin
+     * published it to a class of the teacher's (active) department.
+     */
+    public function teacherCanMarkAttempt(int $attemptId, int $teacherId, ?int $departmentId): ?bool
+    {
+        $stmt = $this->getDb()->prepare(
+            'SELECT a.teacher_id, a.department_id FROM virtual_lab_attempts att INNER JOIN virtual_lab_assignments a ON att.assignment_id = a.id WHERE att.id = :id'
+        );
+        $stmt->execute(['id' => $attemptId]);
+        $row = $stmt->fetch();
+        if (!$row) {
+            return null;
+        }
+        if ($row['teacher_id'] !== null) {
+            return (int) $row['teacher_id'] === $teacherId;
+        }
+        return $departmentId !== null && (int) $row['department_id'] === $departmentId;
     }
 
     public function attemptBelongsToStudent(int $attemptId, int $studentId): bool
@@ -953,14 +1111,14 @@ class VirtualLabService
                     OR (a.class_group_name IS NOT NULL AND EXISTS (SELECT 1 FROM classes sde_c WHERE sde_c.id = sde.class_id AND sde_c.name = a.class_group_name))
                  ) AND sde.student_id = :student_id AND sde.deleted_at IS NULL
                 AND sde.status = 'active'
-                AND sde.department_id = (SELECT department_id FROM subjects WHERE id = a.subject_id)
+                AND sde.department_id = COALESCE(a.department_id, (SELECT department_id FROM subjects WHERE id = a.subject_id))
                 AND a.created_at BETWEEN sde.start_date AND COALESCE(sde.end_date, NOW())
              WHERE a.id = :assignment_id AND a.deleted_at IS NULL
                AND EXISTS (SELECT 1 FROM virtual_lab_experiments ve WHERE ve.id = a.experiment_id AND ve.deleted_at IS NULL AND ve.status <> 'disabled')
                AND NOT EXISTS (
                    SELECT 1 FROM student_teacher_enrollments ste
                    WHERE ste.student_id = :student_id_te AND ste.teacher_id = a.teacher_id
-                     AND ste.department_id = (SELECT department_id FROM subjects WHERE id = a.subject_id)
+                     AND ste.department_id = COALESCE(a.department_id, (SELECT department_id FROM subjects WHERE id = a.subject_id))
                      AND ste.status = 'withdrawn'
                )
              LIMIT 1"

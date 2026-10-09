@@ -44,13 +44,21 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { Scatter } from 'vue-chartjs'
-import { Chart as ChartJS, Title, Tooltip, Legend, PointElement, LineElement, LinearScale } from 'chart.js'
+import { Chart as ChartJS, Title, Tooltip, Legend, PointElement, LineElement, LinearScale, Filler } from 'chart.js'
 import type { NotebookEntry, GraphConfig } from '@/types/virtualLab'
 import { linearRegression } from '@/utils/linearRegression'
 
-ChartJS.register(Title, Tooltip, Legend, PointElement, LineElement, LinearScale)
+ChartJS.register(Title, Tooltip, Legend, PointElement, LineElement, LinearScale, Filler)
 
-const props = defineProps<{ rows: NotebookEntry[]; config?: GraphConfig | null }>()
+const props = defineProps<{
+  rows: NotebookEntry[]
+  config?: GraphConfig | null
+  /** The x values are separate samples (1, 2, 3...), not a quantity - ticks read `${prefix}1` etc.,
+   *  and points start unjoined with no best-fit line, since neither means anything across samples. */
+  discreteXPrefix?: string
+  /** A shaded horizontal range to compare the points against (e.g. a reference density range). */
+  band?: { min: number; max: number; label: string } | null
+}>()
 
 // A derived column that is not stored in the results table but worked out from one that is. Range
 // against sin(2*angle) is a straight line (R = v^2 sin(2*angle) / g), unlike range against angle,
@@ -110,7 +118,7 @@ watch([numericColumns, () => props.config], ([cols, config]) => {
 
 // The points are joined by default so the graph reads as a graph; the learner can switch to points
 // only, or to a smooth curve, which suits non-linear results such as range against angle.
-const lineMode = ref<'none' | 'join' | 'smooth'>('join')
+const lineMode = ref<'none' | 'join' | 'smooth'>(props.discreteXPrefix ? 'none' : 'join')
 
 const displayTitle = computed(() => props.config?.enabled && props.config.title ? props.config.title : 'Graph')
 // The teacher's axis labels belong to the columns they configured; if the learner switches an axis
@@ -126,7 +134,7 @@ const points = computed(() => props.rows
 // experiment explicitly asks for it - never replaces or adjusts the actual scatter points.
 // The learner can also switch it on; it is a straight line by definition (least squares), so it
 // stays straight whatever the points do. On by default.
-const showFit = ref(true)
+const showFit = ref(!props.discreteXPrefix)
 watch(() => props.config?.show_best_fit, (on) => { if (on) showFit.value = true })
 const fit = computed(() => showFit.value ? linearRegression(points.value) : null)
 
@@ -217,15 +225,51 @@ const chartData = computed(() => {
       tension: 0,
     })
   }
+  if (props.band && points.value.length) {
+    // Spans the plotted x range (padded half a step for discrete samples) - the lower edge is drawn
+    // first so the upper one can fill down to it.
+    const xs = points.value.map((p) => p.x)
+    const pad = props.discreteXPrefix ? 0.5 : 0
+    const x0 = Math.min(...xs) - pad
+    const x1 = Math.max(...xs) + pad
+    const edge = { type: 'line', borderColor: 'rgba(16, 185, 129, 0.7)', borderWidth: 1, borderDash: [4, 3], pointRadius: 0, pointHitRadius: 0, tension: 0 }
+    datasets.push(
+      { ...edge, label: '_band_min', data: [{ x: x0, y: props.band.min }, { x: x1, y: props.band.min }], fill: false },
+      { ...edge, label: props.band.label, data: [{ x: x0, y: props.band.max }, { x: x1, y: props.band.max }], fill: '-1', backgroundColor: 'rgba(16, 185, 129, 0.15)' },
+    )
+  }
   return { datasets }
 })
 
 const chartOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
-  plugins: { legend: { display: !!fit.value } },
+  plugins: {
+    legend: {
+      display: !!fit.value || !!props.band,
+      labels: { filter: (item: { text: string }) => !item.text.startsWith('_band') },
+    },
+  },
   scales: {
-    x: { type: 'linear' as const, title: { display: true, text: xAxisLabel.value } },
+    x: {
+      type: 'linear' as const,
+      title: { display: true, text: xAxisLabel.value },
+      // Half a step of room either side of the first and last sample, with only the samples
+      // themselves labelled (no "M0"/"M7" on the padding).
+      ...(props.discreteXPrefix && points.value.length
+        ? (() => {
+            const xs = points.value.map((p) => p.x)
+            const lo = Math.min(...xs), hi = Math.max(...xs)
+            const sampleTicks = Array.from({ length: Math.floor(hi) - Math.ceil(lo) + 1 }, (_, i) => ({ value: Math.ceil(lo) + i }))
+            return {
+              min: lo - 0.5,
+              max: hi + 0.5,
+              afterBuildTicks: (axis: { ticks: { value: number }[] }) => { axis.ticks = sampleTicks },
+              ticks: { callback: (v: string | number) => `${props.discreteXPrefix}${v}` },
+            }
+          })()
+        : {}),
+    },
     y: { title: { display: true, text: yAxisLabel.value } },
   },
 }))

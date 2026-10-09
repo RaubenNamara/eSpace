@@ -1,4 +1,4 @@
-export type LabAction = 'move' | 'rotate' | 'connect' | 'pour' | 'heat' | 'measure' | 'switch_on' | 'switch_off' | 'zoom' | 'inspect' | 'acknowledge' | 'focus_coarse' | 'focus_fine' | 'select_objective'
+export type LabAction = 'move' | 'rotate' | 'connect' | 'pour' | 'heat' | 'measure' | 'switch_on' | 'switch_off' | 'zoom' | 'inspect' | 'acknowledge' | 'focus_coarse' | 'focus_fine' | 'select_objective' | 'wash'
 export type LabCategory = 'physics' | 'chemistry' | 'biology' | 'agriculture'
 export type LabDifficulty = 'beginner' | 'intermediate' | 'advanced'
 export type RenderMode = '3d' | '2d'
@@ -135,8 +135,24 @@ export interface ExperimentSummary {
   published_to?: string[]
   /** Departments this library experiment is shared with (admin) */
   shared_departments?: { id: number; name: string }[]
+  /** Admin list only: every class it is published to, by whom (teachers' copies folded in) */
+  publications?: ExperimentPublication[]
+  /** Admin list only: ids of teachers' copies of this library experiment folded into its card */
+  copy_ids?: number[]
   attempt_count: number
   created_at: string
+}
+
+export interface ExperimentPublication {
+  assignment_id: number
+  class_label: string
+  department_id: number | null
+  department_name: string | null
+  by_admin: boolean
+  published_by: string
+  term_name: string | null
+  due_date: string | null
+  submitted_count: number
 }
 
 export interface StudentAssignment {
@@ -237,6 +253,8 @@ export interface TeacherAssignment {
   class_id: number | null
   class_group_name?: string | null
   class_name: string | null
+  /** Published by the admin to a class of the teacher's department (any of its teachers may mark it) */
+  published_by_admin?: boolean
   term_id: number
   due_date: string | null
   marks: number

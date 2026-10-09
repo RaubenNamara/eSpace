@@ -190,6 +190,9 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/awards', 'eSpace\App\Controllers\Student\AwardController@index');
 
         // Virtual Lab (own attempts only - experiments published to the student's own class)
+        Router::get('/virtual-lab/playground/notebook', 'eSpace\App\Controllers\VirtualLab\PlaygroundNotebookController@index');
+        Router::post('/virtual-lab/playground/notebook', 'eSpace\App\Controllers\VirtualLab\PlaygroundNotebookController@store');
+        Router::delete('/virtual-lab/playground/notebook/{entryId}', 'eSpace\App\Controllers\VirtualLab\PlaygroundNotebookController@destroy');
         Router::get('/virtual-lab/objects', 'eSpace\App\Controllers\Student\VirtualLabController@objects');
         Router::get('/virtual-lab/assignments', 'eSpace\App\Controllers\Student\VirtualLabController@assignments');
         Router::post('/virtual-lab/assignments/{assignmentId}/start', 'eSpace\App\Controllers\Student\VirtualLabController@start');
@@ -524,6 +527,9 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         // Virtual Lab (create/edit own experiments, copy templates, publish, grade attempts)
         Router::get('/virtual-lab/objects', 'eSpace\App\Controllers\Teacher\VirtualLabController@objects');
         Router::get('/virtual-lab/subjects', 'eSpace\App\Controllers\Teacher\VirtualLabController@subjects');
+        Router::get('/virtual-lab/playground/notebook', 'eSpace\App\Controllers\VirtualLab\PlaygroundNotebookController@index');
+        Router::post('/virtual-lab/playground/notebook', 'eSpace\App\Controllers\VirtualLab\PlaygroundNotebookController@store');
+        Router::delete('/virtual-lab/playground/notebook/{entryId}', 'eSpace\App\Controllers\VirtualLab\PlaygroundNotebookController@destroy');
         Router::get('/virtual-lab/experiments', 'eSpace\App\Controllers\Teacher\VirtualLabController@index');
         Router::post('/virtual-lab/experiments', 'eSpace\App\Controllers\Teacher\VirtualLabController@store');
         Router::post('/virtual-lab/experiments/{id}/copy-template', 'eSpace\App\Controllers\Teacher\VirtualLabController@copyTemplate');
@@ -1014,8 +1020,12 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::put('/virtual-lab/experiments/{id}/status', 'eSpace\App\Controllers\Admin\VirtualLabController@setStatus');
         Router::post('/virtual-lab/experiments/bulk-delete', 'eSpace\App\Controllers\Admin\VirtualLabController@bulkDestroy');
         Router::put('/virtual-lab/experiments/{id}/departments', 'eSpace\App\Controllers\Admin\VirtualLabController@setDepartments');
+        Router::post('/virtual-lab/experiments/{id}/publish', 'eSpace\App\Controllers\Admin\VirtualLabController@publish');
+        Router::delete('/virtual-lab/assignments/{id}', 'eSpace\App\Controllers\Admin\VirtualLabController@withdrawAssignment');
+        Router::get('/virtual-lab/departments/{id}/classes', 'eSpace\App\Controllers\Admin\VirtualLabController@departmentClasses');
         Router::delete('/virtual-lab/experiments/{id}', 'eSpace\App\Controllers\Admin\VirtualLabController@destroy');
         Router::get('/virtual-lab/experiments/{id}', 'eSpace\App\Controllers\Admin\VirtualLabController@experimentDetail');
+        Router::post('/virtual-lab/experiments/{id}/practice/action', 'eSpace\App\Controllers\Admin\VirtualLabController@practiceAction');
         Router::get('/virtual-lab/analytics', 'eSpace\App\Controllers\Admin\VirtualLabController@analytics');
 
         // Backup

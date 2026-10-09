@@ -29,6 +29,35 @@
       </div>
     </div>
 
+    <!-- What can I do? - what this apparatus is for, and small tasks to try with it -->
+    <div v-if="showGuide && selectedKey" class="absolute inset-0 z-30 flex items-center justify-center bg-gray-900/40 p-3" @click.self="showGuide = false">
+      <div class="w-full max-w-md max-h-full overflow-y-auto rounded-2xl bg-white dark:bg-gray-800 shadow-2xl border border-gray-200 dark:border-gray-700 p-4" role="dialog" aria-modal="true" :aria-label="`What can I do with ${selectedDisplayName}`">
+        <div class="flex items-start justify-between gap-3 mb-3">
+          <div class="min-w-0">
+            <p class="text-[11px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">What can I do?</p>
+            <h2 class="text-sm font-bold text-gray-900 dark:text-white truncate">{{ selectedDisplayName }}</h2>
+          </div>
+          <button @click="showGuide = false" class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs" aria-label="Close">✕</button>
+        </div>
+        <template v-if="selectedTasks.length">
+          <p class="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1.5">Try these</p>
+          <ul class="space-y-1.5 mb-4">
+            <li v-for="t in selectedTasks" :key="t" class="text-xs text-gray-700 dark:text-gray-200 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg px-2.5 py-2">{{ t }}</li>
+          </ul>
+        </template>
+        <p class="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1.5">Actions</p>
+        <div class="space-y-1.5">
+          <div v-for="act in selectedActions" :key="act" class="flex items-center justify-between gap-2 rounded-lg border border-gray-200 dark:border-gray-700 px-2.5 py-2">
+            <div class="min-w-0">
+              <p class="text-xs font-semibold text-gray-800 dark:text-gray-100">{{ actionLabel(act) }}</p>
+              <p class="text-[11px] text-gray-500 dark:text-gray-400">{{ ACTION_HELP[act] || 'Looks at it closely.' }}</p>
+            </div>
+            <button @click="tryAction(act)" class="flex-shrink-0 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 transition-transform">Try</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Selection / action toolbar -->
     <div v-if="selectedKey && !armedAction" class="absolute left-2 right-2 bottom-2 sm:left-3 sm:right-auto sm:bottom-3 bg-white/95 dark:bg-gray-800/95 backdrop-blur rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 sm:max-w-[min(20rem,calc(100vw-1.5rem))] max-h-[calc(100%-1rem)] sm:max-h-[calc(100%-1.5rem)] overflow-y-auto">
       <div class="flex items-center justify-between gap-2 mb-2">
@@ -43,6 +72,19 @@
           class="px-2.5 py-1.5 sm:py-1 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 transition-transform"
         >
           {{ actionLabel(act) }}
+        </button>
+        <button
+          v-if="canWashSelected()"
+          @click="washSelected"
+          class="px-2.5 py-1.5 sm:py-1 text-xs font-semibold rounded-lg bg-sky-600 text-white hover:bg-sky-700 active:scale-95 transition-transform"
+        >
+          Wash
+        </button>
+        <button
+          @click="showGuide = true"
+          class="px-2.5 py-1.5 sm:py-1 text-xs font-semibold rounded-lg border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 active:scale-95 transition-transform"
+        >
+          What can I do?
         </button>
         <!-- Playground: send it back where it came from (the cupboard for chemicals, else the shelves) -->
         <button
@@ -196,7 +238,7 @@
     </div>
 
     <p class="hidden sm:block absolute right-3 bottom-3 text-[10px] text-gray-500 dark:text-gray-400 bg-white/70 dark:bg-gray-900/60 rounded px-2 py-1 pointer-events-none">
-      Drag to orbit &middot; Scroll to zoom &middot; Click equipment to interact<template v-if="cupboard || wallShelves"> &middot; Click a door to open it, a sink tap to run water</template>
+      Drag to orbit &middot; Scroll to zoom &middot; Click equipment to interact<template v-if="cupboard || wallShelves"> &middot; Click a door to open it<template v-if="wallShelves">, a sink tap to run water, the extinguisher to spray CO₂</template></template>
     </p>
   </div>
 </template>
@@ -207,7 +249,8 @@ import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { createObjectMesh, createConnectionLine, voltageSpriteTexture, digitalDisplayTexture } from './labObjectFactory'
-import { createLabRoom, type LabRoom } from './lab3d/labRoom'
+import { createLabRoom, makeScreenLabel, type LabRoom } from './lab3d/labRoom'
+import { stockWallShelves as stockSharedWallShelves, type StockedShelves } from './lab3d/wallShelves'
 import type { SceneObjectConfig, LabObjectDef, LabAction } from '@/types/virtualLab'
 import { CUPBOARD_SHELVES, chemicalById, chemicalObjectType, chemicalProps } from './chemicals'
 
@@ -224,8 +267,13 @@ const props = defineProps<{
   wallShelves?: boolean
   /** Bench length in metres (default 1.8) */
   benchLength?: number
+  /** Glassware that needs washing before it is used again (keys of objects currently dirty) */
+  dirtyKeys?: string[]
   /** Two more benches either side of the main one (Apparatus Playground) */
   sideBenches?: boolean
+  /** Place every object immediately, ignoring in_tray - a static, fully-assembled "diagram" view
+   *  (admin reviewing an experiment) rather than the student's pick-up-and-place procedure. */
+  forcePlaced?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -235,7 +283,7 @@ const emit = defineEmits<{
   putBack: [objectKey: string]
   /** An apparatus was taken off a wall-cabinet shelf */
   pickApparatus: [objectType: string]
-  action: [{ objectKey: string | null; action: LabAction; value: string | null; unit?: string | null; label?: string | null; safetyIssue?: boolean; targetObjectKey?: string | null; springLoadG?: number }]
+  action: [{ objectKey: string | null; action: LabAction; value: string | null; unit?: string | null; label?: string | null; safetyIssue?: boolean; targetObjectKey?: string | null; source?: string | null; position?: { x: number; y: number; z: number }; springLoadG?: number }]
 }>()
 
 const canvasHost = ref<HTMLDivElement | null>(null)
@@ -258,7 +306,7 @@ let dragging = false
 let rotateStartX = 0
 
 const ACTION_LABELS: Record<LabAction, string> = {
-  move: 'Move', rotate: 'Rotate', connect: 'Connect', pour: 'Pour', heat: 'Heat',
+  move: 'Carry', rotate: 'Rotate', connect: 'Connect', pour: 'Pour', heat: 'Heat', wash: 'Wash',
   measure: 'Measure', switch_on: 'Switch On', switch_off: 'Switch Off', zoom: 'Zoom', inspect: 'Inspect', acknowledge: 'Acknowledge',
   focus_coarse: 'Coarse Focus', focus_fine: 'Fine Focus', select_objective: 'Select Lens',
 }
@@ -284,6 +332,100 @@ const catalogByType = () => new Map(props.objectCatalog.map(o => [o.object_type,
 
 const selectedActions = ref<LabAction[]>([])
 const selectedDisplayName = ref('')
+// "What can I do?" modal: a short explanation of each action, and small tasks per apparatus
+const showGuide = ref(false)
+const ACTION_HELP: Partial<Record<LabAction, string>> = {
+  heat: 'Place the selected object over a lit flame. Click the object you want heated next.',
+  connect: 'Join the selected object to another with a wire or lead.',
+  pour: 'Pour from the selected container into another. Choose how much to pour.',
+  measure: 'Take a reading, such as length, temperature or current.',
+  switch_on: 'Turn it on, so it starts working.',
+  switch_off: 'Turn it off again.',
+  rotate: 'Turn the object to a new angle.',
+  move: 'Pick it up and carry it to a new place. Carry glassware to a sink basin to wash it.',
+  wash: 'Rinse glassware under the running tap in a sink basin.',
+  zoom: 'Get a closer view of the object.',
+  inspect: 'Look at the object closely and read what it is for.',
+}
+const APPARATUS_TASKS: Record<string, string[]> = {
+  bunsen_burner: ['Switch the burner on, then heat a beaker of water over the flame.', 'Heat a test tube of water over the flame and read its temperature.'],
+  beaker: ['Pour water into the beaker, then place it over a lit Bunsen burner to heat it.', 'Carry the beaker to a sink, turn on the tap and wash it.'],
+  conical_flask: ['Pour water into the conical flask, then heat it over the flame.', 'Measure the temperature of the water in the flask while it heats.', 'Carry the flask to a sink, turn on the tap and wash it before pouring in a chemical.'],
+  round_bottom_flask: ['Pour water into the flask and heat it over a lit burner.'],
+  test_tube: ['Pour a little water into the test tube and heat it over the flame.'],
+  measuring_cylinder: ['Pour water into the measuring cylinder and read the volume.'],
+  thermometer: ['Measure the temperature of a heated beaker of water.'],
+  battery: ['Connect a bulb to the battery with wire, then switch the battery on.'],
+  bulb: ['Connect the bulb to a battery and switch the battery on to light it.'],
+  switch: ['Connect the switch in series with a bulb and a battery, then switch it on.'],
+  ammeter: ['Connect the ammeter in series in a circuit and measure the current.'],
+  voltmeter: ['Connect the voltmeter across a bulb and measure the voltage.'],
+  ruler: ['Measure the length of an object against the ruler.'],
+  metre_rule: ['Measure the length of an object against the metre rule.'],
+}
+const selectedTasks = computed(() => {
+  const type = props.sceneObjects.find(o => o.key === selectedKey.value)?.object_type
+  return type ? APPARATUS_TASKS[type] ?? [] : []
+})
+const tryAction = (act: LabAction) => {
+  showGuide.value = false
+  handleActionButton(act)
+}
+
+// --- Sink basins and washing (Apparatus Playground) -------------------------------------------
+// The two stainless basins in the back corners, in scene units (1 unit = 20 cm): the centre of
+// each basin on the worktop, and the floor of the basin below it (room model in lab3d/labRoom.ts)
+const SINK_BASINS = [
+  { x: -32.9, z: -1.4, floorY: -1.0 },
+  { x: 32.9, z: -1.4, floorY: -1.0 },
+]
+const BASIN_HALF_X = 1.3
+const BASIN_HALF_Z = 0.95
+const WASHABLE_TYPES = ['beaker', 'conical_flask', 'amber_conical_flask', 'round_bottom_flask', 'test_tube', 'measuring_cylinder']
+
+/** Index of the sink basin the point is over, or -1 */
+function basinAt(p: THREE.Vector3): number {
+  return SINK_BASINS.findIndex(b => Math.abs(p.x - b.x) <= BASIN_HALF_X && Math.abs(p.z - b.z) <= BASIN_HALF_Z)
+}
+
+/** The selected item is glassware sitting in a sink basin */
+function canWashSelected(): boolean {
+  if (!selectedKey.value) return false
+  const type = props.sceneObjects.find(o => o.key === selectedKey.value)?.object_type
+  const group = groups.get(selectedKey.value)
+  return !!type && WASHABLE_TYPES.includes(type) && !!group && basinAt(group.position) >= 0
+}
+
+function washSelected() {
+  if (!selectedKey.value) return
+  if (!room?.taps?.anyOn()) {
+    warningToast.value = 'Turn on a sink tap first, then wash the glassware.'
+    setTimeout(() => { warningToast.value = null }, 3500)
+    return
+  }
+  emit('action', { objectKey: selectedKey.value, action: 'wash', value: 'sink' })
+}
+
+/** A small "Dirty" tag over each piece of glassware that has been used and not washed */
+function syncDirtyLabels() {
+  const dirty = props.dirtyKeys ?? []
+  groups.forEach((g, key) => {
+    const existing = g.children.find(c => c.userData.dirtyLabel)
+    if (dirty.includes(key) && !existing) {
+      const box = new THREE.Box3()
+      g.children.forEach((c) => { if (!(c instanceof THREE.Sprite)) box.expandByObject(c) })
+      const label = makeScreenLabel('Dirty', 13)
+      label.userData.dirtyLabel = true
+      label.position.set(0, box.max.y + 0.3, 0)
+      g.add(label)
+    } else if (!dirty.includes(key) && existing) {
+      g.remove(existing)
+      ;(existing as THREE.Sprite).material.map?.dispose()
+      ;(existing as THREE.Sprite).material.dispose()
+    }
+  })
+}
+watch(() => [props.dirtyKeys, props.sceneObjects], syncDirtyLabels, { deep: true })
 const selectedObjectType = ref<string | null>(null)
 const batteryVoltage = ref<number | null>(null)
 
@@ -1150,7 +1292,12 @@ function commitArmedManipulation() {
 
     if (['ray_box', 'mirror', 'glass_block'].includes(movedType || '')) recomputeOptics()
 
-    emit('action', { objectKey: selectedKey.value, action: 'move', value: nearby, springLoadG, safetyIssue: springOverloaded })
+    // Carried into a sink basin: it sits in the basin, and can be washed there. Anywhere else, it sits on the bench top.
+    if (group) {
+      const basin = basinAt(group.position)
+      group.position.y = basin >= 0 ? SINK_BASINS[basin].floorY : 0
+    }
+    emit('action', { objectKey: selectedKey.value, action: 'move', value: nearby, springLoadG, safetyIssue: springOverloaded, position: group ? { x: group.position.x, y: group.position.y, z: group.position.z } : undefined })
   } else if (armedAction.value === 'rotate') {
     const group = groups.get(selectedKey.value)
     const degrees = group ? Math.round((group.rotation.y * 180) / Math.PI) : 0
@@ -1362,7 +1509,7 @@ function finishPouring() {
   tintPouredLiquid(from, to, amount)
   containerVolumes.set(to, Math.round((containerVolumes.get(to) ?? 0) + amount))
   if (fromTracked) containerVolumes.set(from, Math.max(0, Math.round((containerVolumes.get(from) ?? 0) - amount)))
-  emit('action', { objectKey: to, action: 'pour', value: String(Math.round(amount)) })
+  emit('action', { objectKey: to, action: 'pour', value: String(Math.round(amount)), source: from })
   pouring.value = null
   armedAction.value = null
   controls.enabled = true
@@ -1419,7 +1566,7 @@ function buildScene() {
       cameraPosition: [0.4, 4.6, 6.4],
       target: [0, 0.4, 0],
       minDistance: 1.2,
-      maxDistance: 14,
+      maxDistance: 60,
       cupboard: !!props.cupboard,
       wallCabinets: !!props.wallShelves,
       benchLength: props.benchLength,
@@ -1436,7 +1583,7 @@ function buildScene() {
   controls = room.controls
 
   props.sceneObjects.forEach((cfg) => {
-    if (cfg.in_tray) {
+    if (cfg.in_tray && !props.forcePlaced) {
       trayItems.value.push(cfg)
       return
     }
@@ -1488,7 +1635,7 @@ function buildScene() {
  * switches, etc.) - only following a changed position.
  */
 watch(
-  () => props.sceneObjects.map(o => `${o.key}@${o.position.x},${o.position.z}`).join('|'),
+  () => props.sceneObjects.map(o => `${o.key}@${o.position.x},${o.position.y},${o.position.z}`).join('|'),
   () => {
     if (!room) return
     const wanted = new Map(props.sceneObjects.filter(o => !o.in_tray).map(o => [o.key, o]))
@@ -1595,6 +1742,7 @@ function syncCupboard() {
 type CupboardHit =
   | { kind: 'door'; door: THREE.Object3D }
   | { kind: 'tap'; tap: THREE.Object3D }
+  | { kind: 'extinguisher' }
   | { kind: 'chemical'; id: string }
   | { kind: 'apparatus'; type: string }
   | null
@@ -1612,6 +1760,7 @@ function cupboardHit(): CupboardHit {
   if (wc) targets.push(...wc.doors, ...wc.blockers)
   if (furniture) targets.push(...furniture.doors, ...furniture.blockers)
   if (taps) targets.push(...taps.taps)
+  if (room?.extinguisher) targets.push(room.extinguisher.group)
   groups.forEach(g => targets.push(g))
   cupboardBottles.forEach((g) => { if (g.visible) targets.push(g) })
   cupboardTags.forEach(t => targets.push(t))
@@ -1620,6 +1769,9 @@ function cupboardHit(): CupboardHit {
   if (!hit) return null
   const tap = room!.taps?.tapOf(hit.object)
   if (tap) return { kind: 'tap', tap }
+  let ext: THREE.Object3D | null = hit.object
+  while (ext && !ext.userData.isExtinguisher) ext = ext.parent
+  if (ext) return { kind: 'extinguisher' }
   const door = room!.doorOf(hit.object)
   if (door) return { kind: 'door', door }
   let o: THREE.Object3D | null = hit.object
@@ -1637,7 +1789,14 @@ function handleCupboardClick(): boolean {
   }
   if (hit.kind === 'tap') {
     room!.taps!.toggle(hit.tap)
-    updateWaterSound(room!.taps!.anyOn())
+    return true
+  }
+  if (hit.kind === 'extinguisher') {
+    room!.extinguisher!.discharge()
+    // The CO₂ spray puts out any burner that is lit in the room
+    props.sceneObjects.forEach((o) => {
+      if (o.object_type === 'bunsen_burner') setObjectState(o.key, { flame: 'off' })
+    })
     return true
   }
   if (hit.kind === 'chemical') {
@@ -1653,212 +1812,25 @@ function handleCupboardClick(): boolean {
 }
 
 // --- Wall cabinets (Apparatus Playground) ----------------------------------------------------
-// Every apparatus in the catalogue stands on a shelf behind glass, grouped by subject: physics
-// and general on the left, chemistry, biology and agriculture on the right. Models are shrunk to
-// fit their shelf space; picking one puts a full-size copy on the bench.
+// Every apparatus in the catalogue stands on a shelf behind glass, grouped by subject (see
+// lab3d/wallShelves.ts, shared with the guided experiments). Picking one puts a full-size copy on
+// the bench.
 const shelfItems = new Map<string, THREE.Group>()
-const shelfStrips: THREE.Object3D[] = []
+let stockedShelves: StockedShelves | null = null
 let hoveredShelfType: string | null = null
-// One subject per cabinet, in the order the room lists them: back wall left to right (long,
-// middle, middle, long), then the side-wall cabinets (left wall, nearer the back first)
-const CABINET_SUBJECTS: ({ key: string; label: string } | undefined)[] = [
-  { key: 'physics', label: 'Physics' },
-  { key: 'chemistry', label: 'Chemistry' },
-  { key: 'biology', label: 'Biology' },
-  { key: 'agriculture', label: 'Agriculture' },
-  { key: 'general', label: 'General' },
-]
-const KNOWN_SECTIONS = ['physics', 'chemistry', 'biology', 'agriculture']
-
-function disposeObject(o: THREE.Object3D) {
-  scene.remove(o)
-  o.traverse((c) => {
-    if (c instanceof THREE.Mesh || c instanceof THREE.Sprite) {
-      c.geometry?.dispose()
-      const mats = Array.isArray(c.material) ? c.material : [c.material]
-      mats.forEach((m: THREE.Material & { map?: THREE.Texture | null }) => { m.map?.dispose(); m.dispose() })
-    }
-  })
-}
 
 function stockWallShelves() {
   const wc = room?.wallCabinets
   if (!wc) return
-  shelfItems.forEach(disposeObject)
+  stockedShelves?.dispose()
   shelfItems.clear()
-  shelfStrips.splice(0).forEach(disposeObject)
-  const defs = props.objectCatalog.filter(d => d.id > 0 && d.is_active !== false)
-  const sectionOf = (d: LabObjectDef) => (KNOWN_SECTIONS.includes(d.category) ? d.category : 'general')
-  const up = new THREE.Vector3(0, 1, 0)
-  // Cabinet coordinates -> scene (the side-wall cabinets are turned to face into the room)
-  const place = (cab: (typeof wc.cabinets)[number], x: number, y: number, z: number) =>
-    new THREE.Vector3(x, y, z).applyAxisAngle(up, cab.rotY).add(cab.offset)
-
-  wc.cabinets.forEach((cab, ci) => {
-    const subject = CABINET_SUBJECTS[ci]
-    if (!subject) return
-    // Name plate on the cornice, whether or not anything is stocked yet
-    const plate = subjectPlate(subject.label, Math.min(0.75 * UNITS_PER_METRE, (cab.maxX - cab.minX) * 0.7))
-    plate.position.copy(place(cab, cab.cx, cab.topY, cab.corniceFrontZ))
-    plate.rotation.y = cab.rotY
-    scene.add(plate)
-    shelfStrips.push(plate)
-
-    const items = defs.filter(d => sectionOf(d) === subject.key).sort((a, b) => a.display_name.localeCompare(b.display_name))
-    if (items.length === 0) return
-    // Fewest items per bay that still fits everything on the cabinet's shelves; slots never
-    // straddle the uprights between the door bays
-    const bays = Math.max(1, cab.bays)
-    let perBay = Math.max(1, Math.ceil(4 / bays))
-    while (Math.ceil(items.length / (perBay * bays)) > cab.rows.length) perBay++
-    const perRow = perBay * bays
-    const bayW = (cab.maxX - cab.minX) / bays
-    const inset = bays > 1 ? 0.03 * UNITS_PER_METRE : 0
-    const slotW = (bayW - inset * 2) / perBay
-
-    items.forEach((def, idx) => {
-      const ri = Math.floor(idx / perRow)
-      const j = idx % perRow
-      const bay = Math.floor(j / perBay)
-      const y = cab.rows[ri]
-      const g = createObjectMesh(def.object_type, `shelf:${def.object_type}`, def.display_name, def.default_props || {})
-      const box = new THREE.Box3()
-      g.children.forEach((c) => { if (!(c instanceof THREE.Sprite)) box.expandByObject(c) })
-      const size = box.getSize(new THREE.Vector3())
-      const center = box.getCenter(new THREE.Vector3())
-      const k = Math.min(1, (slotW * 0.84) / Math.max(size.x, 0.01), (cab.rowHeight * 0.8) / Math.max(size.y, 0.01), (cab.depth * 0.9) / Math.max(size.z, 0.01))
-      g.scale.setScalar(k)
-      const sx = cab.minX + bay * bayW + inset + slotW * ((j % perBay) + 0.5)
-      // Centre the model on its slot (in the cabinet's own frame), then hang it in the room
-      const local = new THREE.Vector3(sx, y - box.min.y * k, cab.z).sub(new THREE.Vector3(center.x * k, 0, center.z * k))
-      g.position.copy(place(cab, local.x, local.y, local.z))
-      g.rotation.y = cab.rotY
-      g.children.forEach((c) => {
-        if (c.userData.role !== 'label') return
-        c.scale.set(0.72 / k, 0.158 / k, 1)
-        c.position.y = box.max.y + 0.2 / k
-        c.visible = false
-      })
-      g.traverse((c) => { if (c instanceof THREE.Mesh) c.castShadow = false })
-      g.userData.shelfType = def.object_type
-      scene.add(g)
-      shelfItems.set(def.object_type, g)
-    })
-  })
+  stockedShelves = stockSharedWallShelves(scene, wc, props.objectCatalog, UNITS_PER_METRE)
+  stockedShelves.items.forEach((g, type) => shelfItems.set(type, g))
   syncCupboard()
-}
-
-/**
- * A subject name plate fixed to the front of a cabinet's top timber: a walnut board standing on
- * the cornice with a brass plate on it, the subject engraved in dark serif capitals between two
- * screws. `width` is in scene units.
- */
-function subjectPlate(label: string, width: number): THREE.Group {
-  const u = UNITS_PER_METRE
-  const h = 0.13 * u
-  const g = new THREE.Group()
-  const board = new THREE.Mesh(
-    new THREE.BoxGeometry(width, h, 0.02 * u),
-    new THREE.MeshStandardMaterial({ color: 0x5b3418, roughness: 0.55 }),
-  )
-  board.position.set(0, h / 2, -0.008 * u)
-  g.add(board)
-  const canvas = document.createElement('canvas')
-  canvas.width = 1024
-  canvas.height = 200
-  const ctx = canvas.getContext('2d')!
-  const grad = ctx.createLinearGradient(0, 0, 0, 200)
-  grad.addColorStop(0, '#f8e3a1')
-  grad.addColorStop(0.45, '#d9a842')
-  grad.addColorStop(1, '#a8781f')
-  ctx.fillStyle = grad
-  ctx.beginPath(); ctx.roundRect(4, 4, 1016, 192, 22); ctx.fill()
-  ctx.strokeStyle = 'rgba(70,45,5,0.85)'
-  ctx.lineWidth = 6
-  ctx.beginPath(); ctx.roundRect(18, 18, 988, 164, 14); ctx.stroke()
-  ctx.lineWidth = 2
-  ctx.beginPath(); ctx.roundRect(30, 30, 964, 140, 10); ctx.stroke()
-  // Screws
-  for (const x of [62, 962]) {
-    const sg = ctx.createRadialGradient(x - 4, 96, 2, x, 100, 16)
-    sg.addColorStop(0, '#fff7d6'); sg.addColorStop(1, '#7a5a17')
-    ctx.fillStyle = sg
-    ctx.beginPath(); ctx.arc(x, 100, 15, 0, Math.PI * 2); ctx.fill()
-    ctx.strokeStyle = '#5a3f0c'; ctx.lineWidth = 3
-    ctx.beginPath(); ctx.moveTo(x - 9, 100); ctx.lineTo(x + 9, 100); ctx.stroke()
-  }
-  // Engraved lettering: a light highlight under dark text
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  let size = 96
-  ctx.font = `bold ${size}px Georgia, serif`
-  const text = label.toUpperCase().split('').join('\u200A')
-  while (ctx.measureText(text).width > 820 && size > 40) { size -= 4; ctx.font = `bold ${size}px Georgia, serif` }
-  ctx.fillStyle = 'rgba(255,248,220,0.7)'
-  ctx.fillText(text, 512, 104)
-  ctx.fillStyle = '#3b2606'
-  ctx.fillText(text, 512, 101)
-  const tex = new THREE.CanvasTexture(canvas)
-  tex.colorSpace = THREE.SRGBColorSpace
-  tex.anisotropy = 8
-  const face = new THREE.Mesh(
-    new THREE.PlaneGeometry(width * 0.94, h * 0.8),
-    new THREE.MeshStandardMaterial({ map: tex, roughness: 0.3, metalness: 0.55, transparent: true }),
-  )
-  face.position.set(0, h / 2, 0.0035 * u)
-  g.add(face)
-  return g
 }
 
 // The catalogue usually arrives after the room is built
 watch(() => props.objectCatalog.map(d => d.object_type).join(','), () => { if (room) stockWallShelves() })
-
-// --- Running-water sound for the sink taps ------------------------------------------------------
-// Made in the browser (filtered noise with a slow wobble) so there's no audio file to download.
-let waterAudio: { ctx: AudioContext; gain: GainNode } | null = null
-
-function updateWaterSound(running: number) {
-  try {
-    if (!waterAudio) {
-      if (running === 0) return
-      const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
-      const ctx = new AC()
-      const buffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate)
-      const data = buffer.getChannelData(0)
-      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1
-      const noise = ctx.createBufferSource()
-      noise.buffer = buffer
-      noise.loop = true
-      const band = ctx.createBiquadFilter()
-      band.type = 'bandpass'
-      band.frequency.value = 1100
-      band.Q.value = 0.6
-      const low = ctx.createBiquadFilter()
-      low.type = 'lowpass'
-      low.frequency.value = 3500
-      const gain = ctx.createGain()
-      gain.gain.value = 0
-      // Gurgle: a slow wobble on the volume and pitch of the splash
-      const wobble = ctx.createOscillator()
-      wobble.frequency.value = 7
-      const wobbleDepth = ctx.createGain()
-      wobbleDepth.gain.value = 250
-      wobble.connect(wobbleDepth).connect(band.frequency)
-      noise.connect(band).connect(low).connect(gain).connect(ctx.destination)
-      noise.start()
-      wobble.start()
-      waterAudio = { ctx, gain }
-    }
-    const { ctx, gain } = waterAudio
-    if (ctx.state === 'suspended') ctx.resume()
-    gain.gain.setTargetAtTime(running === 0 ? 0 : Math.min(0.5, 0.3 + 0.1 * running), ctx.currentTime, 0.15)
-  } catch { /* no audio on this device - the water still runs */ }
-}
-
-onBeforeUnmount(() => {
-  waterAudio?.ctx.close().catch(() => {})
-  waterAudio = null
-})
 
 // --- Camera views (buttons live in the page, which calls goToView) ---------------------------
 export type CameraView = 'bench' | 'entrance' | 'left' | 'right'

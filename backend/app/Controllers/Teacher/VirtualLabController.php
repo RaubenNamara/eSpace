@@ -88,6 +88,7 @@ class VirtualLabController extends Controller
             }
             $filters['is_template'] = true;
             $filters['shared_with_department'] = $departmentId;
+            $filters['published_department'] = $departmentId;
             $this->success(['experiments' => $this->service()->listExperiments($filters)]);
             return;
         }
@@ -367,6 +368,8 @@ class VirtualLabController extends Controller
             $filters['class_id'] = (int) $this->query('class_id');
         }
 
+        // Classes the admin published to straight from the library show here for the whole department
+        $filters['department_id'] = $this->getActiveDepartmentId();
         $this->success(['assignments' => $this->service()->listAssignmentsForTeacher($teacherId, $filters)]);
     }
 
@@ -386,7 +389,7 @@ class VirtualLabController extends Controller
             $this->error('Teacher not found', 403);
             return;
         }
-        $detail = $this->service()->getAssignmentExperimentDetailForTeacher($teacherId, (int) $assignmentId);
+        $detail = $this->service()->getAssignmentExperimentDetailForTeacher($teacherId, (int) $assignmentId, $this->getActiveDepartmentId());
         if (!$detail) {
             $this->notFound('Assignment not found');
             return;
@@ -469,12 +472,13 @@ class VirtualLabController extends Controller
             $this->error('Teacher not found', 403);
             return;
         }
-        $ownerId = $this->service()->getAttemptAssignmentTeacherId((int) $id);
-        if ($ownerId === null) {
+        // The publishing teacher - or, for a class the admin published to, any teacher of that department
+        $canMark = $this->service()->teacherCanMarkAttempt((int) $id, (int) $teacherId, $this->getActiveDepartmentId());
+        if ($canMark === null) {
             $this->notFound('Attempt not found');
             return;
         }
-        if ($ownerId !== (int) $teacherId) {
+        if (!$canMark) {
             $this->error('Only the teacher who published this practical can mark it', 403);
             return;
         }

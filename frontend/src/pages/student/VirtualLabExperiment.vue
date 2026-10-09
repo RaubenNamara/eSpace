@@ -32,8 +32,8 @@
           <!-- Progress bar -->
           <!-- A teacher doing the experiment like a student: same lab, nothing saved, no submit -->
           <div v-if="isPractice" class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-3 py-2 text-xs sm:text-sm text-amber-800 dark:text-amber-200">
-            <span class="font-semibold inline-flex items-center gap-1"><AppIcon name="teacher" class="w-4 h-4" /> Teacher practice</span>
-            <span class="flex-1 min-w-[12rem]">You are doing this experiment the way a student does. Nothing is saved and it can't be submitted.</span>
+            <span class="font-semibold inline-flex items-center gap-1"><AppIcon name="teacher" class="w-4 h-4" /> {{ practiceRole === 'admin' ? 'Admin review' : 'Teacher practice' }}</span>
+            <span class="flex-1 min-w-[12rem]">You are viewing this experiment's diagram and procedure the way a student does it. Nothing is saved and it can't be submitted.</span>
             <button type="button" @click="restartPractice" class="px-2.5 py-1 rounded-lg bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-700 font-semibold hover:bg-amber-100 dark:hover:bg-amber-900/40">↺ Start again</button>
           </div>
           <div v-if="attempt.status === 'in_progress'" class="mt-3 flex items-center gap-3">
@@ -46,16 +46,39 @@
       </div>
 
       <div class="max-w-[1920px] mx-auto pt-4">
+        <VirtualLabBulbResistanceBrief v-if="isBulbExperiment" :introduction="attempt.experiment.introduction" :objective="attempt.experiment.objective" />
+        <VirtualLabConcaveMirrorBrief v-else-if="isMirrorExperiment" :introduction="attempt.experiment.introduction" :objective="attempt.experiment.objective" />
+        <VirtualLabPendulumBrief v-else-if="isPendulum" :introduction="attempt.experiment.introduction" :objective="attempt.experiment.objective" />
+        <VirtualLabGravityBrief v-else-if="isGravityExperiment" :introduction="attempt.experiment.introduction" :objective="attempt.experiment.objective" />
+        <VirtualLabEmfBrief v-else-if="isEmfExperiment" :introduction="attempt.experiment.introduction" :objective="attempt.experiment.objective" />
+
         <!-- Required apparatus - some pieces may already be on the bench, others wait in the tray
              inside the 3D view until you pick them up; the setup itself (wiring, pouring,
              measuring) is still entirely up to you. -->
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-3.5 mb-4">
-          <div class="flex items-center justify-between gap-2 mb-2">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
             <p class="text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">{{ CATEGORY_LABELS[attempt.experiment.category] }} Apparatus</p>
-            <button @click="enterMaximize" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm whitespace-nowrap" title="Fill the whole screen with the lab">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>
-              Full Screen Lab
-            </button>
+            <div class="flex items-center gap-2 ml-auto">
+              <!-- Camera views of the room - same as the Apparatus Playground -->
+              <div v-if="roomCameraSupported" class="inline-flex flex-wrap rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm p-1 gap-1">
+                <button
+                  v-for="v in CAMERA_VIEWS"
+                  :key="v.key"
+                  type="button"
+                  @click="goToView(v.key)"
+                  class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-colors"
+                  :class="cameraView === v.key ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'"
+                  :title="v.title"
+                >
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.55-2.28A1 1 0 0121 8.62v6.76a1 1 0 01-1.45.9L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                  {{ v.label }}
+                </button>
+              </div>
+              <button @click="enterMaximize" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm whitespace-nowrap" title="Fill the whole screen with the lab">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>
+                Full Screen Lab
+              </button>
+            </div>
           </div>
           <div class="flex flex-wrap gap-2">
             <span
@@ -115,6 +138,15 @@
                 @hint="requestHint"
                 @reset="resetCurrentStep"
               />
+
+              <VirtualLabMiniResults v-if="showMiniResults" class="mb-3" :rows="resultRows" :columns="resultTableColumns" :highlight-id="justAddedRowId" />
+
+              <button
+                v-if="allStepsDone && !hasTeacherMarking"
+                type="button"
+                @click="viewResults"
+                class="mb-3 w-full px-3 py-2.5 text-sm font-bold rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm"
+              >All steps done - View Results Table &darr;</button>
 
               <transition
                 enter-active-class="transition duration-200 ease-out"
@@ -180,14 +212,31 @@
                   <span class="text-[10px] font-medium text-red-500 dark:text-red-400">&times; {{ attempt.wrong_actions }}</span>
                 </div>
                 <p :key="`bar${attempt.current_step}${allStepsDone}`" class="step-anim-bar text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-100 line-clamp-2">
-                  {{ allStepsDone || attempt.status !== 'in_progress' ? 'Exit full screen to complete your notebook and submit.' : currentStep?.instruction }}
+                  {{ allStepsDone || attempt.status !== 'in_progress' ? (isPractice ? 'All steps done - click "View Results Table" to see your table, graph and questions.' : 'All steps done - click "View Results Table", then complete your notebook and submit.') : currentStep?.instruction }}
                 </p>
               </div>
               <span v-if="toast" class="hidden sm:inline-flex items-center gap-1 max-w-[16rem] text-[11px] font-semibold rounded-lg px-2 py-1" :class="toast.correct ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300'">
                 <span>{{ toast.correct ? '✅' : '⚠️' }}</span><span class="truncate">{{ toast.text }}</span>
               </span>
+              <!-- Camera views of the room - same as the Apparatus Playground -->
+              <div v-if="roomCameraSupported" class="hidden md:inline-flex flex-shrink-0 flex-wrap rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-1 gap-1">
+                <button
+                  v-for="v in CAMERA_VIEWS"
+                  :key="v.key"
+                  type="button"
+                  @click="goToView(v.key)"
+                  class="inline-flex items-center px-2 py-1 text-[11px] font-semibold rounded-lg transition-colors"
+                  :class="cameraView === v.key ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'"
+                  :title="v.title"
+                >{{ v.label }}</button>
+              </div>
               <button v-if="attempt.status === 'in_progress' && currentStep?.is_safety_check && !allStepsDone" @click="acknowledgeSafety" class="flex-shrink-0 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-amber-600 text-white hover:bg-amber-700">I Understand</button>
               <button v-else-if="pendingInterstitialQuestion" @click="exitMaximize" class="flex-shrink-0 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700">Answer Question</button>
+              <button
+                v-if="allStepsDone && !hasTeacherMarking"
+                @click="viewResults"
+                class="flex-shrink-0 inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm animate-pulse"
+              >View Results Table &darr;</button>
               <button v-if="pendingNotebookEntry" @click="addPendingToNotebook" class="flex-shrink-0 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700" :title="`Add ${pendingNotebookEntry.label}: ${pendingNotebookEntry.value}${pendingNotebookEntry.unit} to your notebook`">+ Notebook</button>
               <button
                 v-if="attempt.status === 'in_progress'"
@@ -214,6 +263,11 @@
                   :scene-objects="attempt.experiment.scene_objects"
                   :object-catalog="objectCatalog"
                   :read-only="sceneReadOnly"
+                  :force-placed="practiceRole === 'admin'"
+                  v-bind="isBulbExperiment || isGravityExperiment || isEmfExperiment ? { currentStep } : {}"
+                  cupboard
+                  wall-shelves
+                  :bench-length="3"
                   @action="onSceneAction"
                 />
               </div>
@@ -247,9 +301,90 @@
                     @hint="requestHint"
                     @reset="resetCurrentStep"
                   />
+                  <VirtualLabMiniResults v-if="showMiniResults" class="mt-3" :rows="resultRows" :columns="resultTableColumns" :highlight-id="justAddedRowId" />
                 </aside>
               </transition>
             </div>
+          </div>
+        </div>
+
+        <!-- Determining g: the student fills the results table as they time each length, then
+             graphs it, finds g, compares it with 10 m/s², concludes and is assessed - all below the lab. -->
+        <div v-if="isGravityExperiment && !hasTeacherMarking" id="gravity-analysis" class="mt-5 sm:mt-6 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+          <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-4"><AppIcon name="book" class="w-5 h-5" /> Results, graph and value of g</h2>
+          <VirtualLabGravityAnalysis
+            :rows="resultRows"
+            :trials="gravityTrials"
+            :g-record="gravityRecord"
+            :analysis="gravityAnalysisEntry"
+            :graph-saved="graphAnalysisEntry"
+            v-model:conclusion="conclusionText"
+            :read-only="attempt.status !== 'in_progress'"
+            @save-row="saveGravityRow"
+            @save-analysis="saveGravityAnalysis"
+            @save-graph="saveGravityGraph"
+            @blocker="gravityBlocker = $event"
+          />
+        </div>
+
+        <!-- Internal resistance and emf: results table, V against I graph, r and E, conclusion and
+             assessment, below the lab -->
+        <div v-if="isEmfExperiment && !hasTeacherMarking" id="emf-analysis" class="mt-5 sm:mt-6 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+          <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-4"><AppIcon name="book" class="w-5 h-5" /> Results, graph, internal resistance and emf</h2>
+          <VirtualLabEmfAnalysis
+            :rows="resultRows"
+            :snapshots="bulbSnapshots"
+            :lab-record="bulbLabRecord"
+            :analysis="emfAnalysisEntry"
+            :graph-saved="graphAnalysisEntry"
+            v-model:conclusion="conclusionText"
+            :read-only="attempt.status !== 'in_progress'"
+            @save-row="saveEmfRow"
+            @save-analysis="saveEmfAnalysis"
+            @save-graph="saveGravityGraph"
+            @blocker="emfBlocker = $event"
+          />
+        </div>
+
+        <!-- Live Results Table - fills in row by row as each reading is recorded, while the student
+             works (the full notebook below takes over once every step is done). The torch-bulb
+             practical shows its own readings table in the lab's bench panel instead. -->
+        <div v-if="showLiveResults" id="live-results" class="mt-5 sm:mt-6 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-5">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+            <p class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2"><AppIcon name="book" class="w-4 h-4" /> Results Table</p>
+            <span class="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300">{{ resultRows.length }} {{ resultRows.length === 1 ? 'row' : 'rows' }} recorded</span>
+          </div>
+          <p v-if="!resultRows.length" class="text-xs text-gray-400 dark:text-gray-500">Your readings will appear here as you record them in the lab.</p>
+          <div v-else class="overflow-x-auto">
+            <table class="w-full border-collapse border border-gray-300 dark:border-gray-600" :class="resultTableColumns.length > 7 ? 'text-xs' : 'text-sm'">
+              <thead>
+                <tr class="bg-indigo-50 dark:bg-indigo-900/30 text-left text-gray-800 dark:text-gray-100">
+                  <th class="border border-gray-300 dark:border-gray-600 px-2 py-2 font-semibold text-gray-500 w-10">#</th>
+                  <th
+                    v-for="col in resultTableColumns"
+                    :key="col"
+                    class="border border-gray-300 dark:border-gray-600 py-2 font-semibold"
+                    :class="[resultTableColumns.length > 7 ? 'px-1.5' : 'px-3', RESULT_COLUMN_LABELS[col] ? '' : 'capitalize']"
+                  >{{ resultColumnLabel(col) }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="(row, i) in resultRows"
+                  :key="row.id"
+                  class="transition-colors duration-700"
+                  :class="i === resultRows.length - 1 && justAddedRowId === row.id ? 'bg-emerald-50 dark:bg-emerald-900/20' : 'odd:bg-white even:bg-gray-50 dark:odd:bg-gray-800 dark:even:bg-gray-900/40'"
+                >
+                  <td class="border border-gray-300 dark:border-gray-600 px-2 py-2 text-gray-400 tabular-nums">{{ i + 1 }}</td>
+                  <td
+                    v-for="col in resultTableColumns"
+                    :key="col"
+                    class="border border-gray-300 dark:border-gray-600 py-2 text-gray-800 dark:text-gray-100 tabular-nums"
+                    :class="[resultTableColumns.length > 7 ? 'px-1.5' : 'px-3', resultCellClass(col, row.extra?.[col])]"
+                  >{{ resultCell(col, row.extra?.[col]) }}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -257,7 +392,19 @@
              their own points here (typing or clicking on graph paper) while they work, and answers
              the questions about it right underneath. -->
         <div v-if="manualPlot && attempt.experiment.graph && !hasTeacherMarking" id="plot-graph" class="mt-5 sm:mt-6 grid grid-cols-1 gap-4" :class="graphQuestions.length ? 'xl:grid-cols-3 items-start' : ''">
+          <!-- Pendulum: the student draws the whole T² against L graph themselves -->
+          <VirtualLabStudentGraph
+            v-if="isPendulum"
+            class="min-w-0 xl:col-span-2"
+            :config="PENDULUM_GRAPH"
+            :rows="pendulumGraphRows"
+            :saved="graphAnalysisEntry"
+            :read-only="attempt.status !== 'in_progress'"
+            @save="savePendulumGraph"
+            @blocker="studentGraphBlocker = $event"
+          />
           <VirtualLabPlotter
+            v-else
             class="min-w-0 xl:col-span-2"
             :config="attempt.experiment.graph"
             :entries="plotEntries"
@@ -302,13 +449,29 @@
         </div>
 
         <!-- Practical Notebook - once the teacher has marked, their marked sheets above show this work -->
-        <div v-if="(allStepsDone || attempt.status !== 'in_progress') && !hasTeacherMarking" class="mt-5 sm:mt-6 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 sm:p-6">
+        <div v-if="(allStepsDone || attempt.status !== 'in_progress') && !hasTeacherMarking" id="practical-notebook" class="scroll-mt-24 mt-5 sm:mt-6 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 sm:p-6">
           <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-5"><AppIcon name="book" class="w-5 h-5" /> Practical Notebook</h2>
 
           <!-- Uses the full width: readings, results table and graph on the left; the written work
                (observations, questions, conclusion) and Submit on the right. Stacks on small screens. -->
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-8 items-start">
-          <div class="space-y-5 min-w-0">
+          <!-- The torch-bulb practical has its own results table, I-V graph, gradient, resistance,
+               conclusion, errors/precautions and assessment, in that order. -->
+          <VirtualLabBulbResistanceAnalysis
+            v-if="isBulbExperiment"
+            class="mb-5"
+            :rows="resultRows"
+            :snapshots="bulbSnapshots"
+            :lab-record="bulbLabRecord"
+            :analysis="bulbAnalysisEntry"
+            v-model:conclusion="conclusionText"
+            :read-only="attempt.status !== 'in_progress'"
+            @save-row="saveBulbRow"
+            @save-analysis="saveBulbAnalysis"
+            @blocker="bulbBlocker = $event"
+          />
+
+          <div class="grid grid-cols-1 gap-5 lg:gap-8 items-start" :class="isBulbExperiment || isMirrorExperiment || isGravityExperiment || isEmfExperiment ? '' : 'lg:grid-cols-2'">
+          <div v-if="!isBulbExperiment" class="space-y-5 min-w-0">
 
           <div v-if="measurementEntries.length > 0">
             <p class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Measurements</p>
@@ -348,21 +511,51 @@
           <div v-if="resultRows.length > 0">
             <p class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Results Table</p>
             <div class="overflow-x-auto">
-              <table class="w-full text-sm border-collapse border border-gray-300 dark:border-gray-600">
+              <!-- Many-column tables (e.g. the six-sample density practical) use tighter cells so every
+                   column, including the final verdict, fits without scrolling sideways. -->
+              <table class="w-full border-collapse border border-gray-300 dark:border-gray-600" :class="resultTableColumns.length > 7 ? 'text-xs' : 'text-sm'">
                 <thead>
                   <tr class="bg-indigo-50 dark:bg-indigo-900/30 text-left text-gray-800 dark:text-gray-100">
-                    <th v-for="col in resultTableColumns" :key="col" class="border border-gray-300 dark:border-gray-600 px-3 py-2 font-semibold capitalize">{{ col.replace(/_/g, ' ') }}</th>
+                    <th
+                      v-for="col in resultTableColumns"
+                      :key="col"
+                      class="border border-gray-300 dark:border-gray-600 py-2 font-semibold"
+                      :class="[resultTableColumns.length > 7 ? 'px-1.5' : 'px-3', RESULT_COLUMN_LABELS[col] ? '' : 'capitalize']"
+                    >{{ resultColumnLabel(col) }}</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="row in resultRows" :key="row.id" class="odd:bg-white even:bg-gray-50 dark:odd:bg-gray-800 dark:even:bg-gray-900/40">
-                    <td v-for="col in resultTableColumns" :key="col" class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-gray-800 dark:text-gray-100">{{ row.extra?.[col] ?? '-' }}</td>
+                    <td
+                      v-for="col in resultTableColumns"
+                      :key="col"
+                      class="border border-gray-300 dark:border-gray-600 py-2 text-gray-800 dark:text-gray-100"
+                      :class="[resultTableColumns.length > 7 ? 'px-1.5' : 'px-3', resultCellClass(col, row.extra?.[col])]"
+                    >{{ resultCell(col, row.extra?.[col]) }}</td>
                   </tr>
                 </tbody>
               </table>
             </div>
             <template v-if="!manualPlot">
-              <VirtualLabGraph ref="graphRef" :rows="resultRows" :config="attempt.experiment.graph" />
+              <!-- Concave mirror: the student plots uv against (u + v) themselves -->
+              <VirtualLabStudentGraph
+                v-if="isMirrorExperiment"
+                class="mt-4"
+                :config="MIRROR_GRAPH"
+                :rows="mirrorGraphRows"
+                :saved="graphAnalysisEntry"
+                :read-only="attempt.status !== 'in_progress'"
+                @save="saveGraphAnalysis"
+                @blocker="studentGraphBlocker = $event"
+              />
+              <VirtualLabGraph
+                v-else
+                ref="graphRef"
+                :rows="resultRows"
+                :config="attempt.experiment.graph"
+                :discrete-x-prefix="isDensityExperiment ? 'M' : undefined"
+                :band="isDensityExperiment ? SILVER_DENSITY_BAND : null"
+              />
 
               <!-- Graph-analysis questions render right under the graph they're about, not mixed in
                    with the general question list below. -->
@@ -383,7 +576,7 @@
           </div>
           </div>
 
-          <div class="space-y-5 min-w-0 lg:sticky lg:top-24 lg:border-l lg:border-gray-100 dark:lg:border-gray-700 lg:pl-8">
+          <div class="space-y-5 min-w-0" :class="isBulbExperiment || isMirrorExperiment || isGravityExperiment || isEmfExperiment ? '' : 'lg:sticky lg:top-24 lg:border-l lg:border-gray-100 dark:lg:border-gray-700 lg:pl-8'">
           <div>
             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Observations</label>
             <textarea
@@ -410,7 +603,7 @@
             ></textarea>
           </div>
 
-          <div v-if="attempt.experiment.conclusion_prompt">
+          <div v-if="attempt.experiment.conclusion_prompt && !isBulbExperiment && !isGravityExperiment && !isEmfExperiment">
             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Conclusion</label>
             <p class="text-xs text-gray-400 dark:text-gray-500 mb-1.5">{{ attempt.experiment.conclusion_prompt }}</p>
             <textarea
@@ -425,16 +618,16 @@
             Practice mode - teachers can't submit results. <button type="button" @click="restartPractice" class="font-semibold underline">Start again</button>
           </p>
           <template v-else-if="attempt.status === 'in_progress'">
-            <p v-if="allStepsDone && graphBlocker" class="rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-4 py-2.5 text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2">
+            <p v-if="allStepsDone && submitBlocker" class="rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-4 py-2.5 text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2">
               <AppIcon name="chart" class="w-4 h-4 flex-shrink-0 mt-px" />
-              <span>{{ graphBlocker }}</span>
+              <span>{{ submitBlocker }}</span>
             </p>
             <button
-              :disabled="!allStepsDone || !!graphBlocker || submitting"
+              :disabled="!allStepsDone || !!submitBlocker || submitting"
               @click="submitPractical"
               class="w-full px-4 py-3 text-sm font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow-md disabled:opacity-50 transition-all print-color-exact"
             >
-              {{ submitting ? 'Submitting...' : !allStepsDone ? 'Complete all steps to submit' : graphBlocker ? 'Finish your graph to submit' : 'Submit Practical' }}
+              {{ submitting ? 'Submitting...' : !allStepsDone ? 'Complete all steps to submit' : submitBlocker ? (isBulbExperiment ? 'Finish your analysis to submit' : 'Finish your graph to submit') : 'Submit Practical' }}
             </button>
           </template>
           </div>
@@ -448,15 +641,28 @@
 <script setup lang="ts">
 import AppIcon from '@/components/common/AppIcon.vue'
 import { useToastStore } from '@/stores/toast'
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useFullscreenLab } from '@/components/virtuallab/lab3d/useFullscreenLab'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
-import VirtualLabScene from '@/components/virtuallab/VirtualLabScene.vue'
+import VirtualLabScene, { type CameraView } from '@/components/virtuallab/VirtualLabScene.vue'
 import VirtualLabGraph from '@/components/virtuallab/VirtualLabGraph.vue'
+import { RESULT_COLUMN_LABELS, resultColumnLabel, resultCell, resultCellClass, SILVER_DENSITY_BAND } from '@/components/virtuallab/resultColumns'
 import VirtualLabStepList from '@/components/virtuallab/VirtualLabStepList.vue'
 import VirtualLabPlotter from '@/components/virtuallab/VirtualLabPlotter.vue'
 import VirtualLabMarkedBook from '@/components/virtuallab/VirtualLabMarkedBook.vue'
+import VirtualLabBulbResistanceBrief from '@/components/virtuallab/VirtualLabBulbResistanceBrief.vue'
+import VirtualLabConcaveMirrorBrief from '@/components/virtuallab/VirtualLabConcaveMirrorBrief.vue'
+import VirtualLabPendulumBrief from '@/components/virtuallab/VirtualLabPendulumBrief.vue'
+import VirtualLabGravityBrief from '@/components/virtuallab/VirtualLabGravityBrief.vue'
+import VirtualLabEmfBrief from '@/components/virtuallab/VirtualLabEmfBrief.vue'
+import VirtualLabEmfAnalysis from '@/components/virtuallab/VirtualLabEmfAnalysis.vue'
+import VirtualLabGravityAnalysis from '@/components/virtuallab/VirtualLabGravityAnalysis.vue'
+import VirtualLabMiniResults from '@/components/virtuallab/VirtualLabMiniResults.vue'
+import type { PendulumGRecord, PendulumTrial } from '@/components/virtuallab/VirtualLabScenePendulum.vue'
+import VirtualLabBulbResistanceAnalysis from '@/components/virtuallab/VirtualLabBulbResistanceAnalysis.vue'
+import VirtualLabStudentGraph, { type StudentGraphConfig } from '@/components/virtuallab/VirtualLabStudentGraph.vue'
+import type { BulbTrial, BulbLabRecord } from '@/components/virtuallab/bulbCircuitEngine'
 import { resolveGuidedExperiment } from '@/components/virtuallab/lab3d/registry'
 import { CATEGORY_LABELS } from '@/types/virtualLab'
 import type { AttemptState, LabObjectDef, ExperimentQuestion, NotebookEntry } from '@/types/virtualLab'
@@ -468,11 +674,15 @@ const QUESTION_TYPE_LABELS: Record<string, string> = {
 const route = useRoute()
 const router = useRouter()
 
-// Practice mode (teacher route, meta.practice): a teacher does the experiment exactly like a
-// student - same lab, steps, notebook, graph and full screen. Each step is checked by the server the
-// way a student's is, but nothing is saved: the attempt lives only in this page and can't be submitted.
+// Practice mode (teacher/admin route, meta.practice): a teacher or admin does the experiment
+// exactly like a student - same lab, steps, notebook, graph and full screen. Each step is checked
+// by the server the way a student's is, but nothing is saved: the attempt lives only in this page
+// and can't be submitted. meta.practiceRole picks which role's API/back-link to use (default
+// 'teacher' - the original practice route predates the admin one).
 const isPractice = computed(() => route.meta.practice === true)
-const backLink = computed(() => (isPractice.value ? '/teacher/virtual-lab' : '/student/virtual-lab'))
+const practiceRole = computed<'teacher' | 'admin'>(() => (route.meta.practiceRole as 'admin') === 'admin' ? 'admin' : 'teacher')
+const practiceApiBase = computed(() => `/api/${practiceRole.value}/virtual-lab`)
+const backLink = computed(() => (isPractice.value ? `/${practiceRole.value}/virtual-lab` : '/student/virtual-lab'))
 let practiceNextId = -1
 type NotebookBody = { entry_type: NotebookEntry['entry_type']; label: string; value: string; unit?: string | null; extra?: Record<string, any> | null }
 const postNotebook = async (body: NotebookBody) => {
@@ -490,7 +700,8 @@ const objectCatalog = ref<LabObjectDef[]>([])
 const loading = ref(true)
 // Loosely typed on purpose - it can be the free-layout engine or any guided experiment, and the only
 // method every renderer needs to expose is setObjectState (see registry.ts's Component contract).
-const sceneRef = ref<{ setObjectState: (key: string, patch: Record<string, any>) => void } | null>(null)
+// goToView is only ever present on the free-layout engine (see guidedExperiment below).
+const sceneRef = ref<{ setObjectState: (key: string, patch: Record<string, any>) => void; goToView?: (v: CameraView) => void } | null>(null)
 const toastStore = useToastStore()
 const graphRef = ref<{ xKey: string; yKey: string } | null>(null)
 // Session-only ("optional" questions can be skipped, not answered - there's nothing to persist,
@@ -518,6 +729,19 @@ const isPendulum = computed(() => attempt.value?.experiment.render_component ===
 const lastPendulumLengthCm = ref<number | null>(null)
 const lastPendulumTimeS = ref<number | null>(null)
 const lastPendulumOscillations = ref(10)
+// Moments-balance trial: distance to the hanger plus distance to the bottle makes one Results Table row
+const lastMomentsD = ref<number | null>(null)
+const lastMomentsY = ref<number | null>(null)
+// Concave mirror trial: object-to-mirror distance u plus screen-to-mirror distance v makes one row
+const lastMirrorU = ref<number | null>(null)
+const lastMirrorV = ref<number | null>(null)
+// Metal-density trial: a reference (unloaded) pointer position, taken once and reused for every
+// sample, plus a raw air reading and a raw water reading for whichever sample is on the hook, make
+// one Results Table row - the metal's own key is kept so the row can be labelled.
+const lastDensityReferenceCm = ref<number | null>(null)
+const lastDensityAirCm = ref<number | null>(null)
+const lastDensityWaterCm = ref<number | null>(null)
+const lastDensityMetalKey = ref<string | null>(null)
 const lastLaunchAngleDeg = ref<number | null>(null)
 const lastRangeM = ref<number | null>(null)
 
@@ -600,12 +824,30 @@ const guidedExperiment = computed(() => {
   return resolveGuidedExperiment(attempt.value.experiment.render_component)
 })
 
+// Camera views of the room - same room (walls, wall cabinets, entrance), same button row as the
+// Apparatus Playground, so every practical looks and feels like the same lab. Every registry scene
+// exposes goToView and is built with cupboard/wallCabinets except 'projectile', which uses the
+// open-field room setting and keeps its own richer launcher/field/trajectory camera system instead.
+const roomCameraSupported = computed(() => attempt.value?.experiment.render_component !== 'projectile')
+const CAMERA_VIEWS: { key: CameraView; label: string; title: string }[] = [
+  { key: 'bench', label: 'Bench', title: 'Back to the apparatus on the bench' },
+  { key: 'entrance', label: 'Entrance', title: 'Look at the lab entrance' },
+  { key: 'left', label: 'Left', title: 'Look at the left wall' },
+  { key: 'right', label: 'Right', title: 'Look at the right wall' },
+]
+const cameraView = ref<CameraView>('bench')
+const goToView = (v: CameraView) => {
+  cameraView.value = v
+  sceneRef.value?.goToView?.(v)
+}
+
 const apparatusList = computed(() => {
   if (!attempt.value) return []
   const catalog = new Map(objectCatalog.value.map(o => [o.object_type, o]))
-  return attempt.value.experiment.scene_objects.map(o => ({
+  // Items put in the tray only to test apparatus identification aren't part of the practical's apparatus
+  return attempt.value.experiment.scene_objects.filter(o => !o.props?.distractor).map(o => ({
     key: o.key,
-    name: catalog.get(o.object_type)?.display_name ?? o.object_type,
+    name: o.props?.label ?? catalog.get(o.object_type)?.display_name ?? o.object_type,
     icon: catalog.get(o.object_type)?.icon ?? '🔬',
   }))
 })
@@ -624,6 +866,32 @@ const resultTableColumns = computed(() => {
   const first = resultRows.value[0]
   return first?.extra ? Object.keys(first.extra) : []
 })
+const isDensityExperiment = computed(() => attempt.value?.experiment.render_component === 'silver_density_spring')
+/** The live table shows while the student is still working; once every step is done the Practical
+ *  Notebook (with the same table) takes over. Practicals that never produce result rows don't get one. */
+const RESULT_TABLE_PRACTICALS = ['pendulum', 'hookes_law', 'circuit', 'titration', 'optics', 'projectile', 'moments_balance', 'concave_mirror_focus', 'silver_density_spring']
+const showLiveResults = computed(() => !!attempt.value && attempt.value.status === 'in_progress' && !allStepsDone.value && !isBulbExperiment.value && !isGravityExperiment.value && !isEmfExperiment.value
+  && (resultRows.value.length > 0 || RESULT_TABLE_PRACTICALS.includes(attempt.value.experiment.render_component ?? '')))
+/** The compact copy in the steps panel - also for the g practical, whose rows the student types in. */
+const showMiniResults = computed(() => showLiveResults.value || ((isGravityExperiment.value || isEmfExperiment.value) && attempt.value?.status === 'in_progress'))
+/** The row just recorded is highlighted for a moment, so the student sees what went in. */
+const justAddedRowId = ref<number | null>(null)
+let justAddedTimer = 0
+watch(() => resultRows.value.length, (n, old) => {
+  if (old === undefined || n <= old) return
+  justAddedRowId.value = resultRows.value[n - 1]?.id ?? null
+  window.clearTimeout(justAddedTimer)
+  justAddedTimer = window.setTimeout(() => { justAddedRowId.value = null }, 2500)
+})
+// Torch-bulb filament practical: the student types each meter reading themselves (it's never
+// auto-filled), so each finished pair becomes a Results Table row of exactly what they recorded, with
+// what the meters really showed kept alongside as a "Meter reading" calculation entry for marking.
+const isBulbExperiment = computed(() => attempt.value?.experiment.render_component === 'bulb_filament_resistance')
+const calcEntries = computed(() => attempt.value?.notebook.filter(n => n.entry_type === 'calculation') ?? [])
+const bulbSnapshots = computed(() => calcEntries.value.filter(n => n.label.startsWith('Meter reading')))
+const bulbLabRecord = computed(() => (calcEntries.value.find(n => n.label === 'Lab record')?.extra as BulbLabRecord | undefined) ?? null)
+const bulbAnalysisEntry = computed(() => calcEntries.value.find(n => n.label === 'Bulb analysis') ?? null)
+const bulbBlocker = ref<string | null>(null)
 const computedResistance = computed(() => {
   if (lastVoltageReading.value === null || lastCurrentReading.value === null || lastCurrentReading.value === 0) return 0
   return Math.round((lastVoltageReading.value / lastCurrentReading.value) * 100) / 100
@@ -640,13 +908,13 @@ watch(() => attempt.value?.current_step, () => {
 })
 
 const loadObjects = async () => {
-  const res = await axios.get(isPractice.value ? '/api/teacher/virtual-lab/objects' : '/api/student/virtual-lab/objects')
+  const res = await axios.get(isPractice.value ? `${practiceApiBase.value}/objects` : '/api/student/virtual-lab/objects')
   objectCatalog.value = res.data.data.objects
 }
 
 const startAttempt = async () => {
   if (isPractice.value) {
-    const res = await axios.get(`/api/teacher/virtual-lab/experiments/${route.params.experimentId}`)
+    const res = await axios.get(`${practiceApiBase.value}/experiments/${route.params.experimentId}`)
     const experiment = res.data.data
     attempt.value = {
       attempt_id: 0, assignment_id: 0, status: 'in_progress', current_step: 1, steps_completed: 0,
@@ -673,7 +941,17 @@ const refreshAttempt = async () => {
   attempt.value = res.data.data
 }
 
-const onSceneAction = async (payload: { objectKey: string | null; action: string; value: string | null; unit?: string | null; label?: string | null; safetyIssue?: boolean; targetObjectKey?: string | null; springLoadG?: number; oscillations?: number }) => {
+// Scene actions are checked one at a time, in the order they happened: a quick student (e.g. opening
+// K then moving the clip straight away) must not have the second action judged against the step the
+// first one hadn't advanced past yet.
+type ScenePayload = Parameters<typeof handleSceneAction>[0]
+let sceneActionChain: Promise<void> = Promise.resolve()
+const onSceneAction = (payload: ScenePayload) => {
+  sceneActionChain = sceneActionChain.then(() => handleSceneAction(payload)).catch(() => {})
+  return sceneActionChain
+}
+
+const handleSceneAction = async (payload: { objectKey: string | null; action: string; value: string | null; unit?: string | null; label?: string | null; safetyIssue?: boolean; targetObjectKey?: string | null; springLoadG?: number; oscillations?: number; bulbTrial?: BulbTrial; labRecord?: BulbLabRecord; pendulumTrial?: PendulumTrial; gRecord?: PendulumGRecord }) => {
   if (!attempt.value) return
 
   if ((payload.action === 'switch_on' || payload.action === 'switch_off') && payload.objectKey) {
@@ -682,7 +960,19 @@ const onSceneAction = async (payload: { objectKey: string | null; action: string
   if (payload.action === 'heat' && payload.value) {
     sceneRef.value?.setObjectState(payload.objectKey!, { flame: 'on' })
   }
-  if (payload.action === 'measure' && payload.value !== null) {
+  if (isGravityExperiment.value) {
+    if (payload.pendulumTrial) { const t = payload.pendulumTrial; queueBulbSave(() => upsertCalculation(`Timing l = ${t.length_m.toFixed(3)} m`, `t = ${t.t_s} s for ${t.oscillations} oscillations`, t)) }
+    if (payload.gRecord) { const r = payload.gRecord; queueBulbSave(() => upsertCalculation('Lab record', 'Apparatus handling', r)) }
+  }
+  if (isEmfExperiment.value) {
+    if (payload.bulbTrial) { const t = payload.bulbTrial; queueBulbSave(() => saveEmfTrial(t)) }
+    if (payload.labRecord) { const r = payload.labRecord; queueBulbSave(() => upsertCalculation('Lab record', 'Apparatus handling', r)) }
+  }
+  if (isBulbExperiment.value) {
+    if (payload.bulbTrial) { const t = payload.bulbTrial; queueBulbSave(() => saveBulbTrial(t)) }
+    if (payload.labRecord) { const r = payload.labRecord; queueBulbSave(() => upsertCalculation('Lab record', 'Apparatus handling', r)) }
+  }
+  if (payload.action === 'measure' && payload.value !== null && !isBulbExperiment.value && !isGravityExperiment.value && !isEmfExperiment.value) {
     const num = parseFloat(payload.value)
     if (payload.unit === 'V') lastVoltageReading.value = num
     if (payload.unit === 'A') lastCurrentReading.value = num
@@ -693,6 +983,19 @@ const onSceneAction = async (payload: { objectKey: string | null; action: string
         lastSpringNaturalCm.value = Number(targetCfg.props?.natural_length_cm ?? catalogDef?.default_props?.natural_length_cm ?? 15)
         lastSpringLengthCm.value = num
       }
+      if (targetCfg?.object_type === 'mass_piece') lastMomentsD.value = num
+      else if (targetCfg?.object_type === 'specimen_bottle') lastMomentsY.value = num
+    }
+    if (payload.label === 'Metre Rule (object to mirror)') lastMirrorU.value = num
+    else if (payload.label === 'Metre Rule (screen to mirror)') lastMirrorV.value = num
+    if (payload.label === 'Reference Reading') {
+      lastDensityReferenceCm.value = num
+    } else if (payload.label === 'Metal Air Reading') {
+      lastDensityMetalKey.value = payload.objectKey
+      lastDensityAirCm.value = num
+      lastDensityWaterCm.value = null // a fresh air reading starts a new trial
+    } else if (payload.label === 'Metal Water Reading') {
+      lastDensityWaterCm.value = num
     }
     if (payload.label === 'Initial Burette Reading') {
       lastBuretteInitialMl.value = num
@@ -747,7 +1050,7 @@ const onSceneAction = async (payload: { objectKey: string | null; action: string
 
   try {
     const res = isPractice.value
-      ? await axios.post(`/api/teacher/virtual-lab/experiments/${route.params.experimentId}/practice/action`, {
+      ? await axios.post(`${practiceApiBase.value}/experiments/${route.params.experimentId}/practice/action`, {
           step_number: attempt.value.current_step,
           object_key: payload.objectKey,
           action: payload.action,
@@ -822,6 +1125,155 @@ const graphBlocker = computed<string | null>(() => {
   return null
 })
 const plotEntries = computed(() => attempt.value?.notebook.filter(n => n.entry_type === 'plot_point') ?? [])
+const submitBlocker = computed(() => graphBlocker.value || (isBulbExperiment.value ? bulbBlocker.value : null) || (isMirrorExperiment.value || isPendulum.value ? studentGraphBlocker.value : null) || (isGravityExperiment.value ? gravityBlocker.value : null) || (isEmfExperiment.value ? emfBlocker.value : null))
+
+// --- Internal resistance and emf of a battery (battery_internal_resistance) ------------------------------
+const isEmfExperiment = computed(() => attempt.value?.experiment.render_component === 'battery_internal_resistance')
+const emfAnalysisEntry = computed(() => calcEntries.value.find(n => n.label === 'Emf analysis') ?? null)
+const emfBlocker = ref<string | null>(null)
+const replaceEmfRow = async (lengthCm: number, current: number, voltage: number) => {
+  const key = lengthCm.toFixed(1)
+  for (const old of resultRows.value.filter(r => r.extra && Number(r.extra.length_cm).toFixed(1) === key)) await removeNotebookEntry(old.id)
+  await postNotebook({ entry_type: 'result_row', label: `l = ${key} cm`, value: String(voltage), unit: 'V', extra: { length_cm: Number(key), current_a: current, voltage_v: voltage } })
+}
+const saveEmfTrial = async (t: BulbTrial) => {
+  if (!attempt.value || attempt.value.status !== 'in_progress') return
+  await replaceEmfRow(Math.round(t.x_m * 1000) / 10, t.current_a, t.voltage_v)
+  await upsertCalculation(`Meter reading l = ${(t.x_m * 100).toFixed(1)} cm`, `I = ${t.true_current_a} A, V = ${t.true_voltage_v} V`, t)
+}
+const saveEmfRow = (row: { length_cm: number; current_a: number; voltage_v: number }) => queueBulbSave(async () => {
+  if (!attempt.value || attempt.value.status !== 'in_progress') return
+  await replaceEmfRow(row.length_cm, row.current_a, row.voltage_v)
+  await refreshAttempt()
+})
+const saveEmfAnalysis = (extra: Record<string, any>) => queueBulbSave(() => {
+  const sm = extra.summary || {}
+  return upsertCalculation('Emf analysis', sm.r != null && sm.e != null ? `r = ${sm.r} ohm, E = ${sm.e} V${sm.score != null ? `, ${sm.score}/${sm.max_score}` : ''}` : 'In progress', extra)
+})
+
+// --- Experimental determination of g (pendulum_gravity) ----------------------------------------------
+const isGravityExperiment = computed(() => attempt.value?.experiment.render_component === 'pendulum_gravity')
+const gravityTrials = computed(() => calcEntries.value.filter(n => n.label.startsWith('Timing l =')))
+const gravityRecord = computed(() => (calcEntries.value.find(n => n.label === 'Lab record')?.extra as PendulumGRecord | undefined) ?? null)
+const gravityAnalysisEntry = computed(() => calcEntries.value.find(n => n.label === 'Gravity analysis') ?? null)
+const gravityBlocker = ref<string | null>(null)
+const saveGravityRow = (row: { length_m: number; time_20_s: number; period_s: number; period_squared_s2: number }) => queueBulbSave(async () => {
+  if (!attempt.value || attempt.value.status !== 'in_progress') return
+  const key = row.length_m.toFixed(3)
+  for (const old of resultRows.value.filter(r => r.extra && Number(r.extra.length_m).toFixed(3) === key)) await removeNotebookEntry(old.id)
+  await postNotebook({ entry_type: 'result_row', label: `l = ${key} m`, value: String(row.period_squared_s2), unit: 's²', extra: { length_m: row.length_m, time_20_s: row.time_20_s, period_s: row.period_s, period_squared_s2: row.period_squared_s2 } })
+  await refreshAttempt()
+})
+const saveGravityAnalysis = (extra: Record<string, any>) => queueBulbSave(() => {
+  const sm = extra.summary || {}
+  return upsertCalculation('Gravity analysis', sm.g != null ? `g = ${sm.g} m/s2${sm.score != null ? `, ${sm.score}/${sm.max_score}` : ''}` : 'In progress', extra)
+})
+const saveGravityGraph = (extra: Record<string, any>) => queueBulbSave(() => {
+  const sm = extra.summary || {}
+  return upsertCalculation('Graph analysis', sm.result != null ? `${sm.result_name} = ${sm.result} ${sm.result_unit}` : 'In progress', extra)
+})
+
+// --- Concave mirror: the student's own graph of uv against (u + v) ------------------------------------
+const isMirrorExperiment = computed(() => attempt.value?.experiment.render_component === 'concave_mirror_focus')
+const MIRROR_GRAPH: StudentGraphConfig = {
+  title: 'Graph of uv against (u + v)',
+  axisOptions: [
+    { key: 'u_plus_v', label: '(u + v) (cm)' }, { key: 'uv', label: 'uv (cm²)' }, { key: 'u', label: 'u (cm)' }, { key: 'v', label: 'v (cm)' },
+  ],
+  xKey: 'u_plus_v', yKey: 'uv', xLabel: '(u + v) (cm)', yLabel: 'uv (cm²)', xSym: '(u+v)', ySym: 'uv', gradientUnit: 'cm',
+  axisMessage: 'Check that (u + v) is on the X-axis and uv is on the Y-axis.',
+  formulaMessage: 'Since the graph is uv against (u + v), gradient = Δ(uv) / Δ(u + v). The focal length f = gradient.',
+  result: {
+    title: 'Focal length of the mirror', symbol: 'f', unit: 'cm', name: 'focal length f',
+    explanation: 'From the mirror formula 1/f = 1/u + 1/v, multiplying through by fuv gives uv = f(u + v). So on a graph of uv against (u + v) the gradient is the focal length itself: f = gradient.',
+    fromGradient: (g: number) => g,
+  },
+}
+const mirrorGraphRows = computed(() => resultRows.value
+  .filter(r => r.extra && r.extra.u_plus_v_cm != null && r.extra.uv_cm2 != null)
+  .map((r, i) => ({ key: String(r.id), label: `Trial ${i + 1}`, x: Number(r.extra!.u_plus_v_cm), y: Number(r.extra!.uv_cm2) })))
+// --- Pendulum: the student's own graph of T² against L ---------------------------------------------
+const PENDULUM_GRAPH: StudentGraphConfig = {
+  title: 'Graph of T² against L',
+  axisOptions: [
+    { key: 'length', label: 'Length, L (m)' }, { key: 'tsq', label: 'Period squared, T² (s²)' },
+    { key: 'period', label: 'Period, T (s)' }, { key: 'time', label: 'Time for 10 oscillations, t (s)' },
+  ],
+  xKey: 'length', yKey: 'tsq', xLabel: 'Length, L (m)', yLabel: 'Period squared, T² (s²)', xSym: 'L', ySym: 'T²', gradientUnit: 's²/m',
+  axisMessage: 'Check that the length L is on the X-axis and the period squared T² is on the Y-axis.',
+  formulaMessage: 'Since the graph is T² against L, gradient = Δ(T²) / ΔL. Then g = 4π² / gradient.',
+  result: {
+    title: 'Acceleration due to gravity, g', symbol: 'g', unit: 'm/s²', name: 'acceleration due to gravity g',
+    explanation: 'T = 2π√(L/g), so squaring both sides gives T² = (4π²/g) × L. The gradient of a graph of T² against L is therefore 4π²/g, so g = 4π² ÷ gradient (4π² ≈ 39.48).',
+    fromGradient: (s: number) => (4 * Math.PI * Math.PI) / s,
+  },
+}
+const pendulumGraphRows = computed(() => resultRows.value
+  .filter(r => r.extra && r.extra.length_m != null && r.extra.period_squared_s2 != null)
+  .map((r, i) => ({ key: String(r.id), label: `Length ${i + 1}`, x: Number(r.extra!.length_m), y: Number(r.extra!.period_squared_s2) })))
+// The pendulum's graph is a "students plot it" graph, which the server checks through plot_point
+// entries - so the points the student plots are kept as plot_point entries too, as well as the
+// whole graph's working.
+const savePendulumGraph = (extra: Record<string, any>) => queueBulbSave(async () => {
+  if (!attempt.value || attempt.value.status !== 'in_progress') return
+  const pts = (extra.points || []) as { x: number; y: number }[]
+  for (const old of plotEntries.value) await removeNotebookEntry(old.id)
+  for (const pt of pts) await postNotebook({ entry_type: 'plot_point', label: 'Plotted point', value: `${pt.x}, ${pt.y}`, extra: { x: pt.x, y: pt.y } })
+  const sm = extra.summary || {}
+  await upsertCalculation('Graph analysis', sm.result != null ? `${sm.result_name} = ${sm.result} ${sm.result_unit}` : 'In progress', extra)
+})
+const graphAnalysisEntry = computed(() => calcEntries.value.find(n => n.label === 'Graph analysis') ?? null)
+const studentGraphBlocker = ref<string | null>(null)
+const saveGraphAnalysis = (extra: Record<string, any>) => queueBulbSave(() => {
+  const sm = extra.summary || {}
+  return upsertCalculation('Graph analysis', sm.result != null ? `${sm.result_name} = ${sm.result} ${sm.result_unit}` : 'In progress', extra)
+})
+
+// --- Torch-bulb practical notebook writes -------------------------------------------------------------
+// Each write replaces an earlier entry (delete + add), so they run one at a time - two overlapping
+// saves could otherwise both delete the same old entry and each add a new one.
+let bulbSaveChain: Promise<void> = Promise.resolve()
+const queueBulbSave = (fn: () => Promise<void>) => {
+  bulbSaveChain = bulbSaveChain.then(fn).catch(() => {
+    toast.value = { correct: false, text: 'Part of your notebook could not be saved. Please try again.' }
+  })
+  return bulbSaveChain
+}
+const removeNotebookEntry = async (id: number) => {
+  if (!attempt.value) return
+  if (isPractice.value) {
+    attempt.value.notebook = attempt.value.notebook.filter(n => n.id !== id)
+    return
+  }
+  await axios.delete(`/api/student/virtual-lab/attempts/${attempt.value.attempt_id}/notebook/${id}`)
+}
+const upsertCalculation = async (label: string, value: string, extra: object) => {
+  if (!attempt.value || attempt.value.status !== 'in_progress') return
+  for (const old of attempt.value.notebook.filter(n => n.entry_type === 'calculation' && n.label === label)) await removeNotebookEntry(old.id)
+  await postNotebook({ entry_type: 'calculation', label, value, extra: { ...extra } })
+  await refreshAttempt()
+}
+const replaceBulbRow = async (x: number, current: number, voltage: number) => {
+  if (!attempt.value) return
+  const key = x.toFixed(3)
+  for (const old of resultRows.value.filter(r => r.extra && Number(r.extra.x_m).toFixed(3) === key)) await removeNotebookEntry(old.id)
+  await postNotebook({ entry_type: 'result_row', label: `x = ${key} m`, value: String(current), unit: 'A', extra: { x_m: Number(key), current_a: current, voltage_v: voltage } })
+}
+const saveBulbTrial = async (t: BulbTrial) => {
+  if (!attempt.value || attempt.value.status !== 'in_progress') return
+  await replaceBulbRow(t.x_m, t.current_a, t.voltage_v)
+  await upsertCalculation(`Meter reading x = ${t.x_m.toFixed(3)} m`, `I = ${t.true_current_a} A, V = ${t.true_voltage_v} V`, t)
+}
+const saveBulbRow = (row: { x_m: number; current_a: number; voltage_v: number }) => queueBulbSave(async () => {
+  if (!attempt.value || attempt.value.status !== 'in_progress') return
+  await replaceBulbRow(row.x_m, row.current_a, row.voltage_v)
+  await refreshAttempt()
+})
+const saveBulbAnalysis = (payload: { extra: Record<string, any> }) => queueBulbSave(() => {
+  const s = payload.extra.summary || {}
+  const value = s.resistance_ohm != null ? `R = ${s.resistance_ohm} ohm${s.score != null ? `, ${s.score}/${s.max_score}` : ''}` : 'In progress'
+  return upsertCalculation('Bulb analysis', value, payload.extra)
+})
 
 const addPlotPoint = async (p: { x: number; y: number }) => {
   if (!attempt.value || attempt.value.status !== 'in_progress') return
@@ -974,6 +1426,82 @@ watch([lastPendulumLengthCm, lastPendulumTimeS], async ([lengthCm, timeS]) => {
   }
 })
 
+// Each moments-balance trial (distance to the hanger + distance to the bottle) goes straight into
+// the Results Table, so the graph of d against y builds up as the student works - d = (mb/50) x y
+// is a straight line through the origin whose gradient is mb/50.
+let momentsRowSaving = false
+watch([lastMomentsD, lastMomentsY], async ([d, y]) => {
+  if (momentsRowSaving || d === null || y === null || !attempt.value || attempt.value.status !== 'in_progress') return
+  momentsRowSaving = true
+  try {
+    await postNotebook({
+      entry_type: 'result_row', label: `y = ${y} cm`, value: String(d), unit: 'cm',
+      extra: { y_cm: y, d_cm: d },
+    })
+    lastMomentsD.value = null
+    lastMomentsY.value = null
+    await refreshAttempt()
+  } finally {
+    momentsRowSaving = false
+  }
+})
+
+// Each concave-mirror trial (object-to-mirror distance u + screen-to-mirror distance v) goes
+// straight into the Results Table with uv and (u+v), so the graph of uv against (u+v) builds up
+// as the student works - uv = f(u+v) is a straight line through the origin whose gradient is f.
+let mirrorRowSaving = false
+watch([lastMirrorU, lastMirrorV], async ([u, v]) => {
+  if (mirrorRowSaving || u === null || v === null || !attempt.value || attempt.value.status !== 'in_progress') return
+  mirrorRowSaving = true
+  try {
+    await postNotebook({
+      entry_type: 'result_row', label: `u = ${u} cm`, value: String(v), unit: 'cm',
+      extra: { u_cm: u, v_cm: v, uv_cm2: Math.round(u * v * 10) / 10, u_plus_v_cm: Math.round((u + v) * 10) / 10 },
+    })
+    lastMirrorU.value = null
+    lastMirrorV.value = null
+    await refreshAttempt()
+  } finally {
+    mirrorRowSaving = false
+  }
+})
+
+// Each metal-density trial (a raw air reading + a raw water reading for the same 100g metal, both
+// taken against the one shared reference/unloaded reading) goes straight into the Results Table.
+// e_a = air reading - reference, e_w = water reading - reference; relative density
+// R.D. = e_a / (e_a - e_w) by the loss-of-weight method, so density = 1000 x R.D. (kg/m3), checked
+// against pure silver's 10200-10500 range.
+let densityRowSaving = false
+watch([lastDensityAirCm, lastDensityWaterCm], async ([air, water]) => {
+  if (densityRowSaving || air === null || water === null || lastDensityReferenceCm.value === null) return
+  if (!attempt.value || attempt.value.status !== 'in_progress') return
+  densityRowSaving = true
+  try {
+    const metalKey = lastDensityMetalKey.value
+    const metalNumber = metalKey ? parseInt(metalKey.replace('metal', ''), 10) || 0 : 0
+    const reference = lastDensityReferenceCm.value
+    const ea = Math.round((air - reference) * 100) / 100
+    const ew = Math.round((water - reference) * 100) / 100
+    const lossCm = Math.round((ea - ew) * 100) / 100
+    const rd = Math.round((ea / Math.max(0.01, ea - ew)) * 100) / 100
+    const density = Math.round(rd * 1000)
+    const verdict = density >= 10200 && density <= 10500 ? 'Consistent with pure silver' : 'Not consistent with pure silver'
+    await postNotebook({
+      entry_type: 'result_row', label: `M${metalNumber}`, value: String(density), unit: ' kg/m3',
+      extra: {
+        metal_number: metalNumber, reference_cm: reference, air_reading_cm: air, water_reading_cm: water,
+        e_a_cm: ea, e_w_cm: ew, loss_cm: lossCm, relative_density: rd, density_kgm3: density, verdict,
+      },
+    })
+    lastDensityAirCm.value = null
+    lastDensityWaterCm.value = null
+    lastDensityMetalKey.value = null
+    await refreshAttempt()
+  } finally {
+    densityRowSaving = false
+  }
+})
+
 const addProjectileResultRow = async () => {
   if (!attempt.value || lastLaunchAngleDeg.value === null || lastRangeM.value === null) return
   const angle = lastLaunchAngleDeg.value
@@ -1017,6 +1545,14 @@ const submitPractical = async () => {
 }
 
 const { labMaximized, enterMaximize, exitMaximize } = useFullscreenLab()
+
+// The Results Table, graph and questions live in the Practical Notebook below the lab, which full
+// screen covers - so finishing the steps there needs a direct way back to them.
+const viewResults = async () => {
+  if (labMaximized.value) exitMaximize()
+  await nextTick()
+  window.setTimeout(() => document.getElementById('practical-notebook')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120)
+}
 
 // Entering full screen: steps panel open beside the lab on tablets/computers, closed on phones
 // (where it would cover the lab) until the student taps "Steps".

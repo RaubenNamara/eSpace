@@ -261,6 +261,7 @@
                     {{ a.experiment_title }} &middot;
                     <span v-if="a.class_group_name" class="text-green-600 dark:text-green-400">{{ a.class_group_name }} (All Streams)</span>
                     <span v-else>{{ a.class_name }}</span>
+                    <span v-if="a.published_by_admin" class="ml-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300" title="Published by the admin to your department - you can follow and mark it">Admin</span>
                   </p>
                   <p class="text-xs text-gray-400 dark:text-gray-500">{{ a.attempt_count }} attempts &middot; {{ a.submitted_count }} submitted &middot; {{ a.graded_count }} graded</p>
                 </div>
@@ -727,12 +728,12 @@
               <table class="w-full text-sm border-collapse border border-gray-300 dark:border-gray-600">
                 <thead>
                   <tr class="bg-indigo-50 dark:bg-indigo-900/30 text-left text-gray-800 dark:text-gray-100">
-                    <th v-for="col in Object.keys(notebookResultRows(gradingAttempt)[0]?.extra || {})" :key="col" class="border border-gray-300 dark:border-gray-600 px-3 py-2 font-semibold capitalize">{{ col.replace(/_/g, ' ') }}</th>
+                    <th v-for="col in Object.keys(notebookResultRows(gradingAttempt)[0]?.extra || {})" :key="col" class="border border-gray-300 dark:border-gray-600 px-3 py-2 font-semibold" :class="RESULT_COLUMN_LABELS[col] ? '' : 'capitalize'">{{ resultColumnLabel(col) }}</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="row in notebookResultRows(gradingAttempt)" :key="row.id" class="odd:bg-white even:bg-gray-50 dark:odd:bg-gray-800 dark:even:bg-gray-900/40">
-                    <td v-for="col in Object.keys(row.extra || {})" :key="col" class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-gray-800 dark:text-gray-100">{{ row.extra?.[col] ?? '-' }}</td>
+                    <td v-for="col in Object.keys(row.extra || {})" :key="col" class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-gray-800 dark:text-gray-100" :class="resultCellClass(col, row.extra?.[col])">{{ resultCell(col, row.extra?.[col]) }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -762,6 +763,37 @@
             </div>
           </div>
 
+          <!-- Torch-bulb practical: the student's own gradient/resistance working and the automatic
+               practical assessment it produced - a guide for the teacher's mark, not a replacement. -->
+          <div v-if="bulbAnalysis(gradingAttempt)" class="text-sm">
+            <p class="font-semibold text-gray-700 dark:text-gray-300 mb-1">Gradient, resistance and practical assessment</p>
+            <div class="bg-gray-50 dark:bg-gray-950/40 rounded-lg p-2.5 space-y-1.5">
+              <p class="text-gray-700 dark:text-gray-200">
+                Gradient: <strong>{{ bulbAnalysis(gradingAttempt)!.summary?.gradient_a_per_v ?? '-' }}</strong> A/V &middot;
+                R = 1/gradient = <strong>{{ bulbAnalysis(gradingAttempt)!.summary?.resistance_ohm ?? '-' }}</strong> &Omega;
+                <span v-if="bulbAnalysis(gradingAttempt)!.summary?.true_resistance_ohm" class="text-gray-400"> (from the meters' true readings: {{ bulbAnalysis(gradingAttempt)!.summary.true_resistance_ohm }} &Omega;)</span>
+              </p>
+              <template v-if="bulbAnalysis(gradingAttempt)!.assessment">
+                <p class="text-gray-700 dark:text-gray-200">Automatic assessment: <strong>{{ bulbAnalysis(gradingAttempt)!.assessment.total }} / {{ bulbAnalysis(gradingAttempt)!.assessment.max }}</strong></p>
+                <ul class="text-xs text-gray-500 dark:text-gray-400 space-y-0.5">
+                  <li v-for="item in bulbAnalysis(gradingAttempt)!.assessment.items" :key="item.key"><span class="font-semibold text-gray-600 dark:text-gray-300">{{ item.label }} {{ item.score }}/{{ item.max }}</span> - {{ item.feedback }}</li>
+                </ul>
+              </template>
+            </div>
+          </div>
+
+          <!-- A student-plotted graph (e.g. the concave mirror's uv against u + v): their own gradient
+               and what they worked out from it. -->
+          <div v-if="studentGraph(gradingAttempt)" class="text-sm">
+            <p class="font-semibold text-gray-700 dark:text-gray-300 mb-1">Student's own graph</p>
+            <p class="bg-gray-50 dark:bg-gray-950/40 rounded-lg p-2.5 text-gray-700 dark:text-gray-200">
+              Points plotted: <strong>{{ studentGraph(gradingAttempt)!.summary?.points_plotted ?? '-' }}</strong> &middot;
+              gradient: <strong>{{ studentGraph(gradingAttempt)!.summary?.gradient ?? '-' }}</strong> &middot;
+              {{ studentGraph(gradingAttempt)!.summary?.result_name }}: <strong>{{ studentGraph(gradingAttempt)!.summary?.result ?? '-' }}</strong> {{ studentGraph(gradingAttempt)!.summary?.result_unit }}
+              <span class="text-gray-400"> &middot; axes {{ studentGraph(gradingAttempt)!.axes?.attempts ? 'corrected after a wrong first try' : 'right first time' }}<template v-if="studentGraph(gradingAttempt)!.wrongFormula"> &middot; tried the upside-down gradient formula first</template></span>
+            </p>
+          </div>
+
           <div v-if="gradingAttempt.conclusion_text" class="text-sm">
             <p class="font-semibold text-gray-700 dark:text-gray-300 mb-1">Conclusion</p>
             <p class="text-gray-600 dark:text-gray-300">{{ gradingAttempt.conclusion_text }}</p>
@@ -775,7 +807,12 @@
                with graph-analysis answers marked right alongside it. -->
           <div v-if="gradingAttempt.graph_snapshot" class="text-sm">
             <p class="font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Graph</p>
-            <VirtualLabGraph :rows="notebookGraphRows(gradingAttempt)" :config="gradingGraphConfig(gradingAttempt)" />
+            <VirtualLabGraph
+              :rows="notebookGraphRows(gradingAttempt)"
+              :config="gradingGraphConfig(gradingAttempt)"
+              :discrete-x-prefix="isSilverDensityRows(notebookGraphRows(gradingAttempt)) ? 'M' : undefined"
+              :band="isSilverDensityRows(notebookGraphRows(gradingAttempt)) ? SILVER_DENSITY_BAND : null"
+            />
             <div v-if="gradingAttempt.graph_snapshot.gradient !== null" class="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-gray-500 dark:text-gray-400">
               <span>Recorded gradient: <strong class="text-gray-700 dark:text-gray-300">{{ gradingAttempt.graph_snapshot.gradient }}</strong></span>
               <span>Intercept: <strong class="text-gray-700 dark:text-gray-300">{{ gradingAttempt.graph_snapshot.intercept }}</strong></span>
@@ -832,6 +869,7 @@ import type { ExperimentSummary, ExperimentDetail, LabObjectDef, TeacherAssignme
 import VirtualLabSkillsPanel from '@/components/virtuallab/VirtualLabSkillsPanel.vue'
 import PublishedClasses from '@/components/virtuallab/PublishedClasses.vue'
 import VirtualLabGraph from '@/components/virtuallab/VirtualLabGraph.vue'
+import { RESULT_COLUMN_LABELS, resultColumnLabel, resultCell, resultCellClass, isSilverDensityRows, SILVER_DENSITY_BAND } from '@/components/virtuallab/resultColumns'
 import VirtualLabMarking from '@/components/virtuallab/VirtualLabMarking.vue'
 import VirtualLabScene from '@/components/virtuallab/VirtualLabScene.vue'
 import { useRouter } from 'vue-router'
@@ -1007,6 +1045,8 @@ const GRAPH_COLUMN_OPTIONS: Record<string, string[]> = {
   titration: ['trial', 'initial_reading_ml', 'final_reading_ml', 'titre_ml'],
   optics: ['trial', 'incidence_deg', 'reflection_deg', 'refraction_deg'],
   projectile: ['angle_deg', 'range_m'],
+  silver_density_spring: ['metal_number', 'reference_cm', 'air_reading_cm', 'water_reading_cm', 'e_a_cm', 'e_w_cm', 'loss_cm', 'relative_density', 'density_kgm3'],
+  bulb_filament_resistance: ['x_m', 'current_a', 'voltage_v'],
 }
 const graphColumnSuggestions = computed(() => GRAPH_COLUMN_OPTIONS[form.value.render_component ?? ''] ?? [])
 const onRenderModeChange = () => { if (form.value.render_mode !== '2d') form.value.render_component = null }
@@ -1022,6 +1062,8 @@ const reviewTab = ref<'mark' | 'summary' | 'timeline'>('mark')
 const answerFor = (questionId: number) => gradingAttempt.value?.answers.find(a => a.question_id === questionId) ?? null
 
 const notebookMeasurements = (a: AttemptDetail) => a.notebook.filter(n => n.entry_type === 'measurement')
+const studentGraph = (a: AttemptDetail) => (a.notebook.find(n => n.entry_type === 'calculation' && n.label === 'Graph analysis')?.extra as Record<string, any> | undefined) ?? null
+const bulbAnalysis = (a: AttemptDetail) => (a.notebook.find(n => n.entry_type === 'calculation' && n.label === 'Bulb analysis')?.extra as Record<string, any> | undefined) ?? null
 const notebookResultRows = (a: AttemptDetail) => a.notebook.filter(n => n.entry_type === 'result_row')
 // Points the student plotted themselves (manual-plot experiments) are stored as {x, y} rows and, when
 // present, are what the graph was drawn from - otherwise it came from the Results Table

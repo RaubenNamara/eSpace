@@ -31,18 +31,30 @@
       </div>
       <template v-else>
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-          <div v-for="card in statCards" :key="card.label" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 flex items-center gap-3">
+          <button
+            v-for="card in statCards"
+            :key="card.label"
+            type="button"
+            @click="goToExperiments()"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 flex items-center gap-3 text-left hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-800 transition-all"
+          >
             <span class="w-10 h-10 rounded-xl flex items-center justify-center text-white flex-shrink-0" :class="card.color"><AppIcon :name="card.icon" class="w-5 h-5" /></span>
             <div class="min-w-0">
               <p class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight">{{ card.value }}</p>
               <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ card.label }}</p>
             </div>
-          </div>
+          </button>
         </div>
 
         <h2 class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">By subject</h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <div v-for="c in analytics.by_category" :key="c.category" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-4">
+          <button
+            v-for="c in analytics.by_category"
+            :key="c.category"
+            type="button"
+            @click="goToExperiments(c.category)"
+            class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 text-left hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-800 transition-all"
+          >
             <div class="flex items-center gap-2.5 mb-3">
               <span class="w-9 h-9 rounded-xl flex items-center justify-center text-white" :class="CATEGORY_COLORS[c.category]"><AppIcon :name="CATEGORY_ICONS[c.category]" class="w-5 h-5" /></span>
               <p class="font-bold text-gray-900 dark:text-white">{{ CATEGORY_LABELS[c.category] }}</p>
@@ -57,7 +69,7 @@
             <div class="h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
               <div class="h-full rounded-full" :class="CATEGORY_COLORS[c.category]" :style="{ width: (c.average_percentage ?? 0) + '%' }"></div>
             </div>
-          </div>
+          </button>
         </div>
       </template>
     </div>
@@ -112,71 +124,115 @@
         <p class="text-sm text-gray-500 dark:text-gray-400">No experiments match these filters.</p>
       </div>
 
-      <div v-else class="space-y-3">
-        <div
-          v-for="e in visibleExperiments"
-          :key="e.id"
-          class="bg-white dark:bg-gray-800 rounded-2xl border shadow-sm p-4 transition-colors"
-          :class="selected.has(e.id) ? 'border-indigo-300 dark:border-indigo-700 ring-1 ring-indigo-100 dark:ring-indigo-900/40' : 'border-gray-200 dark:border-gray-700'"
-        >
-          <div class="flex items-start gap-3">
-            <input type="checkbox" :checked="selected.has(e.id)" @change="toggle(e.id)" class="mt-3 w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 flex-shrink-0" :aria-label="`Select ${e.title}`">
-            <span class="w-10 h-10 rounded-xl flex items-center justify-center text-white flex-shrink-0" :class="CATEGORY_COLORS[e.category]"><AppIcon :name="CATEGORY_ICONS[e.category]" class="w-5 h-5" /></span>
+      <div v-else class="space-y-6">
+        <div v-for="group in groupedExperiments" :key="group.subject">
+          <h2 class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
+            {{ group.subject }}
+            <span class="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-gray-100 dark:bg-gray-700 normal-case">{{ group.experiments.length }}</span>
+          </h2>
+          <div class="space-y-3">
+            <div
+              v-for="e in group.experiments"
+              :key="e.id"
+              role="button"
+              tabindex="0"
+              @click="openExperiment(e)"
+              @keydown.enter="openExperiment(e)"
+              class="bg-white dark:bg-gray-800 rounded-2xl border shadow-sm p-4 transition-colors cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-md"
+              :class="selected.has(e.id) ? 'border-indigo-300 dark:border-indigo-700 ring-1 ring-indigo-100 dark:ring-indigo-900/40' : 'border-gray-200 dark:border-gray-700'"
+            >
+              <div class="flex items-start gap-3">
+                <input type="checkbox" :checked="selected.has(e.id)" @click.stop @change="toggle(e.id)" class="mt-3 w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 flex-shrink-0" :aria-label="`Select ${e.title}`">
+                <span class="w-10 h-10 rounded-xl flex items-center justify-center text-white flex-shrink-0" :class="CATEGORY_COLORS[e.category]"><AppIcon :name="CATEGORY_ICONS[e.category]" class="w-5 h-5" /></span>
 
-            <div class="min-w-0 flex-1">
-              <div class="flex flex-wrap items-center gap-1.5">
-                <h3 class="font-semibold text-gray-900 dark:text-white leading-snug">{{ e.title }}</h3>
-                <span v-if="e.is_template" class="px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">Library</span>
-                <span class="px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase" :class="STATUS_BADGE[e.status]">{{ STATUS_LABEL[e.status] }}</span>
-              </div>
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
-                {{ [e.subject_name || CATEGORY_LABELS[e.category], e.topic].filter(Boolean).join(', ') }}
-                <span class="text-gray-300 dark:text-gray-600">&middot;</span> {{ e.creator_name || 'System' }}
-                <span class="text-gray-300 dark:text-gray-600">&middot;</span> {{ formatDate(e.created_at) }}
-              </p>
-              <div class="flex flex-wrap items-center gap-1.5 mt-2">
-                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-                  <AppIcon name="users" class="w-3 h-3" /> {{ e.assignment_count }} {{ e.assignment_count === 1 ? 'class' : 'classes' }}
-                </span>
-                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-                  <AppIcon name="clipboard" class="w-3 h-3" /> {{ e.attempt_count }} {{ e.attempt_count === 1 ? 'attempt' : 'attempts' }}
-                </span>
-                <span v-for="t in (e.published_to || []).slice(0, 3)" :key="t" class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">{{ t }}</span>
-                <span v-if="(e.published_to || []).length > 3" class="text-[11px] text-gray-400">+{{ (e.published_to || []).length - 3 }} more</span>
-              </div>
-              <div v-if="e.is_template" class="flex flex-wrap items-center gap-1.5 mt-2">
-                <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400">Departments:</span>
-                <span v-for="d in e.shared_departments || []" :key="d.id" class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">{{ d.name }}</span>
-                <span v-if="!(e.shared_departments || []).length" class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">Not shared - no teacher can use it yet</span>
-              </div>
-            </div>
+                <div class="min-w-0 flex-1">
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    <h3 class="font-semibold text-gray-900 dark:text-white leading-snug">{{ e.title }}</h3>
+                    <span v-if="e.is_template" class="px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">Library</span>
+                    <span class="px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase" :class="STATUS_BADGE[e.status]">{{ STATUS_LABEL[e.status] }}</span>
+                  </div>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+                    {{ [e.subject_name || CATEGORY_LABELS[e.category], e.topic].filter(Boolean).join(', ') }}
+                    <span class="text-gray-300 dark:text-gray-600">&middot;</span> {{ e.creator_name || 'System' }}
+                    <span class="text-gray-300 dark:text-gray-600">&middot;</span> {{ formatDate(e.created_at) }}
+                  </p>
+                  <div class="flex flex-wrap items-center gap-1.5 mt-2">
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                      <AppIcon name="users" class="w-3 h-3" /> {{ e.assignment_count }} {{ e.assignment_count === 1 ? 'class' : 'classes' }}
+                    </span>
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                      <AppIcon name="clipboard" class="w-3 h-3" /> {{ e.attempt_count }} {{ e.attempt_count === 1 ? 'attempt' : 'attempts' }}
+                    </span>
+                    <span v-if="e.copy_ids?.length" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300" title="Teachers' own copies of this experiment - their classes are listed on this card">
+                      <AppIcon name="document" class="w-3 h-3" /> {{ e.copy_ids.length }} teacher {{ e.copy_ids.length === 1 ? 'copy' : 'copies' }}
+                    </span>
+                  </div>
+                  <div v-if="e.is_template" class="flex flex-wrap items-center gap-1.5 mt-2">
+                    <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400">Departments:</span>
+                    <span v-for="d in e.shared_departments || []" :key="d.id" class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">{{ d.name }}</span>
+                    <span v-if="!(e.shared_departments || []).length" class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">Not shared - no teacher can use it yet</span>
+                  </div>
+                  <div v-if="(e.publications || []).length" class="mt-2 space-y-1">
+                    <div v-for="g in publicationsByDepartment(e)" :key="g.name" class="flex flex-wrap items-center gap-1.5">
+                      <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400">Published in {{ g.name }}:</span>
+                      <span
+                        v-for="p in g.items"
+                        :key="p.assignment_id"
+                        class="inline-flex items-center gap-1 pl-2 py-0.5 rounded-full text-[11px] font-medium"
+                        :class="[p.by_admin ? 'bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300' : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300', p.by_admin ? 'pr-0.5' : 'pr-2']"
+                        :title="`${p.class_label} - published by ${p.published_by}${p.term_name ? ', ' + p.term_name : ''}${p.due_date ? ', due ' + formatDate(p.due_date) : ''} - ${p.submitted_count} submitted`"
+                      >
+                        {{ p.class_label }}
+                        <span class="opacity-70">&middot; {{ p.published_by }}</span>
+                        <button
+                          v-if="p.by_admin"
+                          @click.stop="withdraw(e, p)"
+                          class="w-4 h-4 rounded-full flex items-center justify-center hover:bg-violet-200 dark:hover:bg-violet-800"
+                          :aria-label="`Withdraw from ${p.class_label}`"
+                          title="Withdraw from this class"
+                        >&times;</button>
+                      </span>
+                    </div>
+                  </div>
+                  <p v-else class="mt-2 text-[11px] text-gray-400">Not published to any class yet.</p>
+                </div>
 
-            <div class="flex flex-col sm:flex-row items-end sm:items-center gap-1.5 flex-shrink-0">
-              <button
-                v-if="e.is_template"
-                @click="openShare(e)"
-                class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-sky-600 text-white hover:bg-sky-700"
-                title="Choose which departments' teachers can use and publish this experiment"
-              >
-                <AppIcon name="users" class="w-3.5 h-3.5" /> Departments
-              </button>
-              <button
-                v-if="e.status !== 'disabled'"
-                @click="setStatus(e, 'disabled')"
-                class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
-                title="Students can't open it until you restore it"
-              >Hide</button>
-              <button
-                v-else
-                @click="setStatus(e, 'published')"
-                class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
-              >Restore</button>
-              <button
-                @click="deleteOne(e)"
-                class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40"
-              >
-                <AppIcon name="trash" class="w-3.5 h-3.5" /> Delete
-              </button>
+                <div class="flex flex-col sm:flex-row items-end sm:items-center gap-1.5 flex-shrink-0" @click.stop>
+                  <button
+                    v-if="e.is_template"
+                    @click="openShare(e)"
+                    class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-sky-600 text-white hover:bg-sky-700"
+                    title="Choose which departments' teachers can use and publish this experiment"
+                  >
+                    <AppIcon name="users" class="w-3.5 h-3.5" /> Departments
+                  </button>
+                  <button
+                    v-if="e.is_template"
+                    @click="openPublish(e)"
+                    class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-violet-600 text-white hover:bg-violet-700"
+                    title="Publish straight to a class of a department, so its students can do it"
+                  >
+                    <AppIcon name="send" class="w-3.5 h-3.5" /> Publish to class
+                  </button>
+                  <button
+                    v-if="e.status !== 'disabled'"
+                    @click="setStatus(e, 'disabled')"
+                    class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+                    title="Students can't open it until you restore it"
+                  >Hide</button>
+                  <button
+                    v-else
+                    @click="setStatus(e, 'published')"
+                    class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                  >Restore</button>
+                  <button
+                    @click="deleteOne(e)"
+                    class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40"
+                  >
+                    <AppIcon name="trash" class="w-3.5 h-3.5" /> Delete
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -268,6 +324,69 @@
         </div>
       </div>
     </div>
+
+    <!-- Publish to a class -->
+    <div v-if="publishTarget" class="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4" @click.self="publishTarget = null">
+      <div class="bg-white dark:bg-gray-800 w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[90dvh] flex flex-col">
+        <div class="px-5 pt-4 pb-3 border-b border-gray-100 dark:border-gray-700 flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <h3 class="font-bold text-gray-900 dark:text-white">Publish to a class</h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ publishTarget.title }}</p>
+          </div>
+          <button @click="publishTarget = null" aria-label="Close" class="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">✕</button>
+        </div>
+        <div class="px-5 py-3 overflow-y-auto flex-1 space-y-3">
+          <p class="text-xs text-gray-500 dark:text-gray-400">Students of the department in the chosen class will see it straight away. The experiment is also shared with the department, so its teachers can follow and mark the class's work.</p>
+          <label class="block">
+            <span class="text-xs font-semibold text-gray-600 dark:text-gray-300">Department</span>
+            <select v-model.number="publishForm.department_id" class="input-field w-full text-sm mt-1">
+              <option :value="0" disabled>Choose a department</option>
+              <option v-for="d in departments" :key="d.id" :value="d.id">{{ d.name }}</option>
+            </select>
+          </label>
+          <div v-if="publishForm.department_id">
+            <span class="text-xs font-semibold text-gray-600 dark:text-gray-300">Class</span>
+            <div v-if="loadingClasses" class="py-3 text-xs text-gray-400">Loading classes...</div>
+            <p v-else-if="!deptClasses.length" class="py-3 text-xs text-amber-600 dark:text-amber-400">No students are enrolled in this department yet.</p>
+            <template v-else>
+              <div class="inline-flex gap-1 mt-1 mb-2 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5">
+                <button v-for="o in [{ k: 'stream', l: 'One stream' }, { k: 'all_streams', l: 'All streams' }]" :key="o.k" type="button" @click="publishForm.scope = o.k as 'stream' | 'all_streams'"
+                  class="px-3 py-1 text-xs font-semibold rounded-md" :class="publishForm.scope === o.k ? 'bg-white dark:bg-gray-800 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'">{{ o.l }}</button>
+              </div>
+              <select v-if="publishForm.scope === 'stream'" v-model.number="publishForm.class_id" class="input-field w-full text-sm">
+                <option :value="0" disabled>Choose a class</option>
+                <option v-for="c in deptClasses" :key="c.id" :value="c.id">{{ c.label }}</option>
+              </select>
+              <select v-else v-model="publishForm.class_group_name" class="input-field w-full text-sm">
+                <option value="" disabled>Choose a class level</option>
+                <option v-for="l in deptClassLevels" :key="l" :value="l">{{ l }} (All Streams)</option>
+              </select>
+            </template>
+          </div>
+          <label class="block">
+            <span class="text-xs font-semibold text-gray-600 dark:text-gray-300">Term</span>
+            <select v-model.number="publishForm.term_id" class="input-field w-full text-sm mt-1">
+              <option :value="0" disabled>Choose a term</option>
+              <option v-for="t in terms" :key="t.id" :value="t.id">{{ t.label }}</option>
+            </select>
+          </label>
+          <div class="grid grid-cols-2 gap-3">
+            <label class="block">
+              <span class="text-xs font-semibold text-gray-600 dark:text-gray-300">Due date <span class="font-normal text-gray-400">(optional)</span></span>
+              <input v-model="publishForm.due_date" type="date" class="input-field w-full text-sm mt-1">
+            </label>
+            <label class="block">
+              <span class="text-xs font-semibold text-gray-600 dark:text-gray-300">Marks</span>
+              <input v-model="publishForm.marks" type="number" min="1" step="1" :placeholder="String(publishTarget.marks)" class="input-field w-full text-sm mt-1">
+            </label>
+          </div>
+        </div>
+        <div class="px-5 py-3 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-2">
+          <button @click="publishTarget = null" class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">Cancel</button>
+          <button @click="savePublish" :disabled="!canPublish || publishing" class="px-4 py-2 text-sm font-semibold rounded-lg bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50">{{ publishing ? 'Publishing...' : 'Publish' }}</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -275,11 +394,14 @@
 import AppIcon from '@/components/common/AppIcon.vue'
 import BulkActionBar from '@/components/common/BulkActionBar.vue'
 import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { CATEGORY_ICONS, CATEGORY_LABELS, CATEGORY_COLORS } from '@/types/virtualLab'
-import type { ExperimentSummary, LabObjectDef, LabCategory } from '@/types/virtualLab'
+import type { ExperimentSummary, ExperimentPublication, LabObjectDef, LabCategory } from '@/types/virtualLab'
 import { useToastStore } from '@/stores/toast'
 import { useConfirmStore } from '@/stores/confirm'
+
+const router = useRouter()
 
 const API_BASE = '/api/admin/virtual-lab'
 const toast = useToastStore()
@@ -308,7 +430,8 @@ const search = ref('')
 
 const tabs = computed<{ key: TabKey; label: string; icon: string; count: number | null }[]>(() => [
   { key: 'overview', label: 'Overview', icon: 'chart', count: null },
-  { key: 'experiments', label: 'Experiments', icon: 'beaker', count: analytics.value?.total_experiments ?? null },
+  // One per card once loaded (teachers' copies are folded into their library card)
+  { key: 'experiments', label: 'Experiments', icon: 'beaker', count: experiments.value.length || (analytics.value?.total_experiments ?? null) },
   { key: 'apparatus', label: 'Apparatus', icon: 'kit', count: objects.value.length || null },
 ])
 
@@ -361,6 +484,30 @@ const sourceFilter = ref<'all' | 'library' | 'teachers'>('all')
 const visibleExperiments = computed(() => experiments.value.filter(e =>
   sourceFilter.value === 'all' || (sourceFilter.value === 'library' ? e.is_template : !e.is_template)))
 
+// Experiments grouped under the subject they belong to (falls back to the general category label
+// for anything without a subject_id), sorted alphabetically so the list stays stable as it grows.
+const groupedExperiments = computed(() => {
+  const groups = new Map<string, ExperimentSummary[]>()
+  for (const e of visibleExperiments.value) {
+    const key = e.subject_name || CATEGORY_LABELS[e.category] || 'Other'
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key)!.push(e)
+  }
+  return [...groups.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([subject, exps]) => ({ subject, experiments: exps }))
+})
+
+// Overview cards drill down into the Experiments tab - a subject card also filters to it.
+const goToExperiments = (category?: string) => {
+  if (category !== undefined) expFilters.value.category = category
+  activeTab.value = 'experiments'
+}
+
+// Opens the experiment exactly like a student would see it (3D diagram + guided procedure) -
+// read-only, nothing is saved, same sandboxed route the teacher's "Try it like a student" uses.
+const openExperiment = (e: ExperimentSummary) => router.push(`/admin/virtual-lab/practice/${e.id}`)
+
 // --- Sharing library experiments with departments ---
 interface Department { id: number; name: string }
 const departments = ref<Department[]>([])
@@ -369,24 +516,140 @@ const shareTarget = ref<ExperimentSummary | null>(null)
 const shareSelection = reactive(new Set<number>())
 const savingShare = ref(false)
 
+const loadDepartments = async () => {
+  if (departments.value.length) return
+  loadingDepartments.value = true
+  try {
+    const res = await axios.get('/api/admin/departments')
+    const list = Array.isArray(res.data.data) ? res.data.data : res.data.data?.departments || []
+    departments.value = list
+      .filter((d: any) => !d.deleted_at)
+      .map((d: any) => ({ id: Number(d.id), name: d.name }))
+      .sort((a: Department, b: Department) => a.name.localeCompare(b.name))
+  } catch {
+    toast.error('Could not load departments')
+  } finally {
+    loadingDepartments.value = false
+  }
+}
+
 const openShare = async (e: ExperimentSummary) => {
   shareTarget.value = e
   shareSelection.clear()
   ;(e.shared_departments || []).forEach(d => shareSelection.add(d.id))
-  if (!departments.value.length) {
-    loadingDepartments.value = true
-    try {
-      const res = await axios.get('/api/admin/departments')
-      const list = Array.isArray(res.data.data) ? res.data.data : res.data.data?.departments || []
-      departments.value = list
-        .filter((d: any) => !d.deleted_at)
-        .map((d: any) => ({ id: Number(d.id), name: d.name }))
-        .sort((a: Department, b: Department) => a.name.localeCompare(b.name))
-    } catch {
-      toast.error('Could not load departments')
-    } finally {
-      loadingDepartments.value = false
-    }
+  await loadDepartments()
+}
+
+// One card per experiment: its classes, grouped by the department they were published in
+const publicationsByDepartment = (e: ExperimentSummary) => {
+  const groups = new Map<string, ExperimentPublication[]>()
+  for (const p of e.publications || []) {
+    const key = p.department_name || 'No department'
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key)!.push(p)
+  }
+  return [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([name, items]) => ({ name, items }))
+}
+
+// --- Admin publishing straight to a department's class ---
+interface DeptClass { id: number; label: string }
+interface TermOption { id: number; label: string; is_current: boolean }
+const publishTarget = ref<ExperimentSummary | null>(null)
+const publishForm = reactive({ department_id: 0, scope: 'stream' as 'stream' | 'all_streams', class_id: 0, class_group_name: '', term_id: 0, due_date: '', marks: '' as string | number })
+const deptClasses = ref<DeptClass[]>([])
+const deptClassLevels = ref<string[]>([])
+const loadingClasses = ref(false)
+const terms = ref<TermOption[]>([])
+const publishing = ref(false)
+
+const canPublish = computed(() => !!publishForm.department_id && !!publishForm.term_id
+  && (publishForm.scope === 'stream' ? !!publishForm.class_id : !!publishForm.class_group_name))
+
+const loadTerms = async () => {
+  if (terms.value.length) return
+  try {
+    const res = await axios.get('/api/admin/terms')
+    const list = Array.isArray(res.data.data) ? res.data.data : res.data.data?.terms || []
+    terms.value = list.map((t: any) => ({
+      id: Number(t.id),
+      label: [t.name, t.academic_year?.name].filter(Boolean).join(' - ') + (Number(t.is_current) ? ' (current)' : ''),
+      is_current: !!Number(t.is_current),
+    }))
+  } catch {
+    toast.error('Could not load terms')
+  }
+}
+
+const openPublish = async (e: ExperimentSummary) => {
+  publishTarget.value = e
+  Object.assign(publishForm, { department_id: 0, scope: 'stream', class_id: 0, class_group_name: '', term_id: 0, due_date: '', marks: '' })
+  await Promise.all([loadDepartments(), loadTerms()])
+  publishForm.term_id = terms.value.find(t => t.is_current)?.id ?? 0
+  // Start from the department it is already shared with, when there is just one
+  const shared = e.shared_departments || []
+  if (shared.length === 1) publishForm.department_id = shared[0].id
+}
+
+watch(() => publishForm.department_id, async (id) => {
+  publishForm.class_id = 0
+  publishForm.class_group_name = ''
+  deptClasses.value = []
+  deptClassLevels.value = []
+  if (!id) return
+  loadingClasses.value = true
+  try {
+    const res = await axios.get(`${API_BASE}/departments/${id}/classes`)
+    deptClasses.value = res.data.data.classes
+    deptClassLevels.value = res.data.data.class_levels
+  } catch {
+    toast.error('Could not load the classes')
+  } finally {
+    loadingClasses.value = false
+  }
+})
+
+const savePublish = async () => {
+  const e = publishTarget.value
+  if (!e || !canPublish.value) return
+  publishing.value = true
+  try {
+    await axios.post(`${API_BASE}/experiments/${e.id}/publish`, {
+      department_id: publishForm.department_id,
+      scope: publishForm.scope,
+      class_id: publishForm.scope === 'stream' ? publishForm.class_id : null,
+      class_group_name: publishForm.scope === 'all_streams' ? publishForm.class_group_name : null,
+      term_id: publishForm.term_id,
+      due_date: publishForm.due_date || null,
+      marks: publishForm.marks === '' ? null : Number(publishForm.marks),
+    })
+    const cls = publishForm.scope === 'stream'
+      ? deptClasses.value.find(c => c.id === publishForm.class_id)?.label
+      : `${publishForm.class_group_name} (All Streams)`
+    toast.success(`"${e.title}" published to ${cls}`)
+    publishTarget.value = null
+    await Promise.all([loadExperiments(), loadAnalytics()])
+  } catch (err: any) {
+    const errors = err.response?.data?.errors
+    toast.error((errors && Object.values(errors)[0]) || err.response?.data?.message || 'Could not publish the experiment')
+  } finally {
+    publishing.value = false
+  }
+}
+
+const withdraw = async (e: ExperimentSummary, p: ExperimentPublication) => {
+  const ok = await confirmDialog.open({
+    title: 'Withdraw from class',
+    message: `Withdraw "${e.title}" from ${p.class_label} (${p.department_name})? Its students will no longer see it.${p.submitted_count ? ` ${p.submitted_count} submitted ${p.submitted_count === 1 ? 'attempt is' : 'attempts are'} kept, and marks already given stay on report cards.` : ''}`,
+    confirmLabel: 'Withdraw',
+    danger: true,
+  })
+  if (!ok) return
+  try {
+    await axios.delete(`${API_BASE}/assignments/${p.assignment_id}`)
+    toast.success(`Withdrawn from ${p.class_label}`)
+    await Promise.all([loadExperiments(), loadAnalytics()])
+  } catch (err: any) {
+    toast.error(err.response?.data?.message || 'Could not withdraw it')
   }
 }
 
@@ -477,7 +740,10 @@ const impactText = (e: ExperimentSummary) => {
   const parts: string[] = []
   if (e.assignment_count) parts.push(`it is published to ${e.assignment_count} ${e.assignment_count === 1 ? 'class' : 'classes'}`)
   if (e.attempt_count) parts.push(`${e.attempt_count} student ${e.attempt_count === 1 ? 'attempt' : 'attempts'} exist`)
-  return parts.length ? ` ${parts.join(' and ').replace(/^./, c => c.toUpperCase())}.` : ''
+  const copies = e.copy_ids?.length
+    ? ` Teachers' own copies (${e.copy_ids.length}) are not deleted - they will show as separate cards.`
+    : ''
+  return (parts.length ? ` ${parts.join(' and ').replace(/^./, c => c.toUpperCase())}.` : '') + copies
 }
 
 const deleteOne = async (e: ExperimentSummary) => {

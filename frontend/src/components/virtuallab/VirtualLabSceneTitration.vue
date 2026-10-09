@@ -89,6 +89,7 @@ import { buildRetortStand, setHighlight } from './lab3d/apparatus'
 import LabUnsupported from './lab3d/LabUnsupported.vue'
 import LabButton from './ui/LabButton.vue'
 import type { SceneObjectConfig, LabObjectDef, LabAction } from '@/types/virtualLab'
+import type { CameraView } from './VirtualLabScene.vue'
 
 const props = defineProps<{
   sceneObjects: SceneObjectConfig[]
@@ -523,6 +524,7 @@ function pickTarget(ev: PointerEvent): Pickable | null {
 }
 function onHover(ev: PointerEvent) { hoverCursor.value = pickTarget(ev) ? 'pointer' : 'grab' }
 function onPointerDown(ev: PointerEvent) {
+  if (handleFurnitureClick(ev)) return
   const t = pickTarget(ev)
   if (!t || !room.value) return
   room.value.controls.enabled = false
@@ -588,8 +590,10 @@ function confirmReading() {
   pendingReading.value = null
 }
 
-const { room, unsupported, pick } = useLabScene(
-  { cameraPosition: [0.32, 0.56, 1.12], target: [0.06, 0.36, 0], minDistance: 0.3, maxDistance: 1.8 },
+const HOME_POS: THREE.Vector3Tuple = [0.32, 0.56, 1.12]
+const HOME_TARGET: THREE.Vector3Tuple = [0.06, 0.36, 0]
+const { room, unsupported, pick, handleFurnitureClick } = useLabScene(
+  { cameraPosition: HOME_POS, target: HOME_TARGET, minDistance: 0.3, maxDistance: 12, cupboard: true, wallCabinets: true, shelfCatalog: () => props.objectCatalog, benchLength: 3 },
   (r) => {
     buildScene(r.scene)
     r.onFrame(syncScene)
@@ -606,5 +610,16 @@ onBeforeUnmount(() => window.removeEventListener('pointerup', onPointerUp))
 function setObjectState() {
   // No switchable apparatus in this experiment - kept for the renderer interface.
 }
-defineExpose({ setObjectState })
+
+// Same room-navigation views as the Apparatus Playground / free-layout engine.
+function goToView(view: CameraView) {
+  const r = room.value
+  if (!r) return
+  if (view === 'bench') r.flyTo(new THREE.Vector3(...HOME_POS), new THREE.Vector3(...HOME_TARGET))
+  else if (view === 'entrance') r.flyTo(new THREE.Vector3(2.4, 0.95, 2.4), new THREE.Vector3(0, 0.25, 7))
+  else if (view === 'left') r.flyTo(new THREE.Vector3(-1.2, 1.0, 1.6), new THREE.Vector3(-7, 0.45, 1.6))
+  else r.flyTo(new THREE.Vector3(1.2, 1.0, 1.6), new THREE.Vector3(7, 0.45, 1.6))
+}
+
+defineExpose({ setObjectState, goToView })
 </script>

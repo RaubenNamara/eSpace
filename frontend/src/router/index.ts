@@ -314,7 +314,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'virtual-lab', name: 'TeacherVirtualLab', component: TeacherVirtualLab },
       { path: 'virtual-lab/playground', name: 'TeacherVirtualLabPlayground', component: StudentVirtualLabPlayground },
       // A teacher doing an experiment exactly like a student (same page; nothing saved, no submit)
-      { path: 'virtual-lab/practice/:experimentId', name: 'TeacherVirtualLabPractice', component: StudentVirtualLabExperiment, meta: { practice: true } }
+      { path: 'virtual-lab/practice/:experimentId', name: 'TeacherVirtualLabPractice', component: StudentVirtualLabExperiment, meta: { practice: true, practiceRole: 'teacher' } }
     ]
   },
   {
@@ -395,6 +395,9 @@ const routes: RouteRecordRaw[] = [
       { path: 'uneb-assessment', name: 'AdminUnebAssessment', component: () => import('../pages/common/UnebAssessment.vue') },
       { path: 'rewards', name: 'AdminRewards', component: AdminRewards },
       { path: 'virtual-lab', name: 'AdminVirtualLab', component: AdminVirtualLab },
+      // An admin opening an experiment to view its diagram/procedure - same page as the teacher
+      // practice route, nothing saved, no submit.
+      { path: 'virtual-lab/practice/:experimentId', name: 'AdminVirtualLabPractice', component: StudentVirtualLabExperiment, meta: { practice: true, practiceRole: 'admin' } },
       { path: 'search', name: 'AdminSearch', component: AdminSearch }
     ]
   },

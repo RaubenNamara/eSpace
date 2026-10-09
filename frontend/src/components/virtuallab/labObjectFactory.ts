@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { makeScreenLabel } from './lab3d/labRoom'
+import { buildRetortStand } from './lab3d/apparatus'
 
 /**
  * Builds one piece of lab apparatus for the free-layout engine (VirtualLabScene) and the teacher
@@ -627,6 +628,83 @@ export function createObjectMesh(objectType: string, key: string, displayName: s
       add(face, holder)
       break
     }
+    case 'concave_mirror': {
+      // A shallow concave (converging) mirror dish, silvered on its inner face, in a clip-on
+      // holder on a small foot - distinct from the flat 'mirror' used for ray-tracing reflection.
+      // DoubleSide, not BackSide - a raycaster only registers hits on the side a BackSide
+      // material actually renders, which made the dish (by far the biggest, easiest target)
+      // effectively unclickable from the camera's normal viewing angle.
+      // Solid, not see-through: a silvered concave face on the inside of a spherical cap (facing -z,
+      // towards the object once the stand is turned), a painted back on the outside, and a thick rim.
+      // A fully metallic surface with nothing around it to reflect renders almost invisible, so the
+      // silvering is a bright, only partly metallic finish that always reads as a mirror.
+      const R = 0.62, cap = 0.5 // sphere radius and half-angle of the cap -> dish radius about 0.3
+      const capGeo = () => new THREE.SphereGeometry(R, 48, 16, 0, Math.PI * 2, 0, cap)
+      const silvered = mesh(capGeo(), new THREE.MeshStandardMaterial({ color: 0xdfe6ee, metalness: 0.55, roughness: 0.12, side: THREE.BackSide }), 0, 0.45, -R)
+      silvered.rotation.x = Math.PI / 2
+      const back = mesh(capGeo(), new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.5, side: THREE.FrontSide }), 0, 0.45, -R + 0.012)
+      back.rotation.x = Math.PI / 2
+      const dish = new THREE.Group()
+      dish.add(silvered, back)
+      const rimR = R * Math.sin(cap)
+      const rimZ = -R + R * Math.cos(cap)
+      const rim = mesh(new THREE.TorusGeometry(rimR, 0.016, 10, 48), metal(0x6b7280), 0, 0.45, rimZ + 0.006)
+      const clip = mesh(rbox(0.05, 0.22, 0.05, 0.012), enamel(0x27272a), 0, 0.33, 0.04)
+      const foot = mesh(rbox(0.32, 0.03, 0.22, 0.01), enamel(0x27272a), 0, 0.015)
+      const rod = mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.3, 12), metal(), 0, 0.18)
+      // Invisible but raycastable - a generous box around the whole stand, same reason the
+      // metre rule and Hooke's Law's spring each have their own grab zone.
+      const grabZone = mesh(new THREE.BoxGeometry(0.5, 0.65, 0.4), new THREE.MeshBasicMaterial({ visible: false }), 0, 0.3, 0)
+      add(dish, rim, clip, foot, rod, grabZone)
+      break
+    }
+    case 'illuminated_object': {
+      // A lit arrow-shaped aperture in a wire-gauze front plate - the "object" whose real image
+      // the concave mirror forms. The arrow (rather than a plain hole) makes an inverted image
+      // easy to recognise on the screen.
+      const on = props.state === 'on'
+      const housing = mesh(rbox(0.32, 0.4, 0.22, 0.02), enamel(0x1f2937), 0, 0.2)
+      const arrowPath = (ctx: CanvasRenderingContext2D, w: number, h: number) => {
+        ctx.beginPath()
+        ctx.moveTo(w * 0.5, h * 0.12); ctx.lineTo(w * 0.78, h * 0.46); ctx.lineTo(w * 0.62, h * 0.46)
+        ctx.lineTo(w * 0.62, h * 0.88); ctx.lineTo(w * 0.38, h * 0.88); ctx.lineTo(w * 0.38, h * 0.46)
+        ctx.lineTo(w * 0.22, h * 0.46); ctx.closePath()
+      }
+      // Diffuse map: the wire-gauze grid plus the arrow aperture, always visible as a shape.
+      const diffuseTex = canvasTex(256, 256, (ctx, w, h) => {
+        ctx.fillStyle = '#111827'; ctx.fillRect(0, 0, w, h)
+        ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 2
+        for (let i = 0; i < w; i += 12) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, h); ctx.moveTo(0, i); ctx.lineTo(w, i); ctx.stroke() }
+        ctx.fillStyle = '#2a2e38'
+        arrowPath(ctx, w, h); ctx.fill()
+      })
+      // Emissive map: just the arrow, on black - so only the arrow glows when lit (clearly
+      // brighter than its barely-visible dark cut-out when off), not the whole plate, and
+      // toggling is a single emissiveIntensity change (no texture rebuild needed).
+      const emissiveTex = canvasTex(256, 256, (ctx, w, h) => {
+        ctx.fillStyle = '#000000'; ctx.fillRect(0, 0, w, h)
+        ctx.fillStyle = '#fde68a'
+        arrowPath(ctx, w, h); ctx.fill()
+      })
+      const face = mesh(new THREE.PlaneGeometry(0.24, 0.3), new THREE.MeshStandardMaterial({
+        map: diffuseTex, emissiveMap: emissiveTex, emissive: 0xffe066, emissiveIntensity: on ? 1.6 : 0,
+      }), 0, 0.22, 0.111)
+      face.userData.role = 'led'
+      const foot = mesh(rbox(0.3, 0.03, 0.2, 0.01), enamel(0x27272a), 0, 0.015)
+      add(housing, face, foot, terminal(-0.1, 0.02, 0.13, 0xdc2626), terminal(0.1, 0.02, 0.13, 0x111111))
+      break
+    }
+    case 'focus_screen': {
+      // A plain card on a stand that catches the real image - sharp or blurred depending on how
+      // close its position is to the true image distance (the guided scene decides which).
+      const board = mesh(new THREE.BoxGeometry(0.3, 0.38, 0.015), new THREE.MeshStandardMaterial({ color: 0xfafaf9, roughness: 0.85, side: THREE.DoubleSide }), 0, 0.26)
+      const frame = mesh(rbox(0.32, 0.4, 0.02, 0.01), wood(), 0, 0.26, -0.005)
+      const foot = mesh(rbox(0.28, 0.03, 0.2, 0.01), enamel(0x27272a), 0, 0.015)
+      const rod = mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.22, 10), metal(), 0, 0.1)
+      const grabZone = mesh(new THREE.BoxGeometry(0.4, 0.5, 0.3), new THREE.MeshBasicMaterial({ visible: false }), 0, 0.2, 0)
+      add(frame, board, foot, rod, grabZone)
+      break
+    }
     case 'biological_model': {
       const slide = mesh(new THREE.BoxGeometry(0.5, 0.012, 0.18), glass(0xe0f2fe), 0, 0.006)
       const coverslip = mesh(new THREE.BoxGeometry(0.14, 0.003, 0.14), glass(0xf1f6f5), 0, 0.014)
@@ -718,15 +796,13 @@ export function createObjectMesh(objectType: string, key: string, displayName: s
       break
     }
     case 'retort_stand': {
-      const castIron = enamel(0x2f4b63)
-      add(mesh(rbox(0.36, 0.035, 0.24, 0.012), castIron, 0, 0.0175))
-      add(mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.95, 20), metal(), -0.13, 0.5))
-      add(mesh(rbox(0.07, 0.07, 0.07, 0.01), castIron, -0.13, 0.9))
-      const screw = mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.07, 10), metal(), -0.13, 0.9, 0.06)
-      screw.rotation.x = Math.PI / 2
-      const arm = mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.3, 16), metal(), 0.03, 0.9)
-      arm.rotation.z = Math.PI / 2
-      add(screw, arm, mesh(rbox(0.04, 0.05, 0.05, 0.008), brass(), 0.17, 0.9))
+      // Same model as the Pendulum/Hooke's Law/Titration scenes (lab3d/apparatus.ts), so a retort
+      // stand looks identical everywhere instead of this factory keeping its own duplicate. That
+      // helper works directly in metres; this factory's units are 0.2 m each (see 'metre_rule': a
+      // 5-unit-long box for a 1 m rule), so the result is scaled up by 5 to match.
+      const stand = buildRetortStand({ pivot: new THREE.Vector3(0, 0.55, 0), rodX: -0.15, armZ: -0.07, armEnd: 0.12 })
+      stand.scale.setScalar(5)
+      add(stand)
       break
     }
     case 'mass_piece': {
@@ -1946,6 +2022,54 @@ export function createObjectMesh(objectType: string, key: string, displayName: s
       }
       break
     }
+    case 'ripple_tank': {
+      // Ripple tank: a glass-sided tray of water on four black legs, with a black frame round the
+      // top, two white barriers and a yellow obstacle in the water, and a vibrator on an arm above
+      // one corner with its dipper resting in the water
+      const half = 0.42, rim = 0.5, base = 0.1, waterY = 0.25
+      const legMat = plastic(0x111827)
+      for (const x of [-half, half]) for (const z of [-half, half]) add(mesh(new THREE.BoxGeometry(0.035, rim, 0.035), legMat, x, rim / 2, z))
+      const railMat = plastic(0x1f2937)
+      for (const z of [-half, half]) add(mesh(new THREE.BoxGeometry(2 * half + 0.07, 0.04, 0.05), railMat, 0, rim, z))
+      for (const x of [-half, half]) add(mesh(new THREE.BoxGeometry(0.05, 0.04, 2 * half + 0.07), railMat, x, rim, 0))
+      // Glass walls and base, with the water in the bottom of the tray
+      const glassMat = glass(0xdbeafe)
+      const wallH = rim - base
+      for (const z of [-half, half]) add(mesh(new THREE.PlaneGeometry(2 * half, wallH), glassMat, 0, base + wallH / 2, z))
+      for (const x of [-half, half]) {
+        const side = mesh(new THREE.PlaneGeometry(2 * half, wallH), glassMat, x, base + wallH / 2, 0)
+        side.rotation.y = Math.PI / 2
+        add(side)
+      }
+      const floor = mesh(new THREE.PlaneGeometry(2 * half, 2 * half), glassMat, 0, base, 0)
+      floor.rotation.x = -Math.PI / 2
+      add(floor)
+      const water = mesh(new THREE.PlaneGeometry(2 * half, 2 * half), new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.1, transparent: true, opacity: 0.3, depthWrite: false }), 0, waterY, 0)
+      water.rotation.x = -Math.PI / 2
+      add(water)
+      // Obstacles standing in the water: two white barriers and a yellow block
+      const white = plastic(0xf8fafc)
+      const yellow = plastic(0xfacc15)
+      const barrierA = mesh(new THREE.BoxGeometry(0.3, 0.16, 0.03), white, -0.12, base + 0.08, -0.15)
+      barrierA.rotation.y = 0.5
+      const barrierB = mesh(new THREE.BoxGeometry(0.3, 0.16, 0.03), white, 0.15, base + 0.08, 0.2)
+      barrierB.rotation.y = -0.7
+      const block = mesh(rbox(0.22, 0.16, 0.08, 0.01), yellow, -0.1, base + 0.08, 0.14)
+      block.rotation.y = 0.9
+      add(barrierA, barrierB, block)
+      // Vibrator on an arm: post at one back corner, motor hanging over the tray, dipper in the water
+      const armMat = metal(0x374151)
+      const post = mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.65, 12), armMat, -half, rim + 0.325, -half)
+      add(post)
+      const armEnd = new THREE.Vector3(0.22, 1.15, 0)
+      add(strut(new THREE.Vector3(-half, 1.15, -half), armEnd, 0.012, armMat))
+      const motor = mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.14, 24), enamel(0x1f2937), armEnd.x, 1.1, 0)
+      add(motor)
+      const dipper = strut(new THREE.Vector3(armEnd.x, 1.03, 0), new THREE.Vector3(armEnd.x, waterY, 0), 0.008, metal(0x9ca3af))
+      add(dipper)
+      add(mesh(new THREE.SphereGeometry(0.02, 12, 8), chrome(), armEnd.x, waterY, 0))
+      break
+    }
     case 'metre_rule': {
       const edge = new THREE.MeshStandardMaterial({ color: 0xd6a35c, roughness: 0.6 })
       const face = new THREE.MeshStandardMaterial({ map: rulerTexture(), color: 0xf5deb3, roughness: 0.55 })
@@ -2034,6 +2158,33 @@ export function createObjectMesh(objectType: string, key: string, displayName: s
       add(mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.06, 36), plastic(0x0f766e), 0, 0.53))
       add(mesh(new THREE.CylinderGeometry(0.161, 0.161, 0.18, 36, 1, true, -0.6, 1.2), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, side: THREE.DoubleSide }), 0, 0.3))
       add(liquidMesh(0.16, 0.5, props.color || '#fef3c7', 0.6))
+      break
+    }
+    case 'soda_bottle': {
+      // An empty 500ml-style PET soft-drink bottle: petaloid base, straight body, tapered
+      // shoulder, narrow neck and a screw cap - about 23cm tall (1.15 units at 0.2m/unit).
+      const profile = [
+        new THREE.Vector2(0, 0), new THREE.Vector2(0.165, 0), new THREE.Vector2(0.17, 0.03),
+        new THREE.Vector2(0.17, 0.62), new THREE.Vector2(0.14, 0.72), new THREE.Vector2(0.07, 0.82),
+        new THREE.Vector2(0.065, 0.95), new THREE.Vector2(0.08, 0.97), new THREE.Vector2(0.08, 0.99),
+      ]
+      add(new THREE.Mesh(new THREE.LatheGeometry(profile, 40), glass(0xeafaf0)))
+      const capColor = typeof props.cap_color === 'string' ? Number(props.cap_color.replace('#', '0x')) : 0x1d4ed8
+      add(mesh(new THREE.CylinderGeometry(0.082, 0.085, 0.07, 24), plastic(capColor), 0, 1.025))
+      add(mesh(new THREE.TorusGeometry(0.083, 0.007, 8, 24), plastic(capColor), 0, 0.99).rotateX(Math.PI / 2))
+      // Wrap-around label band - a plain coloured strip rather than any real brand's design
+      const labelTex = canvasTex(512, 256, (ctx, w, h) => {
+        ctx.fillStyle = '#dc2626'
+        ctx.fillRect(0, 0, w, h)
+        ctx.fillStyle = '#ffffff'
+        ctx.fillRect(0, h * 0.38, w, h * 0.06)
+        ctx.fillRect(0, h * 0.56, w, h * 0.06)
+        ctx.font = 'bold 48px sans-serif'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText('SODA', w / 2, h * 0.47)
+      })
+      add(mesh(new THREE.CylinderGeometry(0.173, 0.173, 0.28, 40, 1, true), new THREE.MeshStandardMaterial({ map: labelTex, roughness: 0.6, side: THREE.DoubleSide }), 0, 0.33))
       break
     }
     case 'potted_plant': {
@@ -2200,6 +2351,65 @@ export function createObjectMesh(objectType: string, key: string, displayName: s
     }
     case 'heat_proof_mat': {
       add(mesh(rbox(0.8, 0.03, 0.8, 0.01), new THREE.MeshStandardMaterial({ color: 0xe7e5e4, roughness: 0.95 }), 0, 0.015))
+      break
+    }
+
+    // ---------------- Torch-bulb filament practical ----------------
+    case 'cell_holder': {
+      // Two 1.5 V dry cells lying end to end in a double-cell holder, red (+) and black (-) terminals
+      add(mesh(rbox(0.85, 0.15, 0.35, 0.02), plastic(0x1f2937), 0, 0.075))
+      ;[-0.18, 0.18].forEach((x) => {
+        const cell = mesh(new THREE.CylinderGeometry(0.078, 0.078, 0.31, 32), new THREE.MeshStandardMaterial({ color: 0xd61f26, roughness: 0.35 }), x, 0.17)
+        cell.rotation.z = Math.PI / 2
+        const nub = mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.03, 16), chrome(), x + 0.17, 0.17)
+        nub.rotation.z = Math.PI / 2
+        add(cell, nub)
+      })
+      add(terminal(-0.39, 0.15, 0, 0x111827), terminal(0.39, 0.15, 0, 0xdc2626))
+      break
+    }
+    case 'constantan_wire': {
+      // A reel of bare SWG 28 constantan wire
+      const reel = mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.12, 40), new THREE.MeshStandardMaterial({ color: 0xb8bcc4, metalness: 0.9, roughness: 0.35 }), 0, 0.13)
+      reel.rotation.x = Math.PI / 2
+      const flangeA = mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.02, 40), plastic(0x2563eb), 0, 0.22, 0.07)
+      flangeA.rotation.x = Math.PI / 2
+      const flangeB = flangeA.clone()
+      flangeB.position.z = -0.07
+      const tail = mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.4, 6), metal(0xc0c4cc), 0.32, 0.02, 0.0)
+      tail.rotation.z = Math.PI / 2
+      add(reel, flangeA, flangeB, tail)
+      reel.position.y = 0.22
+      break
+    }
+    case 'crocodile_clip': {
+      // A pair of crocodile clips with red and black insulating sleeves
+      ;[[-0.09, 0xdc2626], [0.09, 0x111827]].forEach(([z, color]) => {
+        const sleeve = mesh(new THREE.CylinderGeometry(0.03, 0.036, 0.16, 16), plastic(color as number), 0, 0.04, z as number)
+        sleeve.rotation.z = Math.PI / 2
+        const jawTop = mesh(new THREE.BoxGeometry(0.16, 0.012, 0.04), metal(), 0.15, 0.06, z as number)
+        jawTop.rotation.z = -0.15
+        const jawBottom = mesh(new THREE.BoxGeometry(0.16, 0.012, 0.04), metal(), 0.15, 0.025, z as number)
+        add(sleeve, jawTop, jawBottom)
+      })
+      break
+    }
+    case 'sellotape': {
+      // A roll of clear adhesive tape
+      const roll = mesh(new THREE.TorusGeometry(0.13, 0.05, 16, 40), new THREE.MeshStandardMaterial({ color: 0xf5f0d0, transparent: true, opacity: 0.75, roughness: 0.2 }), 0, 0.05)
+      roll.rotation.x = Math.PI / 2
+      roll.scale.z = 0.8
+      const core = mesh(new THREE.CylinderGeometry(0.085, 0.085, 0.1, 32, 1, true), plastic(0xd6d3d1), 0, 0.05)
+      add(roll, core)
+      break
+    }
+    case 'torch_bulb': {
+      // A small torch bulb screwed into a holder on a wooden base
+      add(mesh(rbox(0.5, 0.07, 0.22, 0.015), wood(), 0, 0.035))
+      add(mesh(new THREE.CylinderGeometry(0.045, 0.05, 0.08, 24), brass(), 0, 0.11))
+      const bulb = mesh(new THREE.SphereGeometry(0.06, 24, 16), glass(), 0, 0.2)
+      bulb.scale.y = 1.3
+      add(bulb, terminal(-0.19, 0.07, 0, 0x111827), terminal(0.19, 0.07, 0, 0x111827))
       break
     }
     default:

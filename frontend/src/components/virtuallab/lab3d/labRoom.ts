@@ -96,8 +96,12 @@ export interface LabRoom {
   furniture: { doors: THREE.Object3D[]; blockers: THREE.Object3D[] }
   /** Sink taps (rooms with wall cabinets): click one to turn its water on or off */
   taps: LabTaps | null
+  /** Fire extinguisher by the entrance (rooms with wall cabinets): click it to spray CO₂ */
+  extinguisher: LabExtinguisher | null
   /** Bench length in metres */
   benchLength: number
+  /** Scene units per metre (see LabRoomOptions.unitScale) */
+  unitScale: number
   /** Glide the camera to look from `pos` at `target` (both in metres); Reset View returns here */
   flyTo: (pos: THREE.Vector3, target: THREE.Vector3) => void
   /** Opens or closes any door built by the room (cupboard or wall cabinet) */
@@ -162,6 +166,36 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
   controls.maxAzimuthAngle = Math.PI / 2.2
   controls.update()
 
+  // The lab usually sits inside a longer page (results, questions below it), and a plain wheel over
+  // it used to zoom the camera instead of scrolling the page - students scrolling down to their
+  // results ended up zoomed out to the far wall without realising. So a plain wheel now scrolls the
+  // page, and Ctrl/Cmd + wheel (a trackpad pinch arrives as ctrl + wheel too) zooms; when the page
+  // can't scroll anyway (the Full Screen Lab overlay locks it), the plain wheel zooms as before.
+  const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
+  const zoomHint = document.createElement('div')
+  zoomHint.textContent = isMac ? 'Use ⌘ + scroll to zoom the lab' : 'Use Ctrl + scroll to zoom the lab'
+  Object.assign(zoomHint.style, {
+    position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', zIndex: '5',
+    padding: '10px 18px', borderRadius: '12px', background: 'rgba(17, 24, 39, 0.78)', color: '#fff',
+    font: '600 14px system-ui, sans-serif', pointerEvents: 'none', opacity: '0', transition: 'opacity 0.25s',
+  })
+  if (getComputedStyle(host).position === 'static') host.style.position = 'relative'
+  host.appendChild(zoomHint)
+  let zoomHintTimer = 0
+  const onWheelCapture = (ev: WheelEvent) => {
+    const pageLocked = document.body.style.overflow === 'hidden' || document.documentElement.scrollHeight <= window.innerHeight
+    // defaultPrevented: the scene has its own wheel handling (e.g. the projectile's zoom slider)
+    if (ev.defaultPrevented || ev.ctrlKey || ev.metaKey || pageLocked) return
+    // Skip OrbitControls' zoom for this one event only (it bails out before preventDefault, so the
+    // page scrolls); restored after the event has finished dispatching, so pinch/touch keep working.
+    controls.enableZoom = false
+    window.setTimeout(() => { controls.enableZoom = true }, 0)
+    zoomHint.style.opacity = '1'
+    window.clearTimeout(zoomHintTimer)
+    zoomHintTimer = window.setTimeout(() => { zoomHint.style.opacity = '0' }, 1200)
+  }
+  host.addEventListener('wheel', onWheelCapture, { capture: true, passive: true })
+
   // Room and lights are built in metres inside a group scaled to the caller's units; shadow
   // cameras aren't affected by parent scale, so their extents are scaled by hand.
   const world = new THREE.Group()
@@ -172,6 +206,7 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
   const furnitureDoors: THREE.Object3D[] = []
   const furnitureBlockers: THREE.Object3D[] = []
   let fixtures: Fixtures | null = null
+  let extinguisher: { api: LabExtinguisher; update: (dt: number) => void } | null = null
   // Inside of the enclosed room (rooms with wall cabinets), in scene units
   let roomBounds: THREE.Box3 | null = null
   let cctvLed: THREE.Mesh | null = null
@@ -188,6 +223,7 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
     if (opts.wallCabinets) {
       wallParts = buildWallCabinets(world, benchLength, s)
       fixtures = buildSinksAndClock(world)
+      extinguisher = buildExtinguisher(world)
       const entrance = buildEntrance(world)
       furnitureDoors.push(...entrance.doors)
       furnitureBlockers.push(...entrance.blockers)
@@ -393,6 +429,48 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
     let t = 0
     frameCallbacks.push((dt) => { t += dt; led.visible = (t % 1.2) < 0.7 })
   }
+  // Running-water sound for the sink taps - made in the browser (filtered noise with a slow wobble)
+  // so there's no audio file to download. Started by the tap click itself, which also satisfies
+  // the browser's "user gesture before audio" rule.
+  let waterAudio: { ctx: AudioContext; gain: GainNode } | null = null
+  const updateWaterSound = (running: number) => {
+    try {
+      if (!waterAudio) {
+        if (running === 0) return
+        const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+        const ctx = new AC()
+        const buffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate)
+        const data = buffer.getChannelData(0)
+        for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1
+        const noise = ctx.createBufferSource()
+        noise.buffer = buffer
+        noise.loop = true
+        const band = ctx.createBiquadFilter()
+        band.type = 'bandpass'
+        band.frequency.value = 1100
+        band.Q.value = 0.6
+        const low = ctx.createBiquadFilter()
+        low.type = 'lowpass'
+        low.frequency.value = 3500
+        const gain = ctx.createGain()
+        gain.gain.value = 0
+        // Gurgle: a slow wobble on the pitch of the splash
+        const wobble = ctx.createOscillator()
+        wobble.frequency.value = 7
+        const wobbleDepth = ctx.createGain()
+        wobbleDepth.gain.value = 250
+        wobble.connect(wobbleDepth).connect(band.frequency)
+        noise.connect(band).connect(low).connect(gain).connect(ctx.destination)
+        noise.start()
+        wobble.start()
+        waterAudio = { ctx, gain }
+      }
+      const { ctx, gain } = waterAudio
+      if (ctx.state === 'suspended') ctx.resume()
+      gain.gain.setTargetAtTime(running === 0 ? 0 : Math.min(0.5, 0.3 + 0.1 * running), ctx.currentTime, 0.15)
+    } catch { /* no audio on this device - the water still runs */ }
+  }
+
   // Taps: handles turn, water streams flicker while on; the clock follows the real time
   let taps: LabTaps | null = null
   if (fixtures) {
@@ -428,7 +506,10 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
         while (o && !o.userData.isTap) o = o.parent
         return o
       },
-      toggle: (tap) => { tap.userData.on = !tap.userData.on },
+      toggle: (tap) => {
+        tap.userData.on = !tap.userData.on
+        updateWaterSound(fx.taps.filter(t => t.userData.on).length)
+      },
       isOn: tap => !!tap.userData.on,
       anyOn: () => fx.taps.filter(t => t.userData.on).length,
     }
@@ -475,12 +556,20 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
     }
   }
 
+  let extinguisherApi: LabExtinguisher | null = null
+  if (extinguisher) {
+    frameCallbacks.push(extinguisher.update)
+    extinguisherApi = extinguisher.api
+  }
+
   return {
     cupboard,
     wallCabinets,
     furniture: { doors: furnitureDoors, blockers: furnitureBlockers },
     taps,
+    extinguisher: extinguisherApi,
     benchLength,
+    unitScale: s,
     flyTo: (pos, target) => {
       framedBox = null
       fittedFill = null
@@ -513,6 +602,11 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
     dispose: () => {
       cancelAnimationFrame(raf)
       resizeObserver.disconnect()
+      host.removeEventListener('wheel', onWheelCapture, { capture: true })
+      waterAudio?.ctx.close().catch(() => {})
+      waterAudio = null
+      window.clearTimeout(zoomHintTimer)
+      zoomHint.remove()
       controls.dispose()
       scene.traverse((obj) => {
         if (obj instanceof THREE.Mesh || obj instanceof THREE.Line || obj instanceof THREE.Sprite) {
@@ -571,9 +665,161 @@ export interface LabTaps {
   anyOn: () => number
 }
 
+export interface LabExtinguisher {
+  /** The extinguisher and its wall bracket (click anything in it to use it) */
+  group: THREE.Object3D
+  /** Sprays CO₂ from the horn for a few seconds; spraying again while it runs carries on */
+  discharge: () => void
+}
+
 interface Fixtures {
   taps: THREE.Object3D[]
   clock: { hour: THREE.Object3D; minute: THREE.Object3D; second: THREE.Object3D }
+}
+
+/**
+ * A red CO₂ fire extinguisher on a steel wall bracket beside the entrance doors, with its hose and
+ * horn. Clicking it sprays a white CO₂ cloud out of the horn: the puffs spread, drift and sink a
+ * little, growing as they thin out until they fade away.
+ */
+function buildExtinguisher(scene: THREE.Object3D): { api: LabExtinguisher; update: (dt: number) => void } {
+  const floorY = -BENCH_H
+  const group = new THREE.Group()
+  group.position.set(EXT_X, floorY, EXT_Z)
+  group.userData.isExtinguisher = true
+  scene.add(group)
+  const red = new THREE.MeshStandardMaterial({ color: 0xc62828, roughness: 0.35, metalness: 0.1 })
+  const black = new THREE.MeshStandardMaterial({ color: 0x15171a, roughness: 0.5 })
+  const steel = labMaterials.steel()
+  // Local coordinates: y is height above the floor, the wall is at +z and the room is at -z
+  const add = (geo: THREE.BufferGeometry, mat: THREE.Material, x: number, y: number, z: number, cast = true) => {
+    const m = new THREE.Mesh(geo, mat)
+    m.position.set(x, y, z)
+    m.castShadow = cast
+    group.add(m)
+    return m
+  }
+  // Wall bracket: a steel plate on the wall, an arm and two clamp rings round the body
+  add(new THREE.BoxGeometry(0.16, 0.4, 0.01), steel, 0, 0.85, 0.095)
+  add(new THREE.BoxGeometry(0.05, 0.05, 0.06), steel, 0, 0.85, 0.07)
+  for (const y of [0.7, 1.0]) {
+    add(new THREE.TorusGeometry(EXT_R + 0.004, 0.008, 8, 28), steel, 0, y, 0).rotation.x = Math.PI / 2
+  }
+  // Cylinder, black foot, valve head and the grip handle on top
+  add(new THREE.CylinderGeometry(EXT_R, EXT_R, 0.5, 28), red, 0, 0.85, 0)
+  add(new THREE.CylinderGeometry(0.04, 0.045, 0.03, 20), black, 0, 0.585, 0, false)
+  add(new THREE.CylinderGeometry(0.028, 0.032, 0.05, 20), steel, 0, 1.125, 0)
+  const lever = add(new THREE.BoxGeometry(0.12, 0.02, 0.03), black, 0, 1.17, 0)
+  // Hose from the valve down the front, then the horn, pointing out into the room and down
+  const junction = new THREE.Vector3(0, 0.56, -0.1)
+  const hose = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0, 1.1, -0.03),
+    new THREE.Vector3(0, 1.0, -0.1),
+    new THREE.Vector3(0, 0.72, -0.12),
+    junction,
+  ])
+  add(new THREE.TubeGeometry(hose, 24, 0.008, 8, false), black, 0, 0, 0, false)
+  const dir = new THREE.Vector3(0, -0.35, -0.94).normalize()
+  const horn = add(new THREE.CylinderGeometry(0.008, 0.024, HORN_L, 16), black, 0, 0, 0)
+  horn.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir)
+  horn.position.copy(junction).addScaledVector(dir, HORN_L / 2)
+  const tip = junction.clone().addScaledVector(dir, HORN_L).add(group.position)
+  // Label on the front of the body, facing the room
+  const label = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.1, 0.2),
+    new THREE.MeshStandardMaterial({
+      roughness: 0.5,
+      map: canvasTexture(256, 512, (ctx, w, h) => {
+        ctx.fillStyle = '#ffffff'
+        ctx.fillRect(0, 0, w, h)
+        ctx.fillStyle = '#c62828'
+        ctx.fillRect(0, 0, w, h * 0.22)
+        ctx.fillStyle = '#ffffff'
+        ctx.font = 'bold 110px Arial'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText('CO₂', w / 2, h * 0.11)
+        ctx.fillStyle = '#111827'
+        ctx.font = 'bold 60px Arial'
+        ctx.fillText('FIRE', w / 2, h * 0.42)
+        ctx.font = 'bold 38px Arial'
+        ctx.fillText('EXTINGUISHER', w / 2, h * 0.53)
+        ctx.font = 'bold 30px Arial'
+        ctx.fillText('CARBON DIOXIDE', w / 2, h * 0.82)
+      }),
+    }),
+  )
+  label.position.set(0, 0.85, -EXT_R - 0.002)
+  label.rotation.y = Math.PI
+  group.add(label)
+
+  // The spray: soft white sprites that start at the horn and drift off into the room
+  const puffTex = canvasTexture(64, 64, (ctx, w) => {
+    const g = ctx.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2)
+    g.addColorStop(0, 'rgba(255,255,255,1)')
+    g.addColorStop(0.45, 'rgba(255,255,255,0.55)')
+    g.addColorStop(1, 'rgba(255,255,255,0)')
+    ctx.fillStyle = g
+    ctx.fillRect(0, 0, w, w)
+  })
+  const puffs = Array.from({ length: PUFF_COUNT }, () => {
+    const mat = new THREE.SpriteMaterial({ map: puffTex, color: 0xf4f8fb, transparent: true, depthWrite: false, opacity: 0 })
+    const sp = new THREE.Sprite(mat)
+    sp.visible = false
+    sp.renderOrder = 4
+    // Not a click target - the cloud should never block the extinguisher underneath it
+    sp.raycast = () => {}
+    scene.add(sp)
+    return { sp, mat, vel: new THREE.Vector3(), age: 0, life: 1, size: 0.1, live: false }
+  })
+
+  let sprayLeft = 0
+  let spawnAcc = 0
+  const spawn = () => {
+    const p = puffs.find(x => !x.live)
+    if (!p) return
+    p.live = true
+    p.age = 0
+    p.life = 2.6 + Math.random() * 1.2
+    p.size = 0.14 + Math.random() * 0.08
+    p.sp.position.copy(tip).add(new THREE.Vector3((Math.random() - 0.5) * 0.02, (Math.random() - 0.5) * 0.02, (Math.random() - 0.5) * 0.02))
+    const speed = 1.4 + Math.random() * 0.6
+    p.vel.copy(dir).add(new THREE.Vector3((Math.random() - 0.5) * 0.35, (Math.random() - 0.5) * 0.35, (Math.random() - 0.5) * 0.35)).normalize().multiplyScalar(speed)
+    p.sp.visible = true
+  }
+
+  const update = (dt: number) => {
+    // The grip is pressed down while spraying
+    const pressTarget = sprayLeft > 0 ? -0.35 : 0
+    lever.rotation.z += (pressTarget - lever.rotation.z) * Math.min(1, dt * 12)
+    if (sprayLeft > 0) {
+      sprayLeft -= dt
+      spawnAcc += dt * 60
+      while (spawnAcc >= 1) { spawnAcc -= 1; spawn() }
+    }
+    for (const p of puffs) {
+      if (!p.live) continue
+      p.age += dt
+      if (p.age >= p.life) {
+        p.live = false
+        p.sp.visible = false
+        continue
+      }
+      const k = p.age / p.life
+      // Air slows the cloud down; CO₂ is heavier than air, so it sinks a little as it spreads
+      p.vel.multiplyScalar(Math.max(0, 1 - dt * 2.2))
+      p.vel.y -= dt * 0.08
+      p.sp.position.addScaledVector(p.vel, dt)
+      p.sp.scale.setScalar(p.size * (0.6 + 2.4 * k))
+      p.mat.opacity = 0.85 * Math.min(1, p.age / 0.15) * Math.pow(1 - k, 0.8)
+    }
+  }
+
+  const api: LabExtinguisher = {
+    group,
+    discharge: () => { sprayLeft = Math.max(sprayLeft, SPRAY_TIME) },
+  }
+  return { api, update }
 }
 
 /**
@@ -763,7 +1009,7 @@ const displayBacking = () => new THREE.MeshStandardMaterial({ color: 0x1e2a3a, r
 const displayShelf = () => new THREE.MeshStandardMaterial({ color: 0xe3c89c, roughness: 0.55 })
 
 /** A warm light inside a cabinet, plus the LED strip it seems to come from. `s` = scene units per metre. */
-function interiorLight(scene: THREE.Object3D, x: number, y: number, z: number, width: number, s: number, intensity = 9) {
+function interiorLight(scene: THREE.Object3D, x: number, y: number, z: number, width: number, s: number, intensity = 3.5) {
   const strip = new THREE.Mesh(
     new THREE.BoxGeometry(width, 0.008, 0.012),
     new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff1d6, emissiveIntensity: 2 }),
@@ -876,6 +1122,13 @@ function buildWallCovering(scene: THREE.Object3D, top: number) {
 const ENTRANCE_W = 1.8
 const ENTRANCE_H = 2.1
 const FRONT_Z = 7
+// Red CO₂ extinguisher on the entrance wall, to the left of the doors (centre of the body, metres)
+const EXT_X = -2.3
+const EXT_Z = FRONT_Z - 0.1
+const EXT_R = 0.055
+const HORN_L = 0.14
+const SPRAY_TIME = 3.5
+const PUFF_COUNT = 220
 
 /**
  * The lab entrance in the middle of the front wall: a pair of wooden doors with glass vision
@@ -1281,8 +1534,8 @@ function buildCupboard(scene: THREE.Object3D, woodTex: THREE.Texture, BENCH_W: n
   panel(bayW, t, D - t, W / 4, shelfY - t / 2, t / 2, inner)
   // A light under the bench top and under the shelf of each bay, so nothing sits in the dark
   if (lit) for (const bx of [-W / 4, W / 4]) {
-    interiorLight(scene, bx, top - 0.05, front - 0.12, bayW - 0.1, s, 10)
-    interiorLight(scene, bx, shelfY - t - 0.006, front - 0.12, bayW - 0.1, s, 10)
+    interiorLight(scene, bx, top - 0.05, front - 0.12, bayW - 0.1, s, 4)
+    interiorLight(scene, bx, shelfY - t - 0.006, front - 0.12, bayW - 0.1, s, 4)
   }
 
   // A pair of doors hinged on the outer sides, meeting in the middle (one door per bay)

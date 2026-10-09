@@ -82,7 +82,111 @@ class VirtualLabController extends Controller
                 $filters[$key] = $this->query($key);
             }
         }
-        $this->success(['experiments' => $this->service()->listExperiments($filters)]);
+        $this->success(['experiments' => $this->service()->listExperimentsForAdmin($filters)]);
+    }
+
+    /**
+     * POST /admin/virtual-lab/experiments/{id}/publish
+     * body: { department_id, class_id | (scope: 'all_streams', class_group_name), term_id, due_date?, marks? }
+     * Publishes a library experiment straight to a class of the chosen department. The experiment
+     * is shared with that department too, so its teachers have it in their library and can follow
+     * and mark the class's work.
+     */
+    public function publish($id): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+        $errors = $this->validateRequired(['department_id', 'term_id']);
+        if (!empty($errors)) {
+            $this->validationError($errors);
+            return;
+        }
+        $ownership = $this->service()->getExperimentOwnership((int) $id);
+        if (!$ownership) {
+            $this->notFound('Experiment not found');
+            return;
+        }
+        if (!$ownership['is_template']) {
+            $this->error('Only library experiments can be published by the admin', 422);
+            return;
+        }
+
+        $departmentId = (int) $this->input('department_id');
+        $classTarget = $this->resolveClassTarget($this->input(), $departmentId);
+        if (!$classTarget['ok']) {
+            $message = str_replace('your department', 'that department', (string) $classTarget['message']);
+            $this->validationError(['class_id' => $message]);
+            return;
+        }
+
+        $adminId = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null;
+        try {
+            $this->service()->addSharedDepartment((int) $id, $departmentId, $adminId);
+            $assignmentId = $this->service()->publishExperiment(
+                (int) $id,
+                $classTarget['class_id'],
+                $classTarget['class_group_name'],
+                null,
+                (int) $this->input('term_id'),
+                $this->input('due_date') ?: null,
+                $this->input('marks') !== null && $this->input('marks') !== '' ? (float) $this->input('marks') : null,
+                $departmentId,
+                $adminId
+            );
+            $this->success(['id' => $assignmentId], 'Experiment published');
+        } catch (\RuntimeException $e) {
+            $this->error($e->getMessage(), 400);
+        }
+    }
+
+    /**
+     * DELETE /admin/virtual-lab/assignments/{id}
+     * Withdraws a class assignment the admin published. A teacher's own publications are theirs
+     * to withdraw.
+     */
+    public function withdrawAssignment($id): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+        if (!$this->service()->withdrawAdminAssignment((int) $id)) {
+            $this->notFound('Only classes the admin published can be withdrawn here');
+            return;
+        }
+        $this->success([], 'Withdrawn from the class');
+    }
+
+    /**
+     * GET /admin/virtual-lab/departments/{id}/classes
+     * The classes (streams) with students enrolled in a department - the same rule publishing
+     * validates against - plus their class levels for "All Streams".
+     */
+    public function departmentClasses($id): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+        $db = \eSpace\Config\Database::getInstance();
+        $stmt = $db->prepare(
+            "SELECT DISTINCT c.id, c.name, c.stream_name
+             FROM classes c
+             INNER JOIN student_department_enrollments se ON se.class_id = c.id
+             WHERE se.department_id = :dept AND se.deleted_at IS NULL AND c.deleted_at IS NULL
+             ORDER BY c.name, c.stream_name"
+        );
+        $stmt->execute(['dept' => (int) $id]);
+        $classes = array_map(fn ($r) => [
+            'id' => (int) $r['id'],
+            'name' => $r['name'],
+            'stream_name' => $r['stream_name'],
+            'label' => trim($r['name'] . ($r['stream_name'] ? ' - ' . $r['stream_name'] : '')),
+        ], $stmt->fetchAll());
+        $levels = array_values(array_unique(array_map(fn ($c) => $c['name'], $classes)));
+        $this->success(['classes' => $classes, 'class_levels' => $levels]);
     }
 
     /**
@@ -186,6 +290,32 @@ class VirtualLabController extends Controller
             }
         }
         $this->success(['deleted' => $deleted], $deleted . ' experiment(s) deleted');
+    }
+
+    /**
+     * POST /admin/virtual-lab/experiments/{id}/practice/action
+     * Same stateless step-checking the teacher practice route uses - admin can open any
+     * experiment and work through its diagram/procedure exactly like a student, nothing is saved.
+     */
+    public function practiceAction($id): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+        $action = (string) $this->input('action');
+        if ($action === '') {
+            $this->validationError(['action' => 'action is required']);
+            return;
+        }
+        $value = $this->input('value');
+        $this->success($this->service()->practiceAction(
+            (int) $id,
+            max(1, (int) $this->input('step_number')),
+            $this->input('object_key') !== null ? (string) $this->input('object_key') : null,
+            $action,
+            $value !== null ? (string) $value : null
+        ));
     }
 
     /**

@@ -108,6 +108,10 @@
               :scene-objects="detail.scene_objects"
               :object-catalog="objectCatalog"
               :read-only="true"
+              force-placed
+              cupboard
+              wall-shelves
+              :bench-length="3"
             />
           </div>
 
