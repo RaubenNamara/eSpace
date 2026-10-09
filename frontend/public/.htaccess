@@ -49,7 +49,7 @@
   <FilesMatch "\.(js|css|woff2?|ttf|eot|svg|png|jpg|jpeg|gif|webp|ico)$">
     Header set Cache-Control "public, max-age=31536000, immutable"
   </FilesMatch>
-  <FilesMatch "^(index\.html|manifest\.webmanifest|registerSW\.js|sw\.js)$">
+  <FilesMatch "^(index\.html|manifest\.webmanifest|registerSW\.js|sw\.js|push-sw\.js)$">
     Header set Cache-Control "no-cache"
   </FilesMatch>
 </IfModule>
