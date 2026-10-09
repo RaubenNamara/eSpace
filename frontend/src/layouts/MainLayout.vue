@@ -381,9 +381,42 @@
       </main>
     </div>
 
+    <!-- Install eSpace as an app (Android: the browser's own dialog; iPhone/iPad: Safari's steps) -->
+    <div
+      v-if="showInstallCard && !labAlert && !shouldHideAppChrome"
+      class="fixed z-[9997] right-4 left-4 sm:left-auto sm:w-96 bottom-24 lg:bottom-6 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl ring-1 ring-indigo-200 dark:ring-indigo-800 p-4"
+    >
+      <div class="flex items-start gap-3">
+        <img src="/pwa-192x192.png" alt="" class="w-10 h-10 rounded-xl flex-shrink-0" />
+        <div class="min-w-0 flex-1">
+          <template v-if="iosDevice">
+            <p class="text-sm font-bold text-gray-900 dark:text-white">Add eSpace to your Home Screen</p>
+            <ol class="text-sm text-gray-600 dark:text-gray-300 mt-1 space-y-0.5 list-decimal list-inside">
+              <li>Tap <span class="inline-flex items-center align-middle mx-0.5"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v12m0-12l-4 4m4-4l4 4M6 11H5a2 2 0 00-2 2v6a2 2 0 002 2h14a2 2 0 002-2v-6a2 2 0 00-2-2h-1" /></svg></span> Share in Safari {{ ipadDevice ? '(top right)' : '(bottom bar)' }}</li>
+              <li>Choose <strong>Add to Home Screen</strong>, then <strong>Add</strong></li>
+              <li>Open eSpace from its new icon</li>
+            </ol>
+            <p class="text-[11px] text-gray-400 mt-1">It opens full screen, updates by itself, and can send you notifications.</p>
+            <div class="flex gap-2 mt-3">
+              <button type="button" @click="dismissInstallCard" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">Got it</button>
+            </div>
+          </template>
+          <template v-else>
+            <p class="text-sm font-bold text-gray-900 dark:text-white">Install the eSpace app</p>
+            <p class="text-sm text-gray-600 dark:text-gray-300 mt-0.5">Open eSpace from your home screen like any other app - full screen, always up to date, with notifications.</p>
+            <div class="flex gap-2 mt-3">
+              <button type="button" @click="installApp" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">Install</button>
+              <button type="button" @click="dismissInstallCard" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">Not now</button>
+            </div>
+          </template>
+        </div>
+        <button type="button" @click="dismissInstallCard" aria-label="Close" class="w-7 h-7 -mt-1 -mr-1 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">✕</button>
+      </div>
+    </div>
+
     <!-- Ask (once) to turn on browser notifications for this device -->
     <div
-      v-if="showPushPrompt && !labAlert && !shouldHideAppChrome"
+      v-if="showPushPrompt && !showInstallCard && !labAlert && !shouldHideAppChrome"
       class="fixed z-[9997] right-4 left-4 sm:left-auto sm:w-96 bottom-24 lg:bottom-6 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl ring-1 ring-indigo-200 dark:ring-indigo-800 p-4"
     >
       <div class="flex items-start gap-3">
@@ -445,6 +478,7 @@ import { resolveAssetUrl } from '@/utils/url'
 import { offline } from '@/utils/offline/enotes'
 import { pushSupported, pushPermission, pushAvailable, enablePush, syncPush } from '@/utils/push'
 import { useToastStore } from '@/stores/toast'
+import { isIos, isIpad, isStandalone, installed, installPromptAvailable, promptInstall } from '@/utils/install'
 
 const router = useRouter()
 const route = useRoute()
@@ -664,6 +698,29 @@ const turnOnPush = async () => {
 const dismissPushPrompt = () => {
   showPushPrompt.value = false
   try { localStorage.setItem(PUSH_PROMPT_KEY, String(Date.now())) } catch { /* private mode */ }
+}
+
+// --- Install eSpace as an app - see utils/install.ts ---
+// Offered to students in a browser tab (not once installed): on Android/Chrome when the browser
+// says it can install, on iPhone/iPad always (Safari has no install dialog). "Not now" hides it for
+// 14 days.
+const INSTALL_CARD_KEY = 'espace_install_card_dismissed_at'
+const iosDevice = isIos()
+const ipadDevice = isIpad()
+const installCardDismissed = ref((() => {
+  try { return Date.now() - Number(localStorage.getItem(INSTALL_CARD_KEY) || 0) < 14 * 24 * 3600 * 1000 } catch { return false }
+})())
+const showInstallCard = computed(() =>
+  authStore.userRole === 'student' && !installCardDismissed.value && !installed.value && !isStandalone()
+  && (iosDevice || !!installPromptAvailable.value))
+const dismissInstallCard = () => {
+  installCardDismissed.value = true
+  try { localStorage.setItem(INSTALL_CARD_KEY, String(Date.now())) } catch { /* private mode */ }
+}
+const installApp = async () => {
+  const accepted = await promptInstall()
+  if (accepted) toast.success('eSpace is installed - open it from your home screen')
+  else dismissInstallCard()
 }
 
 onBeforeUnmount(() => {

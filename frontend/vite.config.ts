@@ -28,8 +28,11 @@ export default defineConfig(() => ({
         description: 'Notes, books, videos, live lessons, competency-based assessment and Learning Maps for secondary schools',
         theme_color: '#4f46e5',
         background_color: '#ffffff',
+        id: '/',
+        start_url: '/',
         display: 'standalone',
-        orientation: 'portrait',
+        // Not locked to portrait: tablets (iPad) and the 3D Virtual Lab are used in landscape
+        orientation: 'any',
         icons: [
           {
             src: '/pwa-192x192.png',

@@ -5,7 +5,11 @@ import { useRegisterSW } from 'virtual:pwa-register/vue'
 import App from './App.vue'
 import router from './router'
 import { installOfflineSupport } from './utils/offline/adapter'
+import { captureInstallPrompt } from './utils/install'
 import './assets/style.css'
+
+// Android/Chrome can fire its install offer before the app mounts - keep it for the Install button
+captureInstallPrompt()
 
 // Actively checks for a new deployment every 60s (rather than only whenever the browser
 // happens to check on its own, which can be as rarely as once per navigation per day) and
@@ -16,11 +20,19 @@ const { updateServiceWorker } = useRegisterSW({
   immediate: true,
   onRegisteredSW(_swScriptUrl, registration) {
     if (!registration) return
-    setInterval(() => {
+    const check = () => {
       registration.update().catch(() => {
-        // Offline or a transient network error - the next interval will just try again.
+        // Offline or a transient network error - the next check will just try again.
       })
-    }, 60 * 1000)
+    }
+    setInterval(check, 60 * 1000)
+    // An installed app on a phone/iPad sits suspended in the background, where timers don't run -
+    // so also check the moment it comes back to the screen or back online, and the newest
+    // deployment is what the student sees as soon as they open it.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') check()
+    })
+    window.addEventListener('online', check)
   },
   onNeedRefresh() {
     updateServiceWorker(true)
