@@ -345,23 +345,28 @@
             </select>
           </label>
           <div v-if="publishForm.department_id">
-            <span class="text-xs font-semibold text-gray-600 dark:text-gray-300">Class</span>
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-gray-600 dark:text-gray-300">Classes</span>
+              <span v-if="selectedTargetCount" class="text-[11px] font-semibold text-violet-600 dark:text-violet-400">{{ selectedTargetCount }} selected</span>
+            </div>
             <div v-if="loadingClasses" class="py-3 text-xs text-gray-400">Loading classes...</div>
             <p v-else-if="!deptClasses.length" class="py-3 text-xs text-amber-600 dark:text-amber-400">No students are enrolled in this department yet.</p>
-            <template v-else>
-              <div class="inline-flex gap-1 mt-1 mb-2 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5">
-                <button v-for="o in [{ k: 'stream', l: 'One stream' }, { k: 'all_streams', l: 'All streams' }]" :key="o.k" type="button" @click="publishForm.scope = o.k as 'stream' | 'all_streams'"
-                  class="px-3 py-1 text-xs font-semibold rounded-md" :class="publishForm.scope === o.k ? 'bg-white dark:bg-gray-800 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'">{{ o.l }}</button>
+            <div v-else class="mt-1 space-y-2">
+              <div v-for="g in classLevels" :key="g.level" class="rounded-xl border p-2.5" :class="selectedLevels.has(g.level) ? 'border-violet-300 dark:border-violet-700 bg-violet-50/60 dark:bg-violet-900/20' : 'border-gray-200 dark:border-gray-700'">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" :checked="selectedLevels.has(g.level)" @change="toggleLevel(g.level)" class="w-4 h-4 rounded border-gray-300 text-violet-600 focus:ring-violet-500">
+                  <span class="text-sm font-semibold text-gray-800 dark:text-gray-100">{{ g.level }} - all streams</span>
+                  <span class="text-[11px] text-gray-400">({{ g.classes.length }})</span>
+                </label>
+                <div class="flex flex-wrap gap-x-4 gap-y-1.5 mt-2 pl-6">
+                  <label v-for="c in g.classes" :key="c.id" class="flex items-center gap-1.5 text-sm" :class="selectedLevels.has(g.level) ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 dark:text-gray-200 cursor-pointer'">
+                    <input type="checkbox" :checked="selectedLevels.has(g.level) || selectedClassIds.has(c.id)" :disabled="selectedLevels.has(g.level)" @change="toggleClass(c.id)" class="w-4 h-4 rounded border-gray-300 text-violet-600 focus:ring-violet-500 disabled:opacity-60">
+                    {{ c.label }}
+                  </label>
+                </div>
               </div>
-              <select v-if="publishForm.scope === 'stream'" v-model.number="publishForm.class_id" class="input-field w-full text-sm">
-                <option :value="0" disabled>Choose a class</option>
-                <option v-for="c in deptClasses" :key="c.id" :value="c.id">{{ c.label }}</option>
-              </select>
-              <select v-else v-model="publishForm.class_group_name" class="input-field w-full text-sm">
-                <option value="" disabled>Choose a class level</option>
-                <option v-for="l in deptClassLevels" :key="l" :value="l">{{ l }} (All Streams)</option>
-              </select>
-            </template>
+              <p class="text-[11px] text-gray-400">"All streams" publishes to the whole class level as one assignment, including any stream added to it later.</p>
+            </div>
           </div>
           <label class="block">
             <span class="text-xs font-semibold text-gray-600 dark:text-gray-300">Term</span>
@@ -552,18 +557,39 @@ const publicationsByDepartment = (e: ExperimentSummary) => {
 }
 
 // --- Admin publishing straight to a department's class ---
-interface DeptClass { id: number; label: string }
+interface DeptClass { id: number; name: string; label: string }
 interface TermOption { id: number; label: string; is_current: boolean }
 const publishTarget = ref<ExperimentSummary | null>(null)
-const publishForm = reactive({ department_id: 0, scope: 'stream' as 'stream' | 'all_streams', class_id: 0, class_group_name: '', term_id: 0, due_date: '', marks: '' as string | number })
+const publishForm = reactive({ department_id: 0, term_id: 0, due_date: '', marks: '' as string | number })
 const deptClasses = ref<DeptClass[]>([])
-const deptClassLevels = ref<string[]>([])
 const loadingClasses = ref(false)
 const terms = ref<TermOption[]>([])
 const publishing = ref(false)
 
-const canPublish = computed(() => !!publishForm.department_id && !!publishForm.term_id
-  && (publishForm.scope === 'stream' ? !!publishForm.class_id : !!publishForm.class_group_name))
+// Ticked class levels ("S.1 - all streams") and ticked single streams. A ticked level covers all
+// its streams, so their own ticks are dropped and they show as ticked-and-locked.
+const selectedLevels = reactive(new Set<string>())
+const selectedClassIds = reactive(new Set<number>())
+const classLevels = computed(() => {
+  const groups = new Map<string, DeptClass[]>()
+  for (const c of deptClasses.value) {
+    if (!groups.has(c.name)) groups.set(c.name, [])
+    groups.get(c.name)!.push(c)
+  }
+  return [...groups.entries()].map(([level, classes]) => ({ level, classes }))
+})
+const toggleLevel = (level: string) => {
+  if (selectedLevels.has(level)) {
+    selectedLevels.delete(level)
+    return
+  }
+  selectedLevels.add(level)
+  deptClasses.value.filter(c => c.name === level).forEach(c => selectedClassIds.delete(c.id))
+}
+const toggleClass = (id: number) => (selectedClassIds.has(id) ? selectedClassIds.delete(id) : selectedClassIds.add(id))
+const selectedTargetCount = computed(() => selectedLevels.size + selectedClassIds.size)
+
+const canPublish = computed(() => !!publishForm.department_id && !!publishForm.term_id && selectedTargetCount.value > 0)
 
 const loadTerms = async () => {
   if (terms.value.length) return
@@ -582,7 +608,9 @@ const loadTerms = async () => {
 
 const openPublish = async (e: ExperimentSummary) => {
   publishTarget.value = e
-  Object.assign(publishForm, { department_id: 0, scope: 'stream', class_id: 0, class_group_name: '', term_id: 0, due_date: '', marks: '' })
+  Object.assign(publishForm, { department_id: 0, term_id: 0, due_date: '', marks: '' })
+  selectedLevels.clear()
+  selectedClassIds.clear()
   await Promise.all([loadDepartments(), loadTerms()])
   publishForm.term_id = terms.value.find(t => t.is_current)?.id ?? 0
   // Start from the department it is already shared with, when there is just one
@@ -591,16 +619,14 @@ const openPublish = async (e: ExperimentSummary) => {
 }
 
 watch(() => publishForm.department_id, async (id) => {
-  publishForm.class_id = 0
-  publishForm.class_group_name = ''
+  selectedLevels.clear()
+  selectedClassIds.clear()
   deptClasses.value = []
-  deptClassLevels.value = []
   if (!id) return
   loadingClasses.value = true
   try {
     const res = await axios.get(`${API_BASE}/departments/${id}/classes`)
     deptClasses.value = res.data.data.classes
-    deptClassLevels.value = res.data.data.class_levels
   } catch {
     toast.error('Could not load the classes')
   } finally {
@@ -612,28 +638,35 @@ const savePublish = async () => {
   const e = publishTarget.value
   if (!e || !canPublish.value) return
   publishing.value = true
-  try {
-    await axios.post(`${API_BASE}/experiments/${e.id}/publish`, {
-      department_id: publishForm.department_id,
-      scope: publishForm.scope,
-      class_id: publishForm.scope === 'stream' ? publishForm.class_id : null,
-      class_group_name: publishForm.scope === 'all_streams' ? publishForm.class_group_name : null,
-      term_id: publishForm.term_id,
-      due_date: publishForm.due_date || null,
-      marks: publishForm.marks === '' ? null : Number(publishForm.marks),
-    })
-    const cls = publishForm.scope === 'stream'
-      ? deptClasses.value.find(c => c.id === publishForm.class_id)?.label
-      : `${publishForm.class_group_name} (All Streams)`
-    toast.success(`"${e.title}" published to ${cls}`)
-    publishTarget.value = null
-    await Promise.all([loadExperiments(), loadAnalytics()])
-  } catch (err: any) {
-    const errors = err.response?.data?.errors
-    toast.error((errors && Object.values(errors)[0]) || err.response?.data?.message || 'Could not publish the experiment')
-  } finally {
-    publishing.value = false
+  // One assignment per ticked level (all streams) and per ticked single stream
+  const targets = [
+    ...[...selectedLevels].map(level => ({ label: `${level} (All Streams)`, body: { scope: 'all_streams', class_group_name: level, class_id: null } })),
+    ...[...selectedClassIds].map(id => ({ label: deptClasses.value.find(c => c.id === id)?.label ?? 'class', body: { scope: 'stream', class_id: id, class_group_name: null } })),
+  ]
+  const done: string[] = []
+  const failed: string[] = []
+  for (const t of targets) {
+    try {
+      await axios.post(`${API_BASE}/experiments/${e.id}/publish`, {
+        department_id: publishForm.department_id,
+        ...t.body,
+        term_id: publishForm.term_id,
+        due_date: publishForm.due_date || null,
+        marks: publishForm.marks === '' ? null : Number(publishForm.marks),
+      })
+      done.push(t.label)
+      if (t.body.class_id) selectedClassIds.delete(t.body.class_id)
+      else selectedLevels.delete(t.body.class_group_name as string)
+    } catch (err: any) {
+      const errors = err.response?.data?.errors
+      failed.push(`${t.label}: ${(errors && Object.values(errors)[0]) || err.response?.data?.message || 'could not publish'}`)
+    }
   }
+  publishing.value = false
+  if (done.length) toast.success(`"${e.title}" published to ${done.join(', ')}`)
+  if (failed.length) toast.error(failed.join(' | '))
+  if (!failed.length) publishTarget.value = null
+  if (done.length) await Promise.all([loadExperiments(), loadAnalytics()])
 }
 
 const withdraw = async (e: ExperimentSummary, p: ExperimentPublication) => {
