@@ -51,6 +51,8 @@
         <VirtualLabPendulumBrief v-else-if="isPendulum" :introduction="attempt.experiment.introduction" :objective="attempt.experiment.objective" />
         <VirtualLabGravityBrief v-else-if="isGravityExperiment" :introduction="attempt.experiment.introduction" :objective="attempt.experiment.objective" />
         <VirtualLabEmfBrief v-else-if="isEmfExperiment" :introduction="attempt.experiment.introduction" :objective="attempt.experiment.objective" />
+        <VirtualLabBottleMassBrief v-else-if="isBottleMassExperiment" :introduction="attempt.experiment.introduction" :objective="attempt.experiment.objective" />
+        <VirtualLabDensityBrief v-else-if="isDensityExperiment" :introduction="attempt.experiment.introduction" :objective="attempt.experiment.objective" />
 
         <!-- Required apparatus - some pieces may already be on the bench, others wait in the tray
              inside the 3D view until you pick them up; the setup itself (wiring, pouring,
@@ -656,6 +658,8 @@ import VirtualLabConcaveMirrorBrief from '@/components/virtuallab/VirtualLabConc
 import VirtualLabPendulumBrief from '@/components/virtuallab/VirtualLabPendulumBrief.vue'
 import VirtualLabGravityBrief from '@/components/virtuallab/VirtualLabGravityBrief.vue'
 import VirtualLabEmfBrief from '@/components/virtuallab/VirtualLabEmfBrief.vue'
+import VirtualLabBottleMassBrief from '@/components/virtuallab/VirtualLabBottleMassBrief.vue'
+import VirtualLabDensityBrief from '@/components/virtuallab/VirtualLabDensityBrief.vue'
 import VirtualLabEmfAnalysis from '@/components/virtuallab/VirtualLabEmfAnalysis.vue'
 import VirtualLabGravityAnalysis from '@/components/virtuallab/VirtualLabGravityAnalysis.vue'
 import VirtualLabMiniResults from '@/components/virtuallab/VirtualLabMiniResults.vue'
@@ -1128,6 +1132,7 @@ const plotEntries = computed(() => attempt.value?.notebook.filter(n => n.entry_t
 const submitBlocker = computed(() => graphBlocker.value || (isBulbExperiment.value ? bulbBlocker.value : null) || (isMirrorExperiment.value || isPendulum.value ? studentGraphBlocker.value : null) || (isGravityExperiment.value ? gravityBlocker.value : null) || (isEmfExperiment.value ? emfBlocker.value : null))
 
 // --- Internal resistance and emf of a battery (battery_internal_resistance) ------------------------------
+const isBottleMassExperiment = computed(() => attempt.value?.experiment.render_component === 'moments_balance')
 const isEmfExperiment = computed(() => attempt.value?.experiment.render_component === 'battery_internal_resistance')
 const emfAnalysisEntry = computed(() => calcEntries.value.find(n => n.label === 'Emf analysis') ?? null)
 const emfBlocker = ref<string | null>(null)
