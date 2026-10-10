@@ -774,8 +774,6 @@ const MENU: Record<string, NavGroup[]> = {
     ] },
     { key: 'revision', name: 'Revision', items: [
       { path: '/student/assignments', label: 'Assessments', icon: 'DocumentTextIcon' },
-      { path: '/student/revision', label: 'Daily Revision', icon: 'BulbIcon' },
-      { path: '/student/live-quiz', label: 'Live Quiz', icon: 'BoltIcon' },
       { path: '/student/exam-plan', label: 'Exam Planner', icon: 'TargetIcon' }
     ] },
     { key: 'resources', name: 'Resources', items: [
@@ -929,7 +927,7 @@ const toggleFold = (key: string) => {
 const STUDENT_TABS = [
   { path: '/student/dashboard', label: 'Home', icon: 'DashboardIcon', also: [] as string[] },
   { path: '/student/enotes', label: 'Learn', icon: 'NoteIcon', also: ['/student/library', '/student/videos', '/student/live-classes', '/student/my-notes'] },
-  { path: '/student/revision', label: 'Revise', icon: 'BulbIcon', also: ['/student/assignments', '/student/live-quiz', '/student/exam-plan', '/student/itembank'] },
+  { path: '/student/assignments', label: 'Work', icon: 'DocumentTextIcon', also: ['/student/exam-plan', '/student/itembank'] },
   { path: '/student/chat', label: 'Chats', icon: 'ChatIcon', also: ['/student/study-groups', '/student/notices'] }
 ]
 const showStudentTabs = computed(() => menuRole.value === 'student' && !shouldHideAppChrome.value && !isImmersiveReader.value)
@@ -942,8 +940,6 @@ const paletteActions = computed<PaletteAction[]>(() => {
   const common: PaletteAction[] = [{ label: themeStore.isDarkMode ? 'Switch to light mode' : 'Switch to dark mode', hint: 'Appearance', run: () => themeStore.toggleTheme() }]
   const byRole: Record<string, PaletteAction[]> = {
     student: [
-      { label: "Do today's revision", hint: 'Daily Revision', run: go('/student/revision') },
-      { label: 'Join a live quiz', hint: 'Live Quiz', run: go('/student/live-quiz') },
       { label: 'Start a study group', hint: 'Study groups', run: go('/student/study-groups') },
       { label: 'Download my notes as PDF', hint: 'My notes', run: go('/student/my-notes') }
     ],

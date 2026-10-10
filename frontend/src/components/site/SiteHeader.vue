@@ -52,6 +52,19 @@
         <router-link to="/login" class="block px-3 py-2 rounded-lg text-sm font-semibold text-indigo-700 dark:text-indigo-300">Sign in</router-link>
       </div>
     </div>
+
+    <!-- Phones: the header has no room for "Sign in", so it floats in the corner, always in reach.
+         Teleported to <body> so the header's blur doesn't trap the fixed position. -->
+    <Teleport to="body">
+      <router-link
+        v-if="!menuOpen"
+        to="/login"
+        class="sm:hidden fixed z-50 right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] inline-flex items-center gap-2 pl-4 pr-5 py-3 rounded-full text-sm font-bold text-white bg-indigo-600 shadow-lg shadow-indigo-600/40 ring-4 ring-white/70 dark:ring-slate-950/70 active:scale-95 transition"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" transform="matrix(-1 0 0 1 24 0)" /></svg>
+        Sign in
+      </router-link>
+    </Teleport>
   </header>
 </template>
 

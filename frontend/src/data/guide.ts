@@ -86,16 +86,6 @@ export const GUIDE: GuidePart[] = [
         steps: ['Green means achieved, amber developing, red needs support, grey not assessed yet.', 'Pick a subject, then a term, to see its topics.', 'Open a topic to see each outcome and the assessments behind it.', '"My report" prints a summary of what you can do.'],
       },
       {
-        id: 's-revision', title: 'Daily Revision', icon: 'bulb',
-        intro: 'Five quick questions a day from your own multiple-choice assessments - only ones already marked or closed.',
-        steps: ['Open Daily Revision from the menu, or "Start today\'s 5" on your dashboard.', 'Pick an answer and tap Check - the right answer is ticked straight away.', 'Get one wrong and it comes back tomorrow; get it right and it comes back later and later.', 'Finish the five to keep your streak going.'],
-        tips: ['Questions from assessments you found hard come first - it is the quickest way to turn red outcomes green.']
-      },
-      {
-        id: 's-livequiz', title: 'Joining a Live Quiz', icon: 'bolt',
-        steps: ['When your teacher starts a Live Quiz, open Live Quiz in eSpace.', 'Type the 6 numbers on your teacher\'s screen and tap Join.', 'Each question shows big coloured buttons - the same colours and shapes as on the screen. Tap your answer.', 'Right answers score points, and faster answers score more. See your place after each question.'],
-      },
-      {
         id: 's-notes', title: 'My notes - and downloading them', icon: 'pencil',
         intro: 'Every note you write on a page of an eNote, a library book or a past paper is kept in one place.',
         steps: ['While reading, tap the note button on a page and write your own summary.', 'Open My notes to see them all, by subject and topic.', 'Tap Download PDF to save them to your phone or computer - they are yours to keep, even after you finish school.'],
@@ -158,12 +148,6 @@ export const GUIDE: GuidePart[] = [
       {
         id: 't-insight', title: 'Learning Map, coverage and engagement', icon: 'map',
         steps: ['Class Learning Map shows each outcome for a stream - "Reteach next" lists the ones most students need help with.', 'Create a support group from any outcome to send revision to the students who need it.', 'Coverage shows which topics still need an assessment, an AOI, EOCs or eNotes.', 'Engagement shows who is reading, watching and attending - message the quiet ones.'],
-      },
-      {
-        id: 't-livequiz', title: 'Running a Live Quiz', icon: 'bolt',
-        intro: 'Turn an assessment\'s multiple-choice and true/false questions into a quiz the whole class plays on their phones.',
-        steps: ['Open Live Quiz, pick one of your published assessments and a time per question, then Open the quiz.', 'Put your screen on the projector: students open Live Quiz and type the code.', 'Start the quiz. The answer shows when time is up or everyone has answered - with how many chose each option and a leaderboard.', 'At the end, if every question in the assessment marks itself, Save to the Learning Map makes each score that learner\'s result.'],
-        tips: ['An assessment with written questions can still be played as a practice round - students then do it the normal way.', 'Anyone who already did the assessment keeps their own result.']
       },
       {
         id: 't-warning', title: 'Early warning', icon: 'warning',

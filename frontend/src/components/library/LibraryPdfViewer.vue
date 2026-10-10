@@ -202,8 +202,12 @@
              positioning would pin the drawer/backdrop to the browser window instead of the card. -->
         <div v-if="showToc" @click="showToc = false" class="absolute inset-0 bg-black/50 z-30 lg:hidden"></div>
 
+        <!-- The book's frame: it stays put while the book scrolls inside it (Read Mode, or zoomed
+             in), so the reading tint laid over the frame covers every part of the page the reader
+             scrolls to - inside the scrolling area it scrolled away with the top of the page. -->
+        <div class="relative flex-1 min-w-0 flex">
         <div
-          class="relative flex-1 p-0 lg:p-3 bg-gray-200 dark:bg-gray-900"
+          class="relative flex-1 min-w-0 p-0 lg:p-3 bg-gray-200 dark:bg-gray-900"
           :class="[
             zoomLevel > MIN_ZOOM ? 'overflow-auto' : 'overflow-hidden flex justify-center items-center',
             // Read Mode fallback: the book is sized to fit the screen exactly, but a scrollbar
@@ -244,13 +248,6 @@
             />
           </div>
 
-          <!-- Reading focus overlay - a plain colored tint over the whole book, purely visual. -->
-          <div
-            v-if="readingTint !== 'none'"
-            class="absolute inset-0 pointer-events-none z-10 mix-blend-multiply"
-            :class="READING_TINTS.find(t => t.value === readingTint)?.class"
-          ></div>
-
           <!-- Each page on show has its own note, folded away as a tab at the foot of that page:
                "My note" where the student has written one, "Add my note" where not. In the two-page
                view the left and right pages each get one (the book is centred, so the spine is the
@@ -273,6 +270,14 @@
               @input="onNoteInput(slot.page)"
             />
           </template>
+        </div>
+
+          <!-- Reading focus overlay - a plain colored tint over the whole visible book, at any scroll -->
+          <div
+            v-if="readingTint !== 'none'"
+            class="absolute inset-0 pointer-events-none z-10 mix-blend-multiply"
+            :class="READING_TINTS.find(t => t.value === readingTint)?.class"
+          ></div>
         </div>
 
         <!-- Right-side contents panel - the PDF's own bookmarks/outline when it has one, else a

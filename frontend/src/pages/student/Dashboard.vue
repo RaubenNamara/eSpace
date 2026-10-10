@@ -29,12 +29,19 @@
     </div>
 
     <template v-else-if="data">
-      <!-- 2. What to do next, beside today's revision and the next exam -->
+      <!-- 2. What to do next, beside the next exam and how the marks are going -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
         <NextStepsCard class="lg:col-span-2 !mb-0 min-w-0" />
         <div class="flex flex-col gap-4 min-w-0">
           <ExamCountdownCard class="!mb-0" />
-          <DailyFiveCard class="!mb-0 flex-1" />
+          <ScoresCard
+            class="flex-1"
+            :average="data.stats.average_score"
+            :graded-count="data.performance.graded_count"
+            :trend="data.performance.trend"
+            :trend-delta="data.performance.trend_delta"
+            :scores="data.performance.scores"
+          />
         </div>
       </div>
 
@@ -43,16 +50,7 @@
         <span class="w-8 h-8 flex-shrink-0 rounded-xl flex items-center justify-center bg-indigo-600 text-white shadow-sm shadow-indigo-500/20"><AppIcon name="trend" class="w-4 h-4" /></span>
         <h2 class="text-base font-bold text-gray-900 dark:text-white">How you're doing</h2>
       </div>
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
-        <ScoresCard
-          :average="data.stats.average_score"
-          :graded-count="data.performance.graded_count"
-          :trend="data.performance.trend"
-          :trend-delta="data.performance.trend_delta"
-          :scores="data.performance.scores"
-        />
-        <LearningMapCard class="lg:col-span-2 !mb-0 !rounded-2xl" />
-      </div>
+      <LearningMapCard class="!mb-5 !rounded-2xl" />
 
       <!-- 4. Badges, the lab and new books -->
       <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-8 [&>*]:min-w-0">
@@ -89,7 +87,6 @@ import NoticeBanner from '@/components/dashboard/NoticeBanner.vue'
 import { useLiveRefresh } from '@/composables/useLiveRefresh'
 import LearningMapCard from '@/components/dashboard/LearningMapCard.vue'
 import NextStepsCard from '@/components/dashboard/NextStepsCard.vue'
-import DailyFiveCard from '@/components/dashboard/DailyFiveCard.vue'
 import ExamCountdownCard from '@/components/dashboard/ExamCountdownCard.vue'
 import axios from 'axios'
 import { useAuthStore } from '@/stores/auth'
@@ -179,7 +176,7 @@ const primary = computed(() => {
   if (d && d.stats.live_now > 0) return { label: 'Join live class', to: '/student/live-classes', icon: 'video', danger: true }
   const w = overdueWork.value[0] || nextWork.value
   if (w) return { label: `${overdueWork.value.length ? 'Catch up' : 'Start'}: ${w.title}`, to: `/student/assignments/${w.id}/answer`, icon: 'clipboard', danger: overdueWork.value.length > 0 }
-  return { label: "Start today's revision", to: '/student/revision', icon: 'flame', danger: false }
+  return { label: 'Continue reading', to: '/student/enotes', icon: 'book', danger: false }
 })
 const actions = computed(() => [
   { label: 'eNotes', to: '/student/notes', icon: 'book', badge: 0 },
