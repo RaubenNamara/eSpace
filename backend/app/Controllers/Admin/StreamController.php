@@ -123,7 +123,6 @@ class StreamController extends Controller
      */
     public function update($id): void
     {
-        error_log("StreamController::update called with id: " . $id);
         
         // Convert to integer
         $id = (int) $id;
@@ -190,7 +189,6 @@ class StreamController extends Controller
      */
     public function destroy($id): void
     {
-        error_log("StreamController::destroy called with id: " . $id);
         
         // Convert to integer
         $id = (int) $id;

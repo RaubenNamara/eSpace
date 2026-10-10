@@ -92,7 +92,7 @@
                 :title="book.title"
                 :seed="book.id"
                 :label="subjectTag(book.subject_name, book.subject_code)"
-                :cover-image="book.cover_image"
+                :cover-image="book.cover_image" :cover="designOf(book)"
                 :author="book.author"
                 :pages="book.total_pages"
               />
@@ -103,7 +103,7 @@
               :title="book.title"
               :seed="book.id"
               :label="subjectTag(book.subject_name, book.subject_code)"
-              :cover-image="book.cover_image"
+              :cover-image="book.cover_image" :cover="designOf(book)"
               :author="book.author"
               :pages="book.total_pages"
             />
@@ -170,7 +170,7 @@
           <li v-for="book in readingList" :key="book.id" class="p-3 flex items-center gap-3">
             <button type="button" class="w-10 h-[53px] flex-shrink-0 overflow-hidden rounded-sm" :title="`Open ${book.title}`" @click="previewBook = book">
               <span class="block origin-top-left scale-[0.43] pointer-events-none">
-                <ShelfBook flat size="sm" :title="book.title" :seed="book.id" :label="subjectTag(book.subject_name, book.subject_code)" :cover-image="book.cover_image" :author="book.author" :pages="book.total_pages" />
+                <ShelfBook flat size="sm" :title="book.title" :seed="book.id" :label="subjectTag(book.subject_name, book.subject_code)" :cover-image="book.cover_image" :cover="designOf(book)" :author="book.author" :pages="book.total_pages" />
               </span>
             </button>
             <div class="min-w-0 flex-1">
@@ -259,17 +259,23 @@
                 :seed="editingBook.id"
                 :label="subjectTag(editingBook.subject_name, editingBook.subject_code)"
                 :cover-image="editingBook.cover_image"
+                :cover="designOf(editingBook)"
                 :author="bookForm.author"
                 :pages="editingBook.total_pages"
               />
               <div class="min-w-0 flex-1 space-y-2">
                 <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Book cover</p>
                 <p class="text-xs text-gray-500 dark:text-gray-400">
-                  {{ editingBook.cover_image
-                    ? (isAutoCover(editingBook.cover_image) ? 'Using the first page of the file.' : 'Using your own picture.')
-                    : 'No picture - a printed jacket with the title and author is shown.' }}
+                  {{ editingBook.cover_design
+                    ? 'A cover designed in eSpace.'
+                    : editingBook.cover_image
+                      ? (isAutoCover(editingBook.cover_image) ? 'Using the first page of the file.' : 'Using your own picture.')
+                      : 'No picture - a printed jacket with the title and author is shown.' }}
                 </p>
                 <div class="flex flex-wrap gap-2">
+                  <button type="button" :disabled="coverBusy" class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50" @click="showCoverEditor = true">
+                    <AppIcon name="sparkles" class="w-3.5 h-3.5" />{{ editingBook.cover_design ? 'Edit the design' : 'Design a cover' }}
+                  </button>
                   <button type="button" @click="coverFileInput?.click()" :disabled="coverBusy" class="px-2.5 py-1.5 text-xs font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">
                     Upload picture
                   </button>
@@ -282,6 +288,26 @@
                   <span v-if="coverBusy" class="text-xs text-gray-400 self-center">Working&hellip;</span>
                 </div>
                 <input ref="coverFileInput" type="file" accept="image/jpeg,image/png,image/webp" class="hidden" @change="onCoverFileSelected">
+              </div>
+            </div>
+
+            <!-- Book cover (new books) - optional: without one, a PDF's first page becomes the cover -->
+            <div v-if="!editingBook" class="mb-4 border border-gray-200 dark:border-gray-700 rounded-lg p-3 flex items-center gap-4">
+              <ShelfBook
+                size="sm"
+                :title="bookForm.title || 'New book'"
+                :seed="0"
+                :cover-image="newCoverPreview"
+                :author="bookForm.author"
+              />
+              <div class="min-w-0 flex-1">
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Book cover</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">{{ newCoverFile ? `Your picture: ${newCoverFile.name}` : 'Optional - choose a picture, or the first page of a PDF becomes the cover.' }}</p>
+                <div class="flex flex-wrap gap-2">
+                  <button type="button" class="px-2.5 py-1.5 text-xs font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700" @click="newCoverInput?.click()">{{ newCoverFile ? 'Change picture' : 'Choose a cover picture' }}</button>
+                  <button v-if="newCoverFile" type="button" class="px-2.5 py-1.5 text-xs font-medium rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30" @click="setNewCover(null)">Remove</button>
+                </div>
+                <input ref="newCoverInput" type="file" accept="image/jpeg,image/png,image/webp" class="hidden" @change="setNewCover(($event.target as HTMLInputElement).files?.[0] || null); ($event.target as HTMLInputElement).value = ''">
               </div>
             </div>
 
@@ -436,6 +462,14 @@
     </div>
 
     <!-- Document Preview -->
+    <LibraryCoverEditor
+      v-if="showCoverEditor && editingBook"
+      :book="editingBook"
+      :api="libApi"
+      :label="subjectTag(editingBook.subject_name, editingBook.subject_code)"
+      @close="showCoverEditor = false"
+      @saved="onDesignSaved"
+    />
     <LibraryDocumentViewer v-if="previewBook" :book="previewBook" @close="previewBook = null" />
     <AudiencePanel
       v-if="readersFor"
@@ -460,6 +494,8 @@ import PickerDropdown, { type PickerOption } from '@/components/common/PickerDro
 import AppIcon from '@/components/common/AppIcon.vue'
 import AudiencePanel from '@/components/common/AudiencePanel.vue'
 import LibraryDocumentViewer from '@/components/library/LibraryDocumentViewer.vue'
+import LibraryCoverEditor from '@/components/library/LibraryCoverEditor.vue'
+import { parseCoverDesign } from '@/utils/enoteCover'
 import TeacherClassSelector from '@/components/teacher/TeacherClassSelector.vue'
 import DepartmentAudiencePicker, { type AudienceLevel } from '@/components/library/DepartmentAudiencePicker.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -787,6 +823,27 @@ const generateMissingCovers = async () => {
 const coverFileInput = ref<HTMLInputElement | null>(null)
 const coverBusy = ref(false)
 
+// ---- Designed covers ----
+const showCoverEditor = ref(false)
+const designOf = (book: LibraryBook) => parseCoverDesign(book.cover_design)
+const setDesign = (id: number, design: string | null) => {
+  for (const target of [books.value.find(b => b.id === id), editingBook.value?.id === id ? editingBook.value : null]) {
+    if (target) target.cover_design = design
+  }
+}
+const onDesignSaved = (design: string | null) => {
+  if (editingBook.value) setDesign(editingBook.value.id, design)
+  showCoverEditor.value = false
+  toast.success(design ? 'Cover saved' : 'Back to the picture cover')
+}
+// Choosing a picture cover means the picture shows - a design would otherwise stay on top
+const dropDesign = async () => {
+  const book = editingBook.value
+  if (!book?.cover_design) return
+  await axios.put(`${libApi}/${book.id}`, { cover_design: null })
+  setDesign(book.id, null)
+}
+
 const onCoverFileSelected = async (event: Event) => {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
@@ -795,6 +852,7 @@ const onCoverFileSelected = async (event: Event) => {
   coverBusy.value = true
   try {
     await uploadCover(editingBook.value.id, file, false)
+    await dropDesign()
     toast.success('Cover updated')
   } catch (error: any) {
     toast.error(error.response?.data?.message || 'Could not upload that picture')
@@ -813,6 +871,7 @@ const useFirstPageCover = async () => {
       await axios.delete(`${libApi}/${editingBook.value.id}/cover`)
     }
     await uploadCover(editingBook.value.id, blob, true, totalPages)
+    await dropDesign()
     toast.success('Cover set to the first page')
   } catch (error: any) {
     toast.error(error.response?.data?.message || 'Could not read the first page of this file')
@@ -832,6 +891,7 @@ const removeCover = async () => {
     if (listed) listed.cover_image = null
     // Don't let the background generator immediately put the first page back
     coverAttempted.add(id)
+    await dropDesign()
     toast.success('Cover removed')
   } catch (error: any) {
     toast.error(error.response?.data?.message || 'Could not remove the cover')
@@ -890,7 +950,22 @@ const editBook = (book: LibraryBook) => {
   showBookModal.value = true
 }
 
+// A cover picture chosen while adding a book, shown on the little book beside it
+const newCoverInput = ref<HTMLInputElement | null>(null)
+const newCoverFile = ref<File | null>(null)
+const newCoverPreview = ref<string | null>(null)
+const setNewCover = (file: File | null) => {
+  if (newCoverPreview.value) URL.revokeObjectURL(newCoverPreview.value)
+  if (file && !/^image\/(jpeg|png|webp)$/.test(file.type)) {
+    toast.warning('Choose a JPG, PNG or WebP picture')
+    file = null
+  }
+  newCoverFile.value = file
+  newCoverPreview.value = file ? URL.createObjectURL(file) : null
+}
+
 const closeBookModal = () => {
+  setNewCover(null)
   showBookModal.value = false
   editingBook.value = null
 }
@@ -1000,12 +1075,22 @@ const saveBook = async () => {
       formData.append('author', bookForm.value.author)
       formData.append('file', bookForm.value.file)
 
-      await axios.post(`${libApi}`, formData, {
+      const created = await axios.post(`${libApi}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (e) => {
           if (e.total) uploadProgress.value = Math.round((e.loaded * 100) / e.total)
         }
       })
+      // The cover picture chosen with it (the book has to exist first)
+      const newId = created.data?.data?.id
+      if (newId && newCoverFile.value) {
+        coverAttempted.add(newId)
+        try {
+          await uploadCover(newId, newCoverFile.value, false)
+        } catch {
+          toast.warning('The book was added, but its cover picture could not be saved - set it with Edit')
+        }
+      }
     }
 
     closeBookModal()

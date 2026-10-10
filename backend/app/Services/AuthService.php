@@ -54,7 +54,6 @@ class AuthService extends Service
             ];
         }
 
-        error_log("User found: " . $user['username'] . ", ID: " . $user['id']);
 
         // Check if user is active
         if (!$this->userRepository->isActive($user['id'])) {
@@ -66,11 +65,7 @@ class AuthService extends Service
         }
 
         // Verify password
-        error_log("Input password (raw): '" . $password . "'");
-        error_log("Input password length: " . strlen($password));
-        error_log("Stored password hash: " . $user['password']);
         $passwordMatch = $this->verifyPassword($password, $user['password']);
-        error_log("Password verification: " . ($passwordMatch ? 'SUCCESS' : 'FAILED'));
 
         if (!$passwordMatch) {
             $this->recordFailedAttempt($identifier);
@@ -417,7 +412,6 @@ class AuthService extends Service
             $userData['must_change_password'] = !empty($user['must_change_password']);
         }
 
-        error_log("getUserData returning: " . json_encode($userData));
         return $userData;
     }
 

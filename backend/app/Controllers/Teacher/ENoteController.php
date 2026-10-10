@@ -2217,9 +2217,6 @@ class ENoteController extends Controller
             $classes = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
             // Debug logging
-            error_log("ENote assignments: teacher_id=$teacherId, department_id=$departmentId");
-            error_log("ENote assignments: subjects count=" . count($subjects));
-            error_log("ENote assignments: classes count=" . count($classes));
 
             $this->success([
                 'subjects' => $subjects,

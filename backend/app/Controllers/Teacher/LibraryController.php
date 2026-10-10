@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace eSpace\App\Controllers\Teacher;
 
 use eSpace\App\Utils\MimeType;
+use eSpace\App\Utils\CoverDesign;
 use eSpace\App\Controllers\Controller;
 use eSpace\App\Services\NotificationService;
 
@@ -548,6 +549,18 @@ class LibraryController extends Controller
             $params['author'] = $author !== '' ? $author : null;
         }
 
+        // A cover designed in eSpace (template, colour, picture, words); null goes back to the
+        // cover picture / first page
+        if (array_key_exists('cover_design', $data)) {
+            $design = $data['cover_design'] === null ? null : CoverDesign::normalize($data['cover_design'], ['/uploads/' . self::COVER_SUBDIR . '/', '/uploads/enotes/']);
+            if ($data['cover_design'] !== null && $design === null) {
+                $this->validationError(['cover_design' => 'That cover design is not valid']);
+                return;
+            }
+            $updates[] = 'cover_design = :cover_design';
+            $params['cover_design'] = $design;
+        }
+
         if (array_key_exists('allow_download', $data)) {
             $updates[] = 'allow_download = :allow_download';
             $params['allow_download'] = $this->toBool($data['allow_download']) ? 1 : 0;
@@ -736,7 +749,10 @@ class LibraryController extends Controller
             return;
         }
 
-        $auto = $this->toBool($_POST['auto'] ?? false);
+        // purpose=art: a picture to use inside a designed cover - stored, but the book's cover
+        // picture is left as it is (the design is saved with the book's other details)
+        $art = ($_POST['purpose'] ?? '') === 'art';
+        $auto = !$art && $this->toBool($_POST['auto'] ?? false);
         // A background auto-cover must never overwrite a cover the teacher chose themselves
         // (e.g. a stale auto-generation finishing after they uploaded their own).
         if ($auto && !empty($book['cover_image']) && !$this->isAutoCover($book['cover_image'])) {
@@ -750,7 +766,7 @@ class LibraryController extends Controller
             return;
         }
 
-        $filename = ($auto ? 'auto_' : 'cover_') . $id . '_' . bin2hex(random_bytes(6)) . '.' . $extensions[$mimeType];
+        $filename = ($art ? 'art_' : ($auto ? 'auto_' : 'cover_')) . $id . '_' . bin2hex(random_bytes(6)) . '.' . $extensions[$mimeType];
         $path = $dir . $filename;
         if (!move_uploaded_file($file['tmp_name'], $path)) {
             $this->error('Could not save cover image', 500);
@@ -764,6 +780,10 @@ class LibraryController extends Controller
         }
 
         $url = '/uploads/' . self::COVER_SUBDIR . '/' . $filename;
+        if ($art) {
+            $this->success(['image' => $url], 'Picture ready');
+            return;
+        }
         $db->prepare("UPDATE library_books SET cover_image = :cover, updated_at = NOW() WHERE id = :id")
             ->execute(['cover' => $url, 'id' => $id]);
 

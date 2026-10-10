@@ -340,7 +340,6 @@ class StudentController extends Controller
      */
     public function enrolled(): void
     {
-        error_log("Teacher enrolled: Starting request");
         
         if (!$this->isAuthenticated()) {
             error_log("Teacher enrolled: Not authenticated");
@@ -349,7 +348,6 @@ class StudentController extends Controller
         }
 
         $departmentId = $this->getTeacherDepartmentId();
-        error_log("Teacher enrolled: Department ID: " . ($departmentId ?? 'NULL'));
         
         if (!$departmentId) {
             error_log("Teacher enrolled: No department assigned");
@@ -362,7 +360,6 @@ class StudentController extends Controller
         $streamName = $this->query('stream_name');
         $teacherId = $this->resolveActiveTeacherId();
 
-        error_log("Teacher enrolled: Filters - academic_year: " . ($academicYear ?? 'none') . ", class_name: " . ($className ?? 'none') . ", stream_name: " . ($streamName ?? 'none'));
 
         $whereClause = "se.deleted_at IS NULL AND se.status = 'active' AND se.department_id = :department_id
             AND NOT EXISTS (
@@ -398,14 +395,11 @@ class StudentController extends Controller
                     WHERE {$whereClause}
                     ORDER BY s.last_name, s.first_name";
             
-            error_log("Teacher enrolled: SQL: " . $sql);
-            error_log("Teacher enrolled: Params: " . json_encode($params));
             
             $stmt = $this->getDb()->prepare($sql);
             $stmt->execute($params);
             $students = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-            error_log("Teacher enrolled: Found " . count($students) . " students");
             $this->success($students, 'Enrolled students retrieved successfully');
         } catch (\PDOException $e) {
             error_log("Failed to fetch enrolled students: " . $e->getMessage());

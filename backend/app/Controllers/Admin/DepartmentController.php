@@ -129,7 +129,6 @@ class DepartmentController extends Controller
      */
     public function update($id): void
     {
-        error_log("DepartmentController::update called with id: " . $id);
         
         // Convert to integer
         $id = (int) $id;
@@ -186,7 +185,6 @@ class DepartmentController extends Controller
      */
     public function destroy($id): void
     {
-        error_log("DepartmentController::destroy called with id: " . $id);
         
         // Convert to integer
         $id = (int) $id;

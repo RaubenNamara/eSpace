@@ -129,7 +129,6 @@ class ClassController extends Controller
      */
     public function update($id): void
     {
-        error_log("ClassController::update called with id: " . $id);
         
         // Convert to integer
         $id = (int) $id;
@@ -193,7 +192,6 @@ class ClassController extends Controller
      */
     public function destroy($id): void
     {
-        error_log("ClassController::destroy called with id: " . $id);
         
         // Convert to integer
         $id = (int) $id;

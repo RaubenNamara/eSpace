@@ -145,7 +145,6 @@ class TermController extends Controller
      */
     public function update($id): void
     {
-        error_log("TermController::update called with id: " . $id);
         
         // Convert to integer
         $id = (int) $id;
@@ -229,7 +228,6 @@ class TermController extends Controller
      */
     public function destroy($id): void
     {
-        error_log("TermController::destroy called with id: " . $id);
         
         // Convert to integer
         $id = (int) $id;

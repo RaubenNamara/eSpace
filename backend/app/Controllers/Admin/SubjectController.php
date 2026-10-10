@@ -134,7 +134,6 @@ class SubjectController extends Controller
      */
     public function update($id): void
     {
-        error_log("SubjectController::update called with id: " . $id);
         
         // Convert to integer
         $id = (int) $id;
@@ -196,7 +195,6 @@ class SubjectController extends Controller
      */
     public function destroy($id): void
     {
-        error_log("SubjectController::destroy called with id: " . $id);
         
         // Convert to integer
         $id = (int) $id;

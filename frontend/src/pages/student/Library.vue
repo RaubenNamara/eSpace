@@ -48,9 +48,9 @@
           @open="(el) => openItem(book, el)"
         >
           <template #cover="{ size }">
-            <ShelfBook flat :size="size" :title="book.title" :seed="book.id" :label="shelfLabel(book)" :cover-image="book.cover_image" :author="book.author" :pages="book.total_pages"  />
+            <ShelfBook flat :size="size" :title="book.title" :seed="book.id" :label="shelfLabel(book)" :cover-image="book.cover_image" :cover="designOf(book)" :author="book.author" :pages="book.total_pages"  />
           </template>
-          <ShelfBook spine-out :is-new="isRecent(book)" :saved="!!offline.docs[docKey('library', book.id)]" :title="book.title" :seed="book.id" :label="shelfLabel(book)" :cover-image="book.cover_image" :author="book.author" :pages="book.total_pages" />
+          <ShelfBook spine-out :is-new="isRecent(book)" :saved="!!offline.docs[docKey('library', book.id)]" :title="book.title" :seed="book.id" :label="shelfLabel(book)" :cover-image="book.cover_image" :cover="designOf(book)" :author="book.author" :pages="book.total_pages" />
           <template #details>
           <p class="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug">{{ book.title }}</p>
           <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ book.author || [book.teacher_first_name, book.teacher_last_name].filter(Boolean).join(' ') }}</p>
@@ -90,12 +90,15 @@
       @opened="finishOpening"
       @closed="opening = null"
     >
-      <ShelfBook flat size="lg" :title="opening.item.title" :seed="opening.item.id" :label="shelfLabel(opening.item)" :cover-image="opening.item.cover_image" :author="opening.item.author" :pages="opening.item.total_pages" />
+      <ShelfBook flat size="lg" :title="opening.item.title" :seed="opening.item.id" :label="shelfLabel(opening.item)" :cover-image="opening.item.cover_image" :cover="designOf(opening.item)" :author="opening.item.author" :pages="opening.item.total_pages" />
     </BookOpenTransition>
   </div>
 </template>
 
 <script setup lang="ts">
+import { parseCoverDesign } from '@/utils/enoteCover'
+// A cover designed in eSpace, when the book has one
+const designOf = (book: { cover_design?: string | null }) => parseCoverDesign(book.cover_design)
 import PageHeader from '@/components/ui/PageHeader.vue'
 import { ref, computed, onMounted, nextTick } from 'vue'
 import axios from 'axios'

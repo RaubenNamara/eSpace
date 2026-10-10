@@ -54,14 +54,11 @@ class AuthController extends Controller
         // Sanitize input
         $identifier = $this->sanitize(['identifier' => $identifier])['identifier'];
 
-        error_log("AuthController: Attempting login for identifier: " . $identifier);
-        error_log("AuthController: Password length: " . strlen($password));
 
         // Attempt login
         $result = $this->authService->login($identifier, $password);
 
         error_log("AuthController: Login result: " . ($result['success'] ? 'SUCCESS' : 'FAILED'));
-        error_log("AuthController: Login message: " . $result['message']);
 
         if ($result['success']) {
             // Generate CSRF token

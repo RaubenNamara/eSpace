@@ -44,10 +44,11 @@ class StudentController extends Controller
 
         $userId = $this->getCurrentUserId();
 
+        // Only columns the students table has (admission_date, date_of_birth and address don't
+        // exist - asking for them failed every request and left Settings blank)
         $sql = "SELECT s.id, s.username, s.email, s.admission_number, s.first_name, s.last_name, s.phone,
-                       s.is_active, s.created_at, s.class_id, s.stream_id, s.admission_date,
-                       s.date_of_birth, s.gender, s.address,
-                       c.name as class_name, c.level as class_level
+                       s.is_active, s.created_at, s.class_id, s.stream_id, s.gender,
+                       TRIM(CONCAT(c.name, ' ', COALESCE(c.stream_name, ''))) as class_name, c.level as class_level
                 FROM students s
                 LEFT JOIN classes c ON s.class_id = c.id
                 WHERE s.id = :id AND s.deleted_at IS NULL";
@@ -92,7 +93,7 @@ class StudentController extends Controller
         $updates = [];
         $params = ['id' => $userId];
 
-        $allowedFields = ['username', 'password', 'first_name', 'last_name', 'gender', 'phone', 'address'];
+        $allowedFields = ['username', 'password', 'first_name', 'last_name', 'gender', 'phone'];
 
         foreach ($allowedFields as $field) {
             if (isset($data[$field])) {

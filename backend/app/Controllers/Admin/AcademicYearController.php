@@ -130,7 +130,6 @@ class AcademicYearController extends Controller
      */
     public function update($id): void
     {
-        error_log("AcademicYearController::update called with id: " . $id);
         
         // Convert to integer
         $id = (int) $id;
@@ -199,7 +198,6 @@ class AcademicYearController extends Controller
      */
     public function destroy($id): void
     {
-        error_log("AcademicYearController::destroy called with id: " . $id);
         
         // Convert to integer
         $id = (int) $id;
@@ -244,7 +242,6 @@ class AcademicYearController extends Controller
      */
     public function terms($id): void
     {
-        error_log("AcademicYearController::terms called with id: " . $id);
         
         // Convert to integer
         $id = (int) $id;

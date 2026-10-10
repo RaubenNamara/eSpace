@@ -39,11 +39,9 @@ class UserController extends Controller
             $page = (int) $this->input('page', 1);
             $limit = (int) $this->input('limit', 20);
 
-            error_log("UserController::index - role: $role, search: $search, page: $page, limit: $limit");
 
             // Regular admins can only see other admins, super admins can see all admin types
             $currentUserRole = $this->getCurrentUserRole();
-            error_log("Current user role: $currentUserRole");
             
             if ($role === '') {
                 // Default to showing admin and super_admin users
@@ -58,7 +56,6 @@ class UserController extends Controller
                 }
             }
 
-            error_log("Final role to fetch: $role");
 
         // For super admins viewing all admin types, we need a custom query
         if ($currentUserRole === 'super_admin' && $role === 'admin') {
@@ -102,7 +99,6 @@ class UserController extends Controller
         }
 
         // Use the User model to get users with filters
-        error_log("Using model paginate with role: $role");
         $result = $this->userModel->paginate($page, $limit, [
             'role' => $role,
             'search' => $search

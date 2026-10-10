@@ -234,7 +234,6 @@ abstract class Model
             $sql = "SELECT * FROM {$this->table}";
             $params = [];
 
-            error_log("Model::paginate - table: {$this->table}, page: $page, limit: $limit, filters: " . json_encode($filters));
 
             if (!empty($filters)) {
                 $where = [];
@@ -266,8 +265,6 @@ abstract class Model
                 $sql .= ' AND deleted_at IS NULL';
             }
 
-            error_log("Main SQL: $sql");
-            error_log("Params: " . json_encode($params));
 
             // Get total count
             $countSql = "SELECT COUNT(*) as total FROM {$this->table}";
@@ -298,13 +295,11 @@ abstract class Model
                 $countSql .= ' AND deleted_at IS NULL';
             }
             
-            error_log("Count SQL: $countSql");
             
             $countStmt = $this->db->prepare($countSql);
             $countStmt->execute($params);
             $total = (int) $countStmt->fetch()['total'];
 
-            error_log("Total count: $total");
 
             // Get paginated results
             $sql .= " ORDER BY created_at DESC LIMIT {$limit} OFFSET {$offset}";
@@ -312,7 +307,6 @@ abstract class Model
             $stmt->execute($params);
             $data = $stmt->fetchAll();
 
-            error_log("Fetched " . count($data) . " records");
 
             return [
                 'data' => array_map([$this, 'hideFields'], $data),
