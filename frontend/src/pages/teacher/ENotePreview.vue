@@ -1,5 +1,8 @@
 <template>
-  <div class="h-screen flex flex-col bg-gray-50 dark:bg-gray-950">
+  <!-- On a desktop the app's header (4rem) and the page padding (2 x 1.5rem) are still showing
+       outside Read Mode, so the reader takes what's left of the screen rather than a full screen's
+       height - otherwise the whole page runs past the bottom and the Previous/Next bar with it. -->
+  <div class="flex flex-col bg-gray-50 dark:bg-gray-950" :class="readMode ? 'h-screen' : 'h-screen lg:h-[calc(100vh-7rem)]'">
     <!-- Header - hidden entirely in Read Mode (replaced by floating overlay controls), and also
          auto-collapses while the reader scrolls down through a page's content, reappearing on
          scroll-up - same idea as the app shell's own header (MainLayout.vue), applied here so
@@ -523,7 +526,7 @@
             <div
               ref="bookWrapRef"
               :class="[
-                readMode ? 'flex-1 min-h-0' : 'flex-1 min-h-0 lg:flex-none lg:h-[80vh] lg:min-h-[420px] lg:mb-3',
+                readMode ? 'flex-1 min-h-0' : 'flex-1 min-h-0 lg:flex-none lg:h-[calc(100vh-16.5rem)] lg:min-h-[420px] lg:mb-3',
                 zoomLevel > MIN_ZOOM ? 'overflow-auto' : 'overflow-hidden',
               ]"
             >
@@ -656,24 +659,6 @@
 
                       <ExplainItBack v-if="isStudentMode && topic" :topic-id="topic.id" :page-id="page.id" />
 
-                      <!-- Student's own private summary of this page - never seen by the teacher/HOD.
-                           Folded away as a tab at the foot of the page ("My summary" when there is
-                           one, "Add my summary" when not); clicking it unfolds the note. -->
-                      <UnfoldingNote
-                        v-if="isStudentMode"
-                        :model-value="pageNotes[page.id] || ''"
-                        @update:model-value="pageNotes[page.id] = $event"
-                        :open="!!openSummaries[page.id]"
-                        @update:open="openSummaries[page.id] = $event"
-                        :color="pageColor(page.id)"
-                        @update:color="setPageColor(page.id, $event)"
-                        :status="pageNoteStatus[page.id]"
-                        heading="My Summary"
-                        tab-label="My summary"
-                        add-label="Add my summary"
-                        show-add
-                        @input="onPageNoteInput(page.id)"
-                      />
                     </div>
 
                     <!-- Teacher-enabled running footer, like the foot of a printed book's page -->
@@ -723,24 +708,49 @@
             <p class="text-gray-500 dark:text-gray-400">This topic has no pages yet.</p>
           </div>
 
-          <!-- Navigation Buttons - replaced by floating overlay arrows in Read Mode. -->
-          <div v-if="!readMode" class="flex items-center justify-between flex-shrink-0 px-3 pb-3 pt-2 lg:px-0 lg:pb-0 lg:pt-0">
+          <!-- Navigation Buttons - replaced by floating overlay arrows in Read Mode. On a desktop the
+               bar sticks to the bottom of the screen, so turning the page (and the student's summary
+               tab in the middle) is always in reach, however far down the reader has scrolled. -->
+          <div v-if="!readMode" class="grid grid-cols-[1fr_auto_1fr] items-center gap-2 flex-shrink-0 px-3 pb-3 pt-2 lg:px-0 lg:py-2 lg:sticky lg:bottom-0 lg:z-30 lg:bg-gray-50/90 lg:dark:bg-gray-950/90 lg:backdrop-blur-sm">
             <button
               @click="handlePrevious"
               :disabled="!hasPreviousPage"
-              class="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base font-medium bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              class="justify-self-start flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base font-medium bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
               </svg>
-              <span>Previous</span>
+              <span class="hidden min-[400px]:inline">Previous</span>
             </button>
+
+            <!-- Student's own private summary of the open page - never seen by the teacher/HOD.
+                 The tab stays here in the bar (not at the foot of a long page) and follows the
+                 reader from page to page; the note opens upwards over the page. -->
+            <div class="col-start-2 flex justify-center">
+              <UnfoldingNote
+                v-if="isStudentMode && currentPage"
+                :key="currentPage.id"
+                pinned
+                :model-value="pageNotes[currentPage.id] || ''"
+                @update:model-value="pageNotes[currentPage.id] = $event"
+                :open="!!openSummaries[currentPage.id]"
+                @update:open="openSummaries[currentPage.id] = $event"
+                :color="pageColor(currentPage.id)"
+                @update:color="setPageColor(currentPage.id, $event)"
+                :status="pageNoteStatus[currentPage.id]"
+                heading="My Summary"
+                tab-label="My summary"
+                add-label="Add my summary"
+                show-add
+                @input="onPageNoteInput(currentPage.id)"
+              />
+            </div>
 
             <button
               v-if="!(isStudentMode && !hasNextPage)"
               @click="handleNext"
               :disabled="!hasNextPage"
-              class="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2 text-sm sm:text-base font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm hover:shadow-md hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-sm transition-all"
+              class="col-start-3 justify-self-end flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2 text-sm sm:text-base font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm hover:shadow-md hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-sm transition-all"
             >
               <span>Next</span>
               <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -757,6 +767,25 @@
          the entire screen. Fixed (not absolute) so they stay put regardless of any scrolling
          inside the book area. -->
     <template v-if="readMode">
+      <div v-if="isStudentMode && currentPage" class="fixed left-1/2 -translate-x-1/2 bottom-6 z-50">
+                <UnfoldingNote
+                  v-if="isStudentMode"
+                  :key="currentPage.id"
+                  pinned
+                  :model-value="pageNotes[currentPage.id] || ''"
+                  @update:model-value="pageNotes[currentPage.id] = $event"
+                  :open="!!openSummaries[currentPage.id]"
+                  @update:open="openSummaries[currentPage.id] = $event"
+                  :color="pageColor(currentPage.id)"
+                  @update:color="setPageColor(currentPage.id, $event)"
+                  :status="pageNoteStatus[currentPage.id]"
+                  heading="My Summary"
+                  tab-label="My summary"
+                  add-label="Add my summary"
+                  show-add
+                  @input="onPageNoteInput(currentPage.id)"
+                />
+      </div>
       <button
         @click="handlePrevious"
         :disabled="!hasPreviousPage"

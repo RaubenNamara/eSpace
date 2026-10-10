@@ -248,10 +248,14 @@
             />
           </div>
 
+        </div>
+
           <!-- Each page on show has its own note, folded away as a tab at the foot of that page:
                "My note" where the student has written one, "Add my note" where not. In the two-page
                view the left and right pages each get one (the book is centred, so the spine is the
-               middle of this area); clicking a tab unfolds that page's note (UnfoldingNote). -->
+               middle of this area); clicking a tab unfolds that page's note (UnfoldingNote).
+               Laid over the frame, not inside the scrolling area, so a zoomed-in or Read Mode page
+               scrolls under the notes instead of carrying them away. -->
           <template v-if="notesEnabled && !preparing && bookImages.length">
             <UnfoldingNote
               v-for="slot in noteSlots"
@@ -265,12 +269,11 @@
               @update:open="openNotes[slot.page] = $event"
               :color="noteColorOf(slot.page)"
               :status="noteStatus[slot.page] ?? 'idle'"
-              :heading="`My Note — Page ${slot.page}`"
+              :heading="`My Note · p. ${slot.page}`"
               @update:color="setNoteColor(slot.page, $event)"
               @input="onNoteInput(slot.page)"
             />
           </template>
-        </div>
 
           <!-- Reading focus overlay - a plain colored tint over the whole visible book, at any scroll -->
           <div

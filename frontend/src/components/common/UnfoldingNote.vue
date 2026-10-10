@@ -3,12 +3,15 @@
        page. Clicking the tab unfolds the note like a folded slip of paper: a small folded square
        opens out to the right into a strip, then opens up (or down, in a page's flow) to its full
        size, fold creases flattening as it opens. Used by the eLibrary / Item Bank reader (floating
-       over the book) and the eNotes reader (at the foot of each page).
+       over the book) and the eNotes reader (pinned: the tab sits in the reader's always-visible
+       Previous/Next bar and the note opens upwards over the page, so it never scrolls away).
        mousedown/touchstart .stop: in the eNotes reader this sits inside page-flip's page, whose
        drag-to-flip listener would otherwise swallow focusing the textarea. -->
   <div
     class="unfolding-note"
-    :class="floating ? 'is-floating absolute left-3 bottom-3 z-40 pointer-events-none' : 'is-inline relative mt-6'"
+    :class="pinned
+      ? 'is-floating is-pinned relative z-40 pointer-events-none'
+      : floating ? 'is-floating absolute left-3 bottom-3 z-40 pointer-events-none' : 'is-inline relative mt-6'"
     @mousedown.stop
     @touchstart.stop
   >
@@ -37,11 +40,13 @@
       </button>
     </Transition>
 
+    <!-- Pinned: the note opens upwards from where the tab was, centred on it -->
+    <div :class="pinned ? 'absolute bottom-0 left-1/2 -translate-x-1/2 w-[22rem] max-w-[calc(100vw-1.5rem)]' : 'contents'">
     <Transition name="note-unfold">
       <div
         v-if="open"
         class="note-card pointer-events-auto rounded-2xl bg-white dark:bg-gray-800 shadow-2xl ring-1 ring-black/5 dark:ring-white/10 overflow-hidden flex flex-col"
-        :class="floating ? 'w-[22rem] max-w-full' : 'w-full max-w-md'"
+        :class="pinned ? 'w-full' : floating ? 'w-[22rem] max-w-full' : 'w-full max-w-md'"
       >
         <div class="note-card-body flex-1 min-h-0 p-3 flex flex-col" :class="style.panel">
           <div class="flex items-center justify-between gap-2 mb-1.5 flex-shrink-0">
@@ -71,7 +76,7 @@
           <textarea
             :value="modelValue"
             @input="onInput"
-            :rows="floating ? 5 : 4"
+            :rows="floating || pinned ? 5 : 4"
             maxlength="2000"
             placeholder="What did you understand from this page? (only you can see this)"
             class="flex-1 w-full text-sm px-3 py-2 rounded-lg border placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 resize-none"
@@ -80,6 +85,7 @@
         </div>
       </div>
     </Transition>
+    </div>
   </div>
 </template>
 
@@ -97,6 +103,8 @@ const props = withDefaults(defineProps<{
   heading?: string
   // Over the book (eLibrary / Item Bank) rather than in the page's own flow (eNotes)
   floating?: boolean
+  // Fixed to a corner of the screen, so it stays in view however far the page is scrolled
+  pinned?: boolean
   // Show an "Add my note" tab on pages that have no note yet
   showAdd?: boolean
   tabLabel?: string
@@ -105,6 +113,7 @@ const props = withDefaults(defineProps<{
   status: 'idle',
   heading: 'My Note',
   floating: false,
+  pinned: false,
   showAdd: false,
   tabLabel: 'My note',
   addLabel: 'Add my note'
