@@ -976,9 +976,7 @@ const loadTopic = async () => {
   topicLoadFailed.value = false
   const keepPageId = currentPage.value?.id ?? null
   try {
-    console.log('Loading topic:', topicId.value)
     const response = await axios.get(`${API_BASE}/teacher/enotes/topics/${topicId.value}`)
-    console.log('Topic response:', response.data)
     if (response.data.success) {
       hasUnsavedChanges.value = false
       topic.value = response.data.data
@@ -990,7 +988,6 @@ const loadTopic = async () => {
         // resolveContentAssetUrls()). Re-saving the page persists the corrected src for good.
         content: resolveContentAssetUrls(page.content || '')
       }))
-      console.log('Pages loaded:', pages.value.length)
 
       if (pages.value.length > 0) {
         // Stay on the page being edited (a reload after a move or copy used to jump back to page 1,
@@ -998,12 +995,10 @@ const loadTopic = async () => {
         // insights) picks the page
         const wanted = keepPageId ?? Number(route.query.page)
         currentPage.value = pages.value.find(p => p.id === wanted) ?? pages.value[0]
-        console.log('Current page set:', currentPage.value)
       } else {
         // A topic with zero pages (freshly created, or every page deleted) has nothing for the
         // teacher to click into - create the first one automatically so the editor is ready to
         // type into the moment the builder appears, instead of an empty state and an extra click.
-        console.log('No pages found, creating a first page automatically')
         await addPage()
       }
 
@@ -1858,7 +1853,6 @@ const createAoiAssessment = async () => {
 }
 
 onMounted(() => {
-  console.log('ENoteBuilder mounted, topicId:', topicId.value)
   loadTopic()
   loadAcademicYears()
   loadCurrentTermInfo()

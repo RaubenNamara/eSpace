@@ -2,12 +2,12 @@
   <div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4" @click.self="$emit('close')">
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
       <!-- Header -->
-      <div class="bg-indigo-600 px-6 py-5 flex items-center justify-between">
+      <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-5 flex items-center justify-between">
         <div>
-          <h2 class="text-lg font-bold text-white">Account Settings</h2>
-          <p class="text-xs text-indigo-100">Update your photo and password</p>
+          <h2 class="text-lg font-bold text-gray-900 dark:text-white">Account Settings</h2>
+          <p class="text-xs text-gray-500 dark:text-gray-400">Update your photo and password</p>
         </div>
-        <button @click="$emit('close')" class="text-white/80 hover:text-white transition-colors">
+        <button @click="$emit('close')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-colors">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
           </svg>

@@ -1,5 +1,5 @@
 <template>
-  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+  <div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
     <div class="bg-white dark:bg-[#202c33] rounded-xl w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col">
       <div class="p-5 border-b border-gray-200 dark:border-white/5 flex items-center gap-2">
         <button v-if="mode === 'list'" @click="backToChooser" class="p-1.5 -ml-1.5 hover:bg-gray-100 dark:hover:bg-[#2a3942] rounded-lg transition-colors flex-shrink-0">

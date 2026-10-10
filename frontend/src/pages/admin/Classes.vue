@@ -51,8 +51,8 @@
     </DataTable>
 
     <!-- Class Modal -->
-    <div v-if="showClassModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+    <div v-if="showClassModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-md">
         <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
           {{ editingClass ? 'Edit Class' : 'Add Class' }}
         </h3>
@@ -123,8 +123,8 @@
 
 
     <!-- Delete Confirmation Modal -->
-    <div v-if="showDeleteModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+    <div v-if="showDeleteModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-md">
         <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Confirm Delete</h3>
         <p class="text-gray-700 dark:text-gray-300 mb-6">
           Are you sure you want to delete this {{ deleteTargetType }}? This action cannot be undone.
@@ -284,7 +284,6 @@ const saveClass = async () => {
       stream_name: classForm.value.stream_name
     }
 
-    console.log('Saving class with data:', data)
 
     let response
     if (editingClass.value) {
@@ -293,7 +292,6 @@ const saveClass = async () => {
       response = await apiService.post('/admin/classes', data)
     }
 
-    console.log('Save class response:', response.data)
 
     if (response.data.success) {
       closeClassModal()

@@ -1,13 +1,10 @@
 <template>
   <div>
-    <!-- Header - a plain title/subtitle row, matching the compact style used on the teacher
-         dashboard and classes page, instead of a hero card. -->
-    <div class="mb-4">
-      <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">My Classes</h1>
-      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-        Classes and departments you're enrolled in<span v-if="!loadingClasses && classes.length > 0"> &middot; {{ classes.length }} {{ classes.length === 1 ? 'class' : 'classes' }}</span>
-      </p>
-    </div>
+    <PageHeader
+      title="My Classes"
+      :description="!loadingClasses && classes.length ? `Your classes and the subjects you take in each - ${classes.length} ${classes.length === 1 ? 'subject' : 'subjects'} in all. Open one to see your classmates.` : 'Your classes and the subjects you take in each.'"
+      icon="users"
+    />
 
     <!-- Classes List -->
     <template v-if="!selectedClass">
@@ -36,47 +33,30 @@
         </svg>
         <p class="text-gray-500 dark:text-gray-400">You're not enrolled in any classes yet</p>
       </div>
-      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        <button
-          v-for="(cls, idx) in classes"
-          :key="`${cls.id}-${cls.department_id}`"
-          @click="selectClass(cls)"
-          class="group text-left rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-indigo-200 dark:hover:border-indigo-800 transition-all overflow-hidden"
-        >
-          <div class="h-1.5" :class="cardAccent(idx)"></div>
-          <div class="p-5">
-            <div class="flex items-start justify-between gap-3 mb-4">
-              <div class="min-w-0">
-                <h3 class="text-lg font-bold text-gray-900 dark:text-white truncate">{{ cls.name }}</h3>
-                <p class="text-xs text-gray-500 dark:text-gray-400">{{ cls.level }}</p>
-              </div>
-              <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-white shadow-sm" :class="cardAccent(idx)">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-4-4"></path>
-                </svg>
-              </div>
-            </div>
-            <div class="space-y-2 mb-4">
-              <div class="flex items-center justify-between text-xs">
-                <span class="text-gray-400 dark:text-gray-500">Department</span>
-                <span class="font-medium text-gray-700 dark:text-gray-300 truncate max-w-[60%] text-right">{{ cls.department_name || 'N/A' }}</span>
-              </div>
-              <div class="flex items-center justify-between text-xs">
-                <span class="text-gray-400 dark:text-gray-500">Stream</span>
-                <span class="font-medium text-gray-700 dark:text-gray-300">{{ cls.stream_name || 'N/A' }}</span>
-              </div>
-            </div>
-            <div class="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700">
-              <span class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-4-4"></path></svg>
-                {{ cls.student_count }} classmate{{ cls.student_count === 1 ? '' : 's' }}
-              </span>
-              <span class="text-indigo-600 dark:text-indigo-400 text-xs font-semibold flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                View <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-              </span>
-            </div>
+      <!-- One section per class (newest year first), its subjects as cards -->
+      <div v-else class="space-y-8">
+        <section v-for="g in classGroups" :key="g.key">
+          <div class="flex items-baseline gap-2 mb-3">
+            <h2 class="text-base font-bold text-gray-900 dark:text-white">{{ g.label }}</h2>
+            <span class="text-xs text-gray-400">{{ g.level }}<template v-if="g.year"> · {{ g.year }}</template> · {{ g.items.length }} {{ g.items.length === 1 ? 'subject' : 'subjects' }}</span>
           </div>
-        </button>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <button
+              v-for="cls in g.items"
+              :key="`${cls.id}-${cls.department_id}`"
+              type="button"
+              class="group text-left rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:-translate-y-0.5 hover:border-indigo-200 dark:hover:border-indigo-700 transition-all p-4 flex items-center gap-3"
+              @click="selectClass(cls)"
+            >
+              <span class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 text-white text-xs font-extrabold tracking-wide shadow-sm" :style="{ background: tint(cls.department_name || '') }">{{ code(cls.department_name) }}</span>
+              <span class="min-w-0 flex-1">
+                <span class="block text-base font-bold text-gray-900 dark:text-white truncate">{{ cls.department_name || 'Subject' }}</span>
+                <span class="block text-xs text-gray-500 dark:text-gray-400">{{ cls.student_count }} classmate{{ cls.student_count === 1 ? '' : 's' }}</span>
+              </span>
+              <svg class="w-4 h-4 text-gray-300 group-hover:text-indigo-500 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+            </button>
+          </div>
+        </section>
       </div>
     </template>
 
@@ -162,7 +142,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
 import axios from 'axios'
 
 const API_BASE = '/api'
@@ -246,7 +227,23 @@ const cardPalettes = [
   'bg-sky-600',
   'bg-violet-600'
 ]
-const cardAccent = (idx: number) => cardPalettes[idx % cardPalettes.length]
+// One colour per subject (the same subject keeps its colour everywhere on the page)
+const TINTS = ['#4f46e5', '#0d9488', '#b45309', '#be123c', '#7c3aed', '#0369a1', '#4d7c0f', '#c2410c']
+const tint = (name: string) => TINTS[[...name].reduce((h, c) => h + c.charCodeAt(0), 0) % TINTS.length]
+const code = (name: string | null) => (name || '?').replace(/[^A-Za-z]/g, '').slice(0, 4).toUpperCase()
+
+// The subjects grouped by the class they're taken in, newest year first
+const classGroups = computed(() => {
+  const map = new Map<string, { key: string; label: string; level: string; year: string | null; items: StudentClass[] }>()
+  for (const c of classes.value) {
+    const key = `${c.name}|${c.stream_name || ''}|${c.academic_year || ''}`
+    if (!map.has(key)) map.set(key, { key, label: [c.name, c.stream_name].filter(Boolean).join(' '), level: c.level, year: c.academic_year, items: [] })
+    map.get(key)!.items.push(c)
+  }
+  const groups = [...map.values()]
+  for (const g of groups) g.items.sort((a, b) => (a.department_name || '').localeCompare(b.department_name || ''))
+  return groups.sort((a, b) => (b.year || '').localeCompare(a.year || '') || b.label.localeCompare(a.label, undefined, { numeric: true }))
+})
 const avatarPalette = (id: number) => cardPalettes[Math.abs(id) % cardPalettes.length]
 
 const studentInitials = (student: Classmate) => {

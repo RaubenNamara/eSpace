@@ -72,8 +72,8 @@
     </DataTable>
 
     <!-- Create Teacher Modal -->
-    <div v-if="showCreateModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div v-if="showCreateModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div class="p-6 border-b border-gray-200 dark:border-gray-700">
           <h2 class="text-xl font-bold text-gray-900 dark:text-white">Add Teacher</h2>
         </div>
@@ -164,8 +164,8 @@
     </div>
 
     <!-- Reset Password Modal -->
-    <div v-if="showResetModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+    <div v-if="showResetModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full">
         <div class="p-6 border-b border-gray-200 dark:border-gray-700">
           <h2 class="text-xl font-bold text-gray-900 dark:text-white">Reset Password</h2>
         </div>
@@ -199,8 +199,8 @@
     </div>
 
     <!-- Edit Teacher Modal -->
-    <div v-if="showEditModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div v-if="showEditModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div class="p-6 border-b border-gray-200 dark:border-gray-700">
           <h2 class="text-xl font-bold text-gray-900 dark:text-white">Edit Teacher</h2>
         </div>
@@ -298,7 +298,7 @@
 
     <!-- View Teacher Drawer -->
     <div v-if="showViewDrawer" class="fixed inset-0 z-50 overflow-hidden">
-      <div class="absolute inset-0 bg-black bg-opacity-50" @click="showViewDrawer = false"></div>
+      <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="showViewDrawer = false"></div>
       <div class="absolute inset-y-0 right-0 max-w-md w-full bg-white dark:bg-gray-800 shadow-xl overflow-y-auto">
         <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
           <h2 class="text-xl font-bold text-gray-900 dark:text-white">Teacher Details</h2>
@@ -672,9 +672,7 @@ const createTeacher = async () => {
 
   creating.value = true
   try {
-    console.log('Creating teacher with data:', formData.value)
     const response = await apiService.post('/admin/teachers', formData.value)
-    console.log('Response:', response)
 
     if (response.data.success) {
       showCreateModal.value = false

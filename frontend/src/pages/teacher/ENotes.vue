@@ -653,8 +653,8 @@
     </div>
 
     <!-- Duplicate Topic Modal -->
-    <div v-if="showDuplicateModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div class="bg-white dark:bg-gray-800 rounded-lg w-full max-w-md max-h-[85vh] overflow-hidden flex flex-col">
+    <div v-if="showDuplicateModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[85vh] overflow-hidden flex flex-col">
         <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <div>
             <h3 class="text-xl font-semibold text-gray-900 dark:text-white">{{ copyingShared ? 'Copy to my classes' : 'Duplicate Topic' }}</h3>
@@ -1172,16 +1172,9 @@ const loadTopics = async () => {
 const loadAssignments = async () => {
   try {
     const response = await axios.get(`${API_BASE}/teacher/enotes/assignments`)
-    console.log('Assignments full response:', response)
-    console.log('Assignments response.data:', response.data)
-    console.log('Assignments response.data.success:', response.data.success)
-    console.log('Assignments response.data.data:', response.data.data)
     
     if (response.data.success) {
       assignments.value = response.data.data
-      console.log('Subjects loaded:', response.data.data.subjects)
-      console.log('Classes loaded:', response.data.data.classes)
-      console.log('Department ID:', response.data.data.department_id)
       assignmentsError.value = null
     } else {
       console.error('Assignments API returned error:', response.data)

@@ -105,6 +105,7 @@
 </template>
 
 <script setup lang="ts">
+import { useConfirmStore } from '@/stores/confirm'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
@@ -114,6 +115,7 @@ import EmptyState from '@/components/ui/EmptyState.vue'
 import Skeleton from '@/components/ui/Skeleton.vue'
 import { niceName, timeAgo } from '@/components/dashboard/teacher/time'
 import { useToastStore } from '@/stores/toast'
+const confirmDialog = useConfirmStore()
 
 interface Notice {
   id: number
@@ -181,7 +183,7 @@ const toggle = async (n: Notice) => {
 }
 
 const remove = async (n: Notice) => {
-  if (!window.confirm(`Remove "${n.title}" from the noticeboard?`)) return
+  if (!await confirmDialog.open({ title: 'Remove notice', message: `Remove "${n.title}" from the noticeboard?`, confirmLabel: 'Remove', danger: true })) return
   try {
     await axios.delete(`${api.value}/${n.id}`)
     notices.value = notices.value.filter(x => x.id !== n.id)

@@ -31,12 +31,9 @@ export const useAuthStore = defineStore('auth', () => {
   const userId = computed(() => user.value?.id)
   const userName = computed(() => {
     // For students, use first_name from the students table if available
-    console.log('userName computed:', user.value)
     if (user.value?.role === 'student' && (user.value as any).first_name) {
-      console.log('Using first_name:', (user.value as any).first_name)
       return (user.value as any).first_name
     }
-    console.log('Using username:', user.value?.username)
     return user.value?.username || 'User'
   })
   const userEmail = computed(() => user.value?.email)
@@ -86,17 +83,12 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function login(credentials: LoginCredentials) {
-    console.log('Login function called with credentials:', credentials)
     isLoading.value = true
     error.value = null
 
     try {
-      console.log('Making API call to login endpoint...')
       const response = await apiService.login(credentials.identifier, credentials.password)
       
-      console.log('API response received:', response)
-      console.log('Response data:', response.data)
-      console.log('Response structure:', JSON.stringify(response.data, null, 2))
       
       // Handle different response structures using helper
       const responseData = response.data as AuthApiResponse
@@ -104,11 +96,8 @@ export const useAuthStore = defineStore('auth', () => {
       const message = payload.message || 'Login successful'
       const success = responseData.success
       
-      console.log('Extracted user:', payload.user)
-      console.log('User role:', payload.user?.role)
       
       if (success && payload.user) {
-        console.log('Login - Raw user data from server:', payload.user)
         // Store only essential user fields to avoid circular references
         const plainUser = {
           id: payload.user.id,
@@ -134,7 +123,6 @@ export const useAuthStore = defineStore('auth', () => {
           (plainUser as any).admission_number = payload.user.admission_number
         }
         
-        console.log('Storing user data:', plainUser)
         applyUserData(plainUser)
 
         // Store tokens
@@ -145,10 +133,8 @@ export const useAuthStore = defineStore('auth', () => {
         // Store user data
         localStorage.setItem('user', JSON.stringify(plainUser))
         
-        console.log('Login successful, user stored:', plainUser)
         return { success: true, message: message, user: plainUser }
       } else {
-        console.log('Login failed condition:', { success, user: payload.user, message })
         error.value = message || 'Login failed'
         return { success: false, message: error.value }
       }

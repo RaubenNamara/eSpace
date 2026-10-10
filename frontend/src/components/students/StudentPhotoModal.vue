@@ -1,6 +1,6 @@
 <template>
-  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.self="closeModal">
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-sm w-full mx-4 p-6">
+  <div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" @click.self="closeModal">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-sm w-full mx-4 p-6">
       <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-1">Student Photo</h2>
       <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">{{ studentName }} &middot; appears on their report card.</p>
 

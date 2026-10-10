@@ -19,8 +19,8 @@
     />
 
     <!-- Academic Year Modal -->
-    <div v-if="showAcademicYearModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+    <div v-if="showAcademicYearModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-md">
         <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
           {{ editingAcademicYear ? 'Edit Academic Year' : 'Add Academic Year' }}
         </h3>
@@ -84,8 +84,8 @@
     </div>
 
     <!-- Term Modal -->
-    <div v-if="showTermModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+    <div v-if="showTermModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-md">
         <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
           {{ editingTerm ? 'Edit Term' : 'Add Term' }}
         </h3>
@@ -165,8 +165,8 @@
     </div>
 
     <!-- Delete Confirmation Modal -->
-    <div v-if="showDeleteModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+    <div v-if="showDeleteModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-md">
         <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Confirm Delete</h3>
         <p class="text-gray-700 dark:text-gray-300 mb-6">
           Are you sure you want to delete this {{ deleteTargetType }}? This action cannot be undone.
@@ -252,12 +252,9 @@ const fetchAcademicYears = async () => {
 const fetchTerms = async () => {
   loading.value = true
   try {
-    console.log('Fetching terms...')
     const response = await apiService.get('/admin/terms')
-    console.log('Terms response:', response.data)
     if (response.data.success) {
       terms.value = response.data.data
-      console.log('Terms loaded:', terms.value)
     } else {
       console.error('Failed to fetch terms:', response.data.message)
     }

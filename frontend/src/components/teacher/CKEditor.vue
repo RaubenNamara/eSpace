@@ -224,15 +224,12 @@ class SimpleUploadAdapter {
   private xhr: XMLHttpRequest | null = null
 
   constructor(loader: any) {
-    console.log('SimpleUploadAdapter constructor called')
     this.loader = loader
   }
 
   upload() {
-    console.log('SimpleUploadAdapter upload() called')
     return new Promise((resolve, reject) => {
       this.loader.file.then((file: File) => {
-        console.log('File received for upload:', file.name, file.size, file.type)
 
         // Reject an oversized file immediately instead of spending time uploading it only for
         // the backend to reject it after the fact (matches ENoteImageController's own caps).
@@ -258,7 +255,6 @@ class SimpleUploadAdapter {
         // is just '/api/teacher/enotes/upload-image' - kept in case a future deployment ever
         // needs a subpath prefix again.
         const uploadUrl = import.meta.env.BASE_URL.replace(/\/$/, '') + '/api/teacher/enotes/upload-image'
-        console.log('Uploading to:', uploadUrl)
         this.xhr.open('POST', uploadUrl, true)
         
         // Note: Backend uses session-based authentication, no token needed
@@ -268,20 +264,15 @@ class SimpleUploadAdapter {
 
         this.xhr.upload.onprogress = (event) => {
           if (event.lengthComputable) {
-            const progress = Math.round((event.loaded / event.total) * 100)
-            console.log('Upload progress:', progress + '%')
             this.loader.uploadTotal = event.total
             this.loader.uploaded = event.loaded
           }
         }
 
         this.xhr.onload = () => {
-          console.log('Upload completed with status:', this.xhr?.status)
-          console.log('Response:', this.xhr?.response)
           
           if (this.xhr?.status === 200) {
             const response = this.xhr.response
-            console.log('Upload response:', response)
             if (response.url) {
               // The backend returns a root-relative path (e.g. '/uploads/enotes/xxx.png'),
               // relative to backend/public/ - not aware of the /eSpace/ subpath the app is
@@ -291,7 +282,6 @@ class SimpleUploadAdapter {
               const resolvedUrl = /^(https?:|data:|blob:)/i.test(response.url)
                 ? response.url
                 : import.meta.env.BASE_URL.replace(/\/$/, '') + (response.url.startsWith('/') ? response.url : `/${response.url}`)
-              console.log('Resolving with URL:', resolvedUrl)
               resolve({
                 default: resolvedUrl
               })
@@ -324,7 +314,6 @@ class SimpleUploadAdapter {
           reject(new Error('Upload aborted'))
         }
 
-        console.log('Sending upload request...')
         this.xhr.send(data)
       }).catch((error: any) => {
         console.error('Error getting file from loader:', error)
@@ -334,7 +323,6 @@ class SimpleUploadAdapter {
   }
 
   abort() {
-    console.log('Upload aborted')
     if (this.xhr) {
       this.xhr.abort()
     }
@@ -457,7 +445,6 @@ class InsertVideoPlugin {
 }
 
 const configureEditor = () => {
-  console.log('Configuring CKEditor with modular plugins...')
   
   // Register the custom upload adapter plugin
   class SimpleUploadAdapterPlugin {
@@ -760,11 +747,9 @@ const configureEditor = () => {
       }
     }
   }
-  console.log('CKEditor config set:', editorConfig.value)
 }
 
 const emitUpdate = (...args: unknown[]) => {
-  console.log('emitUpdate called with args:', args)
   let value = ''
   
   // Handle different argument structures from CKEditor
@@ -785,30 +770,23 @@ const emitUpdate = (...args: unknown[]) => {
     value = String(value || '')
   }
   
-  console.log('Emitting value:', value)
   emit('update:modelValue', value)
 }
 
 const onReady = (editor: any) => {
-  console.log('CKEditor ready:', editor)
   emit('ready', editor)
   
   try {
     const editorElement = editor.ui.getEditableElement()
     if (editorElement) {
       editorElement.style.minHeight = props.minHeight
-      console.log('CKEditor element set min-height:', props.minHeight)
     }
     
     // Log the model value being passed to editor
-    console.log('CKEditor modelValue (first 500 chars):', props.modelValue ? props.modelValue.substring(0, 500) : 'empty')
-    console.log('CKEditor modelValue contains iframe:', props.modelValue && props.modelValue.includes('iframe') ? 'YES' : 'NO')
-    console.log('CKEditor modelValue contains oembed:', props.modelValue && props.modelValue.includes('oembed') ? 'YES' : 'NO')
     
     // Force media embeds to render when content is loaded
     if (editor.editing && editor.editing.view && editor.editing.view.document) {
       editor.editing.view.document.on('change:data', () => {
-        console.log('Editor data changed, refreshing media embeds')
       })
     }
     
@@ -818,14 +796,8 @@ const onReady = (editor: any) => {
     }
     
     // Log the current editor data to debug
-    console.log('Initial editor data (first 500 chars):', editor.getData().substring(0, 500))
-    console.log('Initial editor data contains iframe:', editor.getData().includes('iframe') ? 'YES' : 'NO')
-    console.log('Initial editor data contains oembed:', editor.getData().includes('oembed') ? 'YES' : 'NO')
     
     // Check if media embed plugin is loaded
-    console.log('Media embed plugin loaded:', editor.plugins.has('MediaEmbed') ? 'YES' : 'NO')
-    console.log('GeneralHtmlSupport plugin loaded:', editor.plugins.has('GeneralHtmlSupport') ? 'YES' : 'NO')
-    console.log('HtmlEmbed plugin loaded:', editor.plugins.has('HtmlEmbed') ? 'YES' : 'NO')
   } catch (error) {
     console.error('Error in onReady:', error)
   }

@@ -59,13 +59,13 @@
     <div v-if="showViewEnrolledModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
       <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
         <!-- Header -->
-        <div class="bg-green-600 px-6 py-5 flex-shrink-0">
+        <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-5 flex-shrink-0">
           <div class="flex items-center justify-between gap-4">
             <div class="min-w-0">
-              <h2 class="text-xl sm:text-2xl font-bold text-white truncate">Enrolled Students in {{ analytics.department?.name }}</h2>
-              <p class="text-green-100 text-sm mt-1">View students enrolled in your department</p>
+              <h2 class="text-xl sm:text-xl font-bold text-gray-900 dark:text-white truncate">Enrolled Students in {{ analytics.department?.name }}</h2>
+              <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">View students enrolled in your department</p>
             </div>
-            <button @click="showViewEnrolledModal = false" class="text-white/80 hover:text-white hover:bg-white/10 rounded-lg p-1.5 transition-colors flex-shrink-0">
+            <button @click="showViewEnrolledModal = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-colors flex-shrink-0">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
@@ -405,13 +405,10 @@ const fetchEnrolledStudents = async () => {
       params.stream_name = viewFilters.value.stream_name
     }
 
-    console.log('Fetching enrolled students with params:', params)
     const response = await apiService.get('/teacher/students/enrolled', { params })
-    console.log('Response:', response.data)
 
     if (response.data?.success && response.data?.data) {
       enrolledStudentsList.value = response.data.data
-      console.log('Enrolled students loaded:', enrolledStudentsList.value.length)
     } else {
       console.error('API returned error:', response.data?.message)
     }
@@ -437,12 +434,12 @@ const deEnrollStudent = async (enrollmentId: number, firstName: string, lastName
     return
   }
 
-  const reason = prompt('Reason (optional):') || undefined
+  const reason = (await confirmDialog.ask({ title: 'Reason', message: 'Why is this learner leaving your class? (optional)', placeholder: 'e.g. changed stream', optional: true, confirmLabel: 'De-enroll', danger: true })) ?? null
+  if (reason === null) return
+  const reasonText = reason || undefined
 
-  console.log('De-enrolling student:', enrollmentId)
   try {
-    const response = await apiService.delete(`/teacher/students/${enrollmentId}`, { data: { reason } })
-    console.log('De-enroll response:', response.data)
+    const response = await apiService.delete(`/teacher/students/${enrollmentId}`, { data: { reason: reasonText } })
 
     if (response.data?.success) {
       // Refresh the enrolled students list

@@ -862,9 +862,9 @@
     </div>
 
     <!-- Add/Edit Question Modal -->
-    <div v-if="showAddQuestionModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-0 sm:p-4">
+    <div v-if="showAddQuestionModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-0 sm:p-4">
       <div
-        class="bg-white dark:bg-gray-800 rounded-none sm:rounded-lg w-full h-full sm:h-auto max-w-full sm:max-w-3xl max-h-full sm:max-h-[90vh] flex flex-col transition-all"
+        class="bg-white dark:bg-gray-800 rounded-none sm:rounded-2xl shadow-2xl w-full h-full sm:h-auto max-w-full sm:max-w-3xl max-h-full sm:max-h-[90vh] flex flex-col transition-all"
       >
         <h2 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white px-4 sm:px-6 pt-4 sm:pt-6 pb-2 flex-shrink-0">
           {{ editingQuestion ? 'Edit Question' : 'Add Question' }}
@@ -1155,8 +1155,8 @@
     </div>
 
     <!-- Preview Modal -->
-    <div v-if="showPreviewModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 overflow-y-auto p-0 sm:p-4">
-      <div class="bg-white dark:bg-gray-800 rounded-none sm:rounded-lg p-4 sm:p-6 max-w-4xl w-full min-h-full sm:min-h-0 sm:my-8">
+    <div v-if="showPreviewModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-start justify-center z-50 overflow-y-auto p-0 sm:p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-none sm:rounded-2xl shadow-2xl p-4 sm:p-6 max-w-4xl w-full min-h-full sm:min-h-0 sm:my-8">
         <div class="flex items-center justify-between mb-4 sm:mb-6 gap-2">
           <h2 class="text-lg sm:text-2xl font-semibold text-gray-900 dark:text-white break-words">Assignment Preview</h2>
           <button

@@ -61,8 +61,8 @@
     </DataTable>
 
     <!-- Create Department Modal -->
-    <div v-if="showCreateModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
+    <div v-if="showCreateModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full mx-4">
         <div class="p-6">
           <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4">Create New Department</h2>
           <form @submit.prevent="createDepartment">
@@ -116,8 +116,8 @@
     </div>
 
     <!-- Edit Department Modal -->
-    <div v-if="showEditModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
+    <div v-if="showEditModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full mx-4">
         <div class="p-6">
           <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4">Edit Department</h2>
           <form @submit.prevent="updateDepartment">
@@ -250,9 +250,7 @@ const fetchDepartments = async () => {
 const createDepartment = async () => {
   loading.value = true
   try {
-    console.log('Creating department with data:', formData.value)
     const response = await apiService.post('/admin/departments', formData.value)
-    console.log('Create department response:', response)
 
     if (response.data.success) {
       const createdName = formData.value.name

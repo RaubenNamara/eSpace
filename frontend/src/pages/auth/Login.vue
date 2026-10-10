@@ -638,33 +638,24 @@ onMounted(async () => {
 })
 
 async function handleLogin(): Promise<void> {
-  console.log('handleLogin function called')
   
   if (isLoading.value) {
-    console.log('Already loading, returning')
     return
   }
 
   error.value = null
 
   if (!form.identifier.trim()) {
-    console.log('Missing identifier')
     error.value = 'Please enter your username or email address.'
     identifierInput.value?.focus()
     return
   }
 
   if (!form.password) {
-    console.log('Missing password')
     error.value = 'Please enter your password.'
     return
   }
 
-  console.log('Starting login process with:', {
-    identifier: form.identifier.trim(),
-    hasPassword: !!form.password,
-    remember: form.remember
-  })
 
   isLoading.value = true
 
@@ -675,7 +666,6 @@ async function handleLogin(): Promise<void> {
       remember: form.remember
     })) as LoginResult & { user?: any }
 
-    console.log('Login result received:', result)
 
     if (!result.success) {
       error.value =
@@ -684,7 +674,6 @@ async function handleLogin(): Promise<void> {
       return
     }
 
-    console.log('Login successful, calling redirectUserByRole with user data')
     // Pass user data directly from result to avoid timing issues with store
     redirectUserByRole(result.user)
   } catch (loginError) {
@@ -700,11 +689,6 @@ async function handleLogin(): Promise<void> {
 function redirectUserByRole(userData: any): void {
   const role = String(userData?.role || '').toLowerCase()
   
-  console.log('Redirecting user by role:', {
-    userData: userData,
-    role: role,
-    roleType: typeof userData?.role
-  })
 
   const roleRoutes: Record<string, string> = {
     student: '/student/dashboard',

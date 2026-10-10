@@ -45,13 +45,13 @@
     <div v-if="showViewEnrolledModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-2 sm:p-4">
       <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[95vh] sm:max-h-[90vh] flex flex-col">
         <!-- Header -->
-        <div class="bg-green-600 px-4 sm:px-6 py-4 sm:py-5 flex-shrink-0 rounded-t-2xl">
+        <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-4 sm:py-5 flex-shrink-0 rounded-t-2xl">
           <div class="flex items-center justify-between gap-3">
             <div class="min-w-0">
-              <h2 class="text-lg sm:text-2xl font-bold text-white truncate">View Enrolled Students</h2>
-              <p class="text-green-100 text-xs sm:text-sm mt-1 hidden sm:block">View students enrolled by department and academic year</p>
+              <h2 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white truncate">View Enrolled Students</h2>
+              <p class="text-gray-500 dark:text-gray-400 text-xs sm:text-sm mt-1 hidden sm:block">View students enrolled by department and academic year</p>
             </div>
-            <button @click="showViewEnrolledModal = false" class="text-white/80 hover:text-white transition-colors flex-shrink-0 p-1 -m-1">
+            <button @click="showViewEnrolledModal = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-colors flex-shrink-0">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
@@ -266,13 +266,13 @@
     <div v-if="showEnrollModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-2 sm:p-4">
       <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[95vh] sm:max-h-[90vh] flex flex-col">
         <!-- Header -->
-        <div class="bg-indigo-600 px-4 sm:px-6 py-4 sm:py-5 flex-shrink-0 rounded-t-2xl">
+        <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-4 sm:py-5 flex-shrink-0 rounded-t-2xl">
           <div class="flex items-center justify-between gap-3">
             <div class="min-w-0">
-              <h2 class="text-lg sm:text-2xl font-bold text-white truncate">Enroll Students in Departments</h2>
-              <p class="text-indigo-100 text-xs sm:text-sm mt-1 hidden md:block">Assign students to their respective departments, or de-enroll students already in one</p>
+              <h2 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white truncate">Enroll Students in Departments</h2>
+              <p class="text-gray-500 dark:text-gray-400 text-xs sm:text-sm mt-1 hidden md:block">Assign students to their respective departments, or de-enroll students already in one</p>
             </div>
-            <button @click="showEnrollModal = false" class="text-white/80 hover:text-white transition-colors flex-shrink-0 p-1 -m-1">
+            <button @click="showEnrollModal = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-colors flex-shrink-0">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
@@ -1064,7 +1064,6 @@ const deenrollSingleStudent = async (enrollmentId: number) => {
 
 const enrollStudents = async () => {
   try {
-    console.log('Enroll data being sent:', enrollData.value)
     
     // Validate before sending
     if (!enrollData.value.department_id) {

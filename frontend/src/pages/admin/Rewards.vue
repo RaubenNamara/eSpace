@@ -202,9 +202,9 @@
     <!-- ============================ AWARD DETAIL MODAL ============================ -->
     <div v-if="activeAward" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4" @click.self="activeAward = null">
       <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto">
-        <div class="bg-indigo-600 px-6 py-4 flex items-center justify-between sticky top-0">
-          <h2 class="text-lg font-bold text-white"><BadgeIcon :type="activeAward.badge_type" class="w-4 h-4 inline-block align-[-2px]" /> {{ activeAward.award_title }}</h2>
-          <button @click="activeAward = null" class="text-white/80 hover:text-white">
+        <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between sticky top-0">
+          <h2 class="text-lg font-bold text-gray-900 dark:text-white"><BadgeIcon :type="activeAward.badge_type" class="w-4 h-4 inline-block align-[-2px]" /> {{ activeAward.award_title }}</h2>
+          <button @click="activeAward = null" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg p-1.5">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
           </button>
         </div>

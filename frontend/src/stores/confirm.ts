@@ -10,6 +10,15 @@ export interface ConfirmOptions {
   danger?: boolean
 }
 
+export interface AskOptions extends ConfirmOptions {
+  /** Placeholder shown in the text box */
+  placeholder?: string
+  /** What the box starts with */
+  value?: string
+  /** Allow an empty answer (e.g. an optional reason) */
+  optional?: boolean
+}
+
 /**
  * App-wide confirmation dialog, replacing native confirm() - ConfirmDialog.vue (mounted once in
  * App.vue) renders the current request and resolves the promise `open()` returned once the user
@@ -20,6 +29,9 @@ export const useConfirmStore = defineStore('confirm', () => {
   const visible = ref(false)
   const options = ref<Required<ConfirmOptions> | null>(null)
   let resolver: ((value: boolean) => void) | null = null
+  // ask(): a text box in the same dialog, in place of native prompt()
+  const input = ref<{ placeholder: string; optional: boolean } | null>(null)
+  const text = ref('')
 
   function open(opts: ConfirmOptions): Promise<boolean> {
     options.value = {
@@ -29,6 +41,7 @@ export const useConfirmStore = defineStore('confirm', () => {
       cancelLabel: opts.cancelLabel ?? 'Cancel',
       danger: opts.danger ?? false
     }
+    input.value = null
     visible.value = true
     return new Promise(resolve => { resolver = resolve })
   }
@@ -39,5 +52,16 @@ export const useConfirmStore = defineStore('confirm', () => {
     resolver = null
   }
 
-  return { visible, options, open, resolve }
+  /** Like open(), with a text box: the text typed, or null when cancelled */
+  async function ask(opts: AskOptions): Promise<string | null> {
+    const ok = open(opts)
+    input.value = { placeholder: opts.placeholder ?? '', optional: opts.optional ?? false }
+    text.value = opts.value ?? ''
+    const confirmed = await ok
+    const answer = text.value.trim()
+    input.value = null
+    return confirmed ? answer : null
+  }
+
+  return { visible, options, input, text, open, ask, resolve }
 })

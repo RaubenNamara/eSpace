@@ -70,13 +70,13 @@
     <!-- Create/Edit Modal -->
     <div v-if="showFormModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl md:max-w-3xl max-h-[90vh] flex flex-col">
-        <div class="bg-indigo-600 px-5 sm:px-6 py-5 flex-shrink-0 rounded-t-2xl">
+        <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-5 sm:px-6 py-5 flex-shrink-0 rounded-t-2xl">
           <div class="flex items-center justify-between gap-4">
             <div class="min-w-0">
-              <h3 class="text-xl sm:text-2xl font-bold text-white truncate">{{ editingConstruct ? 'Edit Construct' : 'New Construct' }}</h3>
-              <p class="text-indigo-100 text-sm mt-1">Level and subject decide which curriculum topics are available to attach.</p>
+              <h3 class="text-xl sm:text-xl font-bold text-gray-900 dark:text-white truncate">{{ editingConstruct ? 'Edit Construct' : 'New Construct' }}</h3>
+              <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">Level and subject decide which curriculum topics are available to attach.</p>
             </div>
-            <button @click="closeFormModal" class="text-white/80 hover:text-white transition-colors flex-shrink-0">
+            <button @click="closeFormModal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-colors flex-shrink-0">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
@@ -207,13 +207,13 @@
     <!-- Read-only Detail View -->
     <div v-if="detail" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" @click.self="detail = null">
       <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl md:max-w-3xl max-h-[90vh] flex flex-col">
-        <div class="bg-indigo-600 px-5 sm:px-6 py-5 flex-shrink-0 rounded-t-2xl">
+        <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-5 sm:px-6 py-5 flex-shrink-0 rounded-t-2xl">
           <div class="flex items-center justify-between gap-4">
             <div class="min-w-0">
-              <h3 class="text-xl sm:text-2xl font-bold text-white truncate">{{ detail.name }}</h3>
-              <p class="text-indigo-100 text-sm mt-1">{{ detail.assessment_objective }} &middot; {{ detail.level }} &middot; {{ detail.department_name }} &middot; {{ detail.subject_name }}</p>
+              <h3 class="text-xl sm:text-xl font-bold text-gray-900 dark:text-white truncate">{{ detail.name }}</h3>
+              <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">{{ detail.assessment_objective }} &middot; {{ detail.level }} &middot; {{ detail.department_name }} &middot; {{ detail.subject_name }}</p>
             </div>
-            <button @click="detail = null" class="text-white/80 hover:text-white transition-colors flex-shrink-0">
+            <button @click="detail = null" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-colors flex-shrink-0">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
@@ -260,8 +260,8 @@
     </div>
 
     <!-- Delete Confirmation -->
-    <div v-if="showDeleteModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+    <div v-if="showDeleteModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-md">
         <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Confirm Delete</h3>
         <p class="text-gray-700 dark:text-gray-300 mb-6">
           Are you sure you want to delete "{{ deleteTarget?.name }}"? Teachers and students will no longer be able to view it.

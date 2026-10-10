@@ -441,20 +441,10 @@ router.beforeEach((to, from, next) => {
     authStore.restoreFromStorage()
   }
   
-  console.log('Router guard:', {
-    to: to.path,
-    from: from.path,
-    isAuthenticated: authStore.isAuthenticated,
-    userRole: authStore.userRole,
-    user: authStore.user,
-    requiresAuth: to.meta.requiresAuth,
-    requiredRole: to.meta.role
-  })
   
   // Check if route requires authentication
   if (to.meta.requiresAuth) {
     if (!authStore.isAuthenticated) {
-      console.log('Not authenticated, redirecting to login')
       next('/login')
       return
     }
@@ -466,16 +456,10 @@ router.beforeEach((to, from, next) => {
         ? authStore.hasAnyRole(requiredRole as string[])
         : authStore.hasRole(requiredRole as string)
       
-      console.log('Role check:', {
-        required: requiredRole,
-        hasRole: hasRequiredRole,
-        userRole: authStore.userRole
-      })
       
       if (!hasRequiredRole) {
         // Redirect to appropriate dashboard based on user role
         const role = authStore.userRole
-        console.log('Role mismatch, redirecting based on role:', role)
         if (role === 'student') next('/student/dashboard')
         else if (role === 'teacher') next('/teacher/dashboard')
         else if (role === 'hod') next('/hod/dashboard')
@@ -513,7 +497,6 @@ router.beforeEach((to, from, next) => {
   // If authenticated and trying to access the landing/auth pages, redirect to dashboard
   if (authStore.isAuthenticated && (to.path === '/' || to.path === '/login' || to.path === '/register')) {
     const role = authStore.userRole
-    console.log('Authenticated user accessing auth page, redirecting to dashboard:', role)
     if (role === 'student') next('/student/dashboard')
     else if (role === 'teacher') next('/teacher/dashboard')
     else if (role === 'hod') next('/hod/dashboard')
@@ -522,7 +505,6 @@ router.beforeEach((to, from, next) => {
     return
   }
   
-  console.log('Navigation allowed')
   next()
 })
 

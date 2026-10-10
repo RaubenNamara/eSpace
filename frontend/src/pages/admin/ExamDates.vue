@@ -54,6 +54,7 @@
 </template>
 
 <script setup lang="ts">
+import { useConfirmStore } from '@/stores/confirm'
 import { onMounted, ref } from 'vue'
 import axios from 'axios'
 import PageHeader from '@/components/ui/PageHeader.vue'
@@ -61,6 +62,7 @@ import EmptyState from '@/components/ui/EmptyState.vue'
 import Skeleton from '@/components/ui/Skeleton.vue'
 import AppIcon from '@/components/common/AppIcon.vue'
 import { useToastStore } from '@/stores/toast'
+const confirmDialog = useConfirmStore()
 
 interface Exam { id: number; title: string; class_level: string | null; starts_on: string; ends_on: string | null }
 
@@ -105,7 +107,7 @@ const add = async () => {
 }
 
 const remove = async (e: Exam) => {
-  if (!window.confirm(`Remove ${e.title}?`)) return
+  if (!await confirmDialog.open({ title: 'Remove exam date', message: `Remove ${e.title}?`, confirmLabel: 'Remove', danger: true })) return
   try {
     await axios.delete(`/api/admin/exam-dates/${e.id}`)
     exams.value = exams.value.filter(x => x.id !== e.id)

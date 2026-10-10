@@ -75,10 +75,12 @@
 </template>
 
 <script setup lang="ts">
+import { useConfirmStore } from '@/stores/confirm'
 import { ref, watch } from 'vue'
 import axios from 'axios'
 import { timeAgo } from '@/components/dashboard/teacher/time'
 import { useToastStore } from '@/stores/toast'
+const confirmDialog = useConfirmStore()
 
 interface Answer { id: number; body: string; author: string; is_teacher: boolean; endorsed: boolean; created_at: string; mine: boolean }
 interface Question { id: number; body: string; page_number: number | null; author: string; created_at: string; mine: boolean; answers: Answer[]; answered_by_teacher: boolean }
@@ -137,8 +139,8 @@ const answer = (q: Question) => run(async () => {
   reply.value = ''
 })
 const endorse = (a: Answer) => run(() => axios.post(`/api/teacher/enote-answers/${a.id}/endorse`))
-const removeQuestion = (q: Question) => { if (window.confirm('Remove this question and its answers?')) run(() => axios.delete(`${base()}/enote-questions/${q.id}`)) }
-const removeAnswer = (a: Answer) => { if (window.confirm('Remove this answer?')) run(() => axios.delete(`${base()}/enote-answers/${a.id}`)) }
+const removeQuestion = async (q: Question) => { if (await confirmDialog.open({ title: 'Remove question', message: 'Remove this question and its answers?', confirmLabel: 'Remove', danger: true })) run(() => axios.delete(`${base()}/enote-questions/${q.id}`)) }
+const removeAnswer = async (a: Answer) => { if (await confirmDialog.open({ title: 'Remove answer', message: 'Remove this answer?', confirmLabel: 'Remove', danger: true })) run(() => axios.delete(`${base()}/enote-answers/${a.id}`)) }
 
 // Loaded with the topic (for the count on the button), and again each time the panel opens
 watch(() => props.topicId, id => { if (id) load() }, { immediate: true })

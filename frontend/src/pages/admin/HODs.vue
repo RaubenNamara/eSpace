@@ -56,13 +56,13 @@
     <div v-if="showCreateModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
       <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
         <!-- Header -->
-        <div class="bg-indigo-600 px-6 py-5 flex-shrink-0">
+        <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-5 flex-shrink-0">
           <div class="flex items-center justify-between">
             <div>
-              <h2 class="text-2xl font-bold text-white">Add New Head of Department</h2>
-              <p class="text-indigo-100 text-sm mt-1">Create a new HOD account and assign department</p>
+              <h2 class="text-xl font-bold text-gray-900 dark:text-white">Add New Head of Department</h2>
+              <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">Create a new HOD account and assign department</p>
             </div>
-            <button @click="showCreateModal = false" class="text-white/80 hover:text-white transition-colors">
+            <button @click="showCreateModal = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-colors">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
@@ -234,13 +234,13 @@
     <div v-if="showAssignTeacherModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
       <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
         <!-- Header -->
-        <div class="bg-green-600 px-6 py-5 flex-shrink-0">
+        <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-5 flex-shrink-0">
           <div class="flex items-center justify-between">
             <div>
-              <h2 class="text-2xl font-bold text-white">Assign Teacher as HOD</h2>
-              <p class="text-green-100 text-sm mt-1">Select a teacher to promote to Head of Department</p>
+              <h2 class="text-xl font-bold text-gray-900 dark:text-white">Assign Teacher as HOD</h2>
+              <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">Select a teacher to promote to Head of Department</p>
             </div>
-            <button @click="showAssignTeacherModal = false" class="text-white/80 hover:text-white transition-colors">
+            <button @click="showAssignTeacherModal = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-colors">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
@@ -322,13 +322,13 @@
     <div v-if="showEditModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
       <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
         <!-- Header -->
-        <div class="bg-indigo-600 px-6 py-5 flex-shrink-0">
+        <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-5 flex-shrink-0">
           <div class="flex items-center justify-between">
             <div>
-              <h2 class="text-2xl font-bold text-white">Edit Head of Department</h2>
-              <p class="text-indigo-100 text-sm mt-1">Update HOD information and department assignment</p>
+              <h2 class="text-xl font-bold text-gray-900 dark:text-white">Edit Head of Department</h2>
+              <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">Update HOD information and department assignment</p>
             </div>
-            <button @click="showEditModal = false" class="text-white/80 hover:text-white transition-colors">
+            <button @click="showEditModal = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-colors">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
               </svg>

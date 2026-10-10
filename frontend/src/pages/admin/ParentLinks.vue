@@ -120,6 +120,7 @@
 </template>
 
 <script setup lang="ts">
+import { useConfirmStore } from '@/stores/confirm'
 import { computed, onMounted, ref, watch } from 'vue'
 import axios from 'axios'
 import PageHeader from '@/components/ui/PageHeader.vue'
@@ -130,6 +131,7 @@ import ActionMenu from '@/components/ui/ActionMenu.vue'
 import AppIcon from '@/components/common/AppIcon.vue'
 import { niceName, timeAgo } from '@/components/dashboard/teacher/time'
 import { useToastStore } from '@/stores/toast'
+const confirmDialog = useConfirmStore()
 
 interface ParentLink {
   id: number
@@ -205,7 +207,8 @@ const copy = async (l: ParentLink) => {
     copiedId.value = l.id
     setTimeout(() => { if (copiedId.value === l.id) copiedId.value = null }, 2000)
   } catch {
-    window.prompt('Copy this link:', linkFor(l))
+    // No clipboard access (an older browser, or not https): show the link to copy by hand
+    await confirmDialog.ask({ title: 'Copy this link', message: 'Select the link and copy it.', value: linkFor(l), optional: true, confirmLabel: 'Done', cancelLabel: 'Close' })
   }
 }
 
@@ -270,7 +273,7 @@ const save = async () => {
 }
 
 const revoke = async (l: ParentLink) => {
-  if (!window.confirm(`Turn off ${l.guardian_name}'s link? It stops working at once, and the weekly email stops too.`)) return
+  if (!await confirmDialog.open({ title: 'Turn off this link', message: `Turn off ${l.guardian_name}'s link? It stops working at once, and the weekly email stops too.`, confirmLabel: 'Turn off', danger: true })) return
   try {
     await axios.delete(`/api/admin/parent-links/${l.id}`)
     l.revoked_at = new Date().toISOString()

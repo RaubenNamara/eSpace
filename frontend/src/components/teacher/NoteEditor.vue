@@ -218,6 +218,7 @@
 </template>
 
 <script setup lang="ts">
+import { useConfirmStore } from '@/stores/confirm'
 import { ref, watch, onBeforeUnmount } from 'vue'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
@@ -227,6 +228,7 @@ import Underline from '@tiptap/extension-underline'
 import TextAlign from '@tiptap/extension-text-align'
 import TextStyle from '@tiptap/extension-text-style'
 import Color from '@tiptap/extension-color'
+const confirmDialog = useConfirmStore()
 
 interface Props {
   modelValue: string
@@ -310,15 +312,15 @@ const handleImageUpload = async (event: Event) => {
   target.value = ''
 }
 
-const addVideo = () => {
-  const url = prompt('Enter video URL:')
+const addVideo = async () => {
+  const url = await confirmDialog.ask({ title: 'Add a video', message: 'Paste the link to the video file.', placeholder: 'https://…/lesson.mp4', confirmLabel: 'Add' })
   if (url) {
     editor.value?.chain().focus().insertContent(`<video src="${url}" controls class="max-w-full rounded-lg"></video>`).run()
   }
 }
 
-const addYouTube = () => {
-  const url = prompt('Enter YouTube URL:')
+const addYouTube = async () => {
+  const url = await confirmDialog.ask({ title: 'Add a YouTube video', message: 'Paste the YouTube link.', placeholder: 'https://www.youtube.com/watch?v=…', confirmLabel: 'Add' })
   if (url) {
     const videoId = extractYouTubeId(url)
     if (videoId) {
@@ -380,8 +382,8 @@ const executeEditorAction = (action: string) => {
   }
 }
 
-const addLink = () => {
-  const url = prompt('Enter URL:')
+const addLink = async () => {
+  const url = await confirmDialog.ask({ title: 'Add a link', message: 'Paste the web address.', placeholder: 'https://…', confirmLabel: 'Add' })
   if (url) {
     editor.value?.chain().focus().setLink({ href: url }).run()
   }

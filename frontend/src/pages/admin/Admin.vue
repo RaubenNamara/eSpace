@@ -200,8 +200,8 @@
     </div>
 
     <!-- Create User Modal -->
-    <div v-if="showCreateModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
+    <div v-if="showCreateModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full mx-4">
         <div class="p-6">
           <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4">Create New User</h2>
           <form @submit.prevent="createUser">
@@ -271,8 +271,8 @@
     </div>
 
     <!-- Edit User Modal -->
-    <div v-if="showEditModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
+    <div v-if="showEditModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full mx-4">
         <div class="p-6">
           <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4">Edit User</h2>
           <form @submit.prevent="updateUser">
@@ -443,15 +443,11 @@ const fetchUsers = async () => {
 
     if (search.value) (params as any).search = search.value
 
-    console.log('Current user role:', currentUserRole.value)
-    console.log('Fetching users with params:', params)
     const response = await apiService.get('/admin/users', params)
-    console.log('API response:', response)
 
     if (response.data.success) {
       users.value = response.data.data.users
       pagination.value = response.data.data.pagination
-      console.log('Users loaded:', users.value.length, users.value)
     } else {
       console.error('API returned error:', response.data)
     }
@@ -556,13 +552,11 @@ const editUser = (user: AdminUser) => {
 const updateUser = async () => {
   loading.value = true
   try {
-    console.log('Updating user:', editFormData.value)
     const response = await apiService.put(`/admin/users/${editFormData.value.id}`, {
       username: editFormData.value.username,
       email: editFormData.value.email,
       role: editFormData.value.role
     })
-    console.log('Update response:', response)
 
     if (response.data.success) {
       showEditModal.value = false

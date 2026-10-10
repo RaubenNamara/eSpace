@@ -1,46 +1,36 @@
 <template>
   <div>
-    <div class="flex items-center gap-4 mb-6">
-      <div class="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center shadow-sm flex-shrink-0">
-        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-        </svg>
-      </div>
-      <div>
-        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white leading-tight">Assessments</h1>
-        <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">School-wide assignment oversight</p>
-      </div>
-    </div>
-
-    <div class="flex flex-wrap items-center gap-3 mb-6">
-      <div class="relative flex-1 min-w-[200px] max-w-sm">
-        <svg class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 10.5A6.5 6.5 0 114 10.5a6.5 6.5 0 0113 0z"></path>
-        </svg>
-        <input
-          v-model="search"
-          type="text"
-          placeholder="Search by title or teacher..."
-          class="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 dark:text-white"
-        >
-      </div>
-
-      <select v-model="statusFilter" @change="loadAssignments" class="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white">
-        <option value="">All Status</option>
-        <option value="draft">Draft</option>
-        <option value="published">Published</option>
-        <option value="archived">Archived</option>
-      </select>
-
-      <select v-model="departmentFilter" class="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white">
-        <option value="">All Departments</option>
-        <option v-for="dept in departmentOptions" :key="dept" :value="dept">{{ dept }}</option>
-      </select>
-
-      <span v-if="!loading && assignments.length > 0" class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-        {{ filteredAssignments.length }} of {{ assignments.length }} shown
-      </span>
-    </div>
+    <PageHeader title="Assessments" description="Every assignment in the school - who set it, where it went, and how far it has got." icon="clipboard" accent="indigo" :active-filters="(statusFilter ? 1 : 0) + (departmentFilter ? 1 : 0)">
+      <template #actions>
+        <span v-if="!loading && assignments.length > 0" class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+          {{ filteredAssignments.length }} of {{ assignments.length }} shown
+        </span>
+      </template>
+      <template #filters>
+        <div class="relative w-full sm:w-72">
+          <svg class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 10.5A6.5 6.5 0 114 10.5a6.5 6.5 0 0113 0z"></path>
+          </svg>
+          <input
+            v-model="search"
+            type="text"
+            placeholder="Search by title or teacher..."
+            aria-label="Search"
+            class="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          >
+        </div>
+        <select v-model="statusFilter" @change="loadAssignments" aria-label="Status" class="w-full sm:w-auto py-2 pl-3 pr-8 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white">
+          <option value="">All Status</option>
+          <option value="draft">Draft</option>
+          <option value="published">Published</option>
+          <option value="archived">Archived</option>
+        </select>
+        <select v-model="departmentFilter" aria-label="Department" class="w-full sm:w-auto py-2 pl-3 pr-8 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white">
+          <option value="">All Departments</option>
+          <option v-for="dept in departmentOptions" :key="dept" :value="dept">{{ dept }}</option>
+        </select>
+      </template>
+    </PageHeader>
 
     <div v-if="loading" class="text-center py-16">
       <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
@@ -170,6 +160,7 @@
 
 <script setup lang="ts">
 import EmptyState from '@/components/ui/EmptyState.vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 

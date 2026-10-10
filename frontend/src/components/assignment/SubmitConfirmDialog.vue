@@ -1,6 +1,6 @@
 <template>
-  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 max-w-md w-full">
+  <div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-4 sm:p-6 max-w-md w-full">
       <template v-if="allAnswered">
         <h2 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-2">Ready to submit?</h2>
         <p class="text-gray-600 dark:text-gray-400 mb-2">

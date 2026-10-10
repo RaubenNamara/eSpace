@@ -1,10 +1,10 @@
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-950">
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-6">Settings</h1>
+  <div class="w-full">
+    <div class="max-w-4xl">
+      <PageHeader title="Settings" description="Your details and your password." icon="wrench" />
 
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6 border border-gray-100 dark:border-gray-700">
-        <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Profile Information</h2>
+      <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 sm:p-6 mb-5 border border-gray-200 dark:border-gray-700">
+        <h2 class="text-base font-bold text-gray-900 dark:text-white mb-4">Profile Information</h2>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div>
@@ -26,8 +26,8 @@
         </div>
       </div>
 
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
-        <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Account Credentials</h2>
+      <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 sm:p-6 border border-gray-200 dark:border-gray-700">
+        <h2 class="text-base font-bold text-gray-900 dark:text-white mb-4">Account Credentials</h2>
         <p class="text-gray-600 dark:text-gray-400 mb-6">Update your login details and password for the teacher account.</p>
 
         <form @submit.prevent="updateCredentials">
@@ -67,30 +67,12 @@
           </div>
         </form>
       </div>
-
-      <transition name="toast">
-        <div v-if="successMessage" class="fixed top-6 right-6 z-50 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-green-200 dark:border-green-800 p-4 flex items-center gap-4 min-w-[320px]">
-          <div class="flex-shrink-0 w-10 h-10 bg-green-100 dark:bg-green-900/40 rounded-full flex items-center justify-center">
-            <svg class="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-            </svg>
-          </div>
-          <div class="flex-1">
-            <p class="font-semibold text-gray-900 dark:text-white">Success!</p>
-            <p class="text-sm text-gray-600 dark:text-gray-400">{{ successMessage }}</p>
-          </div>
-          <button @click="successMessage = ''" class="flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors" type="button">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
-          </button>
-        </div>
-      </transition>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import PageHeader from '@/components/ui/PageHeader.vue'
 import { ref, onMounted } from 'vue'
 import { apiService } from '../../services/api'
 import { useToastStore } from '@/stores/toast'
@@ -125,7 +107,6 @@ const credentials = ref({
 })
 
 const loading = ref(false)
-const successMessage = ref('')
 
 const fetchProfile = async () => {
   try {
@@ -167,14 +148,11 @@ const updateCredentials = async () => {
     })
 
     if (response.data?.success) {
-      successMessage.value = 'Credentials updated successfully!'
+      toast.success('Credentials updated successfully!')
       credentials.value.current_password = ''
       credentials.value.new_password = ''
       credentials.value.confirm_password = ''
       await fetchProfile()
-      setTimeout(() => {
-        successMessage.value = ''
-      }, 5000)
     } else {
       toast.error(response.data?.message || 'Failed to update credentials')
     }
