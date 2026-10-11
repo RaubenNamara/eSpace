@@ -40,7 +40,8 @@ export const GUIDE: GuidePart[] = [
       {
         id: 'phone', title: 'Using eSpace on a phone', icon: 'keyboard',
         intro: 'eSpace works in the browser on any phone - nothing to install.',
-        steps: ['Open eSpace in Chrome (or your phone\'s browser) and sign in.', 'Use the browser menu\'s "Add to Home screen" to open it like an app.', 'On small screens, filters fold into a Filters button at the top of each page.'],
+        steps: ['Open eSpace in Chrome (or your phone\'s browser) - on the school website, tap the Sign in button at the bottom right.', 'Use the browser menu\'s "Add to Home screen" (or "Install app") to open it like an app, on phones and iPads.', 'On small screens, filters fold into a Filters button at the top of each page.'],
+        tips: ['When the school updates eSpace, the app picks up the new version as soon as you open it.']
       },
       {
         id: 'offline', title: 'Working offline', icon: 'download',
@@ -58,17 +59,18 @@ export const GUIDE: GuidePart[] = [
       {
         id: 's-dashboard', title: 'Your dashboard (eClass)', icon: 'sparkles',
         intro: 'Open eSpace and your dashboard shows what matters today.',
-        steps: ['"What to do next" lists the most useful things to do, in order.', '"Coming up" shows work due and live classes, soonest first - overdue work is in red.', 'The four tiles show work to do, work done, your average and live classes coming up.', 'If a live class has started, a red banner at the top lets you join in one tap.'],
+        steps: ['The banner at the top sums up your day, with a button for the most useful thing to do now.', 'Your week shows work due and live classes day by day - overdue work is in red.', '"What to do next" lists the most useful things to do, in order; Scores shows your latest results.', 'Your Learning Map, achievements and the newest books follow below.', 'If a live class has started, a red banner at the top lets you join in one tap.'],
       },
       {
         id: 's-enotes', title: 'Reading eNotes', icon: 'document',
         intro: 'eNotes are your teachers\' notes, read page by page like a book.',
-        steps: ['Open eNotes and tap a topic on the shelf (or "Continue reading").', 'Turn pages with the arrows or by swiping.', 'Tap the speaker to listen to a page read aloud.', 'Highlight text or add a page note - only you see them.', 'eSpace remembers your page, so you can carry on next time.'],
-        tips: ['Some pages end with a quick assessment on that page\'s learning outcome - try it while it\'s fresh.']
+        steps: ['Open eNotes and tap a topic on the shelf (or "Continue reading").', 'Turn pages with Previous and Next, or by swiping from the edge of the page.', 'Tap the speaker to listen to a page read aloud.', 'Select text to highlight it in a colour - only you see your highlights.', 'Every page has its own "Add my summary" tab at its foot - two pages side by side each have one. Tap it to write what you understood from that page.', 'eSpace remembers your page, so you can carry on next time.'],
+        tips: ['The summary tabs stay in view at the foot of the book, even on a long page - you never have to scroll down to find them.', 'Some pages end with a quick assessment on that page\'s learning outcome - try it while it\'s fresh.']
       },
       {
         id: 's-library', title: 'eLibrary, Item Bank and Videos', icon: 'book',
-        steps: ['eLibrary holds textbooks and slides; Item Bank holds past papers and practice packs.', 'Tap a book to open it in the reader; use the page notes to write as you read.', 'Videos play in the browser - some can be saved to watch offline.', 'Books your teacher allows can be downloaded.'],
+        steps: ['eLibrary holds textbooks and slides; Item Bank holds past papers and practice packs.', 'Tap a book to open it in the reader. Each page on show has its own "Add my note" tab - tap it to write as you read.', 'Zoom in for small print; your note tabs stay in place while the page scrolls under them.', 'Videos play in the browser - some can be saved to watch offline.', 'Books your teacher allows can be downloaded.'],
+        tips: ['Find the page hard to read? The Reading focus colour button lays a soft colour over the whole page, all the way down as you scroll.']
       },
       {
         id: 's-live', title: 'Joining live classes', icon: 'video',
@@ -88,7 +90,7 @@ export const GUIDE: GuidePart[] = [
       {
         id: 's-notes', title: 'My notes - and downloading them', icon: 'pencil',
         intro: 'Every note you write on a page of an eNote, a library book or a past paper is kept in one place.',
-        steps: ['While reading, tap the note button on a page and write your own summary.', 'Open My notes to see them all, by subject and topic.', 'Tap Download PDF to save them to your phone or computer - they are yours to keep, even after you finish school.'],
+        steps: ['While reading, tap the summary tab at the foot of a page and write what you understood.', 'Open My notes and pick a subject - your notes are grouped by topic, each one on its own page.', 'Delete a note you no longer need with the Delete button on its page.', 'Tap Download PDF to save them to your phone or computer - they are yours to keep, even after you finish school.'],
         tips: ['Search or filter first to download just one subject.']
       },
       {
@@ -116,7 +118,7 @@ export const GUIDE: GuidePart[] = [
     topics: [
       {
         id: 't-dashboard', title: 'Your dashboard', icon: 'sparkles',
-        steps: ['Today\'s tiles: scripts to mark, live classes today, work due this week, open support groups.', '"Mark next" lists the oldest scripts waiting - tap Mark to open one.', '"Your classes" shows each stream\'s outcomes achieved and who needs support.', '"Recent activity" shows the latest submissions, finished eNotes and messages.'],
+        steps: ['The banner at the top sums up your day; below it, today\'s timeline shows your lessons and live classes in order.', 'Marking shows how many scripts are waiting and opens the next one - or says you\'re all caught up.', '"Needs a word" lists learners who may be slipping, from Early warning.', '"Your classes" shows each class\'s hand-in and reading rates and this week\'s topics.', '"Recently" scrolls through the latest submissions, finished eNotes and messages.'],
       },
       {
         id: 't-classes', title: 'My Classes and Student View', icon: 'users',
@@ -130,6 +132,7 @@ export const GUIDE: GuidePart[] = [
       {
         id: 't-content', title: 'eLibrary, Item Bank and Videos', icon: 'upload',
         steps: ['Choose Add (or Upload) and drop in a PDF, slides or a video.', 'Pick the subject and class - a whole class level or one stream.', 'Publish to put it on students\' shelves; keep it as a draft until it\'s ready.', 'The reach bar on each item shows how many students have opened or watched it - tap it for the list.'],
+        tips: ['Book covers: add your own picture when you upload, use the first page of the file, or choose Design a cover to pick a suggested design and edit its words and colours.']
       },
       {
         id: 't-live', title: 'Live classes', icon: 'video',
@@ -173,7 +176,7 @@ export const GUIDE: GuidePart[] = [
       },
       {
         id: 't-results', title: 'Marksheets, physical exams and report cards', icon: 'chart',
-        steps: ['Marksheets: every mark for a class and subject, with averages and grades - Download CSV for a spreadsheet.', 'Physical Exams: record a test sat on paper, type in the marks (Enter moves to the next learner) and choose if it counts on report cards.', 'Report Cards: class teachers generate a full report for each learner - or all missing ones at once - then print.'],
+        steps: ['Marksheets: every mark for a class and subject, with averages and grades - Download CSV for a spreadsheet.', 'Physical Exams: record a test sat on paper, type in the marks (Enter moves to the next learner) and choose if it counts on report cards.', 'Report Cards: class teachers generate a full report for each learner - or all missing ones at once - then print.', 'UNEB assessment: each learner\'s Activities of Integration, CA score and evidence for your subjects, and what is still missing before the UNEB deadline.'],
       }
     ]
   },
@@ -195,6 +198,15 @@ export const GUIDE: GuidePart[] = [
         steps: ['Open Approvals to see eLibrary books and other content waiting for review.', 'Open an item to check it, then approve it (or send it back).', 'Approved content appears on students\' shelves.'],
       },
       {
+        id: 'h-content', title: 'Books, videos and past papers for the department', icon: 'upload',
+        intro: 'eLibrary, Videos and Item Bank work just like a teacher\'s - and what you add can go to the whole department.',
+        steps: ['Open eLibrary (or Videos, or Item Bank) and choose Add.', 'Choose who gets it: the whole department, every stream of one class, or a single stream.', 'Design a cover for a book, or use your own picture.', 'Teachers\' uploads in your department show here too, with who added them.'],
+      },
+      {
+        id: 'h-uneb', title: 'UNEB school-based assessment', icon: 'clipboard',
+        steps: ['Open UNEB assessment, pick the subject, class and stream.', 'Each learner shows their LIN, Activities of Integration marked, the continuous-assessment (CA) score, project and evidence.', 'Status shows what is still missing: no LIN, missed work, or AOIs still to mark.', 'Use Import LINs to add learners\' UNEB numbers from a spreadsheet, then Export for the submission file.'],
+      },
+      {
         id: 'h-teach', title: 'Teaching your own classes', icon: 'teacher',
         intro: 'An HOD who also teaches can switch to the teacher view and use every teacher module for their own classes.',
       }
@@ -212,6 +224,21 @@ export const GUIDE: GuidePart[] = [
       {
         id: 'a-people', title: 'Accounts and enrolment', icon: 'users',
         steps: ['Add students, teachers and HODs (teachers can also be imported from a spreadsheet).', 'Assign teachers to departments and HODs to lead them.', 'Enrol students in their class and departments.', 'Reset passwords when someone is locked out; teachers then choose their own.'],
+      },
+      {
+        id: 'a-supervise', title: 'Supervising departments and teachers', icon: 'target',
+        intro: 'Supervision follows up teaching across the school, one term at a time - down to each teacher and each assessment.',
+        steps: ['Open Supervision and pick the term. The figures at the top count the teachers to follow up - tap one to list only those teachers.', 'Each department card shows work set, scripts waiting to be marked, how many learners handed in, and teachers who have set nothing. Tap a card for just that department\'s teachers.', 'Tap a teacher to see every assessment they set: handed in, waiting to be marked (and for how long), and marked.', 'Tap "didn\'t hand in" on an assessment for those learners by name, class and admission number.', 'Send a reminder notifies the teacher - the message is already written from what needs following up, and you can change it.'],
+        tips: ['A teacher is flagged when they have set nothing this term, have scripts waiting more than 7 days, fewer than half their learners hand in, or have not signed in for 14 days.']
+      },
+      {
+        id: 'a-content', title: 'The school\'s eLibrary, videos and past papers', icon: 'book',
+        steps: ['Open eLibrary (or Videos, or Item Bank) and choose Add.', 'Pick the department, then who gets it: the whole department, every stream of one class, or a single stream.', 'Give a book a cover: your own picture, the first page of the file, or Design a cover to choose a suggested design and edit it.', 'Everything teachers and HODs upload is listed here as well.'],
+      },
+      {
+        id: 'a-uneb', title: 'UNEB school-based assessment', icon: 'clipboard',
+        steps: ['Open UNEB assessment and choose Settings: enter the centre number, what the CA score is out of, and the submission deadline.', 'Pick a subject and class to see every learner\'s Activities of Integration, CA score, project and evidence.', 'The figures at the top show who is not ready yet - no LIN, missed work, or AOIs still to mark.', 'Import LINs from a spreadsheet, then Export the class when everyone is ready.'],
+        tips: ['The deadline shows on the page as a countdown - amber in the last two weeks.']
       },
       {
         id: 'a-year', title: 'Promotion and the new year', icon: 'clock',

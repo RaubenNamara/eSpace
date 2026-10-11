@@ -17,6 +17,8 @@ export interface AskOptions extends ConfirmOptions {
   value?: string
   /** Allow an empty answer (e.g. an optional reason) */
   optional?: boolean
+  /** A few lines to write in, for a message rather than a word or a link */
+  multiline?: boolean
 }
 
 /**
@@ -30,7 +32,7 @@ export const useConfirmStore = defineStore('confirm', () => {
   const options = ref<Required<ConfirmOptions> | null>(null)
   let resolver: ((value: boolean) => void) | null = null
   // ask(): a text box in the same dialog, in place of native prompt()
-  const input = ref<{ placeholder: string; optional: boolean } | null>(null)
+  const input = ref<{ placeholder: string; optional: boolean; multiline: boolean } | null>(null)
   const text = ref('')
 
   function open(opts: ConfirmOptions): Promise<boolean> {
@@ -55,7 +57,7 @@ export const useConfirmStore = defineStore('confirm', () => {
   /** Like open(), with a text box: the text typed, or null when cancelled */
   async function ask(opts: AskOptions): Promise<string | null> {
     const ok = open(opts)
-    input.value = { placeholder: opts.placeholder ?? '', optional: opts.optional ?? false }
+    input.value = { placeholder: opts.placeholder ?? '', optional: opts.optional ?? false, multiline: opts.multiline ?? false }
     text.value = opts.value ?? ''
     const confirmed = await ok
     const answer = text.value.trim()

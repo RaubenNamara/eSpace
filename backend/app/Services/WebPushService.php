@@ -358,6 +358,7 @@ class WebPushService
             'new_library_resource' => $base . '/library',
             'new_item_bank_resource' => $base . '/itembank',
             'report_card_ready' => $base . '/reports',
+            'supervision_reminder' => $base . '/assignments',
             'new_virtual_lab' => $base . '/virtual-lab/' . (int) ($data['assignment_id'] ?? 0),
             default => $base . '/dashboard',
         };

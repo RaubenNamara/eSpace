@@ -6,7 +6,7 @@
       @click.self="confirmStore.resolve(false)"
       @keydown.esc="confirmStore.resolve(false)"
     >
-      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm p-6">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full p-6" :class="confirmStore.input?.multiline ? 'max-w-md' : 'max-w-sm'">
         <div class="flex items-start gap-3 mb-4">
           <div
             class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
@@ -26,8 +26,17 @@
         </div>
 
         <p class="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-line" :class="confirmStore.input ? 'mb-3' : 'mb-6'">{{ confirmStore.options.message }}</p>
+        <textarea
+          v-if="confirmStore.input?.multiline"
+          v-model="confirmStore.text"
+          rows="4"
+          maxlength="500"
+          :placeholder="confirmStore.input.placeholder"
+          class="w-full mb-6 px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
+          autofocus
+        ></textarea>
         <input
-          v-if="confirmStore.input"
+          v-else-if="confirmStore.input"
           v-model="confirmStore.text"
           type="text"
           :placeholder="confirmStore.input.placeholder"

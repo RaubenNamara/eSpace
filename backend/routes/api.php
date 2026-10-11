@@ -781,6 +781,12 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/chat/conversations', 'eSpace\App\Controllers\Admin\ChatController@conversations');
         Router::get('/chat/conversations/{id}', 'eSpace\App\Controllers\Admin\ChatController@messages');
 
+        // Supervision - every department and teacher: work set, marking, hand-in, reminders
+        Router::get('/supervision', 'eSpace\App\Controllers\Admin\SupervisionController@index');
+        Router::get('/supervision/teachers/{id}', 'eSpace\App\Controllers\Admin\SupervisionController@teacher');
+        Router::post('/supervision/teachers/{id}/remind', 'eSpace\App\Controllers\Admin\SupervisionController@remind');
+        Router::get('/supervision/assignments/{id}/missing', 'eSpace\App\Controllers\Admin\SupervisionController@missing');
+
         // Assignments - read-only, school-wide oversight + "Preview as Student"
         Router::get('/assignments', 'eSpace\App\Controllers\Admin\AssignmentController@index');
         Router::get('/assignments/{id}/preview', 'eSpace\App\Controllers\Admin\AssignmentController@preview');

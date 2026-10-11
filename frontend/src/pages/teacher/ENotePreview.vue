@@ -523,12 +523,16 @@
                  renders up front (StPageFlip needs them all present to turn between), but only
                  the page currently open gets the narration-highlight markup - the rest render as
                  plain formatted content. -->
+            <!-- The book's frame: stays put while the book scrolls inside it (zoomed in), so the
+                 students' page summaries laid over it never scroll away with the page -->
+            <div
+              class="relative"
+              :class="readMode ? 'flex-1 min-h-0' : 'flex-1 min-h-0 lg:flex-none lg:h-[calc(100vh-16.5rem)] lg:min-h-[420px] lg:mb-3'"
+            >
             <div
               ref="bookWrapRef"
-              :class="[
-                readMode ? 'flex-1 min-h-0' : 'flex-1 min-h-0 lg:flex-none lg:h-[calc(100vh-16.5rem)] lg:min-h-[420px] lg:mb-3',
-                zoomLevel > MIN_ZOOM ? 'overflow-auto' : 'overflow-hidden',
-              ]"
+              class="h-full"
+              :class="zoomLevel > MIN_ZOOM ? 'overflow-auto' : 'overflow-hidden'"
             >
               <div
                 class="w-full h-full transition-transform duration-200"
@@ -696,6 +700,32 @@
               </div>
               </div>
             </div>
+
+            <!-- Each page on show has its own summary, folded away as a tab at the foot of that
+                 page ("My summary" where the student has written one, "Add my summary" where not) -
+                 in the two-page view the left and right pages each get one, like the eLibrary.
+                 Private to the student, never seen by the teacher/HOD. -->
+            <template v-if="isStudentMode">
+              <UnfoldingNote
+                v-for="slot in summarySlots"
+                :key="slot.page.id"
+                floating
+                show-add
+                :style="slot.style"
+                :model-value="pageNotes[slot.page.id] || ''"
+                @update:model-value="pageNotes[slot.page.id] = $event"
+                :open="!!openSummaries[slot.page.id]"
+                @update:open="openSummaries[slot.page.id] = $event"
+                :color="pageColor(slot.page.id)"
+                @update:color="setPageColor(slot.page.id, $event)"
+                :status="pageNoteStatus[slot.page.id]"
+                :heading="`Summary · p. ${slot.number}`"
+                tab-label="My summary"
+                add-label="Add my summary"
+                @input="onPageNoteInput(slot.page.id)"
+              />
+            </template>
+            </div>
           </template>
 
           <!-- Empty state -->
@@ -709,8 +739,8 @@
           </div>
 
           <!-- Navigation Buttons - replaced by floating overlay arrows in Read Mode. On a desktop the
-               bar sticks to the bottom of the screen, so turning the page (and the student's summary
-               tab in the middle) is always in reach, however far down the reader has scrolled. -->
+               bar sticks to the bottom of the screen, so turning the page is always in reach,
+               however far down the reader has scrolled. -->
           <div v-if="!readMode" class="grid grid-cols-[1fr_auto_1fr] items-center gap-2 flex-shrink-0 px-3 pb-3 pt-2 lg:px-0 lg:py-2 lg:sticky lg:bottom-0 lg:z-30 lg:bg-gray-50/90 lg:dark:bg-gray-950/90 lg:backdrop-blur-sm">
             <button
               @click="handlePrevious"
@@ -723,28 +753,6 @@
               <span class="hidden min-[400px]:inline">Previous</span>
             </button>
 
-            <!-- Student's own private summary of the open page - never seen by the teacher/HOD.
-                 The tab stays here in the bar (not at the foot of a long page) and follows the
-                 reader from page to page; the note opens upwards over the page. -->
-            <div class="col-start-2 flex justify-center">
-              <UnfoldingNote
-                v-if="isStudentMode && currentPage"
-                :key="currentPage.id"
-                pinned
-                :model-value="pageNotes[currentPage.id] || ''"
-                @update:model-value="pageNotes[currentPage.id] = $event"
-                :open="!!openSummaries[currentPage.id]"
-                @update:open="openSummaries[currentPage.id] = $event"
-                :color="pageColor(currentPage.id)"
-                @update:color="setPageColor(currentPage.id, $event)"
-                :status="pageNoteStatus[currentPage.id]"
-                heading="My Summary"
-                tab-label="My summary"
-                add-label="Add my summary"
-                show-add
-                @input="onPageNoteInput(currentPage.id)"
-              />
-            </div>
 
             <button
               v-if="!(isStudentMode && !hasNextPage)"
@@ -767,25 +775,6 @@
          the entire screen. Fixed (not absolute) so they stay put regardless of any scrolling
          inside the book area. -->
     <template v-if="readMode">
-      <div v-if="isStudentMode && currentPage" class="fixed left-1/2 -translate-x-1/2 bottom-6 z-50">
-                <UnfoldingNote
-                  v-if="isStudentMode"
-                  :key="currentPage.id"
-                  pinned
-                  :model-value="pageNotes[currentPage.id] || ''"
-                  @update:model-value="pageNotes[currentPage.id] = $event"
-                  :open="!!openSummaries[currentPage.id]"
-                  @update:open="openSummaries[currentPage.id] = $event"
-                  :color="pageColor(currentPage.id)"
-                  @update:color="setPageColor(currentPage.id, $event)"
-                  :status="pageNoteStatus[currentPage.id]"
-                  heading="My Summary"
-                  tab-label="My summary"
-                  add-label="Add my summary"
-                  show-add
-                  @input="onPageNoteInput(currentPage.id)"
-                />
-      </div>
       <button
         @click="handlePrevious"
         :disabled="!hasPreviousPage"
@@ -1512,6 +1501,21 @@ const selectPage = (pageId: number) => {
 // student is moving on from (a two-page spread shows the left page's index and the one after it)
 let lastBookIndex = 0
 const bookOrientation = ref<'portrait' | 'landscape'>('landscape')
+// The pages on show (one, or two side by side) and where each one's summary tab sits: under its
+// own page - the book fills the frame, so the spine is the middle
+const NOTE_GAP = '0.75rem'
+const summarySlots = computed(() => {
+  const index = currentPage.value ? pages.value.findIndex(p => p.id === currentPage.value!.id) : -1
+  if (index < 0) return []
+  const right = pages.value[index + 1]
+  if (bookOrientation.value !== 'landscape' || !right) {
+    return [{ page: pages.value[index], number: index + 1, style: { left: NOTE_GAP, right: NOTE_GAP } }]
+  }
+  return [
+    { page: pages.value[index], number: index + 1, style: { left: NOTE_GAP, right: `calc(50% + ${NOTE_GAP})` } },
+    { page: right, number: index + 2, style: { left: `calc(50% + ${NOTE_GAP})`, right: NOTE_GAP } },
+  ]
+})
 
 const onBookFlip = (index: number) => {
   // Turning past the last spread can report a page beyond the end - stay where we are

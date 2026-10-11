@@ -386,6 +386,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'itembank', name: 'AdminItemBank', component: AdminItemBank },
       { path: 'notes', name: 'AdminNotes', component: AdminNotes },
       { path: 'assessments', name: 'AdminAssessments', component: AdminAssessments },
+      { path: 'supervision', name: 'AdminSupervision', component: () => import('../pages/admin/Supervision.vue') },
       { path: 'assessments/:id/preview', name: 'AdminAssignmentPreview', component: StudentAssignmentAnswer, meta: { previewRole: 'admin' } },
       { path: 'charts', name: 'AdminCharts', component: AdminCharts },
       { path: 'live-classes', name: 'AdminLiveClasses', component: AdminLiveClasses },

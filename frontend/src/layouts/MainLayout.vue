@@ -890,6 +890,7 @@ const MENU: Record<string, NavGroup[]> = {
       { path: '/admin/virtual-lab', label: 'Virtual Lab', icon: 'FlaskIcon' }
     ] },
     { key: 'assessment', name: 'Assessment', items: [
+      { path: '/admin/supervision', label: 'Supervision', icon: 'TargetIcon' },
       { path: '/admin/assessments', label: 'Assessments', icon: 'DocumentTextIcon' },
       { path: '/admin/marksheet', label: 'Marksheet', icon: 'TableCellsIcon' },
       { path: '/admin/physical-exams', label: 'Physical Exams', icon: 'DocumentTextIcon' },
