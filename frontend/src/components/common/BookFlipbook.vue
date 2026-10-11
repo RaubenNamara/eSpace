@@ -68,9 +68,10 @@ const props = withDefaults(
      *  usePersistedRef() calls reading the same localStorage key are still two unrelated reactive
      *  values, and only re-sync on a fresh read (i.e. a reload) - they don't watch each other. */
     preferSinglePage?: boolean
-    /** Only a press near the book's outer left/right edge can start a page turn (drag or tap),
-     *  like reaching for the edge of a real page - a touch anywhere else on the page (reading,
-     *  scrolling, selecting text) never flips it. The Prev/Next buttons are unaffected. */
+    /** Only the book's extreme outer corners turn the page with a mouse (hover curls it, click or
+     *  drag turns it), and a finger only from near the outer left/right edge - like reaching for
+     *  the corner of a real page. Anywhere else on the page (reading, scrolling, selecting text)
+     *  never flips it. The Prev/Next buttons are unaffected. */
     edgeFlipOnly?: boolean
   }>(),
   { mode: 'image', images: () => [], startPage: 0, showCover: true, muted: false, preferSinglePage: false, edgeFlipOnly: true }
@@ -134,9 +135,22 @@ const isMobile = ref(mq?.matches ?? false)
 // shrinking a phone's book down to a fraction of its actual screen width for no reason.
 const capWidthForToggle = computed(() => props.preferSinglePage && !isMobile.value)
 
-// Width of the strip along each outer edge of the book that can start a page turn
+// Width of the strip along each outer edge of the book where a finger can start a page turn (a
+// swipe from the edge on a phone)
 function edgeZone(bookWidth: number) {
   return Math.min(90, Math.max(36, bookWidth * 0.08))
+}
+
+// With a mouse, only the book's extreme outer corners: hovering one curls the page, and a click or
+// drag from it turns the page. page-flip's own corner reaches a fifth of the page's diagonal in,
+// so the curl sprang up while reading near the edge.
+function cornerSize(bookWidth: number) {
+  return Math.min(72, Math.max(44, bookWidth * 0.05))
+}
+function inCorner(x: number, y: number, left: number, top: number, width: number, height: number) {
+  const c = cornerSize(width)
+  return x >= left && x <= left + width && y >= top && y <= top + height &&
+    (x - left <= c || left + width - x <= c) && (y - top <= c || top + height - y <= c)
 }
 
 function pointX(e: MouseEvent | TouchEvent): number | null {
@@ -171,20 +185,22 @@ function guardFlipStart(e: MouseEvent | TouchEvent) {
   const r = bookBounds()
   const x = pointX(e)
   if (!r || x === null) return
+  if (!('touches' in e)) {
+    // Mouse: only from a corner
+    if (!inCorner(x, e.clientY, r.left, r.top, r.width, r.height)) e.stopPropagation()
+    return
+  }
   const zone = edgeZone(r.width)
   if (x - r.left > zone && r.right - x > zone) e.stopPropagation()
 }
 
-// A pointer cursor near the turnable edges, so readers can find them
+// A pointer cursor on the turnable corners, so readers can find them
 function markEdgeHover(e: MouseEvent) {
   const host = hostRef.value
   if (!host || !props.edgeFlipOnly) return
   const r = bookBounds()
   if (!r) return
-  const zone = edgeZone(r.width)
-  const nearEdge = e.clientY >= r.top && e.clientY <= r.bottom && e.clientX >= r.left && e.clientX <= r.right &&
-    (e.clientX - r.left <= zone || r.right - e.clientX <= zone)
-  host.classList.toggle('near-flip-edge', nearEdge)
+  host.classList.toggle('near-flip-edge', inCorner(e.clientX, e.clientY, r.left, r.top, r.width, r.height))
 }
 
 // ---- Real-book touches: side page stacks and bundle flips for far jumps ----
@@ -301,7 +317,22 @@ function build() {
     flippingTime: FLIPPING_TIME,
     mobileScrollSupport: true,
     startPage: props.startPage,
+    // A click turns the page only on a corner (see the corner check below)
+    disableFlipByClick: props.edgeFlipOnly,
   })
+
+  // page-flip's corner (where hovering curls the page, and where a click turns it) is a fifth of
+  // the page's diagonal - narrowed to the extreme outer corners, the same ones the guard allows
+  if (props.edgeFlipOnly) {
+    const controller = (flip as any).getFlipController?.()
+    if (controller) {
+      controller.isPointOnCorners = function (this: any, globalPos: { x: number; y: number }) {
+        const rect = this.getBoundsRect()
+        const p = this.render.convertToBook(globalPos)
+        return inCorner(p.x, p.y, 0, 0, rect.width, rect.height)
+      }
+    }
+  }
 
   // StPageFlip's constructor also applies minWidth/minHeight as this container's own inline CSS
   // min-width/min-height (so it never gets squeezed smaller than one page in a normal fluid
