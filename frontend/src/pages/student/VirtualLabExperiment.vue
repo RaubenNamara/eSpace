@@ -52,6 +52,8 @@
         <VirtualLabGravityBrief v-else-if="isGravityExperiment" :introduction="attempt.experiment.introduction" :objective="attempt.experiment.objective" />
         <VirtualLabEmfBrief v-else-if="isEmfExperiment" :introduction="attempt.experiment.introduction" :objective="attempt.experiment.objective" />
         <VirtualLabBottleMassBrief v-else-if="isBottleMassExperiment" :introduction="attempt.experiment.introduction" :objective="attempt.experiment.objective" />
+        <VirtualLabPlaneMirrorBrief v-else-if="isPlaneMirrorExperiment" :introduction="attempt.experiment.introduction" :objective="attempt.experiment.objective" />
+        <VirtualLabRuleMassBrief v-else-if="isRuleMassExperiment" :introduction="attempt.experiment.introduction" :objective="attempt.experiment.objective" />
         <VirtualLabDensityBrief v-else-if="isDensityExperiment" :introduction="attempt.experiment.introduction" :objective="attempt.experiment.objective" />
 
         <!-- Required apparatus - some pieces may already be on the bench, others wait in the tray
@@ -265,7 +267,7 @@
                   :scene-objects="attempt.experiment.scene_objects"
                   :object-catalog="objectCatalog"
                   :read-only="sceneReadOnly"
-                  v-bind="isBulbExperiment || isGravityExperiment || isEmfExperiment ? { currentStep } : {}"
+                  v-bind="isBulbExperiment || isGravityExperiment || isEmfExperiment || isRuleMassExperiment || isPlaneMirrorExperiment ? { currentStep } : {}"
                   cupboard
                   wall-shelves
                   :bench-length="3"
@@ -344,6 +346,43 @@
             @save-analysis="saveEmfAnalysis"
             @save-graph="saveGravityGraph"
             @blocker="emfBlocker = $event"
+          />
+        </div>
+
+        <!-- Mass of a metre rule: C, the results table, x against z graph, M, conclusion and assessment -->
+        <div v-if="isRuleMassExperiment && !hasTeacherMarking" id="rule-mass-analysis" class="mt-5 sm:mt-6 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+          <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-4"><AppIcon name="book" class="w-5 h-5" /> Results, graph and the mass of the metre rule</h2>
+          <VirtualLabRuleMassAnalysis
+            :rows="resultRows"
+            :trials="ruleMassTrials"
+            :c-trial="ruleMassCTrial"
+            :lab-record="ruleMassRecord"
+            :analysis="ruleMassAnalysisEntry"
+            :graph-saved="graphAnalysisEntry"
+            v-model:conclusion="conclusionText"
+            :read-only="attempt.status !== 'in_progress'"
+            @save-row="saveRuleMassRow"
+            @save-analysis="saveRuleMassAnalysis"
+            @save-graph="saveGravityGraph"
+            @blocker="ruleMassBlocker = $event"
+          />
+        </div>
+
+        <!-- Plane mirror: results table, x against y graph, the relationship, conclusion and assessment -->
+        <div v-if="isPlaneMirrorExperiment && !hasTeacherMarking" id="plane-mirror-analysis" class="mt-5 sm:mt-6 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+          <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-4"><AppIcon name="book" class="w-5 h-5" /> Results, graph and the relationship between x and y</h2>
+          <VirtualLabPlaneMirrorAnalysis
+            :rows="resultRows"
+            :trials="planeMirrorTrials"
+            :lab-record="planeMirrorRecord"
+            :analysis="planeMirrorAnalysisEntry"
+            :graph-saved="graphAnalysisEntry"
+            v-model:conclusion="conclusionText"
+            :read-only="attempt.status !== 'in_progress'"
+            @save-row="savePlaneMirrorRow"
+            @save-analysis="savePlaneMirrorAnalysis"
+            @save-graph="saveGravityGraph"
+            @blocker="planeMirrorBlocker = $event"
           />
         </div>
 
@@ -449,9 +488,10 @@
           <VirtualLabMarkedBook :saved="attempt.marking_annotations" />
         </div>
 
-        <!-- Practical Notebook - once the teacher has marked, their marked sheets above show this work -->
+        <!-- Practical Notebook - once the teacher has marked, their marked sheets above show this work.
+             Practicals with their own analysis section (hasOwnAnalysis) show only the Submit area here. -->
         <div v-if="(allStepsDone || attempt.status !== 'in_progress') && !hasTeacherMarking" id="practical-notebook" class="scroll-mt-24 mt-5 sm:mt-6 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 sm:p-6">
-          <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-5"><AppIcon name="book" class="w-5 h-5" /> Practical Notebook</h2>
+          <h2 v-if="!hasOwnAnalysis" class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-5"><AppIcon name="book" class="w-5 h-5" /> Practical Notebook</h2>
 
           <!-- Uses the full width: readings, results table and graph on the left; the written work
                (observations, questions, conclusion) and Submit on the right. Stacks on small screens. -->
@@ -471,8 +511,8 @@
             @blocker="bulbBlocker = $event"
           />
 
-          <div class="grid grid-cols-1 gap-5 lg:gap-8 items-start" :class="isBulbExperiment || isMirrorExperiment || isGravityExperiment || isEmfExperiment ? '' : 'lg:grid-cols-2'">
-          <div v-if="!isBulbExperiment" class="space-y-5 min-w-0">
+          <div class="grid grid-cols-1 gap-5 lg:gap-8 items-start" :class="isBulbExperiment || isMirrorExperiment || isGravityExperiment || isEmfExperiment || isRuleMassExperiment || isPlaneMirrorExperiment ? '' : 'lg:grid-cols-2'">
+          <div v-if="!hasOwnAnalysis" class="space-y-5 min-w-0">
 
           <div v-if="measurementEntries.length > 0">
             <p class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Measurements</p>
@@ -549,8 +589,10 @@
                 @save="saveGraphAnalysis"
                 @blocker="studentGraphBlocker = $event"
               />
+              <!-- Not for practicals whose own section below the lab has the student plot the graph
+                   by hand - an automatically drawn copy here would do it for them -->
               <VirtualLabGraph
-                v-else
+                v-else-if="!studentPlotsOwnGraph"
                 ref="graphRef"
                 :rows="resultRows"
                 :config="attempt.experiment.graph"
@@ -577,8 +619,8 @@
           </div>
           </div>
 
-          <div class="space-y-5 min-w-0" :class="isBulbExperiment || isMirrorExperiment || isGravityExperiment || isEmfExperiment ? '' : 'lg:sticky lg:top-24 lg:border-l lg:border-gray-100 dark:lg:border-gray-700 lg:pl-8'">
-          <div>
+          <div class="space-y-5 min-w-0" :class="isBulbExperiment || isMirrorExperiment || isGravityExperiment || isEmfExperiment || isRuleMassExperiment || isPlaneMirrorExperiment ? '' : 'lg:sticky lg:top-24 lg:border-l lg:border-gray-100 dark:lg:border-gray-700 lg:pl-8'">
+          <div v-if="!hasOwnAnalysis">
             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Observations</label>
             <textarea
               v-model="observationText"
@@ -604,7 +646,7 @@
             ></textarea>
           </div>
 
-          <div v-if="attempt.experiment.conclusion_prompt && !isBulbExperiment && !isGravityExperiment && !isEmfExperiment">
+          <div v-if="attempt.experiment.conclusion_prompt && !isBulbExperiment && !isGravityExperiment && !isEmfExperiment && !isRuleMassExperiment && !isPlaneMirrorExperiment">
             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Conclusion</label>
             <p class="text-xs text-gray-400 dark:text-gray-500 mb-1.5">{{ attempt.experiment.conclusion_prompt }}</p>
             <textarea
@@ -628,7 +670,7 @@
               @click="submitPractical"
               class="w-full px-4 py-3 text-sm font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow-md disabled:opacity-50 transition-all print-color-exact"
             >
-              {{ submitting ? 'Submitting...' : !allStepsDone ? 'Complete all steps to submit' : submitBlocker ? (isBulbExperiment ? 'Finish your analysis to submit' : 'Finish your graph to submit') : 'Submit Practical' }}
+              {{ submitting ? 'Submitting...' : !allStepsDone ? 'Complete all steps to submit' : submitBlocker ? (hasOwnAnalysis ? 'Finish your analysis to submit' : 'Finish your graph to submit') : 'Submit Practical' }}
             </button>
           </template>
           </div>
@@ -660,6 +702,12 @@ import VirtualLabEmfBrief from '@/components/virtuallab/VirtualLabEmfBrief.vue'
 import VirtualLabBottleMassBrief from '@/components/virtuallab/VirtualLabBottleMassBrief.vue'
 import VirtualLabDensityBrief from '@/components/virtuallab/VirtualLabDensityBrief.vue'
 import VirtualLabEmfAnalysis from '@/components/virtuallab/VirtualLabEmfAnalysis.vue'
+import VirtualLabRuleMassAnalysis from '@/components/virtuallab/VirtualLabRuleMassAnalysis.vue'
+import VirtualLabRuleMassBrief from '@/components/virtuallab/VirtualLabRuleMassBrief.vue'
+import VirtualLabPlaneMirrorAnalysis from '@/components/virtuallab/VirtualLabPlaneMirrorAnalysis.vue'
+import VirtualLabPlaneMirrorBrief from '@/components/virtuallab/VirtualLabPlaneMirrorBrief.vue'
+import type { MirrorPinTrial, MirrorPinRecord } from '@/components/virtuallab/VirtualLabScenePlaneMirror.vue'
+import type { RuleMassTrial, RuleMassRecord } from '@/components/virtuallab/VirtualLabSceneRuleMass.vue'
 import VirtualLabGravityAnalysis from '@/components/virtuallab/VirtualLabGravityAnalysis.vue'
 import VirtualLabMiniResults from '@/components/virtuallab/VirtualLabMiniResults.vue'
 import type { PendulumGRecord, PendulumTrial } from '@/components/virtuallab/VirtualLabScenePendulum.vue'
@@ -834,7 +882,8 @@ const guidedExperiment = computed(() => {
 // Apparatus Playground, so every practical looks and feels like the same lab. Every registry scene
 // exposes goToView and is built with cupboard/wallCabinets except 'projectile', which uses the
 // open-field room setting and keeps its own richer launcher/field/trajectory camera system instead.
-const roomCameraSupported = computed(() => attempt.value?.experiment.render_component !== 'projectile')
+// The plane-mirror pin practical is a flat top view of the soft board - no room to look around.
+const roomCameraSupported = computed(() => !['projectile', 'plane_mirror_pins'].includes(attempt.value?.experiment.render_component ?? ''))
 const CAMERA_VIEWS: { key: CameraView; label: string; title: string }[] = [
   { key: 'bench', label: 'Bench', title: 'Back to the apparatus on the bench' },
   { key: 'entrance', label: 'Entrance', title: 'Look at the lab entrance' },
@@ -876,10 +925,10 @@ const isDensityExperiment = computed(() => attempt.value?.experiment.render_comp
 /** The live table shows while the student is still working; once every step is done the Practical
  *  Notebook (with the same table) takes over. Practicals that never produce result rows don't get one. */
 const RESULT_TABLE_PRACTICALS = ['pendulum', 'hookes_law', 'circuit', 'titration', 'optics', 'projectile', 'moments_balance', 'concave_mirror_focus', 'silver_density_spring']
-const showLiveResults = computed(() => !!attempt.value && attempt.value.status === 'in_progress' && !allStepsDone.value && !isBulbExperiment.value && !isGravityExperiment.value && !isEmfExperiment.value
+const showLiveResults = computed(() => !!attempt.value && attempt.value.status === 'in_progress' && !allStepsDone.value && !isBulbExperiment.value && !isGravityExperiment.value && !isEmfExperiment.value && !isRuleMassExperiment.value && !isPlaneMirrorExperiment.value
   && (resultRows.value.length > 0 || RESULT_TABLE_PRACTICALS.includes(attempt.value.experiment.render_component ?? '')))
 /** The compact copy in the steps panel - also for the g practical, whose rows the student types in. */
-const showMiniResults = computed(() => showLiveResults.value || ((isGravityExperiment.value || isEmfExperiment.value) && attempt.value?.status === 'in_progress'))
+const showMiniResults = computed(() => showLiveResults.value || ((isGravityExperiment.value || isEmfExperiment.value || isRuleMassExperiment.value || isPlaneMirrorExperiment.value) && attempt.value?.status === 'in_progress'))
 /** The row just recorded is highlighted for a moment, so the student sees what went in. */
 const justAddedRowId = ref<number | null>(null)
 let justAddedTimer = 0
@@ -957,7 +1006,7 @@ const onSceneAction = (payload: ScenePayload) => {
   return sceneActionChain
 }
 
-const handleSceneAction = async (payload: { objectKey: string | null; action: string; value: string | null; unit?: string | null; label?: string | null; safetyIssue?: boolean; targetObjectKey?: string | null; springLoadG?: number; oscillations?: number; bulbTrial?: BulbTrial; labRecord?: BulbLabRecord; pendulumTrial?: PendulumTrial; gRecord?: PendulumGRecord }) => {
+const handleSceneAction = async (payload: { objectKey: string | null; action: string; value: string | null; unit?: string | null; label?: string | null; safetyIssue?: boolean; targetObjectKey?: string | null; springLoadG?: number; oscillations?: number; bulbTrial?: BulbTrial; labRecord?: BulbLabRecord; pendulumTrial?: PendulumTrial; gRecord?: PendulumGRecord; ruleTrial?: RuleMassTrial; ruleRecord?: RuleMassRecord; mirrorTrial?: MirrorPinTrial; mirrorRecord?: MirrorPinRecord }) => {
   if (!attempt.value) return
 
   if ((payload.action === 'switch_on' || payload.action === 'switch_off') && payload.objectKey) {
@@ -970,6 +1019,14 @@ const handleSceneAction = async (payload: { objectKey: string | null; action: st
     if (payload.pendulumTrial) { const t = payload.pendulumTrial; queueBulbSave(() => upsertCalculation(`Timing l = ${t.length_m.toFixed(3)} m`, `t = ${t.t_s} s for ${t.oscillations} oscillations`, t)) }
     if (payload.gRecord) { const r = payload.gRecord; queueBulbSave(() => upsertCalculation('Lab record', 'Apparatus handling', r)) }
   }
+  if (isPlaneMirrorExperiment.value) {
+    if (payload.mirrorRecord) { const r = payload.mirrorRecord; queueBulbSave(() => upsertCalculation('Lab record', 'Apparatus handling', r)) }
+    if (payload.mirrorTrial) { const t = payload.mirrorTrial; queueBulbSave(() => savePlaneMirrorTrial(t)) }
+  }
+  if (isRuleMassExperiment.value) {
+    if (payload.ruleRecord) { const r = payload.ruleRecord; queueBulbSave(() => upsertCalculation('Lab record', 'Apparatus handling', r)) }
+    if (payload.ruleTrial) { const t = payload.ruleTrial; queueBulbSave(() => saveRuleMassTrial(t)) }
+  }
   if (isEmfExperiment.value) {
     if (payload.bulbTrial) { const t = payload.bulbTrial; queueBulbSave(() => saveEmfTrial(t)) }
     if (payload.labRecord) { const r = payload.labRecord; queueBulbSave(() => upsertCalculation('Lab record', 'Apparatus handling', r)) }
@@ -978,7 +1035,7 @@ const handleSceneAction = async (payload: { objectKey: string | null; action: st
     if (payload.bulbTrial) { const t = payload.bulbTrial; queueBulbSave(() => saveBulbTrial(t)) }
     if (payload.labRecord) { const r = payload.labRecord; queueBulbSave(() => upsertCalculation('Lab record', 'Apparatus handling', r)) }
   }
-  if (payload.action === 'measure' && payload.value !== null && !isBulbExperiment.value && !isGravityExperiment.value && !isEmfExperiment.value) {
+  if (payload.action === 'measure' && payload.value !== null && !isBulbExperiment.value && !isGravityExperiment.value && !isEmfExperiment.value && !isRuleMassExperiment.value && !isPlaneMirrorExperiment.value) {
     const num = parseFloat(payload.value)
     if (payload.unit === 'V') lastVoltageReading.value = num
     if (payload.unit === 'A') lastCurrentReading.value = num
@@ -1131,7 +1188,7 @@ const graphBlocker = computed<string | null>(() => {
   return null
 })
 const plotEntries = computed(() => attempt.value?.notebook.filter(n => n.entry_type === 'plot_point') ?? [])
-const submitBlocker = computed(() => graphBlocker.value || (isBulbExperiment.value ? bulbBlocker.value : null) || (isMirrorExperiment.value || isPendulum.value ? studentGraphBlocker.value : null) || (isGravityExperiment.value ? gravityBlocker.value : null) || (isEmfExperiment.value ? emfBlocker.value : null))
+const submitBlocker = computed(() => graphBlocker.value || (isBulbExperiment.value ? bulbBlocker.value : null) || (isMirrorExperiment.value || isPendulum.value ? studentGraphBlocker.value : null) || (isGravityExperiment.value ? gravityBlocker.value : null) || (isEmfExperiment.value ? emfBlocker.value : null) || (isRuleMassExperiment.value ? ruleMassBlocker.value : null) || (isPlaneMirrorExperiment.value ? planeMirrorBlocker.value : null))
 
 // --- Internal resistance and emf of a battery (battery_internal_resistance) ------------------------------
 const isBottleMassExperiment = computed(() => attempt.value?.experiment.render_component === 'moments_balance')
@@ -1156,6 +1213,70 @@ const saveEmfRow = (row: { length_cm: number; current_a: number; voltage_v: numb
 const saveEmfAnalysis = (extra: Record<string, any>) => queueBulbSave(() => {
   const sm = extra.summary || {}
   return upsertCalculation('Emf analysis', sm.r != null && sm.e != null ? `r = ${sm.r} ohm, E = ${sm.e} V${sm.score != null ? `, ${sm.score}/${sm.max_score}` : ''}` : 'In progress', extra)
+})
+
+// --- Plane mirror: image against object distance by the pin method (plane_mirror_pins) ------------------
+const isPlaneMirrorExperiment = computed(() => attempt.value?.experiment.render_component === 'plane_mirror_pins')
+const planeMirrorTrials = computed(() => calcEntries.value.filter(n => n.label.startsWith('Ray traced for y =')))
+const planeMirrorRecord = computed(() => (calcEntries.value.find(n => n.label === 'Lab record')?.extra as MirrorPinRecord | undefined) ?? null)
+const planeMirrorAnalysisEntry = computed(() => calcEntries.value.find(n => n.label === 'Plane mirror analysis') ?? null)
+const planeMirrorBlocker = ref<string | null>(null)
+const replacePlaneMirrorRow = async (row: { object_cm: number; image_cm: number; i_deg: number | null; r_deg: number | null }) => {
+  const key = row.object_cm.toFixed(1)
+  for (const old of resultRows.value.filter(r => r.extra && r.extra.object_cm != null && Number(r.extra.object_cm).toFixed(1) === key)) await removeNotebookEntry(old.id)
+  await postNotebook({ entry_type: 'result_row', label: `y = ${key} cm`, value: String(row.image_cm), unit: 'cm', extra: { object_cm: row.object_cm, image_cm: row.image_cm, i_deg: row.i_deg, r_deg: row.r_deg } })
+}
+const savePlaneMirrorTrial = async (t: MirrorPinTrial) => {
+  if (!attempt.value || attempt.value.status !== 'in_progress') return
+  await upsertCalculation(`Ray traced for y = ${t.object_cm.toFixed(1)} cm`, `x = ${t.image_cm.toFixed(1)} cm, i = ${t.i_deg}°, r = ${t.r_deg}°`, t)
+  await replacePlaneMirrorRow({ object_cm: t.object_cm, image_cm: t.image_cm, i_deg: t.i_deg, r_deg: t.r_deg })
+}
+const savePlaneMirrorRow = (row: { object_cm: number; image_cm: number; i_deg: number | null; r_deg: number | null }) => queueBulbSave(async () => {
+  if (!attempt.value || attempt.value.status !== 'in_progress') return
+  await replacePlaneMirrorRow(row)
+  await refreshAttempt()
+})
+const savePlaneMirrorAnalysis = (extra: Record<string, any>) => queueBulbSave(() => {
+  const sm = extra.summary || {}
+  return upsertCalculation('Plane mirror analysis', sm.k != null ? `gradient = ${sm.k}${sm.score != null ? `, ${sm.score}/${sm.max_score}` : ''}` : 'In progress', extra)
+})
+
+// --- Mass of a metre rule by moments (metre_rule_mass) ------------------------------------------------
+const isRuleMassExperiment = computed(() => attempt.value?.experiment.render_component === 'metre_rule_mass')
+/** Practicals whose analysis section has the student plot the graph by hand (no automatic chart) */
+/** Practicals whose own section below the lab holds the results, graph, conclusion and marking - no Practical Notebook for them, just Submit */
+const hasOwnAnalysis = computed(() => isBulbExperiment.value || isGravityExperiment.value || isEmfExperiment.value || isRuleMassExperiment.value || isPlaneMirrorExperiment.value)
+const studentPlotsOwnGraph = computed(() => isPlaneMirrorExperiment.value || isRuleMassExperiment.value || isGravityExperiment.value || isEmfExperiment.value)
+const ruleMassTrials = computed(() => calcEntries.value.filter(n => n.label.startsWith('Balance with mass at')))
+const ruleMassCTrial = computed(() => (calcEntries.value.find(n => n.label === 'Balance point C')?.extra as RuleMassTrial | undefined) ?? null)
+const ruleMassRecord = computed(() => (calcEntries.value.find(n => n.label === 'Lab record')?.extra as RuleMassRecord | undefined) ?? null)
+const ruleMassAnalysisEntry = computed(() => calcEntries.value.find(n => n.label === 'Rule mass analysis') ?? null)
+const ruleMassBlocker = ref<string | null>(null)
+const replaceRuleMassRow = async (row: { mass_cm: number; pivot_cm: number; x_cm: number; z_cm: number | null }) => {
+  const key = row.mass_cm.toFixed(1)
+  for (const old of resultRows.value.filter(r => r.extra && r.extra.mass_cm != null && Number(r.extra.mass_cm).toFixed(1) === key)) await removeNotebookEntry(old.id)
+  await postNotebook({ entry_type: 'result_row', label: `a = ${key} cm`, value: String(row.pivot_cm), unit: 'cm', extra: { mass_cm: row.mass_cm, pivot_cm: row.pivot_cm, x_cm: row.x_cm, z_cm: row.z_cm } })
+}
+const saveRuleMassTrial = async (t: RuleMassTrial) => {
+  if (!attempt.value || attempt.value.status !== 'in_progress') return
+  if (t.kind === 'c') {
+    await upsertCalculation('Balance point C', `C = ${t.pivot_cm.toFixed(1)} cm`, t)
+    return
+  }
+  const a = t.mass_cm!
+  await upsertCalculation(`Balance with mass at ${a.toFixed(1)} cm`, `P = ${t.pivot_cm.toFixed(1)} cm`, t)
+  const c = ruleMassCTrial.value?.pivot_cm
+  const r1 = (n: number) => Math.round(n * 10) / 10
+  await replaceRuleMassRow({ mass_cm: a, pivot_cm: t.pivot_cm, x_cm: r1(t.pivot_cm - a), z_cm: c != null ? r1(c - t.pivot_cm) : null })
+}
+const saveRuleMassRow = (row: { mass_cm: number; pivot_cm: number; x_cm: number; z_cm: number | null }) => queueBulbSave(async () => {
+  if (!attempt.value || attempt.value.status !== 'in_progress') return
+  await replaceRuleMassRow(row)
+  await refreshAttempt()
+})
+const saveRuleMassAnalysis = (extra: Record<string, any>) => queueBulbSave(() => {
+  const sm = extra.summary || {}
+  return upsertCalculation('Rule mass analysis', sm.mass_g != null ? `M = ${sm.mass_g} g${sm.score != null ? `, ${sm.score}/${sm.max_score}` : ''}` : 'In progress', extra)
 })
 
 // --- Experimental determination of g (pendulum_gravity) ----------------------------------------------

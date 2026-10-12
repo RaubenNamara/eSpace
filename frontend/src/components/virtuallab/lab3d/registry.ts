@@ -7,6 +7,8 @@ import VirtualLabSceneMicroscope from '../VirtualLabSceneMicroscope.vue'
 import VirtualLabSceneOptics from '../VirtualLabSceneOptics.vue'
 import VirtualLabSceneProjectile from '../VirtualLabSceneProjectile.vue'
 import VirtualLabSceneMomentsBalance from '../VirtualLabSceneMomentsBalance.vue'
+import VirtualLabSceneRuleMass from '../VirtualLabSceneRuleMass.vue'
+import VirtualLabScenePlaneMirror from '../VirtualLabScenePlaneMirror.vue'
 import VirtualLabSceneConcaveMirror from '../VirtualLabSceneConcaveMirror.vue'
 import VirtualLabSceneSilverDensity from '../VirtualLabSceneSilverDensity.vue'
 import VirtualLabSceneBulbResistance from '../VirtualLabSceneBulbResistance.vue'
@@ -27,6 +29,9 @@ export const GUIDED_EXPERIMENTS: Record<string, Component> = {
   optics: VirtualLabSceneOptics,
   projectile: VirtualLabSceneProjectile,
   moments_balance: VirtualLabSceneMomentsBalance,
+  metre_rule_mass: VirtualLabSceneRuleMass,
+  // A flat top view of the soft board (pins, mirror on ML) rather than the 3D bench
+  plane_mirror_pins: VirtualLabScenePlaneMirror,
   concave_mirror_focus: VirtualLabSceneConcaveMirror,
   silver_density_spring: VirtualLabSceneSilverDensity,
   bulb_filament_resistance: VirtualLabSceneBulbResistance,

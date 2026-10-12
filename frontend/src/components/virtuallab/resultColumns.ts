@@ -30,6 +30,14 @@ export const RESULT_COLUMN_LABELS: Record<string, string> = {
   length_cm: 'l (cm)',
   current_a: 'I (A)',
   voltage_v: 'V (V)',
+  mass_cm: 'a (cm)',
+  pivot_cm: 'P (cm)',
+  x_cm: 'x (cm)',
+  z_cm: 'z (cm)',
+  object_cm: 'Object distance y (cm)',
+  image_cm: 'Image distance x (cm)',
+  i_deg: 'Angle i (°)',
+  r_deg: 'Angle r (°)',
 }
 
 export const resultColumnLabel = (col: string) => RESULT_COLUMN_LABELS[col] ?? col.replace(/_/g, ' ')
