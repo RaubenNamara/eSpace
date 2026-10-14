@@ -135,6 +135,9 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
 
         // eNotes Module (Professional - topics and pages)
         Router::get('/enotes/topics', 'eSpace\App\Controllers\Student\ENoteController@index');
+        // ICT Lab - best scores, linked notes, finished attempts
+        Router::get('/ict-lab', 'eSpace\App\Controllers\IctLabController@studentIndex');
+        Router::post('/ict-lab/attempts', 'eSpace\App\Controllers\IctLabController@saveAttempt');
         Router::get('/enotes/topics/{id}', 'eSpace\App\Controllers\Student\ENoteController@show');
         Router::post('/enotes/topics/{id}/progress', 'eSpace\App\Controllers\Student\ENoteController@saveProgress');
         Router::get('/enotes/topics/{topicId}/my-pages', 'eSpace\App\Controllers\Student\PageNoteController@topicPageData');
@@ -387,6 +390,10 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/enotes/dashboard', 'eSpace\App\Controllers\Teacher\ENoteController@dashboard');
         Router::get('/enotes/assignments', 'eSpace\App\Controllers\Teacher\ENoteController@assignments');
         Router::get('/enotes/topics', 'eSpace\App\Controllers\Teacher\ENoteController@index');
+        // ICT Lab - linking an activity's steps to the teacher's eNotes
+        Router::get('/ict-lab', 'eSpace\App\Controllers\IctLabController@teacherIndex');
+        Router::put('/ict-lab/links', 'eSpace\App\Controllers\IctLabController@saveLink');
+        Router::delete('/ict-lab/links/{activity}/{step}', 'eSpace\App\Controllers\IctLabController@deleteLink');
         Router::post('/enotes/topics', 'eSpace\App\Controllers\Teacher\ENoteController@create');
         Router::get('/enotes/preview', 'eSpace\App\Controllers\Teacher\ENoteController@previewIndex');
         Router::get('/enotes/preview/topics/{id}', 'eSpace\App\Controllers\Teacher\ENoteController@previewShow');
@@ -601,6 +608,10 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/analytics/reading', 'eSpace\App\Controllers\HOD\AnalyticsController@reading');
         Router::get('/analytics/performance', 'eSpace\App\Controllers\HOD\AnalyticsController@performance');
         Router::get('/analytics/engagement', 'eSpace\App\Controllers\HOD\AnalyticsController@engagement');
+        // ICT Lab - linking an activity's steps to the teacher's eNotes
+        Router::get('/ict-lab', 'eSpace\App\Controllers\IctLabController@teacherIndex');
+        Router::put('/ict-lab/links', 'eSpace\App\Controllers\IctLabController@saveLink');
+        Router::delete('/ict-lab/links/{activity}/{step}', 'eSpace\App\Controllers\IctLabController@deleteLink');
 
         // Teachers
         Router::get('/teachers', 'eSpace\App\Controllers\HOD\TeacherController@index');
@@ -807,6 +818,10 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/students/analytics', 'eSpace\App\Controllers\Admin\StudentController@analytics');
         Router::post('/students', 'eSpace\App\Controllers\Admin\StudentController@create');
         Router::post('/students/enroll', 'eSpace\App\Controllers\Admin\StudentController@enroll');
+        // Bulk subject enrolment from a spreadsheet (a sheet of names per subject)
+        Router::get('/bulk-enrol/options', 'eSpace\App\Controllers\Admin\BulkEnrolController@options');
+        Router::post('/bulk-enrol/match', 'eSpace\App\Controllers\Admin\BulkEnrolController@match');
+        Router::post('/bulk-enrol/commit', 'eSpace\App\Controllers\Admin\BulkEnrolController@commit');
         Router::post('/students/enroll-all-departments', 'eSpace\App\Controllers\Admin\StudentController@enrollAllDepartments');
         Router::post('/students/deenroll', 'eSpace\App\Controllers\Admin\StudentController@deenroll');
         Router::post('/students/deenroll-single', 'eSpace\App\Controllers\Admin\StudentController@deenrollSingle');

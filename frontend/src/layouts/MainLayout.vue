@@ -42,7 +42,7 @@
             <span class="nav-fold-label">
               <span class="truncate">{{ group.name }}</span>
               <span v-if="groupHasActive(group)" class="w-1.5 h-1.5 rounded-full bg-indigo-500 flex-shrink-0" title="You are on a page in here"></span>
-              <span class="ml-auto text-[10px] font-semibold text-slate-400 dark:text-white/30 tabular-nums">{{ group.items.length }}</span>
+              <span class="ml-auto text-[10px] font-semibold text-slate-400 dark:text-white/30 tabular-nums">{{ leavesOf(group).length }}</span>
             </span>
             <svg class="nav-fold-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M19 9l-7 7-7-7"></path></svg>
           </button>
@@ -50,22 +50,39 @@
 
           <div :id="`nav-group-${group.key}`" class="nav-fold-body" :inert="!isIconOnly && isFolded(group.key) ? true : undefined">
             <div class="nav-fold-inner space-y-0.5">
-              <router-link
-                v-for="(item, i) in group.items"
-                :key="item.path"
-                :to="item.path"
-                :title="isIconOnly ? item.label : undefined"
-                :style="{ '--i': i }"
-                class="nav-item flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-xl transition-all duration-150 text-sm font-medium group"
-                :class="[isActive(item.path) ? 'bg-indigo-500/10 dark:bg-white/12 text-indigo-700 dark:text-white shadow-inner shadow-indigo-500/5 dark:shadow-white/5' : 'text-slate-800 dark:text-white/55 hover:bg-black/5 dark:hover:bg-white/[0.07] hover:text-slate-900 dark:hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
-              >
-                <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-all duration-150"
-                  :class="isActive(item.path) ? 'bg-indigo-500 text-white shadow shadow-indigo-500/30 dark:shadow-indigo-500/40' : 'text-slate-600 dark:text-white/40 group-hover:text-slate-900 dark:group-hover:text-white/80'"
+              <template v-for="row in rowsOf(group)" :key="row.item.path">
+                <!-- An item that opens into others (Virtual Lab: Science Lab and ICT Lab) -->
+                <button
+                  v-if="row.parent"
+                  type="button"
+                  :style="{ '--i': row.i }"
+                  class="nav-item w-full flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-xl transition-all duration-150 text-sm font-medium group text-left"
+                  :class="childActive(row.item) ? 'text-indigo-700 dark:text-white' : 'text-slate-800 dark:text-white/55 hover:bg-black/5 dark:hover:bg-white/[0.07] hover:text-slate-900 dark:hover:text-white'"
+                  :aria-expanded="subOpen(row.item)"
+                  @click="toggleSub(row.item.path)"
                 >
-                  <component :is="iconMap[item.icon]" class="w-4 h-4" />
-                </div>
-                <span v-if="!isIconOnly" class="truncate">{{ item.label }}</span>
-              </router-link>
+                  <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 text-slate-600 dark:text-white/40 group-hover:text-slate-900 dark:group-hover:text-white/80">
+                    <component :is="iconMap[row.item.icon]" class="w-4 h-4" />
+                  </div>
+                  <span class="truncate flex-1">{{ row.item.label }}</span>
+                  <svg class="w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200" :class="{ 'rotate-180': subOpen(row.item) }" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <router-link
+                  v-else
+                  :to="row.item.path"
+                  :title="isIconOnly ? row.item.label : undefined"
+                  :style="{ '--i': row.i }"
+                  class="nav-item flex items-center gap-2.5 pr-2.5 py-1.5 rounded-xl transition-all duration-150 text-sm font-medium group"
+                  :class="[row.child && !isIconOnly ? 'pl-7' : 'pl-3.5', isActive(row.item.path) ? 'bg-indigo-500/10 dark:bg-white/12 text-indigo-700 dark:text-white shadow-inner shadow-indigo-500/5 dark:shadow-white/5' : 'text-slate-800 dark:text-white/55 hover:bg-black/5 dark:hover:bg-white/[0.07] hover:text-slate-900 dark:hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
+                >
+                  <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-all duration-150"
+                    :class="isActive(row.item.path) ? 'bg-indigo-500 text-white shadow shadow-indigo-500/30 dark:shadow-indigo-500/40' : 'text-slate-600 dark:text-white/40 group-hover:text-slate-900 dark:group-hover:text-white/80'"
+                  >
+                    <component :is="iconMap[row.item.icon]" class="w-4 h-4" />
+                  </div>
+                  <span v-if="!isIconOnly" class="truncate">{{ row.item.label }}</span>
+                </router-link>
+              </template>
             </div>
           </div>
         </section>
@@ -359,7 +376,7 @@
       </button>
     </div>
   </nav>
-  <CommandPalette v-if="menuGroups.length" ref="paletteRef" :groups="menuGroups" :icons="iconMap" :role="menuRole" :actions="paletteActions" />
+  <CommandPalette v-if="menuGroups.length" ref="paletteRef" :groups="paletteGroups" :icons="iconMap" :role="menuRole" :actions="paletteActions" />
   </div>
       </header>
 
@@ -757,7 +774,7 @@ const openProfileSection = (section: 'photo' | 'password') => {
   showProfileDropdown.value = false
 }
 
-interface NavItem { path: string; label: string; icon: string }
+interface NavItem { path: string; label: string; icon: string; children?: NavItem[] }
 interface NavGroup { key: string; name: string; items: NavItem[] }
 
 // The sidebar, by role, in named groups (see the template for how a group folds away)
@@ -780,7 +797,10 @@ const MENU: Record<string, NavGroup[]> = {
       { path: '/student/library', label: 'eLibrary', icon: 'LibraryIcon' },
       { path: '/student/videos', label: 'Videos', icon: 'VideoCameraIcon' },
       { path: '/student/itembank', label: 'Item Bank', icon: 'QuestionMarkCircleIcon' },
-      { path: '/student/virtual-lab', label: 'Virtual Lab', icon: 'FlaskIcon' }
+      { path: '/student/labs', label: 'Virtual Lab', icon: 'FlaskIcon', children: [
+        { path: '/student/virtual-lab', label: 'Science Lab', icon: 'FlaskIcon' },
+        { path: '/student/ict-lab', label: 'ICT Lab', icon: 'ComputerIcon' }
+      ] }
     ] },
     { key: 'progress', name: 'Progress', items: [
       { path: '/student/reports', label: 'Reports', icon: 'ChartBarIcon' },
@@ -807,7 +827,10 @@ const MENU: Record<string, NavGroup[]> = {
       { path: '/teacher/library', label: 'eLibrary', icon: 'LibraryIcon' },
       { path: '/teacher/videos', label: 'Videos', icon: 'VideoCameraIcon' },
       { path: '/teacher/itembank', label: 'Item Bank', icon: 'QuestionMarkCircleIcon' },
-      { path: '/teacher/virtual-lab', label: 'Virtual Lab', icon: 'FlaskIcon' }
+      { path: '/teacher/labs', label: 'Virtual Lab', icon: 'FlaskIcon', children: [
+        { path: '/teacher/virtual-lab', label: 'Science Lab', icon: 'FlaskIcon' },
+        { path: '/teacher/ict-lab', label: 'ICT Lab', icon: 'ComputerIcon' }
+      ] }
     ] },
     { key: 'assessment', name: 'Assessment', items: [
       { path: '/teacher/assignments', label: 'Assessments', icon: 'DocumentTextIcon' },
@@ -840,7 +863,10 @@ const MENU: Record<string, NavGroup[]> = {
       { path: '/hod/library', label: 'eLibrary', icon: 'LibraryIcon' },
       { path: '/hod/videos', label: 'Videos', icon: 'VideoCameraIcon' },
       { path: '/hod/itembank', label: 'Item Bank', icon: 'QuestionMarkCircleIcon' },
-      { path: '/hod/virtual-lab', label: 'Virtual Lab', icon: 'FlaskIcon' }
+      { path: '/hod/labs', label: 'Virtual Lab', icon: 'FlaskIcon', children: [
+        { path: '/hod/virtual-lab', label: 'Science Lab', icon: 'FlaskIcon' },
+        { path: '/hod/ict-lab', label: 'ICT Lab', icon: 'ComputerIcon' }
+      ] }
     ] },
     { key: 'assessment', name: 'Assessment', items: [
       { path: '/hod/assessments', label: 'Assessments', icon: 'DocumentTextIcon' },
@@ -866,6 +892,7 @@ const MENU: Record<string, NavGroup[]> = {
     ] },
     { key: 'people', name: 'People', items: [
       { path: '/admin/students', label: 'Students', icon: 'AcademicCapIcon' },
+      { path: '/admin/bulk-enrol', label: 'Bulk subject enrolment', icon: 'TableCellsIcon' },
       { path: '/admin/teachers', label: 'Teachers', icon: 'BriefcaseIcon' },
       { path: '/admin/hods', label: 'HODs', icon: 'UserGroupIcon' },
       { path: '/admin/assign-teachers', label: 'Assign Teachers', icon: 'CheckCircleIcon' },
@@ -887,7 +914,10 @@ const MENU: Record<string, NavGroup[]> = {
       { path: '/admin/videos', label: 'Videos', icon: 'VideoCameraIcon' },
       { path: '/admin/itembank', label: 'Item Bank', icon: 'QuestionMarkCircleIcon' },
       { path: '/admin/live-classes', label: 'Live Classes', icon: 'VideoCameraIcon' },
-      { path: '/admin/virtual-lab', label: 'Virtual Lab', icon: 'FlaskIcon' }
+      { path: '/admin/labs', label: 'Virtual Lab', icon: 'FlaskIcon', children: [
+        { path: '/admin/virtual-lab', label: 'Science Lab', icon: 'FlaskIcon' },
+        { path: '/admin/ict-lab', label: 'ICT Lab', icon: 'ComputerIcon' }
+      ] }
     ] },
     { key: 'assessment', name: 'Assessment', items: [
       { path: '/admin/supervision', label: 'Supervision', icon: 'TargetIcon' },
@@ -963,7 +993,38 @@ const paletteActions = computed<PaletteAction[]>(() => {
   return [...(byRole[menuRole.value] || []), ...common]
 })
 
-const groupHasActive = (group: NavGroup) => isFolded(group.key) && group.items.some(item => isActive(item.path))
+// Items that open into others: the links themselves, for counting, the palette and "you are in here"
+const leavesOf = (group: NavGroup) => group.items.flatMap(item => item.children ?? [item])
+const groupHasActive = (group: NavGroup) => isFolded(group.key) && leavesOf(group).some(item => isActive(item.path))
+const childActive = (item: NavItem) => !!item.children?.some(c => isActive(c.path))
+// Which fold-out items are open: one holding the page you are on opens by itself, until closed
+const openSubs = ref(new Set<string>())
+const closedSubs = ref(new Set<string>())
+const subOpen = (item: NavItem) => openSubs.value.has(item.path) || (childActive(item) && !closedSubs.value.has(item.path))
+const toggleSub = (path: string) => {
+  const item = menuGroups.value.flatMap(g => g.items).find(i => i.path === path)
+  if (!item) return
+  const open = new Set(openSubs.value)
+  const closed = new Set(closedSubs.value)
+  if (subOpen(item)) { open.delete(path); closed.add(path) } else { open.add(path); closed.delete(path) }
+  openSubs.value = open
+  closedSubs.value = closed
+}
+// The rows a group draws: plain links, and fold-out items followed by their links when open
+// (an icon-only sidebar shows the links straight away)
+const rowsOf = (group: NavGroup) => {
+  const rows: { item: NavItem; i: number; parent?: boolean; child?: boolean }[] = []
+  let i = 0
+  for (const item of group.items) {
+    if (!item.children) { rows.push({ item, i: i++ }); continue }
+    if (isIconOnly.value) { for (const c of item.children) rows.push({ item: c, i: i++, child: true }); continue }
+    rows.push({ item, i: i++, parent: true })
+    if (subOpen(item)) for (const c of item.children) rows.push({ item: c, i: i++, child: true })
+  }
+  return rows
+}
+// The command palette lists the links, not the fold-out headings
+const paletteGroups = computed(() => menuGroups.value.map(g => ({ ...g, items: leavesOf(g) })))
 
 function isActive(path: string): boolean {
   return route.path === path || route.path.startsWith(path + '/')
@@ -1049,6 +1110,7 @@ const ChartIcon = icon(['M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 0
 
 const TrophyIcon = icon(['M8 21h8m-4-4v4M6 4h12v3a6 6 0 01-12 0V4zM6 4H3v1a4 4 0 004 4M18 4h3v1a4 4 0 01-4 4'])
 
+const ComputerIcon = icon(['M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25'])
 const FlaskIcon = icon(['M9.75 3v5.25L4.5 18a1.5 1.5 0 001.32 2.25h12.36A1.5 1.5 0 0019.5 18l-5.25-9.75V3M8.25 3h7.5M8.25 14.25h7.5'])
 
 const AcademicCapIcon = icon([
@@ -1098,7 +1160,7 @@ const BellAlertIcon = icon(['M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a
 
 const MapIcon = icon(['M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7'])
 
-export { MegaphoneIcon, TargetIcon, ClipboardListIcon, ChatQuestionIcon, BoltIcon, BulbIcon, BellAlertIcon, MapIcon, DashboardIcon, BookOpenIcon, DocumentTextIcon, LibraryIcon, NoteIcon, QuestionMarkCircleIcon, ChatIcon, ChartBarIcon, CogIcon, UsersIcon, VideoCameraIcon, ChartIcon, AcademicCapIcon, BookIcon, CheckCircleIcon, BriefcaseIcon, UserGroupIcon, BuildingOfficeIcon, BuildingLibraryIcon, CalendarIcon, CalendarDaysIcon, KeyIcon, CloudArrowUpIcon, CloudArrowDownIcon, DocumentIcon, TrophyIcon, FlaskIcon, TableCellsIcon }
+export { MegaphoneIcon, TargetIcon, ClipboardListIcon, ChatQuestionIcon, BoltIcon, BulbIcon, BellAlertIcon, MapIcon, DashboardIcon, BookOpenIcon, DocumentTextIcon, LibraryIcon, NoteIcon, QuestionMarkCircleIcon, ChatIcon, ChartBarIcon, CogIcon, UsersIcon, VideoCameraIcon, ChartIcon, AcademicCapIcon, BookIcon, CheckCircleIcon, BriefcaseIcon, UserGroupIcon, BuildingOfficeIcon, BuildingLibraryIcon, CalendarIcon, CalendarDaysIcon, KeyIcon, CloudArrowUpIcon, CloudArrowDownIcon, DocumentIcon, TrophyIcon, FlaskIcon, ComputerIcon, TableCellsIcon }
 
 // Sidebar menu items reference icons by name (e.g. icon: 'BookOpenIcon') so the menu arrays stay
 // plain, serialisable data - <component :is="item.icon"> can't resolve a local script-setup
@@ -1108,7 +1170,7 @@ const iconMap: Record<string, any> = {
   DashboardIcon, BookOpenIcon, DocumentTextIcon, LibraryIcon, NoteIcon, QuestionMarkCircleIcon,
   ChatIcon, ChartBarIcon, CogIcon, UsersIcon, VideoCameraIcon, ChartIcon, AcademicCapIcon, BookIcon,
   CheckCircleIcon, BriefcaseIcon, UserGroupIcon, BuildingOfficeIcon, BuildingLibraryIcon,
-  CalendarIcon, CalendarDaysIcon, KeyIcon, CloudArrowUpIcon, CloudArrowDownIcon, DocumentIcon, TrophyIcon, FlaskIcon,
+  CalendarIcon, CalendarDaysIcon, KeyIcon, CloudArrowUpIcon, CloudArrowDownIcon, DocumentIcon, TrophyIcon, FlaskIcon, ComputerIcon,
   TableCellsIcon, MapIcon, BoltIcon, BulbIcon, BellAlertIcon, MegaphoneIcon, TargetIcon, ClipboardListIcon, ChatQuestionIcon
 }
 </script>

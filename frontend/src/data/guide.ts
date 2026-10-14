@@ -73,6 +73,12 @@ export const GUIDE: GuidePart[] = [
         tips: ['Find the page hard to read? The Reading focus colour button lays a soft colour over the whole page, all the way down as you scroll.']
       },
       {
+        id: 's-ictlab', title: 'The ICT Lab', icon: 'keyboard',
+        intro: 'Hands-on computer activities in 3D - meet every part in the Parts showroom, find the parts in a computer, build one, clean a dusty one, or terminate a network cable - one step at a time.',
+        steps: ['Open Virtual Lab in the menu, then ICT Lab.', 'Pick an activity and a level: Simple shows you what to use, Intermediate gives the steps without pointers, Advanced gives harder tasks.', 'Read the step, then do it - tap the part, pick a part from the tray and tap where it goes, or use the tool. When you get it right the step is ticked and the next one appears.', 'A wrong move counts as a mistake and tells you why. A hint costs 3 points, a mistake 5 - but after two tries on a step (or a long time stuck) the hint shows by itself, free, and what to use glows.', 'Drag to turn the computer round, pinch or scroll to zoom. In Assembling, drag a part from the desk into the case.', 'In Cleaning, choose the air can or the electric blower - the electric one must be plugged into the wall socket and switched on (the computer stays unplugged). Then press and hold on the dust.', 'At the end you see your score; your best score for each level shows on the ICT Lab page.'],
+        tips: ['"Read about this" on a step opens the page of your teacher\'s eNotes that explains it.']
+      },
+      {
         id: 's-live', title: 'Joining live classes', icon: 'video',
         steps: ['Open Live Classes - "Next up" shows the next lesson and how long until it starts.', 'When the teacher starts the lesson, a red Live now banner appears with Join now.', 'The lesson opens in a new tab; close it when you\'re done.', 'Missed one? Look under Past classes - recorded lessons have a Watch button.'],
       },
@@ -133,6 +139,10 @@ export const GUIDE: GuidePart[] = [
         id: 't-content', title: 'eLibrary, Item Bank and Videos', icon: 'upload',
         steps: ['Choose Add (or Upload) and drop in a PDF, slides or a video.', 'Pick the subject and class - a whole class level or one stream.', 'Publish to put it on students\' shelves; keep it as a draft until it\'s ready.', 'The reach bar on each item shows how many students have opened or watched it - tap it for the list.'],
         tips: ['Book covers: add your own picture when you upload, use the first page of the file, or choose Design a cover to pick a suggested design and edit its words and colours.']
+      },
+      {
+        id: 't-ictlab', title: 'The ICT Lab and linking it to your notes', icon: 'keyboard',
+        steps: ['Open Virtual Lab in the menu, then ICT Lab. Try any activity at any level - your own runs are not saved.', 'Beside every step is a page icon. Tap it to link that step to one of your eNotes - the whole topic, or one page.', 'Students on that step then see "Read about this", which opens your page. A link works at every level.', 'Students\' best scores for each activity and level are kept as they finish.'],
       },
       {
         id: 't-live', title: 'Live classes', icon: 'video',
@@ -239,6 +249,12 @@ export const GUIDE: GuidePart[] = [
         id: 'a-uneb', title: 'UNEB school-based assessment', icon: 'clipboard',
         steps: ['Open UNEB assessment and choose Settings: enter the centre number, what the CA score is out of, and the submission deadline.', 'Pick a subject and class to see every learner\'s Activities of Integration, CA score, project and evidence.', 'The figures at the top show who is not ready yet - no LIN, missed work, or AOIs still to mark.', 'Import LINs from a spreadsheet, then Export the class when everyone is ready.'],
         tips: ['The deadline shows on the page as a countdown - amber in the last two weeks.']
+      },
+      {
+        id: 'a-bulk-enrol', title: 'Enrolling many students in a subject from a spreadsheet', icon: 'users',
+        intro: 'For optional subjects: a workbook with a sheet per subject (a sitting plan or class list), each listing student names and streams.',
+        steps: ['Open Bulk subject enrolment (under People) and choose the file. Check the class and the academic year.', 'Each sheet shows how many students it lists, with its subject already picked when the sheet name matches one - change it if needed. A sheet can go into more than one subject.', 'Press Check the names. eSpace finds each student in that class by name and stream, even with small spelling slips or the names in a different order.', 'Names it is not sure of are shown first: choose the right student from the list, or leave them out. Students already in the subject are skipped.', 'Press Enrol. Each student is enrolled under their own stream; running the same sheet again never enrols anyone twice.'],
+        tips: ['The sheet needs a NAME (or NAMES) column and a STREAM column. Titles, room labels like "S.1A" and blank rows are skipped.']
       },
       {
         id: 'a-year', title: 'Promotion and the new year', icon: 'clock',

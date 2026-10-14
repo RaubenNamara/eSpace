@@ -74,6 +74,9 @@ const VirtualLabPreview = () => import('../pages/teacher/preview/VirtualLabPrevi
 const ENotes = () => import('../pages/teacher/ENotes.vue')
 const ENoteBuilder = () => import('../pages/teacher/ENoteBuilder.vue')
 const ENotePreview = () => import('../pages/teacher/ENotePreview.vue')
+const IctLab = () => import('../pages/common/IctLab.vue')
+const IctLabActivity = () => import('../pages/common/IctLabActivity.vue')
+const IctLabShowroom = () => import('../pages/common/IctLabShowroom.vue')
 const StudentENotes = () => import('../pages/student/ENotes.vue')
 
 // HOD Pages
@@ -230,6 +233,9 @@ const routes: RouteRecordRaw[] = [
       { path: 'achievements', name: 'StudentAchievements', component: StudentAchievements },
       { path: 'academic-history', name: 'StudentAcademicHistory', component: StudentAcademicHistory },
       { path: 'virtual-lab', name: 'StudentVirtualLab', component: StudentVirtualLab },
+      { path: 'ict-lab', name: 'StudentIctLab', component: IctLab },
+      { path: 'ict-lab/showroom', name: 'StudentIctLabShowroom', component: IctLabShowroom },
+      { path: 'ict-lab/:activity', name: 'StudentIctLabActivity', component: IctLabActivity },
       { path: 'virtual-lab/playground', name: 'StudentVirtualLabPlayground', component: StudentVirtualLabPlayground },
       { path: 'constructs', name: 'StudentConstructs', component: StudentConstructs },
       { path: 'virtual-lab/:assignmentId', name: 'StudentVirtualLabExperiment', component: StudentVirtualLabExperiment }
@@ -309,6 +315,9 @@ const routes: RouteRecordRaw[] = [
       { path: 'physical-exams', name: 'TeacherPhysicalExams', component: TeacherPhysicalExams },
       { path: 'uneb-assessment', name: 'TeacherUnebAssessment', component: () => import('../pages/common/UnebAssessment.vue') },
       { path: 'virtual-lab', name: 'TeacherVirtualLab', component: TeacherVirtualLab },
+      { path: 'ict-lab', name: 'TeacherIctLab', component: IctLab },
+      { path: 'ict-lab/showroom', name: 'TeacherIctLabShowroom', component: IctLabShowroom },
+      { path: 'ict-lab/:activity', name: 'TeacherIctLabActivity', component: IctLabActivity },
       { path: 'virtual-lab/playground', name: 'TeacherVirtualLabPlayground', component: StudentVirtualLabPlayground },
       // A teacher doing an experiment exactly like a student (same page; nothing saved, no submit)
       { path: 'virtual-lab/practice/:experimentId', name: 'TeacherVirtualLabPractice', component: StudentVirtualLabExperiment, meta: { practice: true, practiceRole: 'teacher' } }
@@ -335,6 +344,9 @@ const routes: RouteRecordRaw[] = [
       { path: 'itembank', name: 'HODItemBank', component: HODItemBank },
       // The admin's Virtual Lab page, limited to the HOD's department (meta.labRole)
       { path: 'virtual-lab', name: 'HODVirtualLab', component: AdminVirtualLab, meta: { labRole: 'hod' } },
+      { path: 'ict-lab', name: 'HODIctLab', component: IctLab },
+      { path: 'ict-lab/showroom', name: 'HODIctLabShowroom', component: IctLabShowroom },
+      { path: 'ict-lab/:activity', name: 'HODIctLabActivity', component: IctLabActivity },
       { path: 'virtual-lab/practice/:experimentId', name: 'HODVirtualLabPractice', component: StudentVirtualLabExperiment, meta: { practice: true, practiceRole: 'hod' } },
       { path: 'assessments', name: 'HODAssessments', component: HODAssessments },
       { path: 'assessments/:id/preview', name: 'HODAssignmentPreview', component: StudentAssignmentAnswer, meta: { previewRole: 'hod' } },
@@ -360,6 +372,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'dashboard', name: 'AdminDashboard', component: AdminDashboard },
       { path: 'users', name: 'AdminUsers', component: AdminUsers },
       { path: 'students', name: 'AdminStudents', component: AdminStudents },
+      { path: 'bulk-enrol', name: 'AdminBulkEnrol', component: () => import('../pages/admin/BulkEnrol.vue') },
       { path: 'teachers', name: 'AdminTeachers', component: AdminTeachers },
       { path: 'assign-teachers', name: 'AdminAssignTeachers', component: AdminAssignTeachers },
       { path: 'hods', name: 'AdminHODs', component: AdminHODs },
@@ -396,6 +409,9 @@ const routes: RouteRecordRaw[] = [
       { path: 'uneb-assessment', name: 'AdminUnebAssessment', component: () => import('../pages/common/UnebAssessment.vue') },
       { path: 'rewards', name: 'AdminRewards', component: AdminRewards },
       { path: 'virtual-lab', name: 'AdminVirtualLab', component: AdminVirtualLab },
+      { path: 'ict-lab', name: 'AdminIctLab', component: IctLab },
+      { path: 'ict-lab/showroom', name: 'AdminIctLabShowroom', component: IctLabShowroom },
+      { path: 'ict-lab/:activity', name: 'AdminIctLabActivity', component: IctLabActivity },
       // An admin opening an experiment to view its diagram/procedure - same page as the teacher
       // practice route, nothing saved, no submit.
       { path: 'virtual-lab/practice/:experimentId', name: 'AdminVirtualLabPractice', component: StudentVirtualLabExperiment, meta: { practice: true, practiceRole: 'admin' } },
