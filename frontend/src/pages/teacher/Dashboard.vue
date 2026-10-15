@@ -382,7 +382,7 @@ const toggle = (k: CardKey) => { open.value = { ...open.value, [k]: !open.value[
 const shown = <T,>(k: CardKey, list: T[]) => (open.value[k] ? list : list.slice(0, LIMIT[k]))
 
 const shortcuts = [
-  { label: 'New assessment', to: '/teacher/assignments/create', icon: 'clipboard' },
+  { label: 'Assessments', to: '/teacher/assignments', icon: 'clipboard' },
   { label: 'eNotes', to: '/teacher/enotes', icon: 'book' },
   { label: 'Live classes', to: '/teacher/live-classes', icon: 'camera' },
   { label: 'My week', to: '/teacher/planner', icon: 'clock' },
