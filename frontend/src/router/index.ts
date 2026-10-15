@@ -226,7 +226,6 @@ const routes: RouteRecordRaw[] = [
       { path: 'study-groups', name: 'StudentStudyGroups', component: () => import('../pages/student/StudyGroups.vue') },
       { path: 'notices', name: 'StudentNotices', component: () => import('../pages/common/Noticeboard.vue') },
       { path: 'my-notes', name: 'StudentMyNotes', component: () => import('../pages/student/MyNotes.vue') },
-      { path: 'exam-plan', name: 'StudentExamPlan', component: () => import('../pages/student/ExamPlan.vue') },
       { path: 'downloads', name: 'StudentDownloads', component: StudentDownloads },
       { path: 'settings', name: 'StudentSettings', component: StudentSettings },
       { path: 'search', name: 'StudentSearch', component: StudentSearch },
@@ -313,7 +312,6 @@ const routes: RouteRecordRaw[] = [
       { path: 'search', name: 'TeacherSearch', component: TeacherSearch },
       { path: 'marksheet', name: 'TeacherMarksheet', component: TeacherMarksheet },
       { path: 'physical-exams', name: 'TeacherPhysicalExams', component: TeacherPhysicalExams },
-      { path: 'uneb-assessment', name: 'TeacherUnebAssessment', component: () => import('../pages/common/UnebAssessment.vue') },
       { path: 'virtual-lab', name: 'TeacherVirtualLab', component: TeacherVirtualLab },
       { path: 'ict-lab', name: 'TeacherIctLab', component: IctLab },
       { path: 'ict-lab/showroom', name: 'TeacherIctLabShowroom', component: IctLabShowroom },
@@ -359,7 +357,6 @@ const routes: RouteRecordRaw[] = [
       { path: 'notices', name: 'HODNotices', component: () => import('../pages/common/Noticeboard.vue') },
       { path: 'marksheet', name: 'HODMarksheet', component: HODMarksheet },
       { path: 'physical-exams', name: 'HODPhysicalExams', component: HODPhysicalExams },
-      { path: 'uneb-assessment', name: 'HODUnebAssessment', component: () => import('../pages/common/UnebAssessment.vue') },
       { path: 'search', name: 'HODSearch', component: HODSearch }
     ]
   },
@@ -406,7 +403,6 @@ const routes: RouteRecordRaw[] = [
       { path: 'chat', name: 'AdminChat', component: AdminChat },
       { path: 'marksheet', name: 'AdminMarksheet', component: AdminMarksheet },
       { path: 'physical-exams', name: 'AdminPhysicalExams', component: AdminPhysicalExams },
-      { path: 'uneb-assessment', name: 'AdminUnebAssessment', component: () => import('../pages/common/UnebAssessment.vue') },
       { path: 'rewards', name: 'AdminRewards', component: AdminRewards },
       { path: 'virtual-lab', name: 'AdminVirtualLab', component: AdminVirtualLab },
       { path: 'ict-lab', name: 'AdminIctLab', component: IctLab },

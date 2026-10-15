@@ -96,7 +96,7 @@ class DashboardController extends Controller
 
             if (in_array($status, ['new', 'in_progress', 'overdue'], true)) {
                 $pendingCount++;
-                if (count($upcomingAssignments) < 5) {
+                if (count($upcomingAssignments) < 6) {
                     $upcomingAssignments[] = [
                         'id' => (int) $row['id'],
                         'title' => $row['title'],

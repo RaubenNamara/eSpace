@@ -26,7 +26,7 @@ export default defineConfig(() => ({
         name: 'eSpace - the digital school',
         short_name: 'eSpace',
         description: 'Notes, books, videos, live lessons, competency-based assessment and Learning Maps for secondary schools',
-        theme_color: '#4f46e5',
+        theme_color: '#15874a',
         background_color: '#ffffff',
         id: '/',
         start_url: '/',

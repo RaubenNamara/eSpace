@@ -104,10 +104,6 @@ export const GUIDE: GuidePart[] = [
         steps: ['While reading, tap the speech-bubble button at the top.', 'Write your question - tick "About page" to say which page.', 'Classmates and your teacher answer; the teacher can mark the best answer.', 'You get a notification when someone answers.'],
       },
       {
-        id: 's-exams', title: 'Exam plan and countdown', icon: 'target',
-        steps: ['When your school adds an exam for your class, your dashboard shows the days left.', 'Exam plan lists what to revise each week - the topics you scored lowest on first.', 'Tap Revise to open the topic\'s eNotes, and tick each topic when you have revised it.'],
-      },
-      {
         id: 's-notices', title: 'The noticeboard', icon: 'speaker',
         steps: ['New notices show on your dashboard and on the Noticeboard.', 'Open a notice to read it - your teacher can see that you have read it.'],
       },
@@ -186,7 +182,7 @@ export const GUIDE: GuidePart[] = [
       },
       {
         id: 't-results', title: 'Marksheets, physical exams and report cards', icon: 'chart',
-        steps: ['Marksheets: every mark for a class and subject, with averages and grades - Download CSV for a spreadsheet.', 'Physical Exams: record a test sat on paper, type in the marks (Enter moves to the next learner) and choose if it counts on report cards.', 'Report Cards: class teachers generate a full report for each learner - or all missing ones at once - then print.', 'UNEB assessment: each learner\'s Activities of Integration, CA score and evidence for your subjects, and what is still missing before the UNEB deadline.'],
+        steps: ['Marksheets: every mark for a class and subject, with averages and grades - Download CSV for a spreadsheet.', 'Physical Exams: record a test sat on paper, type in the marks (Enter moves to the next learner) and choose if it counts on report cards.', 'Report Cards: class teachers generate a full report for each learner - or all missing ones at once - then print.'],
       }
     ]
   },
@@ -211,10 +207,6 @@ export const GUIDE: GuidePart[] = [
         id: 'h-content', title: 'Books, videos and past papers for the department', icon: 'upload',
         intro: 'eLibrary, Videos and Item Bank work just like a teacher\'s - and what you add can go to the whole department.',
         steps: ['Open eLibrary (or Videos, or Item Bank) and choose Add.', 'Choose who gets it: the whole department, every stream of one class, or a single stream.', 'Design a cover for a book, or use your own picture.', 'Teachers\' uploads in your department show here too, with who added them.'],
-      },
-      {
-        id: 'h-uneb', title: 'UNEB school-based assessment', icon: 'clipboard',
-        steps: ['Open UNEB assessment, pick the subject, class and stream.', 'Each learner shows their LIN, Activities of Integration marked, the continuous-assessment (CA) score, project and evidence.', 'Status shows what is still missing: no LIN, missed work, or AOIs still to mark.', 'Use Import LINs to add learners\' UNEB numbers from a spreadsheet, then Export for the submission file.'],
       },
       {
         id: 'h-teach', title: 'Teaching your own classes', icon: 'teacher',
@@ -246,11 +238,6 @@ export const GUIDE: GuidePart[] = [
         steps: ['Open eLibrary (or Videos, or Item Bank) and choose Add.', 'Pick the department, then who gets it: the whole department, every stream of one class, or a single stream.', 'Give a book a cover: your own picture, the first page of the file, or Design a cover to choose a suggested design and edit it.', 'Everything teachers and HODs upload is listed here as well.'],
       },
       {
-        id: 'a-uneb', title: 'UNEB school-based assessment', icon: 'clipboard',
-        steps: ['Open UNEB assessment and choose Settings: enter the centre number, what the CA score is out of, and the submission deadline.', 'Pick a subject and class to see every learner\'s Activities of Integration, CA score, project and evidence.', 'The figures at the top show who is not ready yet - no LIN, missed work, or AOIs still to mark.', 'Import LINs from a spreadsheet, then Export the class when everyone is ready.'],
-        tips: ['The deadline shows on the page as a countdown - amber in the last two weeks.']
-      },
-      {
         id: 'a-bulk-enrol', title: 'Enrolling many students in a subject from a spreadsheet', icon: 'users',
         intro: 'For optional subjects: a workbook with a sheet per subject (a sitting plan or class list), each listing student names and streams.',
         steps: ['Open Bulk subject enrolment (under People) and choose the file. Check the class and the academic year.', 'Each sheet shows how many students it lists, with its subject already picked when the sheet name matches one - change it if needed. A sheet can go into more than one subject.', 'Press Check the names. eSpace finds each student in that class by name and stream, even with small spelling slips or the names in a different order.', 'Names it is not sure of are shown first: choose the right student from the list, or leave them out. Students already in the subject are skipped.', 'Press Enrol. Each student is enrolled under their own stream; running the same sheet again never enrols anyone twice.'],
@@ -272,7 +259,7 @@ export const GUIDE: GuidePart[] = [
       },
       {
         id: 'a-notices', title: 'Noticeboard and exam dates', icon: 'speaker',
-        steps: ['Noticeboard: post to everyone, all students, all staff, or a class - pin important ones to the top, and set a date for it to come down.', 'Exam dates: add each exam (for one class or every class). Students then see a countdown and a week-by-week revision plan.'],
+        steps: ['Noticeboard: post to everyone, all students, all staff, or a class - pin important ones to the top, and set a date for it to come down.', 'Exam dates: add each exam (for one class or every class).'],
       }
     ]
   }

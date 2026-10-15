@@ -140,11 +140,14 @@
         class="print:hidden bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-40 transition-transform duration-300"
         :class="[{ '-translate-y-full': headerHidden }, isImmersiveReader ? 'hidden lg:block' : '']"
       >
-        <div class="flex items-center justify-between px-6 py-3">
+        <div class="flex items-center justify-between px-3 sm:px-6 py-2.5 sm:py-3">
           <div class="flex items-center gap-2 flex-shrink-0">
+            <RouterLink v-if="showStudentTabs" to="/student/dashboard" class="lg:hidden leading-none" aria-label="eSpace home"><Wordmark size="sm" /></RouterLink>
             <button
               @click="sidebarOpen = !sidebarOpen"
               class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
+              :class="showStudentTabs ? 'hidden lg:block' : ''"
+              aria-label="Menu"
             >
               <svg class="w-6 h-6 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
@@ -164,7 +167,7 @@
             Go to <kbd class="px-1 rounded bg-gray-100 dark:bg-gray-700 text-[10px]">{{ isMacKey ? '⌘' : 'Ctrl' }} K</kbd>
           </button>
 
-          <div class="flex items-center space-x-4">
+          <div class="flex items-center space-x-1 sm:space-x-4">
             <!-- Mobile search shortcut -->
             <router-link
               v-if="userRole === 'student' || userRole === 'teacher'"
@@ -235,6 +238,7 @@
             <router-link
               :to="`/${userRole}/chat`"
               class="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              :class="showStudentTabs ? 'hidden lg:block' : ''"
               title="Messages"
             >
               <svg class="w-6 h-6 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -791,7 +795,6 @@ const MENU: Record<string, NavGroup[]> = {
     ] },
     { key: 'revision', name: 'Revision', items: [
       { path: '/student/assignments', label: 'Assessments', icon: 'DocumentTextIcon' },
-      { path: '/student/exam-plan', label: 'Exam Planner', icon: 'TargetIcon' }
     ] },
     { key: 'resources', name: 'Resources', items: [
       { path: '/student/library', label: 'eLibrary', icon: 'LibraryIcon' },
@@ -810,8 +813,7 @@ const MENU: Record<string, NavGroup[]> = {
     ] },
     { key: 'community', name: 'Community', items: [
       { path: '/student/chat', label: 'Chats', icon: 'ChatIcon' },
-      { path: '/student/study-groups', label: 'Study groups', icon: 'UserGroupIcon' },
-      { path: '/student/notices', label: 'Noticeboard', icon: 'MegaphoneIcon' }
+      { path: '/student/study-groups', label: 'Study groups', icon: 'UserGroupIcon' }
     ] }
   ],
   teacher: [
@@ -836,7 +838,6 @@ const MENU: Record<string, NavGroup[]> = {
       { path: '/teacher/assignments', label: 'Assessments', icon: 'DocumentTextIcon' },
       { path: '/teacher/marksheet', label: 'Marksheet', icon: 'TableCellsIcon' },
       { path: '/teacher/physical-exams', label: 'Physical Exams', icon: 'DocumentTextIcon' },
-      { path: '/teacher/uneb-assessment', label: 'UNEB assessment', icon: 'CheckCircleIcon' },
       { path: '/teacher/reports', label: 'Reports', icon: 'ChartBarIcon' }
     ] },
     { key: 'insights', name: 'Insights', items: [
@@ -872,7 +873,6 @@ const MENU: Record<string, NavGroup[]> = {
       { path: '/hod/assessments', label: 'Assessments', icon: 'DocumentTextIcon' },
       { path: '/hod/marksheet', label: 'Marksheet', icon: 'TableCellsIcon' },
       { path: '/hod/physical-exams', label: 'Physical Exams', icon: 'DocumentTextIcon' },
-      { path: '/hod/uneb-assessment', label: 'UNEB assessment', icon: 'CheckCircleIcon' },
       { path: '/hod/reports', label: 'Reports', icon: 'ChartBarIcon' }
     ] },
     { key: 'insights', name: 'Insights', items: [
@@ -924,7 +924,6 @@ const MENU: Record<string, NavGroup[]> = {
       { path: '/admin/assessments', label: 'Assessments', icon: 'DocumentTextIcon' },
       { path: '/admin/marksheet', label: 'Marksheet', icon: 'TableCellsIcon' },
       { path: '/admin/physical-exams', label: 'Physical Exams', icon: 'DocumentTextIcon' },
-      { path: '/admin/uneb-assessment', label: 'UNEB assessment', icon: 'CheckCircleIcon' },
       { path: '/admin/reports', label: 'Reports', icon: 'ChartBarIcon' },
       { path: '/admin/rewards', label: 'Rewards & Badges', icon: 'TrophyIcon' },
       { path: '/admin/charts', label: 'Engagement', icon: 'ChartIcon' }
@@ -956,10 +955,10 @@ const toggleFold = (key: string) => {
 }
 // ---- Students' bottom tab bar on phones ----
 const STUDENT_TABS = [
-  { path: '/student/dashboard', label: 'Home', icon: 'DashboardIcon', also: [] as string[] },
+  { path: '/student/dashboard', label: 'Home', icon: 'DashboardIcon', also: ['/student/notices'] },
   { path: '/student/enotes', label: 'Learn', icon: 'NoteIcon', also: ['/student/library', '/student/videos', '/student/live-classes', '/student/my-notes'] },
-  { path: '/student/assignments', label: 'Work', icon: 'DocumentTextIcon', also: ['/student/exam-plan', '/student/itembank'] },
-  { path: '/student/chat', label: 'Chats', icon: 'ChatIcon', also: ['/student/study-groups', '/student/notices'] }
+  { path: '/student/assignments', label: 'Work', icon: 'DocumentTextIcon', also: ['/student/itembank'] },
+  { path: '/student/chat', label: 'Chats', icon: 'ChatIcon', also: ['/student/study-groups'] }
 ]
 const showStudentTabs = computed(() => menuRole.value === 'student' && !shouldHideAppChrome.value && !isImmersiveReader.value)
 
