@@ -41,7 +41,7 @@ const TONE: Record<Tone, string> = {
   violet: 'bg-violet-50 text-violet-600 dark:bg-violet-900/30 dark:text-violet-300',
   amber: 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-300',
   rose: 'bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-300',
-  sky: 'bg-sky-50 text-sky-600 dark:bg-sky-900/30 dark:text-sky-300',
+  sky: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300',
   gray: 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300'
 }
 </script>

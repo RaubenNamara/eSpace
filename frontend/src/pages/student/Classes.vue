@@ -125,7 +125,7 @@
                 <td class="px-5 py-3 whitespace-nowrap">
                   <span
                     class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium capitalize"
-                    :class="student.gender === 'female' ? 'bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'"
+                    :class="student.gender === 'female' ? 'bg-slate-100 dark:bg-slate-900/30 text-slate-700 dark:text-slate-300' : 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'"
                   >
                     {{ student.gender }}
                   </span>
@@ -224,11 +224,12 @@ const cardPalettes = [
   'bg-emerald-600',
   'bg-amber-600',
   'bg-rose-600',
-  'bg-sky-600',
+  'bg-indigo-600',
   'bg-violet-600'
 ]
 // One colour per subject (the same subject keeps its colour everywhere on the page)
-const TINTS = ['#4f46e5', '#0d9488', '#b45309', '#be123c', '#7c3aed', '#0369a1', '#4d7c0f', '#c2410c']
+// Subject badges: shades of the brand green, and near-black
+const TINTS = ['#15874a', '#126c3d', '#22a45d', '#0f472b', '#1f2937', '#46bf7b', '#115633', '#374151']
 const tint = (name: string) => TINTS[[...name].reduce((h, c) => h + c.charCodeAt(0), 0) % TINTS.length]
 const code = (name: string | null) => (name || '?').replace(/[^A-Za-z]/g, '').slice(0, 4).toUpperCase()
 

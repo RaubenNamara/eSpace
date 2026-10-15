@@ -93,7 +93,7 @@ const loading = ref(false)
 
 const cardPalettes = [
   'bg-gray-500',
-  'bg-sky-500',
+  'bg-indigo-500',
   'bg-emerald-500',
   'bg-amber-500',
   'bg-rose-500',

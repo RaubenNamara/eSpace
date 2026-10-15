@@ -81,8 +81,8 @@
                 <p class="text-[11px] text-gray-500 dark:text-gray-400">{{ st.students }} students · {{ st.level }}</p>
                 <!-- Boys / girls -->
                 <div class="mt-2 flex h-1.5 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-700" :title="`${st.boys} boys, ${st.girls} girls`">
-                  <span class="bg-blue-500" :style="{ width: `${share(st.boys, st.students)}%` }"></span>
-                  <span class="bg-pink-500" :style="{ width: `${share(st.girls, st.students)}%` }"></span>
+                  <span class="bg-indigo-500" :style="{ width: `${share(st.boys, st.students)}%` }"></span>
+                  <span class="bg-slate-500" :style="{ width: `${share(st.girls, st.students)}%` }"></span>
                 </div>
                 <p class="mt-1 text-[10px] text-gray-400">{{ st.boys }} boys · {{ st.girls }} girls</p>
               </div>

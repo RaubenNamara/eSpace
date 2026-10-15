@@ -149,16 +149,16 @@ const props = withDefaults(defineProps<{
 
 // Book-cloth colours: [light, dark] ends of the cover gradient
 const cloths: [string, string][] = [
-  ['#9b2c2c', '#6b1d1d'], // oxblood
-  ['#2c4a7c', '#1b2f52'], // navy
+  ['#15874a', '#0f5b33'], // brand green
+  ['#1f2937', '#111827'], // charcoal
   ['#2f6b4f', '#1d4633'], // forest
-  ['#8a5a1f', '#5e3c12'], // tan leather
-  ['#5b3a7a', '#3b2451'], // plum
-  ['#1f6b73', '#13464c'], // teal
-  ['#a8452a', '#72301c'], // rust
   ['#3d4a5c', '#262f3b'], // slate
-  ['#7a2f55', '#521f39'], // mulberry
-  ['#566b2a', '#3a481b']  // olive
+  ['#115633', '#0a3a22'], // deep green
+  ['#374151', '#1f2937'], // graphite
+  ['#566b2a', '#3a481b'], // olive
+  ['#22704a', '#164d33'], // pine
+  ['#4b5563', '#2d333b'], // stone
+  ['#2c5f4a', '#1b3f31']  // moss
 ]
 
 const coverTitle = computed(() => props.cover?.title || props.title)

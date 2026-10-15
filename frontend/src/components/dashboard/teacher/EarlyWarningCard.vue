@@ -1,10 +1,10 @@
 <template>
-  <!-- Early warning on the dashboard: the students who need a word right now, the first few by
+  <!-- Early warning on the dashboard: the students who need attention right now, the first few by
        name with why, and the way to the full list. Tells the dashboard how many there are. -->
   <section class="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5 flex flex-col">
     <header class="flex items-center gap-2.5 mb-3">
       <span class="w-8 h-8 flex-shrink-0 rounded-xl flex items-center justify-center bg-indigo-600 text-white shadow-sm shadow-indigo-500/20"><AppIcon name="warning" class="w-4 h-4" /></span>
-      <h2 class="flex-1 text-base font-bold text-gray-900 dark:text-white">Needs a word</h2>
+      <h2 class="flex-1 text-base font-bold text-gray-900 dark:text-white">Need attention</h2>
       <span v-if="!loading && flagged" class="px-2 py-0.5 rounded-full text-xs font-bold bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-300 tabular-nums">{{ flagged }}</span>
     </header>
 

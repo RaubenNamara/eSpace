@@ -6,14 +6,14 @@
       v-if="!topic"
       class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300"
     >
-      <svg class="animate-spin h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24">
+      <svg class="animate-spin h-8 w-8 text-indigo-600" fill="none" viewBox="0 0 24 24">
         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
       </svg>
       <p v-if="!topicLoadFailed" class="text-sm">Loading topic...</p>
       <div v-else class="text-center space-y-2">
         <p class="text-sm">Couldn't load this topic. Check your connection.</p>
-        <button @click="loadTopic" class="px-3 py-1.5 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700">Try again</button>
+        <button @click="loadTopic" class="px-3 py-1.5 text-sm rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">Try again</button>
       </div>
     </div>
     <!-- Header -->

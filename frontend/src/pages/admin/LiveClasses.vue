@@ -64,7 +64,7 @@
         </template>
         <template v-else>
           <p class="text-sm text-gray-500 dark:text-gray-400">Recorded Sessions</p>
-          <p class="text-2xl font-bold text-purple-600 dark:text-purple-400 mt-1">{{ summary.recorded_sessions }}</p>
+          <p class="text-2xl font-bold text-slate-600 dark:text-slate-400 mt-1">{{ summary.recorded_sessions }}</p>
         </template>
       </div>
     </div>
@@ -319,7 +319,7 @@ const statusLabel = (status: string) => {
 
 const statusBadge = (status: string) => {
   if (status === 'started') return 'bg-red-500 text-white'
-  if (status === 'scheduled') return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+  if (status === 'scheduled') return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200'
   if (status === 'ended') return 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
   return 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300'
 }

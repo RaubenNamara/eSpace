@@ -631,18 +631,18 @@
                           class="page-assessment flex items-center gap-3 p-3 rounded-xl border"
                           :class="item.kind === 'loa'
                             ? 'border-indigo-200 bg-indigo-50/70 dark:border-indigo-800 dark:bg-indigo-900/20'
-                            : 'border-teal-200 bg-teal-50/70 dark:border-teal-800 dark:bg-teal-900/20'"
+                            : 'border-indigo-200 bg-indigo-50/70 dark:border-indigo-800 dark:bg-indigo-900/20'"
                         >
                           <span
                             class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 text-white"
-                            :class="item.kind === 'loa' ? 'bg-indigo-600' : 'bg-teal-600'"
+                            :class="item.kind === 'loa' ? 'bg-indigo-600' : 'bg-indigo-600'"
                           >
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
                             </svg>
                           </span>
                           <div class="min-w-0 flex-1">
-                            <p class="text-[10px] font-semibold uppercase tracking-wide" :class="item.kind === 'loa' ? 'text-indigo-700 dark:text-indigo-300' : 'text-teal-700 dark:text-teal-300'">
+                            <p class="text-[10px] font-semibold uppercase tracking-wide" :class="item.kind === 'loa' ? 'text-indigo-700 dark:text-indigo-300' : 'text-indigo-700 dark:text-indigo-300'">
                               {{ item.kind === 'loa' ? 'Learning Outcome Assessment' : 'Activity of Integration' }}
                             </p>
                             <p class="text-sm font-medium text-gray-900 dark:text-white leading-snug line-clamp-2">
@@ -855,7 +855,7 @@
       class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
     >
       <div class="completion-card bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden text-center">
-        <div class="relative bg-gradient-to-br from-emerald-400 via-emerald-500 to-teal-600 px-6 py-9 overflow-hidden">
+        <div class="relative bg-gradient-to-br from-emerald-400 via-emerald-500 to-indigo-600 px-6 py-9 overflow-hidden">
           <!-- Soft decorative circles, purely for depth - not confetti, those are the small
                rects below that actually animate outward. -->
           <div class="absolute -top-6 -left-6 w-24 h-24 rounded-full bg-white/10"></div>
@@ -911,7 +911,7 @@
           <button
             v-if="topic.linked_assignment && topic.linked_assignment.submission_status === 'new'"
             @click="attemptLinkedAssignment"
-            class="assessment-cta w-full py-3 text-sm font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl transition-transform hover:scale-[1.02] flex items-center justify-center gap-2"
+            class="assessment-cta w-full py-3 text-sm font-semibold text-white bg-gradient-to-r from-emerald-500 to-indigo-600 rounded-xl transition-transform hover:scale-[1.02] flex items-center justify-center gap-2"
           >
             <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
@@ -1172,7 +1172,7 @@ const readingTint = usePersistedRef('espace:reading-tint', 'none')
 const READING_TINTS = [
   { value: 'none', label: 'None', class: '', swatchClass: 'bg-white dark:bg-gray-800' },
   { value: 'sepia', label: 'Sepia', class: 'bg-amber-700/10', swatchClass: 'bg-amber-200' },
-  { value: 'blue', label: 'Cool Blue', class: 'bg-blue-500/10', swatchClass: 'bg-blue-200' },
+  { value: 'blue', label: 'Cool Blue', class: 'bg-indigo-500/10', swatchClass: 'bg-indigo-200' },
   { value: 'green', label: 'Soft Green', class: 'bg-emerald-500/10', swatchClass: 'bg-emerald-200' },
   { value: 'rose', label: 'Warm Rose', class: 'bg-rose-500/10', swatchClass: 'bg-rose-200' },
 ]
@@ -1220,7 +1220,7 @@ const setPageColor = (pageId: number, color: SummaryColor) => {
 // stored highlights for that page are available.
 const HIGHLIGHT_COLORS = ['yellow', 'green', 'blue', 'pink'] as const
 const HIGHLIGHT_SWATCH_CLASS: Record<string, string> = {
-  yellow: 'bg-yellow-300', green: 'bg-emerald-300', blue: 'bg-sky-300', pink: 'bg-pink-300',
+  yellow: 'bg-yellow-300', green: 'bg-emerald-300', blue: 'bg-indigo-300', pink: 'bg-slate-300',
 }
 const pageHighlights = ref<Record<number, StoredHighlight[]>>({})
 const pageContentRefs: Record<number, HTMLElement> = {}

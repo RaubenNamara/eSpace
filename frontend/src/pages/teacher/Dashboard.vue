@@ -1,59 +1,174 @@
 <template>
+  <!-- The teacher's home, in the same format as the students': notices sliding past, then cream
+       cards with dark-green title bars - what is waiting to be marked, shortcuts, today, who
+       needs attention and each class. Each card shows a few and opens up for the rest. -->
   <div class="w-full">
-    <!-- 1. The day: date, greeting, one sentence of what's ahead, the things a teacher starts most,
-            and today on a timeline underneath -->
-    <DashboardHero :date="todayLabel" :title="`${greeting}, ${firstName}`" :parts="daySentence" :chips="heroChips" :actions="quickCreate">
-      <template #chips>
-        <!-- Department switcher - only when the teacher belongs to more than one -->
+    <!-- Greeting, the department and its students -->
+    <header class="mb-3 flex flex-col sm:flex-row sm:items-end gap-x-3 gap-y-2">
+      <div class="min-w-0 flex-1">
+        <p class="text-sm font-semibold text-indigo-600 dark:text-indigo-400">{{ todayLabel }}</p>
+        <h1 class="text-2xl sm:text-[1.7rem] font-extrabold tracking-tight text-gray-900 dark:text-white truncate">{{ greeting }}, {{ firstName }}</h1>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
         <select
           v-if="myDepartments.length > 1"
           :value="activeDepartmentId"
           :disabled="switchingDepartment"
-          class="rounded-full border-0 ring-1 ring-amber-900/15 dark:ring-amber-200/10 bg-white/70 dark:bg-gray-800/60 text-gray-700 dark:text-gray-200 pl-2.5 pr-7 py-1 text-xs font-semibold focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+          class="rounded-xl border-0 ring-1 ring-gray-200 dark:ring-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 pl-3 pr-8 py-1.5 text-sm font-semibold focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
           @change="switchDepartment(($event.target as HTMLSelectElement).value)"
         >
           <option v-for="dept in myDepartments" :key="dept.id" :value="dept.id">{{ dept.name }}{{ dept.is_primary ? ' (Primary)' : '' }}</option>
         </select>
-      </template>
-      <div v-if="!overview && !overviewError" class="h-14 rounded-lg bg-gray-100 dark:bg-gray-700/50 animate-pulse"></div>
-      <TodayTimeline v-else-if="overview" :items="overview.agenda" />
-      <p v-else class="text-xs text-gray-500 dark:text-gray-400">Today's plan couldn't load.</p>
-    </DashboardHero>
-    <NoticeBanner role="teacher" />
-
-    <div v-if="!overview && !overviewError" class="space-y-4 mb-6">
-      <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        <div class="xl:col-span-2"><Skeleton variant="list" :count="4" /></div>
-        <Skeleton variant="list" :count="3" />
+        <span v-else-if="analytics.department" class="px-3 py-1.5 rounded-xl bg-indigo-800 text-white text-sm font-bold">{{ analytics.department.name }}</span>
+        <button v-if="analytics.department" type="button" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-gray-800 ring-1 ring-gray-200 dark:ring-gray-700 text-sm font-semibold text-gray-800 dark:text-gray-100 hover:ring-indigo-300" @click="openViewEnrolledModal">
+          <AppIcon name="users" class="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+          {{ analytics.total_enrollments ? `${analytics.total_enrollments.toLocaleString()} students` : 'Enrolled students' }}
+        </button>
       </div>
-      <Skeleton variant="tiles" :count="4" />
+    </header>
+
+    <NoticesTicker role="teacher" />
+
+    <div v-if="!overview && !overviewError" class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+      <div class="lg:col-span-2"><Skeleton variant="list" :count="4" /></div>
+      <Skeleton variant="list" :count="3" />
     </div>
-    <EmptyState
-      v-else-if="!overview"
-      class="mb-6"
-      card
-      tone="rose"
-      icon="clipboard"
-      title="Today's overview couldn't load"
-      :message="overviewError"
-    >
+    <EmptyState v-else-if="!overview" class="mb-6" card tone="rose" icon="clipboard" title="Today's overview couldn't load" :message="overviewError">
       <button type="button" class="px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700" @click="retryOverview">Try again</button>
     </EmptyState>
-    <template v-else>
-      <!-- 2. Marking, and who needs a word -->
-      <!-- (all caught up: marking shrinks to a strip and "Recently" moves up under it) -->
-      <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-5">
-        <div class="xl:col-span-2 flex flex-col gap-4 min-w-0">
-          <MarkingCard :class="marking.waiting ? 'flex-1' : ''" :data="marking" :next="overview.mark_next[0] || null" />
-          <ActivityFeed v-if="!marking.waiting" class="flex-1" :items="overview.activity" />
-        </div>
-        <EarlyWarningCard class="min-w-0" :limit="marking.waiting ? 4 : 2" @count="needWord = $event" />
+
+    <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
+      <div class="lg:col-span-2 flex flex-col gap-4 min-w-0">
+        <!-- To mark -->
+        <section class="dash-box">
+          <h2 class="dash-bar">To mark <span v-if="marking.waiting" class="px-2 py-0.5 rounded-full bg-amber-400 text-gray-900 text-xs font-extrabold">{{ marking.waiting }}</span>
+            <RouterLink v-if="overview.mark_next[0]" :to="`/teacher/assignments/${overview.mark_next[0].assignment_id}/submissions?submission=${overview.mark_next[0].submission_id}`" class="dash-bar-link">Mark next →</RouterLink>
+            <RouterLink v-else to="/teacher/assignments" class="dash-bar-link">Assessments</RouterLink>
+          </h2>
+          <div v-if="!markingRows.length" class="p-4 flex items-center gap-3">
+            <span class="w-10 h-10 flex-shrink-0 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 flex items-center justify-center"><AppIcon name="check" class="w-5 h-5" /></span>
+            <p class="text-[0.95rem] text-gray-700 dark:text-gray-200">All marked{{ marking.marked_week ? ` - ${marking.marked_week} marked this week` : '' }}. Nothing waiting.</p>
+          </div>
+          <TransitionGroup v-else tag="ul" name="dash-pop" class="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3">
+            <li v-for="m in shown('marking', markingRows)" :key="m.assignment_id" class="min-w-0">
+              <RouterLink :to="`/teacher/assignments/${m.assignment_id}/submissions`" class="dash-chip group">
+                <span class="dash-chip-badge bg-indigo-700">{{ shortClass(m.class_name) }}</span>
+                <span class="min-w-0 flex-1">
+                  <span class="block text-sm font-bold text-gray-900 dark:text-white truncate">{{ m.title }}</span>
+                  <span class="block text-xs text-gray-500 dark:text-gray-400 truncate">{{ m.waiting }} to mark · {{ m.submitted }} of {{ m.expected }} handed in</span>
+                </span>
+                <span class="flex-shrink-0 px-2.5 py-1 rounded-lg text-xs font-bold text-white bg-indigo-600 group-hover:bg-indigo-700 transition">Mark</span>
+              </RouterLink>
+            </li>
+          </TransitionGroup>
+          <button v-if="markingRows.length > LIMIT.marking" type="button" class="dash-more" :aria-expanded="!!open.marking" @click="toggle('marking')">
+            {{ open.marking ? 'Show less' : `Show ${markingRows.length - LIMIT.marking} more` }}
+            <svg class="w-4 h-4 transition-transform duration-300" :class="open.marking ? 'rotate-180' : ''" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6" /></svg>
+          </button>
+        </section>
+
+        <!-- Shortcuts to the main modules -->
+        <section class="dash-box">
+          <h2 class="dash-bar">Jump in</h2>
+          <TransitionGroup tag="nav" name="dash-pop" class="grid grid-cols-4 gap-1 sm:gap-2 p-2 sm:p-3" aria-label="Shortcuts">
+            <RouterLink v-for="s in shown('jump', shortcuts)" :key="s.to" :to="s.to" class="group flex flex-col items-center gap-1.5 rounded-xl py-2.5 px-1 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition min-w-0">
+              <span class="w-11 h-11 rounded-2xl flex items-center justify-center bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100 dark:bg-indigo-950/50 dark:text-indigo-300 dark:ring-indigo-900 group-hover:bg-indigo-600 group-hover:text-white transition"><AppIcon :name="s.icon" class="w-5 h-5" /></span>
+              <span class="text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-100 text-center leading-tight">{{ s.label }}</span>
+            </RouterLink>
+          </TransitionGroup>
+          <button v-if="shortcuts.length > LIMIT.jump" type="button" class="dash-more" :aria-expanded="!!open.jump" @click="toggle('jump')">
+            {{ open.jump ? 'Show less' : `Show ${shortcuts.length - LIMIT.jump} more` }}
+            <svg class="w-4 h-4 transition-transform duration-300" :class="open.jump ? 'rotate-180' : ''" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6" /></svg>
+          </button>
+        </section>
       </div>
-      <!-- 3. Each class at a glance, and this week's topics -->
-      <ClassHealth class="mb-5" :classes="overview.classes" :week="overview.week_topics || null" />
-      <!-- 4. What students did lately -->
-      <ActivityFeed v-if="marking.waiting" class="mb-8" :items="overview.activity" />
-    </template>
+
+      <div class="flex flex-col gap-4 min-w-0">
+        <!-- Today, and what is coming up -->
+        <section class="dash-box">
+          <h2 class="dash-bar">Today <RouterLink to="/teacher/planner" class="dash-bar-link">My week</RouterLink></h2>
+          <div v-if="!agenda.length" class="p-4 flex items-center gap-3">
+            <p class="flex-1 text-[0.95rem] text-gray-700 dark:text-gray-200">Nothing scheduled for the next seven days.</p>
+            <RouterLink to="/teacher/live-classes" class="flex-shrink-0 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold">Schedule</RouterLink>
+          </div>
+          <TransitionGroup v-else tag="ul" name="dash-pop" class="p-3 space-y-2">
+            <li v-for="it in shown('today', agenda)" :key="`${it.kind}-${it.id}`">
+              <RouterLink :to="it.kind === 'live' ? '/teacher/live-classes' : `/teacher/assignments/${it.id}/submissions`" class="dash-chip">
+                <span class="dash-chip-badge" :class="it.kind === 'live' ? 'bg-red-600' : 'bg-indigo-700'"><AppIcon :name="it.kind === 'live' ? 'camera' : 'clipboard'" class="w-4 h-4" /></span>
+                <span class="min-w-0 flex-1">
+                  <span class="block text-sm font-bold text-gray-900 dark:text-white truncate">{{ it.title }}</span>
+                  <span class="block text-xs text-gray-500 dark:text-gray-400 truncate">{{ it.kind === 'live' ? 'Live class' : 'Closes' }} {{ when(it.at) }}{{ it.class_name ? ` · ${it.class_name}` : '' }}</span>
+                </span>
+              </RouterLink>
+            </li>
+          </TransitionGroup>
+          <button v-if="agenda.length > LIMIT.today" type="button" class="dash-more" :aria-expanded="!!open.today" @click="toggle('today')">
+            {{ open.today ? 'Show less' : `Show ${agenda.length - LIMIT.today} more` }}
+            <svg class="w-4 h-4 transition-transform duration-300" :class="open.today ? 'rotate-180' : ''" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6" /></svg>
+          </button>
+        </section>
+
+        <!-- Who needs attention: a swipeable row on a phone, a list with "Show more" on a wider screen -->
+        <section class="dash-box">
+          <h2 class="dash-bar">Need attention <span v-if="needing.length" class="px-2 py-0.5 rounded-full bg-amber-400 text-gray-900 text-xs font-extrabold">{{ needing.length }}</span><RouterLink to="/teacher/early-warning" class="dash-bar-link">All</RouterLink></h2>
+          <p v-if="!warningLoaded" class="p-4 text-sm text-gray-500 dark:text-gray-400">Checking…</p>
+          <p v-else-if="!needing.length" class="p-4 text-[0.95rem] text-gray-700 dark:text-gray-200">No one is slipping right now.</p>
+          <template v-else>
+          <!-- Phone: swipe through them -->
+          <ul class="md:hidden flex gap-2 overflow-x-auto snap-x snap-mandatory p-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Learners who need attention">
+            <li v-for="st in needing.slice(0, 20)" :key="`m-${st.id}`" class="snap-start flex-shrink-0 w-[15.5rem] rounded-xl bg-white/80 dark:bg-gray-900/40 ring-1 ring-black/5 dark:ring-gray-700 p-2.5">
+              <div class="flex items-center gap-2">
+                <span class="dash-chip-badge bg-gray-800 dark:bg-gray-600">{{ initials(niceName(st.name)) }}</span>
+                <span class="min-w-0">
+                  <span class="block text-sm font-semibold text-gray-900 dark:text-white truncate">{{ niceName(st.name) }}</span>
+                  <span class="block text-xs text-gray-500 dark:text-gray-400 truncate">{{ st.class_label }}</span>
+                </span>
+              </div>
+              <p class="mt-1.5 text-xs text-red-600 dark:text-red-400 line-clamp-2 min-h-[2rem]">{{ reason(st) }}</p>
+              <RouterLink :to="`/teacher/chat?student=${st.id}`" class="mt-1.5 block text-center px-2.5 py-1 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700">Message</RouterLink>
+            </li>
+            <li v-if="needing.length > 20" class="snap-start flex-shrink-0 w-32 flex items-center justify-center">
+              <RouterLink to="/teacher/early-warning" class="text-sm font-semibold text-indigo-700 dark:text-indigo-300">See all {{ needing.length }} →</RouterLink>
+            </li>
+          </ul>
+          <!-- Wider screens: a few, then more on request -->
+          <TransitionGroup tag="ul" name="dash-pop" class="hidden md:block p-3 space-y-2">
+            <li v-for="st in shown('word', needing)" :key="st.id" class="dash-chip">
+              <span class="dash-chip-badge bg-gray-800 dark:bg-gray-600">{{ initials(niceName(st.name)) }}</span>
+              <span class="min-w-0 flex-1">
+                <span class="block text-sm font-bold text-gray-900 dark:text-white truncate">{{ niceName(st.name) }} <span class="font-medium text-gray-500 dark:text-gray-400">{{ st.class_label }}</span></span>
+                <span class="block text-xs text-red-600 dark:text-red-400 truncate">{{ reason(st) }}</span>
+              </span>
+              <RouterLink :to="`/teacher/chat?student=${st.id}`" class="flex-shrink-0 px-2.5 py-1 rounded-lg text-xs font-bold text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-200 dark:ring-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/40">Message</RouterLink>
+            </li>
+          </TransitionGroup>
+          </template>
+          <button v-if="needing.length > LIMIT.word" type="button" class="dash-more !hidden md:!flex" :aria-expanded="!!open.word" @click="toggle('word')">
+            {{ open.word ? 'Show less' : `Show ${needing.length - LIMIT.word} more` }}
+            <svg class="w-4 h-4 transition-transform duration-300" :class="open.word ? 'rotate-180' : ''" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6" /></svg>
+          </button>
+        </section>
+
+        <!-- My classes -->
+        <section class="dash-box">
+          <h2 class="dash-bar">My classes <RouterLink to="/teacher/class-map" class="dash-bar-link">Learning Map</RouterLink></h2>
+          <p v-if="!overview.classes.length" class="p-4 text-[0.95rem] text-gray-500 dark:text-gray-400">No classes yet.</p>
+          <TransitionGroup v-else tag="div" name="dash-pop" class="grid grid-cols-2 gap-2 p-3">
+            <RouterLink v-for="c in shown('classes', overview.classes)" :key="`${c.class_id}-${c.subject_id}`" :to="`/teacher/class-map?subject=${c.subject_id}&level=${encodeURIComponent(c.level)}&stream=${c.class_id}`" class="dash-chip">
+              <span class="dash-chip-badge bg-indigo-700">{{ shortClass(c.class_name) }}</span>
+              <span class="min-w-0">
+                <span class="block text-sm font-bold text-gray-900 dark:text-white truncate">{{ c.class_name }}</span>
+                <span class="block text-xs truncate" :class="c.need_support ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-gray-500 dark:text-gray-400'">{{ c.need_support ? `${c.need_support} need support` : `${c.students} learners` }}</span>
+              </span>
+            </RouterLink>
+          </TransitionGroup>
+          <button v-if="overview.classes.length > LIMIT.classes" type="button" class="dash-more" :aria-expanded="!!open.classes" @click="toggle('classes')">
+            {{ open.classes ? 'Show less' : `Show ${overview.classes.length - LIMIT.classes} more` }}
+            <svg class="w-4 h-4 transition-transform duration-300" :class="open.classes ? 'rotate-180' : ''" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6" /></svg>
+          </button>
+        </section>
+      </div>
+    </div>
 
     <!-- View Enrolled Students Modal -->
     <div v-if="showViewEnrolledModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
@@ -189,18 +304,17 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import NoticeBanner from '@/components/dashboard/NoticeBanner.vue'
+import NoticesTicker from '@/components/dashboard/NoticesTicker.vue'
+import AppIcon from '@/components/common/AppIcon.vue'
+import { niceName } from '@/components/dashboard/teacher/time'
 import { useLiveRefresh } from '@/composables/useLiveRefresh'
 import apiService from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import Skeleton from '@/components/ui/Skeleton.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
-import DashboardHero, { type HeroChip, type HeroPart } from '@/components/dashboard/DashboardHero.vue'
-import TodayTimeline, { type AgendaItem } from '@/components/dashboard/teacher/TodayTimeline.vue'
-import MarkingCard, { type MarkingSummary } from '@/components/dashboard/teacher/MarkingCard.vue'
-import EarlyWarningCard from '@/components/dashboard/teacher/EarlyWarningCard.vue'
-import ClassHealth, { type ClassHealthItem, type WeekTopics } from '@/components/dashboard/teacher/ClassHealth.vue'
-import ActivityFeed from '@/components/dashboard/teacher/ActivityFeed.vue'
+import type { AgendaItem } from '@/components/dashboard/teacher/TodayTimeline.vue'
+import type { MarkingSummary } from '@/components/dashboard/teacher/MarkingCard.vue'
+import type { ClassHealthItem, WeekTopics } from '@/components/dashboard/teacher/ClassHealth.vue'
 import { useToastStore } from '@/stores/toast'
 import { useConfirmStore } from '@/stores/confirm'
 
@@ -258,55 +372,63 @@ const firstName = computed(() => {
   const n = overview.value?.teacher.first_name || authStore.userName || ''
   return n === n.toUpperCase() ? n.charAt(0) + n.slice(1).toLowerCase() : n
 })
-const todayLabel = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-const quickCreate = [
+const todayLabel = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
+
+// ---- each card shows a few, and opens up to show the rest
+const LIMIT = { marking: 4, jump: 4, today: 3, word: 3, classes: 4 } as const
+type CardKey = keyof typeof LIMIT
+const open = ref<Partial<Record<CardKey, boolean>>>({})
+const toggle = (k: CardKey) => { open.value = { ...open.value, [k]: !open.value[k] } }
+const shown = <T,>(k: CardKey, list: T[]) => (open.value[k] ? list : list.slice(0, LIMIT[k]))
+
+const shortcuts = [
   { label: 'New assessment', to: '/teacher/assignments/create', icon: 'clipboard' },
-  { label: 'New eNote', to: '/teacher/enotes', icon: 'book' },
-  { label: 'Schedule class', to: '/teacher/live-classes', icon: 'video' },
+  { label: 'eNotes', to: '/teacher/enotes', icon: 'book' },
+  { label: 'Live classes', to: '/teacher/live-classes', icon: 'camera' },
   { label: 'My week', to: '/teacher/planner', icon: 'clock' },
-  { label: 'Item Bank', to: '/teacher/itembank', icon: 'document' }
+  { label: 'Marksheet', to: '/teacher/marksheet', icon: 'chart' },
+  { label: 'Item Bank', to: '/teacher/itembank', icon: 'target' },
+  { label: 'Learning Map', to: '/teacher/class-map', icon: 'map' },
+  { label: 'Reports', to: '/teacher/reports', icon: 'trend' }
 ]
-const heroChips = computed<HeroChip[]>(() => {
-  const out: HeroChip[] = []
-  if (analytics.value.department) out.push({ text: `${analytics.value.department.name} · ${analytics.value.department.code}`, tone: 'solid' })
-  const w = overview.value?.week_topics
-  if (w?.total) out.push({ text: `Taught ${w.taught} of ${w.total} planned topics`, icon: 'flame' })
-  if (analytics.value.department) out.push({ text: analytics.value.total_enrollments ? `${analytics.value.total_enrollments.toLocaleString()} students enrolled` : 'View enrolled students', icon: 'users', onClick: openViewEnrolledModal })
-  return out
-})
+const toDate = (v: string) => new Date(v.replace(' ', 'T'))
+const when = (v: string) => {
+  const d = toDate(v)
+  const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+  if (d.toDateString() === new Date().toDateString()) return `today, ${time}`
+  return `${d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}, ${time}`
+}
+// "S.1-A" stays; longer names shorten to their first letters
+const shortClass = (n: string | null) => (!n ? '-' : n.length <= 4 ? n : n.replace(/[^A-Za-z0-9.]/g, '').slice(0, 4))
+const initials = (n: string) => n.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase()
 
-// Students flagged in early warning (the card fetches them and reports the count)
-const needWord = ref<number | null>(null)
+// what is waiting to be marked, most first
+const markingRows = computed(() => marking.value.by_assignment.filter(r => r.waiting > 0).slice().sort((p, q) => q.waiting - p.waiting))
+// today's lessons and closing assessments, then what is coming up
+const agenda = computed(() => (overview.value?.agenda ?? []).slice().sort((p, q) => toDate(p.at).getTime() - toDate(q.at).getTime()))
 
+// ---- who needs attention (the early-warning list)
+interface WarningRow { id: number; name: string; class_label: string; signals: { key: string; text: string }[]; needs_teacher: boolean }
+const warning = ref<WarningRow[]>([])
+const warningLoaded = ref(false)
+const needing = computed(() => warning.value.filter(r => r.needs_teacher))
+const reason = (r: WarningRow) => r.signals.filter(g => g.key !== 'never').map(g => g.text).join(' · ')
+const loadWarning = async () => {
+  try {
+    const res = await apiService.get('/teacher/early-warning')
+    warning.value = res.data.data.students || []
+  } catch {
+    warning.value = []
+  } finally {
+    warningLoaded.value = true
+  }
+}
 // Older servers send no marking summary: build one from the queue
 const marking = computed<MarkingSummary>(() => overview.value?.marking || {
   marked_week: 0,
   waiting: overview.value?.today.to_mark || 0,
   oldest_at: overview.value?.mark_next[0]?.submitted_at || null,
   by_assignment: []
-})
-
-// "You teach 2 lessons today, have 12 scripts to mark, and 3 students could use a word."
-const daySentence = computed(() => {
-  const o = overview.value
-  if (!o) return []
-  const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
-  const bits: HeroPart[][] = []
-  const lessons = o.today.live_today
-  const dueToday = o.agenda.filter(a => a.kind === 'due' && new Date(a.at.replace(' ', 'T')).toDateString() === new Date().toDateString()).length
-  if (lessons) bits.push([{ text: 'you teach ' }, { text: plural(lessons, 'live lesson', 'live lessons'), strong: true }, { text: ' today' }])
-  if (dueToday) bits.push([{ text: plural(dueToday, 'assessment closes', 'assessments close'), strong: true }, { text: ' today' }])
-  if (o.today.to_mark) bits.push([{ text: 'you have ' }, { text: plural(o.today.to_mark, 'script', 'scripts'), strong: true }, { text: ' to mark' }])
-  if (needWord.value) bits.push([{ text: plural(needWord.value, 'student', 'students'), strong: true, alert: true }, { text: ' could use a word' }])
-  if (!bits.length) return [{ text: 'A clear day: nothing to mark and nothing scheduled. A good time to plan ahead.' }]
-  const out: HeroPart[] = []
-  bits.forEach((b, i) => {
-    if (i > 0) out.push({ text: i === bits.length - 1 ? ', and ' : ', ' })
-    out.push(...b)
-  })
-  out.push({ text: '.' })
-  out[0] = { ...out[0], text: out[0].text.charAt(0).toUpperCase() + out[0].text.slice(1) }
-  return out
 })
 
 const loadingAnalytics = ref(false)
@@ -461,5 +583,6 @@ onMounted(() => {
   loadOverview()
   loadAnalytics()
   loadMyDepartments()
+  loadWarning()
 })
 </script>

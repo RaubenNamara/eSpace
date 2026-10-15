@@ -25,7 +25,7 @@
         <span class="font-semibold text-amber-700 dark:text-amber-300"><CountUp :value="constructs.achieved" /> of {{ constructs.constructs }}</span> Elements of Construct achieved
       </p>
       <p v-if="toDo" class="text-xs font-semibold text-indigo-600 dark:text-indigo-300 mt-0.5">{{ toDo }} {{ toDo === 1 ? 'outcome needs' : 'outcomes need' }} your attention</p>
-      <p v-else-if="summary.awaiting" class="text-xs text-sky-600 dark:text-sky-300 mt-0.5">{{ summary.awaiting }} awaiting marking</p>
+      <p v-else-if="summary.awaiting" class="text-xs text-indigo-600 dark:text-indigo-300 mt-0.5">{{ summary.awaiting }} awaiting marking</p>
     </div>
     <span class="hidden sm:inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white group-hover:bg-emerald-700 transition-colors">
       Open map

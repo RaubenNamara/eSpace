@@ -1,19 +1,19 @@
 <template>
   <!-- Cancels the layout's padding (16px on a phone, 24px from sm up) to fill the screen edge to edge -->
-  <div class="h-[calc(100dvh-5rem)] sm:h-[calc(100vh-6rem)] -m-4 sm:-m-6 flex bg-gray-100 dark:bg-gray-950 p-2 sm:p-4">
-    <div class="flex-1 flex rounded-2xl border border-gray-200 dark:border-black/40 shadow-lg overflow-hidden bg-white dark:bg-[#111b21]">
+  <div class="h-[calc(100dvh-8.75rem)] sm:h-[calc(100dvh-9.75rem)] lg:h-[calc(100vh-6rem)] -m-4 sm:-m-6 flex bg-gray-100 dark:bg-gray-950 p-2 sm:p-4">
+    <div class="flex-1 flex rounded-2xl border border-gray-200 dark:border-black/40 shadow-lg overflow-hidden bg-white dark:bg-[rgb(17_24_39)]">
       <!-- Sidebar -->
-      <div class="w-full md:w-80 lg:w-96 flex-shrink-0 md:border-r border-gray-200 dark:border-white/5 bg-white dark:bg-[#111b21] flex flex-col" :class="activeConversation ? 'hidden md:flex' : 'flex'">
-        <div class="px-4 py-4 border-b border-gray-200 dark:border-white/5 bg-white dark:bg-[#202c33] flex items-center justify-between">
+      <div class="w-full md:w-80 lg:w-96 flex-shrink-0 md:border-r border-gray-200 dark:border-white/5 bg-white dark:bg-[rgb(17_24_39)] flex flex-col" :class="activeConversation ? 'hidden md:flex' : 'flex'">
+        <div class="chat-bar px-4 py-3.5 bg-indigo-800 flex items-center justify-between">
           <h1 class="text-xl font-bold text-gray-900 dark:text-white">Chats</h1>
-          <button @click="showNewChat = true" class="p-2 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white transition-shadow dark:shadow-[0_0_12px_2px_rgba(16,185,129,0.5)]" title="New chat">
+          <button @click="showNewChat = true" class="chat-new p-2 rounded-full bg-white hover:bg-indigo-50 text-indigo-800 transition-shadow dark:shadow-[0_0_12px_2px_rgba(21,135,74,0.5)]" title="New chat">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
             </svg>
           </button>
         </div>
 
-        <div class="px-3 py-2 bg-white dark:bg-[#111b21]">
+        <div class="px-3 py-2 bg-white dark:bg-[rgb(17_24_39)]">
           <div class="relative">
             <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
@@ -22,7 +22,7 @@
               v-model="conversationSearch"
               type="text"
               placeholder="Search or start a new chat"
-              class="w-full pl-9 pr-3 py-1.5 rounded-lg text-sm bg-gray-100 dark:bg-[#202c33] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 border-0 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              class="w-full pl-9 pr-3 py-1.5 rounded-lg text-sm bg-gray-100 dark:bg-[rgb(31_41_55)] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 border-0 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             >
           </div>
           <!-- Quick filters -->
@@ -32,7 +32,7 @@
               :key="f.key"
               type="button"
               class="flex-shrink-0 px-3 py-1 rounded-full text-xs font-semibold transition-colors"
-              :class="chatFilter === f.key ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-[#202c33] dark:text-gray-300 dark:hover:bg-[#2a3942]'"
+              :class="chatFilter === f.key ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-[rgb(31_41_55)] dark:text-gray-300 dark:hover:bg-[rgb(55_65_81)]'"
               @click="chatFilter = f.key"
             >{{ f.label }}<span v-if="f.count" class="ml-1 opacity-80">{{ f.count }}</span></button>
           </div>
@@ -59,38 +59,38 @@
       <!-- Thread -->
       <div class="flex-1 flex flex-col min-w-0" :class="activeConversation ? 'flex' : 'hidden md:flex'">
         <template v-if="activeConversation">
-          <div class="px-4 py-3 border-b border-gray-200 dark:border-white/5 bg-white dark:bg-[#202c33] flex items-center gap-3 z-10 shadow-sm">
+          <div class="chat-bar px-4 py-3 bg-indigo-800 flex items-center gap-3 z-10 shadow-sm">
             <button @click="activeConversation = null" class="md:hidden p-1 -ml-1 text-gray-500">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
             </button>
             <div class="relative flex-shrink-0">
-              <div class="w-9 h-9 rounded-full bg-emerald-600 flex items-center justify-center text-white text-sm font-semibold">
+              <div class="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center text-white text-sm font-semibold">
                 <AppIcon v-if="activeConversation.type === 'class' || activeConversation.type === 'group'" name="users" class="w-5 h-5" /><template v-else>{{ initials(activeConversation.name) }}</template>
               </div>
               <span
                 v-if="activeConversation.type === 'direct' && activeConversation.is_online"
-                class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-[#202c33] dark:shadow-[0_0_6px_2px_rgba(16,185,129,0.65)]"
+                class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-indigo-500 border-2 border-white dark:border-[rgb(31_41_55)] dark:shadow-[0_0_6px_2px_rgba(21,135,74,0.65)]"
               ></span>
             </div>
             <div class="min-w-0 flex-1">
-              <h2 class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ activeConversation.name }}</h2>
+              <h2 class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ activeConversation.type === 'direct' ? niceName(activeConversation.name) : activeConversation.name }}</h2>
               <p v-if="activeConversation.type === 'class' || activeConversation.type === 'group'" class="text-xs text-gray-500 dark:text-gray-400">{{ activeConversation.type === 'group' ? 'Study group' : 'Class group' }}</p>
-              <p v-else-if="activeConversation.is_online" class="text-xs text-emerald-600 dark:text-emerald-400">Online</p>
+              <p v-else-if="activeConversation.is_online" class="text-xs text-indigo-600 dark:text-indigo-400">Online</p>
             </div>
 
             <div class="relative flex-shrink-0" ref="threadMenuRef">
-              <button @click="showThreadMenu = !showThreadMenu" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-[#2a3942] text-gray-500 dark:text-gray-400" title="Menu">
+              <button @click="showThreadMenu = !showThreadMenu" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-[rgb(55_65_81)] text-gray-500 dark:text-gray-400" title="Menu">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01"></path>
                 </svg>
               </button>
               <div
                 v-if="showThreadMenu"
-                class="absolute right-0 top-full mt-1 w-44 rounded-lg shadow-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#233138] py-1 z-20"
+                class="absolute right-0 top-full mt-1 w-44 rounded-lg shadow-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[rgb(31_41_55)] py-1 z-20"
               >
                 <button
                   @click="clearActiveChat"
-                  class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2a3942]"
+                  class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[rgb(55_65_81)]"
                 >
                   Clear Chat
                 </button>
@@ -119,9 +119,9 @@
         </template>
 
         <div v-else class="wa-chat-bg flex-1 flex items-center justify-center">
-          <div class="text-center px-6 py-8 rounded-2xl bg-white/70 dark:bg-[#202c33]/70 backdrop-blur-sm border border-white/60 dark:border-white/5 shadow-sm">
-            <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
-              <svg class="w-10 h-10 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="text-center px-6 py-8 rounded-2xl bg-white/70 dark:bg-[rgb(31_41_55)]/70 backdrop-blur-sm border border-white/60 dark:border-white/5 shadow-sm">
+            <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center">
+              <svg class="w-10 h-10 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
               </svg>
             </div>
@@ -148,6 +148,7 @@
 </template>
 
 <script setup lang="ts">
+import { niceName } from '@/components/dashboard/teacher/time'
 import AppIcon from '@/components/common/AppIcon.vue'
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
@@ -398,17 +399,17 @@ onBeforeUnmount(() => {
 
 <style>
 .wa-chat-bg {
-  background-color: #e5ddd5;
+  background-color: #eef5f0;
   background-image:
-    radial-gradient(circle at 12% 18%, rgba(0, 0, 0, 0.045) 1.5px, transparent 1.5px),
-    radial-gradient(circle at 62% 42%, rgba(0, 0, 0, 0.035) 1.5px, transparent 1.5px),
-    radial-gradient(circle at 38% 78%, rgba(0, 0, 0, 0.04) 1.5px, transparent 1.5px),
-    radial-gradient(circle at 88% 88%, rgba(0, 0, 0, 0.03) 1.5px, transparent 1.5px);
+    radial-gradient(circle at 12% 18%, rgba(21, 135, 74, 0.10) 1.5px, transparent 1.5px),
+    radial-gradient(circle at 62% 42%, rgba(21, 135, 74, 0.08) 1.5px, transparent 1.5px),
+    radial-gradient(circle at 38% 78%, rgba(21, 135, 74, 0.09) 1.5px, transparent 1.5px),
+    radial-gradient(circle at 88% 88%, rgba(21, 135, 74, 0.07) 1.5px, transparent 1.5px);
   background-size: 120px 120px;
 }
 
 .dark .wa-chat-bg {
-  background-color: #0b141a;
+  background-color: rgb(13 21 18);
   background-image:
     radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.035) 1.5px, transparent 1.5px),
     radial-gradient(circle at 62% 42%, rgba(255, 255, 255, 0.028) 1.5px, transparent 1.5px),

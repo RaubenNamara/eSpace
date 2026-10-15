@@ -399,8 +399,8 @@ const overrideForm = ref({ badge_type: 'gold' as BadgeType, award_title: '', adm
 
 const sourceBadgeClass = (source: string) => {
   const map: Record<string, string> = {
-    automatic: 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200',
-    manual: 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200',
+    automatic: 'bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200',
+    manual: 'bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200',
     override: 'bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200',
   }
   return map[source] || 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'

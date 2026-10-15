@@ -222,7 +222,7 @@
             <!-- Header -->
             <div
               class="relative flex-shrink-0 px-4 sm:px-8 py-4 sm:py-6"
-              :class="activeItem.itemType === 'topic' ? 'bg-purple-600' : 'bg-indigo-600'"
+              :class="activeItem.itemType === 'topic' ? 'bg-slate-600' : 'bg-indigo-600'"
             >
               <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0">
@@ -250,7 +250,7 @@
             <div class="h-1 bg-gray-100 dark:bg-gray-700 flex-shrink-0">
               <div
                 class="h-1 transition-all duration-300"
-                :class="activeItem.itemType === 'topic' ? 'bg-purple-600' : 'bg-indigo-600'"
+                :class="activeItem.itemType === 'topic' ? 'bg-slate-600' : 'bg-indigo-600'"
                 :style="{ width: (activeItem.itemType === 'topic' ? pageProgress : maxScrollPercent) + '%' }"
               ></div>
             </div>
@@ -261,19 +261,19 @@
                 <!-- Topic cover: name, competency and learning outcomes always shown as page 1 -->
                 <div v-if="isCoverPage" class="max-w-2xl mx-auto">
                   <div class="text-center mb-8">
-                    <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
+                    <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-slate-600 flex items-center justify-center shadow-lg shadow-slate-500/20">
                       <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                       </svg>
                     </div>
-                    <p class="text-xs font-semibold tracking-wider uppercase text-purple-600 dark:text-purple-400 mb-2">Topic Overview</p>
+                    <p class="text-xs font-semibold tracking-wider uppercase text-slate-600 dark:text-slate-400 mb-2">Topic Overview</p>
                     <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white leading-snug">{{ activeItem.title }}</h1>
                   </div>
 
                   <div v-if="coverCompetency" class="mb-8">
                     <div class="flex items-center gap-2.5 mb-3">
-                      <div class="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center flex-shrink-0">
-                        <svg class="w-4 h-4 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-900/40 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-4 h-4 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
                       </div>
@@ -284,8 +284,8 @@
 
                   <div v-if="coverLearningOutcomes.length" class="mb-4">
                     <div class="flex items-center gap-2.5 mb-3">
-                      <div class="w-8 h-8 rounded-lg bg-fuchsia-100 dark:bg-fuchsia-900/40 flex items-center justify-center flex-shrink-0">
-                        <svg class="w-4 h-4 text-fuchsia-600 dark:text-fuchsia-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-900/40 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-4 h-4 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                         </svg>
                       </div>
@@ -294,7 +294,7 @@
                     <p class="text-xs text-gray-400 dark:text-gray-500 pl-[42px] mb-3">By the end of this topic, you should be able to:</p>
                     <ol class="pl-[42px] space-y-2.5">
                       <li v-for="(outcome, i) in coverLearningOutcomes" :key="i" class="flex items-start gap-3">
-                        <span class="mt-0.5 w-6 h-6 rounded-full bg-fuchsia-50 dark:bg-fuchsia-900/30 text-fuchsia-600 dark:text-fuchsia-400 text-xs font-bold flex items-center justify-center flex-shrink-0">
+                        <span class="mt-0.5 w-6 h-6 rounded-full bg-slate-50 dark:bg-slate-900/30 text-slate-600 dark:text-slate-400 text-xs font-bold flex items-center justify-center flex-shrink-0">
                           {{ i + 1 }}
                         </span>
                         <span class="text-sm text-gray-700 dark:text-gray-300 pt-0.5">{{ outcome }}</span>
@@ -309,7 +309,7 @@
                   <div v-if="pages.length" class="mt-10 pt-6 border-t border-gray-100 dark:border-gray-700/60 text-center">
                     <button
                       @click="goNext"
-                      class="inline-flex items-center gap-1.5 text-sm font-medium text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors"
+                      class="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
                     >
                       Start reading
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -471,13 +471,13 @@ const allItems = computed<SubjectItem[]>(() => {
 
 const gradients = [
   'bg-indigo-600',
-  'bg-blue-600',
+  'bg-indigo-600',
   'bg-emerald-600',
   'bg-amber-600',
   'bg-rose-600',
   'bg-violet-600',
-  'bg-sky-600',
-  'bg-teal-600'
+  'bg-indigo-600',
+  'bg-indigo-600'
 ]
 const subjectGradient = (id: number) => gradients[Math.abs(id) % gradients.length]
 const subjectInitials = (subj: { name: string; code?: string }) => {

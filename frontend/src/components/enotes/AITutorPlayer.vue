@@ -2,16 +2,16 @@
   <!-- No idle-state trigger here - the header's AI Tutor button is the only entry point (calls
        start() via ref) and shows/hides this panel; this only ever renders once the walkthrough
        has actually been requested. -->
-  <div v-if="status !== 'idle'" class="rounded-xl border border-purple-100 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/20 p-4 shadow-xl">
+  <div v-if="status !== 'idle'" class="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/20 p-4 shadow-xl">
       <div class="flex items-center gap-2 mb-3">
         <AppIcon name="teacher" class="w-5 h-5" />
-        <h4 class="text-sm font-semibold text-purple-900 dark:text-purple-200">AI Tutor Walkthrough</h4>
-        <span v-if="status === 'ready' && blocks.length" class="text-[11px] text-purple-500 dark:text-purple-400 ml-auto">
+        <h4 class="text-sm font-semibold text-slate-900 dark:text-slate-200">AI Tutor Walkthrough</h4>
+        <span v-if="status === 'ready' && blocks.length" class="text-[11px] text-slate-500 dark:text-slate-400 ml-auto">
           {{ currentIndex >= 0 ? `Paragraph ${currentIndex + 1} of ${blocks.length}` : `${blocks.length} paragraphs` }}
         </span>
       </div>
 
-      <div v-if="status === 'loading'" class="flex items-center gap-2 text-sm text-purple-700 dark:text-purple-300">
+      <div v-if="status === 'loading'" class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
         <svg class="w-4 h-4 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
@@ -21,7 +21,7 @@
 
       <template v-else-if="status === 'error'">
         <p class="text-sm text-red-600 dark:text-red-400 mb-2">{{ errorMsg }}</p>
-        <button @click="fetchWalkthrough(false)" class="text-xs font-medium text-purple-700 dark:text-purple-300 hover:underline">
+        <button @click="fetchWalkthrough(false)" class="text-xs font-medium text-slate-700 dark:text-slate-300 hover:underline">
           Try again
         </button>
       </template>
@@ -41,14 +41,14 @@
             v-for="(_b, i) in blocks"
             :key="i"
             class="h-1.5 flex-1 rounded-full transition-colors"
-            :class="i < currentIndex ? 'bg-purple-400' : i === currentIndex ? 'bg-purple-600' : 'bg-purple-100 dark:bg-purple-800'"
+            :class="i < currentIndex ? 'bg-slate-400' : i === currentIndex ? 'bg-slate-600' : 'bg-slate-100 dark:bg-slate-800'"
           ></span>
         </div>
 
         <div class="flex flex-wrap items-center gap-2 mb-3">
           <button
             @click="togglePlay"
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-600 text-white text-xs font-medium hover:bg-purple-700 transition-colors"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-600 text-white text-xs font-medium hover:bg-slate-700 transition-colors"
           >
             <svg v-if="!isPlaying" class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>
             <svg v-else class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"></path></svg>
@@ -57,7 +57,7 @@
           <button
             @click="replay"
             :disabled="currentIndex === -1"
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-gray-700 border border-purple-200 dark:border-purple-700 text-purple-700 dark:text-purple-300 text-xs font-medium hover:bg-purple-50 dark:hover:bg-gray-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-gray-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium hover:bg-slate-50 dark:hover:bg-gray-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
@@ -67,22 +67,22 @@
           <button
             @click="stop"
             :disabled="currentIndex === -1"
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-gray-700 border border-purple-200 dark:border-purple-700 text-purple-700 dark:text-purple-300 text-xs font-medium hover:bg-purple-50 dark:hover:bg-gray-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-gray-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium hover:bg-slate-50 dark:hover:bg-gray-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12"></rect></svg>
             Stop
           </button>
 
           <div class="flex items-center gap-1 ml-1">
-            <span class="text-[11px] text-purple-500 dark:text-purple-400 mr-0.5">Speed</span>
+            <span class="text-[11px] text-slate-500 dark:text-slate-400 mr-0.5">Speed</span>
             <button
               v-for="rate in speeds"
               :key="rate"
               @click="setSpeed(rate)"
               class="px-2 py-1 rounded text-[11px] font-medium transition-colors"
               :class="playbackRate === rate
-                ? 'bg-purple-600 text-white'
-                : 'bg-white dark:bg-gray-700 text-purple-600 dark:text-purple-300 border border-purple-200 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-gray-600'"
+                ? 'bg-slate-600 text-white'
+                : 'bg-white dark:bg-gray-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-gray-600'"
             >{{ rate }}x</button>
           </div>
         </div>
@@ -91,23 +91,23 @@
           <button
             @click="explainAgain"
             :disabled="regenerating"
-            class="text-purple-700 dark:text-purple-300 font-medium hover:underline disabled:opacity-50"
+            class="text-slate-700 dark:text-slate-300 font-medium hover:underline disabled:opacity-50"
           >
             {{ regenerating ? 'Explaining again...' : 'Explain Again' }}
           </button>
-          <button @click="showTranscript = !showTranscript" class="text-purple-700 dark:text-purple-300 font-medium hover:underline">
+          <button @click="showTranscript = !showTranscript" class="text-slate-700 dark:text-slate-300 font-medium hover:underline">
             {{ showTranscript ? 'Hide Explanation' : 'View Explanation' }}
           </button>
         </div>
 
         <div
           v-if="showTranscript"
-          class="mt-3 p-3 rounded-lg bg-white dark:bg-gray-800 border border-purple-100 dark:border-purple-800 text-sm text-gray-700 dark:text-gray-300 max-h-64 overflow-y-auto space-y-2"
+          class="mt-3 p-3 rounded-lg bg-white dark:bg-gray-800 border border-slate-100 dark:border-slate-800 text-sm text-gray-700 dark:text-gray-300 max-h-64 overflow-y-auto space-y-2"
         >
           <p
             v-for="(segments, bi) in blockSegments"
             :key="bi"
-            :class="bi === currentIndex ? 'text-purple-900 dark:text-purple-100 font-medium' : ''"
+            :class="bi === currentIndex ? 'text-slate-900 dark:text-slate-100 font-medium' : ''"
           >
             <template v-for="(seg, si) in segments" :key="si">
               <span v-if="seg.highlight" class="text-red-600 dark:text-red-400 font-semibold">{{ seg.text }}</span>

@@ -67,7 +67,7 @@
         </template>
         <template #cell-name="{ row }">
           <span class="inline-flex items-center gap-2.5">
-            <span class="w-8 h-8 rounded-full text-[11px] font-bold flex items-center justify-center flex-shrink-0" :class="row.gender === 'female' ? 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-200' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-200'">{{ initials(row.name) }}</span>
+            <span class="w-8 h-8 rounded-full text-[11px] font-bold flex items-center justify-center flex-shrink-0" :class="row.gender === 'female' ? 'bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-200' : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-200'">{{ initials(row.name) }}</span>
             <span class="font-semibold text-gray-900 dark:text-white">{{ niceName(row.name) }}</span>
           </span>
         </template>

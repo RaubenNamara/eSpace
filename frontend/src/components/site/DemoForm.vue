@@ -3,7 +3,7 @@
        POST /api/demo-requests; admins follow it up under Admin > Demo requests. -->
   <div class="relative overflow-hidden rounded-[2rem] border border-slate-200 dark:border-white/10">
     <div class="grid lg:grid-cols-2 gap-0 overflow-hidden">
-      <div class="p-8 sm:p-12 bg-slate-900 text-white">
+      <div class="p-8 sm:p-12 bg-indigo-950 text-white">
         <h2 class="font-jakarta text-3xl sm:text-4xl font-extrabold tracking-tight">{{ title }}</h2>
         <p class="mt-4 text-slate-300 leading-relaxed">Tell us a little about your school and we'll walk you through eSpace with your own classes and subjects - no obligation.</p>
         <ul class="mt-8 space-y-3">

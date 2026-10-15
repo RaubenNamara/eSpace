@@ -27,7 +27,7 @@
           :key="m.key"
           type="button"
           class="text-left rounded-2xl border bg-white dark:bg-gray-800 p-3.5 transition-shadow hover:shadow-md"
-          :class="sortBy === m.key ? 'border-sky-400 ring-2 ring-sky-200 dark:ring-sky-900/50' : 'border-gray-200 dark:border-gray-700'"
+          :class="sortBy === m.key ? 'border-indigo-400 ring-2 ring-indigo-200 dark:ring-indigo-900/50' : 'border-gray-200 dark:border-gray-700'"
           :title="`Sort students by ${m.label}, least engaged first`"
           :disabled="!m.total"
           @click="sortBy = sortBy === m.key ? 'overall' : m.key"
@@ -78,7 +78,7 @@
           <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-bold tabular-nums" :class="overallChip(row.overall)">{{ row.overall === null ? '–' : `${row.overall}%` }}</span>
         </template>
         <template v-if="role === 'teacher'" #actions="{ row }">
-          <RouterLink :to="`/teacher/chat?student=${row.student_id}`" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-sky-700 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-900/30" :title="`Message ${row.name}`">
+          <RouterLink :to="`/teacher/chat?student=${row.student_id}`" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30" :title="`Message ${row.name}`">
             <AppIcon name="chat" class="w-3.5 h-3.5" /> Message
           </RouterLink>
         </template>

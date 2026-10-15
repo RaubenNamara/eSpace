@@ -38,25 +38,25 @@
 
     <EmptyState v-else-if="filteredAwards.length === 0" compact icon="trophy" tone="amber" title="No badges yet" message="Badges are awarded automatically - for strong results, steady improvement and keeping a learning streak going." />
 
-    <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div v-else class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2.5">
       <div
         v-for="a in filteredAwards"
         :key="a.id"
-        class="rounded-xl p-4 text-white shadow-sm relative"
+        class="rounded-xl p-3 text-white shadow-sm relative"
         :class="[BADGE_COLORS[a.badge_type], a.status === 'revoked' ? 'opacity-50 grayscale' : '']"
       >
         <span v-if="a.status === 'revoked'" class="absolute top-2 right-2 text-[10px] font-semibold bg-black/40 px-2 py-0.5 rounded-full">Revoked</span>
         <div class="flex items-start justify-between gap-2">
-          <BadgeIcon :type="a.badge_type" class="w-8 h-8" />
+          <BadgeIcon :type="a.badge_type" class="w-6 h-6" />
           <span class="text-[10px] uppercase tracking-wide font-semibold bg-white/20 px-2 py-0.5 rounded-full">{{ BADGE_LABELS[a.badge_type] }}</span>
         </div>
-        <p class="font-bold mt-2 leading-tight">{{ a.award_title }}</p>
-        <p v-if="a.average !== null" class="text-sm opacity-90">Average: {{ a.average }}%</p>
-        <p v-else-if="a.score !== null" class="text-sm opacity-90">Score: {{ a.score }}%</p>
-        <p class="text-xs opacity-75 mt-1">
+        <p class="font-bold mt-1.5 text-sm leading-tight">{{ a.award_title }}</p>
+        <p v-if="a.average !== null" class="text-xs opacity-90">Average: {{ a.average }}%</p>
+        <p v-else-if="a.score !== null" class="text-xs opacity-90">Score: {{ a.score }}%</p>
+        <p class="text-[11px] opacity-75 mt-0.5 truncate">
           {{ a.subject_name ? a.subject_name + ' · ' : '' }}{{ a.term_name }}{{ a.academic_year ? ', ' + a.academic_year : '' }}
         </p>
-        <p class="text-[11px] opacity-60 mt-2">Awarded {{ formatDate(a.awarded_at) }}</p>
+        <p class="text-[10px] opacity-60 mt-1">Awarded {{ formatDate(a.awarded_at) }}</p>
       </div>
     </div>
   </div>

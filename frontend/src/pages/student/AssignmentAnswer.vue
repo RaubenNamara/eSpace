@@ -123,8 +123,8 @@
         </div>
 
         <!-- Locked banner: attempt already submitted -->
-        <div v-else-if="isLocked" class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
-          <p class="text-blue-800 dark:text-blue-200 text-sm">
+        <div v-else-if="isLocked" class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg p-4 mb-4">
+          <p class="text-indigo-800 dark:text-indigo-200 text-sm">
             You have already submitted this assignment. Your work is shown below in read-only mode.
             <span v-if="submissionStatus === 'returned' || submissionStatus === 'graded'">It has been marked by your teacher.</span>
           </p>
@@ -205,10 +205,10 @@
            without an assessment_category (every assignment created before this feature). -->
       <div v-if="curriculum" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-5 mb-4 sm:mb-6">
         <div class="flex items-center gap-2 mb-1">
-          <svg class="w-4 h-4 text-purple-500 dark:text-purple-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-4 h-4 text-slate-500 dark:text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
           </svg>
-          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-900/30 text-slate-700 dark:text-slate-300">
             {{ curriculum.category }} &ndash; {{ ASSESSMENT_CATEGORY_LABELS[curriculum.category] }}
           </span>
         </div>

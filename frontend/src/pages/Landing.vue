@@ -216,7 +216,7 @@
                   <router-link :to="`/guide#${activeRole.key}`" class="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:underline">Read the guide</router-link>
                 </div>
               </div>
-              <div class="rounded-3xl p-6 sm:p-8 bg-slate-900 text-white dark:bg-white/5 dark:border dark:border-white/10">
+              <div class="rounded-3xl p-6 sm:p-8 bg-indigo-950 text-white dark:bg-white/5 dark:border dark:border-white/10">
                 <p class="text-xs font-bold uppercase tracking-widest opacity-80">A day with eSpace</p>
                 <ol class="mt-5 space-y-4">
                   <li v-for="(s, i) in activeRole.day" :key="s.time" class="flex gap-4">
@@ -233,7 +233,7 @@
       </section>
 
       <!-- ===== Curriculum + try the Learning Map ===== -->
-      <section id="learning-map" class="py-20 sm:py-28 bg-slate-900 text-white scroll-mt-20">
+      <section id="learning-map" class="py-20 sm:py-28 bg-indigo-950 text-white scroll-mt-20">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div class="grid lg:grid-cols-2 gap-12 items-center">
             <div class="reveal">
@@ -410,7 +410,7 @@
             </div>
             <div>
               <!-- The executive director leads, in a larger card -->
-              <div v-if="teamLead" class="reveal rounded-3xl bg-slate-900 text-white dark:bg-white/5 dark:border dark:border-white/10 p-6 sm:p-8 flex flex-col sm:flex-row items-center sm:items-start gap-6 text-center sm:text-left">
+              <div v-if="teamLead" class="reveal rounded-3xl bg-indigo-950 text-white dark:bg-white/5 dark:border dark:border-white/10 p-6 sm:p-8 flex flex-col sm:flex-row items-center sm:items-start gap-6 text-center sm:text-left">
                 <div class="flex-shrink-0 w-32 h-32 sm:w-36 sm:h-36 rounded-full p-1 bg-white/15">
                   <img v-if="teamLead.photo" :src="teamLead.photo" :alt="teamLead.name" width="136" height="136" loading="lazy" class="w-full h-full rounded-full object-cover border-4 border-slate-900">
                   <span v-else class="w-full h-full rounded-full bg-slate-800 flex items-center justify-center font-jakarta text-4xl font-extrabold text-white">{{ initials(teamLead.name) }}</span>

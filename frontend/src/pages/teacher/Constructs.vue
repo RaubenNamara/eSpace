@@ -44,7 +44,7 @@
         <h3 class="font-semibold text-gray-900 dark:text-white leading-snug mb-2">{{ c.name }}</h3>
         <div class="flex flex-wrap gap-1.5 mb-3">
           <span class="tag-pill bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">{{ c.assessment_objective }}</span>
-          <span class="tag-pill bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">{{ c.level }}</span>
+          <span class="tag-pill bg-slate-50 text-slate-700 dark:bg-slate-900/30 dark:text-slate-300">{{ c.level }}</span>
           <span class="tag-pill bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ c.topic_count ?? 0 }} topic{{ (c.topic_count ?? 0) === 1 ? '' : 's' }}</span>
         </div>
         <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">{{ c.subject_name }}</p>

@@ -30,7 +30,7 @@
         <span class="block font-semibold text-gray-900 dark:text-white">{{ row.name }}<span v-if="row.stream_name" class="font-normal text-gray-400"> · {{ row.stream_name }}</span></span>
       </template>
       <template #cell-level="{ row }">
-        <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold" :class="row.level === 'A Level' ? 'bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300' : 'bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300'">{{ row.level }}</span>
+        <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold" :class="row.level === 'A Level' ? 'bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300' : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'">{{ row.level }}</span>
       </template>
       <template #cell-class_teacher_name="{ row }">
         <span v-if="row.class_teacher_name" class="text-gray-700 dark:text-gray-200">{{ niceName(row.class_teacher_name) }}</span>
@@ -63,7 +63,7 @@
               v-model="classForm.name"
               type="text"
               required
-              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
             >
           </div>
           <div class="mb-4">
@@ -71,7 +71,7 @@
             <select
               v-model="classForm.level"
               required
-              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
             >
               <option value="">Select Level</option>
               <option value="A Level">A Level</option>
@@ -83,7 +83,7 @@
             <select
               v-model="classForm.academic_year_id"
               required
-              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
             >
               <option value="">Select Academic Year</option>
               <option v-for="academicYear in academicYears" :key="academicYear.id" :value="academicYear.id">
@@ -98,7 +98,7 @@
               type="text"
               required
               placeholder="e.g., Science, Arts, Commerce"
-              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
             >
           </div>
           <div class="flex justify-end space-x-3">

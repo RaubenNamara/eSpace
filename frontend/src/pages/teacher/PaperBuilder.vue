@@ -29,11 +29,11 @@
           :key="`m${p.id}`"
           type="button"
           class="flex-shrink-0 w-9 h-9 rounded-full text-sm font-bold border-2"
-          :class="current?.id === p.id ? 'border-amber-500 bg-amber-500 text-white' : hasKey(p) ? 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200' : 'border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300'"
+          :class="current?.id === p.id ? 'border-indigo-500 bg-indigo-500 text-white' : hasKey(p) ? 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200' : 'border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300'"
           :aria-label="`Question ${i + 1}`"
           @click="select(p.id)"
         >{{ i + 1 }}</button>
-        <button type="button" class="flex-shrink-0 h-9 px-3 rounded-full text-sm font-semibold bg-amber-600 text-white" @click="addQuestion">+ Add</button>
+        <button type="button" class="flex-shrink-0 h-9 px-3 rounded-full text-sm font-semibold bg-indigo-600 text-white" @click="addQuestion">+ Add</button>
       </div>
       <aside class="hidden lg:block rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-2 lg:sticky lg:top-20">
         <ol class="space-y-1 max-h-[60vh] overflow-y-auto">
@@ -41,18 +41,18 @@
             <button
               type="button"
               class="w-full flex items-start gap-2 rounded-xl px-2.5 py-2 text-left"
-              :class="current?.id === p.id ? 'bg-amber-50 dark:bg-amber-900/25 ring-1 ring-amber-300 dark:ring-amber-700' : 'hover:bg-gray-50 dark:hover:bg-gray-700/40'"
+              :class="current?.id === p.id ? 'bg-amber-50 dark:bg-indigo-900/25 ring-1 ring-indigo-300 dark:ring-indigo-700' : 'hover:bg-gray-50 dark:hover:bg-gray-700/40'"
               @click="select(p.id)"
             >
               <span class="mt-0.5 w-6 h-6 flex-shrink-0 rounded-lg bg-gray-100 dark:bg-gray-700 text-[11px] font-bold flex items-center justify-center text-gray-700 dark:text-gray-200">{{ i + 1 }}</span>
               <span class="min-w-0 flex-1">
                 <span class="block text-xs text-gray-800 dark:text-gray-100 line-clamp-2">{{ glimpse(p) || 'New question' }}</span>
-                <span class="block text-[10px] font-semibold" :class="hasKey(p) ? 'text-gray-400' : 'text-amber-600 dark:text-amber-400'">{{ TYPE_LABEL[p.answer_type] }}<template v-if="!hasKey(p)"> · no answer set</template></span>
+                <span class="block text-[10px] font-semibold" :class="hasKey(p) ? 'text-gray-400' : 'text-indigo-600 dark:text-indigo-400'">{{ TYPE_LABEL[p.answer_type] }}<template v-if="!hasKey(p)"> · no answer set</template></span>
               </span>
             </button>
           </li>
         </ol>
-        <button type="button" class="mt-2 w-full px-3 py-2 rounded-xl text-sm font-semibold bg-amber-600 text-white hover:bg-amber-700" @click="addQuestion">+ Add a question</button>
+        <button type="button" class="mt-2 w-full px-3 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700" @click="addQuestion">+ Add a question</button>
       </aside>
 
       <!-- The question being written -->
@@ -89,7 +89,7 @@
                 :key="t"
                 type="button"
                 class="px-3 py-1.5 rounded-lg text-xs font-semibold border"
-                :class="current.answer_type === t ? 'bg-amber-600 border-amber-600 text-white' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-gray-300'"
+                :class="current.answer_type === t ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-gray-300'"
                 @click="setType(t)"
               >{{ TYPE_LABEL[t] }}</button>
             </div>
@@ -111,7 +111,7 @@
               <input v-model="current.options[i]" type="text" maxlength="500" class="flex-1 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm dark:text-white" :placeholder="`Choice ${letters[i]}`" @input="queueSave">
               <button type="button" class="p-1 text-gray-400 hover:text-rose-500" :aria-label="`Remove choice ${letters[i]}`" @click="removeOption(i)">✕</button>
             </div>
-            <button v-if="current.options.length < 8" type="button" class="text-xs font-semibold text-amber-700 dark:text-amber-300 hover:underline" @click="addOption">+ Add a choice</button>
+            <button v-if="current.options.length < 8" type="button" class="text-xs font-semibold text-indigo-700 dark:text-indigo-300 hover:underline" @click="addOption">+ Add a choice</button>
           </div>
 
           <!-- True / false -->

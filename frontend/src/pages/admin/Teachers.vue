@@ -269,7 +269,7 @@
               <button
                 type="button"
                 @click="manageDepartmentsFromEdit"
-                class="shrink-0 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                class="shrink-0 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
               >
                 Manage Departments
               </button>
@@ -354,7 +354,7 @@
                 :key="dept.id"
                 class="px-2 py-1 text-xs rounded-full"
                 :class="dept.is_primary
-                  ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 font-medium'
+                  ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300 font-medium'
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'"
               >
                 {{ dept.name }}<span v-if="dept.is_primary"> (Primary)</span>
@@ -364,7 +364,7 @@
             <button
               type="button"
               @click="manageDepartmentsFromDrawer"
-              class="mt-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+              class="mt-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
             >
               Manage Departments
             </button>
@@ -903,7 +903,7 @@ const getInitials = (firstName: string, lastName: string) => {
 }
 
 const getAvatarColor = (name: string) => {
-  const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-teal-500']
+  const colors = ['bg-indigo-500', 'bg-green-500', 'bg-slate-500', 'bg-slate-500', 'bg-indigo-500', 'bg-indigo-500']
   const index = name.charCodeAt(0) % colors.length
   return colors[index]
 }

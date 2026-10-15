@@ -21,7 +21,7 @@
         </p>
 
         <div v-if="loading" class="text-center py-8 text-gray-500 dark:text-gray-400">
-          <div class="inline-block animate-spin rounded-full h-6 w-6 border-2 border-blue-600 border-t-transparent"></div>
+          <div class="inline-block animate-spin rounded-full h-6 w-6 border-2 border-indigo-600 border-t-transparent"></div>
         </div>
 
         <div v-else class="space-y-1 max-h-72 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-100 dark:divide-gray-700">
@@ -35,7 +35,7 @@
                 type="checkbox"
                 :value="dept.id"
                 v-model="selectedIds"
-                class="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
+                class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
               >
               <span class="text-sm text-gray-900 dark:text-white">{{ dept.name }}</span>
             </span>

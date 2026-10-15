@@ -120,7 +120,7 @@ export const GUIDE: GuidePart[] = [
     topics: [
       {
         id: 't-dashboard', title: 'Your dashboard', icon: 'sparkles',
-        steps: ['The banner at the top sums up your day; below it, today\'s timeline shows your lessons and live classes in order.', 'Marking shows how many scripts are waiting and opens the next one - or says you\'re all caught up.', '"Needs a word" lists learners who may be slipping, from Early warning.', '"Your classes" shows each class\'s hand-in and reading rates and this week\'s topics.', '"Recently" scrolls through the latest submissions, finished eNotes and messages.'],
+        steps: ['The banner at the top sums up your day; below it, today\'s timeline shows your lessons and live classes in order.', 'Marking shows how many scripts are waiting and opens the next one - or says you\'re all caught up.', '"Need attention" lists learners who may be slipping, from Early warning.', '"Your classes" shows each class\'s hand-in and reading rates and this week\'s topics.', '"Recently" scrolls through the latest submissions, finished eNotes and messages.'],
       },
       {
         id: 't-classes', title: 'My Classes and Student View', icon: 'users',

@@ -1,23 +1,21 @@
 <template>
   <!-- Where the learners are: enrolments by department, by class or by year, as a short list of
        bars - one card in place of three charts -->
-  <section class="flex flex-col rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5">
-    <div class="flex items-center gap-2 mb-3">
-<span class="w-8 h-8 flex-shrink-0 rounded-xl flex items-center justify-center bg-indigo-600 text-white shadow-sm shadow-indigo-500/20"><AppIcon name="users" class="w-4 h-4" /></span>
-      <h2 class="flex-1 text-base font-bold text-gray-900 dark:text-white">Enrolment</h2>
-      <button type="button" class="text-xs font-semibold text-indigo-600 dark:text-indigo-300 hover:underline" @click="emit('open')">See who →</button>
+  <section class="dash-box flex flex-col">
+    <h2 class="dash-bar">Enrolment <span v-if="total" class="text-xs font-semibold text-indigo-100 tabular-nums">{{ total.toLocaleString() }}</span><button type="button" class="dash-bar-link" @click="emit('open')">See who</button></h2>
+    <div class="px-3 pt-3">
+      <div class="inline-flex p-0.5 rounded-lg bg-gray-100 dark:bg-gray-900/50 text-xs font-semibold">
+        <button
+          v-for="t in TABS"
+          :key="t.key"
+          type="button"
+          class="px-2.5 py-1 rounded-md transition-colors"
+          :class="tab === t.key ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'"
+          @click="tab = t.key"
+        >{{ t.label }}</button>
+      </div>
     </div>
-    <div class="inline-flex self-start p-0.5 mb-3 rounded-lg bg-gray-100 dark:bg-gray-900/50 text-xs font-semibold">
-      <button
-        v-for="t in TABS"
-        :key="t.key"
-        type="button"
-        class="px-2.5 py-1 rounded-md transition-colors"
-        :class="tab === t.key ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'"
-        @click="tab = t.key"
-      >{{ t.label }}</button>
-    </div>
-
+    <div class="p-3">
     <div v-if="loading" class="space-y-2.5"><div v-for="i in 5" :key="i" class="h-6 rounded bg-gray-100 dark:bg-gray-700/50 animate-pulse"></div></div>
     <p v-else-if="!rows.length" class="text-xs text-gray-500 dark:text-gray-400">Nothing yet - this fills in as students are enrolled.</p>
     <ul v-else class="space-y-2">
@@ -31,16 +29,17 @@
         </div>
       </li>
     </ul>
-    <button v-if="rows.length > LIMIT" type="button" class="mt-3 self-start text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200" @click="all = !all">
-      {{ all ? 'Show fewer' : `Show all ${rows.length}` }}
+    <p v-if="recent" class="mt-3 text-xs text-gray-500 dark:text-gray-400">{{ recent.toLocaleString() }} new this week</p>
+    </div>
+    <button v-if="rows.length > LIMIT" type="button" class="dash-more mt-auto" :aria-expanded="all" @click="all = !all">
+      {{ all ? 'Show less' : `Show ${rows.length - LIMIT} more` }}
+      <svg class="w-4 h-4 transition-transform duration-300" :class="all ? 'rotate-180' : ''" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6" /></svg>
     </button>
-    <p v-if="total" class="mt-auto pt-3 text-[11px] text-gray-400">{{ total.toLocaleString() }} enrolments in all{{ recent ? ` · ${recent.toLocaleString()} new this week` : '' }}</p>
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import AppIcon from '@/components/common/AppIcon.vue'
 
 const props = defineProps<{
   loading: boolean
@@ -58,7 +57,7 @@ const TABS = [
   { key: 'year', label: 'Year' }
 ] as const
 const BARS = ['bg-indigo-600 dark:bg-indigo-400']
-const LIMIT = 10
+const LIMIT = 6
 
 const tab = ref<(typeof TABS)[number]['key']>('department')
 const all = ref(false)

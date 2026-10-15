@@ -7,8 +7,13 @@
      dark:bg-gray-800 below) so panels visibly float above the page instead of blending into
      one flat gray - the same light-mode gray-50-page / white-card split just made two steps
      deep instead of one. */
+  /* Small, plain, easy-to-read text: everything is sized in rem, so a 15px base makes the whole
+     app a touch smaller and calmer (the public site still grows on very large screens). */
+  html {
+    font-size: 15px;
+  }
   body {
-    @apply bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white;
+    @apply bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white antialiased;
   }
 }
 
@@ -411,3 +416,49 @@ html.dark {
   --ck-color-engine-placeholder-text: #6b7280;
 }
 html.dark .ck.ck-editor__editable:not(.ck-editor__nested-editable) { color: #e5e7eb; }
+
+/* ---------------------------------------------------------------------------------------------
+   Dashboard and report cards: cream card, a dark-green title bar, compact chips inside, and a
+   "Show N more" button at the foot. Shared by every role's dashboard and the reports pages.
+   --------------------------------------------------------------------------------------------- */
+.dash-box {
+  @apply rounded-2xl shadow-sm min-w-0 overflow-hidden;
+  background: linear-gradient(180deg, var(--frame-paper-top), var(--frame-paper-bottom));
+  border: 1px solid var(--frame-border);
+}
+html.dark .dash-box {
+  background: rgb(31 41 55);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+.dash-bar {
+  @apply flex items-center gap-2 px-4 py-2.5 bg-indigo-800 text-white text-[0.95rem] font-bold tracking-tight;
+}
+.dash-bar-link {
+  @apply ml-auto text-xs font-semibold text-indigo-100 hover:text-white hover:underline;
+}
+.dash-chip {
+  @apply flex items-center gap-2 rounded-xl px-2 py-1.5 min-w-0 bg-white/70 ring-1 ring-black/5 hover:ring-indigo-300 hover:bg-indigo-50/60 dark:bg-gray-900/40 dark:ring-gray-700 dark:hover:ring-indigo-700 transition;
+}
+.dash-chip-alert {
+  @apply bg-red-50/80 ring-red-100 dark:bg-red-950/20 dark:ring-red-900/50;
+}
+.dash-chip-badge {
+  @apply w-8 h-8 flex-shrink-0 rounded-lg text-[10px] font-extrabold flex items-center justify-center text-white;
+}
+.dash-more {
+  @apply w-full flex items-center justify-center gap-1 py-2 border-t border-black/5 dark:border-gray-700/70 text-sm font-bold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50/60 dark:hover:bg-indigo-900/20 transition;
+}
+.dash-pop-enter-active { transition: opacity 0.3s ease, transform 0.3s ease; }
+.dash-pop-leave-active { transition: opacity 0.15s ease; }
+.dash-pop-enter-from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+.dash-pop-leave-to { opacity: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .dash-pop-enter-active, .dash-pop-leave-active { transition: none; }
+}
+
+/* Chat: the list's and the conversation's dark-green title bars - white words and icons on them */
+.chat-bar { color: #fff; }
+.chat-bar h1, .chat-bar h2 { color: #fff !important; }
+.chat-bar p { color: rgb(208 245 225 / 0.9) !important; }
+.chat-bar > button:not(.chat-new), .chat-bar [ref] > button, .chat-bar button:not(.chat-new) svg { color: #fff !important; }
+.chat-bar button:not(.chat-new):hover { background: rgb(255 255 255 / 0.12) !important; }

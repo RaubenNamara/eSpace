@@ -69,22 +69,23 @@
 
       <!-- Phone: a card per record -->
       <ul class="md:hidden divide-y divide-gray-100 dark:divide-gray-700">
-        <li v-for="row in pageRows" :key="keyOf(row)" class="p-3" :class="rowClickable ? 'cursor-pointer active:bg-gray-50 dark:active:bg-gray-700/40' : ''" @click="rowClickable && $emit('row-click', row)">
+        <li v-for="row in pageRows" :key="keyOf(row)" class="px-3 py-2.5" :class="rowClickable ? 'cursor-pointer active:bg-gray-50 dark:active:bg-gray-700/40' : ''" @click="rowClickable && $emit('row-click', row)">
           <div v-if="titleCol" class="text-sm font-semibold text-gray-900 dark:text-white leading-snug">
             <slot :name="`cell-${titleCol.key}`" :row="row" :value="valueOf(row, titleCol.key)">{{ display(row, titleCol.key) }}</slot>
           </div>
           <div v-if="subtitleCol" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
             <slot :name="`cell-${subtitleCol.key}`" :row="row" :value="valueOf(row, subtitleCol.key)">{{ display(row, subtitleCol.key) }}</slot>
           </div>
-          <dl v-if="fieldCols.length" class="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5">
-            <div v-for="col in fieldCols" :key="col.key" class="min-w-0">
-              <dt class="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">{{ col.label }}</dt>
+          <!-- the other columns on one wrapped line: "Label value" pairs, so a long list stays short -->
+          <dl v-if="fieldCols.length" class="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+            <div v-for="col in fieldCols" :key="col.key" class="min-w-0 max-w-full flex items-baseline gap-1">
+              <dt class="flex-shrink-0 text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">{{ col.label }}</dt>
               <dd class="text-xs text-gray-800 dark:text-gray-100 truncate">
                 <slot :name="`cell-${col.key}`" :row="row" :value="valueOf(row, col.key)">{{ display(row, col.key) }}</slot>
               </dd>
             </div>
           </dl>
-          <div v-if="$slots.actions" class="mt-2.5 flex flex-wrap items-center gap-1.5" @click.stop>
+          <div v-if="$slots.actions" class="mt-2 flex flex-wrap items-center gap-1.5" @click.stop>
             <slot name="actions" :row="row" />
           </div>
         </li>

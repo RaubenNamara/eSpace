@@ -69,7 +69,7 @@ interface DemoRequest {
 
 const STATUS: Record<Status, { label: string; action: string; chip: string }> = {
   new: { label: 'New', action: 'Mark as new', chip: 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-200' },
-  contacted: { label: 'Contacted', action: 'Mark contacted', chip: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-200' },
+  contacted: { label: 'Contacted', action: 'Mark contacted', chip: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200' },
   closed: { label: 'Closed', action: 'Close', chip: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' }
 }
 const NEXT: Status[] = ['contacted', 'closed', 'new']

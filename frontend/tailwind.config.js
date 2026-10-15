@@ -101,10 +101,20 @@ export default {
           900: '#7f1d1d',
         },
       },
+      // One plain, readable font everywhere (Inter). Pages that asked for a display font get Inter
+      // too; only the eSpace word logo keeps its own face (font-brand).
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
-        display: ['Poppins', 'system-ui', 'sans-serif'],
-        jakarta: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+        display: ['Inter', 'system-ui', 'sans-serif'],
+        jakarta: ['Inter', 'system-ui', 'sans-serif'],
+        brand: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+      },
+      // Light, calm type: nothing heavier than semi-bold, and "semibold" labels read as medium
+      fontWeight: {
+        semibold: '500',
+        bold: '600',
+        extrabold: '600',
+        black: '600',
       },
       boxShadow: {
         'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.15)',

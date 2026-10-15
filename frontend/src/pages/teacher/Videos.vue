@@ -101,7 +101,7 @@
               <button v-else-if="video.status === 'published'" type="button" class="mt-1.5 w-full text-left group/w" :title="'See who has watched'" @click="viewersFor = video">
                 <span class="flex items-center gap-2">
                   <span class="flex-1 h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
-                    <span class="block h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500" :style="{ width: reach(video) + '%' }"></span>
+                    <span class="block h-full rounded-full bg-gradient-to-r from-violet-500 to-slate-500" :style="{ width: reach(video) + '%' }"></span>
                   </span>
                   <span class="text-[11px] font-semibold tabular-nums text-gray-500 dark:text-gray-400">{{ reach(video) }}%</span>
                 </span>
@@ -415,7 +415,7 @@ const activeClassSubjectShelves = computed(() => {
   return orderShelves(Array.from(map, ([name, videos]) => ({ name, videos })), g => g.videos)
 })
 
-const sectionAccents = ['bg-indigo-500', 'bg-rose-500', 'bg-emerald-500', 'bg-amber-500', 'bg-sky-500', 'bg-violet-500']
+const sectionAccents = ['bg-indigo-500', 'bg-rose-500', 'bg-emerald-500', 'bg-amber-500', 'bg-indigo-500', 'bg-violet-500']
 
 const visibleIds = computed(() => activeClassVideos.value.map(v => v.id))
 

@@ -13,9 +13,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-10-15', area: 'Everyone', icon: 'sparkles',
+    title: 'A cleaner eSpace in green, white and black',
+    text: 'Simple dashboards for every role - school notices sliding past, the work waiting, shortcuts and classes in small cards that open up for more - and a My activity report for students: what they have done and not done over a week, a month, a term or the year.'
+  },
+  {
     date: '2026-10-05', area: 'Students', icon: 'target',
-    title: 'Exam countdown, questions on eNotes and notes to keep',
-    text: 'A revision plan up to each exam, a place to ask questions while reading, and every note a student writes - downloadable as a PDF to keep for good.'
+    title: 'Questions on eNotes and notes to keep',
+    text: 'A place to ask questions while reading, and every note a student writes - downloadable as a PDF to keep for good.'
   },
   {
     date: '2026-10-05', area: 'Teachers', icon: 'clipboard',

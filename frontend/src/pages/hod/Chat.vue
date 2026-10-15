@@ -1,14 +1,14 @@
 <template>
   <div class="h-[calc(100vh-6rem)] -m-6 flex bg-gray-100 dark:bg-gray-950 p-2 sm:p-4">
-    <div class="flex-1 flex rounded-2xl border border-gray-200 dark:border-black/40 shadow-lg overflow-hidden bg-white dark:bg-[#111b21]">
+    <div class="flex-1 flex rounded-2xl border border-gray-200 dark:border-black/40 shadow-lg overflow-hidden bg-white dark:bg-[rgb(17_24_39)]">
       <!-- Sidebar -->
-      <div class="w-full md:w-80 lg:w-96 flex-shrink-0 md:border-r border-gray-200 dark:border-white/5 bg-white dark:bg-[#111b21] flex flex-col" :class="activeConversation ? 'hidden md:flex' : 'flex'">
-        <div class="px-4 py-4 border-b border-gray-200 dark:border-white/5 bg-white dark:bg-[#202c33]">
+      <div class="w-full md:w-80 lg:w-96 flex-shrink-0 md:border-r border-gray-200 dark:border-white/5 bg-white dark:bg-[rgb(17_24_39)] flex flex-col" :class="activeConversation ? 'hidden md:flex' : 'flex'">
+        <div class="chat-bar px-4 py-3.5 bg-indigo-800">
           <h1 class="text-xl font-bold text-gray-900 dark:text-white">Chat Monitoring</h1>
           <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Conversations in your department</p>
         </div>
 
-        <div class="px-3 py-2 bg-white dark:bg-[#111b21]">
+        <div class="px-3 py-2 bg-white dark:bg-[rgb(17_24_39)]">
           <div class="relative">
             <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
@@ -17,7 +17,7 @@
               v-model="conversationSearch"
               type="text"
               placeholder="Search conversations"
-              class="w-full pl-9 pr-3 py-1.5 rounded-lg text-sm bg-gray-100 dark:bg-[#202c33] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 border-0 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              class="w-full pl-9 pr-3 py-1.5 rounded-lg text-sm bg-gray-100 dark:bg-[rgb(31_41_55)] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 border-0 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             >
           </div>
         </div>
@@ -35,7 +35,7 @@
             :key="conv.id"
             @click="openConversation(conv)"
             class="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors border-b border-gray-100 dark:border-white/5"
-            :class="activeConversation?.id === conv.id ? 'bg-indigo-50 dark:bg-[#2a3942]' : 'hover:bg-gray-50 dark:hover:bg-[#182229]'"
+            :class="activeConversation?.id === conv.id ? 'bg-indigo-50 dark:bg-[rgb(55_65_81)]' : 'hover:bg-gray-50 dark:hover:bg-[rgb(31_41_55_/_0.6)]'"
           >
             <div class="w-11 h-11 rounded-full bg-gray-500 flex items-center justify-center text-white flex-shrink-0">
               <svg v-if="conv.type === 'class'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -59,16 +59,16 @@
       <!-- Thread -->
       <div class="flex-1 flex flex-col min-w-0" :class="activeConversation ? 'flex' : 'hidden md:flex'">
         <template v-if="activeConversation">
-          <div class="px-4 py-3 border-b border-gray-200 dark:border-white/5 bg-white dark:bg-[#202c33]">
+          <div class="chat-bar px-4 py-3 bg-indigo-800">
             <div class="flex items-center gap-3">
               <button @click="activeConversation = null" class="md:hidden p-1 -ml-1 text-gray-500">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
               </button>
               <div class="min-w-0">
-                <h2 class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ activeConversation.name }}</h2>
+                <h2 class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ activeConversation.type === 'direct' ? niceName(activeConversation.name) : activeConversation.name }}</h2>
                 <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-gray-500 dark:text-gray-400">
                   <span v-for="p in (activeConversation.participants || [])" :key="`${p.role}-${p.id}`" class="inline-flex items-center gap-1">
-                    <span v-if="p.is_online" class="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0 dark:shadow-[0_0_5px_1.5px_rgba(16,185,129,0.65)]" title="Online"></span>
+                    <span v-if="p.is_online" class="w-1.5 h-1.5 rounded-full bg-indigo-500 flex-shrink-0 dark:shadow-[0_0_5px_1.5px_rgba(21,135,74,0.65)]" title="Online"></span>
                     {{ p.name }}
                   </span>
                 </div>
@@ -91,13 +91,13 @@
             </template>
           </div>
 
-          <div class="px-4 py-3 border-t border-gray-200 dark:border-white/5 bg-gray-100 dark:bg-[#202c33] text-center text-xs text-gray-500 dark:text-gray-400">
+          <div class="px-4 py-3 border-t border-gray-200 dark:border-white/5 bg-gray-100 dark:bg-[rgb(31_41_55)] text-center text-xs text-gray-500 dark:text-gray-400">
             Read-only monitoring view
           </div>
         </template>
 
         <div v-else class="wa-chat-bg flex-1 flex items-center justify-center">
-          <p class="px-6 py-4 rounded-2xl bg-white/70 dark:bg-[#202c33]/70 backdrop-blur-sm border border-white/60 dark:border-white/5 shadow-sm text-gray-500 dark:text-gray-400">Select a conversation to view</p>
+          <p class="px-6 py-4 rounded-2xl bg-white/70 dark:bg-[rgb(31_41_55)]/70 backdrop-blur-sm border border-white/60 dark:border-white/5 shadow-sm text-gray-500 dark:text-gray-400">Select a conversation to view</p>
         </div>
       </div>
     </div>
@@ -109,6 +109,7 @@
 </template>
 
 <script setup lang="ts">
+import { niceName } from '@/components/dashboard/teacher/time'
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import axios from 'axios'
 import MessageBubble from '@/components/chat/MessageBubble.vue'
@@ -193,17 +194,17 @@ onBeforeUnmount(() => {
 
 <style>
 .wa-chat-bg {
-  background-color: #e5ddd5;
+  background-color: #eef5f0;
   background-image:
-    radial-gradient(circle at 12% 18%, rgba(0, 0, 0, 0.045) 1.5px, transparent 1.5px),
-    radial-gradient(circle at 62% 42%, rgba(0, 0, 0, 0.035) 1.5px, transparent 1.5px),
-    radial-gradient(circle at 38% 78%, rgba(0, 0, 0, 0.04) 1.5px, transparent 1.5px),
-    radial-gradient(circle at 88% 88%, rgba(0, 0, 0, 0.03) 1.5px, transparent 1.5px);
+    radial-gradient(circle at 12% 18%, rgba(21, 135, 74, 0.10) 1.5px, transparent 1.5px),
+    radial-gradient(circle at 62% 42%, rgba(21, 135, 74, 0.08) 1.5px, transparent 1.5px),
+    radial-gradient(circle at 38% 78%, rgba(21, 135, 74, 0.09) 1.5px, transparent 1.5px),
+    radial-gradient(circle at 88% 88%, rgba(21, 135, 74, 0.07) 1.5px, transparent 1.5px);
   background-size: 120px 120px;
 }
 
 .dark .wa-chat-bg {
-  background-color: #0b141a;
+  background-color: rgb(13 21 18);
   background-image:
     radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.035) 1.5px, transparent 1.5px),
     radial-gradient(circle at 62% 42%, rgba(255, 255, 255, 0.028) 1.5px, transparent 1.5px),

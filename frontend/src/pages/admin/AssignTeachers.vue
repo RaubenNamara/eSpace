@@ -29,7 +29,7 @@
 
       <!-- Loading -->
       <div v-if="loading" class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 p-12 text-center">
-        <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div>
+        <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-indigo-600 border-t-transparent"></div>
         <p class="mt-4 text-gray-500 dark:text-gray-400">Loading teachers, subjects and classes...</p>
       </div>
 
@@ -45,7 +45,7 @@
           <select
             v-model="selectedTeacherId"
             @change="onTeacherChange"
-            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
           >
             <option value="">Select a teacher...</option>
             <option v-for="t in teachers" :key="t.id" :value="t.id">
@@ -58,7 +58,7 @@
             <span
               v-for="d in selectedTeacher.departments"
               :key="d.id"
-              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300"
+              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300"
             >
               {{ d.name }}<span v-if="d.is_primary" class="ml-1 opacity-70">(primary)</span>
             </span>
@@ -75,7 +75,7 @@
             v-model="selectedSubjectId"
             @change="onSubjectChange"
             :disabled="!eligibleSubjects.length"
-            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white disabled:opacity-50"
+            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white disabled:opacity-50"
           >
             <option value="">Select a subject...</option>
             <option v-for="s in eligibleSubjects" :key="s.id" :value="s.id">{{ s.name }}</option>
@@ -102,10 +102,10 @@
                   :key="cls.id"
                   class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border cursor-pointer text-sm transition-colors"
                   :class="selectedClassIds.includes(cls.id)
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
                     : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
                 >
-                  <input type="checkbox" :value="cls.id" v-model="selectedClassIds" class="rounded text-blue-600 focus:ring-blue-500" />
+                  <input type="checkbox" :value="cls.id" v-model="selectedClassIds" class="rounded text-indigo-600 focus:ring-indigo-500" />
                   {{ cls.stream_name || cls.name }}
                 </label>
               </div>

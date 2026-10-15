@@ -42,7 +42,7 @@
           <EmptyState v-else-if="!shown.length" compact icon="users" tone="gray" :title="emptyTitle" />
           <ul v-else class="divide-y divide-gray-100 dark:divide-gray-700">
             <li v-for="s in shown" :key="s.id" class="py-2.5 flex items-center gap-3">
-              <span class="w-9 h-9 rounded-full text-xs font-bold flex items-center justify-center flex-shrink-0" :class="s.gender === 'female' ? 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-200' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-200'">{{ initials(s.name) }}</span>
+              <span class="w-9 h-9 rounded-full text-xs font-bold flex items-center justify-center flex-shrink-0" :class="s.gender === 'female' ? 'bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-200' : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-200'">{{ initials(s.name) }}</span>
               <div class="min-w-0 flex-1">
                 <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ niceName(s.name) }}</p>
                 <div v-if="s.percent !== null" class="mt-1 flex items-center gap-2">

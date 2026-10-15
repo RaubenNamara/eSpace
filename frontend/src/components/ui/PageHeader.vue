@@ -72,14 +72,9 @@ withDefaults(defineProps<{
   activeFilters?: number
 }>(), { accent: 'indigo', activeFilters: 0 })
 
-const ACCENT: Record<Accent, { icon: string; badge: string; text: string }> = {
-  indigo: { icon: 'bg-indigo-600 text-white', badge: 'bg-indigo-600', text: 'text-indigo-600 dark:text-indigo-300' },
-  emerald: { icon: 'bg-emerald-600 text-white', badge: 'bg-emerald-600', text: 'text-emerald-600 dark:text-emerald-300' },
-  violet: { icon: 'bg-violet-600 text-white', badge: 'bg-violet-600', text: 'text-violet-600 dark:text-violet-300' },
-  amber: { icon: 'bg-amber-500 text-white', badge: 'bg-amber-500', text: 'text-amber-600 dark:text-amber-300' },
-  rose: { icon: 'bg-rose-600 text-white', badge: 'bg-rose-600', text: 'text-rose-600 dark:text-rose-300' },
-  sky: { icon: 'bg-sky-600 text-white', badge: 'bg-sky-600', text: 'text-sky-600 dark:text-sky-300' }
-}
+// Every page header uses the brand green, whatever accent a page asks for - one look across eSpace
+const GREEN = { icon: 'bg-indigo-600 text-white', badge: 'bg-indigo-600', text: 'text-indigo-600 dark:text-indigo-300' }
+const ACCENT: Record<Accent, { icon: string; badge: string; text: string }> = { indigo: GREEN, emerald: GREEN, violet: GREEN, amber: GREEN, rose: GREEN, sky: GREEN }
 
 const sheetOpen = ref(false)
 // The sheet never stays open behind a wider layout

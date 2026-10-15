@@ -12,13 +12,13 @@
               v-model="search"
               type="text"
               placeholder="Search by username, name, or IP address..."
-              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
               @input="debouncedSearch"
             >
           </div>
           <select
             v-model="roleFilter"
-            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
             @change="fetchLogs(1)"
           >
             <option value="">All Roles</option>
@@ -34,7 +34,7 @@
       <!-- Logs Table -->
       <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden border border-gray-100 dark:border-gray-700">
         <div v-if="loading" class="p-12 text-center">
-          <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div>
+          <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-indigo-600 border-t-transparent"></div>
           <p class="mt-4 text-gray-500 dark:text-gray-400">Loading logs...</p>
         </div>
 
@@ -67,7 +67,7 @@
                   <div v-if="log.full_name" class="text-xs text-gray-500 dark:text-gray-400">{{ log.username }}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 capitalize">
+                  <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300 capitalize">
                     {{ log.role.replace('_', ' ') }}
                   </span>
                 </td>

@@ -127,14 +127,14 @@ const subjectDetail = ref<StudentSubjectPerformance | null>(null)
 
 const gradeColor = (grade: string | null | undefined) => {
   const colors: Record<string, string> = {
-    A: 'bg-emerald-600', B: 'bg-blue-600', C: 'bg-amber-500', D: 'bg-orange-500', E: 'bg-red-600', F: 'bg-red-600',
+    A: 'bg-emerald-600', B: 'bg-indigo-600', C: 'bg-amber-500', D: 'bg-orange-500', E: 'bg-red-600', F: 'bg-red-600',
   }
   return grade ? colors[grade] || 'bg-gray-400' : 'bg-gray-300'
 }
 
 const barColor = (percentage: number) => {
   if (percentage >= 80) return 'bg-emerald-500'
-  if (percentage >= 60) return 'bg-blue-500'
+  if (percentage >= 60) return 'bg-indigo-500'
   if (percentage >= 40) return 'bg-amber-500'
   return 'bg-red-500'
 }

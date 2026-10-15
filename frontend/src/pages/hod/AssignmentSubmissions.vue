@@ -107,7 +107,7 @@ const shown = computed(() => submissions.value.filter(r => {
 }))
 const badge = (s: string) => (s === 'graded' || s === 'returned'
   ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
-  : s === 'submitted' || s === 'marking' ? 'bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300')
+  : s === 'submitted' || s === 'marking' ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300')
 
 onMounted(async () => {
   try {

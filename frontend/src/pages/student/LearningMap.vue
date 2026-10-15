@@ -42,23 +42,23 @@
       <!-- Three views of the same map, each built on the one before: the learning outcomes, the
            competency at the end of each topic (its Activity of Integration), and the Elements of
            Construct that group topics (End of Chapter). Picking one switches everything below. -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-3">
+      <div class="grid grid-cols-3 gap-2 sm:gap-3 mb-3">
         <button
           v-for="card in viewCards"
           :key="card.key"
           type="button"
-          class="text-left bg-white dark:bg-gray-800 rounded-2xl border p-4 flex items-center gap-4 transition-all hover:-translate-y-0.5"
+          class="text-center sm:text-left bg-white dark:bg-gray-800 rounded-2xl border p-2.5 sm:p-4 flex flex-col sm:flex-row items-center gap-1.5 sm:gap-4 transition-all hover:-translate-y-0.5 min-w-0"
           :class="view === card.key ? card.selected : 'border-gray-200 dark:border-gray-700 opacity-40 blur-[1px] hover:opacity-100 hover:blur-0'"
           :aria-pressed="view === card.key"
           @click="setView(card.key)"
         >
-          <ProgressRing :percent="card.percent" :size="76" :stroke="8" :color="card.color">
-            <span class="text-base font-bold text-gray-900 dark:text-white"><CountUp :value="`${card.percent}%`" /></span>
+          <ProgressRing :percent="card.percent" :size="narrow ? 54 : 76" :stroke="narrow ? 6 : 8" :color="card.color">
+            <span class="text-sm sm:text-base font-bold text-gray-900 dark:text-white"><CountUp :value="`${card.percent}%`" /></span>
           </ProgressRing>
           <div class="min-w-0 flex-1">
-            <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ card.title }}</p>
-            <p class="text-xs text-gray-500 dark:text-gray-400"><CountUp :value="card.achieved" /> of {{ card.total }} {{ card.noun }}</p>
-            <p class="text-[11px] mt-1" :class="view === card.key ? card.accent : 'text-gray-400 dark:text-gray-500'">{{ view === card.key ? 'Showing below' : 'Tap to see them' }}</p>
+            <p class="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white leading-tight">{{ narrow ? card.title.replace(' achieved', '') : card.title }}</p>
+            <p class="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400"><CountUp :value="card.achieved" /> of {{ card.total }}<span class="hidden sm:inline"> {{ card.noun }}</span></p>
+            <p class="hidden sm:block text-[11px] mt-1" :class="view === card.key ? card.accent : 'text-gray-400 dark:text-gray-500'">{{ view === card.key ? 'Showing below' : 'Tap to see them' }}</p>
           </div>
         </button>
       </div>
@@ -167,7 +167,7 @@
                     <span v-if="topic.aoi" class="px-1.5 py-0.5 rounded text-[10px] font-semibold" :class="statusStyle(topic.aoi.status).chip">
                       Activity of Integration: {{ topic.aoi.level ? `${topic.aoi.level} · ${topic.aoi.percentage}%` : statusStyle(topic.aoi.status).label }}
                     </span>
-                    <span v-if="topic.eoc" class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">End of chapter: {{ topic.eoc.level }} · {{ topic.eoc.percentage }}%</span>
+                    <span v-if="topic.eoc" class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">End of chapter: {{ topic.eoc.level }} · {{ topic.eoc.percentage }}%</span>
                     <span v-if="topic.enote" class="px-1.5 py-0.5 rounded text-[10px] font-semibold" :class="topic.enote.opened ? 'bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'">
                       {{ topic.enote.opened ? 'Notes read' : 'Notes available' }}
                     </span>
@@ -233,7 +233,7 @@
             <div class="absolute left-0 top-0">
               <ProgressRing :percent="topic.competency.percentage ?? 0" :size="44" :stroke="5" :color="gradeStyle(topic.competency.grade)?.color ?? '#9ca3af'">
                 <span v-if="topic.competency.grade" class="text-sm font-extrabold" :style="{ color: gradeStyle(topic.competency.grade)!.color }">{{ topic.competency.grade }}</span>
-                <svg v-else-if="topic.competency.status === 'awaiting'" class="w-4 h-4 text-sky-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <svg v-else-if="topic.competency.status === 'awaiting'" class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                 <span v-else class="text-[10px] font-bold text-gray-400">&ndash;</span>
               </ProgressRing>
             </div>
@@ -335,7 +335,7 @@
             <div class="absolute left-0 top-0">
               <ProgressRing :percent="c.percentage ?? 0" :size="44" :stroke="5" :color="gradeStyle(c.grade)?.color ?? '#9ca3af'">
                 <span v-if="c.grade" class="text-sm font-extrabold" :style="{ color: gradeStyle(c.grade)!.color }">{{ c.grade }}</span>
-                <svg v-else-if="c.status === 'awaiting'" class="w-4 h-4 text-sky-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <svg v-else-if="c.status === 'awaiting'" class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                 <span v-else class="text-[10px] font-bold text-gray-400">&ndash;</span>
               </ProgressRing>
             </div>
@@ -508,7 +508,7 @@ const STATUS: Record<Status, { label: string; chip: string; dot: string; bar: st
   achieved: { label: 'Achieved', chip: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300', dot: 'bg-emerald-500', bar: 'bg-emerald-500', icon: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300', text: 'text-emerald-700 dark:text-emerald-300 font-semibold' },
   developing: { label: 'Developing', chip: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300', dot: 'bg-amber-500', bar: 'bg-amber-400', icon: 'bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-300', text: 'text-amber-700 dark:text-amber-300 font-semibold' },
   needs_support: { label: 'Needs support', chip: 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300', dot: 'bg-rose-500', bar: 'bg-rose-400', icon: 'bg-rose-100 text-rose-600 dark:bg-rose-900/50 dark:text-rose-300', text: 'text-rose-700 dark:text-rose-300 font-semibold' },
-  awaiting: { label: 'Awaiting marking', chip: 'bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300', dot: 'bg-sky-500', bar: 'bg-sky-300', icon: 'bg-sky-100 text-sky-600 dark:bg-sky-900/50 dark:text-sky-300', text: 'text-sky-700 dark:text-sky-300' },
+  awaiting: { label: 'Awaiting marking', chip: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300', dot: 'bg-indigo-500', bar: 'bg-indigo-300', icon: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-300', text: 'text-indigo-700 dark:text-indigo-300' },
   available: { label: 'Assessment ready to attempt', chip: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300', dot: 'bg-indigo-500', bar: 'bg-indigo-300', icon: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-300', text: 'text-indigo-700 dark:text-indigo-300' },
   not_assessed: { label: 'Not yet assessed', chip: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300', dot: 'bg-gray-400', bar: 'bg-gray-200 dark:bg-gray-700', icon: 'border-2 border-gray-300 dark:border-gray-600', text: 'text-gray-500 dark:text-gray-400' }
 }
@@ -518,8 +518,8 @@ const legendOrder: Status[] = ['achieved', 'developing', 'needs_support', 'await
 // The report card's five levels of competence (ReportCardGradingService bands), highest first
 const GRADE: Record<Grade, { label: string; color: string; chip: string; dot: string; note: string }> = {
   A: { label: 'Exceptional', color: '#047857', chip: 'bg-emerald-50 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200', dot: 'bg-emerald-700', note: 'bg-emerald-50/70 border-emerald-200 text-emerald-900 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-100' },
-  B: { label: 'Outstanding', color: '#0d9488', chip: 'bg-teal-50 text-teal-800 dark:bg-teal-900/40 dark:text-teal-200', dot: 'bg-teal-600', note: 'bg-teal-50/70 border-teal-200 text-teal-900 dark:bg-teal-900/20 dark:border-teal-800 dark:text-teal-100' },
-  C: { label: 'Satisfactory', color: '#0284c7', chip: 'bg-sky-50 text-sky-800 dark:bg-sky-900/40 dark:text-sky-200', dot: 'bg-sky-600', note: 'bg-sky-50/70 border-sky-200 text-sky-900 dark:bg-sky-900/20 dark:border-sky-800 dark:text-sky-100' },
+  B: { label: 'Outstanding', color: '#0d9488', chip: 'bg-indigo-50 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-200', dot: 'bg-indigo-600', note: 'bg-indigo-50/70 border-indigo-200 text-indigo-900 dark:bg-indigo-900/20 dark:border-indigo-800 dark:text-indigo-100' },
+  C: { label: 'Satisfactory', color: '#0284c7', chip: 'bg-indigo-50 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-200', dot: 'bg-indigo-600', note: 'bg-indigo-50/70 border-indigo-200 text-indigo-900 dark:bg-indigo-900/20 dark:border-indigo-800 dark:text-indigo-100' },
   D: { label: 'Basic', color: '#d97706', chip: 'bg-amber-50 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200', dot: 'bg-amber-500', note: 'bg-amber-50/70 border-amber-200 text-amber-900 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-100' },
   E: { label: 'Elementary', color: '#e11d48', chip: 'bg-rose-50 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200', dot: 'bg-rose-500', note: 'bg-rose-50/70 border-rose-200 text-rose-900 dark:bg-rose-900/20 dark:border-rose-800 dark:text-rose-100' }
 }
@@ -570,11 +570,14 @@ const viewCards = computed(() => {
   const d = data.value
   if (!d) return []
   return [
-    { key: 'outcomes' as View, title: 'Outcomes achieved', noun: 'learning outcomes', percent: d.overall.percent, achieved: d.overall.achieved, total: d.overall.outcomes, color: '#059669', accent: 'text-emerald-700 dark:text-emerald-300 font-semibold', selected: 'border-emerald-400 ring-2 ring-emerald-200 dark:ring-emerald-900' },
-    { key: 'competencies' as View, title: 'Competencies achieved', noun: 'topic competencies', percent: d.competencies.percent, achieved: d.competencies.achieved, total: d.competencies.competencies, color: '#7c3aed', accent: 'text-violet-700 dark:text-violet-300 font-semibold', selected: VIEW_SELECTED.competencies },
+    { key: 'outcomes' as View, title: 'Outcomes achieved', noun: 'learning outcomes', percent: d.overall.percent, achieved: d.overall.achieved, total: d.overall.outcomes, color: '#15874a', accent: 'text-emerald-700 dark:text-emerald-300 font-semibold', selected: 'border-emerald-400 ring-2 ring-emerald-200 dark:ring-emerald-900' },
+    { key: 'competencies' as View, title: 'Competencies achieved', noun: 'topic competencies', percent: d.competencies.percent, achieved: d.competencies.achieved, total: d.competencies.competencies, color: '#1f2937', accent: 'text-violet-700 dark:text-violet-300 font-semibold', selected: VIEW_SELECTED.competencies },
     { key: 'constructs' as View, title: 'Constructs achieved', noun: 'Elements of Construct', percent: d.constructs.percent, achieved: d.constructs.achieved, total: d.constructs.constructs, color: '#d97706', accent: 'text-amber-700 dark:text-amber-300 font-semibold', selected: VIEW_SELECTED.constructs }
   ]
 })
+
+// Phones get the three rings side by side, smaller
+const narrow = typeof window !== 'undefined' && window.matchMedia('(max-width: 639px)').matches
 
 const legend = computed(() => {
   const d = data.value

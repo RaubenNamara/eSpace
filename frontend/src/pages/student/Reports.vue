@@ -1,6 +1,15 @@
 <template>
   <div class="w-full">
-    <PageHeader v-if="!activeReport" title="My Report Cards" description="Your end-of-term reports - your results on every learning outcome, competency and construct, ready to print." icon="document" accent="indigo" />
+    <PageHeader v-if="!activeReport" title="My Reports" description="What you have done and not done over a week, a month, a term or the year - and your end-of-term report cards." icon="chart" accent="indigo" />
+
+    <!-- My activity | Report cards -->
+    <div v-if="!activeReport" class="mb-4 inline-flex rounded-xl bg-white dark:bg-gray-800 ring-1 ring-gray-200 dark:ring-gray-700 p-1" role="tablist">
+      <button v-for="t in TABS" :key="t.key" type="button" role="tab" :aria-selected="tab === t.key" class="px-4 py-1.5 rounded-lg text-sm font-bold transition" :class="tab === t.key ? 'bg-indigo-800 text-white shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40'" @click="tab = t.key">{{ t.label }}</button>
+    </div>
+
+    <StudentActivityReport v-if="tab === 'activity' && !activeReport" />
+
+    <template v-else>
 
     <div v-if="error" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6 text-red-600 dark:text-red-400 text-sm">
       {{ error }}
@@ -53,6 +62,7 @@
       </div>
       <ReportCard ref="reportCardRef" :report="activeReport" />
     </div>
+    </template>
   </div>
 </template>
 
@@ -62,11 +72,14 @@ import EmptyState from '@/components/ui/EmptyState.vue'
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import ReportCard from '@/components/reportcard/ReportCard.vue'
+import StudentActivityReport from '@/components/reports/StudentActivityReport.vue'
 import { downloadElementAsPdf, sanitizeFilename } from '@/utils/reportCardPdf'
 import type { ReportCard as ReportCardType, ReportCardListEntry } from '@/types/reportCard'
 
 const API_BASE = '/api/student'
 
+const TABS = [{ key: 'activity', label: 'My activity' }, { key: 'cards', label: 'Report cards' }] as const
+const tab = ref<(typeof TABS)[number]['key']>('activity')
 const reportList = ref<ReportCardListEntry[]>([])
 const activeReport = ref<ReportCardType | null>(null)
 const loading = ref(false)

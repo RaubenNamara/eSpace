@@ -88,8 +88,8 @@
           <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
             <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700">
               <h2 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white flex items-center">
-                <span class="w-8 h-8 mr-2.5 rounded-lg bg-sky-50 dark:bg-sky-900/30 flex items-center justify-center flex-shrink-0">
-                  <svg class="w-4 h-4 text-sky-600 dark:text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <span class="w-8 h-8 mr-2.5 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center flex-shrink-0">
+                  <svg class="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
                   </svg>
                 </span>
@@ -277,7 +277,7 @@
                 </div>
 
                 <!-- LOA scope: Theme/Branch -> Topic -> Competence -> Learning Outcomes -->
-                <div v-if="form.assessment_category === 'LOA'" class="space-y-4 pt-4 mt-2 border-t-2 border-blue-100 dark:border-blue-900/40">
+                <div v-if="form.assessment_category === 'LOA'" class="space-y-4 pt-4 mt-2 border-t-2 border-indigo-100 dark:border-indigo-900/40">
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Theme / Branch</label>
@@ -349,7 +349,7 @@
                 </div>
 
                 <!-- EOC scope: pick one admin-defined Construct (department + Subject + Level scoped) -->
-                <div v-if="form.assessment_category === 'EOC'" class="pt-4 mt-2 border-t-2 border-fuchsia-100 dark:border-fuchsia-900/40 space-y-3">
+                <div v-if="form.assessment_category === 'EOC'" class="pt-4 mt-2 border-t-2 border-slate-100 dark:border-slate-900/40 space-y-3">
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Construct *</label>
                   <div v-if="!selectedClassLevel" class="text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-950/40 rounded-lg p-3">
                     Select a Class-Stream above to determine the Level (O Level / A Level) before choosing a Construct.
@@ -369,15 +369,15 @@
                       @click="selectEocConstruct(c.id)"
                       class="relative text-left p-3 rounded-xl border-2 transition-colors"
                       :class="selectedConstructId === c.id
-                        ? 'border-fuchsia-600 bg-fuchsia-50 dark:bg-fuchsia-900/20'
-                        : 'border-gray-200 dark:border-gray-700 hover:border-fuchsia-300 dark:hover:border-fuchsia-700'"
+                        ? 'border-slate-600 bg-slate-50 dark:bg-slate-900/20'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-slate-300 dark:hover:border-slate-700'"
                     >
-                      <svg v-if="selectedConstructId === c.id" class="w-4 h-4 absolute top-3 right-3 text-fuchsia-600 dark:text-fuchsia-400" fill="currentColor" viewBox="0 0 20 20">
+                      <svg v-if="selectedConstructId === c.id" class="w-4 h-4 absolute top-3 right-3 text-slate-600 dark:text-slate-400" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path>
                       </svg>
                       <p class="font-semibold text-sm text-gray-900 dark:text-white pr-5">{{ c.name }}</p>
                       <div class="flex flex-wrap gap-1.5 mt-1.5">
-                        <span class="tag-pill bg-fuchsia-50 text-fuchsia-700 dark:bg-fuchsia-900/30 dark:text-fuchsia-300">{{ c.assessment_objective }}</span>
+                        <span class="tag-pill bg-slate-50 text-slate-700 dark:bg-slate-900/30 dark:text-slate-300">{{ c.assessment_objective }}</span>
                         <span class="tag-pill bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ c.topic_count ?? 0 }} topic{{ (c.topic_count ?? 0) === 1 ? '' : 's' }}</span>
                       </div>
                     </button>
@@ -680,7 +680,7 @@
                         <span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
                           {{ question.marks }} marks
                         </span>
-                        <span v-if="question.allow_drawing" class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                        <span v-if="question.allow_drawing" class="px-2 py-1 text-xs font-medium rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200">
                           Drawing
                         </span>
                         <span
@@ -824,9 +824,9 @@
               <span class="text-slate-500 dark:text-slate-400 font-medium">Category</span>
               <span v-if="form.assessment_category" class="px-2 py-0.5 rounded text-xs font-bold"
                 :class="{
-                  'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300': form.assessment_category === 'LOA',
+                  'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300': form.assessment_category === 'LOA',
                   'bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300': form.assessment_category === 'AOI',
-                  'bg-fuchsia-50 text-fuchsia-700 dark:bg-fuchsia-900/30 dark:text-fuchsia-300': form.assessment_category === 'EOC'
+                  'bg-slate-50 text-slate-700 dark:bg-slate-900/30 dark:text-slate-300': form.assessment_category === 'EOC'
                 }"
                 :title="ASSESSMENT_CATEGORY_LABELS[form.assessment_category]"
               >{{ form.assessment_category }}</span>
@@ -834,7 +834,7 @@
             </div>
             <div v-if="form.assessment_category === 'EOC' && selectedConstructName" class="flex items-center justify-between gap-3 py-2">
               <span class="text-slate-500 dark:text-slate-400 font-medium">Construct</span>
-              <span class="font-semibold text-fuchsia-700 dark:text-fuchsia-300 text-right truncate max-w-[65%]">{{ selectedConstructName }}</span>
+              <span class="font-semibold text-slate-700 dark:text-slate-300 text-right truncate max-w-[65%]">{{ selectedConstructName }}</span>
             </div>
             <div class="flex items-center justify-between gap-3 py-2">
               <span class="text-slate-500 dark:text-slate-400 font-medium">Subject</span>
@@ -873,7 +873,7 @@
           <p v-if="questionModalContextLabel" class="text-sm text-indigo-600 dark:text-indigo-400">
             {{ questionModalContextLabel }}
           </p>
-          <span v-if="form.assessment_category === 'EOC' && selectedConstructAO" class="px-2 py-0.5 rounded text-xs font-bold bg-fuchsia-50 text-fuchsia-700 dark:bg-fuchsia-900/30 dark:text-fuchsia-300">
+          <span v-if="form.assessment_category === 'EOC' && selectedConstructAO" class="px-2 py-0.5 rounded text-xs font-bold bg-slate-50 text-slate-700 dark:bg-slate-900/30 dark:text-slate-300">
             Assessment Objective: {{ selectedConstructAO }}
           </span>
         </div>
@@ -1630,19 +1630,19 @@ const ASSESSMENT_CATEGORY_LABELS: Record<string, string> = {
 // Each category gets its own accent (blue/violet/fuchsia) instead of one uniform indigo, so a
 // teacher can tell LOA/AOI/EOC apart at a glance wherever they show up (category picker, snapshot).
 const CATEGORY_ACTIVE_CLASSES: Record<string, string> = {
-  LOA: 'border-blue-600 bg-blue-50 dark:bg-blue-900/20',
+  LOA: 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20',
   AOI: 'border-violet-600 bg-violet-50 dark:bg-violet-900/20',
-  EOC: 'border-fuchsia-600 bg-fuchsia-50 dark:bg-fuchsia-900/20'
+  EOC: 'border-slate-600 bg-slate-50 dark:bg-slate-900/20'
 }
 const CATEGORY_TEXT_CLASSES: Record<string, string> = {
-  LOA: 'text-blue-600 dark:text-blue-400',
+  LOA: 'text-indigo-600 dark:text-indigo-400',
   AOI: 'text-violet-600 dark:text-violet-400',
-  EOC: 'text-fuchsia-600 dark:text-fuchsia-400'
+  EOC: 'text-slate-600 dark:text-slate-400'
 }
 const CATEGORY_ICON_BG: Record<string, string> = {
-  LOA: 'bg-blue-50 dark:bg-blue-900/30',
+  LOA: 'bg-indigo-50 dark:bg-indigo-900/30',
   AOI: 'bg-violet-50 dark:bg-violet-900/30',
-  EOC: 'bg-fuchsia-50 dark:bg-fuchsia-900/30'
+  EOC: 'bg-slate-50 dark:bg-slate-900/30'
 }
 // One glance icon per category on the picker cards - a graduation cap for a single Learning
 // Outcome, stacked layers for combining several Topics, a verified-shield for a Construct.

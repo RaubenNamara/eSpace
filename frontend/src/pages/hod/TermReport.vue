@@ -53,7 +53,7 @@
                   <td class="py-1.5 px-3 text-right tabular-nums" :class="s.assessments ? 'text-gray-900 dark:text-white font-semibold' : 'text-gray-300 dark:text-gray-600'">{{ s.assessments }}</td>
                   <td class="py-1.5 px-3 min-w-[9rem]">
                     <span v-if="s.expected" class="flex items-center gap-2">
-                      <span class="flex-1 h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden"><span class="block h-full rounded-full bg-sky-500" :style="{ width: `${rate(s)}%` }"></span></span>
+                      <span class="flex-1 h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden"><span class="block h-full rounded-full bg-indigo-500" :style="{ width: `${rate(s)}%` }"></span></span>
                       <span class="text-xs tabular-nums text-gray-600 dark:text-gray-300 w-9 text-right">{{ rate(s) }}%</span>
                     </span>
                     <span v-else class="text-gray-300 dark:text-gray-600">-</span>
@@ -190,7 +190,7 @@ const warningItems = computed(() => {
     { label: 'Low results', value: w.low || 0, tone: 'text-rose-600 dark:text-rose-400' },
     { label: 'Falling', value: w.falling || 0, tone: 'text-amber-600 dark:text-amber-400' },
     { label: 'Missing work', value: w.missed || 0, tone: 'text-amber-600 dark:text-amber-400' },
-    { label: 'Gone quiet', value: w.quiet || 0, tone: 'text-sky-600 dark:text-sky-400' },
+    { label: 'Gone quiet', value: w.quiet || 0, tone: 'text-indigo-600 dark:text-indigo-400' },
     { label: 'Never signed in', value: w.never || 0, tone: 'text-gray-600 dark:text-gray-300' }
   ]
 })

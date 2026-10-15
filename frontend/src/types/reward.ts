@@ -86,9 +86,9 @@ export const BADGE_LABELS: Record<BadgeType, string> = {
 }
 
 export const BADGE_COLORS: Record<BadgeType, string> = {
-  platinum: 'bg-cyan-600',
+  platinum: 'bg-indigo-800',
   gold: 'bg-amber-600',
   silver: 'bg-gray-500',
   bronze: 'bg-orange-600',
-  special: 'bg-purple-600',
+  special: 'bg-indigo-600',
 }

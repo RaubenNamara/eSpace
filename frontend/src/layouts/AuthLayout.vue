@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 dark:from-gray-900 dark:to-gray-800">
+  <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-500 to-slate-600 dark:from-gray-900 dark:to-gray-800">
     <div class="max-w-md w-full mx-4">
       <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8">
         <div class="text-center mb-8">

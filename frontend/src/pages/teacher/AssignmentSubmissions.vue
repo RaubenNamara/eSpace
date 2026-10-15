@@ -46,7 +46,26 @@
       <!-- Submissions List -->
       <div v-else-if="!markingData">
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <div class="overflow-x-auto">
+          <!-- Phone: one compact row per learner -->
+          <ul class="md:hidden divide-y divide-gray-100 dark:divide-gray-700">
+            <li v-for="submission in submissions" :key="`m-${submission.id}`" class="flex items-center gap-2.5 px-3 py-2.5">
+              <span class="h-9 w-9 flex-shrink-0 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-sm font-bold text-indigo-700 dark:text-indigo-300">{{ submission.student_name?.charAt(0) || '?' }}</span>
+              <span class="min-w-0 flex-1">
+                <span class="block text-sm font-semibold text-gray-900 dark:text-white truncate">{{ submission.student_name }}</span>
+                <span class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 min-w-0">
+                  <span :class="getStatusClasses(submission.status)" class="px-1.5 py-0.5 text-[10px] font-semibold rounded-full flex-shrink-0">{{ capitalizeFirst(submission.status) }}</span>
+                  <span class="truncate">{{ submission.total_score !== null ? submission.total_score : '-' }} / {{ assignment?.total_marks }}</span>
+                </span>
+              </span>
+              <button
+                v-if="submission.status !== 'in_progress' && submission.status !== 'draft'"
+                class="flex-shrink-0 px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-xs font-bold"
+                @click="selectSubmission(submission)"
+              >Mark</button>
+              <span v-else class="flex-shrink-0 text-[11px] text-gray-400">Not handed in</span>
+            </li>
+          </ul>
+          <div class="hidden md:block overflow-x-auto">
           <table class="w-full min-w-[640px]">
             <thead class="bg-gray-50 dark:bg-gray-700">
               <tr>
@@ -300,9 +319,9 @@ const formatDate = (dateString: string) => {
 const getStatusClasses = (status: string) => {
   const statusMap: Record<string, string> = {
     submitted: 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200',
-    marking: 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200',
+    marking: 'bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200',
     graded: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200',
-    returned: 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200'
+    returned: 'bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200'
   }
   return statusMap[status] || 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
 }

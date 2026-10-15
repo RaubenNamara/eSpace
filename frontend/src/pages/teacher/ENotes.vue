@@ -149,7 +149,7 @@
                 </span>
                 <span
                   v-if="topic.content_group_id && linkedTopicCount(topic) > 0"
-                  class="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
+                  class="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-50 text-slate-700 dark:bg-slate-900/30 dark:text-slate-300"
                   :title="`Linked to ${linkedTopicCount(topic)} other class/stream cop${linkedTopicCount(topic) === 1 ? 'y' : 'ies'} - editing content here updates them too`"
                 >
                   Linked
@@ -159,7 +159,7 @@
               <p v-if="copies.length === 1" class="text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ classLabel(topic) }}</p>
               <!-- Duplicated: every class/stream this topic is in, each with its own status -->
               <div v-else class="mt-1">
-                <p class="text-[10px] font-semibold uppercase tracking-wide text-purple-700 dark:text-purple-300">Duplicated to {{ copies.length }} classes</p>
+                <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300">Duplicated to {{ copies.length }} classes</p>
                 <ul class="mt-1 space-y-0.5 max-h-28 overflow-y-auto">
                   <li v-for="copy in copies" :key="copy.id" class="flex items-center justify-between gap-2 text-[11px] text-gray-600 dark:text-gray-300">
                     <span class="truncate">{{ classLabel(copy) }}</span>

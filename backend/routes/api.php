@@ -182,9 +182,8 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/search/suggestions', 'eSpace\App\Controllers\SearchController@suggestions');
 
         // Reports
-        Router::get('/reports/performance', 'eSpace\App\Controllers\Student\ReportController@performance');
-        Router::get('/reports/assignments', 'eSpace\App\Controllers\Student\ReportController@assignments');
-        Router::get('/reports/reading', 'eSpace\App\Controllers\Student\ReportController@reading');
+        // The student's own activity report (what they did and did not do over a period)
+        Router::get('/reports/activity', 'eSpace\App\Controllers\Student\ActivityReportController@activity');
 
         // Report Cards (CBC assessment report - own reports only, read-only)
         Router::get('/report-cards/terms', 'eSpace\App\Controllers\Student\ReportCardController@listTerms');

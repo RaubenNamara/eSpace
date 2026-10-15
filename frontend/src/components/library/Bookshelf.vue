@@ -69,15 +69,12 @@ defineProps<{
   padding: 4px 12px;
   border-radius: 4px;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.02em;
-  color: #3b2a10;
-  background: linear-gradient(180deg, #f1dea6, #cfa95a 55%, #b8913f);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.6),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.2),
-    0 1px 3px rgba(0, 0, 0, 0.25);
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+  color: #fff;
+  background: #115633;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(15, 40, 25, 0.25);
   max-width: 100%;
 }
 
@@ -87,16 +84,16 @@ defineProps<{
   font-weight: 800;
   padding: 1px 7px;
   border-radius: 999px;
-  color: #fff;
-  background: #dc2626;
+  color: #1f2937;
+  background: #fbbf24;
   text-shadow: none;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   animation: shelf-new-pulse 2s ease-in-out 3;
 }
 
 @keyframes shelf-new-pulse {
-  0%, 100% { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 0 0 rgba(220, 38, 38, 0.5); }
-  50% { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 0 5px rgba(220, 38, 38, 0); }
+  0%, 100% { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 0 0 rgba(251, 191, 36, 0.6); }
+  50% { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 0 5px rgba(251, 191, 36, 0); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -111,26 +108,26 @@ defineProps<{
   font-weight: 700;
   padding: 0 6px;
   border-radius: 999px;
-  background: rgba(59, 42, 16, 0.15);
+  background: rgba(255, 255, 255, 0.2);
 }
 
-/* Back wall of the bookcase */
+/* Back wall of the bookcase: a soft, light green in eSpace's colours */
 .shelf-cabinet {
   position: relative;
-  border-radius: 10px;
+  border-radius: 14px;
   overflow: hidden;
   background:
-    linear-gradient(to bottom, rgba(0, 0, 0, 0.08), transparent 30%),
-    linear-gradient(180deg, #f4ede1, #e8dcc7);
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(120, 85, 40, 0.18);
+    linear-gradient(to bottom, rgba(21, 80, 50, 0.05), transparent 35%),
+    linear-gradient(180deg, #f4f9f5, #e8f2ec);
+  box-shadow: inset 0 1px 4px rgba(15, 40, 25, 0.06), 0 1px 2px rgba(15, 40, 25, 0.05);
+  border: 1px solid rgba(21, 80, 50, 0.12);
 }
 
 .dark .shelf-cabinet {
   background:
-    linear-gradient(to bottom, rgba(0, 0, 0, 0.3), transparent 30%),
-    linear-gradient(180deg, #2b2620, #221e19);
-  border-color: rgba(0, 0, 0, 0.4);
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.25), transparent 35%),
+    linear-gradient(180deg, #17221c, #121a16);
+  border-color: rgba(255, 255, 255, 0.06);
 }
 
 .shelf-scroller {
@@ -170,12 +167,13 @@ defineProps<{
     to bottom,
     transparent 0,
     transparent var(--plank-top),
-    #d19a5f var(--plank-top),
-    #b27a43 calc(var(--plank-top) + 3px),
-    #8a5a2b calc(var(--plank-top) + 9px),
-    #6e4520 calc(var(--plank-top) + var(--plank-h)),
-    rgba(0, 0, 0, 0.22) calc(var(--plank-top) + var(--plank-h)),
-    transparent calc(var(--plank-top) + var(--plank-h) + 7px),
+    #ffffff var(--plank-top),
+    #f1f6f3 calc(var(--plank-top) + 4px),
+    #dce8e1 calc(var(--plank-top) + var(--plank-h) - 3px),
+    #15874a calc(var(--plank-top) + var(--plank-h) - 3px),
+    #15874a calc(var(--plank-top) + var(--plank-h)),
+    rgba(15, 40, 25, 0.16) calc(var(--plank-top) + var(--plank-h)),
+    transparent calc(var(--plank-top) + var(--plank-h) + 8px),
     transparent var(--row-pitch)
   );
 }
@@ -209,7 +207,7 @@ defineProps<{
   padding-right: 110px;
 }
 
-/* Empty shelf: a short shelf with a quiet note on it, instead of a book's height of bare wood */
+/* Empty shelf: a short shelf with a quiet note on it, instead of a book's height of bare shelf */
 .bookshelf.is-empty {
   --shelf-book-h: 34px;
   --shelf-pad-top: 10px;
@@ -222,12 +220,12 @@ defineProps<{
   padding-bottom: 10px;
   font-size: 12px;
   font-style: italic;
-  color: rgba(90, 60, 25, 0.55);
+  color: rgba(17, 86, 51, 0.6);
   white-space: nowrap;
 }
 
 .dark .shelf-empty {
-  color: rgba(246, 223, 168, 0.45);
+  color: rgba(176, 234, 198, 0.5);
 }
 
 .dark .shelf-track {
@@ -235,12 +233,13 @@ defineProps<{
     to bottom,
     transparent 0,
     transparent var(--plank-top),
-    #8f6139 var(--plank-top),
-    #7a5230 calc(var(--plank-top) + 3px),
-    #5a3b20 calc(var(--plank-top) + 9px),
-    #452c17 calc(var(--plank-top) + var(--plank-h)),
+    #3a4a41 var(--plank-top),
+    #2c3a33 calc(var(--plank-top) + 4px),
+    #24302a calc(var(--plank-top) + var(--plank-h) - 3px),
+    #22a45d calc(var(--plank-top) + var(--plank-h) - 3px),
+    #22a45d calc(var(--plank-top) + var(--plank-h)),
     rgba(0, 0, 0, 0.35) calc(var(--plank-top) + var(--plank-h)),
-    transparent calc(var(--plank-top) + var(--plank-h) + 7px),
+    transparent calc(var(--plank-top) + var(--plank-h) + 8px),
     transparent var(--row-pitch)
   );
 }

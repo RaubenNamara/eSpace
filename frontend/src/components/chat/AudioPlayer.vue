@@ -3,7 +3,7 @@
     <button
       @click="toggle"
       class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-colors"
-      :class="isMine ? 'bg-white/25 hover:bg-white/35 text-white' : 'bg-emerald-600 hover:bg-emerald-700 text-white'"
+      :class="isMine ? 'bg-white/25 hover:bg-white/35 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'"
     >
       <svg v-if="!playing" class="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>
       <svg v-else class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 5h4v14H6zm8 0h4v14h-4z"></path></svg>
@@ -16,7 +16,7 @@
         @click="seek"
         ref="barRef"
       >
-        <div class="h-full rounded-full" :class="isMine ? 'bg-white' : 'bg-emerald-600'" :style="{ width: progressPct + '%' }"></div>
+        <div class="h-full rounded-full" :class="isMine ? 'bg-white' : 'bg-indigo-600'" :style="{ width: progressPct + '%' }"></div>
       </div>
       <span class="text-[11px] mt-1 inline-block" :class="isMine ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'">
         {{ formatTime(playing || currentTime > 0 ? currentTime : duration) }}

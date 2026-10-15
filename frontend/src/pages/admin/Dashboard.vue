@@ -1,45 +1,80 @@
 <template>
-  <div>
-    <!-- 1. The school today, and how many learners and teachers were in this week -->
-    <DashboardHero :date="todayLabel" :title="`${greeting}, ${firstName}`" :parts="daySentence" :chips="heroChips" :actions="heroActions">
-      <p class="text-xs font-bold text-gray-700 dark:text-gray-200 mb-2.5">Signed in this week</p>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
-        <div v-for="r in activity" :key="r.label">
-          <div class="flex items-baseline justify-between gap-2 text-xs mb-1">
-            <span class="font-semibold text-gray-700 dark:text-gray-200">{{ r.label }}</span>
-            <span class="text-gray-500 dark:text-gray-400"><b class="text-gray-900 dark:text-white tabular-nums">{{ r.active.toLocaleString() }}</b> of {{ r.total.toLocaleString() }} · {{ r.share }}</span>
-          </div>
-          <div class="h-2 rounded-full bg-gray-200/70 dark:bg-gray-700 overflow-hidden">
-            <div class="h-full rounded-full bg-indigo-600 dark:bg-indigo-400 transition-all duration-700" :style="{ width: `${r.total ? Math.max(r.active ? 1.5 : 0, (r.active / r.total) * 100) : 0}%` }"></div>
-          </div>
-        </div>
+  <!-- The admin's home, in the same format as every role's: notices sliding past, then cards with
+       dark-green title bars - finishing the setup, who signed in this week, shortcuts and where
+       the learners are. Curriculum mastery lives in Reports. -->
+  <div class="w-full">
+    <header class="mb-3 flex flex-col sm:flex-row sm:items-end gap-x-3 gap-y-2">
+      <div class="min-w-0 flex-1">
+        <p class="text-sm font-semibold text-indigo-600 dark:text-indigo-400">{{ todayLabel }}</p>
+        <h1 class="text-2xl sm:text-[1.7rem] font-extrabold tracking-tight text-gray-900 dark:text-white truncate">{{ greeting }}, {{ firstName }}</h1>
       </div>
-    </DashboardHero>
+      <div class="flex flex-wrap items-center gap-2">
+        <span v-if="currentTerm" class="px-3 py-1.5 rounded-xl bg-indigo-800 text-white text-sm font-bold">{{ currentTerm }}</span>
+        <span v-if="figures" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-gray-800 ring-1 ring-gray-200 dark:ring-gray-700 text-sm font-semibold text-gray-800 dark:text-gray-100">
+          <AppIcon name="users" class="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+          {{ figures.students.toLocaleString() }} learners · {{ figures.teachers.toLocaleString() }} teachers
+        </span>
+      </div>
+    </header>
 
-    <!-- 2. Finishing setup, beside where the learners are -->
-    <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-5">
-      <SetupChecklist class="xl:col-span-2 min-w-0" @figures="onFigures" @progress="(d: number, t: number) => (setup = { done: d, total: t })" />
-      <EnrolmentCard
-        class="min-w-0"
-        :loading="loadingAnalytics"
-        :total="analytics.total_enrollments"
-        :recent="analytics.recent_enrollments"
-        :by-department="analytics.by_department"
-        :by-class="analytics.by_class"
-        :by-year="analytics.by_academic_year"
-        @open="openViewEnrolledModal"
-      />
+    <NoticesTicker role="admin" />
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
+      <div class="lg:col-span-2 flex flex-col gap-4 min-w-0">
+        <SetupChecklist @figures="onFigures" @progress="(d: number, t: number) => (setup = { done: d, total: t })" />
+
+        <!-- Shortcuts -->
+        <section class="dash-box">
+          <h2 class="dash-bar">Jump in</h2>
+          <TransitionGroup tag="nav" name="dash-pop" class="grid grid-cols-4 gap-1 sm:gap-2 p-2 sm:p-3" aria-label="Shortcuts">
+            <component
+              :is="q.to ? 'RouterLink' : 'button'"
+              v-for="q in (allShortcuts ? shortcuts : shortcuts.slice(0, 4))"
+              :key="q.label"
+              :to="q.to"
+              :type="q.to ? undefined : 'button'"
+              class="group flex flex-col items-center gap-1.5 rounded-xl py-2.5 px-1 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition min-w-0"
+              @click="q.onClick?.()"
+            >
+              <span class="w-11 h-11 rounded-2xl flex items-center justify-center bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100 dark:bg-indigo-950/50 dark:text-indigo-300 dark:ring-indigo-900 group-hover:bg-indigo-600 group-hover:text-white transition"><AppIcon :name="q.icon" class="w-5 h-5" /></span>
+              <span class="text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-100 text-center leading-tight">{{ q.label }}</span>
+            </component>
+          </TransitionGroup>
+          <button type="button" class="dash-more" :aria-expanded="allShortcuts" @click="allShortcuts = !allShortcuts">
+            {{ allShortcuts ? 'Show less' : `Show ${shortcuts.length - 4} more` }}
+            <svg class="w-4 h-4 transition-transform duration-300" :class="allShortcuts ? 'rotate-180' : ''" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6" /></svg>
+          </button>
+        </section>
+      </div>
+
+      <div class="flex flex-col gap-4 min-w-0">
+        <!-- Who signed in this week -->
+        <section class="dash-box">
+          <h2 class="dash-bar">Signed in this week</h2>
+          <div class="p-3 space-y-3">
+            <div v-for="r in activity" :key="r.label">
+              <div class="flex items-baseline justify-between gap-2 text-sm mb-1">
+                <span class="font-semibold text-gray-800 dark:text-gray-100">{{ r.label }}</span>
+                <span class="text-gray-500 dark:text-gray-400"><b class="text-gray-900 dark:text-white tabular-nums">{{ r.active.toLocaleString() }}</b> of {{ r.total.toLocaleString() }} · {{ r.share }}</span>
+              </div>
+              <div class="h-2 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+                <div class="h-full rounded-full bg-indigo-600 dark:bg-indigo-400 transition-all duration-700" :style="{ width: `${r.total ? Math.max(r.active ? 1.5 : 0, (r.active / r.total) * 100) : 0}%` }"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <EnrolmentCard
+          :loading="loadingAnalytics"
+          :total="analytics.total_enrollments"
+          :recent="analytics.recent_enrollments"
+          :by-department="analytics.by_department"
+          :by-class="analytics.by_class"
+          :by-year="analytics.by_academic_year"
+          @open="openViewEnrolledModal"
+        />
+      </div>
     </div>
-
-    <!-- 3. Curriculum mastery across the school (or one department) -->
-    <MasteryOverviewCard class="!rounded-2xl" endpoint="/api/admin/mastery-overview" :params="masteryDepartment ? { department_id: masteryDepartment } : {}" show-department>
-      <template #filter>
-        <select v-model="masteryDepartment" class="px-2.5 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white">
-          <option :value="0">All departments</option>
-          <option v-for="dept in departments" :key="dept.id" :value="dept.id">{{ dept.name }}</option>
-        </select>
-      </template>
-    </MasteryOverviewCard>
 
     <!-- View Enrolled Students Modal -->
     <div v-if="showViewEnrolledModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-2 sm:p-4">
@@ -527,10 +562,10 @@ import { ref, onMounted, computed } from 'vue'
 import { useLiveRefresh } from '@/composables/useLiveRefresh'
 import apiService from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
-import DashboardHero, { type HeroAction, type HeroChip, type HeroPart } from '@/components/dashboard/DashboardHero.vue'
+import AppIcon from '@/components/common/AppIcon.vue'
+import NoticesTicker from '@/components/dashboard/NoticesTicker.vue'
 import EnrolmentCard from '@/components/admin/EnrolmentCard.vue'
 import SetupChecklist, { type SetupFigures } from '@/components/admin/SetupChecklist.vue'
-import MasteryOverviewCard from '@/components/dashboard/MasteryOverviewCard.vue'
 import { useToastStore } from '@/stores/toast'
 import { useConfirmStore } from '@/stores/confirm'
 
@@ -591,7 +626,6 @@ const greeting = computed(() => {
 const loadingAnalytics = ref(false)
 const departments = ref<Department[]>([])
 // Curriculum mastery panel filter (0 = every department)
-const masteryDepartment = ref(0)
 const academicYears = ref<AcademicYear[]>([])
 const classes = ref<Class[]>([])
 // Ordered S.1..S.6 (numeric, so "S.10" would still sort after "S.2"), then alphabetically by
@@ -1158,20 +1192,17 @@ const onFigures = (f: SetupFigures, term: string | null) => { figures.value = f;
 // A share as a whole percent, never showing a real handful of people as 0%
 const share = (n: number, of: number) => { const p = (n / of) * 100; return n > 0 && p < 1 ? 'under 1%' : `${Math.round(p)}%` }
 const setup = ref<{ done: number; total: number } | null>(null)
-const heroActions: HeroAction[] = [
+const allShortcuts = ref(false)
+const shortcuts: { label: string; icon: string; to?: string; onClick?: () => void }[] = [
   { label: 'Enrol students', icon: 'users', onClick: () => openEnrollModal() },
   { label: 'Enrolled', icon: 'clipboard', onClick: () => openViewEnrolledModal() },
-  { to: '/admin/teachers', label: 'Teachers', icon: 'teacher' },
+  { to: '/admin/supervision', label: 'Supervision', icon: 'target' },
   { to: '/admin/notices', label: 'Post a notice', icon: 'speaker' },
+  { to: '/admin/teachers', label: 'Teachers', icon: 'teacher' },
+  { to: '/admin/bulk-enrol', label: 'Bulk enrolment', icon: 'upload' },
+  { to: '/admin/reports', label: 'Reports', icon: 'chart' },
   { to: '/admin/settings', label: 'Settings', icon: 'wrench' }
 ]
-const heroChips = computed<HeroChip[]>(() => {
-  const out: HeroChip[] = []
-  if (currentTerm.value) out.push({ text: currentTerm.value, tone: 'solid' })
-  out.push({ text: 'Administrator', icon: 'key' })
-  if (setup.value && setup.value.done < setup.value.total) out.push({ text: `Setup ${setup.value.done} of ${setup.value.total}`, tone: 'warn' })
-  return out
-})
 const firstName = computed(() => {
   const n = String(authStore.userName || '').split(' ')[0] || ''
   return n ? n.charAt(0).toUpperCase() + n.slice(1) : 'there'
@@ -1183,20 +1214,6 @@ const activity = computed(() => {
     { label: 'Teachers', active: f?.teachers_active_week ?? 0, total: f?.teachers ?? 0, share: f && f.teachers ? share(f.teachers_active_week, f.teachers) : '…', bar: '' }
   ]
 })
-// "3,363 learners and 114 teachers in 37 classes. 6 setup steps are left - the list below takes you to each."
-const daySentence = computed(() => {
-  type Part = HeroPart
-  const f = figures.value
-  if (!f) return [{ text: 'Getting the school ready…' }] as Part[]
-  const out: Part[] = [
-    { text: `${f.students.toLocaleString()} learners`, strong: true }, { text: ' and ' },
-    { text: `${f.teachers.toLocaleString()} teachers`, strong: true }, { text: ` in ${f.classes.toLocaleString()} classes. ` }
-  ]
-  const left = setup.value ? setup.value.total - setup.value.done : 0
-  if (left) out.push({ text: `${left} setup ${left === 1 ? 'step is' : 'steps are'} left`, strong: true, alert: true }, { text: ' - each one links straight to where it is fixed.' })
-  else if (setup.value) out.push({ text: 'Setup is complete.' })
-  return out
-})
-const todayLabel = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+const todayLabel = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
 </script>
 

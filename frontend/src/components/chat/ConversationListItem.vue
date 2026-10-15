@@ -2,7 +2,7 @@
   <button
     @click="$emit('click')"
     class="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors border-b border-gray-100 dark:border-white/5"
-    :class="active ? 'bg-emerald-50 dark:bg-[#2a3942]' : 'hover:bg-gray-50 dark:hover:bg-[#182229]'"
+    :class="active ? 'bg-indigo-50 dark:bg-[rgb(55_65_81)]' : 'hover:bg-gray-50 dark:hover:bg-[rgb(31_41_55_/_0.6)]'"
   >
     <div class="relative flex-shrink-0">
       <div
@@ -16,14 +16,14 @@
       </div>
       <span
         v-if="conversation.type === 'direct' && conversation.is_online"
-        class="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white dark:border-[#111b21] dark:shadow-[0_0_6px_2px_rgba(16,185,129,0.65)]"
+        class="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-indigo-500 border-2 border-white dark:border-[rgb(17_24_39)] dark:shadow-[0_0_6px_2px_rgba(21,135,74,0.65)]"
         title="Online"
       ></span>
     </div>
 
     <div class="min-w-0 flex-1">
       <div class="flex items-center justify-between gap-2">
-        <h3 class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ conversation.name }}</h3>
+        <h3 class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ displayName }}</h3>
         <span v-if="conversation.last_message" class="text-[11px] text-gray-400 dark:text-gray-500 flex-shrink-0">{{ formatTime(conversation.last_message.created_at) }}</span>
       </div>
       <div class="flex items-center justify-between gap-2 mt-0.5">
@@ -35,7 +35,7 @@
         </p>
         <span
           v-if="conversation.unread_count"
-          class="flex-shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-emerald-600 text-white text-[10px] font-semibold flex items-center justify-center"
+          class="flex-shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-indigo-600 text-white text-[10px] font-semibold flex items-center justify-center"
         >
           {{ conversation.unread_count > 99 ? '99+' : conversation.unread_count }}
         </span>
@@ -46,25 +46,27 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { niceName } from '@/components/dashboard/teacher/time'
+import { chatText } from '@/utils/chatText'
 import type { Conversation } from '@/types/chat'
 
 const props = defineProps<{ conversation: Conversation; active?: boolean }>()
 defineEmits(['click'])
 
-const palettes = [
-  'bg-emerald-600', 'bg-blue-600', 'bg-indigo-600',
-  'bg-amber-600', 'bg-rose-600', 'bg-violet-600'
-]
+// Avatars in the brand's greens and near-black
+const palettes = ['bg-indigo-600', 'bg-indigo-800', 'bg-gray-800', 'bg-indigo-500', 'bg-indigo-700', 'bg-gray-700']
+// People's names in normal case; class and group names ("S.1 - A (ICT)") as they are
+const displayName = computed(() => (props.conversation.type === 'direct' ? niceName(props.conversation.name) : props.conversation.name))
 const avatarPalette = computed(() => palettes[Math.abs(props.conversation.id) % palettes.length])
 
 const initials = computed(() => {
-  return props.conversation.name.split(/\s+/).filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?'
+  return displayName.value.split(/\s+/).filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?'
 })
 
 const previewText = computed(() => {
   const lm = props.conversation.last_message
   if (!lm) return ''
-  if (lm.message) return lm.message
+  if (lm.message) return chatText(lm.message)
   const labels: Record<string, string> = { image: 'Photo', audio: 'Voice message', video: 'Video', file: 'File' }
   return lm.attachment_type ? labels[lm.attachment_type] || 'Attachment' : ''
 })

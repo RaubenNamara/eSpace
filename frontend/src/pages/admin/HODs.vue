@@ -38,7 +38,7 @@
         </span>
       </template>
       <template #cell-teacher_id="{ row }">
-        <span v-if="row.teacher_id" class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">Also teaches</span>
+        <span v-if="row.teacher_id" class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">Also teaches</span>
         <span v-else class="text-gray-400 text-xs">HOD only</span>
       </template>
       <template #cell-is_active="{ row }">

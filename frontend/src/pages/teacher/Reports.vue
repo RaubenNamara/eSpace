@@ -253,7 +253,7 @@ const tab = usePersistedRef<'summary' | 'generate'>('reports:tab', 'summary')
 
 type Grade = 'A' | 'B' | 'C' | 'D' | 'E'
 const GRADES: Grade[] = ['A', 'B', 'C', 'D', 'E']
-const GRADE_BAR: Record<Grade, string> = { A: 'bg-emerald-500', B: 'bg-sky-500', C: 'bg-amber-400', D: 'bg-orange-500', E: 'bg-rose-500' }
+const GRADE_BAR: Record<Grade, string> = { A: 'bg-emerald-500', B: 'bg-indigo-500', C: 'bg-amber-400', D: 'bg-orange-500', E: 'bg-rose-500' }
 const CATS = ['LOA', 'AOI', 'EOC'] as const
 const STATE_LABEL: Record<string, string> = { not_assessed: 'Not assessed', awaiting_marking: 'Awaiting marking', awaiting_submission: 'Not handed in' }
 

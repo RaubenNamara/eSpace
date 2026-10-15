@@ -14,13 +14,13 @@
               v-model="search"
               type="text"
               placeholder="Search by title, description, or teacher name..."
-              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
               @input="debouncedSearch"
             >
           </div>
           <select
             v-model="statusFilter"
-            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
             @change="fetchTopics"
           >
             <option value="">All Status</option>
@@ -30,7 +30,7 @@
           </select>
           <select
             v-model="departmentFilter"
-            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
             @change="fetchTopics"
           >
             <option value="">All Departments</option>
@@ -79,7 +79,7 @@
 
       <!-- Topics -->
       <div v-if="loading" class="text-center py-12">
-        <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div>
+        <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-indigo-600 border-t-transparent"></div>
         <p class="mt-4 text-gray-500 dark:text-gray-400">Loading eNotes...</p>
       </div>
 
@@ -95,7 +95,7 @@
           <p class="text-sm text-gray-500 dark:text-gray-400">
             {{ topics.length }} topic{{ topics.length === 1 ? '' : 's' }} across {{ groupedTopics.length }} class{{ groupedTopics.length === 1 ? '' : 'es' }}
           </p>
-          <button @click="toggleAllClasses" class="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">
+          <button @click="toggleAllClasses" class="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
             {{ allClassesCollapsed ? 'Expand all' : 'Collapse all' }}
           </button>
         </div>
@@ -193,7 +193,7 @@
                       </p>
 
                       <div class="flex flex-wrap items-center gap-2 mb-4">
-                        <span v-if="topic.department_name" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                        <span v-if="topic.department_name" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
                           {{ topic.department_name }}
                         </span>
                         <span class="ml-auto text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">{{ topic.total_pages }} page{{ topic.total_pages === 1 ? '' : 's' }}</span>
@@ -204,7 +204,7 @@
                         <select
                           :value="topic.class_id ?? ''"
                           @change="assignClass(topic, ($event.target as HTMLSelectElement).value)"
-                          class="w-full text-xs px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                          class="w-full text-xs px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
                         >
                           <option value="">Unassigned</option>
                           <option v-for="cls in classOptions" :key="cls.id" :value="cls.id">{{ cls.label }}</option>
@@ -215,7 +215,7 @@
                         <select
                           :value="topic.status"
                           @change="changeStatus(topic, ($event.target as HTMLSelectElement).value)"
-                          class="text-xs px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                          class="text-xs px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
                         >
                           <option value="draft">Draft</option>
                           <option value="published">Published</option>
@@ -224,10 +224,10 @@
                         <div class="flex items-center gap-1">
                           <button
                             @click="openViewer(topic)"
-                            class="p-2 hover:bg-blue-100 dark:hover:bg-blue-900 rounded-lg transition-colors"
+                            class="p-2 hover:bg-indigo-100 dark:hover:bg-indigo-900 rounded-lg transition-colors"
                             title="View content"
                           >
-                            <svg class="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
                             </svg>

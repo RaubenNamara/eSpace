@@ -21,7 +21,7 @@
             {{ y.name }}
             <span v-if="isCurrent(y)" class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-indigo-600 text-white">Current</span>
             <span v-else-if="isPast(y)" class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">Past</span>
-            <span v-else class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">Upcoming</span>
+            <span v-else class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">Upcoming</span>
           </h3>
           <p class="text-xs text-gray-500 dark:text-gray-400">{{ fmt(y.start_date) }} – {{ fmt(y.end_date) }} · {{ termsOf(y).length }} term{{ termsOf(y).length === 1 ? '' : 's' }}</p>
         </div>
@@ -149,9 +149,9 @@ const daysLeft = (t: Term) => Math.max(0, Math.ceil((day(t.end_date) + 86400000 
 const termTone = (t: Term) => ({
   past: 'bg-gray-300 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
   now: 'bg-indigo-600 text-white',
-  next: 'bg-sky-200 text-sky-900 dark:bg-sky-900/60 dark:text-sky-100'
+  next: 'bg-indigo-200 text-indigo-900 dark:bg-indigo-900/60 dark:text-indigo-100'
 }[status(t)])
-const termDot = (t: Term) => ({ past: 'bg-gray-400', now: 'bg-indigo-600', next: 'bg-sky-400' }[status(t)])
+const termDot = (t: Term) => ({ past: 'bg-gray-400', now: 'bg-indigo-600', next: 'bg-indigo-400' }[status(t)])
 
 // Month initials along the bottom of a year's track - roughly every other month on a full year
 const monthTicks = (y: AcademicYear) => {

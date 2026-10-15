@@ -2,7 +2,7 @@
   <div class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 sm:p-4">
     <div class="bg-white dark:bg-gray-800 w-full h-full sm:h-auto sm:max-w-4xl sm:max-h-[90vh] sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col">
       <!-- Header -->
-      <div class="relative flex-shrink-0 bg-purple-600 px-4 sm:px-8 py-4 sm:py-6">
+      <div class="relative flex-shrink-0 bg-slate-600 px-4 sm:px-8 py-4 sm:py-6">
         <div class="flex items-start justify-between gap-3">
           <div class="flex items-start gap-3 min-w-0">
             <div class="hidden sm:flex w-11 h-11 rounded-xl bg-white/15 items-center justify-center flex-shrink-0">
@@ -12,7 +12,7 @@
             </div>
             <div class="min-w-0">
               <h2 class="text-lg sm:text-2xl font-bold text-white leading-tight truncate">{{ topic?.title }}</h2>
-              <div class="flex flex-wrap items-center gap-2 mt-1.5 text-xs sm:text-sm text-purple-100">
+              <div class="flex flex-wrap items-center gap-2 mt-1.5 text-xs sm:text-sm text-slate-100">
                 <span class="px-2 py-0.5 rounded-full bg-white/20 font-medium">
                   {{ topic?.subject_name || 'General' }}
                 </span>
@@ -34,7 +34,7 @@
 
       <!-- Page progress -->
       <div v-if="pages.length > 1" class="h-1 bg-gray-100 dark:bg-gray-700 flex-shrink-0">
-        <div class="h-1 bg-purple-600 transition-all duration-300" :style="{ width: pageProgress + '%' }"></div>
+        <div class="h-1 bg-slate-600 transition-all duration-300" :style="{ width: pageProgress + '%' }"></div>
       </div>
 
       <!-- Content -->
@@ -48,7 +48,7 @@
           <h3 v-if="currentPage && pages.length > 1 && !isDefaultPageTitle(currentPage.title)" class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4">
             {{ currentPage.title }}
           </h3>
-          <div v-if="currentPage?.narration_audio_path" class="mb-6 flex items-center gap-3 p-3 rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800">
+          <div v-if="currentPage?.narration_audio_path" class="mb-6 flex items-center gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-900/20 border border-slate-100 dark:border-slate-800">
             <AppIcon name="speaker" class="w-5 h-5" />
             <audio :key="currentPage.narration_audio_path" :src="resolveAssetUrl(currentPage.narration_audio_path)" controls class="flex-1 h-9"></audio>
           </div>
@@ -80,7 +80,7 @@
         <button
           @click="next"
           :disabled="!canGoNext || isAnimating"
-          class="flex items-center gap-1.5 px-3 sm:px-4 py-2 text-sm font-medium rounded-lg bg-purple-600 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed hover:bg-purple-700"
+          class="flex items-center gap-1.5 px-3 sm:px-4 py-2 text-sm font-medium rounded-lg bg-slate-600 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-700"
         >
           <span>Next</span>
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

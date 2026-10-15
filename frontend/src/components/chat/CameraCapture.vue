@@ -56,7 +56,7 @@
         <button @click="retake" class="px-5 py-2.5 rounded-full bg-white/15 hover:bg-white/25 text-white text-sm font-medium">
           Retake
         </button>
-        <button @click="usePhoto" class="px-6 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold flex items-center gap-2">
+        <button @click="usePhoto" class="px-6 py-2.5 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
           Use Photo
         </button>

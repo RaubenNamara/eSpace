@@ -6,7 +6,7 @@
         :key="cat.label"
         @click="activeCategory = cat.label"
         class="px-3 py-2 text-lg flex-shrink-0 border-b-2 transition-colors"
-        :class="activeCategory === cat.label ? 'border-emerald-600' : 'border-transparent opacity-50 hover:opacity-100'"
+        :class="activeCategory === cat.label ? 'border-indigo-600' : 'border-transparent opacity-50 hover:opacity-100'"
         :title="cat.label"
       >
         {{ cat.icon }}

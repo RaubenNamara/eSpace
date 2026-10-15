@@ -185,9 +185,9 @@ const typeBadgeClass = (type: string) => {
     enote: 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300',
     library: 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300',
     assignment: 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300',
-    item_bank: 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300',
+    item_bank: 'bg-slate-100 dark:bg-slate-900/40 text-slate-700 dark:text-slate-300',
     video: 'bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300',
-    lesson: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300',
+    lesson: 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300',
     subject: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300',
   }
   return map[type] || 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'

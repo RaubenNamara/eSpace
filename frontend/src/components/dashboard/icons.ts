@@ -27,7 +27,7 @@ export const dashboardColors: Record<string, { bg: string; text: string; color: 
   emerald: { bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-600 dark:text-emerald-400', color: 'bg-emerald-600', ring: 'ring-emerald-400 dark:ring-emerald-500' },
   violet: { bg: 'bg-violet-100 dark:bg-violet-900/30', text: 'text-violet-600 dark:text-violet-400', color: 'bg-violet-600', ring: 'ring-violet-400 dark:ring-violet-500' },
   red: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-600 dark:text-red-400', color: 'bg-red-600', ring: 'ring-red-400 dark:ring-red-500' },
-  teal: { bg: 'bg-teal-100 dark:bg-teal-900/30', text: 'text-teal-600 dark:text-teal-400', color: 'bg-teal-600', ring: 'ring-teal-400 dark:ring-teal-500' },
-  pink: { bg: 'bg-pink-100 dark:bg-pink-900/30', text: 'text-pink-600 dark:text-pink-400', color: 'bg-pink-600', ring: 'ring-pink-400 dark:ring-pink-500' },
-  sky: { bg: 'bg-sky-100 dark:bg-sky-900/30', text: 'text-sky-600 dark:text-sky-400', color: 'bg-sky-600', ring: 'ring-sky-400 dark:ring-sky-500' }
+  teal: { bg: 'bg-indigo-100 dark:bg-indigo-900/30', text: 'text-indigo-600 dark:text-indigo-400', color: 'bg-indigo-600', ring: 'ring-indigo-400 dark:ring-indigo-500' },
+  pink: { bg: 'bg-slate-100 dark:bg-slate-900/30', text: 'text-slate-600 dark:text-slate-400', color: 'bg-slate-600', ring: 'ring-slate-400 dark:ring-slate-500' },
+  sky: { bg: 'bg-indigo-100 dark:bg-indigo-900/30', text: 'text-indigo-600 dark:text-indigo-400', color: 'bg-indigo-600', ring: 'ring-indigo-400 dark:ring-indigo-500' }
 }

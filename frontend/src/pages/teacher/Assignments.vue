@@ -204,7 +204,7 @@ const groupOf = (a: Row): GroupKey => {
 const GROUPS: { key: GroupKey; title: string; dot: string; hint?: string }[] = [
   { key: 'to_mark', title: 'Waiting to be marked', dot: 'bg-rose-500', hint: 'students are waiting for their results' },
   { key: 'open', title: 'Open now', dot: 'bg-emerald-500', hint: 'students can answer these' },
-  { key: 'upcoming', title: 'Opening soon', dot: 'bg-sky-500' },
+  { key: 'upcoming', title: 'Opening soon', dot: 'bg-indigo-500' },
   { key: 'draft', title: 'Drafts', dot: 'bg-amber-500', hint: "students can't see these yet" },
   { key: 'closed', title: 'Closed', dot: 'bg-gray-400' },
   { key: 'archived', title: 'Archived', dot: 'bg-gray-300 dark:bg-gray-600' }
@@ -279,7 +279,7 @@ const clearFilters = () => {
 const formatType = (type: string) => TYPES[type] || type
 const categoryOf = (a: Row) => a.assessment_category || ''
 const categoryChip = (c: string) => ({
-  LOA: 'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-200',
+  LOA: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-200',
   AOI: 'bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-200',
   EOC: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200'
 }[c] || 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200')
@@ -296,7 +296,7 @@ const due = (a: Row) => {
   const end = at(a.deadline_at || a.due_date)
   if (a.status === 'draft') return { label: 'Not published', sub: isNaN(end) ? 'No deadline' : `Due ${shortDate(end)}`, tone: 'text-amber-600 dark:text-amber-300' }
   const opens = at(a.open_at)
-  if (opens > now) return { label: `Opens ${shortDate(opens)}`, sub: isNaN(end) ? '' : `Due ${shortDate(end)}`, tone: 'text-sky-600 dark:text-sky-300' }
+  if (opens > now) return { label: `Opens ${shortDate(opens)}`, sub: isNaN(end) ? '' : `Due ${shortDate(end)}`, tone: 'text-indigo-600 dark:text-indigo-300' }
   if (isNaN(end)) return { label: 'No deadline', sub: '', tone: 'text-gray-500 dark:text-gray-400' }
   // Calendar days, so "tomorrow" means the next date, whatever the hour
   const midnight = (t: number) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime() }

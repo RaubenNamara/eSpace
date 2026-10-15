@@ -1,7 +1,23 @@
 <template>
   <div class="w-full">
-    <PageHeader title="Reports" description="Student competency reports (LOA/AOI/EOC) and summative report cards." icon="chart" accent="indigo">
+    <PageHeader title="Reports" description="Student competency reports (LOA/AOI/EOC), summative report cards, and how the curriculum is covered across the school." icon="chart" accent="indigo">
     </PageHeader>
+
+    <div class="mb-4 inline-flex rounded-xl bg-white dark:bg-gray-800 ring-1 ring-gray-200 dark:ring-gray-700 p-1" role="tablist">
+      <button v-for="t in REPORT_TABS" :key="t.key" type="button" role="tab" :aria-selected="reportTab === t.key" class="px-4 py-1.5 rounded-lg text-sm font-bold transition" :class="reportTab === t.key ? 'bg-indigo-800 text-white shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40'" @click="reportTab = t.key">{{ t.label }}</button>
+    </div>
+
+    <!-- Curriculum mastery across the school (or one department) - moved here from the dashboard -->
+    <MasteryOverviewCard v-if="reportTab === 'mastery'" class="!rounded-2xl" endpoint="/api/admin/mastery-overview" :params="masteryDepartment ? { department_id: masteryDepartment } : {}" show-department>
+      <template #filter>
+        <select v-model="masteryDepartment" class="px-2.5 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white">
+          <option :value="0">All departments</option>
+          <option v-for="dept in masteryDepartments" :key="dept.id" :value="dept.id">{{ dept.name }}</option>
+        </select>
+      </template>
+    </MasteryOverviewCard>
+
+    <template v-else>
 
     <!-- ============================= Student Competency Reports (LOA/AOI/EOC) ============================= -->
     <div class="mb-10">
@@ -313,6 +329,7 @@
     <div style="position: fixed; left: -10000px; top: 0; width: 900px;" aria-hidden="true">
       <ReportCard v-if="bulkReport" ref="bulkCardRef" :report="bulkReport" />
     </div>
+    </template>
   </div>
 </template>
 
@@ -322,6 +339,7 @@ import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import axios from 'axios'
 import ReportCard from '@/components/reportcard/ReportCard.vue'
 import CompetencyDetailReport from '@/components/reportcard/CompetencyDetailReport.vue'
+import MasteryOverviewCard from '@/components/dashboard/MasteryOverviewCard.vue'
 import { captureElement, buildPdfFromCanvases, downloadElementAsPdf, sanitizeFilename, withLightMode } from '@/utils/reportCardPdf'
 import type {
   ReportCard as ReportCardType, ReportCardStudentEntry,
@@ -358,7 +376,7 @@ const CATEGORY_SHORT_LABELS: Record<CompetencyCategory, string> = {
 
 const gradeBg = (grade: string | null) => {
   const colors: Record<string, string> = {
-    A: 'bg-emerald-600', B: 'bg-blue-600', C: 'bg-amber-500', D: 'bg-orange-500', E: 'bg-red-600',
+    A: 'bg-emerald-600', B: 'bg-indigo-600', C: 'bg-amber-500', D: 'bg-orange-500', E: 'bg-red-600',
   }
   return grade ? colors[grade] || 'bg-gray-400' : 'bg-gray-300'
 }
@@ -651,6 +669,20 @@ const handleEscape = (e: KeyboardEvent) => {
     if (activeReport.value) activeReport.value = null
   }
 }
+
+// Student reports | how the curriculum is covered across the school
+const REPORT_TABS = [{ key: 'students', label: 'Student reports' }, { key: 'mastery', label: 'Curriculum mastery' }] as const
+const reportTab = ref<(typeof REPORT_TABS)[number]['key']>('students')
+const masteryDepartment = ref(0)
+const masteryDepartments = ref<{ id: number; name: string }[]>([])
+watch(reportTab, async t => {
+  if (t !== 'mastery' || masteryDepartments.value.length) return
+  try {
+    const res = await axios.get('/api/admin/departments')
+    const d = res.data?.data
+    masteryDepartments.value = (Array.isArray(d) ? d : d?.departments || []).map((x: any) => ({ id: x.id, name: x.name }))
+  } catch { /* the list just stays at "All departments" */ }
+})
 
 onMounted(async () => {
   window.addEventListener('keydown', handleEscape)

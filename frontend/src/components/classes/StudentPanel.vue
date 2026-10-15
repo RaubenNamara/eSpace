@@ -6,7 +6,7 @@
     <div class="fixed inset-0 z-50 flex items-end sm:items-stretch sm:justify-end bg-black/40" @click.self="$emit('close')">
       <aside class="w-full sm:w-96 max-h-[88vh] sm:max-h-none overflow-y-auto bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-none shadow-2xl p-5">
         <div class="flex items-start gap-3">
-          <span class="w-14 h-14 rounded-2xl text-lg font-extrabold flex items-center justify-center flex-shrink-0" :class="student.gender === 'female' ? 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-200' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-200'">{{ initials(student.name) }}</span>
+          <span class="w-14 h-14 rounded-2xl text-lg font-extrabold flex items-center justify-center flex-shrink-0" :class="student.gender === 'female' ? 'bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-200' : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-200'">{{ initials(student.name) }}</span>
           <div class="min-w-0 flex-1">
             <p class="text-lg font-bold text-gray-900 dark:text-white leading-tight">{{ niceName(student.name) }}</p>
             <p class="text-xs text-gray-500 dark:text-gray-400">{{ className }} · {{ student.admission_number }} · <span class="capitalize">{{ student.gender }}</span></p>

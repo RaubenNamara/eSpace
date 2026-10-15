@@ -1,8 +1,8 @@
 <template>
   <div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-    <div class="bg-white dark:bg-[#202c33] rounded-xl w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col">
+    <div class="bg-white dark:bg-[rgb(31_41_55)] rounded-xl w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col">
       <div class="p-5 border-b border-gray-200 dark:border-white/5 flex items-center gap-2">
-        <button v-if="mode === 'list'" @click="backToChooser" class="p-1.5 -ml-1.5 hover:bg-gray-100 dark:hover:bg-[#2a3942] rounded-lg transition-colors flex-shrink-0">
+        <button v-if="mode === 'list'" @click="backToChooser" class="p-1.5 -ml-1.5 hover:bg-gray-100 dark:hover:bg-[rgb(55_65_81)] rounded-lg transition-colors flex-shrink-0">
           <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
           </svg>
@@ -10,7 +10,7 @@
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white flex-1">
           {{ mode === 'choose' ? 'New Chat' : (tabs.find(t => t.key === activeTab)?.label || 'New Chat') }}
         </h3>
-        <button @click="$emit('close')" class="p-2 hover:bg-gray-100 dark:hover:bg-[#2a3942] rounded-lg transition-colors">
+        <button @click="$emit('close')" class="p-2 hover:bg-gray-100 dark:hover:bg-[rgb(55_65_81)] rounded-lg transition-colors">
           <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
           </svg>
@@ -23,7 +23,7 @@
           v-for="tab in tabs"
           :key="tab.key"
           @click="chooseGroup(tab.key)"
-          class="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border border-gray-200 dark:border-white/10 hover:border-emerald-300 dark:hover:border-emerald-700 hover:bg-gray-50 dark:hover:bg-[#2a3942] transition-colors text-left"
+          class="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border border-gray-200 dark:border-white/10 hover:border-indigo-300 dark:hover:border-indigo-700 hover:bg-gray-50 dark:hover:bg-[rgb(55_65_81)] transition-colors text-left"
         >
           <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-white" :class="groupAccent(tab.key)">
             <svg v-if="tab.key === 'classes'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -53,7 +53,7 @@
             v-model="search"
             type="text"
             placeholder="Search..."
-            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 dark:bg-[#2a3942] dark:text-white"
+            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-[rgb(55_65_81)] dark:text-white"
             autofocus
           >
         </div>
@@ -64,7 +64,7 @@
               v-for="cls in filteredClassGroups"
               :key="`${cls.class_id}-${cls.department_id}`"
               @click="$emit('select-class', cls)"
-              class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-[#2a3942] transition-colors text-left"
+              class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-[rgb(55_65_81)] transition-colors text-left"
             >
               <div class="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white flex-shrink-0">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -84,22 +84,22 @@
               v-for="contact in filteredContacts"
               :key="`${contact.role}-${contact.id}`"
               @click="$emit('select-contact', contact)"
-              class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-[#2a3942] transition-colors text-left"
+              class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-[rgb(55_65_81)] transition-colors text-left"
             >
               <div class="relative flex-shrink-0">
-                <div class="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center text-white font-semibold text-sm">
+                <div class="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-semibold text-sm">
                   {{ (contact.first_name[0] || '') + (contact.last_name[0] || '') }}
                 </div>
                 <span
                   v-if="contact.is_online"
-                  class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-gray-800"
+                  class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-indigo-500 border-2 border-white dark:border-gray-800"
                   title="Online"
                 ></span>
               </div>
               <div class="min-w-0">
                 <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ contact.first_name }} {{ contact.last_name }}</p>
                 <p v-if="contact.department_name" class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ contact.department_name }}</p>
-                <p v-else-if="contact.is_online" class="text-xs text-emerald-600 dark:text-emerald-400">Online</p>
+                <p v-else-if="contact.is_online" class="text-xs text-indigo-600 dark:text-indigo-400">Online</p>
               </div>
             </button>
             <p v-if="filteredContacts.length === 0" class="text-center text-sm text-gray-400 py-8">No contacts found</p>
@@ -155,7 +155,7 @@ const groupAccentPalette: Record<string, string> = {
   teachers: 'bg-amber-600',
   colleagues: 'bg-amber-600'
 }
-const groupAccent = (key: string) => groupAccentPalette[key] || 'bg-emerald-600'
+const groupAccent = (key: string) => groupAccentPalette[key] || 'bg-indigo-600'
 
 const filteredContacts = computed(() => {
   const tab = props.contactTabs.find(t => t.key === activeTab.value)

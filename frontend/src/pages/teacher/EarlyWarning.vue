@@ -82,7 +82,7 @@ const SIGNAL: Record<SignalKey, { label: string; icon: string; chip: string; ton
   low: { label: 'Low results', icon: 'chart', chip: 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-200', tone: 'rose', hint: 'Average under 50%' },
   falling: { label: 'Falling', icon: 'trend', chip: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-200', tone: 'amber', hint: '10+ points down this term' },
   missed: { label: 'Missing work', icon: 'clock', chip: 'bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-200', tone: 'violet', hint: '2+ deadlines in 30 days' },
-  quiet: { label: 'Gone quiet', icon: 'hourglass', chip: 'bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-200', tone: 'sky', hint: 'Not signed in for 14 days' },
+  quiet: { label: 'Gone quiet', icon: 'hourglass', chip: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-200', tone: 'sky', hint: 'Not signed in for 14 days' },
   never: { label: 'Never signed in', icon: 'users', chip: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300', tone: 'gray', hint: 'Hand out their login' }
 }
 

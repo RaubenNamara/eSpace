@@ -56,10 +56,10 @@
 
           <p v-for="e in d.exams" :key="e.title" class="mb-1.5 px-2 py-1 rounded-lg text-[11px] font-semibold bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 truncate" :title="e.title">Exam · {{ e.title }}</p>
 
-          <RouterLink v-for="l in d.lessons" :key="`l${l.id}`" to="/teacher/live-classes" class="mb-1.5 block rounded-lg px-2 py-1.5 bg-sky-50 dark:bg-sky-900/25 hover:bg-sky-100 dark:hover:bg-sky-900/40">
-            <span class="block text-[11px] font-semibold text-sky-800 dark:text-sky-200">{{ time(l.start) }} · Live</span>
-            <span class="block text-xs text-sky-900 dark:text-sky-100 truncate">{{ l.title }}</span>
-            <span v-if="l.class" class="block text-[10px] text-sky-700/80 dark:text-sky-300/80 truncate">{{ l.class }}</span>
+          <RouterLink v-for="l in d.lessons" :key="`l${l.id}`" to="/teacher/live-classes" class="mb-1.5 block rounded-lg px-2 py-1.5 bg-indigo-50 dark:bg-indigo-900/25 hover:bg-indigo-100 dark:hover:bg-indigo-900/40">
+            <span class="block text-[11px] font-semibold text-indigo-800 dark:text-indigo-200">{{ time(l.start) }} · Live</span>
+            <span class="block text-xs text-indigo-900 dark:text-indigo-100 truncate">{{ l.title }}</span>
+            <span v-if="l.class" class="block text-[10px] text-indigo-700/80 dark:text-indigo-300/80 truncate">{{ l.class }}</span>
           </RouterLink>
 
           <RouterLink v-for="a in d.due" :key="`a${a.id}`" :to="`/teacher/assignments/${a.id}/submissions`" class="mb-1.5 block rounded-lg px-2 py-1.5 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/35">

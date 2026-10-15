@@ -185,7 +185,7 @@ const emit = defineEmits<{
 
 const ACTION: Record<Action, { verb: string; dot: string }> = {
   snapshot: { verb: 'Before tracking began:', dot: 'bg-gray-400' },
-  create: { verb: 'Added', dot: 'bg-sky-500' },
+  create: { verb: 'Added', dot: 'bg-indigo-500' },
   edit: { verb: 'Edited', dot: 'bg-indigo-500' },
   duplicate: { verb: 'Copied a page as', dot: 'bg-violet-500' },
   move: { verb: 'Moved pages', dot: 'bg-amber-500' },

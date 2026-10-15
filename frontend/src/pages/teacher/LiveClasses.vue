@@ -2,7 +2,7 @@
   <div class="w-full">
     <PageHeader title="Live Classes" description="Host real-time lessons with BigBlueButton - students get a reminder and a join button." icon="video" accent="rose">
       <template #actions>
-        <button type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold bg-red-600 text-white hover:bg-red-700 shadow-sm shadow-red-500/20" @click="openCreateModal">
+        <button type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-500/20" @click="openCreateModal">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
           <span class="hidden sm:inline">Schedule class</span><span class="sm:hidden">New</span>
         </button>
@@ -18,7 +18,7 @@
     <Skeleton v-if="loading && !classes.length" variant="list" :count="4" />
 
     <EmptyState v-else-if="!classes.length" icon="video" tone="rose" title="No live classes yet" message="Schedule a lesson and your students get a reminder and a join button on their dashboard.">
-      <button type="button" class="px-4 py-2 rounded-xl text-sm font-semibold bg-red-600 text-white hover:bg-red-700" @click="openCreateModal">Schedule a class</button>
+      <button type="button" class="px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700" @click="openCreateModal">Schedule a class</button>
     </EmptyState>
 
     <template v-else>
@@ -213,7 +213,7 @@
               <button
                 type="submit"
                 :disabled="saving"
-                class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
               >
                 {{ saving ? 'Saving...' : (editingClass ? 'Update' : 'Schedule') }}
               </button>

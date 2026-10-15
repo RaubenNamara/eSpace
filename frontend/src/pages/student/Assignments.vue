@@ -106,7 +106,7 @@ const CATEGORY_LABEL: Record<'LOA' | 'AOI' | 'EOC', string> = {
   EOC: 'Elements of Construct'
 }
 const CATEGORY_CHIP: Record<'LOA' | 'AOI' | 'EOC', string> = {
-  LOA: 'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-200',
+  LOA: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-200',
   AOI: 'bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-200',
   EOC: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200'
 }
@@ -133,7 +133,7 @@ const GROUPS: { key: GroupKey; title: string; dot: string; hint?: string }[] = [
   { key: 'overdue', title: 'Overdue', dot: 'bg-rose-500', hint: 'the deadline has passed' },
   { key: 'started', title: 'In progress', dot: 'bg-amber-500', hint: 'pick up where you left off' },
   { key: 'todo', title: 'To do', dot: 'bg-indigo-500', hint: 'soonest deadline first' },
-  { key: 'waiting', title: 'Waiting for marks', dot: 'bg-sky-500' },
+  { key: 'waiting', title: 'Waiting for marks', dot: 'bg-indigo-500' },
   { key: 'marked', title: 'Marked', dot: 'bg-emerald-500' }
 ]
 
@@ -183,7 +183,7 @@ const due = (a: StudentAssignment) => {
   const end = at(a.due_date)
   if (isNaN(end)) return { label: 'No deadline', sub: '', tone: 'text-gray-500 dark:text-gray-400' }
   const date = new Date(end).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })
-  if (a.status === 'submitted' || a.status === 'late') return { label: a.status === 'late' ? 'Handed in late' : 'Handed in', sub: `was due ${date}`, tone: 'text-sky-600 dark:text-sky-300' }
+  if (a.status === 'submitted' || a.status === 'late') return { label: a.status === 'late' ? 'Handed in late' : 'Handed in', sub: `was due ${date}`, tone: 'text-indigo-600 dark:text-indigo-300' }
   const midnight = (t: number) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime() }
   const days = Math.round((midnight(end) - midnight(Date.now())) / DAY)
   if (end < Date.now()) return { label: days === 0 ? 'Closed today' : `Closed ${-days === 1 ? 'yesterday' : `${-days} days ago`}`, sub: date, tone: 'text-rose-600 dark:text-rose-300' }

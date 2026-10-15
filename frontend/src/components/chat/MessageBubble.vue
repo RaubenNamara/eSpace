@@ -15,11 +15,11 @@
       <div
         class="rounded-2xl px-3 py-2 shadow-sm"
         :class="message.is_mine
-          ? 'bg-emerald-600 dark:bg-[#005c4b] text-white rounded-br-sm shadow-emerald-900/10 dark:shadow-[0_0_10px_rgba(0,168,132,0.35)]'
-          : 'bg-white dark:bg-[#202c33] text-gray-900 dark:text-white rounded-bl-sm border border-black/5 dark:border-white/5'"
+          ? 'bg-indigo-600 dark:bg-[rgb(17_86_51)] text-white rounded-br-sm shadow-indigo-900/10 dark:shadow-[0_0_10px_rgba(21,135,74,0.35)]'
+          : 'bg-white dark:bg-[rgb(31_41_55)] text-gray-900 dark:text-white rounded-bl-sm border border-black/5 dark:border-white/5'"
       >
-        <p v-if="showSenderName" class="text-xs font-semibold mb-1" :class="message.is_mine ? 'text-emerald-100' : 'text-emerald-600 dark:text-emerald-400'">
-          {{ message.sender_name }}
+        <p v-if="showSenderName" class="text-xs font-semibold mb-1" :class="message.is_mine ? 'text-indigo-100' : 'text-indigo-600 dark:text-indigo-400'">
+          {{ niceName(message.sender_name || '') }}
         </p>
 
         <!-- Reply quote -->
@@ -27,13 +27,13 @@
           v-if="message.reply_to"
           @click="$emit('scroll-to', message.reply_to.id)"
           class="block w-full text-left mb-1.5 px-2 py-1.5 rounded-lg border-l-4 truncate"
-          :class="message.is_mine ? 'bg-white/15 border-white/50' : 'bg-gray-100 dark:bg-[#2a3942] border-emerald-500'"
+          :class="message.is_mine ? 'bg-white/15 border-white/50' : 'bg-gray-100 dark:bg-[rgb(55_65_81)] border-indigo-500'"
         >
-          <p class="text-xs font-medium truncate" :class="message.is_mine ? 'text-white/90' : 'text-emerald-600 dark:text-emerald-400'">
-            {{ message.reply_to.sender_name || 'Message' }}
+          <p class="text-xs font-medium truncate" :class="message.is_mine ? 'text-white/90' : 'text-indigo-600 dark:text-indigo-400'">
+            {{ message.reply_to.sender_name ? niceName(message.reply_to.sender_name) : 'Message' }}
           </p>
           <p class="text-xs truncate" :class="message.is_mine ? 'text-white/70' : 'text-gray-500 dark:text-gray-400'">
-            {{ message.reply_to.message || 'Attachment' }}
+            {{ chatText(message.reply_to.message) || 'Attachment' }}
           </p>
         </button>
 
@@ -51,7 +51,7 @@
           target="_blank"
           rel="noopener"
           class="flex items-center gap-2 mb-1.5 px-2.5 py-2 rounded-lg"
-          :class="message.is_mine ? 'bg-white/15 hover:bg-white/20' : 'bg-gray-100 dark:bg-[#2a3942] hover:bg-gray-200 dark:hover:bg-[#334752]'"
+          :class="message.is_mine ? 'bg-white/15 hover:bg-white/20' : 'bg-gray-100 dark:bg-[rgb(55_65_81)] hover:bg-gray-200 dark:hover:bg-[rgb(75_85_99)]'"
         >
           <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
@@ -59,14 +59,14 @@
           <span class="text-sm truncate">{{ message.attachment_name || 'File' }}</span>
         </a>
 
-        <p v-if="message.message" class="text-sm whitespace-pre-wrap break-words">{{ message.message }}</p>
+        <p v-if="message.message" class="text-sm whitespace-pre-wrap break-words">{{ chatText(message.message) }}</p>
 
-        <p class="text-[10px] mt-1 flex items-center justify-end gap-1" :class="message.is_mine ? 'text-emerald-100/80' : 'text-gray-400 dark:text-gray-500'">
+        <p class="text-[10px] mt-1 flex items-center justify-end gap-1" :class="message.is_mine ? 'text-indigo-100/80' : 'text-gray-400 dark:text-gray-500'">
           <span>{{ formatTime(message.created_at) }}</span>
           <svg
             v-if="message.is_mine && !readOnly"
             class="w-3.5 h-3.5 flex-shrink-0"
-            :class="message.is_read ? 'text-lime-300' : 'text-emerald-100/60'"
+            :class="message.is_read ? 'text-lime-300' : 'text-indigo-100/60'"
             viewBox="0 0 16 15"
             fill="none"
           >
@@ -84,6 +84,8 @@
 import AudioPlayer from './AudioPlayer.vue'
 import type { ChatMessage } from '@/types/chat'
 import { resolveAssetUrl } from '@/utils/url'
+import { chatText } from '@/utils/chatText'
+import { niceName } from '@/components/dashboard/teacher/time'
 
 defineProps<{ message: ChatMessage; showSenderName?: boolean; readOnly?: boolean }>()
 defineEmits<{ reply: [ChatMessage]; 'scroll-to': [number]; 'preview-image': [string] }>()

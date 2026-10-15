@@ -1,36 +1,24 @@
 <template>
   <!-- What is still missing in the school's setup, each with a way straight to the fix. What's
        done folds away under one line, so the card shrinks as the school gets set up. -->
-  <section class="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5">
-    <header class="flex items-center gap-4">
-      <!-- Progress ring -->
-      <div class="relative w-14 h-14 flex-shrink-0">
-        <svg viewBox="0 0 36 36" class="w-14 h-14 -rotate-90">
-          <circle cx="18" cy="18" r="15.5" fill="none" stroke-width="3.5" class="stroke-gray-100 dark:stroke-gray-700" />
-          <circle cx="18" cy="18" r="15.5" fill="none" stroke-width="3.5" stroke-linecap="round"
-            :class="allDone ? 'stroke-emerald-500' : 'stroke-indigo-500'"
-            :stroke-dasharray="`${pct * 0.974} 100`" pathLength="97.4" />
-        </svg>
-        <span class="absolute inset-0 flex items-center justify-center text-xs font-bold text-gray-900 dark:text-white tabular-nums">{{ done }}/{{ total }}</span>
-      </div>
-      <div class="min-w-0 flex-1">
-        <h2 class="text-base font-bold text-gray-900 dark:text-white">{{ allDone ? 'The school is fully set up' : 'Finish setting up the school' }}</h2>
-        <p class="text-xs text-gray-500 dark:text-gray-400">
-          {{ allDone ? 'Everything teachers and students rely on is in place.' : `${total - done} thing${total - done === 1 ? '' : 's'} left - each one links straight to where it's fixed.` }}
-        </p>
-      </div>
-      <button type="button" class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700" title="Check again" aria-label="Check again" @click="load">
+  <section class="dash-box">
+    <h2 class="dash-bar">
+      {{ allDone ? 'The school is fully set up' : 'Finish setting up' }}
+      <span class="px-2 py-0.5 rounded-full text-xs font-extrabold tabular-nums" :class="allDone ? 'bg-white text-indigo-800' : 'bg-amber-400 text-gray-900'">{{ done }}/{{ total }}</span>
+      <button type="button" class="ml-auto p-1 rounded-md text-indigo-100 hover:text-white hover:bg-white/10" title="Check again" aria-label="Check again" @click="load">
         <svg class="w-4 h-4" :class="{ 'animate-spin': loading }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
       </button>
-    </header>
+    </h2>
+    <!-- how far along -->
+    <div class="px-3 pt-3"><div class="h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden"><div class="h-full rounded-full bg-indigo-600 transition-all duration-700" :style="{ width: `${Math.max(pct, 3)}%` }"></div></div></div>
 
-    <div v-if="loading && !items.length" class="mt-4 space-y-2">
+    <div v-if="loading && !items.length" class="p-3 space-y-2">
       <div v-for="i in 4" :key="i" class="h-12 rounded-xl bg-gray-100 dark:bg-gray-700/50 animate-pulse"></div>
     </div>
 
-    <ul v-else class="mt-4 space-y-2">
-      <li v-for="item in todo" :key="item.key">
-        <RouterLink :to="item.link" class="group flex items-start gap-3 rounded-xl border border-amber-200/70 dark:border-amber-800/60 bg-amber-50/60 dark:bg-amber-900/10 px-3 py-2.5 hover:border-amber-300 dark:hover:border-amber-700 transition-colors">
+    <TransitionGroup v-else tag="ul" name="dash-pop" class="p-3 space-y-2">
+      <li v-for="item in (allTodo ? todo : todo.slice(0, LIMIT))" :key="item.key">
+        <RouterLink :to="item.link" class="group flex items-start gap-3 rounded-xl ring-1 ring-amber-200/80 dark:ring-amber-800/60 bg-amber-50/60 dark:bg-amber-900/10 px-3 py-2 hover:ring-amber-300 dark:hover:ring-amber-700 transition">
           <span class="mt-0.5 w-5 h-5 rounded-full border-2 border-amber-400 flex-shrink-0"></span>
           <span class="min-w-0 flex-1">
             <span class="block text-sm font-semibold text-gray-900 dark:text-white">{{ item.title }}</span>
@@ -42,13 +30,17 @@
               <span v-if="item.count > item.examples.length" class="px-1.5 py-0.5 text-[10px] text-amber-800 dark:text-amber-300">+{{ item.count - item.examples.length }} more</span>
             </span>
           </span>
-          <span class="self-center text-xs font-semibold text-amber-800 dark:text-amber-300 group-hover:underline whitespace-nowrap">Fix →</span>
+          <span class="self-center flex-shrink-0 px-2.5 py-1 rounded-lg text-xs font-bold text-white bg-indigo-600 group-hover:bg-indigo-700 transition">Fix</span>
         </RouterLink>
       </li>
-    </ul>
+    </TransitionGroup>
+    <button v-if="todo.length > LIMIT" type="button" class="dash-more" :aria-expanded="allTodo" @click="allTodo = !allTodo">
+      {{ allTodo ? 'Show less' : `Show ${todo.length - LIMIT} more` }}
+      <svg class="w-4 h-4 transition-transform duration-300" :class="allTodo ? 'rotate-180' : ''" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6" /></svg>
+    </button>
 
     <!-- Done -->
-    <div v-if="doneItems.length" class="mt-3">
+    <div v-if="doneItems.length" class="px-4 py-2.5 border-t border-black/5 dark:border-gray-700/70">
       <button type="button" class="flex items-center gap-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200" :aria-expanded="showDone" @click="showDone = !showDone">
         <svg class="w-3.5 h-3.5 transition-transform" :class="showDone ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M9 5l7 7-7 7"></path></svg>
         {{ doneItems.length }} done
@@ -77,6 +69,8 @@ const emit = defineEmits<{ figures: [figures: SetupFigures, currentTerm: string 
 const items = ref<Item[]>([])
 const loading = ref(true)
 const showDone = ref(false)
+const allTodo = ref(false)
+const LIMIT = 3
 
 const todo = computed(() => items.value.filter(i => !i.done))
 const doneItems = computed(() => items.value.filter(i => i.done))

@@ -1,23 +1,24 @@
 <template>
   <div class="min-h-screen bg-gray-50 dark:bg-gray-950">
     <!-- Sidebar -->
-    <!-- Floats as a framed card off the page edges on desktop (flush on mobile, where an inset
-         drawer just wastes thumb-reach), framed like the eNotes / eLibrary bookcase - warm paper,
-         a gold border and a recessed edge (.app-frame-sidebar in assets/style.css). -->
+    <!-- Floats as a card off the page edges on desktop (flush on mobile, where an inset drawer
+         just wastes thumb-reach): white, with a dark-green brand bar on top like the dashboard
+         cards' title bars, and the page you are on in solid green (.app-frame-sidebar in
+         assets/style.css). -->
     <aside
       v-if="!shouldHideAppChrome"
       class="print:hidden overflow-hidden fixed left-0 top-3 bottom-3 lg:left-3 lg:top-3 lg:bottom-3 rounded-r-2xl lg:rounded-2xl app-frame-sidebar backdrop-blur-xl transform transition-all duration-300 z-50 flex flex-col"
       :class="[isIconOnly ? 'w-16' : 'w-48 md:w-56', { '-translate-x-full': !sidebarOpen, 'translate-x-0': sidebarOpen }]"
     >
 
-      <!-- Logo/brand header - desktop/tablet only; the mobile drawer skips straight to nav. -->
-      <div class="relative hidden lg:block px-4 py-4 border-b app-frame-divider flex-shrink-0">
+      <!-- The brand bar: the logo in white on dark green -->
+      <div class="relative px-4 py-3.5 bg-indigo-800 flex-shrink-0">
         <!-- The eSpace word logo; just the "e" mark when the sidebar is folded to icons -->
         <div class="flex items-center gap-3" :class="{ 'justify-center': isIconOnly }">
-          <img v-if="isIconOnly" src="/favicon.svg" alt="eSpace" class="w-9 h-9 rounded-xl shadow-lg shadow-indigo-500/25">
+          <img v-if="isIconOnly" src="/favicon.svg" alt="eSpace" class="w-9 h-9 rounded-xl ring-2 ring-white/30">
           <div v-else class="min-w-0">
-            <h1 class="leading-none"><Wordmark size="sm" /></h1>
-            <p class="text-[10.5px] text-slate-600 dark:text-white/40 capitalize font-medium tracking-wide leading-tight mt-1">{{ userRole }} Console</p>
+            <h1 class="leading-none"><Wordmark size="sm" light /></h1>
+            <p class="text-[10.5px] text-indigo-100/90 capitalize font-semibold tracking-wide leading-tight mt-1">{{ userRole }} Console</p>
           </div>
         </div>
       </div>
@@ -57,11 +58,11 @@
                   type="button"
                   :style="{ '--i': row.i }"
                   class="nav-item w-full flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-xl transition-all duration-150 text-sm font-medium group text-left"
-                  :class="childActive(row.item) ? 'text-indigo-700 dark:text-white' : 'text-slate-800 dark:text-white/55 hover:bg-black/5 dark:hover:bg-white/[0.07] hover:text-slate-900 dark:hover:text-white'"
+                  :class="childActive(row.item) ? 'text-indigo-800 dark:text-white font-semibold' : 'text-gray-800 dark:text-white/60 hover:bg-indigo-50 dark:hover:bg-white/[0.07] hover:text-indigo-800 dark:hover:text-white'"
                   :aria-expanded="subOpen(row.item)"
                   @click="toggleSub(row.item.path)"
                 >
-                  <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 text-slate-600 dark:text-white/40 group-hover:text-slate-900 dark:group-hover:text-white/80">
+                  <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 text-indigo-700 dark:text-indigo-300/80 group-hover:text-indigo-800 dark:group-hover:text-white/80">
                     <component :is="iconMap[row.item.icon]" class="w-4 h-4" />
                   </div>
                   <span class="truncate flex-1">{{ row.item.label }}</span>
@@ -73,10 +74,10 @@
                   :title="isIconOnly ? row.item.label : undefined"
                   :style="{ '--i': row.i }"
                   class="nav-item flex items-center gap-2.5 pr-2.5 py-1.5 rounded-xl transition-all duration-150 text-sm font-medium group"
-                  :class="[row.child && !isIconOnly ? 'pl-7' : 'pl-3.5', isActive(row.item.path) ? 'bg-indigo-500/10 dark:bg-white/12 text-indigo-700 dark:text-white shadow-inner shadow-indigo-500/5 dark:shadow-white/5' : 'text-slate-800 dark:text-white/55 hover:bg-black/5 dark:hover:bg-white/[0.07] hover:text-slate-900 dark:hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
+                  :class="[row.child && !isIconOnly ? 'pl-7' : 'pl-3.5', isActive(row.item.path) ? 'bg-indigo-600 text-white font-semibold shadow-sm shadow-indigo-900/20' : 'text-gray-800 dark:text-white/60 hover:bg-indigo-50 dark:hover:bg-white/[0.07] hover:text-indigo-800 dark:hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
                 >
                   <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-all duration-150"
-                    :class="isActive(row.item.path) ? 'bg-indigo-500 text-white shadow shadow-indigo-500/30 dark:shadow-indigo-500/40' : 'text-slate-600 dark:text-white/40 group-hover:text-slate-900 dark:group-hover:text-white/80'"
+                    :class="isActive(row.item.path) ? 'bg-white/20 text-white' : 'text-indigo-700 dark:text-indigo-300/80 group-hover:text-indigo-800 dark:group-hover:text-white/80'"
                   >
                     <component :is="iconMap[row.item.icon]" class="w-4 h-4" />
                   </div>
@@ -1193,11 +1194,11 @@ const iconMap: Record<string, any> = {
   color: rgb(100 116 139);
   transition: background-color 0.2s, padding 0.3s ease, margin 0.3s ease;
 }
-.nav-fold:focus-visible { outline: 2px solid rgb(99 102 241); outline-offset: 1px; }
+.nav-fold:focus-visible { outline: 2px solid rgb(21 135 74); outline-offset: 1px; }
 .nav-fold-line {
   flex: 1 1 auto;
   height: 1px;
-  background: rgb(203 213 225);
+  background: rgba(21, 135, 74, 0.2);
   transform-origin: left;
   transition: transform 0.3s ease, opacity 0.2s ease;
 }
@@ -1227,7 +1228,7 @@ const iconMap: Record<string, any> = {
 }
 .nav-fold:hover .nav-fold-chevron,
 .nav-fold:focus-visible .nav-fold-chevron { opacity: 0.75; }
-.nav-fold:hover .nav-fold-line { background: rgb(148 163 184); }
+.nav-fold:hover .nav-fold-line { background: rgba(21, 135, 74, 0.45); }
 .dark .nav-fold:hover .nav-fold-line { background: rgba(255, 255, 255, 0.22); }
 /* Touch screens have no hover - keep the chevron faintly visible so the fold can be found */
 @media (hover: none) { .nav-fold-chevron { opacity: 0.45; } }
@@ -1236,10 +1237,10 @@ const iconMap: Record<string, any> = {
   min-height: 2rem;
   margin-bottom: 0;
   padding: 0 0.6rem 0 0.9rem;
-  background: rgba(15, 23, 42, 0.035);
+  background: rgba(21, 135, 74, 0.06);
 }
 .dark .is-folded .nav-fold { background: rgba(255, 255, 255, 0.04); color: rgba(255, 255, 255, 0.5); }
-.is-folded .nav-fold:hover { background: rgba(15, 23, 42, 0.07); color: rgb(30 41 59); }
+.is-folded .nav-fold:hover { background: rgba(21, 135, 74, 0.12); color: rgb(17 86 51); }
 .dark .is-folded .nav-fold:hover { background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.85); }
 .is-folded .nav-fold-line { transform: scaleX(0); opacity: 0; flex: 0 0 0; }
 .is-folded .nav-fold-label { flex: 1 1 auto; max-width: 100%; opacity: 1; }

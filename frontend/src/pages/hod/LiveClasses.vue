@@ -202,7 +202,7 @@ const statusLabel = (status: string) => (status === 'started' ? 'Live' : status.
 
 const statusBadge = (status: string) => {
   if (status === 'started') return 'bg-rose-500 text-white'
-  if (status === 'scheduled') return 'bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300'
+  if (status === 'scheduled') return 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
   if (status === 'ended') return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
   return 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300'
 }

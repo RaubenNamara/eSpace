@@ -232,7 +232,7 @@ onBeforeUnmount(() => {
 }
 
 .card-cover:focus-visible {
-  outline: 2px solid #4f46e5;
+  outline: 2px solid #15874a;
   outline-offset: 3px;
 }
 
@@ -240,11 +240,11 @@ onBeforeUnmount(() => {
   margin-top: 6px;
   font-size: 11px;
   font-weight: 500;
-  color: #4f46e5;
+  color: #15874a;
 }
 
 .dark .card-hint {
-  color: #818cf8;
+  color: #46bf7b;
 }
 
 /* Phones: bottom sheet */
@@ -277,11 +277,11 @@ onBeforeUnmount(() => {
   font-size: 15px;
   font-weight: 600;
   color: #fff;
-  background: #4f46e5;
+  background: #15874a;
 }
 
 .sheet-open:active {
-  background: #4338ca;
+  background: #126c3d;
 }
 
 @keyframes shelf-sheet-in {

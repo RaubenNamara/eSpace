@@ -1,10 +1,10 @@
 <template>
   <!-- The eSpace word logo: an indigo "e" and "Space", set tight in Plus Jakarta Sans. Scales
        with `size`; `light` is for dark backgrounds that aren't the dark theme (e.g. a hero image). -->
-  <span class="inline-flex items-baseline font-jakarta font-extrabold tracking-tight leading-none select-none" :class="SIZE[size]" aria-label="eSpace">
-    <span class="text-indigo-600 dark:text-indigo-400 pr-[0.02em]">e</span>
+  <span class="inline-flex items-baseline font-brand font-extrabold [font-weight:800] tracking-tight leading-none select-none" :class="SIZE[size]" aria-label="eSpace">
+    <span class="pr-[0.02em]" :class="light ? 'text-indigo-300' : 'text-indigo-600 dark:text-indigo-400'">e</span>
     <span :class="light ? 'text-white' : 'text-slate-900 dark:text-white'">Space</span>
-    <span class="ml-[0.06em] inline-block w-[0.22em] h-[0.22em] rounded-full bg-indigo-600 dark:bg-indigo-400 self-start mt-[0.12em]" aria-hidden="true"></span>
+    <span class="ml-[0.06em] inline-block w-[0.22em] h-[0.22em] rounded-full self-start mt-[0.12em]" :class="light ? 'bg-indigo-300' : 'bg-indigo-600 dark:bg-indigo-400'" aria-hidden="true"></span>
   </span>
 </template>
 

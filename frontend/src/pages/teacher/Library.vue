@@ -133,7 +133,7 @@
                 <button v-else type="button" class="mt-1.5 w-full text-left group/r" title="See who has read it" @click.stop="readersFor = book">
                   <span class="flex items-center gap-2">
                     <span class="flex-1 h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
-                      <span class="block h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-500" :style="{ width: reach(book) + '%' }"></span>
+                      <span class="block h-full rounded-full bg-gradient-to-r from-emerald-500 to-indigo-500" :style="{ width: reach(book) + '%' }"></span>
                     </span>
                     <span class="text-[11px] font-semibold tabular-nums text-gray-500 dark:text-gray-400">{{ reach(book) }}%</span>
                   </span>
@@ -180,7 +180,7 @@
               </p>
               <button v-if="book.status === 'published' && book.audience" type="button" class="mt-1 w-full max-w-sm flex items-center gap-2 group/r" title="See who has read it" @click="readersFor = book">
                 <span class="flex-1 h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
-                  <span class="block h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-500" :style="{ width: reach(book) + '%' }"></span>
+                  <span class="block h-full rounded-full bg-gradient-to-r from-emerald-500 to-indigo-500" :style="{ width: reach(book) + '%' }"></span>
                 </span>
                 <span class="text-[11px] whitespace-nowrap text-gray-500 dark:text-gray-400 group-hover/r:text-emerald-600 dark:group-hover/r:text-emerald-300">{{ book.readers || 0 }}/{{ book.audience }} opened<template v-if="book.finished"> · {{ book.finished }} done</template></span>
               </button>

@@ -6,7 +6,7 @@
     <template v-if="!activeExam">
       <PageHeader title="Physical Exams" description="Tests sat on paper - type in the marks and choose whether each one counts on report cards." icon="pencil" accent="amber">
         <template #actions>
-          <button v-if="canQuery" type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold bg-amber-500 text-white hover:bg-amber-600 shadow-sm shadow-amber-500/20" @click="openCreate">
+          <button v-if="canQuery" type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-500/20" @click="openCreate">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
             <span class="hidden sm:inline">New exam</span><span class="sm:hidden">New</span>
           </button>
@@ -26,7 +26,7 @@
       <Skeleton v-if="booting || loading" variant="list" :count="3" />
       <EmptyState v-else-if="!canQuery" icon="pencil" tone="amber" title="Nothing to show yet" message="Physical exams appear for the classes and subjects you teach." />
       <EmptyState v-else-if="!exams.length" icon="pencil" tone="amber" title="No physical exams yet" message="Record a test the class sat on paper - a CAT, a mid-term, a practical - and type in everyone's marks.">
-        <button type="button" class="px-4 py-2 rounded-xl text-sm font-semibold bg-amber-500 text-white hover:bg-amber-600" @click="openCreate">Add the first exam</button>
+        <button type="button" class="px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700" @click="openCreate">Add the first exam</button>
       </EmptyState>
 
       <ul v-else class="space-y-3">
@@ -59,7 +59,7 @@
               On report cards
             </button>
             <div class="flex items-center gap-1">
-              <button type="button" class="px-3 py-1.5 rounded-lg text-xs font-semibold" :class="exam.marked_count === exam.class_size ? 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700' : 'bg-amber-500 text-white hover:bg-amber-600'" @click="openMarksheet(exam)">
+              <button type="button" class="px-3 py-1.5 rounded-lg text-xs font-semibold" :class="exam.marked_count === exam.class_size ? 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700' : 'bg-indigo-600 text-white hover:bg-indigo-700'" @click="openMarksheet(exam)">
                 {{ exam.marked_count ? (exam.marked_count === exam.class_size ? 'Edit marks' : 'Continue marking') : 'Enter marks' }}
               </button>
               <ActionMenu :items="[{ label: 'Delete exam', icon: 'trash', danger: true, run: () => removeExam(exam) }]" :label="`More for ${exam.title}`" />
@@ -120,7 +120,7 @@
             <p class="flex-1 text-xs" :class="dirty ? 'text-amber-700 dark:text-amber-300 font-semibold' : 'text-gray-500 dark:text-gray-400'">
               {{ overCount ? `${overCount} mark${overCount === 1 ? ' is' : 's are'} over ${Number(activeExam.max_score)}` : dirty ? 'Unsaved changes' : 'All marks saved' }}
             </p>
-            <button type="button" :disabled="savingMarks || !!overCount || !dirty" class="px-5 py-2 rounded-xl text-sm font-semibold bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-50" @click="saveMarksheet">
+            <button type="button" :disabled="savingMarks || !!overCount || !dirty" class="px-5 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50" @click="saveMarksheet">
               {{ savingMarks ? 'Saving…' : 'Save marks' }}
             </button>
           </div>
@@ -156,7 +156,7 @@
         </label>
         <div class="flex justify-end gap-2">
           <button type="button" class="px-4 py-2 rounded-xl text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700" @click="showCreateForm = false">Cancel</button>
-          <button type="submit" :disabled="creating" class="px-4 py-2 rounded-xl text-sm font-semibold bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-50">{{ creating ? 'Creating…' : 'Create and enter marks' }}</button>
+          <button type="submit" :disabled="creating" class="px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">{{ creating ? 'Creating…' : 'Create and enter marks' }}</button>
         </div>
       </form>
     </div>

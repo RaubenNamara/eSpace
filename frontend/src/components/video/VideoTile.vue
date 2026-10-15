@@ -189,7 +189,7 @@ const statusClass = computed(() => ({
   archived: 'bg-gray-500 text-white'
 }[props.video.status]))
 
-const gradients = ['from-rose-500 to-orange-500', 'from-indigo-500 to-sky-500', 'from-emerald-500 to-teal-500', 'from-violet-500 to-fuchsia-500', 'from-amber-500 to-rose-500']
+const gradients = ['from-rose-500 to-orange-500', 'from-indigo-500 to-indigo-500', 'from-emerald-500 to-indigo-500', 'from-violet-500 to-slate-500', 'from-amber-500 to-rose-500']
 const gradient = computed(() => gradients[Math.abs(props.video.id) % gradients.length])
 
 const meta = computed(() => {

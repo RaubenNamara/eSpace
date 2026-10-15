@@ -13,7 +13,7 @@
       <div class="p-6 space-y-6">
         <!-- Step: Upload -->
         <div v-if="step === 'upload'" class="space-y-5">
-          <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 text-sm text-blue-800 dark:text-blue-300">
+          <div class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg p-4 text-sm text-indigo-800 dark:text-indigo-300">
             <p class="font-medium mb-1">How it works</p>
             <ol class="list-decimal list-inside space-y-1">
               <li>Download the template and fill in one row per teacher.</li>
@@ -54,7 +54,7 @@
           <p v-if="parseError" class="text-sm text-red-600 dark:text-red-400">{{ parseError }}</p>
 
           <div v-if="parsing" class="text-center text-sm text-gray-500 dark:text-gray-400">
-            <div class="inline-block animate-spin rounded-full h-5 w-5 border-2 border-blue-600 border-t-transparent align-middle mr-2"></div>
+            <div class="inline-block animate-spin rounded-full h-5 w-5 border-2 border-indigo-600 border-t-transparent align-middle mr-2"></div>
             Reading file...
           </div>
         </div>

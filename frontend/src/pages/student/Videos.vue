@@ -94,7 +94,7 @@ const error = ref<string | null>(null)
 
 const playVideo = ref<VideoResource | null>(null)
 
-const sectionAccents = ['bg-indigo-500', 'bg-rose-500', 'bg-emerald-500', 'bg-amber-500', 'bg-sky-500', 'bg-violet-500']
+const sectionAccents = ['bg-indigo-500', 'bg-rose-500', 'bg-emerald-500', 'bg-amber-500', 'bg-indigo-500', 'bg-violet-500']
 
 const subjectGroups = computed<SubjectGroup[]>(() => {
   const map = new Map<number, SubjectGroup>()

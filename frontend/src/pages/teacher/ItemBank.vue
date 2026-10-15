@@ -2,11 +2,11 @@
   <div class="w-full">
     <PageHeader title="Item Bank" :description="COPY[contentRole]" icon="clipboard" accent="amber" :active-filters="activeFilterCount">
       <template #actions>
-        <button v-if="contentRole === 'teacher'" type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold border border-amber-300 dark:border-amber-700 bg-white dark:bg-gray-800 text-amber-800 dark:text-amber-200 hover:bg-amber-50 dark:hover:bg-amber-900/30" title="Write questions in eSpace, page by page, with answers students can check" @click="openCreateModal('paper')">
+        <button v-if="contentRole === 'teacher'" type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold border border-indigo-300 dark:border-indigo-700 bg-white dark:bg-gray-800 text-indigo-800 dark:text-indigo-200 hover:bg-amber-50 dark:hover:bg-indigo-900/30" title="Write questions in eSpace, page by page, with answers students can check" @click="openCreateModal('paper')">
           <AppIcon name="pencil" class="w-4 h-4" />
           <span class="hidden sm:inline">Write a paper</span><span class="sm:hidden">Write</span>
         </button>
-        <button type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold bg-amber-600 text-white hover:bg-amber-700 shadow-sm shadow-amber-500/20" @click="openCreateModal('pdf')">
+        <button type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-500/20" @click="openCreateModal('pdf')">
           <AppIcon name="upload" class="w-4 h-4" />
           <span class="hidden sm:inline">Add a paper</span><span class="sm:hidden">Add</span>
         </button>
@@ -14,7 +14,7 @@
       <template #filters>
         <div class="relative">
           <svg class="w-4 h-4 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"></path></svg>
-          <input v-model="search" type="search" placeholder="Search papers" class="w-full md:w-48 pl-8 pr-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+          <input v-model="search" type="search" placeholder="Search papers" class="w-full md:w-48 pl-8 pr-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
         </div>
         <PickerDropdown v-if="contentRole === 'admin'" v-model="departmentFilter" label="Department" :options="departmentOptions" align="right" />
         <PickerDropdown v-model="subjectFilter" label="Subject" :options="subjectOptions" align="right" />
@@ -27,7 +27,7 @@
     <Skeleton v-if="loading && !resources.length" variant="cards" :count="6" />
 
     <EmptyState v-else-if="!resources.length" icon="clipboard" tone="amber" title="No papers yet" message="Add a PDF - a past paper, a set of practice questions, a revision pack - and students open it in the browser. The first page becomes its cover.">
-      <button type="button" class="px-4 py-2 rounded-xl text-sm font-semibold bg-amber-600 text-white hover:bg-amber-700" @click="openCreateModal('pdf')">Add your first paper</button>
+      <button type="button" class="px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700" @click="openCreateModal('pdf')">Add your first paper</button>
     </EmptyState>
 
     <template v-else>
@@ -39,8 +39,8 @@
           type="button"
           class="flex-shrink-0 inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold border transition-colors"
           :class="activeClassName === g.name
-            ? 'bg-amber-600 border-amber-600 text-white shadow-sm shadow-amber-500/20'
-            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:border-amber-300 dark:hover:border-amber-700'"
+            ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm shadow-indigo-500/20'
+            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:border-indigo-300 dark:hover:border-indigo-700'"
           @click="activeClassName = g.name"
         >
           {{ g.label }}
@@ -53,7 +53,7 @@
           <input
             type="checkbox"
             :checked="bulk.allSelected(visibleIds)"
-            class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-amber-600 focus:ring-amber-500"
+            class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
             @change="bulk.toggleAll(visibleIds)"
           >
           Select all
@@ -71,7 +71,7 @@
       </BulkActionBar>
 
       <EmptyState v-if="!activeClassSubjectShelves.length" compact icon="clipboard" tone="gray" title="Nothing matches" message="Try another class, subject or status.">
-        <button type="button" class="text-sm font-semibold text-amber-600 dark:text-amber-300 hover:underline" @click="clearFilters">Clear filters</button>
+        <button type="button" class="text-sm font-semibold text-indigo-600 dark:text-indigo-300 hover:underline" @click="clearFilters">Clear filters</button>
       </EmptyState>
 
       <div v-else class="shelf-row flex flex-wrap items-start gap-x-5 gap-y-7">
@@ -115,7 +115,7 @@
                 <input
                   type="checkbox"
                   :checked="bulk.isSelected(resource.id)"
-                  class="w-3.5 h-3.5 rounded border-gray-300 dark:border-gray-600 text-amber-600 focus:ring-amber-500"
+                  class="w-3.5 h-3.5 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
                   @change="bulk.toggle(resource.id)"
                 >
                 Select
@@ -138,14 +138,14 @@
                     </span>
                     <span class="text-[11px] font-semibold tabular-nums text-gray-500 dark:text-gray-400">{{ reach(resource) }}%</span>
                   </span>
-                  <span class="block text-[11px] text-gray-500 dark:text-gray-400 group-hover/r:text-amber-600 dark:group-hover/r:text-amber-300">
+                  <span class="block text-[11px] text-gray-500 dark:text-gray-400 group-hover/r:text-indigo-600 dark:group-hover/r:text-indigo-300">
                     {{ resource.readers || 0 }} of {{ resource.audience }} opened
                   </span>
                 </button>
               </template>
               <p v-else-if="resource.status === 'draft'" class="mt-1.5 flex items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400">
                 Students can't see it yet
-                <button type="button" class="font-semibold text-amber-600 dark:text-amber-300 hover:underline" @click.stop="publishOne(resource)">Publish</button>
+                <button type="button" class="font-semibold text-indigo-600 dark:text-indigo-300 hover:underline" @click.stop="publishOne(resource)">Publish</button>
               </p>
 
               <div class="flex items-center -ml-1.5 mt-0.5">
@@ -183,12 +183,12 @@
                 <span class="flex-1 h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
                   <span class="block h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500" :style="{ width: reach(resource) + '%' }"></span>
                 </span>
-                <span class="text-[11px] whitespace-nowrap text-gray-500 dark:text-gray-400 group-hover/r:text-amber-600 dark:group-hover/r:text-amber-300">{{ resource.readers || 0 }}/{{ resource.audience }} opened</span>
+                <span class="text-[11px] whitespace-nowrap text-gray-500 dark:text-gray-400 group-hover/r:text-indigo-600 dark:group-hover/r:text-indigo-300">{{ resource.readers || 0 }}/{{ resource.audience }} opened</span>
               </button>
               <p v-else-if="resource.status === 'published'" class="mt-1 text-[11px] text-gray-400">No students in this class yet</p>
               <p v-else class="mt-1 flex items-center gap-2 text-[11px]">
                 <span class="px-1.5 py-0.5 rounded-full font-semibold" :class="statusChip(resource.status)">{{ resource.status === 'draft' ? 'Draft' : 'Archived' }}</span>
-                <button v-if="resource.status === 'draft'" type="button" class="font-semibold text-amber-600 dark:text-amber-300 hover:underline" @click="publishOne(resource)">Publish</button>
+                <button v-if="resource.status === 'draft'" type="button" class="font-semibold text-indigo-600 dark:text-indigo-300 hover:underline" @click="publishOne(resource)">Publish</button>
               </p>
             </div>
             <div class="flex items-center flex-shrink-0">
@@ -308,7 +308,7 @@
                 <TeacherClassSelector v-if="contentRole === 'teacher'" v-model="resourceForm.classTarget" />
                 <template v-else>
                   <DepartmentAudiencePicker v-model="resourceForm.classTarget" :levels="formDepartment?.levels || []" :disabled="!formDepartment" />
-                  <p v-if="formDepartment && missingLevels.length" class="mt-1 text-[11px] text-amber-700 dark:text-amber-300">
+                  <p v-if="formDepartment && missingLevels.length" class="mt-1 text-[11px] text-indigo-700 dark:text-indigo-300">
                     No {{ missingLevels.join(', ') }} learners are enrolled in {{ formDepartment.name }} yet{{ contentRole === 'admin' ? ' - enrol them (Dashboard → Enrol students) and those classes appear here' : '' }}.
                   </p>
                 </template>
@@ -334,20 +334,20 @@
               <span class="text-sm text-gray-700 dark:text-gray-300">Allow students to download this file</span>
             </label>
 
-            <p v-if="!editingResource && paperMode" class="mb-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-xs text-amber-900 dark:text-amber-100">
+            <p v-if="!editingResource && paperMode" class="mb-4 rounded-lg bg-amber-50 dark:bg-indigo-900/20 px-3 py-2 text-xs text-indigo-900 dark:text-indigo-100">
               Next you'll write the questions one page at a time - with choices, short answers or a model answer - and students check their answers as they go. Any question can also be placed on an eNote page.
             </p>
             <div v-if="!editingResource && !paperMode" class="mb-4">
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">PDF file *</label>
               <label
                 class="flex flex-col items-center justify-center gap-2 px-4 py-6 rounded-xl border-2 border-dashed cursor-pointer text-center transition-colors"
-                :class="dragging ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20' : resourceForm.file ? 'border-amber-300 dark:border-amber-700 bg-amber-50/60 dark:bg-amber-900/10' : 'border-gray-300 dark:border-gray-600 hover:border-amber-400 dark:hover:border-amber-600'"
+                :class="dragging ? 'border-indigo-500 bg-amber-50 dark:bg-indigo-900/20' : resourceForm.file ? 'border-indigo-300 dark:border-indigo-700 bg-amber-50/60 dark:bg-indigo-900/10' : 'border-gray-300 dark:border-gray-600 hover:border-indigo-400 dark:hover:border-indigo-600'"
                 @dragover.prevent="dragging = true"
                 @dragleave.prevent="dragging = false"
                 @drop.prevent="onDrop"
               >
                 <input type="file" accept="application/pdf" class="sr-only" @change="handleFileSelect">
-                <span class="w-11 h-11 rounded-xl flex items-center justify-center bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-300">
+                <span class="w-11 h-11 rounded-xl flex items-center justify-center bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300">
                   <AppIcon :name="resourceForm.file ? 'clipboard' : 'upload'" class="w-5 h-5" />
                 </span>
                 <template v-if="resourceForm.file">
@@ -384,7 +384,7 @@
               <button
                 type="submit"
                 :disabled="saving"
-                class="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {{ saving ? (uploadProgress > 0 ? `Uploading... ${uploadProgress}%` : 'Saving...') : (editingResource ? 'Update Resource' : paperMode ? 'Start writing' : 'Upload') }}
               </button>

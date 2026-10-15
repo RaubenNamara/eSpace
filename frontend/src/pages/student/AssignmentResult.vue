@@ -22,22 +22,22 @@
       </div>
 
       <!-- Marks / Grade summary (result mode only) -->
-      <div v-if="(mode === 'result' || oversightRole) && summary" class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-4 text-center">
-          <p class="text-xs text-gray-500 dark:text-gray-400">Marks</p>
-          <p class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">{{ summary.marks_awarded }} / {{ summary.total_marks }}</p>
+      <div v-if="(mode === 'result' || oversightRole) && summary" class="grid grid-cols-4 gap-1.5 sm:gap-3 mb-4 sm:mb-6">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 px-1.5 py-2 sm:p-3 text-center min-w-0">
+          <p class="text-[10.5px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400">Marks</p>
+          <p class="text-sm sm:text-xl font-extrabold text-gray-900 dark:text-white truncate">{{ summary.marks_awarded }} / {{ summary.total_marks }}</p>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-4 text-center">
-          <p class="text-xs text-gray-500 dark:text-gray-400">Percentage</p>
-          <p class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">{{ summary.percentage }}%</p>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 px-1.5 py-2 sm:p-3 text-center min-w-0">
+          <p class="text-[10.5px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400">Percentage</p>
+          <p class="text-sm sm:text-xl font-extrabold text-gray-900 dark:text-white">{{ summary.percentage }}%</p>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-4 text-center">
-          <p class="text-xs text-gray-500 dark:text-gray-400">Grade</p>
-          <p class="text-lg sm:text-xl font-bold text-indigo-600 dark:text-indigo-400">{{ summary.grade }}</p>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 px-1.5 py-2 sm:p-3 text-center min-w-0">
+          <p class="text-[10.5px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400">Grade</p>
+          <p class="text-sm sm:text-xl font-extrabold text-indigo-600 dark:text-indigo-400">{{ summary.grade }}</p>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-4 text-center">
-          <p class="text-xs text-gray-500 dark:text-gray-400">Status</p>
-          <p class="text-lg sm:text-xl font-bold" :class="gradeStatus.color">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 px-1.5 py-2 sm:p-3 text-center min-w-0">
+          <p class="text-[10.5px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400">Status</p>
+          <p class="text-sm sm:text-xl font-extrabold truncate" :class="gradeStatus.color">
             {{ gradeStatus.label }}
           </p>
         </div>
@@ -172,9 +172,9 @@ const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp']
 
 const gradingScale = [
   { grade: 'A', label: 'Exceptional', color: 'text-green-600 dark:text-green-400' },
-  { grade: 'B', label: 'Outstanding', color: 'text-blue-600 dark:text-blue-400' },
-  { grade: 'C', label: 'Satisfactory', color: 'text-blue-600 dark:text-blue-400' },
-  { grade: 'D', label: 'Basic', color: 'text-blue-600 dark:text-blue-400' },
+  { grade: 'B', label: 'Outstanding', color: 'text-indigo-600 dark:text-indigo-400' },
+  { grade: 'C', label: 'Satisfactory', color: 'text-indigo-600 dark:text-indigo-400' },
+  { grade: 'D', label: 'Basic', color: 'text-indigo-600 dark:text-indigo-400' },
   { grade: 'E', label: 'Elementary', color: 'text-red-600 dark:text-red-400' }
 ]
 
@@ -191,7 +191,7 @@ const statusLabel = computed(() => {
 const statusClass = computed(() => {
   return submission.value?.status === 'returned'
     ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
-    : 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
+    : 'bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200'
 })
 
 function answerFor(questionId: number): string | undefined {

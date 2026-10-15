@@ -153,7 +153,7 @@ const SORTS = [
 ]
 const sort = ref<'name' | 'high' | 'low'>('name')
 
-const GRADE_BG: Record<string, string> = { A: 'bg-emerald-500', B: 'bg-sky-500', C: 'bg-amber-400', D: 'bg-orange-500', E: 'bg-rose-500', F: 'bg-rose-600' }
+const GRADE_BG: Record<string, string> = { A: 'bg-emerald-500', B: 'bg-indigo-500', C: 'bg-amber-400', D: 'bg-orange-500', E: 'bg-rose-500', F: 'bg-rose-600' }
 
 // Each mark tinted by how it went
 const heat = (pct: number | null) => {
