@@ -11,8 +11,8 @@
 
         <!-- Safety state (assembly) -->
         <div v-if="mode === 'assembly'" class="absolute top-2 left-2 flex flex-wrap gap-1.5 text-[11px] font-semibold pointer-events-none">
-          <span class="px-2 py-0.5 rounded-full shadow-sm" :class="powered ? 'bg-emerald-600 text-white' : pluggedIn ? 'bg-rose-600 text-white' : 'bg-white/90 text-gray-700'">
-            {{ powered ? 'Switched on' : pluggedIn ? 'Mains: plugged in' : 'Mains: unplugged' }}
+          <span class="px-2 py-0.5 rounded-full shadow-sm" :class="powered ? 'bg-emerald-600 text-white' : pluggedIn && socketOn ? 'bg-rose-600 text-white' : pluggedIn ? 'bg-amber-500 text-white' : 'bg-white/90 text-gray-700'">
+            {{ powered ? 'Switched on' : !pluggedIn ? 'Unplugged' : socketOn ? 'Plugged in · socket on' : 'Plugged in · socket off' }}
           </span>
           <span class="px-2 py-0.5 rounded-full shadow-sm" :class="has('strap') ? 'bg-emerald-600 text-white' : 'bg-white/90 text-gray-700'">
             Wrist strap: {{ has('strap') ? 'on' : 'off' }}
@@ -80,7 +80,7 @@
           <p v-for="(line, i) in BOOT.slice(0, bootShown)" :key="i">{{ line }}</p>
         </div>
 
-        <div class="mt-3 grid grid-cols-5 gap-1.5">
+        <div class="mt-3 grid grid-cols-3 sm:grid-cols-6 gap-1.5">
           <button
             v-for="t in TOOLS"
             :key="t.key"
@@ -110,6 +110,7 @@ import * as THREE from 'three'
 import PartsScene from './PartsScene.vue'
 import AssemblyScene from './AssemblyScene.vue'
 import { createWorkbench, type Workbench } from './three/workbench'
+import { buildPowerKit, attachPlugDragging, type PowerKit } from './three/power'
 import { buildPc, setEmissive, tagSprite, fadeExcept, type PcRig, type PcPartKey, type ConnectorKey } from './three/pcModel'
 import { PC_PARTS, ASSEMBLY_PARTS, type IctStep, type PcPart } from './activities'
 
@@ -127,11 +128,16 @@ const host = ref<HTMLDivElement | null>(null)
 const wb = shallowRef<Workbench | null>(null)
 const unsupported = ref(false)
 let rig: PcRig | null = null
+// Assembly: the wall socket behind the bench and the computer's plug
+let power: PowerKit | null = null
+let plugDrag: { busy: () => boolean } | null = null
 
 const has = (a: string) => props.done.includes(a)
 const placed = (k: string) => has('place:' + k)
 const nameOf = (k: string) => ASSEMBLY_PARTS.find(p => p.key === k)?.name || PC_PARTS[k]?.name || k
 const pluggedIn = computed(() => !has('unplug') || has('plug'))
+// The wall socket's switch: on at the start, off before unplugging, on again after plugging in
+const socketOn = computed(() => !has('socket-off') || has('socket-on'))
 const powered = computed(() => has('power'))
 
 // ---------------------------------------------------------------- setting up
@@ -163,8 +169,8 @@ onMounted(async () => {
   rig = buildPc()
   w.scene.add(rig.shell)
   for (const k of Object.keys(rig.parts) as PcPartKey[]) w.scene.add(rig.parts[k])
-  for (const c of Object.values(rig.cables)) w.scene.add(c)
-  w.scene.add(rig.sidePanel, rig.mainsPlug, rig.strapCoil, rig.pasteTube, rig.pasteDot)
+  for (const [k, c] of Object.entries(rig.cables)) if (props.mode === 'parts' || (k !== 'mainsIn' && k !== 'mainsOut')) w.scene.add(c)
+  w.scene.add(rig.sidePanel, rig.strapCoil, rig.pasteTube, rig.pasteDot)
 
   if (props.mode === 'parts') {
     setUpParts()
@@ -177,6 +183,7 @@ onMounted(async () => {
     const spin = props.mode === 'parts' || powered.value || booting.value
     if (spin && rig) for (const s of rig.spinners) s.obj.rotation[s.axis] += dt * s.speed
     pulse(dt)
+    power?.update()
     frameCamera(dt)
   })
 
@@ -294,8 +301,16 @@ function setUpAssembly() {
     // its label can be tapped too
     addPickable(r.connectorLabels[k], 'connect:' + k)
   }
-  addPickable(r.mainsPlug, 'tool:mains')
-  addPickable(r.cables.mainsIn, 'tool:mains')
+  // the wall socket: its switch can be tapped, the plug dragged in and out
+  const w = wb.value!
+  power = buildPowerKit(w, {
+    socketX: 0.46,
+    plugs: [{ deviceEnd: () => new THREE.Vector3(0.214, 0.412, 0.03), rest: new THREE.Vector3(0.38, 0.013, -0.27), startIn: pluggedIn.value ? 0 : null }],
+    switchesOn: [socketOn.value, false]
+  })
+  addPickable(power.outlets[0].rocker, 'tool:wall')
+  addPickable(power.plugs[0].group, 'tool:mains')
+  plugDrag = attachPlugDragging(w, power, (_i, outlet) => plugTo(outlet === 0), () => plugTo(!pluggedIn.value))
   addPickable(r.powerButton, 'tool:power')
   addPickable(r.sidePanel, 'tool:panel')
   addPickable(r.strapCoil, 'tool:strap')
@@ -350,9 +365,11 @@ function sync(animate: boolean) {
   r.cables.cpu_fan.visible = has('connect:cpu_fan')
   r.cables.fpanel.visible = has('connect:fpanel')
   r.cables.strap.visible = has('strap')
-  r.cables.mainsIn.visible = pluggedIn.value
-  r.cables.mainsOut.visible = !pluggedIn.value
-  r.mainsPlug.visible = !pluggedIn.value
+  if (power) {
+    if (power.outlets[0].on !== socketOn.value) power.setSwitch(0, socketOn.value, animate)
+    const at = pluggedIn.value ? 0 : null
+    if (power.plugs[0].inOutlet !== at && !plugDrag?.busy()) power.setPlug(0, at, animate)
+  }
   r.pasteDot.visible = has('paste') && placed('cpu')
   r.powerLed.emissive.setHex(powered.value ? 0x22c55e : 0x000000)
   r.powerLed.emissiveIntensity = powered.value ? 2 : 0
@@ -401,7 +418,7 @@ const hoverName = computed(() => {
   if (!k || dragging.value) return ''
   if (k.startsWith('ghost:')) return `Place for the ${nameOf(k.slice(6)).toLowerCase()}`
   if (k.startsWith('connect:')) return ({ cpu_fan: 'CPU_FAN connector', atx24: '24-pin power connector', sata: 'SATA port', fpanel: 'Front panel pins' } as Record<string, string>)[k.slice(8)]
-  if (k.startsWith('tool:')) return ({ mains: 'Mains cable', power: 'Power button', panel: 'Side panel', strap: 'Anti-static wrist strap', paste: 'Thermal paste' } as Record<string, string>)[k.slice(5)]
+  if (k.startsWith('tool:')) return ({ wall: 'Wall socket switch', mains: 'Mains plug (drag it)', power: 'Power button', panel: 'Side panel', strap: 'Anti-static wrist strap', paste: 'Thermal paste' } as Record<string, string>)[k.slice(5)]
   // Parts mode at Advanced: no names until found
   if (props.mode === 'parts' && props.level !== 'simple' && !has('tap:' + k)) return ''
   return nameOf(k)
@@ -415,7 +432,7 @@ const glowKey = computed(() => {
   if (a.startsWith('tap:')) return a.slice(4)
   if (a.startsWith('place:')) return selected.value === a.slice(6) ? 'ghost:' + a.slice(6) : a.slice(6)
   if (a.startsWith('connect:')) return a
-  return ({ unplug: 'tool:mains', plug: 'tool:mains', strap: 'tool:strap', paste: 'tool:paste', close: 'tool:panel', power: 'tool:power' } as Record<string, string>)[a] || null
+  return ({ 'socket-off': 'tool:wall', 'socket-on': 'tool:wall', unplug: 'tool:mains', plug: 'tool:mains', strap: 'tool:strap', paste: 'tool:paste', close: 'tool:panel', power: 'tool:power' } as Record<string, string>)[a] || null
 })
 const glowTool = computed(() => (glowKey.value?.startsWith('tool:') ? glowKey.value.slice(5) : null))
 
@@ -459,10 +476,17 @@ const tmp = new THREE.Vector3()
 
 const deskParts = computed(() => (props.mode === 'assembly' ? ASSEMBLY_PARTS.filter(p => !placed(p.key)) : []))
 
+// What is under the pointer. The wall switch is small and the see-through outlines can lie in
+// front of it, so a direct hit on it wins.
+function pickAt(ev: PointerEvent) {
+  const w = wb.value!
+  return (power && w.pick(ev, [power.outlets[0].rocker])) || w.pick(ev, pickables)
+}
+
 function onDown(ev: PointerEvent) {
   const w = wb.value
   if (!w) return
-  const hit = w.pick(ev, pickables)
+  const hit = pickAt(ev)
   let key = hit ? keyOf.get(hit) || null : null
   // the board's connectors while it still lies on the desk: that is grabbing the board
   if (key?.startsWith('connect:') && props.mode === 'assembly' && !placed('motherboard')) key = 'motherboard'
@@ -495,7 +519,7 @@ function onMove(ev: PointerEvent) {
       return
     }
   }
-  const hit = w.pick(ev, pickables)
+  const hit = pickAt(ev)
   hoverKey.value = hit ? keyOf.get(hit) || null : null
 }
 
@@ -664,20 +688,46 @@ async function answer(o: Option) {
 
 // ---------------------------------------------------------------- tools
 const TOOLS = [
-  { key: 'mains', label: 'Mains cable', icon: 'M8 4v5M16 4v5M6 9h12v3a6 6 0 01-12 0zM12 18v3' },
+  { key: 'wall', label: 'Wall switch', icon: 'M7 4h10v16H7zM10 8h4v4h-4z' },
+  { key: 'mains', label: 'Mains plug', icon: 'M8 4v5M16 4v5M6 9h12v3a6 6 0 01-12 0zM12 18v3' },
   { key: 'strap', label: 'Wrist strap', icon: 'M7 7a5 5 0 1010 0M7 7v4a5 5 0 0010 0V7M12 16v5h6' },
   { key: 'paste', label: 'Thermal paste', icon: 'M9 3h6v4l2 3v9a2 2 0 01-2 2H9a2 2 0 01-2-2v-9l2-3zM10 13h4' },
   { key: 'panel', label: 'Side panel', icon: 'M5 3h14v18H5zM9 7h6M9 10h6M9 13h6' },
   { key: 'power', label: 'Power button', icon: 'M12 3v8M7.5 6.5a7 7 0 109 0' }
 ]
 function useTool(key: string) {
-  if (key === 'mains') emit('act', has('unplug') ? 'plug' : 'unplug')
+  if (key === 'wall') flipSwitch()
+  else if (key === 'mains') plugTo(!pluggedIn.value)
   else if (key === 'strap') emit('act', 'strap')
   else if (key === 'panel') emit('act', 'close')
   else if (key === 'paste') {
     if (props.step?.action === 'paste' && props.step.data?.ask === 'paste') asking.value = 'paste'
     else emit('act', 'paste')
   } else if (key === 'power') switchOn()
+}
+
+// ---------------------------------------------------------------- the wall socket
+// The switch rocks over and the plug goes in or out; if that is not what the step wants, it
+// springs back and the runner says why.
+function flipSwitch() {
+  const want = !socketOn.value
+  const action = want ? 'socket-on' : 'socket-off'
+  if (props.step?.action !== action) {
+    power?.setSwitch(0, want)
+    setTimeout(() => power?.setSwitch(0, socketOn.value), 450)
+  }
+  emit('act', action)
+}
+function plugTo(inSocket: boolean) {
+  if (!power) return
+  if (inSocket === pluggedIn.value) {
+    power.setPlug(0, pluggedIn.value ? 0 : null)
+    return
+  }
+  const action = inSocket ? 'plug' : 'unplug'
+  if (props.step?.action === action) power.setPlug(0, inSocket ? 0 : null)
+  else power.setPlug(0, pluggedIn.value ? 0 : null)
+  emit('act', action)
 }
 
 // ---------------------------------------------------------------- switching on

@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
+import { buildLabRoom } from './labRoom'
 
 /**
  * The ICT Lab's 3D workbench: a renderer, a lit room with a desk, a camera you can turn around
@@ -52,7 +53,7 @@ export function createWorkbench(host: HTMLElement, opts: WorkbenchOptions): Work
   host.appendChild(canvas)
 
   const scene = new THREE.Scene()
-  scene.background = new THREE.Color(0xdfe6ee)
+  scene.background = new THREE.Color(0xe7e1d6)
   const pmrem = new THREE.PMREMGenerator(renderer)
   const env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
   scene.environment = env
@@ -72,31 +73,8 @@ export function createWorkbench(host: HTMLElement, opts: WorkbenchOptions): Work
   key.shadow.bias = -0.0005
   scene.add(key)
 
-  // The room: a floor far below and a back wall, so the desk is not floating in grey
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(8, 8), new THREE.MeshStandardMaterial({ color: 0xc9b9a3, roughness: 0.95 }))
-  floor.rotation.x = -Math.PI / 2
-  floor.position.y = -0.76
-  floor.receiveShadow = true
-  scene.add(floor)
-  const wall = new THREE.Mesh(new THREE.PlaneGeometry(8, 4), new THREE.MeshStandardMaterial({ color: 0xe8edf2, roughness: 1 }))
-  wall.position.set(0, 1, -0.9)
-  scene.add(wall)
-
-  // The desk: a wooden top on a dark frame, with a grey anti-static mat
-  const deskTop = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.04, 0.95), new THREE.MeshStandardMaterial({ color: 0xa0764d, roughness: 0.7 }))
-  deskTop.position.set(0.15, -0.02, 0.05)
-  deskTop.receiveShadow = true
-  deskTop.castShadow = true
-  scene.add(deskTop)
-  const mat = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.003, 0.7), new THREE.MeshStandardMaterial({ color: 0x5b6b7a, roughness: 0.9 }))
-  mat.position.set(0.2, 0.0015, 0.05)
-  mat.receiveShadow = true
-  scene.add(mat)
-  for (const [x, z] of [[-0.65, -0.38], [0.95, -0.38], [-0.65, 0.48], [0.95, 0.48]]) {
-    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.72, 0.05), new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.6, metalness: 0.4 }))
-    leg.position.set(x, -0.4, z)
-    scene.add(leg)
-  }
+  // The computer lab: tiled floor, walls with a window, the wooden bench (its top is y = 0)
+  buildLabRoom(scene)
 
   const camera = new THREE.PerspectiveCamera(42, 1, opts.near ?? 0.02, 20)
   const startPos = new THREE.Vector3(...opts.cameraPosition)

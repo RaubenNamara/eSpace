@@ -64,8 +64,8 @@
       </article>
     </div>
 
-    <h2 class="mt-8 mb-2 text-sm font-bold text-gray-900 dark:text-white">Coming next</h2>
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+    <h2 v-if="COMING.length" class="mt-8 mb-2 text-sm font-bold text-gray-900 dark:text-white">Coming next</h2>
+    <div v-if="COMING.length" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
       <div v-for="c in COMING" :key="c.title" class="rounded-2xl border border-dashed border-gray-300 dark:border-gray-600 p-4">
         <div class="flex items-center gap-2">
           <span class="w-8 h-8 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 flex items-center justify-center"><AppIcon :name="c.icon" class="w-4 h-4" /></span>

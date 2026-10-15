@@ -6,8 +6,8 @@
   <div class="w-full">
     <!-- Safety state -->
     <div class="flex flex-wrap gap-1.5 mb-2 text-[11px] font-semibold">
-      <span class="px-2 py-0.5 rounded-full" :class="powered ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200' : pluggedIn ? 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-200' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-200'">
-        {{ powered ? 'Switched on' : pluggedIn ? 'Mains: plugged in' : 'Mains: unplugged' }}
+      <span class="px-2 py-0.5 rounded-full" :class="powered ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200' : pluggedIn && socketOn ? 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-200' : pluggedIn ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-200' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-200'">
+        {{ powered ? 'Switched on' : !pluggedIn ? 'Unplugged' : socketOn ? 'Plugged in · socket on' : 'Plugged in · socket off' }}
       </span>
       <span class="px-2 py-0.5 rounded-full" :class="has('strap') ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-200'">
         Wrist strap: {{ has('strap') ? 'on' : 'off' }}
@@ -102,7 +102,7 @@
     </div>
 
     <!-- Tools -->
-    <div class="mt-3 grid grid-cols-5 gap-1.5">
+    <div class="mt-3 grid grid-cols-3 sm:grid-cols-6 gap-1.5">
       <button
         v-for="t in TOOLS"
         :key="t.key"
@@ -138,6 +138,8 @@ const nameOf = (key: string) => ASSEMBLY_PARTS.find(p => p.key === key)?.name ||
 
 // Plugged in at the start (it has to be unplugged first) and again once plugged back in
 const pluggedIn = computed(() => !has('unplug') || has('plug'))
+// The wall socket's switch: on at the start, off before unplugging, on again after plugging in
+const socketOn = computed(() => !has('socket-off') || has('socket-on'))
 const powered = computed(() => has('power'))
 
 // What is in the case: the fixed parts, and whatever has been fitted
@@ -185,7 +187,7 @@ const glowZone = computed(() => (props.guide && want.value.startsWith('place:') 
 const glowConnector = computed(() => (props.guide && want.value.startsWith('connect:') ? want.value.slice(8) : null))
 const glowTool = computed(() => {
   if (!props.guide) return null
-  const map: Record<string, string> = { unplug: 'mains', plug: 'mains', strap: 'strap', paste: 'paste', close: 'panel', power: 'power' }
+  const map: Record<string, string> = { 'socket-off': 'wall', 'socket-on': 'wall', unplug: 'mains', plug: 'mains', strap: 'strap', paste: 'paste', close: 'panel', power: 'power' }
   return map[want.value] || null
 })
 
@@ -249,14 +251,16 @@ const answer = (o: Option) => {
 
 // ---- tools ----
 const TOOLS = [
-  { key: 'mains', label: 'Mains cable', icon: 'M8 4v5M16 4v5M6 9h12v3a6 6 0 01-12 0zM12 18v3' },
+  { key: 'wall', label: 'Wall switch', icon: 'M7 4h10v16H7zM10 8h4v4h-4z' },
+  { key: 'mains', label: 'Mains plug', icon: 'M8 4v5M16 4v5M6 9h12v3a6 6 0 01-12 0zM12 18v3' },
   { key: 'strap', label: 'Wrist strap', icon: 'M7 7a5 5 0 1010 0M7 7v4a5 5 0 0010 0V7M12 16v5h6' },
   { key: 'paste', label: 'Thermal paste', icon: 'M9 3h6v4l2 3v9a2 2 0 01-2 2H9a2 2 0 01-2-2v-9l2-3zM10 13h4' },
   { key: 'panel', label: 'Side panel', icon: 'M5 3h14v18H5zM9 7h6M9 10h6M9 13h6' },
   { key: 'power', label: 'Power button', icon: 'M12 3v8M7.5 6.5a7 7 0 109 0' }
 ]
 const useTool = (key: string) => {
-  if (key === 'mains') emit('act', has('unplug') ? 'plug' : 'unplug')
+  if (key === 'wall') emit('act', socketOn.value ? 'socket-off' : 'socket-on')
+  else if (key === 'mains') emit('act', pluggedIn.value ? 'unplug' : 'plug')
   else if (key === 'strap') emit('act', 'strap')
   else if (key === 'panel') emit('act', 'close')
   else if (key === 'paste') {

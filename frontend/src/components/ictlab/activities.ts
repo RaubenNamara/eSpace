@@ -30,7 +30,7 @@ export interface IctActivity {
   title: string
   summary: string
   icon: string
-  scene: 'parts' | 'rj45' | 'assembly' | 'cleaning'
+  scene: 'parts' | 'rj45' | 'assembly' | 'cleaning' | 'troubleshoot'
   topic: string
   // `preset`: actions already done when the level starts (e.g. the motherboard already in the case)
   levels: Record<IctLevel, { intro: string; steps: IctStep[]; preset?: string[] }>
@@ -225,8 +225,15 @@ const STRAP_FIRST = 'Put on the anti-static wrist strap before touching the part
 const PASTE_FIRST = 'Thermal paste goes on the processor before the cooler - without it the processor overheats.'
 const CLOSE_FIRST = 'Close the case before switching on - an open case is unsafe, and the fans cannot cool it properly.'
 
+// The wall socket: switch off before the plug comes out, plug in before switching on
+const socket = {
+  off: { key: 'socket-off', action: 'socket-off', title: 'Switch off at the wall socket', text: 'Shut the computer down, then press the switch above its plug on the wall socket to OFF (the red mark disappears).', hint: 'Tap the switch above the plug on the wall socket (or use Wall switch).', wrong: { unplug: 'Switch off at the socket before you pull the plug out.', '*': SAFETY_FIRST } } as IctStep,
+  unplug: { key: 'unplug', action: 'unplug', title: 'Pull out the plug', text: 'Pull the plug out of the wall socket - hold the plug itself, never pull the cable.', hint: 'Drag the plug away from the wall socket (or use Mains plug).', wrong: { '*': SAFETY_FIRST } } as IctStep,
+  plug: { key: 'plug-in', action: 'plug', title: 'Plug it back in', text: 'Push the plug firmly into the wall socket.', hint: 'Drag the plug onto the wall socket (or use Mains plug).', wrong: { power: 'It has no power yet - plug it in first.', 'socket-on': 'Push the plug in first, then switch on at the socket.' } } as IctStep,
+  on: { key: 'socket-on', action: 'socket-on', title: 'Switch on at the wall socket', text: 'Press the switch above the plug to ON - the red mark shows.', hint: 'Tap the switch above the plug on the wall socket (or use Wall switch).', wrong: { power: 'There is no power yet - switch on at the wall socket first.' } } as IctStep
+}
+
 const asm = {
-  unplug: { key: 'unplug', action: 'unplug', title: 'Switch off and unplug', text: 'Shut the computer down, switch off at the socket and pull out the mains cable at the back.', hint: 'Use the Mains cable button.', wrong: { '*': SAFETY_FIRST } } as IctStep,
   strap: { key: 'strap', action: 'strap', title: 'Put on the anti-static wrist strap', text: 'Clip the wrist strap to bare metal on the case, so any static in your body goes to the case, not the parts.', hint: 'Use the Wrist strap button.', wrong: { '*': STRAP_FIRST } } as IctStep,
   motherboard: { key: 'motherboard', action: 'place:motherboard', title: 'Fit the motherboard', text: 'Line its ports up with the back panel and lay it on the standoffs, then screw it down.', hint: 'Pick the motherboard from the tray, then tap the big outline in the case.' } as IctStep,
   cpu: (ask: boolean): IctStep => ({ key: 'cpu', action: 'place:cpu', title: 'Fit the processor', text: ask ? 'Lift the socket lever, line the processor up, and lower it in - no pressing.' : 'Lift the socket lever, line up the small gold triangle on the processor with the one on the socket, lower it in and close the lever.', hint: 'Pick the processor, then tap the socket on the motherboard.', data: ask ? { ask: 'cpu' } : undefined, wrong: { 'place:cooler': 'The processor goes in first - the cooler sits on top of it.' } }),
@@ -241,11 +248,10 @@ const asm = {
   gpu: { key: 'gpu', action: 'place:gpu', title: 'Fit the graphics card', text: 'Remove the slot cover at the back, then push the card firmly into the long PCI Express slot until it clicks.', hint: 'Pick the graphics card, then tap its outline across the lower motherboard.' } as IctStep,
   panel: { key: 'front-panel', action: 'connect:fpanel', title: 'Connect the front panel', text: 'Plug the case power button and light wires onto the F_PANEL pins at the bottom of the motherboard - without them the power button does nothing.', hint: 'Tap the F_PANEL pins at the bottom of the motherboard.' } as IctStep,
   close: { key: 'close', action: 'close', title: 'Put the side panel back', text: 'Check no cable touches a fan, then slide the side panel on and screw it shut.', hint: 'Use the Side panel button.' } as IctStep,
-  plug: { key: 'plug-in', action: 'plug', title: 'Plug the mains cable back in', text: 'Plug the mains cable into the power supply and switch on at the socket.', hint: 'Use the Mains cable button.', wrong: { power: 'It has no power yet - plug the mains cable in first.' } } as IctStep,
   power: { key: 'power-on', action: 'power', title: 'Switch it on', text: 'Press the power button. A healthy computer gives one short beep and starts up.', hint: 'Use the Power button.' } as IctStep
 }
 // Closing up before the work is done, or switching on with the case open, is its own lesson
-asm.close.wrong = { power: CLOSE_FIRST, plug: CLOSE_FIRST }
+asm.close.wrong = { power: CLOSE_FIRST, plug: CLOSE_FIRST, 'socket-on': CLOSE_FIRST }
 
 const assemblyActivity: IctActivity = {
   key: 'assembly',
@@ -258,16 +264,16 @@ const assemblyActivity: IctActivity = {
     simple: {
       intro: 'The motherboard and power supply are already in. Drag each part from the desk into the case (or tap it, then tap where it goes) - what to use glows.',
       preset: ['place:motherboard', 'place:psu', 'connect:atx24', 'place:gpu'],
-      steps: [asm.unplug, asm.strap, asm.cpu(false), asm.paste(false), asm.cooler, asm.cpuFan, asm.ram(false), asm.hdd, asm.sata, asm.close, asm.plug, asm.power]
+      steps: [socket.off, socket.unplug, asm.strap, asm.cpu(false), asm.paste(false), asm.cooler, asm.cpuFan, asm.ram(false), asm.hdd, asm.sata, asm.close, socket.plug, socket.on, asm.power]
     },
     intermediate: {
       intro: 'Only the motherboard is in. Fit the rest yourself, the right way round - a hint costs 3 points, a mistake 5.',
       preset: ['place:motherboard'],
-      steps: [asm.unplug, asm.strap, asm.cpu(true), asm.paste(false), asm.cooler, asm.cpuFan, asm.ram(true), asm.psu, asm.atx, asm.hdd, asm.sata, asm.gpu, asm.close, asm.plug, asm.power]
+      steps: [socket.off, socket.unplug, asm.strap, asm.cpu(true), asm.paste(false), asm.cooler, asm.cpuFan, asm.ram(true), asm.psu, asm.atx, asm.hdd, asm.sata, asm.gpu, asm.close, socket.plug, socket.on, asm.power]
     },
     advanced: {
       intro: 'An empty case. Build the whole computer - safely, in the right order, and the right way round. A hint costs 3 points, a mistake 5.',
-      steps: [asm.unplug, asm.strap, asm.motherboard, asm.cpu(true), asm.paste(true), asm.cooler, asm.cpuFan, asm.ram(true), asm.psu, asm.atx, asm.hdd, asm.sata, asm.gpu, asm.panel, asm.close, asm.plug, asm.power]
+      steps: [socket.off, socket.unplug, asm.strap, asm.motherboard, asm.cpu(true), asm.paste(true), asm.cooler, asm.cpuFan, asm.ram(true), asm.psu, asm.atx, asm.hdd, asm.sata, asm.gpu, asm.panel, asm.close, socket.plug, socket.on, asm.power]
     }
   }
 }
@@ -286,15 +292,13 @@ export const DUSTY: { key: string; name: string; fan: boolean }[] = [
 
 const HOLD_WHY = 'Hold the fan still with a finger first - spun by the air it turns far too fast, which wears it out and can even push power back into the motherboard.'
 const cln = {
-  unplug: { key: 'unplug', action: 'unplug', title: 'Switch off and unplug', text: 'Shut the computer down, switch off at the socket and pull out the mains cable.', hint: 'Use the Mains cable button (or tap the cable behind the computer).', wrong: { '*': SAFETY_FIRST } } as IctStep,
   outside: { key: 'outside', action: 'outside', title: 'Take it where there is fresh air', text: 'Carry the computer outside, or next to an open window - the dust you blow out must not settle back in the room.', hint: 'Use the Fresh air button.' } as IctStep,
   mask: { key: 'mask', action: 'mask', title: 'Put on a dust mask', text: 'Computer dust is fine and dirty - wear a mask so you do not breathe it in.', hint: 'Use the Dust mask button.' } as IctStep,
   open: { key: 'open-case', action: 'open', title: 'Take the side panel off', text: 'Undo the thumb screws at the back and slide the side panel off.', hint: 'Use the Side panel button (or tap the glass panel).' } as IctStep,
   blower: (ask: boolean): IctStep => ({ key: 'blower', action: 'blower', title: 'Pick up a dust blower', text: ask ? 'Choose your dust blower: a can of compressed air, or an electric blower.' : 'Choose a dust blower: a can of compressed air (held upright), or an electric blower that plugs into the wall socket.', hint: 'Use the Air can or the Electric blower button. An electric blower must be plugged in and switched on before it blows.', data: ask ? { ask: 'blower' } : undefined }),
   hold: (k: string, name: string): IctStep => ({ key: `hold-${k}`, action: `hold:${k}`, title: `Hold the ${name} still`, text: `Choose Hold a fan, then tap the ${name} - your finger keeps it from spinning while you blow.`, hint: `Choose Hold a fan, then tap the ${name}.`, wrong: { [`clean:${k}`]: HOLD_WHY } }),
   clean: (k: string, name: string, text: string): IctStep => ({ key: `clean-${k}`, action: `clean:${k}`, title: `Blow the dust off the ${name}`, text, hint: `With a dust blower in your hand (an electric one plugged in and switched on), press and hold on the ${name} until the dust is gone.` }),
-  close: { key: 'close', action: 'close', title: 'Put the side panel back', text: 'Slide the side panel back on and do up the thumb screws.', hint: 'Use the Side panel button.', wrong: { power: CLOSE_FIRST, plug: CLOSE_FIRST } } as IctStep,
-  plug: { key: 'plug-in', action: 'plug', title: 'Plug it back in', text: 'Take the computer back, plug the mains cable in and switch on at the socket.', hint: 'Use the Mains cable button.', wrong: { power: 'It has no power yet - plug the mains cable in first.' } } as IctStep,
+  close: { key: 'close', action: 'close', title: 'Put the side panel back', text: 'Slide the side panel back on and do up the thumb screws.', hint: 'Use the Side panel button.', wrong: { power: CLOSE_FIRST, plug: CLOSE_FIRST, 'socket-on': CLOSE_FIRST } } as IctStep,
   power: { key: 'power-on', action: 'power', title: 'Switch it on', text: 'Press the power button - with the dust gone it runs cooler and quieter.', hint: 'Use the Power button.' } as IctStep
 }
 const C_COOLER = cln.clean('cooler', 'CPU cooler', 'Short bursts of air into the fins of the heat sink - the dust packs in there and makes the processor overheat.')
@@ -314,24 +318,119 @@ const cleaningActivity: IctActivity = {
   levels: {
     simple: {
       intro: 'This computer is full of dust and running hot. Clean it the safe way - what to use glows.',
-      steps: [cln.unplug, cln.outside, cln.open, cln.blower(false), cln.hold('cooler', 'CPU cooler fan'), C_COOLER, cln.hold('casefan', 'case fan'), C_CASEFAN, C_PSU, cln.close, cln.plug, cln.power]
+      steps: [socket.off, socket.unplug, cln.outside, cln.open, cln.blower(false), cln.hold('cooler', 'CPU cooler fan'), C_COOLER, cln.hold('casefan', 'case fan'), C_CASEFAN, C_PSU, cln.close, socket.plug, socket.on, cln.power]
     },
     intermediate: {
       intro: 'Clean every dusty part, safely and in a sensible order. A hint costs 3 points, a mistake 5.',
-      steps: [cln.unplug, cln.outside, cln.open, cln.blower(true), cln.hold('cooler', 'CPU cooler fan'), C_COOLER, cln.hold('gpu', 'graphics card fans'), C_GPU, cln.hold('casefan', 'case fan'), C_CASEFAN, C_PSU, C_FLOOR, cln.close, cln.plug, cln.power]
+      steps: [socket.off, socket.unplug, cln.outside, cln.open, cln.blower(true), cln.hold('cooler', 'CPU cooler fan'), C_COOLER, cln.hold('gpu', 'graphics card fans'), C_GPU, cln.hold('casefan', 'case fan'), C_CASEFAN, C_PSU, C_FLOOR, cln.close, socket.plug, socket.on, cln.power]
     },
     advanced: {
       intro: 'A full clean, the way a technician does it - protect yourself, short bursts only (a long blast counts as a mistake). A hint costs 3 points, a mistake 5.',
-      steps: [cln.unplug, cln.outside, cln.mask, cln.open, cln.blower(true), cln.hold('cooler', 'CPU cooler fan'), C_COOLER, cln.hold('gpu', 'graphics card fans'), C_GPU, C_RAM, cln.hold('casefan', 'case fan'), C_CASEFAN, C_PSU, C_FLOOR, cln.close, cln.plug, cln.power]
+      steps: [socket.off, socket.unplug, cln.outside, cln.mask, cln.open, cln.blower(true), cln.hold('cooler', 'CPU cooler fan'), C_COOLER, cln.hold('gpu', 'graphics card fans'), C_GPU, C_RAM, cln.hold('casefan', 'case fan'), C_CASEFAN, C_PSU, C_FLOOR, cln.close, socket.plug, socket.on, cln.power]
     }
   }
 }
 
-export const ACTIVITIES: IctActivity[] = [partsActivity, assemblyActivity, cleaningActivity, rj45Activity]
+// ---- Troubleshooting ----
+// Each level is two fault cases. A step names the thing to tap (`obj`) and what is seen once it is
+// done (`say`); actions are "<step>@<case>", so the same kind of step can come in both cases.
+type TStep = { k: string; obj: string; title: string; text: string; hint: string; say?: string; ask?: string; wrong?: Record<string, string> }
+const FIRST_SIMPLE = 'Check the simple things first - is it plugged in and switched on? - before opening the computer.'
+const UNPLUG_FIRST = 'Switch it off and unplug it before you open it up.'
+function tcase(id: string, title: string, complaint: string, list: TStep[]): IctStep[] {
+  return list.map((t, i) => ({
+    key: `${id}-${t.k}`,
+    action: `${t.k}@${id}`,
+    title: t.title,
+    text: i === 0 ? `${complaint} ${t.text}` : t.text,
+    hint: t.hint,
+    data: { case: id, obj: t.obj, ...(t.say ? { say: t.say } : {}), ...(t.ask ? { ask: t.ask } : {}), ...(i === 0 ? { caseTitle: title } : {}) },
+    wrong: t.wrong ? Object.fromEntries(Object.entries(t.wrong).map(([a, m]) => [a === '*' ? '*' : `${a}@${id}`, m])) : undefined
+  }))
+}
+// Off at the wall, then the plug out - and back in, then on - just as at a real socket
+const offSteps: TStep[] = [
+  { k: 'switchoff', obj: 'switch', title: 'Switch off at the socket', text: 'Shut the computer down, then switch off at the wall socket.', hint: 'Tap the switch above the socket on the wall (or use Wall switch).', wrong: { 'tap:panel': UNPLUG_FIRST, 'tap:plug': 'Switch off at the socket before you pull the plug out.' } },
+  { k: 'unplug', obj: 'plug', title: 'Pull out the plug', text: 'Pull the plug out of the socket - hold the plug, never the cable.', hint: 'Drag the plug away from the wall (or use Mains plug).', wrong: { 'tap:panel': UNPLUG_FIRST } }
+]
+const openStep: TStep = { k: 'open', obj: 'panel', title: 'Open the case', text: 'Take the side panel off.', hint: 'Tap the glass side panel (or use Side panel).' }
+const closeStep: TStep = { k: 'close', obj: 'panel', title: 'Close the case', text: 'Put the side panel back on.', hint: 'Tap the side panel (or use Side panel).' }
+const plugSteps: TStep[] = [
+  { k: 'plugin', obj: 'plug', title: 'Plug it back in', text: 'Push the plug firmly into the wall socket.', hint: 'Drag the plug onto the socket (or use Mains plug).' },
+  { k: 'switchon', obj: 'switch', title: 'Switch on at the socket', text: 'Switch the socket on.', hint: 'Tap the switch above the socket (or use Wall switch).' }
+]
+
+const caseNoPower = tcase('nopower', 'No power', 'A teacher says: "I press the power button and nothing happens."', [
+  { k: 'try', obj: 'power', title: 'See the fault for yourself', text: 'Press the power button and watch.', hint: 'Tap the power button on the front of the computer.', say: 'Nothing happens - no lights, no fans, no sound.' },
+  { k: 'switchon', obj: 'switch', title: 'Check the wall socket', text: 'No sign of life at all: start with the power. The plug is in - but is the socket switched on? Switch it on.', hint: 'Tap the switch above the socket on the wall (or use Wall switch).', say: 'The socket was switched off - its red flag now shows it is ON.', wrong: { 'tap:panel': FIRST_SIMPLE, 'tap:plug': 'The plug is in properly - look at the socket switch.' } },
+  { k: 'test', obj: 'power', title: 'Test it', text: 'Press the power button again.', hint: 'Tap the power button.', say: 'The fans start, the light comes on and it starts up. Fixed!' }
+])
+const caseNoDisplay = tcase('nodisplay', 'No picture', 'A student says: "The computer is on but the screen is black."', [
+  { k: 'start', obj: 'power', title: 'See the fault for yourself', text: 'Switch the computer on and look at the screen.', hint: 'Tap the power button.', say: 'The fans spin and the power light is on - but the screen says No signal.' },
+  { k: 'monitor', obj: 'monitor', title: 'Check the monitor', text: '"No signal" means the monitor works but gets nothing from the computer. Check the monitor has power.', hint: 'Tap the monitor.', say: "The monitor's own light is on - it has power.", wrong: { 'tap:panel': FIRST_SIMPLE } },
+  { k: 'cable', obj: 'video', title: 'Check the video cable', text: 'Follow the cable from the back of the monitor to the back of the computer.', hint: 'Tap the video cable behind the computer.', say: 'The video cable has come out of the back of the computer.' },
+  { k: 'reconnect', obj: 'video', title: 'Plug the cable back in', text: 'Push the video cable back into the port and tighten its screws.', hint: 'Tap the video cable again.', say: 'The picture is back!' }
+])
+const caseBeeps = tcase('beeps', 'Beeps and no picture', 'A teacher says: "It beeps and beeps and the screen stays black."', [
+  { k: 'start', obj: 'power', title: 'Listen to it', text: 'Switch it on and listen.', hint: 'Tap the power button.', say: 'Long beeps, again and again - and nothing on the screen.' },
+  { k: 'diagnose', obj: 'ask', title: 'What do the beeps mean?', text: 'The beeps are the computer telling you what failed its start-up check.', hint: 'Repeated long beeps on most computers point to the memory.', ask: 'beeps' },
+  ...offSteps,
+  openStep,
+  { k: 'reseat', obj: 'ram', title: 'Reseat the memory', text: 'Open the clips, take the RAM sticks out, and press them back in until the clips click.', hint: 'Tap the RAM sticks beside the processor.', say: 'You pressed the memory out and back in - the clips clicked.' },
+  closeStep,
+  ...plugSteps,
+  { k: 'test', obj: 'power', title: 'Test it', text: 'Switch it on again and listen.', hint: 'Tap the power button.', say: 'One short beep - it starts. Fixed!' }
+])
+const caseHeat = tcase('heat', 'It switches itself off', 'A student says: "It works for a while, then just turns off."', [
+  { k: 'start', obj: 'power', title: 'See the fault for yourself', text: 'Switch it on and wait.', hint: 'Tap the power button.', say: 'It starts, runs for a minute - then switches itself off.' },
+  { k: 'bios', obj: 'keyboard', title: 'Check the temperatures', text: 'Switching off by itself is often overheating. Start it and open the BIOS to see the temperature.', hint: 'Tap the keyboard (it presses Del as it starts).', say: 'BIOS: CPU 96 °C, CPU fan 0 RPM - the cooler fan is not turning!' },
+  ...offSteps,
+  openStep,
+  { k: 'fan', obj: 'cpu_fan', title: 'Reconnect the cooler fan', text: 'Look at the cooler fan cable - where should it be?', hint: 'Tap the CPU_FAN connector just above the cooler.', say: 'The fan cable was off - it is back on CPU_FAN.', wrong: { 'tap:cooler': 'The cooler itself is fine - its fan has no power. Find where its cable should plug in.' } },
+  closeStep,
+  ...plugSteps,
+  { k: 'test', obj: 'power', title: 'Test it', text: 'Switch on and check the temperature again.', hint: 'Tap the power button.', say: 'CPU 45 °C, fan 1,450 RPM - and it stays on. Fixed!' }
+])
+const caseBoot = tcase('boot', 'No boot device', 'A teacher says: "It says No boot device found."', [
+  { k: 'start', obj: 'power', title: 'See the fault for yourself', text: 'Switch it on and read the screen.', hint: 'Tap the power button.', say: 'Black screen: "No boot device found. Press any key."' },
+  { k: 'bios', obj: 'keyboard', title: 'Does the computer see the drive?', text: 'Open the BIOS and look at the drives it has found.', hint: 'Tap the keyboard.', say: 'BIOS boot list: no drives found - the computer cannot see the hard disk.' },
+  ...offSteps,
+  openStep,
+  { k: 'sata', obj: 'sata', title: 'Check the drive cables', text: 'The computer cannot see the drive: check the cables between the drive and the motherboard.', hint: 'Tap the SATA port on the motherboard, beside the drive.', say: 'The SATA cable had come off the motherboard - pushed firmly back in.', wrong: { 'tap:hdd': 'The drive is in place - check the cable that joins it to the motherboard.' } },
+  closeStep,
+  ...plugSteps,
+  { k: 'test', obj: 'power', title: 'Test it', text: 'Switch it on.', hint: 'Tap the power button.', say: 'The hard disk is found - the computer starts. Fixed!' }
+])
+const caseClock = tcase('clock', 'The clock keeps resetting', 'A teacher says: "Every morning the date says 2010."', [
+  { k: 'start', obj: 'power', title: 'See the fault for yourself', text: 'Switch it on and look at the date.', hint: 'Tap the power button.', say: 'The clock says 1 January 2010.' },
+  { k: 'bios', obj: 'keyboard', title: 'Look in the BIOS', text: 'Open the BIOS and check the date and the settings.', hint: 'Tap the keyboard.', say: 'BIOS date 01/01/2010 and the settings are back to factory - the CMOS battery has run flat.' },
+  ...offSteps,
+  openStep,
+  { k: 'battery', obj: 'cmos', title: 'Replace the CMOS battery', text: 'Take out the coin battery and fit a new CR2032, flat side up.', hint: 'Tap the round coin battery on the motherboard.', say: 'Old battery out, new CR2032 in.' },
+  closeStep,
+  ...plugSteps,
+  { k: 'test', obj: 'power', title: 'Switch it on', text: 'Switch it on.', hint: 'Tap the power button.', say: 'It starts.' },
+  { k: 'setdate', obj: 'keyboard', title: 'Set the date and time', text: 'Set the right date and time - with a new battery they will now stay.', hint: 'Tap the keyboard.', say: 'Date and time set - and they stay set. Fixed!' }
+])
+
+const troubleshootActivity: IctActivity = {
+  key: 'troubleshoot',
+  title: 'Troubleshooting',
+  summary: 'Real faults to find and fix: no power, no picture, beeps, overheating, no boot device, a flat CMOS battery.',
+  icon: 'bulb',
+  scene: 'troubleshoot',
+  topic: 'Computer maintenance',
+  levels: {
+    simple: { intro: 'Two computers with a problem. Look first, check the simple things, then fix - what to check glows.', steps: [...caseNoPower, ...caseNoDisplay] },
+    intermediate: { intro: 'Two harder faults. Work out the cause before you fix it - a hint costs 3 points, a mistake 5.', steps: [...caseBeeps, ...caseHeat] },
+    advanced: { intro: 'Two faults a technician meets every week. A hint costs 3 points, a mistake 5.', steps: [...caseBoot, ...caseClock] }
+  }
+}
+
+export const ACTIVITIES: IctActivity[] = [partsActivity, assemblyActivity, cleaningActivity, troubleshootActivity, rj45Activity]
 
 // Planned next, shown on the lab's front page
 export const COMING: { title: string; summary: string; icon: string }[] = [
-  { title: 'Troubleshooting', summary: 'No power, beeps, no display, overheating - find the fault step by step.', icon: 'bulb' }
 ]
 
 export const activityByKey = (key: string) => ACTIVITIES.find(a => a.key === key) || null

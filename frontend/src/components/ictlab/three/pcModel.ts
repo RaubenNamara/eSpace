@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { motherboardTexture, ramTexture, stickerTexture, brushedMetalTexture, honeycombTexture, shroudTexture } from './textures'
 
 /**
  * A desktop computer in 3D, built from simple shapes (no model files to download): an open tower
@@ -49,6 +50,17 @@ function box(w: number, h: number, d: number, mat: THREE.Material, x = 0, y = 0,
   m.receiveShadow = true
   return m
 }
+type Face = 'px' | 'nx' | 'py' | 'ny' | 'pz' | 'nz'
+const FACES: Face[] = ['px', 'nx', 'py', 'ny', 'pz', 'nz']
+function facedBox(w: number, h: number, d: number, base: THREE.MeshStandardMaterial, faces: Partial<Record<Face, THREE.Material>>, x = 0, y = 0, z = 0) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), FACES.map(f => faces[f] ?? base))
+  m.position.set(x, y, z)
+  m.castShadow = true
+  m.receiveShadow = true
+  return m
+}
+const pictured = (map: THREE.Texture, rough = 0.6, metal = 0.1) => new THREE.MeshStandardMaterial({ map, roughness: rough, metalness: metal })
+
 function cyl(r: number, h: number, mat: THREE.Material, axis: 'x' | 'y' | 'z', x = 0, y = 0, z = 0, seg = 28) {
   const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, seg), mat)
   if (axis === 'x') m.rotation.z = Math.PI / 2
@@ -125,8 +137,8 @@ const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z)
 export function buildPc(): PcRig {
   // ---- the case shell ----
   const shell = new THREE.Group()
-  const caseMat = std(0x1f2937, 0.55, 0.45)
-  const innerMat = std(0x2b3542, 0.5, 0.55)
+  const caseMat = new THREE.MeshStandardMaterial({ map: brushedMetalTexture('#2b2f36'), metalness: 0.6, roughness: 0.42 })
+  const innerMat = new THREE.MeshStandardMaterial({ map: brushedMetalTexture('#5b6470'), metalness: 0.55, roughness: 0.5 })
   shell.add(box(0.42, 0.44, 0.004, innerMat, 0, Y0 + 0.22, -0.098)) // motherboard tray (far side)
   shell.add(box(0.42, 0.004, 0.2, caseMat, 0, Y0 + 0.438, 0)) // top
   shell.add(box(0.42, 0.004, 0.2, caseMat, 0, Y0 + 0.002, 0)) // bottom
@@ -157,7 +169,7 @@ export function buildPc(): PcRig {
   // ---- motherboard (with what is soldered on it) ----
   const BOARD = V(0.068, Y0 + 0.1875, -0.093)
   const mb = new THREE.Group()
-  mb.add(box(0.244, 0.305, 0.004, std(0x14532d, 0.2, 0.7)))
+  mb.add(facedBox(0.244, 0.305, 0.004, std(0x0f3d26, 0.2, 0.7), { pz: pictured(motherboardTexture(), 0.55, 0.15) }))
   mb.add(box(0.05, 0.05, 0.004, std(0xd1d5db, 0.5, 0.4), -0.047, 0.078, 0.004)) // CPU socket
   mb.add(box(0.034, 0.002, 0.003, std(0x9ca3af, 0.8, 0.3), -0.047, 0.106, 0.004)) // socket lever
   for (const x of [0.035, 0.05]) mb.add(box(0.007, 0.135, 0.009, std(0x0f172a), x, 0.06, 0.006)) // RAM slots
@@ -190,7 +202,7 @@ export function buildPc(): PcRig {
   // ---- processor ----
   const cpu = new THREE.Group()
   cpu.add(box(0.0375, 0.0375, 0.0015, std(0x065f46, 0.2, 0.6), 0, 0, 0.00075))
-  cpu.add(box(0.03, 0.03, 0.003, std(0xcbd5e1, 0.9, 0.25), 0, 0, 0.003))
+  cpu.add(facedBox(0.03, 0.03, 0.003, std(0xcbd5e1, 0.9, 0.25), { pz: new THREE.MeshStandardMaterial({ map: stickerTexture('CORE i5', ['3.6 GHz  6 CORES', 'LGA1200', 'MALAY'], '#334155'), metalness: 0.7, roughness: 0.3, color: 0xd9dde3 }) }, 0, 0, 0.003))
   const tri = new THREE.Mesh(new THREE.CircleGeometry(0.003, 3), new THREE.MeshBasicMaterial({ color: 0xfacc15 }))
   tri.position.set(-0.016, -0.016, 0.0016)
   cpu.add(tri)
@@ -212,8 +224,11 @@ export function buildPc(): PcRig {
   // ---- memory: two sticks ----
   const ram = new THREE.Group()
   for (const x of [0, 0.015]) {
-    ram.add(box(0.0015, 0.133, 0.031, std(0x064e3b, 0.2, 0.6), x, 0, 0.0155))
-    ram.add(box(0.004, 0.13, 0.026, std(0x1d4ed8, 0.6, 0.35), x, 0, 0.016))
+    const ramFace = ramTexture()
+    ramFace.center.set(0.5, 0.5)
+    ramFace.rotation = Math.PI / 2
+    const ramMat = pictured(ramFace, 0.55, 0.1)
+    ram.add(facedBox(0.0018, 0.133, 0.031, std(0x0f5132, 0.2, 0.6), { px: ramMat, nx: ramMat }, x, 0, 0.0155))
     ram.add(box(0.0045, 0.126, 0.003, std(0xfacc15, 0.9, 0.3), x, 0, 0.0015))
   }
   parts.ram = ram
@@ -223,7 +238,7 @@ export function buildPc(): PcRig {
   const gpu = new THREE.Group()
   gpu.add(box(0.22, 0.002, 0.11, std(0x064e3b, 0.2, 0.6), 0, 0, 0.055))
   gpu.add(box(0.22, 0.004, 0.11, std(0x111827, 0.6, 0.4), 0, 0.003, 0.055)) // backplate
-  gpu.add(box(0.22, 0.03, 0.11, std(0x1f2937, 0.4, 0.45), 0, -0.016, 0.055)) // shroud
+  gpu.add(facedBox(0.22, 0.03, 0.11, std(0x1b1f24, 0.4, 0.45), { pz: pictured(shroudTexture(), 0.45, 0.3) }, 0, -0.016, 0.055)) // shroud
   for (const x of [-0.05, 0.05]) {
     const gf = fan(0.035, 0.006, 'y')
     gf.group.position.set(x, -0.032, 0.058)
@@ -239,10 +254,14 @@ export function buildPc(): PcRig {
 
   // ---- power supply at the top ----
   const psu = new THREE.Group()
-  psu.add(box(0.15, 0.086, 0.14, std(0x374151, 0.6, 0.4)))
-  const psuLabel = label('ATX 500W', 0.09, 0.024, { bg: '#111827', fg: '#e5e7eb' })
-  psuLabel.position.set(-0.02, 0.01, 0.0705)
-  psu.add(psuLabel)
+  const psuSide = new THREE.MeshStandardMaterial({ map: stickerTexture('POWER SUPPLY 500W', ['AC IN 220-240V~ 50Hz 4A', 'DC +12V 38A  +5V 20A', '+3.3V 20A  -12V 0.3A', 'DO NOT OPEN - HIGH VOLTAGE'], '#b91c1c'), roughness: 0.5 })
+  const psuVent = new THREE.MeshStandardMaterial({ map: honeycombTexture(), metalness: 0.6, roughness: 0.45 })
+  const psuMetal = new THREE.MeshStandardMaterial({ map: brushedMetalTexture('#2a2d33'), metalness: 0.65, roughness: 0.4 })
+  psu.add(facedBox(0.15, 0.086, 0.14, psuMetal, { px: psuVent }))
+  // the spec label, stuck on the side you see
+  const psuLabelPlate = new THREE.Mesh(new THREE.PlaneGeometry(0.096, 0.06), psuSide)
+  psuLabelPlate.position.set(-0.02, 0.004, 0.0702)
+  psu.add(psuLabelPlate)
   const pf = fan(0.05, 0.004, 'y')
   pf.group.position.set(0, -0.0435, 0)
   psu.add(pf.group)
@@ -254,10 +273,9 @@ export function buildPc(): PcRig {
 
   // ---- drives ----
   const hdd = new THREE.Group()
-  hdd.add(box(0.146, 0.026, 0.102, std(0x9ca3af, 0.8, 0.35)))
-  const hddLabel = label('HDD 1TB', 0.08, 0.02, { bg: '#f8fafc', fg: '#334155' })
-  hddLabel.position.set(0, 0, 0.0515)
-  hdd.add(hddLabel)
+  const hddTop = new THREE.MeshStandardMaterial({ map: stickerTexture('HARD DISK DRIVE', ['3.5"  SATA 6Gb/s', '1 TB   7200 RPM', '+5V 0.6A  +12V 0.45A'], '#15803d'), roughness: 0.5 })
+  const hddSide = new THREE.MeshStandardMaterial({ map: brushedMetalTexture('#a7adb5'), metalness: 0.8, roughness: 0.35 })
+  hdd.add(facedBox(0.146, 0.026, 0.102, hddSide, { py: hddTop }))
   hdd.add(box(0.004, 0.008, 0.03, std(0x0f172a), 0.074, 0, -0.02))
   parts.hdd = hdd
   anchors.hdd = { pos: V(-0.137, Y0 + 0.19, -0.02), quat: Q() }
@@ -387,8 +405,14 @@ export function buildPc(): PcRig {
 /** Light a part up (hover, the part a step asks for) - every material in it, remembering the original */
 export function setEmissive(obj: THREE.Object3D, color: number, intensity: number) {
   obj.traverse(o => {
-    const m = (o as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined
-    if (!m || !('emissive' in m) || (o as THREE.Sprite).isSprite) return
+    if ((o as THREE.Sprite).isSprite) return
+    const mm = (o as THREE.Mesh).material as THREE.MeshStandardMaterial | THREE.MeshStandardMaterial[] | undefined
+    for (const m of Array.isArray(mm) ? mm : mm ? [mm] : []) glowOne(m, color, intensity)
+  })
+}
+function glowOne(m: THREE.MeshStandardMaterial, color: number, intensity: number) {
+  {
+    if (!m || !('emissive' in m)) return
     if (m.userData.baseEmissive === undefined) {
       m.userData.baseEmissive = m.emissive.getHex()
       m.userData.baseIntensity = m.emissiveIntensity
@@ -400,7 +424,7 @@ export function setEmissive(obj: THREE.Object3D, color: number, intensity: numbe
       m.emissive.setHex(color)
       m.emissiveIntensity = intensity
     }
-  })
+  }
 }
 
 /**
@@ -412,9 +436,10 @@ export function fadeExcept(roots: THREE.Object3D[], keep: THREE.Object3D | null,
   keep?.traverse(o => kept.add(o))
   for (const root of roots) {
     root.traverse(o => {
-      const m = (o as THREE.Mesh).material as THREE.Material | undefined
-      if (!m || Array.isArray(m) || (o as THREE.Sprite).isSprite) return
+      const mm = (o as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined
+      if (!mm || (o as THREE.Sprite).isSprite) return
       const fade = keep !== null && !kept.has(o)
+      for (const m of Array.isArray(mm) ? mm : [mm]) {
       if (m.userData.baseOpacity === undefined) {
         m.userData.baseOpacity = m.opacity
         m.userData.baseTransparent = m.transparent
@@ -424,6 +449,7 @@ export function fadeExcept(roots: THREE.Object3D[], keep: THREE.Object3D | null,
       m.opacity = fade ? Math.min(opacity, m.userData.baseOpacity) : m.userData.baseOpacity
       m.depthWrite = fade ? false : m.userData.baseDepthWrite
       m.needsUpdate = true
+      }
     })
   }
 }

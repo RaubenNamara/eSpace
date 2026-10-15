@@ -66,7 +66,7 @@ import { useRoute } from 'vue-router'
 import * as THREE from 'three'
 import AppIcon from '@/components/common/AppIcon.vue'
 import { createWorkbench, type Workbench } from '@/components/ictlab/three/workbench'
-import { buildPc, setEmissive, type PcRig, type PcPartKey } from '@/components/ictlab/three/pcModel'
+import { buildPc, setEmissive, fadeExcept, type PcRig, type PcPartKey } from '@/components/ictlab/three/pcModel'
 import { PC_PARTS, PART_DETAILS } from '@/components/ictlab/activities'
 import { labRoleOf } from '@/components/ictlab/types'
 
@@ -175,7 +175,8 @@ function show() {
   copy.quaternion.identity()
   copy.scale.set(1, 1, 1)
   copy.visible = true
-  copy.traverse(o => { o.visible = true })
+  // everything in the part shows, but not the connector name tags
+  copy.traverse(o => { o.visible = !(o as THREE.Sprite).isSprite })
   const box = new THREE.Box3().setFromObject(copy)
   const size = box.getSize(new THREE.Vector3())
   const largest = Math.max(size.x, size.y, size.z)
@@ -198,24 +199,7 @@ function show() {
 // "Where it goes": the computer with everything faded but this part, which glows
 function fadeAllBut(target: THREE.Object3D | null) {
   if (!rig) return
-  const keep = new Set<THREE.Object3D>()
-  target?.traverse(o => keep.add(o))
-  const groups: THREE.Object3D[] = [rig.shell, ...Object.values(rig.parts), rig.cables.sata, rig.cables.atx24, rig.cables.cpu_fan, rig.cables.fpanel, rig.cables.mainsIn]
-  for (const g of groups) {
-    g.traverse(o => {
-      const m = (o as THREE.Mesh).material as THREE.Material | undefined
-      if (!m || (o as THREE.Sprite).isSprite) return
-      const fade = target !== null && !keep.has(o)
-      if (m.userData.baseOpacity === undefined) {
-        m.userData.baseOpacity = m.opacity
-        m.userData.baseTransparent = m.transparent
-      }
-      m.transparent = fade ? true : m.userData.baseTransparent
-      m.opacity = fade ? 0.14 : m.userData.baseOpacity
-      m.depthWrite = !fade
-      m.needsUpdate = true
-    })
-  }
+  fadeExcept([rig.shell, ...Object.values(rig.parts), rig.cables.sata, rig.cables.atx24, rig.cables.cpu_fan, rig.cables.fpanel, rig.cables.mainsIn], target, 0.14)
 }
 
 watch(key, () => {

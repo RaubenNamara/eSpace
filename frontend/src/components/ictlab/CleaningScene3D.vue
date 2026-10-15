@@ -9,14 +9,14 @@
       <div ref="host" class="absolute inset-0" :class="isBlower(tool) ? 'cursor-crosshair' : tool === 'hand' ? 'cursor-pointer' : 'cursor-grab'"></div>
 
       <div class="absolute top-2 left-2 flex flex-wrap gap-1.5 text-[11px] font-semibold pointer-events-none">
-        <span class="px-2 py-0.5 rounded-full shadow-sm" :class="powered ? 'bg-emerald-600 text-white' : pluggedIn ? 'bg-rose-600 text-white' : 'bg-white/90 text-gray-700'">
-          {{ powered ? 'Switched on' : pluggedIn ? 'Mains: plugged in' : 'Mains: unplugged' }}
+        <span class="px-2 py-0.5 rounded-full shadow-sm" :class="powered ? 'bg-emerald-600 text-white' : pluggedIn && socketOn ? 'bg-rose-600 text-white' : pluggedIn ? 'bg-amber-500 text-white' : 'bg-white/90 text-gray-700'">
+          {{ powered ? 'Switched on' : !pluggedIn ? 'Computer unplugged' : socketOn ? 'Plugged in · socket on' : 'Plugged in · socket off' }}
         </span>
         <span v-if="has('outside')" class="px-2 py-0.5 rounded-full shadow-sm bg-sky-600 text-white">Fresh air</span>
         <span v-if="has('mask')" class="px-2 py-0.5 rounded-full shadow-sm bg-emerald-600 text-white">Mask on</span>
         <span v-if="tool" class="px-2 py-0.5 rounded-full shadow-sm bg-indigo-600 text-white">{{ tool === 'can' ? 'Air can in hand' : tool === 'electric' ? 'Electric blower in hand' : 'Hand ready to hold a fan' }}</span>
-        <span v-if="blowerKind === 'electric'" class="px-2 py-0.5 rounded-full shadow-sm" :class="elecOn ? 'bg-emerald-600 text-white' : elecPlugged ? 'bg-amber-500 text-white' : 'bg-white/90 text-gray-700'">
-          Blower: {{ elecOn ? 'running' : elecPlugged ? 'plugged in, off' : 'not plugged in' }}
+        <span v-if="blowerKind === 'electric'" class="px-2 py-0.5 rounded-full shadow-sm" :class="elecOn ? 'bg-emerald-600 text-white' : elecPlugged && elecSocketOn ? 'bg-amber-500 text-white' : 'bg-white/90 text-gray-700'">
+          Blower: {{ elecOn ? 'running' : !elecPlugged ? 'not plugged in' : elecSocketOn ? 'plugged in, off' : 'plugged in, socket off' }}
         </span>
       </div>
 
@@ -48,7 +48,7 @@
       </div>
     </div>
 
-    <div class="mt-3 grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-9 gap-1.5">
+    <div class="mt-3 grid grid-cols-4 sm:grid-cols-6 gap-1.5">
       <button
         v-for="t in tools"
         :key="t.key"
@@ -68,6 +68,7 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick, shallowRef } from 'vue'
 import * as THREE from 'three'
 import { createWorkbench, type Workbench } from './three/workbench'
+import { buildPowerKit, attachPlugDragging, type PowerKit } from './three/power'
 import { buildPc, setEmissive, type PcRig, type PcPartKey } from './three/pcModel'
 import { DUSTY, type IctStep } from './activities'
 
@@ -86,6 +87,8 @@ let rig: PcRig | null = null
 
 const has = (a: string) => props.done.includes(a)
 const pluggedIn = computed(() => !has('unplug') || has('plug'))
+// The wall socket's switch for the computer: on at the start, off before unplugging, on after plugging in
+const socketOn = computed(() => !has('socket-off') || has('socket-on'))
 const powered = computed(() => has('power'))
 const panelOff = computed(() => has('open') && !has('close'))
 
@@ -169,8 +172,8 @@ onMounted(async () => {
   rig = buildPc()
   w.scene.add(rig.shell)
   for (const k of Object.keys(rig.parts) as PcPartKey[]) w.scene.add(rig.parts[k])
-  for (const c of [rig.cables.sata, rig.cables.atx24, rig.cables.cpu_fan, rig.cables.fpanel, rig.cables.mainsIn, rig.cables.mainsOut]) w.scene.add(c)
-  w.scene.add(rig.sidePanel, rig.mainsPlug)
+  for (const c of [rig.cables.sata, rig.cables.atx24, rig.cables.cpu_fan, rig.cables.fpanel]) w.scene.add(c)
+  w.scene.add(rig.sidePanel)
   rig.cables.cpu_fan.visible = true
   rig.cables.sata.visible = true
   rig.cables.atx24.visible = true
@@ -199,6 +202,17 @@ onMounted(async () => {
 
   buildElectricBlower()
 
+  // The wall socket: the computer's plug in the left outlet, the blower's plug lying ready for the right
+  power = buildPowerKit(w, {
+    socketX: 0.46,
+    plugs: [
+      { deviceEnd: () => new THREE.Vector3(0.214, 0.412, 0.03), rest: new THREE.Vector3(0.38, 0.013, -0.27), startIn: 0 },
+      { deviceEnd: () => elecBlower.localToWorld(new THREE.Vector3(0, 0.05, -0.08)), rest: new THREE.Vector3(0.58, 0.013, -0.24), color: 0xf4f4f0 }
+    ],
+    switchesOn: [true, false]
+  })
+  plugDrag = attachPlugDragging(w, power, onPlugDrop, i => (i === 0 ? onPlugDrop(0, pluggedIn.value ? null : 0) : onPlugDrop(1, elecPlugged.value ? null : 1)))
+
   // A finger for each fan, shown while it is held
   for (const k of ['cooler', 'gpu', 'casefan']) {
     const f = new THREE.Mesh(new THREE.CapsuleGeometry(0.008, 0.05, 6, 12), new THREE.MeshStandardMaterial({ color: 0x8d5524, roughness: 0.7 }))
@@ -225,7 +239,7 @@ onMounted(async () => {
   c.addEventListener('pointermove', onMove)
   c.addEventListener('pointerup', onUp)
   c.addEventListener('pointerleave', onUp)
-  sync()
+  sync(false)
 })
 
 onBeforeUnmount(() => {
@@ -236,17 +250,20 @@ onBeforeUnmount(() => {
 
 // ---------------------------------------------------------------- state from accepted actions
 const OPEN_POSE = { pos: new THREE.Vector3(-0.42, 0.234, 0.2), quat: new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0.95, 0.05)) }
-function sync() {
+function sync(animate = true) {
   const r = rig
   const w = wb.value
   if (!r || !w) return
   const pose = panelOff.value ? OPEN_POSE : r.sidePanelClosed
   w.moveTo(r.sidePanel, pose.pos, pose.quat, 800, panelOff.value ? 0.05 : 0.08)
-  r.cables.mainsIn.visible = pluggedIn.value
-  r.cables.mainsOut.visible = !pluggedIn.value
-  r.mainsPlug.visible = !pluggedIn.value
-  r.powerLed.emissive.setHex(powered.value || pluggedIn.value && !has('unplug') ? 0x22c55e : 0)
-  r.powerLed.emissiveIntensity = powered.value || !has('unplug') ? 2 : 0
+  if (power) {
+    if (power.outlets[0].on !== socketOn.value) power.setSwitch(0, socketOn.value, animate)
+    const at = pluggedIn.value ? 0 : null
+    if (power.plugs[0].inOutlet !== at && !plugDrag?.busy()) power.setPlug(0, at, animate)
+  }
+  const live = powered.value || !has('socket-off')
+  r.powerLed.emissive.setHex(live ? 0x22c55e : 0)
+  r.powerLed.emissiveIntensity = live ? 2 : 0
   for (const [k, f] of fingers) f.visible = has('hold:' + k) && !has('clean:' + k)
   for (const d of dust.values()) {
     if (has('clean:' + d.key)) d.level = 0
@@ -255,7 +272,7 @@ function sync() {
   updateDustLeft()
   if (has('blower') && !tool.value && !has('close')) tool.value = blowerKind.value || 'can'
 }
-watch(() => props.done.join('|'), sync)
+watch(() => props.done.join('|'), () => sync())
 
 // ---------------------------------------------------------------- tools
 type Tool = 'can' | 'electric' | 'hand' | null
@@ -265,7 +282,10 @@ const isBlower = (t: Tool) => t === 'can' || t === 'electric'
 // the computer itself stays unplugged)
 const blowerKind = ref<'can' | 'electric' | null>(null)
 const elecPlugged = ref(false)
+const elecSocketOn = ref(false)
 const elecOn = ref(false)
+let power: PowerKit | null = null
+let plugDrag: { busy: () => boolean } | null = null
 const note = ref('')
 let noteTimer: ReturnType<typeof setTimeout> | null = null
 const tell = (text: string) => {
@@ -274,7 +294,8 @@ const tell = (text: string) => {
   noteTimer = setTimeout(() => { note.value = '' }, 3500)
 }
 const tools = computed(() => [
-  { key: 'mains', label: 'Mains cable', icon: 'M8 4v5M16 4v5M6 9h12v3a6 6 0 01-12 0zM12 18v3' },
+  { key: 'wall', label: 'Wall switch', icon: 'M7 4h10v16H7zM10 8h4v4h-4z' },
+  { key: 'mains', label: 'Mains plug', icon: 'M8 4v5M16 4v5M6 9h12v3a6 6 0 01-12 0zM12 18v3' },
   { key: 'outside', label: 'Fresh air', icon: 'M3 8h11a3 3 0 10-3-3M3 12h15a3 3 0 11-3 3M3 16h7' },
   ...(props.level === 'advanced' ? [{ key: 'mask', label: 'Dust mask', icon: 'M4 9c3-2 13-2 16 0v3c0 4-4 6-8 6s-8-2-8-6zM4 10l-2-1M20 10l2-1' }] : []),
   { key: 'panel', label: 'Side panel', icon: 'M5 3h14v18H5zM9 7h6M9 10h6M9 13h6' },
@@ -295,10 +316,11 @@ const glowTool = computed(() => {
   if (a.startsWith('hold:')) return tool.value === 'hand' ? null : 'hand'
   if (a.startsWith('clean:')) {
     if (blowerKind.value === 'electric' && !elecPlugged.value) return 'bplug'
+    if (blowerKind.value === 'electric' && !elecSocketOn.value) return null
     if (blowerKind.value === 'electric' && !elecOn.value) return 'bswitch'
     return isBlower(tool.value) ? null : blowerKind.value || 'electric'
   }
-  return ({ unplug: 'mains', plug: 'mains', outside: 'outside', mask: 'mask', open: 'panel', close: 'panel', blower: 'electric', power: 'power' } as Record<string, string>)[a] || null
+  return ({ 'socket-off': 'wall', 'socket-on': 'wall', unplug: 'mains', plug: 'mains', outside: 'outside', mask: 'mask', open: 'panel', close: 'panel', blower: 'electric', power: 'power' } as Record<string, string>)[a] || null
 })
 
 // Doing it right with each kind of blower
@@ -324,7 +346,8 @@ function pickBlower(kind: 'can' | 'electric') {
   tool.value = kind
 }
 function useTool(key: string) {
-  if (key === 'mains') emit('act', has('unplug') ? 'plug' : 'unplug')
+  if (key === 'wall') flipSwitch(0)
+  else if (key === 'mains') onPlugDrop(0, pluggedIn.value ? null : 0)
   else if (key === 'outside') emit('act', 'outside')
   else if (key === 'mask') emit('act', 'mask')
   else if (key === 'panel') emit('act', has('open') ? 'close' : 'open')
@@ -336,22 +359,65 @@ function useTool(key: string) {
       else {
         pickBlower(key)
         emit('act', 'blower')
-        if (key === 'electric') tell('Now plug the blower into the wall socket and switch it on.')
+        if (key === 'electric') tell('Now plug the blower into the wall socket (drag its white plug) and switch on.')
       }
     } else if (tool.value === key) tool.value = null
     else pickBlower(key)
   } else if (key === 'bplug') {
-    elecPlugged.value = !elecPlugged.value
-    if (!elecPlugged.value) elecOn.value = false
-    tell(elecPlugged.value ? 'The blower is plugged into the wall socket - the computer stays unplugged.' : 'Blower unplugged.')
+    onPlugDrop(1, elecPlugged.value ? null : 1)
   } else if (key === 'bswitch') {
     if (!elecPlugged.value) tell('Plug the blower in first.')
+    else if (!elecSocketOn.value) tell("No power - switch on at the wall socket, above the blower's plug.")
     else {
       elecOn.value = !elecOn.value
       tell(elecOn.value ? 'The blower is running.' : 'Blower switched off.')
     }
   }
 }
+// ---------------------------------------------------------------- the wall socket
+// Left outlet: the computer - its switch and plug follow the steps (a move the step does not want
+// springs back and the runner says why). Right outlet: the blower's, free to use.
+function flipSwitch(i: number) {
+  if (!power) return
+  if (i === 1) {
+    elecSocketOn.value = !elecSocketOn.value
+    power.setSwitch(1, elecSocketOn.value)
+    if (!elecSocketOn.value) elecOn.value = false
+    if (elecSocketOn.value && elecPlugged.value) tell('Power to the blower - now switch the blower itself on.')
+    return
+  }
+  const want = !socketOn.value
+  const action = want ? 'socket-on' : 'socket-off'
+  if (props.step?.action !== action) {
+    power.setSwitch(0, want)
+    setTimeout(() => power?.setSwitch(0, socketOn.value), 450)
+  }
+  emit('act', action)
+}
+function onPlugDrop(i: number, outlet: number | null) {
+  if (!power) return
+  if (i === 1) {
+    if (outlet === 0) {
+      power.setPlug(1, elecPlugged.value ? 1 : null)
+      tell("That outlet is the computer's - use the other one.")
+      return
+    }
+    elecPlugged.value = outlet === 1
+    power.setPlug(1, outlet)
+    if (!elecPlugged.value) elecOn.value = false
+    if (elecPlugged.value) tell(elecSocketOn.value ? 'The blower is plugged in - switch it on.' : 'Plugged in - now switch on at the wall socket, above the plug.')
+    return
+  }
+  const inSocket = outlet === 0
+  if (inSocket === pluggedIn.value) {
+    power.setPlug(0, pluggedIn.value ? 0 : null)
+    return
+  }
+  const action = inSocket ? 'plug' : 'unplug'
+  power.setPlug(0, props.step?.action === action ? outlet : pluggedIn.value ? 0 : null)
+  emit('act', action)
+}
+
 function answer(ok: boolean, why?: string) {
   const kind = asking.value
   asking.value = null
@@ -359,7 +425,7 @@ function answer(ok: boolean, why?: string) {
   if (ok) {
     pickBlower(kind)
     emit('act', 'blower')
-    if (kind === 'electric') tell('Now plug the blower into the wall socket and switch it on.')
+    if (kind === 'electric') tell('Now plug the blower into the wall socket (drag its white plug) and switch on.')
   } else emit('mistake', why || 'Not the safe way - try again.')
 }
 
@@ -375,10 +441,17 @@ const zones = () => [...dust.values()].filter(d => d.level > 0).map(d => d.zone)
 const dustOf = (zone: THREE.Object3D) => [...dust.values()].find(d => d.zone === zone) || null
 const fanParts = () => (['cooler', 'gpu', 'casefan'] as PcPartKey[]).filter(k => dust.has(k)).map(k => rig!.parts[k])
 
+let downAt: { x: number; y: number; rocker: number } | null = null
+const rockers = () => power?.outlets.map(o => o.rocker) ?? []
 function onDown(ev: PointerEvent) {
   const w = wb.value
   if (!w || !rig) return
   pointer = ev
+  const rk = w.pick(ev, rockers())
+  if (rk) {
+    downAt = { x: ev.clientX, y: ev.clientY, rocker: rockers().indexOf(rk) }
+    return
+  }
   if (tool.value === 'hand') {
     const hit = w.pick(ev, fanParts())
     if (hit) {
@@ -401,8 +474,8 @@ function onDown(ev: PointerEvent) {
     emit('mistake', 'Take the side panel off first - you cannot reach the dust through the glass.')
     return
   }
-  if (tool.value === 'electric' && !(elecPlugged.value && elecOn.value)) {
-    tell(elecPlugged.value ? 'The blower is off - switch it on first.' : 'The blower is not plugged in - plug it into the wall socket and switch it on.')
+  if (tool.value === 'electric' && !(elecPlugged.value && elecSocketOn.value && elecOn.value)) {
+    tell(!elecPlugged.value ? 'The blower is not plugged in - drag its plug into the wall socket.' : !elecSocketOn.value ? "No power - switch on at the wall socket, above the blower's plug." : 'The blower is off - switch it on first.')
     w.controls.enabled = true
     return
   }
@@ -417,6 +490,16 @@ function onMove(ev: PointerEvent) {
   const r = w.canvas.getBoundingClientRect()
   hoverAt.value = { x: ev.clientX - r.left, y: ev.clientY - r.top }
   if (blowing) return
+  const rk = w.pick(ev, rockers())
+  if (rk) {
+    hoverName.value = rockers().indexOf(rk) === 0 ? 'Wall socket switch (computer)' : 'Wall socket switch (blower)'
+    return
+  }
+  const pl = power ? w.pick(ev, power.plugs.map(p => p.group)) : null
+  if (pl) {
+    hoverName.value = pl === power!.plugs[0].group ? 'Computer plug (drag it)' : 'Blower plug (drag it)'
+    return
+  }
   const hit = tool.value === 'hand' ? w.pick(ev, fanParts()) : w.pick(ev, zones())
   if (!hit) {
     hoverName.value = ''
@@ -424,13 +507,16 @@ function onMove(ev: PointerEvent) {
   }
   hoverName.value = tool.value === 'hand' ? `Hold the ${({ cooler: 'CPU cooler', gpu: 'graphics card', casefan: 'case fan' } as Record<string, string>)[hit.userData.part]} fan` : `Dusty ${dustOf(hit)?.name}`
 }
-function onUp() {
+function onUp(ev?: PointerEvent) {
   if (wb.value) wb.value.controls.enabled = true
   blowing = null
+  const d = downAt
+  downAt = null
+  if (d && ev?.type === 'pointerup' && Math.hypot(ev.clientX - d.x, ev.clientY - d.y) < 6) flipSwitch(d.rocker)
 }
 
 // ---------------------------------------------------------------- every frame
-const spinFans = () => powered.value || (!has('unplug'))
+const spinFans = () => powered.value || !has('socket-off')
 function frame(dt: number) {
   const w = wb.value
   const r = rig
@@ -498,30 +584,36 @@ function frame(dt: number) {
       elecFan.rotation.x += dt * 40
       elecBody.position.x = Math.sin(performance.now() / 18) * 0.0004
     }
-    elecLed.emissive.setHex(elecOn.value ? 0x22c55e : elecPlugged.value ? 0xf59e0b : 0)
-    elecLed.emissiveIntensity = elecPlugged.value ? 2 : 0
-    updateElecCable()
+    const live = elecPlugged.value && elecSocketOn.value
+    elecLed.emissive.setHex(elecOn.value ? 0x22c55e : live ? 0xf59e0b : 0)
+    elecLed.emissiveIntensity = live ? 2 : 0
   }
+  power?.update()
   updatePuffs(dt)
   // what the step wants, glowing
   const want = props.guide ? props.step?.action || '' : ''
   for (const k of ['cooler', 'gpu', 'casefan', 'psu'] as PcPartKey[]) setEmissive(r.parts[k], 0, 0)
+  if (power) {
+    // the switch or plug the step wants; the blower's switch when it is plugged in without power
+    const glow = (o: THREE.Object3D, on: boolean) => setEmissive(o, on ? 0xfacc15 : 0, on ? 0.3 + 0.3 * Math.sin(performance.now() / 220) : 0)
+    glow(power.outlets[0].rocker, want === 'socket-off' || want === 'socket-on')
+    glow(power.plugs[0].group, want === 'unplug' || want === 'plug')
+    const needBlower = props.guide && want.startsWith('clean:') && tool.value === 'electric'
+    glow(power.plugs[1].group, needBlower && !elecPlugged.value)
+    glow(power.outlets[1].rocker, needBlower && elecPlugged.value && !elecSocketOn.value)
+  }
   const m = /^(hold|clean):(\w+)$/.exec(want)
   if (m && m[2] !== 'floor' && m[2] !== 'ram') setEmissive(r.parts[m[2] as PcPartKey], 0xfacc15, 0.2 + 0.2 * Math.sin(performance.now() / 220))
 }
 
 // ---------------------------------------------------------------- the electric blower
 // A hand-held electric blower: a motor body with a handle, a long nozzle, an intake fan at the back,
-// a cable to a power strip on the desk. Its nozzle points along +z, so lookAt aims it.
+// its cable to a plug for the wall socket. Its nozzle points along +z, so lookAt aims it.
 let elecBlower: THREE.Group
 let elecBody: THREE.Group
 let elecFan: THREE.Group
 let elecLed: THREE.MeshStandardMaterial
-let elecCable: THREE.Mesh
-let strip: THREE.Group
 const ELEC_REST = { pos: new THREE.Vector3(0.02, 0.058, 0.2), quat: new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -1.35, 0)) }
-const STRIP_SOCKET = new THREE.Vector3(0.2, 0.022, 0.36)
-const LOOSE_PLUG = new THREE.Vector3(0.14, 0.01, 0.32)
 function buildElectricBlower() {
   const w = wb.value!
   elecBlower = new THREE.Group()
@@ -610,42 +702,6 @@ function buildElectricBlower() {
   elecBlower.position.copy(ELEC_REST.pos)
   elecBlower.quaternion.copy(ELEC_REST.quat)
   w.scene.add(elecBlower)
-
-  // a power strip on the desk - the wall socket for the blower
-  strip = new THREE.Group()
-  strip.add(new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.03, 0.06), new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.5 })))
-  for (let i = 0; i < 4; i++) {
-    const sock = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.002, 0.03), new THREE.MeshStandardMaterial({ color: 0x334155 }))
-    sock.position.set(-0.07 + i * 0.045, 0.016, 0)
-    strip.add(sock)
-  }
-  const sw = new THREE.Mesh(new THREE.BoxGeometry(0.014, 0.006, 0.02), new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0x7f1d1d }))
-  sw.position.set(0.09, 0.017, 0)
-  strip.add(sw)
-  strip.position.set(0.27, 0.015, 0.36)
-  strip.traverse(o => { o.castShadow = true })
-  w.scene.add(strip)
-
-  elecCable = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.6 }))
-  elecCable.castShadow = true
-  w.scene.add(elecCable)
-}
-
-// The blower's cable, from its tail to the power strip (or to its plug lying on the desk)
-const lastTail = new THREE.Vector3(9, 9, 9)
-let lastPlugged = false
-function updateElecCable() {
-  // the cable leaves the back of the handle
-  const tail = elecBlower.localToWorld(new THREE.Vector3(0, 0.05, -0.08))
-  if (tail.distanceTo(lastTail) < 0.001 && lastPlugged === elecPlugged.value) return
-  lastTail.copy(tail)
-  lastPlugged = elecPlugged.value
-  const end = elecPlugged.value ? STRIP_SOCKET : LOOSE_PLUG
-  const mid = tail.clone().lerp(end, 0.5)
-  mid.y = 0.004
-  const curve = new THREE.CatmullRomCurve3([tail, tail.clone().add(new THREE.Vector3(0, -0.04, 0)), mid, end.clone().add(new THREE.Vector3(-0.03, 0, 0)), end])
-  elecCable.geometry.dispose()
-  elecCable.geometry = new THREE.TubeGeometry(curve, 40, 0.003, 8, false)
 }
 
 // ---------------------------------------------------------------- dust puffs

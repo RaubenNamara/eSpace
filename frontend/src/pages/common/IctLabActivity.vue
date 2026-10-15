@@ -108,6 +108,7 @@
         <Rj45Scene v-else-if="activity.scene === 'rj45'" :key="`${level}-${run}`" :step="sceneStep" :guide="level === 'simple' || assist" :done="done" :level="level" @act="onAct" @mistake="onMistake" />
         <Pc3DScene v-else-if="activity.scene === 'assembly'" :key="`a-${level}-${run}`" mode="assembly" :step="sceneStep" :guide="level === 'simple' || assist" :done="sceneDone" :level="level" @act="onAct" @mistake="onMistake" />
         <CleaningScene3D v-else-if="activity.scene === 'cleaning'" :key="`c-${level}-${run}`" :step="sceneStep" :guide="level === 'simple' || assist" :done="done" :level="level" @act="onAct" @mistake="onMistake" />
+        <TroubleshootScene3D v-else-if="activity.scene === 'troubleshoot'" :key="`t-${level}-${run}`" :step="sceneStep" :guide="level === 'simple' || assist" :done="done" :level="level" @act="onAct" @mistake="onMistake" />
       </section>
     </div>
 
@@ -156,6 +157,7 @@ import EmptyState from '@/components/ui/EmptyState.vue'
 import Rj45Scene from '@/components/ictlab/Rj45Scene.vue'
 import Pc3DScene from '@/components/ictlab/Pc3DScene.vue'
 import CleaningScene3D from '@/components/ictlab/CleaningScene3D.vue'
+import TroubleshootScene3D from '@/components/ictlab/TroubleshootScene3D.vue'
 import StepLinkModal from '@/components/ictlab/StepLinkModal.vue'
 import { LEVELS, activityByKey, type IctLevel, type IctStep } from '@/components/ictlab/activities'
 import { labRoleOf, type IctLink } from '@/components/ictlab/types'
@@ -222,7 +224,8 @@ const onAct = (action: string, wrongMessage?: string) => {
   if (finished.value || !step) return
   if (action === step.action) {
     done.value = [...done.value, action]
-    say('good', `Done - ${step.title.charAt(0).toLowerCase()}${step.title.slice(1)}.`)
+    const t = `${step.title.charAt(0).toLowerCase()}${step.title.slice(1)}`
+    say('good', `Done - ${t}${/[.?!]$/.test(t) ? '' : '.'}`)
     stepIndex.value++
     hintShown.value = false
     if (stepIndex.value >= steps.value.length) finish()
