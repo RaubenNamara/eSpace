@@ -86,7 +86,7 @@
 
       <!-- Active days -->
       <section class="dash-box">
-        <h2 class="dash-bar">Active days <span class="ml-auto text-xs font-semibold text-indigo-100">{{ data.active_days.length }} of {{ data.range.days }}</span></h2>
+        <h2 class="dash-bar">Active days <span class="ml-auto text-xs font-semibold text-indigo-700 dark:text-indigo-300">{{ data.active_days.length }} of {{ data.range.days }}</span></h2>
         <div class="p-3">
           <div class="flex flex-wrap gap-1">
             <span

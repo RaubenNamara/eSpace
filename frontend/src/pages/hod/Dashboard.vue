@@ -102,7 +102,7 @@
 
         <!-- Each teacher's week -->
         <section class="dash-box">
-          <h2 class="dash-bar">Teachers <span class="text-xs font-semibold text-indigo-100">{{ activeCount }} of {{ teachers.length }} in this week</span><RouterLink to="/hod/teachers" class="dash-bar-link">All</RouterLink></h2>
+          <h2 class="dash-bar">Teachers <span class="text-xs font-semibold text-indigo-700 dark:text-indigo-300">{{ activeCount }} of {{ teachers.length }} in this week</span><RouterLink to="/hod/teachers" class="dash-bar-link">All</RouterLink></h2>
           <div v-if="!loaded" class="space-y-2 p-3"><div v-for="i in 3" :key="i" class="h-12 rounded-xl bg-gray-100 dark:bg-gray-700/50 animate-pulse"></div></div>
           <p v-else-if="!teachers.length" class="p-4 text-[0.95rem] text-gray-500 dark:text-gray-400">No teachers in the department yet.</p>
           <TransitionGroup v-else tag="ul" name="dash-pop" class="p-3 space-y-2">

@@ -6,7 +6,7 @@
       <div class="w-full md:w-80 lg:w-96 flex-shrink-0 md:border-r border-gray-200 dark:border-white/5 bg-white dark:bg-[rgb(17_24_39)] flex flex-col" :class="activeConversation ? 'hidden md:flex' : 'flex'">
         <div class="chat-bar px-4 py-3.5 bg-indigo-800 flex items-center justify-between">
           <h1 class="text-xl font-bold text-gray-900 dark:text-white">Chats</h1>
-          <button @click="showNewChat = true" class="chat-new p-2 rounded-full bg-white hover:bg-indigo-50 text-indigo-800 transition-shadow dark:shadow-[0_0_12px_2px_rgba(21,135,74,0.5)]" title="New chat">
+          <button @click="showNewChat = true" class="chat-new p-2 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white transition-shadow dark:shadow-[0_0_12px_2px_rgba(21,135,74,0.5)]" title="New chat">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
             </svg>

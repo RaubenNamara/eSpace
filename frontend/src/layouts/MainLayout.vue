@@ -12,13 +12,13 @@
     >
 
       <!-- The brand bar: the logo in white on dark green -->
-      <div class="relative px-4 py-3.5 bg-indigo-800 flex-shrink-0">
+      <div class="relative px-4 py-3.5 border-b app-frame-divider flex-shrink-0">
         <!-- The eSpace word logo; just the "e" mark when the sidebar is folded to icons -->
         <div class="flex items-center gap-3" :class="{ 'justify-center': isIconOnly }">
-          <img v-if="isIconOnly" src="/favicon.svg" alt="eSpace" class="w-9 h-9 rounded-xl ring-2 ring-white/30">
+          <img v-if="isIconOnly" src="/favicon.svg" alt="eSpace" class="w-9 h-9 rounded-xl">
           <div v-else class="min-w-0">
-            <h1 class="leading-none"><Wordmark size="sm" light /></h1>
-            <p class="text-[10.5px] text-indigo-100/90 capitalize font-semibold tracking-wide leading-tight mt-1">{{ userRole }} Console</p>
+            <h1 class="leading-none"><Wordmark size="sm" /></h1>
+            <p class="text-[10.5px] text-gray-500 dark:text-white/40 capitalize font-semibold tracking-wide leading-tight mt-1">{{ userRole }} Console</p>
           </div>
         </div>
       </div>
@@ -74,10 +74,10 @@
                   :title="isIconOnly ? row.item.label : undefined"
                   :style="{ '--i': row.i }"
                   class="nav-item flex items-center gap-2.5 pr-2.5 py-1.5 rounded-xl transition-all duration-150 text-sm font-medium group"
-                  :class="[row.child && !isIconOnly ? 'pl-7' : 'pl-3.5', isActive(row.item.path) ? 'bg-indigo-600 text-white font-semibold shadow-sm shadow-indigo-900/20' : 'text-gray-800 dark:text-white/60 hover:bg-indigo-50 dark:hover:bg-white/[0.07] hover:text-indigo-800 dark:hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
+                  :class="[row.child && !isIconOnly ? 'pl-7' : 'pl-3.5', isActive(row.item.path) ? 'bg-indigo-50 text-indigo-900 font-semibold dark:bg-white/10 dark:text-white' : 'text-gray-800 dark:text-white/60 hover:bg-indigo-50 dark:hover:bg-white/[0.07] hover:text-indigo-800 dark:hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
                 >
                   <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-all duration-150"
-                    :class="isActive(row.item.path) ? 'bg-white/20 text-white' : 'text-indigo-700 dark:text-indigo-300/80 group-hover:text-indigo-800 dark:group-hover:text-white/80'"
+                    :class="isActive(row.item.path) ? 'bg-indigo-600 text-white shadow-sm' : 'text-indigo-700 dark:text-indigo-300/80 group-hover:text-indigo-800 dark:group-hover:text-white/80'"
                   >
                     <component :is="iconMap[row.item.icon]" class="w-4 h-4" />
                   </div>

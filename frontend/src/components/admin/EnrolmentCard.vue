@@ -2,7 +2,7 @@
   <!-- Where the learners are: enrolments by department, by class or by year, as a short list of
        bars - one card in place of three charts -->
   <section class="dash-box flex flex-col">
-    <h2 class="dash-bar">Enrolment <span v-if="total" class="text-xs font-semibold text-indigo-100 tabular-nums">{{ total.toLocaleString() }}</span><button type="button" class="dash-bar-link" @click="emit('open')">See who</button></h2>
+    <h2 class="dash-bar">Enrolment <span v-if="total" class="text-xs font-semibold text-indigo-700 dark:text-indigo-300 tabular-nums">{{ total.toLocaleString() }}</span><button type="button" class="dash-bar-link" @click="emit('open')">See who</button></h2>
     <div class="px-3 pt-3">
       <div class="inline-flex p-0.5 rounded-lg bg-gray-100 dark:bg-gray-900/50 text-xs font-semibold">
         <button

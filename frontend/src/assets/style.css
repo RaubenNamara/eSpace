@@ -431,10 +431,13 @@ html.dark .dash-box {
   border-color: rgba(255, 255, 255, 0.06);
 }
 .dash-bar {
-  @apply flex items-center gap-2 px-4 py-2.5 bg-indigo-800 text-white text-[0.95rem] font-bold tracking-tight;
+  @apply flex items-center gap-2 px-4 py-2.5 bg-indigo-50/80 text-indigo-900 border-b border-indigo-100 text-[0.95rem] font-bold tracking-tight;
+}
+html.dark .dash-bar {
+  @apply bg-white/[0.04] text-white border-white/10;
 }
 .dash-bar-link {
-  @apply ml-auto text-xs font-semibold text-indigo-100 hover:text-white hover:underline;
+  @apply ml-auto text-xs font-semibold text-indigo-700 hover:text-indigo-900 hover:underline dark:text-indigo-300 dark:hover:text-indigo-200;
 }
 .dash-chip {
   @apply flex items-center gap-2 rounded-xl px-2 py-1.5 min-w-0 bg-white/70 ring-1 ring-black/5 hover:ring-indigo-300 hover:bg-indigo-50/60 dark:bg-gray-900/40 dark:ring-gray-700 dark:hover:ring-indigo-700 transition;
@@ -456,9 +459,13 @@ html.dark .dash-box {
   .dash-pop-enter-active, .dash-pop-leave-active { transition: none; }
 }
 
-/* Chat: the list's and the conversation's dark-green title bars - white words and icons on them */
-.chat-bar { color: #fff; }
-.chat-bar h1, .chat-bar h2 { color: #fff !important; }
-.chat-bar p { color: rgb(208 245 225 / 0.9) !important; }
-.chat-bar > button:not(.chat-new), .chat-bar [ref] > button, .chat-bar button:not(.chat-new) svg { color: #fff !important; }
-.chat-bar button:not(.chat-new):hover { background: rgb(255 255 255 / 0.12) !important; }
+/* Chat: the list's and the conversation's title bars - a soft light-green band, dark words */
+.chat-bar { background: rgb(239 251 243 / 0.85) !important; border-bottom: 1px solid rgb(215 245 225); color: rgb(15 71 43); }
+.dark .chat-bar { background: rgb(255 255 255 / 0.04) !important; border-bottom-color: rgb(255 255 255 / 0.08); color: #fff; }
+.chat-bar h1, .chat-bar h2 { color: rgb(15 71 43) !important; }
+.dark .chat-bar h1, .dark .chat-bar h2 { color: #fff !important; }
+.chat-bar p { color: rgb(18 108 61) !important; }
+.dark .chat-bar p { color: rgb(125 216 163) !important; }
+.chat-bar button:not(.chat-new) svg { color: rgb(18 108 61) !important; }
+.dark .chat-bar button:not(.chat-new) svg { color: rgb(209 213 219) !important; }
+.chat-bar button:not(.chat-new):hover { background: rgb(21 135 74 / 0.08) !important; }
