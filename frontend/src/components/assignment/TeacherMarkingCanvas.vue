@@ -46,7 +46,6 @@
         />
       </div>
       <template v-if="part.key === 'typed' && typedAnswerLayerInfo">
-        <div v-if="typedSaveStatus" class="teacher-marking-canvas__status">{{ typedSaveStatus }}</div>
         <div class="teacher-marking-canvas__workspace teacher-marking-canvas__workspace--typed">
           <AnnotationCanvas
             :ref="(el: any) => { typedRef = el }"
@@ -63,7 +62,6 @@
         </div>
       </template>
       <template v-else-if="part.file && part.key === selectedKey && selectedFile">
-        <div v-if="evidenceSaveStatus" class="teacher-marking-canvas__status">{{ evidenceSaveStatus }}</div>
         <div class="teacher-marking-canvas__workspace">
           <AnnotationCanvas
             v-if="selectedFile.fileType === 'image'"
@@ -111,6 +109,7 @@
 </template>
 
 <script setup lang="ts">
+import { useToastStore } from '@/stores/toast'
 import AppIcon from '@/components/common/AppIcon.vue'
 import { ref, computed, watch } from 'vue'
 import axios from 'axios'
@@ -139,6 +138,15 @@ interface Props {
 
 const props = defineProps<Props>()
 
+// saving is automatic; a short pop-up confirms it rather than a status line under the tools
+const toast = useToastStore()
+let savedToast: number | null = null
+function notifySaved() {
+  // one at a time: each autosave replaces the last "saved" pop-up instead of stacking them
+  if (savedToast !== null) toast.dismiss(savedToast)
+  savedToast = toast.success('Marks saved', 1500)
+}
+
 // Rasterized as a read-only Fabric layer (not shown as plain HTML) so the marking canvas stacked
 // on top of it gives the teacher a real annotation surface directly over the student's own words.
 const typedAnswerLayerInfo = computed(() => {
@@ -161,7 +169,6 @@ const typedRef = ref<any>(null)
 const typedTool = ref<AnnotationTool>('pen')
 const typedColor = ref('#dc2626')
 const typedStrokeWidth = ref(2)
-const typedSaveStatus = ref('')
 
 const markingLayer = ref<Record<number, AnnotationLayerJSON>>({ ...(props.question.marking_annotations || {}) })
 
@@ -191,19 +198,17 @@ let typedSaveTimeout: number | null = null
 
 function onTypedAnswerLayerChange(layer: AnnotationLayerJSON) {
   markingLayer.value = { ...markingLayer.value, [TYPED_ANSWER_PAGE]: layer }
-  typedSaveStatus.value = 'Unsaved changes'
   if (typedSaveTimeout) clearTimeout(typedSaveTimeout)
   typedSaveTimeout = window.setTimeout(async () => {
-    typedSaveStatus.value = 'Saving…'
     try {
       await axios.put(`${API_BASE}/teacher/assignments/${props.assignmentId}/submissions/${props.submissionId}/marking-annotations`, {
         question_id: props.question.id,
         page_number: TYPED_ANSWER_PAGE,
         annotation_data: layer
       })
-      typedSaveStatus.value = 'Saved'
+      notifySaved()
     } catch {
-      typedSaveStatus.value = 'Save failed'
+      toast.error('Your marks could not be saved. Check your connection and mark again.')
     }
   }, 1500)
 }
@@ -295,7 +300,6 @@ const evidenceRef = ref<any>(null)
 const evidenceTool = ref<AnnotationTool>('pen')
 const evidenceColor = ref('#dc2626')
 const evidenceStrokeWidth = ref(2)
-const evidenceSaveStatus = ref('')
 const evidenceImageDims = ref({ width: 800, height: 1000 })
 
 // Keyed the same way as `allFiles` above - 'primary' holds the legacy page-numbered layer
@@ -319,10 +323,8 @@ watch(() => selectedFile.value?.url, measureEvidenceImage, { immediate: true })
 let evidenceSaveTimeout: number | null = null
 
 function persistEvidence(attachmentId: number | null, pageNumber: number, layer: AnnotationLayerJSON) {
-  evidenceSaveStatus.value = 'Unsaved changes'
   if (evidenceSaveTimeout) clearTimeout(evidenceSaveTimeout)
   evidenceSaveTimeout = window.setTimeout(async () => {
-    evidenceSaveStatus.value = 'Saving…'
     try {
       await axios.put(`${API_BASE}/teacher/assignments/${props.assignmentId}/submissions/${props.submissionId}/marking-annotations`, {
         question_id: props.question.id,
@@ -330,9 +332,9 @@ function persistEvidence(attachmentId: number | null, pageNumber: number, layer:
         attachment_id: attachmentId,
         annotation_data: layer
       })
-      evidenceSaveStatus.value = 'Saved'
+      notifySaved()
     } catch {
-      evidenceSaveStatus.value = 'Save failed'
+      toast.error('Your marks could not be saved. Check your connection and mark again.')
     }
   }, 1500)
 }
@@ -412,16 +414,6 @@ function onEvidencePdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
 }
 
 .dark .teacher-marking-canvas__section-label {
-  color: #9ca3af;
-}
-
-.teacher-marking-canvas__status {
-  padding: 4px 12px;
-  font-size: 12px;
-  color: #6b7280;
-}
-
-.dark .teacher-marking-canvas__status {
   color: #9ca3af;
 }
 
