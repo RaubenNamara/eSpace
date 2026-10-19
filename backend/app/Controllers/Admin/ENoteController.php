@@ -80,10 +80,18 @@ class ENoteController extends Controller
         $sql = "SELECT et.id, et.title, et.description, et.total_pages, et.estimated_reading_time,
                        et.status, et.published_at, et.archived_at, et.created_at, et.updated_at,
                        et.subject_id, et.class_id, et.department_id, et.teacher_id,
+                       et.class_group_name, et.content_group_id, et.cover_design,
                        s.name as subject_name, s.code as subject_code,
                        c.name as class_name, c.level as class_level, c.stream_name as class_stream_name,
-                       d.name as department_name,
-                       t.first_name as teacher_first_name, t.last_name as teacher_last_name
+                       d.name as department_name, d.code as department_code,
+                       t.first_name as teacher_first_name, t.last_name as teacher_last_name,
+                       (SELECT COUNT(DISTINCT sde.student_id) FROM student_department_enrollments sde
+                        LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
+                        WHERE sde.department_id = et.department_id AND sde.deleted_at IS NULL AND sde.status = 'active'
+                          AND ((et.class_id IS NULL AND et.class_group_name IS NULL)
+                               OR sde.class_id = et.class_id
+                               OR (et.class_group_name IS NOT NULL AND sde_c.name = et.class_group_name))) AS audience,
+                       (SELECT COUNT(*) FROM enote_progress ep WHERE ep.topic_id = et.id) AS readers
                 FROM enote_topics et
                 LEFT JOIN subjects s ON et.subject_id = s.id
                 LEFT JOIN classes c ON et.class_id = c.id
@@ -312,6 +320,51 @@ class ENoteController extends Controller
             error_log('Failed to delete eNote topic: ' . $e->getMessage());
             $this->error('Failed to delete topic', 500);
         }
+    }
+
+    /**
+     * Who is reading a topic: every student it is aimed at, with how far they got
+     * (the same shape as the teacher's readers list, so the same panel shows it).
+     * GET /admin/enotes/{id}/readers
+     */
+    public function readers(): void
+    {
+        if (!$this->isAdmin()) {
+            $this->forbidden();
+            return;
+        }
+        $id = (int) $this->routeParam('id');
+        $stmt = $this->db->prepare(
+            "SELECT st.id, st.first_name, st.last_name, st.gender,
+                    CONCAT(sde_c.name, IF(sde_c.stream_name IS NULL OR sde_c.stream_name = '', '', CONCAT('-', sde_c.stream_name))) AS class_label,
+                    MAX(ep.percentage_completed) AS percent, MAX(ep.last_read_at) AS last_at, MAX(ep.completed_at) AS completed_at,
+                    MAX(pg.order_number) AS current_page
+             FROM enote_topics et
+             INNER JOIN student_department_enrollments sde ON sde.department_id = et.department_id AND sde.deleted_at IS NULL AND sde.status = 'active'
+             LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
+             INNER JOIN students st ON st.id = sde.student_id AND st.deleted_at IS NULL
+             LEFT JOIN enote_progress ep ON ep.topic_id = et.id AND ep.student_id = st.id
+             LEFT JOIN enote_pages pg ON pg.id = ep.current_page_id
+             WHERE et.id = ? AND et.deleted_at IS NULL
+               AND ((et.class_id IS NULL AND et.class_group_name IS NULL)
+                    OR sde.class_id = et.class_id
+                    OR (et.class_group_name IS NOT NULL AND sde_c.name = et.class_group_name))
+             GROUP BY st.id
+             ORDER BY st.first_name, st.last_name"
+        );
+        $stmt->execute([$id]);
+        $students = array_map(static fn (array $row): array => [
+            'id' => (int) $row['id'],
+            'name' => trim($row['first_name'] . ' ' . $row['last_name']),
+            'gender' => $row['gender'],
+            'class_label' => $row['class_label'],
+            'percent' => $row['percent'] !== null ? (int) round((float) $row['percent']) : null,
+            'current_page' => $row['current_page'] !== null ? (int) $row['current_page'] : null,
+            'last_at' => $row['last_at'],
+            'completed' => $row['completed_at'] !== null,
+        ], $stmt->fetchAll(\PDO::FETCH_ASSOC));
+
+        $this->success(['students' => $students]);
     }
 
     private function isAdmin(): bool
