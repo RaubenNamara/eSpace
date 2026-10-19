@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace eSpace\App\Controllers\Admin;
 
 use eSpace\App\Controllers\Controller;
+use eSpace\App\Services\DeviceInfo;
 
 /**
  * Staff activity for the admin dashboard: which teachers and HODs signed in recently, whether
@@ -24,6 +25,8 @@ class StaffActivityController extends Controller
     private const ONLINE_MINUTES = 5;
     private const MAX_PEOPLE = 60;
     private const MAX_ACTIVITIES = 12;
+    private const MAX_STUDENTS = 2000;
+    private const DASHBOARD_STUDENTS = 12;
 
     public function __construct()
     {
@@ -63,48 +66,136 @@ class StaffActivityController extends Controller
             'online_minutes' => self::ONLINE_MINUTES,
             'teachers' => $teachers,
             'hods' => $this->people('hod', $since),
+            // the dashboard shows the latest few; the full list is its own page (students())
+            'students' => $this->people('student', $since, self::DASHBOARD_STUDENTS),
+            'students_total' => $this->countSignedIn('student', $since),
         ]);
     }
 
     /**
-     * Everyone of a role who signed in since $since, most recent first, with their sign-in count,
-     * department, device and whether they are online now.
+     * Every student who signed in during the period (the "Student sign-ins" page)
+     * GET /admin/student-sign-ins?days=7
      */
-    private function people(string $role, string $since): array
+    public function students(): void
     {
-        $table = $role === 'hod' ? 'hods' : 'teachers';
-        $sql = "SELECT p.id, p.first_name, p.last_name, p.username, p.profile_photo, p.last_active_at,
-                       d.name AS department,
+        if (!$this->isAdmin()) {
+            $this->forbidden();
+            return;
+        }
+        $days = (int) $this->query('days', 7);
+        if (!in_array($days, [1, 7, 30], true)) {
+            $days = 7;
+        }
+        $since = (new \DateTimeImmutable('today'))->modify('-' . ($days - 1) . ' days')->format('Y-m-d 00:00:00');
+        $this->success([
+            'days' => $days,
+            'since' => $since,
+            'online_minutes' => self::ONLINE_MINUTES,
+            'students' => $this->people('student', $since, self::MAX_STUDENTS),
+            'students_total' => $this->countSignedIn('student', $since),
+        ]);
+    }
+
+    /** how many different people of a role signed in since $since */
+    private function countSignedIn(string $role, string $since): int
+    {
+        $table = $role === 'student' ? 'students' : ($role === 'hod' ? 'hods' : 'teachers');
+        $stmt = $this->db->prepare(
+            "SELECT COUNT(DISTINCT l.user_id) FROM login_logs l INNER JOIN {$table} p ON p.id = l.user_id AND p.deleted_at IS NULL
+             WHERE l.role = ? AND l.logged_in_at >= ?"
+        );
+        $stmt->execute([$role, $since]);
+        return (int) $stmt->fetchColumn();
+    }
+
+    /**
+     * Everyone of a role who signed in since $since, most recent first, with their sign-in count,
+     * department (staff) or class (students), the device of their latest sign-in and whether they
+     * are online now.
+     */
+    private function people(string $role, string $since, int $limit = self::MAX_PEOPLE): array
+    {
+        [$table, $groupSelect, $groupJoin, $extra] = match ($role) {
+            'hod' => ['hods', 'd.name', 'LEFT JOIN departments d ON d.id = p.department_id', "'' AS admission_number"],
+            'student' => ['students', "CONCAT(c.name, IF(c.stream_name IS NULL OR c.stream_name = '', '', CONCAT('-', c.stream_name)))", 'LEFT JOIN classes c ON c.id = p.class_id', 'p.admission_number'],
+            default => ['teachers', 'd.name', 'LEFT JOIN departments d ON d.id = p.department_id', "'' AS admission_number"],
+        };
+        $sql = "SELECT p.id, p.first_name, p.last_name, p.username, p.profile_photo, p.last_active_at, {$extra},
+                       {$groupSelect} AS grp,
                        COUNT(l.id) AS logins,
                        MAX(l.logged_in_at) AS last_login_at,
-                       (SELECT l2.user_agent FROM login_logs l2 WHERE l2.role = ? AND l2.user_id = p.id ORDER BY l2.logged_in_at DESC LIMIT 1) AS user_agent,
-                       (SELECT l3.ip_address FROM login_logs l3 WHERE l3.role = ? AND l3.user_id = p.id ORDER BY l3.logged_in_at DESC LIMIT 1) AS ip_address
+                       MAX(l.id) AS last_log_id
                 FROM {$table} p
                 INNER JOIN login_logs l ON l.user_id = p.id AND l.role = ? AND l.logged_in_at >= ?
-                LEFT JOIN departments d ON d.id = p.department_id
+                {$groupJoin}
                 WHERE p.deleted_at IS NULL
-                GROUP BY p.id, p.first_name, p.last_name, p.username, p.profile_photo, p.last_active_at, d.name
+                GROUP BY p.id, p.first_name, p.last_name, p.username, p.profile_photo, p.last_active_at, admission_number, grp
                 ORDER BY last_login_at DESC
-                LIMIT " . self::MAX_PEOPLE;
+                LIMIT " . $limit;
         $stmt = $this->db->prepare($sql);
-        $stmt->execute([$role, $role, $role, $since]);
+        $stmt->execute([$role, $since]);
+        $rows = $stmt->fetchAll();
+        $devices = $this->devicesOf(array_map(fn ($r) => (int) $r['last_log_id'], $rows));
+
         $now = time();
         $out = [];
-        foreach ($stmt->fetchAll() as $r) {
-            $active = $r['last_active_at'] ? strtotime((string) $r['last_active_at']) : null;
+        foreach ($rows as $r) {
+            // signing in is activity too: "last seen" is never earlier than the last sign-in
+            // (last_active_at is only refreshed by the presence ping on some pages)
+            $seen = max(array_filter([(string) ($r['last_active_at'] ?? ''), (string) $r['last_login_at']]));
+            $active = $seen ? strtotime($seen) : null;
+            $dev = $devices[(int) $r['last_log_id']] ?? ['browser' => null, 'os' => null, 'device_type' => null, 'device_model' => null, 'ip_address' => null];
             $out[] = [
                 'id' => (int) $r['id'],
                 'name' => trim($r['first_name'] . ' ' . $r['last_name']) ?: $r['username'],
                 'username' => $r['username'],
+                'admission_number' => $r['admission_number'] ?: null,
                 'profile_photo' => $r['profile_photo'],
-                'department' => $r['department'],
+                // staff: their department; students: their class and stream
+                'department' => $r['grp'],
                 'logins' => (int) $r['logins'],
                 'last_login_at' => $r['last_login_at'],
-                'last_active_at' => $r['last_active_at'],
+                'last_active_at' => $seen ?: null,
                 'online' => $active !== null && ($now - $active) <= self::ONLINE_MINUTES * 60,
-                'device' => $this->device((string) ($r['user_agent'] ?? '')),
-                'ip_address' => $r['ip_address'],
+                'browser' => $dev['browser'],
+                'os' => $dev['os'],
+                'device_type' => $dev['device_type'],
+                'device_model' => $dev['device_model'],
+                'device' => DeviceInfo::summary($dev['browser'], $dev['os'], $dev['device_model']),
+                'ip_address' => $dev['ip_address'],
             ];
+        }
+        return $out;
+    }
+
+    /**
+     * The browser, OS and device of these sign-ins: as stored at login (migration 139), or read
+     * from the User-Agent of sign-ins recorded before that.
+     *
+     * @param int[] $logIds
+     * @return array<int, array{browser: ?string, os: ?string, device_type: ?string, device_model: ?string, ip_address: ?string}>
+     */
+    private function devicesOf(array $logIds): array
+    {
+        $logIds = array_values(array_filter($logIds));
+        if (!$logIds) {
+            return [];
+        }
+        $in = implode(',', array_fill(0, count($logIds), '?'));
+        try {
+            $stmt = $this->db->prepare("SELECT id, user_agent, ip_address, browser, os, device_type, device_model FROM login_logs WHERE id IN ($in)");
+            $stmt->execute($logIds);
+        } catch (\PDOException $e) {
+            // a database without the device columns yet
+            $stmt = $this->db->prepare("SELECT id, user_agent, ip_address FROM login_logs WHERE id IN ($in)");
+            $stmt->execute($logIds);
+        }
+        $out = [];
+        foreach ($stmt->fetchAll() as $r) {
+            $dev = !empty($r['browser']) || !empty($r['os'])
+                ? ['browser' => $r['browser'], 'os' => $r['os'], 'device_type' => $r['device_type'], 'device_model' => $r['device_model']]
+                : DeviceInfo::fromUserAgent((string) ($r['user_agent'] ?? ''));
+            $out[(int) $r['id']] = $dev + ['ip_address' => $r['ip_address']];
         }
         return $out;
     }
@@ -213,33 +304,5 @@ class StaffActivityController extends Controller
     {
         $role = $this->getCurrentUserRole();
         return $role === 'admin' || $role === 'super_admin';
-    }
-
-    /** "Chrome on Windows", "Safari on iPhone" - enough to tell a phone from the school computer */
-    private function device(string $ua): ?string
-    {
-        if ($ua === '') {
-            return null;
-        }
-        $browser = match (true) {
-            str_contains($ua, 'Edg/') => 'Edge',
-            str_contains($ua, 'OPR/') || str_contains($ua, 'Opera') => 'Opera',
-            str_contains($ua, 'SamsungBrowser') => 'Samsung Internet',
-            str_contains($ua, 'Firefox/') => 'Firefox',
-            str_contains($ua, 'Chrome/') => 'Chrome',
-            str_contains($ua, 'Safari/') => 'Safari',
-            default => 'Browser',
-        };
-        $os = match (true) {
-            str_contains($ua, 'iPhone') => 'iPhone',
-            str_contains($ua, 'iPad') => 'iPad',
-            str_contains($ua, 'Android') => 'Android',
-            str_contains($ua, 'Windows') => 'Windows',
-            str_contains($ua, 'Mac OS') => 'Mac',
-            str_contains($ua, 'CrOS') => 'Chromebook',
-            str_contains($ua, 'Linux') => 'Linux',
-            default => null,
-        };
-        return $os ? "{$browser} on {$os}" : $browser;
     }
 }

@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { collectClientInfo } from '@/utils/clientInfo'
 import { ref, computed } from 'vue'
 import type { User, LoginCredentials, RegisterData, AuthPayload, AuthApiResponse } from '../types'
 import { apiService } from '../services/api'
@@ -87,7 +88,7 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
 
     try {
-      const response = await apiService.login(credentials.identifier, credentials.password)
+      const response = await apiService.login(credentials.identifier, credentials.password, await collectClientInfo())
       
       
       // Handle different response structures using helper

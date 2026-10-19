@@ -761,6 +761,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/dashboard', 'eSpace\App\Controllers\Admin\DashboardController@index');
         Router::get('/mastery-overview', 'eSpace\App\Controllers\Admin\MasteryOverviewController@index');
         Router::get('/staff-activity', 'eSpace\App\Controllers\Admin\StaffActivityController@index');
+        Router::get('/student-sign-ins', 'eSpace\App\Controllers\Admin\StaffActivityController@students');
         Router::get('/setup-checklist', 'eSpace\App\Controllers\Admin\SetupChecklistController@index');
 
         // Live Classes (BigBlueButton) - school-wide oversight + moderation

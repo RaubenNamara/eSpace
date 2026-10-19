@@ -387,6 +387,7 @@ const routes: RouteRecordRaw[] = [
     children: [
       { path: '', redirect: '/admin/dashboard' },
       { path: 'dashboard', name: 'AdminDashboard', component: AdminDashboard },
+      { path: 'student-sign-ins', name: 'AdminStudentSignIns', component: () => import('../pages/admin/StudentSignIns.vue') },
       { path: 'users', name: 'AdminUsers', component: AdminUsers },
       { path: 'students', name: 'AdminStudents', component: AdminStudents },
       { path: 'bulk-enrol', name: 'AdminBulkEnrol', component: () => import('../pages/admin/BulkEnrol.vue') },

@@ -83,18 +83,31 @@ class AuthController extends Controller
 
             // Record every successful login, across all roles, for the admin System Logs page
             $fullName = trim(($userData['first_name'] ?? '') . ' ' . ($userData['last_name'] ?? '')) ?: null;
-            $stmt = \eSpace\Config\Database::getInstance()->prepare(
-                'INSERT INTO login_logs (user_id, role, username, full_name, ip_address, user_agent, logged_in_at)
-                 VALUES (:user_id, :role, :username, :full_name, :ip_address, :user_agent, NOW())'
-            );
-            $stmt->execute([
+            $row = [
                 'user_id' => (int) $userData['id'],
                 'role' => $userData['role'],
                 'username' => $userData['username'],
                 'full_name' => $fullName,
                 'ip_address' => $this->getClientIp(),
-                'user_agent' => $this->getUserAgent(),
-            ]);
+                'user_agent' => mb_substr($this->getUserAgent(), 0, 255),
+            ];
+            // the real browser, OS and device: as the browser reports itself (sent by the login
+            // page), else read from the User-Agent string
+            $client = $this->input('client');
+            $device = \eSpace\App\Services\DeviceInfo::detect($this->getUserAgent(), is_array($client) ? $client : null);
+            $db = \eSpace\Config\Database::getInstance();
+            try {
+                $db->prepare(
+                    'INSERT INTO login_logs (user_id, role, username, full_name, ip_address, user_agent, browser, os, device_type, device_model, logged_in_at)
+                     VALUES (:user_id, :role, :username, :full_name, :ip_address, :user_agent, :browser, :os, :device_type, :device_model, NOW())'
+                )->execute($row + $device);
+            } catch (\PDOException $e) {
+                // a database that has not had migration 139 yet: record the sign-in without the device columns
+                $db->prepare(
+                    'INSERT INTO login_logs (user_id, role, username, full_name, ip_address, user_agent, logged_in_at)
+                     VALUES (:user_id, :role, :username, :full_name, :ip_address, :user_agent, NOW())'
+                )->execute($row);
+            }
 
             $this->success([
                 'user' => $userData,

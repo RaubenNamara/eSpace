@@ -52,11 +52,11 @@
               <Avatar :person="t" />
               <span class="min-w-0 flex-1">
                 <span class="flex items-center gap-1.5">
-                  <span class="font-semibold text-sm text-gray-900 dark:text-white truncate">{{ t.name }}</span>
+                  <span class="font-semibold text-sm text-gray-900 dark:text-white truncate">{{ properName(t.name) }}</span>
                   <span v-if="t.department" class="flex-shrink-0 px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-[10px] font-semibold text-gray-600 dark:text-gray-300">{{ t.department }}</span>
                 </span>
                 <span class="block text-xs text-gray-500 dark:text-gray-400 truncate">
-                  <StatusText :person="t" /> · signed in {{ t.logins }}× · last {{ when(t.last_login_at) }}<template v-if="t.device"> · {{ t.device }}</template>
+                  <StatusText :person="t" /> · {{ signIns(t.logins) }}<template v-if="t.device"> · <DeviceText :person="t" /></template>
                 </span>
               </span>
               <span class="flex-shrink-0 text-right">
@@ -102,33 +102,52 @@
             <Avatar :person="h" />
             <span class="min-w-0 flex-1">
               <span class="flex items-center gap-1.5">
-                <span class="font-semibold text-sm text-gray-900 dark:text-white truncate">{{ h.name }}</span>
+                <span class="font-semibold text-sm text-gray-900 dark:text-white truncate">{{ properName(h.name) }}</span>
                 <span v-if="h.department" class="flex-shrink-0 px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-[10px] font-semibold text-gray-600 dark:text-gray-300">{{ h.department }}</span>
               </span>
-              <span class="block text-xs text-gray-500 dark:text-gray-400"><StatusText :person="h" /></span>
-              <span class="block text-xs text-gray-500 dark:text-gray-400 truncate">Signed in {{ h.logins }}× · last {{ when(h.last_login_at) }}<template v-if="h.device"> · {{ h.device }}</template></span>
+              <span class="block text-xs text-gray-500 dark:text-gray-400"><StatusText :person="h" /> · {{ signIns(h.logins) }}</span>
+              <span v-if="h.device" class="block text-xs text-gray-500 dark:text-gray-400 truncate"><DeviceText :person="h" /></span>
             </span>
           </li>
         </ul>
-        <p class="mt-2 text-[11px] text-gray-400 dark:text-gray-500">Period: {{ periodLabel }}. Change it in the Teachers panel.</p>
+        <p class="mt-2 text-[11px] text-gray-400 dark:text-gray-500">Period: {{ periodName }} (change it in the Teachers panel).</p>
+      </div>
+    </section>
+
+    <!-- Students: the latest 12; the full list is its own page -->
+    <section class="dash-box lg:col-span-3 min-w-0">
+      <h2 class="dash-bar">Students: recent sign-ins</h2>
+      <div class="p-3 space-y-3">
+        <p v-if="data" class="text-xs text-gray-500 dark:text-gray-400">
+          <b class="text-gray-900 dark:text-white">{{ data.students_total }}</b> students signed in {{ periodLabel }} ·
+          <b class="text-emerald-600">{{ onlineStudents }}</b> of the latest {{ data.students.length }} online now
+        </p>
+        <div v-if="loading && !data" class="grid grid-cols-1 md:grid-cols-2 gap-2" aria-busy="true">
+          <div v-for="i in 4" :key="i" class="h-12 rounded-xl bg-gray-100 dark:bg-gray-700/50 animate-pulse"></div>
+        </div>
+        <p v-else-if="data && !data.students.length" class="py-6 text-center text-sm text-gray-500 dark:text-gray-400">No student signed in {{ periodLabel }}.</p>
+        <ul v-else-if="data" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-4">
+          <StudentRow v-for="st in data.students" :key="st.id" :person="st" />
+        </ul>
+        <RouterLink
+          v-if="data && data.students_total > data.students.length"
+          :to="{ path: '/admin/student-sign-ins', query: { days: String(days) } }"
+          class="inline-flex items-center gap-1 text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
+        >See all {{ data.students_total }} students →</RouterLink>
       </div>
     </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, h, defineComponent, type PropType } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import apiService from '@/services/api'
+import { PERIODS, periodPhrase, when, tickNow, signIns, properName, Avatar, StatusText, DeviceText, StudentRow, type SignInPerson } from './signInParts'
 
 interface Activity { type: string; label: string; title: string | null; count: number; at: string }
-interface Person {
-  id: number; name: string; username: string; profile_photo: string | null; department: string | null
-  logins: number; last_login_at: string; last_active_at: string | null; online: boolean; device: string | null; ip_address: string | null
-}
-interface Teacher extends Person { activity_count: number; activities: Activity[] }
-interface StaffActivityData { days: number; since: string; online_minutes: number; teachers: Teacher[]; hods: Person[] }
+interface Teacher extends SignInPerson { activity_count: number; activities: Activity[] }
+interface StaffActivityData { days: number; since: string; online_minutes: number; teachers: Teacher[]; hods: SignInPerson[]; students: SignInPerson[]; students_total: number }
 
-const PERIODS = [{ days: 1, label: 'Today' }, { days: 7, label: '7 days' }, { days: 30, label: '30 days' }]
 const LIMIT = 6
 const ICONS: Record<string, { icon: string; bg: string }> = {
   assignment_created: { icon: '📝', bg: 'bg-sky-100 dark:bg-sky-900/40' },
@@ -153,7 +172,8 @@ const search = ref('')
 const open = ref<number | null>(null)
 const showAll = ref(false)
 
-const periodLabel = computed(() => (days.value === 1 ? 'today' : `in the last ${days.value} days`))
+const periodLabel = computed(() => periodPhrase(days.value))
+const periodName = computed(() => PERIODS.find(p => p.days === days.value)?.label ?? '')
 const filteredTeachers = computed(() => {
   const q = search.value.trim().toLowerCase()
   const list = data.value?.teachers ?? []
@@ -162,6 +182,8 @@ const filteredTeachers = computed(() => {
 const shownTeachers = computed(() => (showAll.value || search.value ? filteredTeachers.value : filteredTeachers.value.slice(0, LIMIT)))
 const onlineTeachers = computed(() => (data.value?.teachers ?? []).filter(t => t.online).length)
 const totalActivities = computed(() => (data.value?.teachers ?? []).reduce((n, t) => n + t.activity_count, 0))
+
+const onlineStudents = computed(() => (data.value?.students ?? []).filter(st => st.online).length)
 
 async function load() {
   loading.value = true
@@ -181,54 +203,11 @@ function setDays(d: number) {
   load()
 }
 
-// "5 min ago", "today 14:05", "yesterday 09:12", "Mon 3 Oct 11:40"
-const now = ref(Date.now())
-function when(at: string | null) {
-  if (!at) return 'never'
-  const t = new Date(at.replace(' ', 'T')).getTime()
-  const diff = Math.max(0, (now.value - t) / 1000)
-  if (diff < 60) return 'just now'
-  if (diff < 3600) return `${Math.floor(diff / 60)} min ago`
-  const d = new Date(t)
-  const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  const today = new Date(now.value); today.setHours(0, 0, 0, 0)
-  const day = new Date(d); day.setHours(0, 0, 0, 0)
-  const daysAgo = Math.round((today.getTime() - day.getTime()) / 86400000)
-  if (daysAgo === 0) return `today ${time}`
-  if (daysAgo === 1) return `yesterday ${time}`
-  return `${d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })} ${time}`
-}
-
-// small pieces of the rows
-const Avatar = defineComponent({
-  props: { person: { type: Object as PropType<Person>, required: true } },
-  setup(p) {
-    return () => h('span', { class: 'relative flex-shrink-0' }, [
-      p.person.profile_photo
-        ? h('img', { src: p.person.profile_photo, alt: '', class: 'w-9 h-9 rounded-full object-cover' })
-        : h('span', { class: 'w-9 h-9 rounded-full flex items-center justify-center bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-200 text-xs font-bold' },
-          p.person.name.split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()),
-      h('span', {
-        class: ['absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full ring-2 ring-white dark:ring-gray-800', p.person.online ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'],
-        title: p.person.online ? 'Online now' : 'Offline',
-      }),
-    ])
-  },
-})
-const StatusText = defineComponent({
-  props: { person: { type: Object as PropType<Person>, required: true } },
-  setup(p) {
-    return () => p.person.online
-      ? h('span', { class: 'font-semibold text-emerald-600 dark:text-emerald-400' }, 'Online now')
-      : h('span', null, `Last active ${when(p.person.last_active_at)}`)
-  },
-})
-
 // keep "online" and the times fresh while the dashboard stays open
 let timer: number | undefined
 onMounted(() => {
   load()
-  timer = window.setInterval(() => { now.value = Date.now(); load() }, 60_000)
+  timer = window.setInterval(() => { tickNow(); load() }, 60_000)
 })
 onBeforeUnmount(() => window.clearInterval(timer))
 </script>

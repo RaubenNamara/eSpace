@@ -88,8 +88,9 @@ api.interceptors.response.use(
 // API methods
 export const apiService = {
   // Auth
-  login: (identifier: string, password: string) =>
-    api.post<ApiResponse>('/auth/login', { identifier, password }),
+  // `client`: what the browser reports about itself (utils/clientInfo.ts), for the sign-in record
+  login: (identifier: string, password: string, client?: unknown) =>
+    api.post<ApiResponse>('/auth/login', { identifier, password, client }),
   
   register: (data: any) =>
     api.post<ApiResponse>('/auth/register', data),
