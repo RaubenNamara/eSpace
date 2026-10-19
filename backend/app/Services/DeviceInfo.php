@@ -53,6 +53,8 @@ final class DeviceInfo
         if (!$browser && !$os) {
             return null;
         }
+        // the browser by name only ("Chrome", not "Chrome 155"); the version stays in the stored record
+        $browser = $browser !== null ? (preg_replace('/\s+\d+(\.\d+)*$/', '', $browser) ?: $browser) : null;
         $where = $model ? trim(($os ?? '') . ' · ' . $model, ' ·') : $os;
         return $browser && $where ? "{$browser} on {$where}" : ($browser ?: $where);
     }
