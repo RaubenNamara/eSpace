@@ -671,10 +671,31 @@
         </div>
 
         <div class="flex-1 overflow-y-auto p-6">
-          <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+          <p v-if="copyingShared" class="text-sm text-gray-600 dark:text-gray-400 mb-4">
             Select the class stream(s) to copy this topic and all its pages to. Each copy is created as a
             <span class="font-medium">draft</span> so you can review it before publishing.
           </p>
+          <template v-else>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">Select the class stream(s) to copy this topic and all its pages to.</p>
+            <!-- published or draft copies: a published topic's copies are published unless the teacher keeps them back -->
+            <fieldset class="mb-4">
+              <legend class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">The copies will be</legend>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <label
+                  v-for="opt in DUPLICATE_STATUS_OPTIONS"
+                  :key="opt.value"
+                  class="flex items-start gap-2 rounded-xl border px-3 py-2 cursor-pointer"
+                  :class="duplicateStatus === opt.value ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30' : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300'"
+                >
+                  <input v-model="duplicateStatus" type="radio" name="duplicate-status" :value="opt.value" class="mt-0.5 text-indigo-600 focus:ring-indigo-500">
+                  <span>
+                    <span class="block text-sm font-semibold text-gray-900 dark:text-white">{{ opt.label }}</span>
+                    <span class="block text-[11px] text-gray-500 dark:text-gray-400">{{ opt.hint }}</span>
+                  </span>
+                </label>
+              </div>
+            </fieldset>
+          </template>
 
           <div v-if="duplicateGroups.length === 0" class="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">
             No classes found in your department.
@@ -719,7 +740,7 @@
           <p v-if="duplicateGroups.some(g => g.streams.some(st => streamHasTopic(g, st.id)))" class="mt-2 text-[11px] text-gray-500 dark:text-gray-400">Greyed-out streams already have this topic.</p>
 
           <div v-if="duplicateResult" class="mt-4 p-3 rounded-lg bg-green-50 dark:bg-green-900/20 text-sm text-green-800 dark:text-green-300">
-            Created {{ duplicateResult.created }} {{ copyingShared ? 'draft cop' + (duplicateResult.created === 1 ? 'y' : 'ies') + ' in your eNotes' : 'duplicate(s)' }}{{ duplicateResult.skipped ? `, skipped ${duplicateResult.skipped}` : '' }}.
+            Created {{ duplicateResult.created }} {{ copyingShared ? 'draft cop' + (duplicateResult.created === 1 ? 'y' : 'ies') + ' in your eNotes' : `${duplicateStatus} cop${duplicateResult.created === 1 ? 'y' : 'ies'}` }}{{ duplicateResult.skipped ? `, skipped ${duplicateResult.skipped}` : '' }}.
           </div>
 
           <div class="flex justify-end space-x-3 mt-6">
@@ -1334,14 +1355,12 @@ const saveTopic = async () => {
       const response = await axios.post(`${API_BASE}/teacher/enotes/topics`, payload)
       const newId = response.data?.data?.id
       if (newId && targets.length > 1) {
-        // the other streams get linked copies (an edit to one updates them all); copies start as
-        // drafts, so publish them too when the teacher chose Published
+        // the other streams get linked copies (an edit to one updates them all), with the same status
         try {
-          const dup = await axios.post(`${API_BASE}/teacher/enotes/topics/${newId}/duplicate`, { targets: targets.slice(1) })
-          const created: { id: number }[] = dup.data?.data?.created ?? []
-          if (payload.status === 'published' && created.length) {
-            await axios.post(`${API_BASE}/teacher/enotes/topics/bulk-status`, { ids: created.map(c => c.id), status: 'published' })
-          }
+          await axios.post(`${API_BASE}/teacher/enotes/topics/${newId}/duplicate`, {
+            targets: targets.slice(1),
+            status: payload.status === 'published' ? 'published' : 'draft'
+          })
           toast.success(`eNote made available in ${targets.length} class-stream groups`)
         } catch (e: any) {
           toast.error(e.response?.data?.message || 'The eNote was created, but not every class-stream could be added. Use Duplicate to add the rest.')
@@ -1515,9 +1534,17 @@ const toggleShare = async (topic: ENoteTopic) => {
   }
 }
 
+// A published topic's copies are published straight away unless the teacher keeps them as drafts
+const DUPLICATE_STATUS_OPTIONS = [
+  { value: 'published', label: 'Published', hint: 'Students in those streams can read it now' },
+  { value: 'draft', label: 'Draft', hint: 'Hidden from students until you publish it' }
+] as const
+const duplicateStatus = ref<'published' | 'draft'>('draft')
+
 const openDuplicateModal = (topic: ENoteTopic) => {
   copyingShared.value = false
   duplicatingTopic.value = topic
+  duplicateStatus.value = topic.status === 'published' ? 'published' : 'draft'
   duplicateChecked.value = {}
   duplicateResult.value = null
   showDuplicateModal.value = true
@@ -1540,7 +1567,7 @@ const confirmDuplicate = async () => {
       copyingShared.value
         ? `${API_BASE}/teacher/enotes/shared/${duplicatingTopic.value.id}/copy`
         : `${API_BASE}/teacher/enotes/topics/${duplicatingTopic.value.id}/duplicate`,
-      { targets }
+      copyingShared.value ? { targets } : { targets, status: duplicateStatus.value }
     )
     if (response.data.success) {
       duplicateResult.value = {

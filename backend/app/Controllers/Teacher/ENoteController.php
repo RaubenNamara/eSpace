@@ -2017,9 +2017,10 @@ class ENoteController extends Controller
     /**
      * Duplicate a topic (title, competency, learning outcomes, and every page's content) into
      * one new topic per selected target class/stream in the teacher's department - e.g. reusing
-     * the same lesson across S.1 A and S.1 B without re-authoring it. Each duplicate always
-     * starts as 'draft' regardless of the source topic's status, so the teacher reviews/publishes
-     * each one for its own class before students see it. Narration audio is deliberately not
+     * the same lesson across S.1 A and S.1 B without re-authoring it. The copies take the source
+     * topic's status - a published topic's copies are published straight away (and their students
+     * notified) - unless the teacher sends status=draft to review them first; a draft or archived
+     * topic's copies start as drafts. Narration audio is deliberately not
      * copied (mirrors duplicatePage()) since it's cheap to regenerate and tying cloned audio
      * files to a new topic/page id isn't worth the complexity.
      * POST /teacher/enotes/topics/{id}/duplicate
@@ -2058,13 +2059,18 @@ class ENoteController extends Controller
 
         $departmentId = (int) $topic['department_id'];
 
+        // published copies only when the source is published, or the teacher asks for it
+        $copyStatus = $data['status'] ?? ($topic['status'] === 'published' ? 'published' : 'draft');
+        if (!in_array($copyStatus, ['draft', 'published'], true)) {
+            $copyStatus = 'draft';
+        }
+
         // The group id every duplicate (and the source topic itself) will share, so a later edit
         // to any one of them can find and mirror onto the rest (see getLinkedTopicIds()) - a
         // teacher editing a topic's title/competency/learning outcomes or any page content wants
         // that change reflected across every class/stream copy of the same lesson. Each copy still
         // keeps its own id, its own class/stream assignment, and its own independent publish
-        // status - duplicating never publishes anything, and publishing/unpublishing one copy
-        // never affects the others. Reuse an existing group if this topic is already linked (e.g.
+        // status - publishing/unpublishing one copy later never affects the others. Reuse an existing group if this topic is already linked (e.g.
         // duplicating a topic that was itself a duplicate) instead of starting a disconnected
         // second group.
         $groupId = $topic['content_group_id'] !== null ? (int) $topic['content_group_id'] : $id;
@@ -2131,9 +2137,10 @@ class ENoteController extends Controller
 
                 $insertTopic = $db->prepare(
                     "INSERT INTO enote_topics (teacher_id, content_group_id, class_id, class_group_name, subject_id, department_id, title, description, learning_outcomes, cover_design, status, total_pages, created_at, updated_at)
-                     VALUES (:teacher_id, :content_group_id, :class_id, :class_group_name, :subject_id, :department_id, :title, :description, :learning_outcomes, :cover_design, 'draft', :total_pages, NOW(), NOW())"
+                     VALUES (:teacher_id, :content_group_id, :class_id, :class_group_name, :subject_id, :department_id, :title, :description, :learning_outcomes, :cover_design, :status, :total_pages, NOW(), NOW())"
                 );
                 $insertTopic->execute([
+                    'status' => $copyStatus,
                     'teacher_id' => $teacherId,
                     'content_group_id' => $groupId,
                     'class_id' => $classTarget['class_id'],
@@ -2147,6 +2154,9 @@ class ENoteController extends Controller
                     'total_pages' => count($pages)
                 ]);
                 $newTopicId = (int) $db->lastInsertId();
+                if ($copyStatus === 'published') {
+                    $db->prepare("UPDATE enote_topics SET published_at = NOW() WHERE id = :id")->execute(['id' => $newTopicId]);
+                }
 
                 $insertPage = $db->prepare(
                     "INSERT INTO enote_pages (topic_id, order_number, title, content, is_active, created_at, updated_at)
@@ -2164,8 +2174,25 @@ class ENoteController extends Controller
 
                 $db->commit();
 
+                if ($copyStatus === 'published') {
+                    try {
+                        (new NotificationService())->notifyDepartmentClass(
+                            $departmentId,
+                            $classTarget['class_id'],
+                            'new_enote',
+                            'New eNote',
+                            "A new eNote topic \"{$topic['title']}\" is now available.",
+                            ['topic_id' => $newTopicId],
+                            $classTarget['class_group_name']
+                        );
+                    } catch (\Throwable $e) {
+                        error_log('Duplicate topic: notification failed: ' . $e->getMessage());
+                    }
+                }
+
                 $created[] = [
                     'id' => $newTopicId,
+                    'status' => $copyStatus,
                     'class_id' => $classTarget['class_id'],
                     'class_group_name' => $classTarget['class_group_name']
                 ];
@@ -2185,7 +2212,7 @@ class ENoteController extends Controller
 
         $this->success(
             ['created' => $created, 'skipped' => $skipped],
-            count($created) . ' duplicate(s) created successfully' . (count($skipped) ? ' (' . count($skipped) . ' skipped)' : '')
+            count($created) . ' ' . ($copyStatus === 'published' ? 'published' : 'draft') . ' copy(ies) created' . (count($skipped) ? ' (' . count($skipped) . ' skipped)' : '')
         );
     }
 
