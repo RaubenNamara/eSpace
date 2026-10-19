@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
+import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 
 /**
  * Shared 3D laboratory room for the realistic per-experiment renderers. Units are metres, with
@@ -139,8 +140,9 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
   const field = opts.setting === 'field'
   const s = opts.unitScale ?? 1
   const scene = new THREE.Scene()
-  scene.background = new THREE.Color(field ? 0xbcdcf5 : 0xdfe3e8)
-  scene.fog = field ? new THREE.Fog(0xbcdcf5, 60 * s, 160 * s) : new THREE.Fog(0xdfe3e8, 4 * s, 9 * s)
+  // Outdoors the fog is the hazy horizon colour, so distant hills and trees fade into the sky dome
+  scene.background = new THREE.Color(field ? 0xd6e8f5 : 0xdfe3e8)
+  scene.fog = field ? new THREE.Fog(0xd6e8f5, 70 * s, 200 * s) : new THREE.Fog(0xdfe3e8, 4 * s, 9 * s)
 
   // Image-based lighting so metal, brass and glass pick up believable reflections.
   const pmrem = new THREE.PMREMGenerator(renderer)
@@ -1580,10 +1582,15 @@ function buildCupboard(scene: THREE.Object3D, woodTex: THREE.Texture, BENCH_W: n
   return { doors, blockers, bays: [bay(-W / 2 + t, -t / 2), bay(t / 2, W / 2 - t)] }
 }
 
+/** Where the sun is in the field's sky (seen up to the left, beyond the far trees) - the sunlight
+ *  comes from the same direction, so the shadows agree with the sun you can see */
+const FIELD_SUN_DIR = new THREE.Vector3(-0.25, 0.27, -0.93).normalize()
+const FIELD_CENTRE = new THREE.Vector3(12, 0, 0)
+
 function buildFieldLighting(scene: THREE.Object3D) {
-  scene.add(new THREE.HemisphereLight(0xdfefff, 0x5d7a3a, 0.8))
-  const sun = new THREE.DirectionalLight(0xfff4e0, 2.2)
-  sun.position.set(8, 30, 18)
+  scene.add(new THREE.HemisphereLight(0xdfefff, 0x5d7a3a, 0.95))
+  const sun = new THREE.DirectionalLight(0xfff1d6, 2.3)
+  sun.position.copy(FIELD_CENTRE).addScaledVector(FIELD_SUN_DIR, 40)
   sun.target.position.set(12, 0, 0)
   sun.castShadow = true
   sun.shadow.mapSize.set(2048, 2048)
@@ -1593,42 +1600,241 @@ function buildFieldLighting(scene: THREE.Object3D) {
   scene.add(sun, sun.target)
 }
 
-function buildField(scene: THREE.Object3D) {
-  const grass = canvasTexture(512, 512, (ctx, w, h) => {
-    ctx.fillStyle = '#5f8f3e'
+/** Seeded random numbers, so the outdoor field looks the same on every visit */
+function seededRandom(seed: number): () => number {
+  let t = seed >>> 0
+  return () => {
+    t += 0x6d2b79f5
+    let r = Math.imul(t ^ (t >>> 15), 1 | t)
+    r ^= r + Math.imul(r ^ (r >>> 7), 61 | r)
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+/** Nudges every vertex of a geometry in or out a little, so spheres read as clumps of leaves */
+function lumpy(source: THREE.BufferGeometry, rnd: () => number, amount: number): THREE.BufferGeometry {
+  // shared vertices first, so the nudged surface is shaded smoothly (rounded leaves, not facets)
+  const geo = mergeVertices(source.deleteAttribute('normal').deleteAttribute('uv'))
+  const pos = geo.attributes.position as THREE.BufferAttribute
+  const v = new THREE.Vector3()
+  const seen = new Map<string, number>()
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i)
+    // shared corners get the same nudge so the surface stays closed
+    const key = `${v.x.toFixed(3)},${v.y.toFixed(3)},${v.z.toFixed(3)}`
+    let k = seen.get(key)
+    if (k === undefined) { k = 1 + (rnd() - 0.5) * 2 * amount; seen.set(key, k) }
+    pos.setXYZ(i, v.x * k, v.y * k, v.z * k)
+  }
+  geo.computeVertexNormals()
+  return geo
+}
+
+function barkTexture(rnd: () => number): THREE.CanvasTexture {
+  return canvasTexture(128, 256, (ctx, w, h) => {
+    ctx.fillStyle = '#5a4331'
     ctx.fillRect(0, 0, w, h)
-    for (let i = 0; i < 6000; i++) {
-      const shade = 60 + Math.random() * 70
-      ctx.fillStyle = `rgba(${shade * 0.6},${shade + 40},${shade * 0.4},0.35)`
-      ctx.fillRect(Math.random() * w, Math.random() * h, 2, 5)
+    for (let i = 0; i < 70; i++) {
+      const x = rnd() * w
+      ctx.strokeStyle = rnd() > 0.5 ? 'rgba(40,28,18,0.55)' : 'rgba(120,95,70,0.35)'
+      ctx.lineWidth = 1 + rnd() * 3
+      ctx.beginPath()
+      ctx.moveTo(x, 0)
+      for (let y = 0; y <= h; y += 16) ctx.lineTo(x + (rnd() - 0.5) * 6, y)
+      ctx.stroke()
+    }
+  })
+}
+
+/** A broad-leaved tree: tapered barked trunk, a few branches, and a crown of irregular leaf clumps */
+function makeBroadleafTree(rnd: () => number, bark: THREE.Material, leaves: THREE.Material[]): THREE.Group {
+  const tree = new THREE.Group()
+  const h = 3.2 + rnd() * 2.2
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.34, h, 10, 4), bark)
+  trunk.position.y = h / 2
+  tree.add(trunk)
+  // the trunk widens at the root
+  const root = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.5, 0.35, 10), bark)
+  root.position.y = 0.17
+  tree.add(root)
+  const branches = 3 + Math.floor(rnd() * 3)
+  for (let b = 0; b < branches; b++) {
+    const len = 1.2 + rnd() * 1.2
+    const br = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.11, len, 6), bark)
+    const ang = (b / branches) * Math.PI * 2 + rnd()
+    const tilt = 0.6 + rnd() * 0.5
+    br.position.set(Math.cos(ang) * Math.sin(tilt) * len / 2, h * (0.65 + rnd() * 0.25) + Math.cos(tilt) * len / 2, Math.sin(ang) * Math.sin(tilt) * len / 2)
+    br.rotation.set(Math.sin(ang) * tilt, 0, -Math.cos(ang) * tilt)
+    tree.add(br)
+  }
+  const crownR = 1.9 + rnd() * 1.1
+  const crownY = h + crownR * 0.55
+  const clumps = 9 + Math.floor(rnd() * 6)
+  for (let c = 0; c < clumps; c++) {
+    const r = crownR * (0.45 + rnd() * 0.35)
+    const geo = lumpy(new THREE.IcosahedronGeometry(r, 3), rnd, 0.14)
+    const clump = new THREE.Mesh(geo, leaves[Math.floor(rnd() * leaves.length)])
+    const a = rnd() * Math.PI * 2
+    const d = crownR * Math.sqrt(rnd()) * 0.75
+    clump.position.set(Math.cos(a) * d, crownY + (rnd() - 0.35) * crownR * 0.8, Math.sin(a) * d)
+    clump.scale.y = 0.8 + rnd() * 0.25
+    clump.castShadow = true
+    tree.add(clump)
+  }
+  trunk.castShadow = true
+  return tree
+}
+
+/** A conifer: a straight trunk with stacked, slightly ragged tiers of needles */
+function makeConifer(rnd: () => number, bark: THREE.Material, needles: THREE.Material): THREE.Group {
+  const tree = new THREE.Group()
+  const h = 5 + rnd() * 3
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.26, h * 0.5, 8), bark)
+  trunk.position.y = h * 0.25
+  tree.add(trunk)
+  const tiers = 5
+  for (let t = 0; t < tiers; t++) {
+    const f = t / tiers
+    const r = (1.9 - f * 1.5) * (0.9 + rnd() * 0.2)
+    const cone = new THREE.Mesh(lumpy(new THREE.ConeGeometry(r, h * 0.36, 12, 3), rnd, 0.08), needles)
+    cone.position.y = h * 0.3 + f * h * 0.62
+    cone.rotation.y = rnd() * Math.PI
+    cone.castShadow = true
+    tree.add(cone)
+  }
+  return tree
+}
+
+function buildField(scene: THREE.Object3D) {
+  const rnd = seededRandom(20261015)
+
+  // Sky dome: deep blue overhead fading to a pale, hazy horizon, with soft clouds
+  const skyTex = canvasTexture(2048, 1024, (ctx, w, h) => {
+    const g = ctx.createLinearGradient(0, 0, 0, h)
+    g.addColorStop(0, '#3f86cf')
+    g.addColorStop(0.3, '#79b2e6')
+    g.addColorStop(0.47, '#c4ddf2')
+    g.addColorStop(0.5, '#d6e8f5')
+    g.addColorStop(1, '#d6e8f5')
+    ctx.fillStyle = g
+    ctx.fillRect(0, 0, w, h)
+    for (let i = 0; i < 34; i++) {
+      const cx = rnd() * w, cy = h * (0.14 + rnd() * 0.3), r = 30 + rnd() * 70
+      for (let k = 0; k < 9; k++) {
+        const gx = cx + (rnd() - 0.5) * r * 2.6, gy = cy + (rnd() - 0.5) * r * 0.45, rr = r * (0.45 + rnd() * 0.6)
+        const rg = ctx.createRadialGradient(gx, gy, 0, gx, gy, rr)
+        rg.addColorStop(0, 'rgba(255,255,255,0.8)')
+        rg.addColorStop(0.6, 'rgba(255,255,255,0.35)')
+        rg.addColorStop(1, 'rgba(255,255,255,0)')
+        ctx.fillStyle = rg
+        ctx.beginPath()
+        ctx.arc(gx, gy, rr, 0, Math.PI * 2)
+        ctx.fill()
+      }
+    }
+  })
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(260, 48, 24), new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide, fog: false, depthWrite: false, toneMapped: false }))
+  sky.position.copy(FIELD_CENTRE)
+  sky.renderOrder = -1
+  scene.add(sky)
+
+  // The sun: a bright disc with a soft glow, where the sunlight comes from
+  const glowTex = (inner: string, outer: string) => canvasTexture(256, 256, (ctx, w, h) => {
+    const g = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2)
+    g.addColorStop(0, inner)
+    g.addColorStop(0.35, outer)
+    g.addColorStop(1, 'rgba(255,240,200,0)')
+    ctx.fillStyle = g
+    ctx.fillRect(0, 0, w, h)
+  })
+  const sunAt = FIELD_CENTRE.clone().addScaledVector(FIELD_SUN_DIR, 240)
+  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex('rgba(255,250,225,0.7)', 'rgba(255,236,180,0.3)'), fog: false, depthWrite: false, transparent: true, toneMapped: false }))
+  halo.scale.set(150, 150, 1)
+  halo.position.copy(sunAt)
+  const disc = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex('rgba(255,255,255,1)', 'rgba(255,250,220,1)'), fog: false, depthWrite: false, transparent: true, toneMapped: false }))
+  disc.scale.set(26, 26, 1)
+  disc.position.copy(sunAt)
+  halo.renderOrder = disc.renderOrder = 0
+  scene.add(halo, disc)
+
+  // Mown school-field lawn: blotchy greens with blades, and broad lighter/darker mowing stripes
+  const grass = canvasTexture(1024, 1024, (ctx, w, h) => {
+    ctx.fillStyle = '#5c8c3a'
+    ctx.fillRect(0, 0, w, h)
+    for (let i = 0; i < 180; i++) {
+      const x = rnd() * w, y = rnd() * h, r = 20 + rnd() * 70
+      const rg = ctx.createRadialGradient(x, y, 0, x, y, r)
+      const tone = rnd() > 0.5 ? '90,140,55' : '70,112,42'
+      rg.addColorStop(0, `rgba(${tone},0.35)`)
+      rg.addColorStop(1, `rgba(${tone},0)`)
+      ctx.fillStyle = rg
+      ctx.fillRect(x - r, y - r, r * 2, r * 2)
+    }
+    for (let i = 0; i < 26000; i++) {
+      const shade = rnd()
+      ctx.fillStyle = shade > 0.55 ? `rgba(150,190,95,${0.25 + rnd() * 0.3})` : `rgba(45,85,30,${0.25 + rnd() * 0.3})`
+      ctx.fillRect(rnd() * w, rnd() * h, 1.5, 3 + rnd() * 5)
     }
   })
   grass.wrapS = grass.wrapT = THREE.RepeatWrapping
-  grass.repeat.set(80, 80)
-  const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(300, 300),
-    new THREE.MeshStandardMaterial({ map: grass, roughness: 1 }),
-  )
+  grass.repeat.set(70, 70)
+  grass.anisotropy = 8
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(320, 320), new THREE.MeshStandardMaterial({ map: grass, roughness: 1 }))
   ground.rotation.x = -Math.PI / 2
   ground.receiveShadow = true
   scene.add(ground)
+  const stripes = canvasTexture(16, 256, (ctx, w, h) => {
+    for (let i = 0; i < 8; i++) {
+      ctx.fillStyle = i % 2 ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)'
+      ctx.fillRect(0, (i * h) / 8, w, h / 8)
+    }
+  })
+  const mowing = new THREE.Mesh(new THREE.PlaneGeometry(90, 36), new THREE.MeshBasicMaterial({ map: stripes, transparent: true, depthWrite: false }))
+  mowing.rotation.x = -Math.PI / 2
+  mowing.rotation.z = Math.PI / 2
+  mowing.position.set(22, 0.002, 4)
+  scene.add(mowing)
 
-  // White boundary line and distant trees for a sense of scale
-  const line = new THREE.Mesh(new THREE.PlaneGeometry(80, 0.1), new THREE.MeshStandardMaterial({ color: 0xf5f5f0, roughness: 0.9 }))
+  // White boundary line of the field
+  const line = new THREE.Mesh(new THREE.PlaneGeometry(90, 0.1), new THREE.MeshStandardMaterial({ color: 0xf5f5f0, roughness: 0.9 }))
   line.rotation.x = -Math.PI / 2
-  line.position.set(20, 0.003, -6)
+  line.position.set(22, 0.003, -6)
   scene.add(line)
 
-  const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5b4330, roughness: 0.9 })
-  const leafMat = new THREE.MeshStandardMaterial({ color: 0x3f6b2a, roughness: 0.9 })
-  for (let i = 0; i < 14; i++) {
-    const x = -20 + i * 6 + (i % 3) * 1.5
-    const z = -30 - (i % 4) * 4
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.35, 3, 8), trunkMat)
-    trunk.position.set(x, 1.5, z)
-    const crown = new THREE.Mesh(new THREE.SphereGeometry(2.2 + (i % 3) * 0.5, 12, 10), leafMat)
-    crown.position.set(x, 4.2 + (i % 2), z)
-    scene.add(trunk, crown)
+  // Distant hills, softened by the haze
+  const hillMat = new THREE.MeshStandardMaterial({ color: 0x6f9468, roughness: 1 })
+  for (let i = 0; i < 7; i++) {
+    const hill = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 12), hillMat)
+    hill.scale.set(40 + rnd() * 40, 10 + rnd() * 12, 22 + rnd() * 10)
+    hill.position.set(-60 + i * 30 + rnd() * 10, -3, -130 - rnd() * 40)
+    scene.add(hill)
+  }
+
+  // A trimmed hedge along the far side of the field
+  const hedgeMat = new THREE.MeshStandardMaterial({ color: 0x2f5a25, roughness: 1 })
+  for (let x = -30; x <= 75; x += 1.1) {
+    const bush = new THREE.Mesh(lumpy(new THREE.IcosahedronGeometry(0.85 + rnd() * 0.25, 1), rnd, 0.15), hedgeMat)
+    bush.position.set(x, 0.7, -22 + (rnd() - 0.5) * 0.4)
+    bush.scale.set(1, 0.9 + rnd() * 0.2, 0.75)
+    bush.castShadow = true
+    scene.add(bush)
+  }
+
+  // Trees behind the hedge and at the sides: mostly broad-leaved, a few conifers
+  const bark = new THREE.MeshStandardMaterial({ map: barkTexture(rnd), roughness: 0.95 })
+  const leaves = ['#3d6b2a', '#4a7c31', '#365f25', '#55893a', '#2f5622'].map(c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.92 }))
+  const needles = new THREE.MeshStandardMaterial({ color: 0x264d2a, roughness: 0.95 })
+  const spots: [number, number][] = []
+  for (let i = 0; i < 26; i++) spots.push([-28 + i * 4.2 + (rnd() - 0.5) * 3, -28 - rnd() * 16])
+  for (let i = 0; i < 6; i++) spots.push([-18 - rnd() * 8, -14 + i * 5 + rnd() * 2])
+  for (let i = 0; i < 6; i++) spots.push([62 + rnd() * 8, -14 + i * 5 + rnd() * 2])
+  for (const [x, z] of spots) {
+    const tree = rnd() < 0.22 ? makeConifer(rnd, bark, needles) : makeBroadleafTree(rnd, bark, leaves)
+    tree.position.set(x, 0, z)
+    tree.rotation.y = rnd() * Math.PI * 2
+    const sc = 0.85 + rnd() * 0.45
+    tree.scale.setScalar(sc)
+    scene.add(tree)
   }
 }
 

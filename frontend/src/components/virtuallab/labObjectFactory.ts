@@ -2153,6 +2153,46 @@ export function createObjectMesh(objectType: string, key: string, displayName: s
       for (let i = 0; i < 4; i++) add(mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.06, 8), chrome(), -0.3 + i * 0.2, 0.11, i % 2 ? 0.18 : -0.18))
       break
     }
+    case 'preserved_frog': {
+      // a frog in a jar of preservative, as it comes from the prep room
+      add(mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.5, 36, 1, true), glass(), 0, 0.25))
+      add(mesh(new THREE.CylinderGeometry(0.21, 0.21, 0.06, 36), plastic(0x1f2937), 0, 0.53))
+      add(liquidMesh(0.2, 0.5, '#f3f0d0', 0.62))
+      const frogBody = mesh(new THREE.SphereGeometry(0.1, 24, 16), solid(0x5d7a2c), 0, 0.2)
+      frogBody.scale.set(0.8, 1.4, 0.55)
+      add(frogBody)
+      break
+    }
+    case 'dissecting_scissors': {
+      for (const s of [-1, 1]) {
+        const blade = mesh(rbox(0.3, 0.012, 0.03, 0.004), chrome(), 0.12, 0.012, s * 0.012)
+        blade.rotation.y = s * 0.06
+        const ring = mesh(new THREE.TorusGeometry(0.045, 0.01, 10, 24), chrome(), -0.2, 0.012, s * 0.06)
+        ring.rotation.x = Math.PI / 2
+        add(blade, ring)
+      }
+      break
+    }
+    case 'dissecting_pins': {
+      add(mesh(new THREE.CylinderGeometry(0.14, 0.15, 0.06, 32), solid(0x8b5a2b), 0, 0.03))
+      const pad = mesh(new THREE.SphereGeometry(0.13, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), solid(0xb91c1c), 0, 0.055)
+      pad.scale.y = 0.5
+      add(pad)
+      for (let k = 0; k < 8; k++) {
+        const a = (k / 8) * Math.PI * 2
+        add(mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.14, 6), chrome(), Math.cos(a) * 0.06, 0.15, Math.sin(a) * 0.06))
+        add(mesh(new THREE.SphereGeometry(0.014, 12, 8), plastic([0xdc2626, 0x2563eb, 0xf59e0b, 0x16a34a][k % 4]), Math.cos(a) * 0.06, 0.22, Math.sin(a) * 0.06))
+      }
+      break
+    }
+    case 'rubber_gloves': {
+      for (const s of [-1, 1]) {
+        const palm = mesh(rbox(0.3, 0.03, 0.5, 0.012), plastic(0x93c5fd), s * 0.18, 0.015, 0)
+        palm.rotation.y = s * 0.12
+        add(palm)
+      }
+      break
+    }
     case 'specimen_bottle': {
       add(mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.5, 36, 1, true), glass(), 0, 0.25))
       add(mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.06, 36), plastic(0x0f766e), 0, 0.53))

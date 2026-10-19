@@ -10,7 +10,7 @@
     <template v-if="open">
       <div class="flex flex-wrap gap-1 mb-3">
         <button
-          v-for="t in TABS"
+          v-for="t in tabs"
           :key="t.key"
           type="button"
           @click="tab = t.key"
@@ -34,7 +34,7 @@
             <p>{{ aim }}</p>
           </div>
           <div class="rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3">
-            <p class="text-[11px] font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400 mb-1">Hypothesis</p>
+            <p class="text-[11px] font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400 mb-1">{{ hypothesisLabel || 'Hypothesis' }}</p>
             <p>{{ hypothesis }}</p>
             <p v-if="hypothesisNote" class="text-xs text-amber-800 dark:text-amber-200 mt-1.5">{{ hypothesisNote }}</p>
           </div>
@@ -44,7 +44,7 @@
           </div>
         </div>
 
-        <div v-else-if="tab === 'variables'" class="space-y-2">
+        <div v-else-if="tab === 'variables' && variables" class="space-y-2">
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <div class="rounded-xl bg-gray-50 dark:bg-gray-900/40 p-3"><p class="text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1">Independent</p><p>{{ variables.independent }}</p></div>
             <div class="rounded-xl bg-gray-50 dark:bg-gray-900/40 p-3"><p class="text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1">Dependent</p><p>{{ variables.dependent }}</p></div>
@@ -82,7 +82,10 @@ const props = defineProps<{
   hypothesisNote?: string
   task?: string
   theory?: string[]
-  variables: { independent: string; dependent: string; controlled: string; note?: string }
+  /** Left out for observational practicals (e.g. a dissection) - the Variables tab is then hidden */
+  variables?: { independent: string; dependent: string; controlled: string; note?: string }
+  /** e.g. "What to expect" where a practical has no hypothesis to test */
+  hypothesisLabel?: string
   apparatus: string[]
   setupPoints: string[]
   procedure: string[]
@@ -97,6 +100,7 @@ const TABS = [
   { key: 'procedure', label: 'Procedure' },
 ] as const
 const tab = ref<(typeof TABS)[number]['key']>('scenario')
+const tabs = computed(() => TABS.filter(t => t.key !== 'variables' || !!props.variables).map(t => (t.key === 'aim' && props.hypothesisLabel ? { ...t, label: `Aim & ${props.hypothesisLabel}` } : t)))
 const open = ref(true)
 const scenarioParas = computed(() => (props.introduction || '').split(/\n+/).map(p => p.trim()).filter(Boolean))
 </script>

@@ -803,7 +803,8 @@ const MENU: Record<string, NavGroup[]> = {
       { path: '/student/itembank', label: 'Item Bank', icon: 'QuestionMarkCircleIcon' },
       { path: '/student/labs', label: 'Virtual Lab', icon: 'FlaskIcon', children: [
         { path: '/student/virtual-lab', label: 'Science Lab', icon: 'FlaskIcon' },
-        { path: '/student/ict-lab', label: 'ICT Lab', icon: 'ComputerIcon' }
+        { path: '/student/ict-lab', label: 'ICT Lab', icon: 'ComputerIcon' },
+        { path: '/student/anatomy', label: 'Anatomy Explorer', icon: 'FlaskIcon' }
       ] }
     ] },
     { key: 'progress', name: 'Progress', items: [
@@ -832,7 +833,8 @@ const MENU: Record<string, NavGroup[]> = {
       { path: '/teacher/itembank', label: 'Item Bank', icon: 'QuestionMarkCircleIcon' },
       { path: '/teacher/labs', label: 'Virtual Lab', icon: 'FlaskIcon', children: [
         { path: '/teacher/virtual-lab', label: 'Science Lab', icon: 'FlaskIcon' },
-        { path: '/teacher/ict-lab', label: 'ICT Lab', icon: 'ComputerIcon' }
+        { path: '/teacher/ict-lab', label: 'ICT Lab', icon: 'ComputerIcon' },
+        { path: '/teacher/anatomy', label: 'Anatomy Explorer', icon: 'FlaskIcon' }
       ] }
     ] },
     { key: 'assessment', name: 'Assessment', items: [
@@ -867,7 +869,8 @@ const MENU: Record<string, NavGroup[]> = {
       { path: '/hod/itembank', label: 'Item Bank', icon: 'QuestionMarkCircleIcon' },
       { path: '/hod/labs', label: 'Virtual Lab', icon: 'FlaskIcon', children: [
         { path: '/hod/virtual-lab', label: 'Science Lab', icon: 'FlaskIcon' },
-        { path: '/hod/ict-lab', label: 'ICT Lab', icon: 'ComputerIcon' }
+        { path: '/hod/ict-lab', label: 'ICT Lab', icon: 'ComputerIcon' },
+        { path: '/hod/anatomy', label: 'Anatomy Explorer', icon: 'FlaskIcon' }
       ] }
     ] },
     { key: 'assessment', name: 'Assessment', items: [
@@ -917,7 +920,8 @@ const MENU: Record<string, NavGroup[]> = {
       { path: '/admin/live-classes', label: 'Live Classes', icon: 'VideoCameraIcon' },
       { path: '/admin/labs', label: 'Virtual Lab', icon: 'FlaskIcon', children: [
         { path: '/admin/virtual-lab', label: 'Science Lab', icon: 'FlaskIcon' },
-        { path: '/admin/ict-lab', label: 'ICT Lab', icon: 'ComputerIcon' }
+        { path: '/admin/ict-lab', label: 'ICT Lab', icon: 'ComputerIcon' },
+        { path: '/admin/anatomy', label: 'Anatomy Explorer', icon: 'FlaskIcon' }
       ] }
     ] },
     { key: 'assessment', name: 'Assessment', items: [

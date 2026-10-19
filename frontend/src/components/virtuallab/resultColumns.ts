@@ -38,6 +38,8 @@ export const RESULT_COLUMN_LABELS: Record<string, string> = {
   image_cm: 'Image distance x (cm)',
   i_deg: 'Angle i (°)',
   r_deg: 'Angle r (°)',
+  angle_deg: 'Angle θ (°)',
+  range_m: 'Range R (m)',
 }
 
 export const resultColumnLabel = (col: string) => RESULT_COLUMN_LABELS[col] ?? col.replace(/_/g, ' ')

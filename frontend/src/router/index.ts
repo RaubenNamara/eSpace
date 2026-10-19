@@ -77,6 +77,11 @@ const ENotePreview = () => import('../pages/teacher/ENotePreview.vue')
 const IctLab = () => import('../pages/common/IctLab.vue')
 const IctLabActivity = () => import('../pages/common/IctLabActivity.vue')
 const IctLabShowroom = () => import('../pages/common/IctLabShowroom.vue')
+const AnatomyExplorer = () => import('../pages/common/AnatomyExplorer.vue')
+const AnatomyModules = () => import('../pages/common/AnatomyModules.vue')
+const AnatomyModule = () => import('../pages/common/AnatomyModule.vue')
+const AnatomyBioDigital = () => import('../pages/common/AnatomyBioDigital.vue')
+const AnatomySystem = () => import('../pages/common/AnatomySystem.vue')
 const StudentENotes = () => import('../pages/student/ENotes.vue')
 
 // HOD Pages
@@ -233,6 +238,11 @@ const routes: RouteRecordRaw[] = [
       { path: 'academic-history', name: 'StudentAcademicHistory', component: StudentAcademicHistory },
       { path: 'virtual-lab', name: 'StudentVirtualLab', component: StudentVirtualLab },
       { path: 'ict-lab', name: 'StudentIctLab', component: IctLab },
+      { path: 'anatomy', name: 'StudentAnatomy', component: AnatomyExplorer },
+      { path: 'anatomy/modules', name: 'StudentAnatomyModules', component: AnatomyModules },
+      { path: 'anatomy/modules/:id', name: 'StudentAnatomyModule', component: AnatomyModule },
+      { path: 'anatomy/biodigital', name: 'StudentAnatomyBioDigital', component: AnatomyBioDigital },
+      { path: 'anatomy/systems/:key', name: 'StudentAnatomySystem', component: AnatomySystem },
       { path: 'ict-lab/showroom', name: 'StudentIctLabShowroom', component: IctLabShowroom },
       { path: 'ict-lab/:activity', name: 'StudentIctLabActivity', component: IctLabActivity },
       { path: 'virtual-lab/playground', name: 'StudentVirtualLabPlayground', component: StudentVirtualLabPlayground },
@@ -314,6 +324,11 @@ const routes: RouteRecordRaw[] = [
       { path: 'physical-exams', name: 'TeacherPhysicalExams', component: TeacherPhysicalExams },
       { path: 'virtual-lab', name: 'TeacherVirtualLab', component: TeacherVirtualLab },
       { path: 'ict-lab', name: 'TeacherIctLab', component: IctLab },
+      { path: 'anatomy', name: 'TeacherAnatomy', component: AnatomyExplorer },
+      { path: 'anatomy/modules', name: 'TeacherAnatomyModules', component: AnatomyModules },
+      { path: 'anatomy/modules/:id', name: 'TeacherAnatomyModule', component: AnatomyModule },
+      { path: 'anatomy/biodigital', name: 'TeacherAnatomyBioDigital', component: AnatomyBioDigital },
+      { path: 'anatomy/systems/:key', name: 'TeacherAnatomySystem', component: AnatomySystem },
       { path: 'ict-lab/showroom', name: 'TeacherIctLabShowroom', component: IctLabShowroom },
       { path: 'ict-lab/:activity', name: 'TeacherIctLabActivity', component: IctLabActivity },
       { path: 'virtual-lab/playground', name: 'TeacherVirtualLabPlayground', component: StudentVirtualLabPlayground },
@@ -343,6 +358,11 @@ const routes: RouteRecordRaw[] = [
       // The admin's Virtual Lab page, limited to the HOD's department (meta.labRole)
       { path: 'virtual-lab', name: 'HODVirtualLab', component: AdminVirtualLab, meta: { labRole: 'hod' } },
       { path: 'ict-lab', name: 'HODIctLab', component: IctLab },
+      { path: 'anatomy', name: 'HODAnatomy', component: AnatomyExplorer },
+      { path: 'anatomy/modules', name: 'HODAnatomyModules', component: AnatomyModules },
+      { path: 'anatomy/modules/:id', name: 'HODAnatomyModule', component: AnatomyModule },
+      { path: 'anatomy/biodigital', name: 'HODAnatomyBioDigital', component: AnatomyBioDigital },
+      { path: 'anatomy/systems/:key', name: 'HODAnatomySystem', component: AnatomySystem },
       { path: 'ict-lab/showroom', name: 'HODIctLabShowroom', component: IctLabShowroom },
       { path: 'ict-lab/:activity', name: 'HODIctLabActivity', component: IctLabActivity },
       { path: 'virtual-lab/practice/:experimentId', name: 'HODVirtualLabPractice', component: StudentVirtualLabExperiment, meta: { practice: true, practiceRole: 'hod' } },
@@ -406,6 +426,11 @@ const routes: RouteRecordRaw[] = [
       { path: 'rewards', name: 'AdminRewards', component: AdminRewards },
       { path: 'virtual-lab', name: 'AdminVirtualLab', component: AdminVirtualLab },
       { path: 'ict-lab', name: 'AdminIctLab', component: IctLab },
+      { path: 'anatomy', name: 'AdminAnatomy', component: AnatomyExplorer },
+      { path: 'anatomy/modules', name: 'AdminAnatomyModules', component: AnatomyModules },
+      { path: 'anatomy/modules/:id', name: 'AdminAnatomyModule', component: AnatomyModule },
+      { path: 'anatomy/biodigital', name: 'AdminAnatomyBioDigital', component: AnatomyBioDigital },
+      { path: 'anatomy/systems/:key', name: 'AdminAnatomySystem', component: AnatomySystem },
       { path: 'ict-lab/showroom', name: 'AdminIctLabShowroom', component: IctLabShowroom },
       { path: 'ict-lab/:activity', name: 'AdminIctLabActivity', component: IctLabActivity },
       // An admin opening an experiment to view its diagram/procedure - same page as the teacher

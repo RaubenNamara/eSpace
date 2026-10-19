@@ -52,6 +52,8 @@
         <VirtualLabGravityBrief v-else-if="isGravityExperiment" :introduction="attempt.experiment.introduction" :objective="attempt.experiment.objective" />
         <VirtualLabEmfBrief v-else-if="isEmfExperiment" :introduction="attempt.experiment.introduction" :objective="attempt.experiment.objective" />
         <VirtualLabBottleMassBrief v-else-if="isBottleMassExperiment" :introduction="attempt.experiment.introduction" :objective="attempt.experiment.objective" />
+        <VirtualLabProjectileBrief v-else-if="isProjectileRangeExperiment" :introduction="attempt.experiment.introduction" :objective="attempt.experiment.objective" />
+        <VirtualLabFrogDissectionBrief v-else-if="isFrogDissectionExperiment" :introduction="attempt.experiment.introduction" :objective="attempt.experiment.objective" />
         <VirtualLabPlaneMirrorBrief v-else-if="isPlaneMirrorExperiment" :introduction="attempt.experiment.introduction" :objective="attempt.experiment.objective" />
         <VirtualLabRuleMassBrief v-else-if="isRuleMassExperiment" :introduction="attempt.experiment.introduction" :objective="attempt.experiment.objective" />
         <VirtualLabDensityBrief v-else-if="isDensityExperiment" :introduction="attempt.experiment.introduction" :objective="attempt.experiment.objective" />
@@ -267,7 +269,7 @@
                   :scene-objects="attempt.experiment.scene_objects"
                   :object-catalog="objectCatalog"
                   :read-only="sceneReadOnly"
-                  v-bind="isBulbExperiment || isGravityExperiment || isEmfExperiment || isRuleMassExperiment || isPlaneMirrorExperiment ? { currentStep } : {}"
+                  v-bind="isBulbExperiment || isGravityExperiment || isEmfExperiment || isRuleMassExperiment || isPlaneMirrorExperiment || isProjectileRangeExperiment || isFrogDissectionExperiment ? { currentStep } : {}"
                   cupboard
                   wall-shelves
                   :bench-length="3"
@@ -365,6 +367,34 @@
             @save-analysis="saveRuleMassAnalysis"
             @save-graph="saveGravityGraph"
             @blocker="ruleMassBlocker = $event"
+          />
+        </div>
+
+        <!-- Projectile range: results table, questions, conclusion and assessment (no graph) -->
+        <div v-if="isProjectileRangeExperiment && !hasTeacherMarking" id="projectile-analysis" class="mt-5 sm:mt-6 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+          <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-4"><AppIcon name="book" class="w-5 h-5" /> Results and questions</h2>
+          <VirtualLabProjectileAnalysis
+            :rows="resultRows"
+            :trials="projectileTrials"
+            :analysis="projectileAnalysisEntry"
+            v-model:conclusion="conclusionText"
+            :read-only="attempt.status !== 'in_progress'"
+            @save-row="saveProjectileRow"
+            @save-analysis="saveProjectileAnalysis"
+            @blocker="projectileBlocker = $event"
+          />
+        </div>
+
+        <!-- Frog dissection: labelled diagram, organs and functions, questions, conclusion and assessment -->
+        <div v-if="isFrogDissectionExperiment && !hasTeacherMarking" id="frog-analysis" class="mt-5 sm:mt-6 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+          <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-4"><AppIcon name="book" class="w-5 h-5" /> Observations and questions</h2>
+          <VirtualLabFrogDissectionAnalysis
+            :record="frogRecord"
+            :analysis="frogAnalysisEntry"
+            v-model:conclusion="conclusionText"
+            :read-only="attempt.status !== 'in_progress'"
+            @save-analysis="saveFrogAnalysis"
+            @blocker="frogBlocker = $event"
           />
         </div>
 
@@ -511,7 +541,7 @@
             @blocker="bulbBlocker = $event"
           />
 
-          <div class="grid grid-cols-1 gap-5 lg:gap-8 items-start" :class="isBulbExperiment || isMirrorExperiment || isGravityExperiment || isEmfExperiment || isRuleMassExperiment || isPlaneMirrorExperiment ? '' : 'lg:grid-cols-2'">
+          <div class="grid grid-cols-1 gap-5 lg:gap-8 items-start" :class="isBulbExperiment || isMirrorExperiment || isGravityExperiment || isEmfExperiment || isRuleMassExperiment || isPlaneMirrorExperiment || isProjectileRangeExperiment || isFrogDissectionExperiment ? '' : 'lg:grid-cols-2'">
           <div v-if="!hasOwnAnalysis" class="space-y-5 min-w-0">
 
           <div v-if="measurementEntries.length > 0">
@@ -619,7 +649,7 @@
           </div>
           </div>
 
-          <div class="space-y-5 min-w-0" :class="isBulbExperiment || isMirrorExperiment || isGravityExperiment || isEmfExperiment || isRuleMassExperiment || isPlaneMirrorExperiment ? '' : 'lg:sticky lg:top-24 lg:border-l lg:border-gray-100 dark:lg:border-gray-700 lg:pl-8'">
+          <div class="space-y-5 min-w-0" :class="isBulbExperiment || isMirrorExperiment || isGravityExperiment || isEmfExperiment || isRuleMassExperiment || isPlaneMirrorExperiment || isProjectileRangeExperiment || isFrogDissectionExperiment ? '' : 'lg:sticky lg:top-24 lg:border-l lg:border-gray-100 dark:lg:border-gray-700 lg:pl-8'">
           <div v-if="!hasOwnAnalysis">
             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Observations</label>
             <textarea
@@ -646,7 +676,7 @@
             ></textarea>
           </div>
 
-          <div v-if="attempt.experiment.conclusion_prompt && !isBulbExperiment && !isGravityExperiment && !isEmfExperiment && !isRuleMassExperiment && !isPlaneMirrorExperiment">
+          <div v-if="attempt.experiment.conclusion_prompt && !isBulbExperiment && !isGravityExperiment && !isEmfExperiment && !isRuleMassExperiment && !isPlaneMirrorExperiment && !isProjectileRangeExperiment && !isFrogDissectionExperiment">
             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Conclusion</label>
             <p class="text-xs text-gray-400 dark:text-gray-500 mb-1.5">{{ attempt.experiment.conclusion_prompt }}</p>
             <textarea
@@ -706,6 +736,12 @@ import VirtualLabRuleMassAnalysis from '@/components/virtuallab/VirtualLabRuleMa
 import VirtualLabRuleMassBrief from '@/components/virtuallab/VirtualLabRuleMassBrief.vue'
 import VirtualLabPlaneMirrorAnalysis from '@/components/virtuallab/VirtualLabPlaneMirrorAnalysis.vue'
 import VirtualLabPlaneMirrorBrief from '@/components/virtuallab/VirtualLabPlaneMirrorBrief.vue'
+import VirtualLabProjectileAnalysis from '@/components/virtuallab/VirtualLabProjectileAnalysis.vue'
+import VirtualLabProjectileBrief from '@/components/virtuallab/VirtualLabProjectileBrief.vue'
+import VirtualLabFrogDissectionAnalysis from '@/components/virtuallab/VirtualLabFrogDissectionAnalysis.vue'
+import VirtualLabFrogDissectionBrief from '@/components/virtuallab/VirtualLabFrogDissectionBrief.vue'
+import type { FrogRecord } from '@/components/virtuallab/VirtualLabSceneFrogDissection.vue'
+import type { ProjectileTrial } from '@/components/virtuallab/VirtualLabSceneProjectile.vue'
 import type { MirrorPinTrial, MirrorPinRecord } from '@/components/virtuallab/VirtualLabScenePlaneMirror.vue'
 import type { RuleMassTrial, RuleMassRecord } from '@/components/virtuallab/VirtualLabSceneRuleMass.vue'
 import VirtualLabGravityAnalysis from '@/components/virtuallab/VirtualLabGravityAnalysis.vue'
@@ -723,6 +759,8 @@ const QUESTION_TYPE_LABELS: Record<string, string> = {
 }
 
 const route = useRoute()
+/** what the Anatomy Explorer opens with when the Human Body Systems practical is chosen */
+const ANATOMY_SYSTEMS = 'integumentary,skeletal,respiratory,digestive,nervous,urinary'
 const router = useRouter()
 
 // Practice mode (teacher/admin route, meta.practice): a teacher or admin does the experiment
@@ -883,7 +921,7 @@ const guidedExperiment = computed(() => {
 // exposes goToView and is built with cupboard/wallCabinets except 'projectile', which uses the
 // open-field room setting and keeps its own richer launcher/field/trajectory camera system instead.
 // The plane-mirror pin practical is a flat top view of the soft board - no room to look around.
-const roomCameraSupported = computed(() => !['projectile', 'plane_mirror_pins'].includes(attempt.value?.experiment.render_component ?? ''))
+const roomCameraSupported = computed(() => !['projectile', 'projectile_range', 'plane_mirror_pins', 'frog_dissection'].includes(attempt.value?.experiment.render_component ?? ''))
 const CAMERA_VIEWS: { key: CameraView; label: string; title: string }[] = [
   { key: 'bench', label: 'Bench', title: 'Back to the apparatus on the bench' },
   { key: 'entrance', label: 'Entrance', title: 'Look at the lab entrance' },
@@ -925,10 +963,10 @@ const isDensityExperiment = computed(() => attempt.value?.experiment.render_comp
 /** The live table shows while the student is still working; once every step is done the Practical
  *  Notebook (with the same table) takes over. Practicals that never produce result rows don't get one. */
 const RESULT_TABLE_PRACTICALS = ['pendulum', 'hookes_law', 'circuit', 'titration', 'optics', 'projectile', 'moments_balance', 'concave_mirror_focus', 'silver_density_spring']
-const showLiveResults = computed(() => !!attempt.value && attempt.value.status === 'in_progress' && !allStepsDone.value && !isBulbExperiment.value && !isGravityExperiment.value && !isEmfExperiment.value && !isRuleMassExperiment.value && !isPlaneMirrorExperiment.value
+const showLiveResults = computed(() => !!attempt.value && attempt.value.status === 'in_progress' && !allStepsDone.value && !isBulbExperiment.value && !isGravityExperiment.value && !isEmfExperiment.value && !isRuleMassExperiment.value && !isPlaneMirrorExperiment.value && !isProjectileRangeExperiment.value && !isFrogDissectionExperiment.value
   && (resultRows.value.length > 0 || RESULT_TABLE_PRACTICALS.includes(attempt.value.experiment.render_component ?? '')))
 /** The compact copy in the steps panel - also for the g practical, whose rows the student types in. */
-const showMiniResults = computed(() => showLiveResults.value || ((isGravityExperiment.value || isEmfExperiment.value || isRuleMassExperiment.value || isPlaneMirrorExperiment.value) && attempt.value?.status === 'in_progress'))
+const showMiniResults = computed(() => showLiveResults.value || ((isGravityExperiment.value || isEmfExperiment.value || isRuleMassExperiment.value || isPlaneMirrorExperiment.value || isProjectileRangeExperiment.value) && attempt.value?.status === 'in_progress'))
 /** The row just recorded is highlighted for a moment, so the student sees what went in. */
 const justAddedRowId = ref<number | null>(null)
 let justAddedTimer = 0
@@ -982,6 +1020,12 @@ const startAttempt = async () => {
     const res = await axios.post(`/api/student/virtual-lab/assignments/${assignmentId}/start`)
     attempt.value = res.data.data
   }
+  // The Human Body Systems practical has moved to the Anatomy Explorer (real 3D anatomy): go there
+  if (attempt.value!.experiment.render_component === 'human_body') {
+    const role = route.path.split('/')[1] || 'student'
+    await router.replace({ path: `/${role}/anatomy`, query: { systems: ANATOMY_SYSTEMS } })
+    return
+  }
   // Opening cascade (Step 1 downwards) only - later steps drop in one at a time as they're reached
   const stepsShown = Math.min(attempt.value!.current_step, attempt.value!.experiment.steps.length)
   setTimeout(() => { revealStagger.value = false }, stepsShown * 140 + 900)
@@ -1006,7 +1050,7 @@ const onSceneAction = (payload: ScenePayload) => {
   return sceneActionChain
 }
 
-const handleSceneAction = async (payload: { objectKey: string | null; action: string; value: string | null; unit?: string | null; label?: string | null; safetyIssue?: boolean; targetObjectKey?: string | null; springLoadG?: number; oscillations?: number; bulbTrial?: BulbTrial; labRecord?: BulbLabRecord; pendulumTrial?: PendulumTrial; gRecord?: PendulumGRecord; ruleTrial?: RuleMassTrial; ruleRecord?: RuleMassRecord; mirrorTrial?: MirrorPinTrial; mirrorRecord?: MirrorPinRecord }) => {
+const handleSceneAction = async (payload: { objectKey: string | null; action: string; value: string | null; unit?: string | null; label?: string | null; safetyIssue?: boolean; targetObjectKey?: string | null; springLoadG?: number; oscillations?: number; bulbTrial?: BulbTrial; labRecord?: BulbLabRecord; pendulumTrial?: PendulumTrial; gRecord?: PendulumGRecord; ruleTrial?: RuleMassTrial; ruleRecord?: RuleMassRecord; mirrorTrial?: MirrorPinTrial; mirrorRecord?: MirrorPinRecord; projectileTrial?: ProjectileTrial; frogRecord?: FrogRecord }) => {
   if (!attempt.value) return
 
   if ((payload.action === 'switch_on' || payload.action === 'switch_off') && payload.objectKey) {
@@ -1018,6 +1062,14 @@ const handleSceneAction = async (payload: { objectKey: string | null; action: st
   if (isGravityExperiment.value) {
     if (payload.pendulumTrial) { const t = payload.pendulumTrial; queueBulbSave(() => upsertCalculation(`Timing l = ${t.length_m.toFixed(3)} m`, `t = ${t.t_s} s for ${t.oscillations} oscillations`, t)) }
     if (payload.gRecord) { const r = payload.gRecord; queueBulbSave(() => upsertCalculation('Lab record', 'Apparatus handling', r)) }
+  }
+  if (isFrogDissectionExperiment.value && payload.frogRecord) {
+    const r = payload.frogRecord
+    queueBulbSave(() => upsertCalculation('Dissection record', `${r.organs_found.length} organs identified`, r))
+  }
+  if (isProjectileRangeExperiment.value && payload.projectileTrial) {
+    const t = payload.projectileTrial
+    queueBulbSave(() => saveProjectileTrial(t))
   }
   if (isPlaneMirrorExperiment.value) {
     if (payload.mirrorRecord) { const r = payload.mirrorRecord; queueBulbSave(() => upsertCalculation('Lab record', 'Apparatus handling', r)) }
@@ -1035,7 +1087,7 @@ const handleSceneAction = async (payload: { objectKey: string | null; action: st
     if (payload.bulbTrial) { const t = payload.bulbTrial; queueBulbSave(() => saveBulbTrial(t)) }
     if (payload.labRecord) { const r = payload.labRecord; queueBulbSave(() => upsertCalculation('Lab record', 'Apparatus handling', r)) }
   }
-  if (payload.action === 'measure' && payload.value !== null && !isBulbExperiment.value && !isGravityExperiment.value && !isEmfExperiment.value && !isRuleMassExperiment.value && !isPlaneMirrorExperiment.value) {
+  if (payload.action === 'measure' && payload.value !== null && !isBulbExperiment.value && !isGravityExperiment.value && !isEmfExperiment.value && !isRuleMassExperiment.value && !isPlaneMirrorExperiment.value && !isProjectileRangeExperiment.value) {
     const num = parseFloat(payload.value)
     if (payload.unit === 'V') lastVoltageReading.value = num
     if (payload.unit === 'A') lastCurrentReading.value = num
@@ -1188,7 +1240,7 @@ const graphBlocker = computed<string | null>(() => {
   return null
 })
 const plotEntries = computed(() => attempt.value?.notebook.filter(n => n.entry_type === 'plot_point') ?? [])
-const submitBlocker = computed(() => graphBlocker.value || (isBulbExperiment.value ? bulbBlocker.value : null) || (isMirrorExperiment.value || isPendulum.value ? studentGraphBlocker.value : null) || (isGravityExperiment.value ? gravityBlocker.value : null) || (isEmfExperiment.value ? emfBlocker.value : null) || (isRuleMassExperiment.value ? ruleMassBlocker.value : null) || (isPlaneMirrorExperiment.value ? planeMirrorBlocker.value : null))
+const submitBlocker = computed(() => graphBlocker.value || (isBulbExperiment.value ? bulbBlocker.value : null) || (isMirrorExperiment.value || isPendulum.value ? studentGraphBlocker.value : null) || (isGravityExperiment.value ? gravityBlocker.value : null) || (isEmfExperiment.value ? emfBlocker.value : null) || (isRuleMassExperiment.value ? ruleMassBlocker.value : null) || (isPlaneMirrorExperiment.value ? planeMirrorBlocker.value : null) || (isProjectileRangeExperiment.value ? projectileBlocker.value : null) || (isFrogDissectionExperiment.value ? frogBlocker.value : null))
 
 // --- Internal resistance and emf of a battery (battery_internal_resistance) ------------------------------
 const isBottleMassExperiment = computed(() => attempt.value?.experiment.render_component === 'moments_balance')
@@ -1213,6 +1265,40 @@ const saveEmfRow = (row: { length_cm: number; current_a: number; voltage_v: numb
 const saveEmfAnalysis = (extra: Record<string, any>) => queueBulbSave(() => {
   const sm = extra.summary || {}
   return upsertCalculation('Emf analysis', sm.r != null && sm.e != null ? `r = ${sm.r} ohm, E = ${sm.e} V${sm.score != null ? `, ${sm.score}/${sm.max_score}` : ''}` : 'In progress', extra)
+})
+
+// --- Dissection of a frog (frog_dissection) - labelled diagram and questions, no results table ----------
+const isFrogDissectionExperiment = computed(() => attempt.value?.experiment.render_component === 'frog_dissection')
+const frogRecord = computed(() => (calcEntries.value.find(n => n.label === 'Dissection record')?.extra as FrogRecord | undefined) ?? null)
+const frogAnalysisEntry = computed(() => calcEntries.value.find(n => n.label === 'Frog dissection analysis') ?? null)
+const frogBlocker = ref<string | null>(null)
+const saveFrogAnalysis = (extra: Record<string, any>) => queueBulbSave(() => {
+  const sm = extra.summary || {}
+  return upsertCalculation('Frog dissection analysis', `${sm.organs_found ?? 0} organs found${sm.score != null ? `, ${sm.score}/${sm.max_score}` : ''}`, extra)
+})
+
+// --- Projectile: range at five angles of projection (projectile_range) - no graph ----------------------
+const isProjectileRangeExperiment = computed(() => attempt.value?.experiment.render_component === 'projectile_range')
+const projectileTrials = computed(() => calcEntries.value.filter(n => n.label.startsWith('Shot at')))
+const projectileAnalysisEntry = computed(() => calcEntries.value.find(n => n.label === 'Projectile analysis') ?? null)
+const projectileBlocker = ref<string | null>(null)
+const replaceProjectileRow = async (row: { angle_deg: number; range_m: number }) => {
+  for (const old of resultRows.value.filter(r => r.extra && r.extra.angle_deg != null && Number(r.extra.angle_deg) === row.angle_deg)) await removeNotebookEntry(old.id)
+  await postNotebook({ entry_type: 'result_row', label: `θ = ${row.angle_deg}°`, value: String(row.range_m), unit: 'm', extra: { angle_deg: row.angle_deg, range_m: row.range_m } })
+}
+const saveProjectileTrial = async (t: ProjectileTrial) => {
+  if (!attempt.value || attempt.value.status !== 'in_progress') return
+  await upsertCalculation(`Shot at ${t.angle_deg}°`, `R = ${t.range_m} m`, t)
+  await replaceProjectileRow({ angle_deg: t.angle_deg, range_m: t.range_m })
+}
+const saveProjectileRow = (row: { angle_deg: number; range_m: number }) => queueBulbSave(async () => {
+  if (!attempt.value || attempt.value.status !== 'in_progress') return
+  await replaceProjectileRow(row)
+  await refreshAttempt()
+})
+const saveProjectileAnalysis = (extra: Record<string, any>) => queueBulbSave(() => {
+  const sm = extra.summary || {}
+  return upsertCalculation('Projectile analysis', sm.best_angle != null ? `greatest range ${sm.best_range_m} m at ${sm.best_angle}°${sm.score != null ? `, ${sm.score}/${sm.max_score}` : ''}` : 'In progress', extra)
 })
 
 // --- Plane mirror: image against object distance by the pin method (plane_mirror_pins) ------------------
@@ -1245,7 +1331,7 @@ const savePlaneMirrorAnalysis = (extra: Record<string, any>) => queueBulbSave(()
 const isRuleMassExperiment = computed(() => attempt.value?.experiment.render_component === 'metre_rule_mass')
 /** Practicals whose analysis section has the student plot the graph by hand (no automatic chart) */
 /** Practicals whose own section below the lab holds the results, graph, conclusion and marking - no Practical Notebook for them, just Submit */
-const hasOwnAnalysis = computed(() => isBulbExperiment.value || isGravityExperiment.value || isEmfExperiment.value || isRuleMassExperiment.value || isPlaneMirrorExperiment.value)
+const hasOwnAnalysis = computed(() => isFrogDissectionExperiment.value || isProjectileRangeExperiment.value || isBulbExperiment.value || isGravityExperiment.value || isEmfExperiment.value || isRuleMassExperiment.value || isPlaneMirrorExperiment.value)
 const studentPlotsOwnGraph = computed(() => isPlaneMirrorExperiment.value || isRuleMassExperiment.value || isGravityExperiment.value || isEmfExperiment.value)
 const ruleMassTrials = computed(() => calcEntries.value.filter(n => n.label.startsWith('Balance with mass at')))
 const ruleMassCTrial = computed(() => (calcEntries.value.find(n => n.label === 'Balance point C')?.extra as RuleMassTrial | undefined) ?? null)

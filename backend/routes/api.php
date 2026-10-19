@@ -1064,6 +1064,11 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
     Router::group(['middleware' => 'auth'], function () {
         Router::post('/presence/ping', 'eSpace\App\Controllers\PresenceController@ping');
     });
+
+    // Anatomy Explorer settings (BioDigital licence configuration) - shared across every role
+    Router::group(['middleware' => 'auth'], function () {
+        Router::get('/anatomy/config', 'eSpace\App\Controllers\AnatomyController@config');
+    });
 }); // End of auth group
 
 // Dispatch the request

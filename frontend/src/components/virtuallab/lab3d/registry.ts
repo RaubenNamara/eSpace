@@ -12,6 +12,7 @@ import VirtualLabScenePlaneMirror from '../VirtualLabScenePlaneMirror.vue'
 import VirtualLabSceneConcaveMirror from '../VirtualLabSceneConcaveMirror.vue'
 import VirtualLabSceneSilverDensity from '../VirtualLabSceneSilverDensity.vue'
 import VirtualLabSceneBulbResistance from '../VirtualLabSceneBulbResistance.vue'
+import VirtualLabSceneFrogDissection from '../VirtualLabSceneFrogDissection.vue'
 
 /**
  * Guided 3D experiments, keyed by an experiment's `render_component` slug. Experiments with
@@ -28,6 +29,8 @@ export const GUIDED_EXPERIMENTS: Record<string, Component> = {
   microscope: VirtualLabSceneMicroscope,
   optics: VirtualLabSceneOptics,
   projectile: VirtualLabSceneProjectile,
+  // Same field and launcher, guided (launcher prop experiment: 'range_angles'): range at five angles
+  projectile_range: VirtualLabSceneProjectile,
   moments_balance: VirtualLabSceneMomentsBalance,
   metre_rule_mass: VirtualLabSceneRuleMass,
   // A flat top view of the soft board (pins, mirror on ML) rather than the 3D bench
@@ -37,6 +40,7 @@ export const GUIDED_EXPERIMENTS: Record<string, Component> = {
   bulb_filament_resistance: VirtualLabSceneBulbResistance,
   // Same bench without a bulb: cells, K, ammeter and wire P in series, voltmeter across the battery
   battery_internal_resistance: VirtualLabSceneBulbResistance,
+  frog_dissection: VirtualLabSceneFrogDissection,
 }
 
 export function resolveGuidedExperiment(renderComponent: string | null | undefined): Component | null {
