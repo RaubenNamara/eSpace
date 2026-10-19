@@ -149,7 +149,7 @@ const API_BASE = '/api'
 const typedRef = ref<any>(null)
 const typedTool = ref<AnnotationTool>('pen')
 const typedColor = ref('#dc2626')
-const typedStrokeWidth = ref(3)
+const typedStrokeWidth = ref(2)
 const typedSaveStatus = ref('')
 
 const markingLayer = ref<Record<number, AnnotationLayerJSON>>({ ...(props.question.marking_annotations || {}) })
@@ -283,7 +283,7 @@ const selectedFile = computed(() => allFiles.value.find(f => f.key === selectedK
 const evidenceRef = ref<any>(null)
 const evidenceTool = ref<AnnotationTool>('pen')
 const evidenceColor = ref('#dc2626')
-const evidenceStrokeWidth = ref(3)
+const evidenceStrokeWidth = ref(2)
 const evidenceSaveStatus = ref('')
 const evidenceImageDims = ref({ width: 800, height: 1000 })
 
