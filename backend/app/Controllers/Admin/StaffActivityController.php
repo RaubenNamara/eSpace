@@ -1,0 +1,245 @@
+<?php
+
+declare(strict_types=1);
+
+namespace eSpace\App\Controllers\Admin;
+
+use eSpace\App\Controllers\Controller;
+
+/**
+ * Staff activity for the admin dashboard: which teachers and HODs signed in recently, whether
+ * they are online now, and what each teacher actually did.
+ *
+ * Sign-ins come from login_logs (written on every successful login), "online" from
+ * last_active_at (kept fresh by the presence ping). There is no general action log (audit_logs
+ * is not written to), so a teacher's activity is read from the work itself: assignments set and
+ * published, scripts marked, eNotes written and edited, videos, live classes, virtual labs set and
+ * graded, live quizzes run and item bank questions added - each with its own timestamp.
+ */
+class StaffActivityController extends Controller
+{
+    protected \PDO $db;
+
+    /** a teacher whose last ping is this recent is shown as online */
+    private const ONLINE_MINUTES = 5;
+    private const MAX_PEOPLE = 60;
+    private const MAX_ACTIVITIES = 12;
+
+    public function __construct()
+    {
+        parent::__construct();
+        $this->db = \eSpace\Config\Database::getInstance();
+    }
+
+    /**
+     * GET /admin/staff-activity?days=7
+     */
+    public function index(): void
+    {
+        if (!$this->isAdmin()) {
+            $this->forbidden();
+            return;
+        }
+
+        $days = (int) $this->query('days', 7);
+        if (!in_array($days, [1, 7, 30], true)) {
+            $days = 7;
+        }
+        $since = (new \DateTimeImmutable('today'))->modify('-' . ($days - 1) . ' days')->format('Y-m-d 00:00:00');
+
+        $teachers = $this->people('teacher', $since);
+        $activities = $this->teacherActivities(array_column($teachers, 'id'), $since);
+        foreach ($teachers as &$t) {
+            $list = $activities[$t['id']] ?? [];
+            usort($list, fn ($a, $b) => strcmp($b['at'], $a['at']));
+            $t['activity_count'] = array_sum(array_column($list, 'count'));
+            $t['activities'] = array_slice($list, 0, self::MAX_ACTIVITIES);
+        }
+        unset($t);
+
+        $this->success([
+            'days' => $days,
+            'since' => $since,
+            'online_minutes' => self::ONLINE_MINUTES,
+            'teachers' => $teachers,
+            'hods' => $this->people('hod', $since),
+        ]);
+    }
+
+    /**
+     * Everyone of a role who signed in since $since, most recent first, with their sign-in count,
+     * department, device and whether they are online now.
+     */
+    private function people(string $role, string $since): array
+    {
+        $table = $role === 'hod' ? 'hods' : 'teachers';
+        $sql = "SELECT p.id, p.first_name, p.last_name, p.username, p.profile_photo, p.last_active_at,
+                       d.name AS department,
+                       COUNT(l.id) AS logins,
+                       MAX(l.logged_in_at) AS last_login_at,
+                       (SELECT l2.user_agent FROM login_logs l2 WHERE l2.role = ? AND l2.user_id = p.id ORDER BY l2.logged_in_at DESC LIMIT 1) AS user_agent,
+                       (SELECT l3.ip_address FROM login_logs l3 WHERE l3.role = ? AND l3.user_id = p.id ORDER BY l3.logged_in_at DESC LIMIT 1) AS ip_address
+                FROM {$table} p
+                INNER JOIN login_logs l ON l.user_id = p.id AND l.role = ? AND l.logged_in_at >= ?
+                LEFT JOIN departments d ON d.id = p.department_id
+                WHERE p.deleted_at IS NULL
+                GROUP BY p.id, p.first_name, p.last_name, p.username, p.profile_photo, p.last_active_at, d.name
+                ORDER BY last_login_at DESC
+                LIMIT " . self::MAX_PEOPLE;
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$role, $role, $role, $since]);
+        $now = time();
+        $out = [];
+        foreach ($stmt->fetchAll() as $r) {
+            $active = $r['last_active_at'] ? strtotime((string) $r['last_active_at']) : null;
+            $out[] = [
+                'id' => (int) $r['id'],
+                'name' => trim($r['first_name'] . ' ' . $r['last_name']) ?: $r['username'],
+                'username' => $r['username'],
+                'profile_photo' => $r['profile_photo'],
+                'department' => $r['department'],
+                'logins' => (int) $r['logins'],
+                'last_login_at' => $r['last_login_at'],
+                'last_active_at' => $r['last_active_at'],
+                'online' => $active !== null && ($now - $active) <= self::ONLINE_MINUTES * 60,
+                'device' => $this->device((string) ($r['user_agent'] ?? '')),
+                'ip_address' => $r['ip_address'],
+            ];
+        }
+        return $out;
+    }
+
+    /**
+     * What each teacher did since $since, as [teacher_id => [{type, label, title, count, at}]].
+     * Repetitive work (marking, page edits, questions) is grouped per day and per piece of work,
+     * so one marking session reads "Marked 24 scripts - Topic test" rather than 24 lines.
+     */
+    private function teacherActivities(array $teacherIds, string $since): array
+    {
+        if (!$teacherIds) {
+            return [];
+        }
+        $in = implode(',', array_fill(0, count($teacherIds), '?'));
+        // each source: SQL returning teacher_id, type, title, count, at - with ? placeholders for the ids and the date
+        $sources = [
+            "SELECT a.teacher_id, 'assignment_created' AS type, a.title, 1 AS cnt, a.created_at AS at
+             FROM assignments a WHERE a.deleted_at IS NULL AND a.teacher_id IN ($in) AND a.created_at >= ?",
+            "SELECT a.teacher_id, 'assignment_published', a.title, 1, a.published_at
+             FROM assignments a WHERE a.deleted_at IS NULL AND a.teacher_id IN ($in) AND a.published_at >= ? AND a.published_at > a.created_at + INTERVAL 1 MINUTE",
+            "SELECT s.marked_by, 'scripts_marked', a.title, COUNT(*), MAX(s.marked_at)
+             FROM assignment_submissions s INNER JOIN assignments a ON a.id = s.assignment_id
+             WHERE s.marked_by IN ($in) AND s.marked_at >= ?
+             GROUP BY s.marked_by, s.assignment_id, a.title, DATE(s.marked_at)",
+            // an eNote and its linked copies in other classes count as one, "for 3 classes"
+            "SELECT e.teacher_id, 'enote_created', MIN(e.title), COUNT(*), MAX(e.created_at)
+             FROM enote_topics e WHERE e.deleted_at IS NULL AND e.teacher_id IN ($in) AND e.created_at >= ?
+             GROUP BY e.teacher_id, COALESCE(e.content_group_id, e.id), DATE(e.created_at)",
+            "SELECT e.teacher_id, 'enote_published', MIN(e.title), COUNT(*), MAX(e.published_at)
+             FROM enote_topics e WHERE e.deleted_at IS NULL AND e.teacher_id IN ($in) AND e.published_at >= ?
+             GROUP BY e.teacher_id, COALESCE(e.content_group_id, e.id), DATE(e.published_at)",
+            "SELECT h.teacher_id, 'enote_pages_edited', t.title, COUNT(*), MAX(h.created_at)
+             FROM enote_page_history h INNER JOIN enote_topics t ON t.id = h.topic_id
+             WHERE h.teacher_id IN ($in) AND h.created_at >= ?
+             GROUP BY h.teacher_id, h.topic_id, t.title, DATE(h.created_at)",
+            "SELECT v.teacher_id, 'video_added', v.title, 1, v.created_at
+             FROM videos v WHERE v.deleted_at IS NULL AND v.teacher_id IN ($in) AND v.created_at >= ?",
+            "SELECT lc.created_by, 'live_class_scheduled', lc.title, 1, lc.created_at
+             FROM live_classes lc WHERE lc.deleted_at IS NULL AND lc.created_by IN ($in) AND lc.created_at >= ?",
+            "SELECT vla.teacher_id, 'virtual_lab_set', x.title, 1, vla.created_at
+             FROM virtual_lab_assignments vla LEFT JOIN virtual_lab_experiments x ON x.id = vla.experiment_id
+             WHERE vla.deleted_at IS NULL AND vla.teacher_id IN ($in) AND vla.created_at >= ?",
+            "SELECT at.graded_by, 'virtual_lab_graded', x.title, COUNT(*), MAX(at.graded_at)
+             FROM virtual_lab_attempts at
+             LEFT JOIN virtual_lab_assignments vla ON vla.id = at.assignment_id
+             LEFT JOIN virtual_lab_experiments x ON x.id = vla.experiment_id
+             WHERE at.graded_by IN ($in) AND at.graded_at >= ?
+             GROUP BY at.graded_by, x.title, DATE(at.graded_at)",
+            "SELECT q.teacher_id, 'live_quiz_run', a.title, 1, q.created_at
+             FROM live_quizzes q LEFT JOIN assignments a ON a.id = q.assignment_id
+             WHERE q.teacher_id IN ($in) AND q.created_at >= ?",
+            "SELECT ib.uploader_id, 'questions_added', NULL, COUNT(*), MAX(ib.created_at)
+             FROM item_bank_questions ib
+             WHERE ib.deleted_at IS NULL AND ib.uploader_role = 'teacher' AND ib.uploader_id IN ($in) AND ib.created_at >= ?
+             GROUP BY ib.uploader_id, DATE(ib.created_at)",
+        ];
+
+        $out = [];
+        foreach ($sources as $sql) {
+            try {
+                $stmt = $this->db->prepare($sql);
+                $stmt->execute([...$teacherIds, $since]);
+            } catch (\PDOException $e) {
+                // one source that does not match this database (an older schema) must not hide the rest
+                error_log('Staff activity source failed: ' . $e->getMessage());
+                continue;
+            }
+            foreach ($stmt->fetchAll(\PDO::FETCH_NUM) as [$tid, $type, $title, $count, $at]) {
+                if (!$at) {
+                    continue;
+                }
+                $out[(int) $tid][] = [
+                    'type' => $type,
+                    'label' => $this->label($type, (int) $count),
+                    'title' => $title,
+                    'count' => (int) $count,
+                    'at' => $at,
+                ];
+            }
+        }
+        return $out;
+    }
+
+    private function label(string $type, int $n): string
+    {
+        $s = fn (string $one, string $many) => $n === 1 ? $one : str_replace('{n}', (string) $n, $many);
+        return match ($type) {
+            'assignment_created' => 'Created an assessment',
+            'assignment_published' => 'Published an assessment',
+            'scripts_marked' => $s('Marked 1 script', 'Marked {n} scripts'),
+            'enote_created' => $s('Created an eNote', 'Created an eNote for {n} classes'),
+            'enote_published' => $s('Published an eNote', 'Published an eNote in {n} classes'),
+            'enote_pages_edited' => $s('Edited an eNote page', 'Made {n} eNote page edits'),
+            'video_added' => 'Added a video',
+            'live_class_scheduled' => 'Scheduled a live class',
+            'virtual_lab_set' => 'Set a virtual lab',
+            'virtual_lab_graded' => $s('Graded 1 virtual lab attempt', 'Graded {n} virtual lab attempts'),
+            'live_quiz_run' => 'Ran a live quiz',
+            'questions_added' => $s('Added 1 question to the item bank', 'Added {n} questions to the item bank'),
+            default => $type,
+        };
+    }
+
+    private function isAdmin(): bool
+    {
+        $role = $this->getCurrentUserRole();
+        return $role === 'admin' || $role === 'super_admin';
+    }
+
+    /** "Chrome on Windows", "Safari on iPhone" - enough to tell a phone from the school computer */
+    private function device(string $ua): ?string
+    {
+        if ($ua === '') {
+            return null;
+        }
+        $browser = match (true) {
+            str_contains($ua, 'Edg/') => 'Edge',
+            str_contains($ua, 'OPR/') || str_contains($ua, 'Opera') => 'Opera',
+            str_contains($ua, 'SamsungBrowser') => 'Samsung Internet',
+            str_contains($ua, 'Firefox/') => 'Firefox',
+            str_contains($ua, 'Chrome/') => 'Chrome',
+            str_contains($ua, 'Safari/') => 'Safari',
+            default => 'Browser',
+        };
+        $os = match (true) {
+            str_contains($ua, 'iPhone') => 'iPhone',
+            str_contains($ua, 'iPad') => 'iPad',
+            str_contains($ua, 'Android') => 'Android',
+            str_contains($ua, 'Windows') => 'Windows',
+            str_contains($ua, 'Mac OS') => 'Mac',
+            str_contains($ua, 'CrOS') => 'Chromebook',
+            str_contains($ua, 'Linux') => 'Linux',
+            default => null,
+        };
+        return $os ? "{$browser} on {$os}" : $browser;
+    }
+}

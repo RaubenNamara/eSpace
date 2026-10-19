@@ -76,6 +76,9 @@
       </div>
     </div>
 
+    <!-- Teachers and HODs who signed in recently, and what the teachers did -->
+    <StaffActivity class="mb-8" />
+
     <!-- View Enrolled Students Modal -->
     <div v-if="showViewEnrolledModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-2 sm:p-4">
       <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[95vh] sm:max-h-[90vh] flex flex-col">
@@ -561,6 +564,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useLiveRefresh } from '@/composables/useLiveRefresh'
 import apiService from '@/services/api'
+import StaffActivity from '@/components/admin/StaffActivity.vue'
 import { useAuthStore } from '@/stores/auth'
 import AppIcon from '@/components/common/AppIcon.vue'
 import NoticesTicker from '@/components/dashboard/NoticesTicker.vue'
