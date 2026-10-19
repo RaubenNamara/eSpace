@@ -19,7 +19,19 @@
 
     <NoticesTicker role="admin" />
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
+    <!-- jump to a part of the dashboard -->
+    <nav class="mb-4 flex flex-wrap gap-2" aria-label="Dashboard sections">
+      <a v-for="sct in SECTIONS" :key="sct.id" :href="`#${sct.id}`" class="px-3 py-1.5 rounded-full bg-white dark:bg-gray-800 ring-1 ring-gray-200 dark:ring-gray-700 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:ring-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300" @click.prevent="goTo(sct.id)">{{ sct.label }}</a>
+    </nav>
+
+    <!-- 1. At a glance -->
+    <div id="dash-glance" class="scroll-mt-20 mb-3 flex items-end gap-3">
+      <div class="flex-1 min-w-0">
+        <h2 class="text-lg font-extrabold text-gray-900 dark:text-white">At a glance</h2>
+        <p class="text-xs text-gray-500 dark:text-gray-400">Setting up the school, shortcuts and enrolment.</p>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-10">
       <div class="lg:col-span-2 flex flex-col gap-4 min-w-0">
         <SetupChecklist @figures="onFigures" @progress="(d: number, t: number) => (setup = { done: d, total: t })" />
 
@@ -76,8 +88,35 @@
       </div>
     </div>
 
-    <!-- Teachers and HODs who signed in recently, and what the teachers did -->
-    <StaffActivity class="mb-8" />
+    <!-- 2. School activity: one period for the insights and the people below -->
+    <div id="dash-usage" class="scroll-mt-20 mb-3 flex flex-wrap items-end gap-3">
+      <div class="flex-1 min-w-0">
+        <h2 class="text-lg font-extrabold text-gray-900 dark:text-white">School activity</h2>
+        <p class="text-xs text-gray-500 dark:text-gray-400">Who signed in, when, where and on what - and what staff did. The period applies to everything below.</p>
+      </div>
+      <div class="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-800 shadow-sm" role="radiogroup" aria-label="Period for school activity">
+        <button
+          v-for="pr in PERIODS"
+          :key="pr.days"
+          type="button"
+          role="radio"
+          :aria-checked="activityDays === pr.days"
+          class="px-3.5 py-1.5 text-sm font-semibold"
+          :class="activityDays === pr.days ? 'bg-indigo-600 text-white' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'"
+          @click="activityDays = pr.days"
+        >{{ pr.label }}</button>
+      </div>
+    </div>
+
+    <!-- When, where and on what the school signs in -->
+    <SignInInsights class="mb-6" :days="activityDays" />
+
+    <!-- 3. Who is active: teachers, HODs and students -->
+    <div id="dash-people" class="scroll-mt-20 mb-3">
+      <h2 class="text-lg font-extrabold text-gray-900 dark:text-white">Who is active</h2>
+      <p class="text-xs text-gray-500 dark:text-gray-400">Teachers and HODs with what they did, and the students who signed in.</p>
+    </div>
+    <StaffActivity class="mb-10" :days="activityDays" />
 
     <!-- View Enrolled Students Modal -->
     <div v-if="showViewEnrolledModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-2 sm:p-4">
@@ -561,10 +600,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useLiveRefresh } from '@/composables/useLiveRefresh'
 import apiService from '@/services/api'
 import StaffActivity from '@/components/admin/StaffActivity.vue'
+import SignInInsights from '@/components/admin/SignInInsights.vue'
+import { PERIODS } from '@/components/admin/signInParts'
 import { useAuthStore } from '@/stores/auth'
 import AppIcon from '@/components/common/AppIcon.vue'
 import NoticesTicker from '@/components/dashboard/NoticesTicker.vue'
@@ -619,6 +660,19 @@ const loadingClasses = ref(false)
 const loadingEnrolled = ref(false)
 const loadingStudentsForClass = ref(false)
 const authStore = useAuthStore()
+
+// --- the parts of the dashboard, and the period the activity sections show (remembered on this device) ---
+const SECTIONS = [
+  { id: 'dash-glance', label: 'At a glance' },
+  { id: 'dash-usage', label: 'How eSpace is used' },
+  { id: 'dash-people', label: 'Who is active' },
+]
+const goTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+const ACTIVITY_DAYS_KEY = 'admin.dashboard.activityDays'
+const activityDays = ref((() => {
+  try { const v = Number(localStorage.getItem(ACTIVITY_DAYS_KEY)); return PERIODS.some(p => p.days === v) ? v : 7 } catch { return 7 }
+})())
+watch(activityDays, v => { try { localStorage.setItem(ACTIVITY_DAYS_KEY, String(v)) } catch { /* private mode */ } })
 
 const greeting = computed(() => {
   const hour = new Date().getHours()

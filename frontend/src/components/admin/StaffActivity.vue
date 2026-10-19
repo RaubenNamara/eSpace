@@ -7,18 +7,6 @@
       <h2 class="dash-bar">Teachers: recent sign-ins and activity</h2>
       <div class="p-3 space-y-3">
         <div class="flex flex-wrap items-center gap-2">
-          <div class="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden" role="radiogroup" aria-label="Period">
-            <button
-              v-for="p in PERIODS"
-              :key="p.days"
-              type="button"
-              role="radio"
-              :aria-checked="days === p.days"
-              class="px-3 py-1.5 text-xs font-semibold"
-              :class="days === p.days ? 'bg-indigo-600 text-white' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'"
-              @click="setDays(p.days)"
-            >{{ p.label }}</button>
-          </div>
           <input
             v-model="search"
             type="search"
@@ -163,9 +151,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import apiService from '@/services/api'
-import { PERIODS, periodPhrase, when, tickNow, signIns, properName, Avatar, StatusText, DeviceText, StudentRow, type SignInPerson } from './signInParts'
+import { periodPhrase, when, tickNow, signIns, properName, Avatar, StatusText, DeviceText, StudentRow, type SignInPerson } from './signInParts'
 
 interface Activity { type: string; label: string; title: string | null; count: number; at: string }
 interface Teacher extends SignInPerson { activity_count: number; activities: Activity[] }
@@ -204,7 +192,9 @@ const ICONS: Record<string, { icon: string; bg: string }> = {
   sba_uploaded: { icon: '📎', bg: 'bg-rose-100 dark:bg-rose-900/40' },
 }
 
-const days = ref(7)
+/** the period is chosen on the dashboard, for this and the insights together */
+const props = defineProps<{ days: number }>()
+const days = computed(() => props.days)
 const data = ref<StaffActivityData | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
@@ -237,12 +227,11 @@ async function load() {
     loading.value = false
   }
 }
-function setDays(d: number) {
-  days.value = d
+watch(days, () => {
   open.value = null
   openHod.value = null
   load()
-}
+})
 
 // keep "online" and the times fresh while the dashboard stays open
 let timer: number | undefined
