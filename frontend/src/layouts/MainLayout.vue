@@ -158,15 +158,6 @@
 
           <!-- Global Search (student/teacher only) -->
           <GlobalSearchBar v-if="userRole === 'student' || userRole === 'teacher' || userRole === 'hod' || userRole === 'admin'" class="hidden md:block flex-1 mx-4" />
-          <button
-            v-if="menuGroups.length"
-            type="button"
-            class="hidden lg:inline-flex items-center gap-1.5 mr-3 px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50"
-            title="Jump to any page or search (Ctrl/Cmd + K)"
-            @click="paletteRef?.show()"
-          >
-            Go to <kbd class="px-1 rounded bg-gray-100 dark:bg-gray-700 text-[10px]">{{ isMacKey ? '⌘' : 'Ctrl' }} K</kbd>
-          </button>
 
           <div class="flex items-center space-x-1 sm:space-x-4">
             <!-- Mobile search shortcut -->
@@ -381,7 +372,7 @@
       </button>
     </div>
   </nav>
-  <CommandPalette v-if="menuGroups.length" ref="paletteRef" :groups="paletteGroups" :icons="iconMap" :role="menuRole" :actions="paletteActions" />
+  <CommandPalette v-if="menuGroups.length" :groups="paletteGroups" :icons="iconMap" :role="menuRole" :actions="paletteActions" />
   </div>
       </header>
 
@@ -968,8 +959,6 @@ const STUDENT_TABS = [
 const showStudentTabs = computed(() => menuRole.value === 'student' && !shouldHideAppChrome.value && !isImmersiveReader.value)
 
 // ---- The command palette (Ctrl/Cmd + K) ----
-const paletteRef = ref<InstanceType<typeof CommandPalette> | null>(null)
-const isMacKey = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
 const paletteActions = computed<PaletteAction[]>(() => {
   const go = (path: string) => () => router.push(path)
   const common: PaletteAction[] = [{ label: themeStore.isDarkMode ? 'Switch to light mode' : 'Switch to dark mode', hint: 'Appearance', run: () => themeStore.toggleTheme() }]

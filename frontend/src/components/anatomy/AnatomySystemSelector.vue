@@ -30,7 +30,8 @@
               @change="toggle(s.key, ($event.target as HTMLInputElement).checked)"
             />
             <span class="w-2.5 h-2.5 rounded-full flex-shrink-0 ring-1 ring-black/10" :style="{ background: s.colour }" aria-hidden="true"></span>
-            <span class="truncate text-sm text-gray-800 dark:text-gray-100" :class="modelValue.includes(s.key) ? 'font-semibold' : ''">{{ SHORT[s.key] }}</span>
+            <!-- full system names; a long one wraps onto a second line rather than being cut off -->
+            <span class="system-name min-w-0 text-sm leading-tight text-gray-800 dark:text-gray-100" :class="modelValue.includes(s.key) ? 'font-semibold' : ''">{{ SHORT[s.key] }}</span>
             <span v-if="state(s.key) === 'loading'" class="flex-shrink-0 w-3 h-3 rounded-full border-2 border-indigo-300 border-t-indigo-600 animate-spin" aria-label="loading"></span>
             <span v-else-if="state(s.key) === 'error'" class="flex-shrink-0 text-[10px] font-semibold text-red-600">failed</span>
           </label>
@@ -135,10 +136,10 @@ const PRESETS: { label: string; systems: SystemKey[] }[] = [
   { label: 'Organs', systems: ['skeletal', 'circulatory', 'respiratory', 'digestive', 'urinary', 'nervous'] },
 ]
 
-/** short, everyday names for the list (the full name is in the tooltip) */
+/** the names of the human body systems as taught in biology */
 const SHORT: Record<SystemKey, string> = {
-  integumentary: 'Skin', skeletal: 'Skeleton', muscular: 'Muscles', circulatory: 'Heart & blood', respiratory: 'Lungs & airways',
-  digestive: 'Digestion', nervous: 'Brain & nerves', urinary: 'Kidneys & bladder', reproductive: 'Reproductive organs', endocrine: 'Hormone glands',
+  integumentary: 'Integumentary system', skeletal: 'Skeletal system', muscular: 'Muscular system', circulatory: 'Circulatory system', respiratory: 'Respiratory system',
+  digestive: 'Digestive system', nervous: 'Nervous system', urinary: 'Urinary system', reproductive: 'Reproductive system', endocrine: 'Endocrine system',
 }
 const openNote = ref<SystemKey | null>(null)
 

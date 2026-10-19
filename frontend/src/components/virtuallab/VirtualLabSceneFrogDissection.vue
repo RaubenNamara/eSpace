@@ -121,7 +121,13 @@
       </div>
       <p class="text-gray-700 dark:text-gray-200"><span class="font-semibold">What it does: </span>{{ info.fn }}</p>
       <p class="mt-1 text-gray-600 dark:text-gray-300"><span class="font-semibold">In the living frog: </span>{{ info.life }}</p>
+      <button v-if="closeUpKey" type="button" class="mt-2 w-full px-2 py-1.5 rounded-lg bg-emerald-600 text-white text-[12px] font-semibold hover:bg-emerald-700" @click="closeUpOrgan = closeUpKey">
+        &#x1F50D; Close-up{{ closeUpKey === 'heart' ? ': heartbeat and blood flow' : '' }}
+      </button>
     </div>
+
+    <!-- one organ on its own, enlarged (a view only: it never changes the dissection) -->
+    <FrogOrganCloseUp v-if="closeUpOrgan && model()" :organ="closeUpOrgan" :frog="model()!" :title="INFO[closeUpOrgan]?.name ?? closeUpOrgan" :info="INFO[closeUpOrgan] ?? null" @close="closeUpOrgan = null" />
 
     <!-- Deep dissection: a box for each organ -->
     <div v-if="sortOpen" class="absolute inset-x-2 bottom-2 sm:inset-x-3 sm:bottom-3 bg-white/95 dark:bg-gray-800/95 backdrop-blur rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-2">
@@ -171,6 +177,7 @@ import { createStudio, type Studio } from './lab3d/studio'
 import { buildFrog, makePin, organOf, PART_NAMES, SIT_TILT, SIT_H, type FrogModel, type FrogPart, type FootKey, type FlapKey, type OrganKey } from './lab3d/frogModel'
 import LabUnsupported from './lab3d/LabUnsupported.vue'
 import LabButton from './ui/LabButton.vue'
+import FrogOrganCloseUp from './FrogOrganCloseUp.vue'
 import type { SceneObjectConfig, LabObjectDef, LabAction } from '@/types/virtualLab'
 import type { CameraView } from './VirtualLabScene.vue'
 
@@ -722,6 +729,9 @@ const alive = ref(true)
 const bodyOpen = computed(() => flapGoal.muscleR === 1 && flapGoal.muscleL === 1)
 const infoKey = ref<string | null>(null)
 const info = computed(() => (infoKey.value ? INFO[infoKey.value] ?? null : null))
+/** the organ close-up: offered on the card of any organ (the testes open the kidneys) */
+const closeUpOrgan = ref<OrganKey | null>(null)
+const closeUpKey = computed<OrganKey | null>(() => (infoKey.value ? organOf(infoKey.value as FrogPart) : null))
 const sortOpen = computed(() => (guided.value ? stageKey.value === 'move:organs_sorted' : bodyOpen.value))
 const sorted = computed(() => record.sorted)
 // the organ card would cover the organs being lifted out
@@ -1130,11 +1140,11 @@ function screenOf(local: { x: number; y: number; z: number }) {
   const rect = r.renderer.domElement.getBoundingClientRect()
   return { x: rect.left + ((w.x + 1) / 2) * rect.width, y: rect.top + ((1 - w.y) / 2) * rect.height }
 }
-const model = () => frog
+const model = (): FrogModel | undefined => frog
 
 defineExpose({
   setObjectState, goToView, pickFromTray, placedKeys, selectTool, tool, layOnBack, setSection, setView, section, phase,
   pinnedFeet, cutProgress, cutDone, lifted, flapGoal, record, screenOf, heldOrgan, pickBox, sortOpen, alive, infoKey, model,
-  applyStage, snap, sortOrgan, activeCutLayer, room,
+  applyStage, snap, sortOrgan, activeCutLayer, room, closeUpOrgan,
 })
 </script>

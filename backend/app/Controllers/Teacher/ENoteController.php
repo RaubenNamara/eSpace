@@ -2074,6 +2074,22 @@ class ENoteController extends Controller
         $pagesStmt->execute(['topic_id' => $id]);
         $pages = $pagesStmt->fetchAll();
 
+        // Where this topic already is: itself and every linked copy in its group
+        $coverage = ['streams' => [], 'classes' => [], 'streamClass' => []];
+        $membersStmt = $db->prepare(
+            "SELECT et.class_id, et.class_group_name, c.name AS class_name
+             FROM enote_topics et LEFT JOIN classes c ON c.id = et.class_id
+             WHERE et.teacher_id = :teacher_id AND et.deleted_at IS NULL
+               AND (et.id = :id OR (:gid IS NOT NULL AND et.content_group_id = :gid2))"
+        );
+        $membersStmt->execute(['teacher_id' => $teacherId, 'id' => $id, 'gid' => $topic['content_group_id'], 'gid2' => $topic['content_group_id']]);
+        foreach ($membersStmt->fetchAll() as $m) {
+            $this->addToCoverage($coverage, [
+                'class_id' => $m['class_id'] !== null ? (int) $m['class_id'] : null,
+                'class_group_name' => $m['class_group_name'],
+            ], $m['class_name']);
+        }
+
         $created = [];
         $skipped = [];
 
@@ -2089,11 +2105,12 @@ class ENoteController extends Controller
                 continue;
             }
 
-            // Duplicating onto the topic's own current class/stream isn't a meaningful "different
-            // stream" copy - the teacher already has that one.
-            if ($classTarget['class_id'] === $topic['class_id'] && $classTarget['class_group_name'] === $topic['class_group_name']) {
+            // A class/stream that already has this topic (the topic itself or any linked copy,
+            // directly or through an "all streams" copy of its class) can't be given it again -
+            // its students would see the same lesson twice.
+            if ($this->targetAlreadyCovered($classTarget, $coverage)) {
                 $skipped[] = [
-                    'message' => 'Already targets that class/stream',
+                    'message' => 'Already has this topic',
                     'class_id' => $classTarget['class_id'],
                     'class_group_name' => $classTarget['class_group_name']
                 ];
@@ -2152,6 +2169,8 @@ class ENoteController extends Controller
                     'class_id' => $classTarget['class_id'],
                     'class_group_name' => $classTarget['class_group_name']
                 ];
+                // two overlapping targets in one request (S.5-A and "S.5 all streams") make one copy
+                $this->addToCoverage($coverage, $classTarget);
             } catch (\PDOException $e) {
                 $db->rollBack();
                 error_log('Failed to duplicate topic to target: ' . $e->getMessage());
@@ -2168,6 +2187,53 @@ class ENoteController extends Controller
             ['created' => $created, 'skipped' => $skipped],
             count($created) . ' duplicate(s) created successfully' . (count($skipped) ? ' (' . count($skipped) . ' skipped)' : '')
         );
+    }
+
+    /**
+     * Records a class target in the coverage of a topic group: a single stream (with its class
+     * name, looked up when not given) or a whole class ("all streams").
+     */
+    private function addToCoverage(array &$coverage, array $classTarget, ?string $className = null): void
+    {
+        if (!empty($classTarget['class_group_name'])) {
+            $coverage['classes'][$classTarget['class_group_name']] = true;
+            return;
+        }
+        if (empty($classTarget['class_id'])) {
+            return;
+        }
+        $classId = (int) $classTarget['class_id'];
+        $coverage['streams'][$classId] = true;
+        $coverage['streamClass'][$classId] = $className ?? $this->classNameOf($classId);
+    }
+
+    /**
+     * Whether a class target is already covered: a stream that has the topic itself or through an
+     * "all streams" copy of its class, or a whole class of which any stream already has it.
+     */
+    private function targetAlreadyCovered(array $classTarget, array $coverage): bool
+    {
+        if (!empty($classTarget['class_group_name'])) {
+            $name = $classTarget['class_group_name'];
+            return isset($coverage['classes'][$name]) || in_array($name, $coverage['streamClass'], true);
+        }
+        if (empty($classTarget['class_id'])) {
+            return false;
+        }
+        $classId = (int) $classTarget['class_id'];
+        if (isset($coverage['streams'][$classId])) {
+            return true;
+        }
+        $name = $this->classNameOf($classId);
+        return $name !== null && isset($coverage['classes'][$name]);
+    }
+
+    private function classNameOf(int $classId): ?string
+    {
+        $stmt = $this->getDb()->prepare("SELECT name FROM classes WHERE id = :id");
+        $stmt->execute(['id' => $classId]);
+        $name = $stmt->fetchColumn();
+        return $name === false ? null : (string) $name;
     }
 
     /**

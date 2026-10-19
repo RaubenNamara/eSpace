@@ -369,16 +369,16 @@
                 </div>
                 <div>
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Class-Stream *</label>
-                  <select
-                    v-model="curriculumSelection.class_id"
-                    required
+                  <!-- tick one stream, several, or a whole class ("S.5 · all streams"): the eNote goes to each -->
+                  <ClassStreamMultiSelect
+                    :model-value="streamIds"
+                    :options="curriculumMeta?.class_streams ?? []"
                     :disabled="!curriculumSelection.academic_year_id"
-                    class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 dark:bg-gray-700 dark:text-white disabled:opacity-50"
-                    @change="onCurriculumStepChange('class_id')"
-                  >
-                    <option value="">Select Class-Stream</option>
-                    <option v-for="c in curriculumMeta?.class_streams" :key="c.id" :value="c.id">{{ c.display_name }}</option>
-                  </select>
+                    @update:model-value="setStreams"
+                  />
+                  <p v-if="streamTargets().length > 1" class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Topics follow {{ primaryLabel }}. Each class-stream gets the eNote as a linked copy - an edit in one updates them all.
+                  </p>
                 </div>
                 <div>
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Term *</label>
@@ -654,7 +654,7 @@
 
     <!-- Duplicate Topic Modal -->
     <div v-if="showDuplicateModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[85vh] overflow-hidden flex flex-col">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
         <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <div>
             <h3 class="text-xl font-semibold text-gray-900 dark:text-white">{{ copyingShared ? 'Copy to my classes' : 'Duplicate Topic' }}</h3>
@@ -680,22 +680,43 @@
             No classes found in your department.
           </div>
 
-          <div v-else class="space-y-1 border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-100 dark:divide-gray-700 overflow-hidden">
-            <div v-for="group in duplicateGroups" :key="group.name + group.level" class="py-1">
-              <label class="flex items-center gap-2.5 px-3 py-2 text-sm font-semibold text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 cursor-pointer">
-                <input type="checkbox" v-model="duplicateChecked[`all:${group.name}`]" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                {{ group.name }} (All Streams)
-              </label>
+          <!-- two columns of classes; each class's streams as a compact grid of ticks -->
+          <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div
+              v-for="group in duplicateGroups"
+              :key="group.name + group.level"
+              class="rounded-xl border p-3"
+              :class="groupBlocked(group) && group.streams.every(st => streamHasTopic(group, st.id)) ? 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30' : 'border-gray-200 dark:border-gray-700'"
+            >
+              <!-- a class or stream that already has this topic can't be given it a second time -->
               <label
-                v-for="stream in group.streams"
-                :key="stream.id"
-                class="flex items-center gap-2.5 px-3 py-2 pl-8 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                class="flex items-center gap-2 text-sm font-semibold"
+                :class="groupBlocked(group) ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed' : 'text-green-700 dark:text-green-400 cursor-pointer'"
+                :title="groupBlocked(group) ? groupBlockedReason(group) : undefined"
               >
-                <input type="checkbox" v-model="duplicateChecked[`stream:${stream.id}`]" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                {{ group.name }} - {{ stream.stream_name || 'N/A' }}
+                <input type="checkbox" :checked="!!duplicateChecked[`all:${group.name}`]" :disabled="groupBlocked(group)" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:opacity-50" @change="toggleDuplicateGroup(group, ($event.target as HTMLInputElement).checked)">
+                <span class="whitespace-nowrap">{{ group.name }} <span class="font-normal">&middot; all streams</span></span>
               </label>
+              <p v-if="groupBlocked(group)" class="mt-0.5 pl-6 text-[11px] text-gray-500 dark:text-gray-400">{{ groupBlockedReason(group) }}</p>
+              <div class="mt-2 grid grid-cols-4 gap-1.5">
+                <label
+                  v-for="stream in group.streams"
+                  :key="stream.id"
+                  class="flex items-center justify-center gap-1 rounded-md border px-1.5 py-1 text-xs font-medium"
+                  :class="streamHasTopic(group, stream.id)
+                    ? 'border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900/50 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                    : duplicateChecked[`stream:${stream.id}`]
+                      ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-200 cursor-pointer'
+                      : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:border-indigo-400 cursor-pointer'"
+                  :title="streamHasTopic(group, stream.id) ? `${group.name}-${stream.stream_name} already has this topic` : `${group.name}-${stream.stream_name}`"
+                >
+                  <input type="checkbox" :checked="!!duplicateChecked[`stream:${stream.id}`]" :disabled="streamHasTopic(group, stream.id)" class="w-3.5 h-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:opacity-50" @change="toggleDuplicateStream(group, stream.id, ($event.target as HTMLInputElement).checked)">
+                  {{ stream.stream_name || 'N/A' }}
+                </label>
+              </div>
             </div>
           </div>
+          <p v-if="duplicateGroups.some(g => g.streams.some(st => streamHasTopic(g, st.id)))" class="mt-2 text-[11px] text-gray-500 dark:text-gray-400">Greyed-out streams already have this topic.</p>
 
           <div v-if="duplicateResult" class="mt-4 p-3 rounded-lg bg-green-50 dark:bg-green-900/20 text-sm text-green-800 dark:text-green-300">
             Created {{ duplicateResult.created }} {{ copyingShared ? 'draft cop' + (duplicateResult.created === 1 ? 'y' : 'ies') + ' in your eNotes' : 'duplicate(s)' }}{{ duplicateResult.skipped ? `, skipped ${duplicateResult.skipped}` : '' }}.
@@ -727,6 +748,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
+import ClassStreamMultiSelect from '@/components/enotes/ClassStreamMultiSelect.vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import StatStrip, { type StatItem } from '@/components/ui/StatStrip.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
@@ -772,6 +794,9 @@ interface CurriculumMetaOption {
 interface CurriculumClassStreamMetaOption {
   id: number
   display_name: string
+  /** the class level, e.g. "S.5", and its stream letter, e.g. "A" */
+  class_name?: string
+  stream_name?: string
 }
 
 interface CurriculumTopicMetaOption {
@@ -844,6 +869,44 @@ const curriculumSelection = ref({
 const curriculumTopicLoading = ref(false)
 const selectedCurriculumTopic = ref<SelectedCurriculumTopic | null>(null)
 
+// --- the same eNote in several class-streams at once ---
+// The Class-Stream field takes ticks. The first ticked stream (in list order) is the primary: it
+// drives the curriculum cascade (terms, themes and topics are authored per class-stream) and is the
+// topic created first; the others become linked copies of it (as Duplicate does later).
+const streamIds = ref<number[]>([])
+const streamOptions = computed(() => curriculumMeta.value?.class_streams ?? [])
+const levelOf = (c: CurriculumClassStreamMetaOption) => c.class_name || c.display_name.replace(/-[^-]*$/, '')
+const primaryLabel = computed(() => streamOptions.value.find(c => c.id === streamIds.value[0])?.display_name ?? '')
+const setStreams = (ids: number[]) => {
+  streamIds.value = ids
+  const primary = ids[0] ?? ''
+  // only a change of the primary stream invalidates the curriculum steps after it
+  if (primary !== curriculumSelection.value.class_id) {
+    curriculumSelection.value.class_id = primary
+    onCurriculumStepChange('class_id')
+  }
+}
+/**
+ * Where the eNote goes, the primary stream's target first. A whole class ticked becomes one
+ * "all streams" target, so every stream of it - including any added later - sees the eNote.
+ */
+type StreamTarget = { scope: 'stream' | 'all_streams'; class_id: number | null; class_group_name: string | null }
+const streamTargets = (): StreamTarget[] => {
+  const targets: StreamTarget[] = []
+  const levels = [...new Set(streamOptions.value.map(levelOf))]
+  for (const level of levels) {
+    const streams = streamOptions.value.filter(c => levelOf(c) === level)
+    const ticked = streams.filter(c => streamIds.value.includes(c.id))
+    if (!ticked.length) continue
+    if (ticked.length === streams.length && streams.length > 1) targets.push({ scope: 'all_streams', class_id: null, class_group_name: level })
+    else for (const c of ticked) targets.push({ scope: 'stream', class_id: c.id, class_group_name: null })
+  }
+  const primary = streamIds.value[0]
+  const i = targets.findIndex(t => t.class_id === primary || (t.scope === 'all_streams' && streamOptions.value.some(c => c.id === primary && levelOf(c) === t.class_group_name)))
+  if (i > 0) targets.unshift(...targets.splice(i, 1))
+  return targets
+}
+
 const emptyCurriculumSelection = () => ({
   subject_id: '' as number | '',
   academic_year_id: '' as number | '',
@@ -874,6 +937,7 @@ const loadCurriculumMeta = async () => {
 // Changing an earlier cascade step invalidates every step after it (and the chosen topic), since
 // those option lists were fetched for the old selection.
 const onCurriculumStepChange = async (changedField: 'subject_id' | 'academic_year_id' | 'class_id' | 'term_id' | 'theme_branch') => {
+  if (changedField === 'subject_id' || changedField === 'academic_year_id') streamIds.value = []
   if (changedField === 'subject_id') {
     curriculumSelection.value.academic_year_id = ''
     curriculumSelection.value.class_id = ''
@@ -1200,6 +1264,7 @@ const openCreateModal = () => {
     status: 'draft'
   }
   curriculumSelection.value = emptyCurriculumSelection()
+  streamIds.value = []
   selectedCurriculumTopic.value = null
   curriculumMeta.value = null
   topicSaveError.value = null
@@ -1259,11 +1324,29 @@ const saveTopic = async () => {
     }
 
     const isNewTopic = !editingTopic.value
+    // the curriculum form can send the eNote to several class-streams at once
+    const targets = isNewTopic && useCurriculumWizard.value ? streamTargets() : []
+    if (targets.length) Object.assign(payload, targets[0])
 
     if (editingTopic.value) {
       await axios.put(`${API_BASE}/teacher/enotes/topics/${editingTopic.value.id}`, payload)
     } else {
       const response = await axios.post(`${API_BASE}/teacher/enotes/topics`, payload)
+      const newId = response.data?.data?.id
+      if (newId && targets.length > 1) {
+        // the other streams get linked copies (an edit to one updates them all); copies start as
+        // drafts, so publish them too when the teacher chose Published
+        try {
+          const dup = await axios.post(`${API_BASE}/teacher/enotes/topics/${newId}/duplicate`, { targets: targets.slice(1) })
+          const created: { id: number }[] = dup.data?.data?.created ?? []
+          if (payload.status === 'published' && created.length) {
+            await axios.post(`${API_BASE}/teacher/enotes/topics/bulk-status`, { ids: created.map(c => c.id), status: 'published' })
+          }
+          toast.success(`eNote made available in ${targets.length} class-stream groups`)
+        } catch (e: any) {
+          toast.error(e.response?.data?.message || 'The eNote was created, but not every class-stream could be added. Use Duplicate to add the rest.')
+        }
+      }
       // Creating a topic on its own leaves it with zero pages - jump straight into the builder
       // so the teacher can start writing right away, instead of landing back on the list with no
       // obvious next step.
@@ -1359,7 +1442,57 @@ const duplicateGroups = computed<DuplicateClassGroup[]>(() => {
   return Array.from(map.values())
 })
 
-const selectedDuplicateTargetCount = computed(() => Object.values(duplicateChecked.value).filter(Boolean).length)
+// "All streams" and the stream boxes move together: ticking a class ticks every stream it can
+// take; unticking one stream unticks the class; ticking the last free stream ticks the class.
+const toggleDuplicateGroup = (group: DuplicateClassGroup, on: boolean) => {
+  const next = { ...duplicateChecked.value, [`all:${group.name}`]: on }
+  for (const st of group.streams) if (!streamHasTopic(group, st.id)) next[`stream:${st.id}`] = on
+  duplicateChecked.value = next
+}
+const toggleDuplicateStream = (group: DuplicateClassGroup, streamId: number, on: boolean) => {
+  const next = { ...duplicateChecked.value, [`stream:${streamId}`]: on }
+  next[`all:${group.name}`] = !groupBlocked(group) && group.streams.every(st => next[`stream:${st.id}`])
+  duplicateChecked.value = next
+}
+/** what will be duplicated: a fully ticked class as one "all streams" copy, otherwise each ticked stream */
+const duplicateTargets = computed(() => {
+  const targets: Array<{ scope: string; class_id: number | null; class_group_name: string | null }> = []
+  for (const group of duplicateGroups.value) {
+    if (duplicateChecked.value[`all:${group.name}`]) {
+      targets.push({ scope: 'all_streams', class_id: null, class_group_name: group.name })
+      continue
+    }
+    for (const stream of group.streams) {
+      if (duplicateChecked.value[`stream:${stream.id}`]) targets.push({ scope: 'stream', class_id: stream.id, class_group_name: null })
+    }
+  }
+  return targets
+})
+const selectedDuplicateTargetCount = computed(() => duplicateTargets.value.length)
+
+// Where the topic being duplicated already is: the topic itself and its linked copies (same
+// content_group_id). A stream that has it - directly, or through an "all streams" copy of its
+// class - can't be given it again. (Copying a colleague's shared topic starts a new topic, so
+// nothing is blocked there.)
+const existingCoverage = computed(() => {
+  const t = duplicatingTopic.value
+  const streams = new Set<number>(), wholeClasses = new Set<string>()
+  if (!t || copyingShared.value) return { streams, wholeClasses }
+  const members = t.content_group_id ? topics.value.filter(x => x.content_group_id === t.content_group_id) : []
+  for (const m of [t, ...members]) {
+    if (m.class_group_name) wholeClasses.add(m.class_group_name)
+    else if (m.class_id) streams.add(Number(m.class_id))
+  }
+  return { streams, wholeClasses }
+})
+const streamHasTopic = (group: DuplicateClassGroup, streamId: number) =>
+  existingCoverage.value.wholeClasses.has(group.name) || existingCoverage.value.streams.has(streamId)
+/** "All Streams" would give a stream that already has the topic a second copy */
+const groupBlocked = (group: DuplicateClassGroup) =>
+  existingCoverage.value.wholeClasses.has(group.name) || group.streams.some(st => existingCoverage.value.streams.has(st.id))
+const groupBlockedReason = (group: DuplicateClassGroup) =>
+  existingCoverage.value.wholeClasses.has(group.name) ? 'already has this topic' : 'some streams already have it'
+
 
 // ---- Sharing with colleagues ----
 const showShared = ref(false)
@@ -1398,17 +1531,7 @@ const closeDuplicateModal = () => {
 const confirmDuplicate = async () => {
   if (!duplicatingTopic.value) return
 
-  const targets: Array<{ scope: string; class_id: number | null; class_group_name: string | null }> = []
-  for (const group of duplicateGroups.value) {
-    if (duplicateChecked.value[`all:${group.name}`]) {
-      targets.push({ scope: 'all_streams', class_id: null, class_group_name: group.name })
-    }
-    for (const stream of group.streams) {
-      if (duplicateChecked.value[`stream:${stream.id}`]) {
-        targets.push({ scope: 'stream', class_id: stream.id, class_group_name: null })
-      }
-    }
-  }
+  const targets = duplicateTargets.value
   if (targets.length === 0) return
 
   duplicating.value = true

@@ -123,7 +123,7 @@ class ENoteCurriculumController extends Controller
 
         [$whereClasses, $paramsClasses] = $this->curriculumFilterClause($filters, ['subject_id', 'academic_year_id'], $departmentId);
         $classesStmt = $db->prepare(
-            "SELECT DISTINCT c.id, CONCAT(c.name, '-', c.stream_name) AS display_name
+            "SELECT DISTINCT c.id, CONCAT(c.name, '-', c.stream_name) AS display_name, c.name AS class_name, c.stream_name
              FROM enote_curriculum_topics ct
              INNER JOIN classes c ON ct.class_id = c.id
              WHERE {$whereClasses}

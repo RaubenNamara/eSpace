@@ -88,6 +88,8 @@ export interface FrogModel {
   /** Take an organ out of the body (into its box) */
   removeOrgan: (k: OrganKey) => void
   isRemoved: (k: OrganKey) => boolean
+  /** The meshes of one organ (for the organ close-up, which shows copies of them on their own) */
+  organObjects: (k: OrganKey) => THREE.Object3D[]
   dispose: () => void
 }
 
@@ -1362,6 +1364,7 @@ export function buildFrog(): FrogModel {
     setOrganLift,
     removeOrgan,
     isRemoved: (k: OrganKey) => removed.has(k),
+    organObjects: (k: OrganKey) => organs[k].slice(),
     dispose: () => {
       root.traverse((o) => {
         if (o instanceof THREE.Mesh) {
