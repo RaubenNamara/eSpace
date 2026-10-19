@@ -35,7 +35,25 @@
     >
       <!-- guide -->
       <aside v-show="panelOpen" class="order-2 lg:order-none rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 space-y-4 lg:overflow-y-auto" :class="labMaximized ? 'hidden lg:block lg:h-full' : 'lg:h-[calc(100vh-13rem)]'">
+        <HeartPanel
+          v-if="heartOpen"
+          :view="heartView"
+          :phase="heartPhase"
+          :playing="heartPlaying"
+          :speed="heartSpeed"
+          :selected="heartPart"
+          @view="setHeartView"
+          @phase="showPhase"
+          @speed="setHeartSpeed"
+          @select="selectHeartPart"
+          @zoom="zoomHeartPart"
+        />
+        <template v-else>
         <p class="text-sm text-gray-700 dark:text-gray-200">{{ guide.overview }}</p>
+        <button v-if="key === 'circulatory'" type="button" class="w-full flex items-center gap-2 rounded-xl border border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 px-3 py-2 text-left text-sm font-semibold text-indigo-800 dark:text-indigo-200 hover:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" @click="openHeart">
+          <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.3C1 8.4 3 4.5 6.6 4.5c2.1 0 3.6 1.2 4.4 2.6.8-1.4 2.3-2.6 4.4-2.6 3.6 0 5.6 3.9 4.2 7.2C19.5 16.4 12 21 12 21z" /></svg>
+          <span>Open the heart close-up<span class="block text-[11px] font-normal text-indigo-700/80 dark:text-indigo-300/80">Or click the heart in the model: pumping, valves and blood flow, inside and out.</span></span>
+        </button>
         <p v-if="def.gaps" class="text-[11px] text-gray-500 dark:text-gray-400">{{ def.gaps }}</p>
 
         <!-- age-appropriate gate -->
@@ -104,6 +122,7 @@
         </section>
 
         <AnatomySystemStructures :index="index" :system="key" :selected-key="partKey" :show-sensitive="showSensitive" :sex="reproSex" @select="selectStructure" />
+        </template>
       </aside>
 
       <!-- 3D -->
@@ -123,19 +142,39 @@
           :index="index"
           :base-url="ANATOMY_BASE"
           :systems="shownSystems"
-          :selection="selection"
+          :selection="heartOpen ? [] : selection"
           :isolate="false"
           :see-through="true"
           :show-sensitive="showSensitive"
           :repro-sex="reproSex"
           :labels-on="labelsOn"
-          :labels="labels"
-          :selected-label-key="partKey"
+          :labels="heartOpen ? heartLabels : labels"
+          :selected-label-key="heartOpen ? heartPart : partKey"
+          :name-for="heartOpen ? heartName : undefined"
           @pick="onPick"
           @load-state="onLoadState"
         >
           <AnatomyLoadingState :states="loadStates" />
           <div class="absolute top-2 left-2 right-2 flex flex-wrap gap-1.5">
+            <template v-if="heartOpen">
+              <button type="button" :class="btn(false)" :aria-pressed="!panelOpen" :aria-label="panelOpen ? 'Hide the side panel' : 'Show the side panel'" @click="panelOpen = !panelOpen">{{ panelOpen ? 'Hide panel' : 'Show panel' }}</button>
+              <button type="button" :class="btn(false)" @click="closeHeart()">← Return to full system</button>
+              <button type="button" :class="btn(heartPlaying)" :aria-pressed="heartPlaying" @click="setHeartPlaying(!heartPlaying)">{{ heartPlaying ? '❚❚ Pause' : '▶ Play' }}</button>
+              <span class="inline-flex rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden bg-white/95 dark:bg-gray-900/95" role="radiogroup" aria-label="Heart view">
+                <button v-for="o in HEART_VIEWS" :key="o.k" type="button" role="radio" :aria-checked="heartView === o.k"
+                  class="px-2.5 py-1.5 text-xs font-semibold" :class="heartView === o.k ? 'bg-indigo-600 text-white' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'"
+                  @click="setHeartView(o.k)">{{ o.l }}</button>
+              </span>
+              <button type="button" :class="btn(false)" title="Back to the whole heart, centred" @click="resetHeartView">Reset view</button>
+              <button type="button" :class="btn(labelsOn)" :aria-pressed="labelsOn" @click="labelsOn = !labelsOn">Labels</button>
+              <button type="button" :class="btn(turning)" :aria-pressed="turning" @click="turning = !turning">Turn</button>
+              <span class="inline-flex rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden bg-white/95 dark:bg-gray-900/95">
+                <button type="button" class="px-2.5 py-1.5 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 border-r border-gray-200 dark:border-gray-700" aria-label="Zoom in" title="Zoom in" @click="viewer?.zoom(0.8)">＋</button>
+                <button type="button" class="px-2.5 py-1.5 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Zoom out" title="Zoom out" @click="viewer?.zoom(1.25)">−</button>
+              </span>
+              <button type="button" :class="[btn(labMaximized), 'ml-auto']" :aria-pressed="labMaximized" @click="labMaximized ? exitMaximize() : enterMaximize()">{{ labMaximized ? 'Exit full screen' : 'Full screen' }}</button>
+            </template>
+            <template v-else>
             <button
               type="button"
               :class="btn(false)"
@@ -152,6 +191,7 @@
             <button type="button" :class="btn(inBody)" :aria-pressed="inBody" @click="inBody = !inBody">Show inside the body</button>
             <button type="button" :class="btn(labelsOn)" :aria-pressed="labelsOn" @click="labelsOn = !labelsOn">Labels</button>
             <button v-if="key === 'reproductive' && reproSex === 'female' && showSensitive" type="button" :class="btn(false)" title="The same organs as a 3D textbook diagram" @click="diagramMode = true">3D diagram</button>
+            <button v-if="key === 'circulatory'" type="button" :class="btn(false)" title="The heart on its own: pumping, valves and blood flow" @click="openHeart">Heart close-up</button>
             <button type="button" :class="btn(false)" title="See the whole system" @click="frameWhole">Whole system</button>
             <button type="button" :class="btn(false)" title="Back to this step's view" @click="placeCamera">Reset view</button>
             <span class="inline-flex rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden bg-white/95 dark:bg-gray-900/95">
@@ -162,9 +202,13 @@
               <svg class="w-3.5 h-3.5 inline -mt-0.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path v-if="!labMaximized" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /><path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" /></svg>
               {{ labMaximized ? 'Exit full screen' : 'Full screen' }}
             </button>
+            </template>
           </div>
           <!-- live caption for the animation -->
-          <div v-if="caption" class="absolute bottom-3 left-1/2 -translate-x-1/2 w-[min(34rem,calc(100%-1.5rem))] px-4 py-2.5 rounded-2xl bg-gray-900/85 text-white text-sm text-center shadow-lg" role="status" aria-live="polite">{{ caption }}</div>
+          <div v-if="heartOpen && heartCaption" class="absolute bottom-3 left-1/2 -translate-x-1/2 w-[min(36rem,calc(100%-1.5rem))] px-4 py-2.5 rounded-2xl bg-gray-900/85 text-white text-sm text-center shadow-lg" role="status" aria-live="polite">
+            <span class="block text-[10px] font-bold uppercase tracking-wide text-indigo-200">{{ heartPhaseName }}</span>{{ heartCaption }}
+          </div>
+          <div v-else-if="caption" class="absolute bottom-3 left-1/2 -translate-x-1/2 w-[min(34rem,calc(100%-1.5rem))] px-4 py-2.5 rounded-2xl bg-gray-900/85 text-white text-sm text-center shadow-lg" role="status" aria-live="polite">{{ caption }}</div>
         </AnatomyViewer>
       </section>
     </div>
@@ -188,6 +232,11 @@ import AnatomyDiagramViewer from '@/components/anatomy/AnatomyDiagramViewer.vue'
 import { contentFor } from '@/anatomy/content'
 import { useFullscreenLab } from '@/components/virtuallab/lab3d/useFullscreenLab'
 import { useReproSex } from '@/anatomy/useReproSex'
+import HeartPanel from '@/components/anatomy/HeartPanel.vue'
+import { HeartMode, type HeartLabel, type HeartView } from '@/anatomy/heart/heartMode'
+import { PHASES, type CyclePhase } from '@/anatomy/heart/heartCycle'
+import { HEART_PART_BY_KEY, partForName } from '@/anatomy/heart/heartParts'
+import type * as THREE from 'three'
 
 const route = useRoute()
 const role = computed(() => labRoleOf(route.path))
@@ -225,7 +274,7 @@ const onLarge = () => { isLarge.value = !!largeQuery?.matches }
 largeQuery?.addEventListener('change', onLarge)
 onBeforeUnmount(() => largeQuery?.removeEventListener('change', onLarge))
 // the view changed size (full screen, panel): show the whole system, centred
-watch([labMaximized, panelOpen], () => setTimeout(() => frameWhole(), 250))
+watch([labMaximized, panelOpen], () => setTimeout(() => heart ? heart.resetCamera() : frameWhole(), 250))
 // switching between female and male organs: frame what is now shown
 watch(() => reproSex.value, (sx) => {
   partKey.value = null
@@ -290,12 +339,19 @@ function placeCamera() {
 
 function onLoadState(s: SystemKey, st: LoadState) {
   loadStates.value = { ...loadStates.value, [s]: st }
-  if (st.status === 'ready') {
+  if (st.status === 'ready' && !heart) {
     if (s === key.value) setTimeout(placeCamera, 30)
     restartEffect()
   }
 }
-function onPick(id: string | null) {
+function onPick(id: string | null, point?: THREE.Vector3) {
+  if (heart) { selectHeartPart(id ? heart.partAt(id, point) : null); return }
+  // clicking the heart (or a vessel on it) in the circulatory system opens the close-up
+  if (id && key.value === 'circulatory') {
+    const s = index.value?.structure(id)
+    const p = s ? partForName(s.name) : null
+    if (s && (s.group === 'heart' || p?.key === 'coronary-arteries' || p?.key === 'cardiac-veins')) { openHeart(); return }
+  }
   const g = id ? index.value?.groupOf(id) : null
   partKey.value = g && parts.value.some(p => p.key === g.key) ? g.key : g?.key ?? null
 }
@@ -309,6 +365,7 @@ function selectStructure(k: string) {
   if (partKey.value) viewer.value?.focus(idsOf([k]))
 }
 function chooseStep(i: number) {
+  closeHeart(false)
   stepIndex.value = i
   partKey.value = null
   playing.value = true
@@ -326,6 +383,7 @@ function stopEffect() {
 }
 function restartEffect() {
   stopEffect()
+  if (heart) return
   const engine = viewer.value?.engine
   const spec = step.value?.effect
   if (!engine || !spec || !playing.value || !index.value) return
@@ -345,6 +403,88 @@ watch(stepIndex, () => placeCamera())
 // a step about female or male organs switches to them
 watch(() => step.value?.sex, sx => { if (sx) reproSex.value = sx }, { immediate: true })
 watch(turning, on => viewer.value?.engine?.setAutoRotate(on))
-watch(key, () => { stopEffect(); stepIndex.value = 0; partKey.value = null; loadStates.value = {}; turning.value = false; showSensitive.value = false })
-onBeforeUnmount(stopEffect)
+watch(key, () => { closeHeart(false); stopEffect(); stepIndex.value = 0; partKey.value = null; loadStates.value = {}; turning.value = false; showSensitive.value = false })
+onBeforeUnmount(() => { closeHeart(false); stopEffect() })
+
+// --- the heart close-up ---
+let heart: HeartMode | null = null
+const HEART_VIEWS = [{ k: 'external', l: 'Outside' }, { k: 'internal', l: 'Inside' }] as const
+const heartOpen = ref(false)
+const heartView = ref<HeartView>('external')
+const heartPhase = ref<CyclePhase | null>(null)
+const heartPart = ref<string | null>(null)
+const heartSpeed = ref(20)
+const heartPlaying = ref(true)
+const heartLabels = ref<HeartLabel[]>([])
+const heartPhaseInfo = computed(() => PHASES.find(p => p.key === heartPhase.value) ?? null)
+const heartCaption = computed(() => heartPhaseInfo.value?.caption ?? null)
+const heartPhaseName = computed(() => heartPhaseInfo.value ? `${PHASES.indexOf(heartPhaseInfo.value) + 1}. ${heartPhaseInfo.value.name}` : '')
+const heartName = (id: string) => heart?.nameOf(id) ?? null
+
+function openHeart() {
+  const engine = viewer.value?.engine
+  if (heart || !engine || !index.value || !engine.isLoaded('circulatory')) return
+  stopEffect()
+  partKey.value = null
+  turning.value = false
+  heartView.value = 'external'
+  heartPart.value = null
+  heartPlaying.value = true
+  heart = new HeartMode(engine, index.value, { onPhase: (p) => { heartPhase.value = p } })
+  heart.setSpeed(heartSpeed.value)
+  heartLabels.value = heart.labels()
+  heartOpen.value = true
+  // glide in from the whole system to the heart
+  heart.resetCamera(1300)
+}
+/** back to the whole circulatory system */
+function closeHeart(reframe = true) {
+  if (!heart) return
+  heart.dispose()
+  heart = null
+  heartOpen.value = false
+  heartPart.value = null
+  heartPhase.value = null
+  turning.value = false
+  if (reframe) {
+    restartEffect()
+    frameWhole()
+  }
+}
+function resetHeartView() {
+  viewer.value?.engine?.setAutoRotate(false)
+  turning.value = false
+  heart?.resetCamera()
+}
+function setHeartView(v: HeartView) {
+  heartView.value = v
+  heart?.setView(v)
+  heartLabels.value = heart?.labels() ?? []
+  heart?.resetCamera()
+}
+function setHeartPlaying(on: boolean) {
+  heartPlaying.value = on
+  heart?.setPlaying(on)
+}
+function setHeartSpeed(bpm: number) {
+  heartSpeed.value = bpm
+  heart?.setSpeed(bpm)
+}
+/** a stage chosen from the list: pause there so it can be looked at */
+function showPhase(k: CyclePhase) {
+  const p = PHASES.find(x => x.key === k)
+  if (!p || !heart) return
+  setHeartPlaying(false)
+  heart.setCycle((p.start + p.end) / 2)
+}
+function selectHeartPart(k: string | null) {
+  heartPart.value = k
+  heart?.select(k)
+  // valves and septa are inside the heart: open it up to show them
+  if (k && HEART_PART_BY_KEY[k]?.inside && heartView.value === 'external') setHeartView('internal')
+}
+function zoomHeartPart(k: string) {
+  const ids = heart?.idsOf(k) ?? []
+  if (ids.length) viewer.value?.focus(ids, undefined, 1.7)
+}
 </script>

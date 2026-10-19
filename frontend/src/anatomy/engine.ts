@@ -13,8 +13,8 @@ export interface EngineOptions {
   baseUrl: string
   /** called whenever a system file starts, progresses, finishes or fails */
   onLoadState?: (system: SystemKey, state: LoadState) => void
-  /** a structure was clicked/tapped (null = empty space) */
-  onPick?: (id: string | null) => void
+  /** a structure was clicked/tapped (null = empty space); `point` is where it was hit, in world space */
+  onPick?: (id: string | null, point?: THREE.Vector3) => void
   onHover?: (id: string | null) => void
 }
 
@@ -139,6 +139,12 @@ export class AnatomyEngine {
   // --- appearance ---
 
   setSelection(ids: string[]) { this.selection = new Set(ids); this.applyAll() }
+  /** Show only these structures (still limited to the visible systems); null shows everything again */
+  private only: Set<string> | null = null
+  setOnly(ids: Iterable<string> | null) { this.only = ids ? new Set(ids) : null; this.applyAll() }
+  /** Hover recolours what is under the pointer; a close-up that draws its own highlight turns it off */
+  private hoverHighlight = true
+  setHoverHighlight(on: boolean) { this.hoverHighlight = on; this.applyAll() }
   setIsolate(on: boolean) { this.isolate = on; this.applyAll() }
   setSeeThroughSkin(on: boolean) { this.seeThroughSkin = on; this.applyAll() }
   setShowSensitive(on: boolean) { this.showSensitive = on; this.applyAll() }
@@ -200,8 +206,9 @@ export class AnatomyEngine {
       else if (s.system === 'reproductive') show = show && this.showSensitive && (!s.sex || s.sex === this.reproSex)
       // hair belongs with the skin: shown only when the skin is
       if (/hair/i.test(s.name)) show = show && this.visible.has('integumentary')
+      if (this.only) show = show && this.only.has(id)
       if (this.selection.has(id)) material = this.mats.selected
-      else if (this.hover.has(id)) material = this.mats.hovered
+      else if (this.hoverHighlight && this.hover.has(id)) material = this.mats.hovered
       else if (this.overrides.has(id)) material = this.overrides.get(id)!
       else if (isolating) material = this.mats.ghostFor(colourOf(s))
       else if (seeThrough && s.system === 'integumentary') material = this.mats.skinSeeThrough
@@ -303,7 +310,10 @@ export class AnatomyEngine {
   // --- picking ---
 
   /** The structure under a screen point (client coordinates), or null */
-  pickAt(clientX: number, clientY: number): string | null {
+  pickAt(clientX: number, clientY: number): string | null { return this.hitAt(clientX, clientY)?.id ?? null }
+
+  /** The structure under a screen point and where it was hit (world space) */
+  hitAt(clientX: number, clientY: number): { id: string; point: THREE.Vector3 } | null {
     const r = this.view.canvas.getBoundingClientRect()
     const ndc = new THREE.Vector2(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1)
     this.raycaster.setFromCamera(ndc, this.view.camera)
@@ -319,9 +329,14 @@ export class AnatomyEngine {
     }
     // in a cross-section, hits on the cut-away side do not count
     const planes = this.view.renderer.clippingPlanes
-    const kept = (h: THREE.Intersection) => planes.every(p => p.distanceToPoint(h.point) >= 0)
+    // a material can cut its own mesh open (local clipping): hits on its cut-away part do not count either
+    const kept = (h: THREE.Intersection) => {
+      const local = ((h.object as THREE.Mesh).material as THREE.Material).clippingPlanes ?? []
+      return planes.every(p => p.distanceToPoint(h.point) >= 0) && local.every(p => p.distanceToPoint(h.point) >= 0)
+    }
     const hit = this.raycaster.intersectObjects(solid, false).find(kept) ?? this.raycaster.intersectObjects(faded, false).find(kept)
-    return (hit?.object.userData.structureId as string | undefined) ?? null
+    const id = hit?.object.userData.structureId as string | undefined
+    return id && hit ? { id, point: hit.point.clone() } : null
   }
 
   private onPointerDown = (e: PointerEvent) => { this.down = { x: e.clientX, y: e.clientY, t: performance.now() } }
@@ -331,7 +346,8 @@ export class AnatomyEngine {
     if (!d) return
     // a tap or click, not the end of a drag
     if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > 6 || performance.now() - d.t > 600) return
-    this.opts.onPick?.(this.pickAt(e.clientX, e.clientY))
+    const hit = this.hitAt(e.clientX, e.clientY)
+    this.opts.onPick?.(hit?.id ?? null, hit?.point)
   }
   private onPointerMove = (e: PointerEvent) => {
     if (e.pointerType !== 'mouse' || e.buttons) return

@@ -45,7 +45,8 @@ import type { AnatomyIndex } from '@/anatomy/metadata'
 import type { ClipSpec, LoadState, ReproSex, SystemKey, ViewName } from '@/anatomy/types'
 import AnatomyErrorState from './AnatomyErrorState.vue'
 
-export interface LabelSpec { key: string; name: string; ids: string[] }
+/** a label on the centre of these structures, or at a fixed world point (`at`) */
+export interface LabelSpec { key: string; name: string; ids: string[]; at?: [number, number, number] }
 
 const props = defineProps<{
   index: AnatomyIndex
@@ -60,9 +61,11 @@ const props = defineProps<{
   selectedLabelKey: string | null
   clip?: ClipSpec | null
   reproSex?: ReproSex
+  /** names what is under the pointer (a close-up can name parts more precisely than the organ groups) */
+  nameFor?: (id: string) => string | null
 }>()
 const emit = defineEmits<{
-  pick: [string | null]
+  pick: [string | null, THREE.Vector3 | undefined]
   'load-state': [SystemKey, LoadState]
   clear: []
 }>()
@@ -75,6 +78,7 @@ const hoverId = ref<string | null>(null)
 const hoverName = computed(() => {
   const id = hoverId.value
   if (!id) return null
+  if (props.nameFor) return props.nameFor(id)
   const g = props.index.groupOf(id)
   return g?.name ?? props.index.structure(id)?.name ?? null
 })
@@ -92,7 +96,7 @@ function updateLabels() {
   const ordered = [...props.labels].sort((a, b) => Number(b.key === props.selectedLabelKey) - Number(a.key === props.selectedLabelKey))
   for (const l of ordered) {
     let c = centres.get(l.key)
-    if (!c) { c = e.centreOf(l.ids); centres.set(l.key, c) }
+    if (!c) { c = l.at ? new THREE.Vector3(...l.at) : e.centreOf(l.ids); centres.set(l.key, c) }
     const p = e.project(c)
     if (!p) continue
     const w = l.name.length * 6.2 + 14, h = 18
@@ -113,7 +117,7 @@ onMounted(() => {
         if (st.status === 'ready') centres.clear()
         emit('load-state', s, st)
       },
-      onPick: id => emit('pick', id),
+      onPick: (id, point) => emit('pick', id, point),
       onHover: id => { hoverId.value = id },
     })
     engine.value = e
@@ -145,6 +149,8 @@ watch(() => props.showSensitive, v => engine.value?.setShowSensitive(v))
 watch(() => props.reproSex, v => engine.value?.setReproSex(v ?? 'female'))
 watch(() => JSON.stringify(props.clip ?? null), () => engine.value?.setClip(props.clip ?? null))
 watch(() => [props.labelsOn, props.labels.map(l => l.key).join(), props.selectedLabelKey], () => {
+  // the same key can move (e.g. a close-up's labels): measure again
+  centres.clear()
   updateLabels()
   engine.value?.view.requestRender()
 })
