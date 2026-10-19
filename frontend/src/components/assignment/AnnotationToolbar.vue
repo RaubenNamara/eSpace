@@ -127,9 +127,9 @@
       </button>
     </div>
 
-    <div class="toolbar-section">
+    <div v-if="variant !== 'marking'" class="toolbar-section">
       <button
-        v-for="c in toolbarColors"
+        v-for="c in colors"
         :key="c"
         type="button"
         :class="['color-btn', { active: color === c }]"
@@ -162,6 +162,20 @@
       <!-- marking: Clear Selected removes the marks picked with Select; Delete clears this page's marks (Undo brings them back) -->
       <button type="button" class="tool-btn" title="Clear Selected" :disabled="disabled" @click="$emit('clear-selected')">⌫</button>
       <button type="button" class="tool-btn tool-btn--danger" :title="variant === 'marking' ? 'Delete all marks on this page' : 'Clear All'" :disabled="disabled" @click="$emit('clear-all')"><AppIcon name="trash" class="w-4 h-4" /></button>
+    </div>
+
+    <!-- marking: the three ink colours come last, as small dots -->
+    <div v-if="variant === 'marking'" class="toolbar-section">
+      <button
+        v-for="c in MARKING_COLORS"
+        :key="c"
+        type="button"
+        :class="['color-btn', 'color-btn--small', { active: color === c }]"
+        :style="{ backgroundColor: c }"
+        :title="c"
+        :disabled="disabled"
+        @click="$emit('update:color', c)"
+      ></button>
     </div>
   </div>
 </template>
@@ -232,7 +246,6 @@ const MARKING_TOOLS: { value: AnnotationTool; label: string; icon: string }[] = 
   // picks marks for Clear Selected
   { value: 'select', label: 'Select', icon: '↖' },
   { value: 'pen', label: 'Pen', icon: '@pencil' },
-  { value: 'pencil', label: 'Pencil', icon: '✎' },
   { value: 'eraser', label: 'Eraser', icon: '@eraser' },
   { value: 'tick', label: 'Tick / Correct', icon: '✓' },
   { value: 'cross', label: 'Cross / Incorrect', icon: '✕' },
@@ -247,7 +260,6 @@ const tools = computed(() => {
   if (props.variant === 'marking') return MARKING_TOOLS
   return BASE_TOOLS
 })
-const toolbarColors = computed(() => props.variant === 'marking' ? MARKING_COLORS : colors)
 
 // --- 'answer' variant: Pencil is a thin-stroke alias of Pen (same underlying tool, distinct
 // preset width) - pencilActive is purely local UI state so the two buttons highlight separately.
@@ -413,6 +425,13 @@ const activeToolLabel = computed(() => {
   border-radius: 50%;
   border: 2px solid #e5e7eb;
   cursor: pointer;
+}
+
+.color-btn--small,
+.annotation-toolbar .color-btn--small {
+  width: 16px;
+  height: 16px;
+  border-width: 1px;
 }
 
 .color-btn.active {

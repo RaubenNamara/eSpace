@@ -10,13 +10,20 @@ const titles = (w: ReturnType<typeof mountBar>) => w.findAll('button.tool-btn').
 describe('AnnotationToolbar - marking', () => {
   it('offers only the marking tools, then undo, redo, clear selected and delete', () => {
     expect(titles(mountBar('marking'))).toEqual([
-      'Select', 'Pen', 'Pencil', 'Eraser', 'Tick / Correct', 'Cross / Incorrect', 'Underline', 'Text',
+      'Select', 'Pen', 'Eraser', 'Tick / Correct', 'Cross / Incorrect', 'Underline', 'Text',
       'Undo', 'Redo', 'Clear Selected', 'Delete all marks on this page',
     ])
   })
 
-  it('has red, blue and green ink only', () => {
-    expect(mountBar('marking').findAll('button.color-btn').map(b => b.attributes('title'))).toEqual(['#dc2626', '#2563eb', '#16a34a'])
+  it('has red, blue and green ink only, as small dots after the delete button', () => {
+    const w = mountBar('marking')
+    const colours = w.findAll('button.color-btn')
+    expect(colours.map(b => b.attributes('title'))).toEqual(['#dc2626', '#2563eb', '#16a34a'])
+    expect(colours.every(b => b.classes('color-btn--small'))).toBe(true)
+    // in document order, every colour comes after the delete button
+    const order = w.findAll('button').map(b => b.attributes('title'))
+    expect(order.indexOf('#dc2626')).toBeGreaterThan(order.indexOf('Delete all marks on this page'))
+    expect(order.at(-1)).toBe('#16a34a')
   })
 
   it('has no size control: marking keeps a fixed 2px line', () => {

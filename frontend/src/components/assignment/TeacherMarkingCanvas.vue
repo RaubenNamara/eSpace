@@ -5,11 +5,19 @@
          part opens for marking where it sits (one open at a time, so only one heavy canvas is
          mounted). -->
     <template v-for="(part, index) in orderedParts" :key="part.key">
-      <p class="teacher-marking-canvas__section-label" :class="{ 'teacher-marking-canvas__section-label--spaced': index > 0 }">
-        <template v-if="orderedParts.length > 1">Part {{ index + 1 }} of {{ orderedParts.length }} · </template>{{ part.label }}
-      </p>
-      <template v-if="part.key === 'typed' && typedAnswerLayerInfo">
+      <!-- the part's name and, when it is open for marking, its tools on the same line -->
+      <div
+        class="teacher-marking-canvas__part-head"
+        :class="{
+          'teacher-marking-canvas__section-label--spaced': index > 0,
+          'teacher-marking-canvas__part-head--tools': (part.key === 'typed' && typedAnswerLayerInfo) || (part.file && part.key === selectedKey && selectedFile),
+        }"
+      >
+        <p class="teacher-marking-canvas__section-label">
+          <template v-if="orderedParts.length > 1">Part {{ index + 1 }} of {{ orderedParts.length }} · </template>{{ part.label }}
+        </p>
         <AnnotationToolbar
+          v-if="part.key === 'typed' && typedAnswerLayerInfo"
           variant="marking"
           :tool="typedTool"
           :color="typedColor"
@@ -22,6 +30,22 @@
           @clear-all="typedRef?.clearAll()"
           @clear-selected="typedRef?.clearSelected()"
         />
+        <AnnotationToolbar
+          v-else-if="part.file && part.key === selectedKey && selectedFile"
+          variant="marking"
+          :tool="evidenceTool"
+          :color="evidenceColor"
+          :stroke-width="evidenceStrokeWidth"
+          @update:tool="evidenceTool = $event"
+          @update:color="evidenceColor = $event"
+          @update:stroke-width="evidenceStrokeWidth = $event"
+          @undo="evidenceRef?.undo()"
+          @redo="evidenceRef?.redo()"
+          @clear-all="evidenceRef?.clearAll()"
+          @clear-selected="evidenceRef?.clearSelected()"
+        />
+      </div>
+      <template v-if="part.key === 'typed' && typedAnswerLayerInfo">
         <div v-if="typedSaveStatus" class="teacher-marking-canvas__status">{{ typedSaveStatus }}</div>
         <div class="teacher-marking-canvas__workspace teacher-marking-canvas__workspace--typed">
           <AnnotationCanvas
@@ -39,19 +63,6 @@
         </div>
       </template>
       <template v-else-if="part.file && part.key === selectedKey && selectedFile">
-        <AnnotationToolbar
-          variant="marking"
-          :tool="evidenceTool"
-          :color="evidenceColor"
-          :stroke-width="evidenceStrokeWidth"
-          @update:tool="evidenceTool = $event"
-          @update:color="evidenceColor = $event"
-          @update:stroke-width="evidenceStrokeWidth = $event"
-          @undo="evidenceRef?.undo()"
-          @redo="evidenceRef?.redo()"
-          @clear-all="evidenceRef?.clearAll()"
-          @clear-selected="evidenceRef?.clearSelected()"
-        />
         <div v-if="evidenceSaveStatus" class="teacher-marking-canvas__status">{{ evidenceSaveStatus }}</div>
         <div class="teacher-marking-canvas__workspace">
           <AnnotationCanvas
@@ -359,6 +370,30 @@ function onEvidencePdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
 
 .teacher-marking-canvas__section-label--spaced {
   margin-top: 16px;
+}
+
+/* label and tools on one line, with a clear gap between them; the tools drop below on a narrow screen */
+.teacher-marking-canvas__part-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  column-gap: 32px;
+  row-gap: 4px;
+}
+.teacher-marking-canvas__part-head--tools {
+  border-bottom: 1px solid #e5e7eb;
+}
+.dark .teacher-marking-canvas__part-head--tools {
+  border-color: #374151;
+}
+.teacher-marking-canvas__part-head .teacher-marking-canvas__section-label {
+  padding: 0;
+  flex-shrink: 0;
+}
+.teacher-marking-canvas__part-head :deep(.annotation-toolbar) {
+  padding: 6px 0;
+  border-bottom: none;
+  background: transparent;
 }
 
 .dark .teacher-marking-canvas__section-label {
