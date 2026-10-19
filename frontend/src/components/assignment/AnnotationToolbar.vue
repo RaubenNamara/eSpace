@@ -112,7 +112,7 @@
   </div>
 
   <!-- Author / marking toolbar: flat button row (unchanged) -->
-  <div v-else class="annotation-toolbar" :class="{ 'annotation-toolbar--vertical': vertical }">
+  <div v-else class="annotation-toolbar" :class="{ 'annotation-toolbar--vertical': vertical, 'annotation-toolbar--marking': variant === 'marking' }">
     <div class="toolbar-section">
       <button
         v-for="t in tools"
@@ -425,6 +425,27 @@ const activeToolLabel = computed(() => {
   border-radius: 50%;
   border: 2px solid #e5e7eb;
   cursor: pointer;
+}
+
+/* marking: one compact line (fits beside the part label on a 14" laptop) */
+.annotation-toolbar--marking {
+  flex-wrap: nowrap;
+  gap: 2px;
+}
+.annotation-toolbar--marking .toolbar-section {
+  flex-wrap: nowrap;
+  gap: 2px;
+  padding-right: 6px;
+  margin-right: 4px;
+}
+.annotation-toolbar--marking .toolbar-section:last-child {
+  margin-right: 0;
+  padding-right: 0;
+}
+.annotation-toolbar--marking .tool-btn {
+  width: 30px;
+  height: 30px;
+  font-size: 14px;
 }
 
 .color-btn--small,

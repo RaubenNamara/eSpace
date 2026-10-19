@@ -372,13 +372,29 @@ function onEvidencePdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
   margin-top: 16px;
 }
 
-/* label and tools on one line, with a clear gap between them; the tools drop below on a narrow screen */
+/* label and tools on one line, with a clear gap between them; the tools drop below on a phone */
 .teacher-marking-canvas__part-head {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  column-gap: 32px;
+  column-gap: 20px;
   row-gap: 4px;
+}
+/* laptop and wider (a 14" screen included): always one line - a long label is shortened with "…" */
+@media (min-width: 1024px) {
+  .teacher-marking-canvas__part-head {
+    flex-wrap: nowrap;
+  }
+  .teacher-marking-canvas__part-head .teacher-marking-canvas__section-label {
+    flex-shrink: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .teacher-marking-canvas__part-head :deep(.annotation-toolbar) {
+    flex-shrink: 0;
+  }
 }
 .teacher-marking-canvas__part-head--tools {
   border-bottom: 1px solid #e5e7eb;
@@ -388,7 +404,6 @@ function onEvidencePdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
 }
 .teacher-marking-canvas__part-head .teacher-marking-canvas__section-label {
   padding: 0;
-  flex-shrink: 0;
 }
 .teacher-marking-canvas__part-head :deep(.annotation-toolbar) {
   padding: 6px 0;
