@@ -89,28 +89,51 @@
       </div>
     </section>
 
-    <!-- HODs -->
+    <!-- HODs: sign-ins and what they did (or "Viewed only") -->
     <section class="dash-box min-w-0">
-      <h2 class="dash-bar">HODs: recent sign-ins</h2>
+      <h2 class="dash-bar">HODs: recent sign-ins and activity</h2>
       <div class="p-3">
         <div v-if="loading && !data" class="space-y-2" aria-busy="true">
           <div v-for="i in 3" :key="i" class="h-12 rounded-xl bg-gray-100 dark:bg-gray-700/50 animate-pulse"></div>
         </div>
         <p v-else-if="data && !data.hods.length" class="py-6 text-center text-sm text-gray-500 dark:text-gray-400">No HOD signed in {{ periodLabel }}.</p>
         <ul v-else-if="data" class="divide-y divide-gray-100 dark:divide-gray-700/60">
-          <li v-for="h in data.hods" :key="h.id" class="flex items-center gap-3 py-2">
-            <Avatar :person="h" />
-            <span class="min-w-0 flex-1">
-              <span class="flex items-center gap-1.5">
-                <span class="font-semibold text-sm text-gray-900 dark:text-white truncate">{{ properName(h.name) }}</span>
-                <span v-if="h.department" class="flex-shrink-0 px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-[10px] font-semibold text-gray-600 dark:text-gray-300">{{ h.department }}</span>
+          <li v-for="h in data.hods" :key="h.id" class="py-2">
+            <button
+              type="button"
+              class="w-full flex items-center gap-3 text-left rounded-lg px-1 py-1 hover:bg-gray-50 dark:hover:bg-gray-700/40"
+              :aria-expanded="openHod === h.id"
+              @click="openHod = openHod === h.id ? null : h.id"
+            >
+              <Avatar :person="h" />
+              <span class="min-w-0 flex-1">
+                <span class="flex items-center gap-1.5">
+                  <span class="font-semibold text-sm text-gray-900 dark:text-white truncate">{{ properName(h.name) }}</span>
+                  <span v-if="h.department" class="flex-shrink-0 px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-[10px] font-semibold text-gray-600 dark:text-gray-300">{{ h.department }}</span>
+                </span>
+                <span class="block text-xs text-gray-500 dark:text-gray-400"><StatusText :person="h" /> · {{ signIns(h.logins) }}</span>
+                <span v-if="h.device" class="block text-xs text-gray-500 dark:text-gray-400 truncate"><DeviceText :person="h" /></span>
               </span>
-              <span class="block text-xs text-gray-500 dark:text-gray-400"><StatusText :person="h" /> · {{ signIns(h.logins) }}</span>
-              <span v-if="h.device" class="block text-xs text-gray-500 dark:text-gray-400 truncate"><DeviceText :person="h" /></span>
-            </span>
+              <span
+                class="flex-shrink-0 px-2 py-0.5 rounded-full text-[11px] font-semibold"
+                :class="h.viewed_only ? 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200'"
+                :title="h.viewed_only ? 'Signed in and looked around, but changed nothing that is recorded' : undefined"
+              >{{ h.viewed_only ? 'Viewed only' : `${h.activity_count} ${h.activity_count === 1 ? 'action' : 'actions'}` }}</span>
+            </button>
+            <div v-if="openHod === h.id" class="mt-1 ml-12 mr-1">
+              <ol v-if="h.activities.length" class="relative border-l-2 border-indigo-100 dark:border-indigo-900/60 pl-4 space-y-2 py-1">
+                <li v-for="(a, i) in h.activities" :key="i" class="relative">
+                  <span class="absolute -left-[1.4rem] top-0.5 w-5 h-5 rounded-full flex items-center justify-center text-[11px]" :class="ICONS[a.type]?.bg ?? 'bg-gray-100 dark:bg-gray-700'" aria-hidden="true">{{ ICONS[a.type]?.icon ?? '•' }}</span>
+                  <p class="text-sm text-gray-800 dark:text-gray-100">
+                    <span class="font-semibold">{{ a.label }}</span><template v-if="a.title"> · <span class="text-gray-600 dark:text-gray-300">{{ a.title }}</span></template>
+                  </p>
+                  <p class="text-[11px] text-gray-500 dark:text-gray-400">{{ when(a.at) }}</p>
+                </li>
+              </ol>
+              <p v-else class="text-xs text-gray-500 dark:text-gray-400 py-1">Signed in and looked around, but changed nothing {{ periodLabel }} - no approvals, enrolment changes, notices, answers, report cards, awards, attendance, uploads, messages or teaching work.</p>
+            </div>
           </li>
         </ul>
-        <p class="mt-2 text-[11px] text-gray-400 dark:text-gray-500">Period: {{ periodName }} (change it in the Teachers panel).</p>
       </div>
     </section>
 
@@ -146,7 +169,8 @@ import { PERIODS, periodPhrase, when, tickNow, signIns, properName, Avatar, Stat
 
 interface Activity { type: string; label: string; title: string | null; count: number; at: string }
 interface Teacher extends SignInPerson { activity_count: number; activities: Activity[] }
-interface StaffActivityData { days: number; since: string; online_minutes: number; teachers: Teacher[]; hods: SignInPerson[]; students: SignInPerson[]; students_total: number }
+interface Hod extends SignInPerson { teacher_id: number | null; activity_count: number; activities: Activity[]; viewed_only: boolean }
+interface StaffActivityData { days: number; since: string; online_minutes: number; teachers: Teacher[]; hods: Hod[]; students: SignInPerson[]; students_total: number }
 
 const LIMIT = 6
 const ICONS: Record<string, { icon: string; bg: string }> = {
@@ -162,6 +186,22 @@ const ICONS: Record<string, { icon: string; bg: string }> = {
   virtual_lab_graded: { icon: '🧪', bg: 'bg-amber-100 dark:bg-amber-900/40' },
   live_quiz_run: { icon: '⚡', bg: 'bg-violet-100 dark:bg-violet-900/40' },
   questions_added: { icon: '❓', bg: 'bg-violet-100 dark:bg-violet-900/40' },
+  // HOD work
+  book_approved: { icon: '✔', bg: 'bg-emerald-100 dark:bg-emerald-900/40' },
+  notes_approved: { icon: '✔', bg: 'bg-emerald-100 dark:bg-emerald-900/40' },
+  questions_approved: { icon: '✔', bg: 'bg-emerald-100 dark:bg-emerald-900/40' },
+  enrolment_department_de_enroll: { icon: '👥', bg: 'bg-amber-100 dark:bg-amber-900/40' },
+  enrolment_teacher_de_enroll: { icon: '👥', bg: 'bg-amber-100 dark:bg-amber-900/40' },
+  enrolment_teacher_re_enroll: { icon: '👥', bg: 'bg-amber-100 dark:bg-amber-900/40' },
+  notice_posted: { icon: '📢', bg: 'bg-sky-100 dark:bg-sky-900/40' },
+  questions_answered: { icon: '💬', bg: 'bg-sky-100 dark:bg-sky-900/40' },
+  chat_sent: { icon: '💬', bg: 'bg-sky-100 dark:bg-sky-900/40' },
+  physical_assessment_created: { icon: '📋', bg: 'bg-sky-100 dark:bg-sky-900/40' },
+  report_cards_generated: { icon: '🧾', bg: 'bg-indigo-100 dark:bg-indigo-900/40' },
+  awards_changed: { icon: '🏅', bg: 'bg-amber-100 dark:bg-amber-900/40' },
+  attendance_updated: { icon: '🗓', bg: 'bg-indigo-100 dark:bg-indigo-900/40' },
+  book_uploaded: { icon: '📚', bg: 'bg-rose-100 dark:bg-rose-900/40' },
+  sba_uploaded: { icon: '📎', bg: 'bg-rose-100 dark:bg-rose-900/40' },
 }
 
 const days = ref(7)
@@ -170,10 +210,10 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 const search = ref('')
 const open = ref<number | null>(null)
+const openHod = ref<number | null>(null)
 const showAll = ref(false)
 
 const periodLabel = computed(() => periodPhrase(days.value))
-const periodName = computed(() => PERIODS.find(p => p.days === days.value)?.label ?? '')
 const filteredTeachers = computed(() => {
   const q = search.value.trim().toLowerCase()
   const list = data.value?.teachers ?? []
@@ -200,6 +240,7 @@ async function load() {
 function setDays(d: number) {
   days.value = d
   open.value = null
+  openHod.value = null
   load()
 }
 
