@@ -1378,9 +1378,33 @@ class ENoteController extends Controller
         }
 
         try {
+            // the topics that are newly going live, so their students hear about them (as with a single publish)
+            $newlyLive = [];
+            if ($status === 'published') {
+                $stmt = $db->prepare("SELECT id, title, department_id, class_id, class_group_name FROM enote_topics WHERE id IN ($placeholders) AND status <> 'published'");
+                $stmt->execute($ids);
+                $newlyLive = $stmt->fetchAll();
+            }
+
             $sql = "UPDATE enote_topics SET status = ?{$extraClause}, updated_at = NOW() WHERE id IN ($placeholders)";
             $stmt = $db->prepare($sql);
             $stmt->execute([$status, ...$ids]);
+
+            foreach ($newlyLive as $t) {
+                try {
+                    (new NotificationService())->notifyDepartmentClass(
+                        (int) $t['department_id'],
+                        $t['class_id'] !== null ? (int) $t['class_id'] : null,
+                        'new_enote',
+                        'New eNote',
+                        "A new eNote topic \"{$t['title']}\" is now available.",
+                        ['topic_id' => (int) $t['id']],
+                        $t['class_group_name']
+                    );
+                } catch (\Throwable $e) {
+                    error_log('Bulk publish: notification failed: ' . $e->getMessage());
+                }
+            }
 
             $this->success(['updated' => count($ids)], count($ids) . ' topic(s) updated');
         } catch (\PDOException $e) {

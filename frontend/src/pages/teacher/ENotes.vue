@@ -166,6 +166,15 @@
                     <span :class="['flex-shrink-0 px-1.5 py-px rounded-full text-[9px] font-semibold', statusChip(copy.status)]">{{ statusLabel(copy.status) }}</span>
                   </li>
                 </ul>
+                <!-- some copies still drafts: publish them all in one go -->
+                <button
+                  v-if="draftCopies(copies).length"
+                  type="button"
+                  class="mt-1.5 w-full px-2 py-1 rounded-lg text-[11px] font-semibold bg-indigo-600 text-white hover:bg-indigo-700"
+                  @click.stop="publishCopies(draftCopies(copies))"
+                >
+                  Publish {{ draftCopies(copies).length === copies.length ? `in all ${copies.length} classes` : `the ${draftCopies(copies).length} draft${draftCopies(copies).length === 1 ? '' : 's'}` }}
+                </button>
               </div>
               <div class="flex items-center -ml-1.5 mt-0.5">
                 <button
@@ -252,8 +261,12 @@
                     <span class="text-[11px] whitespace-nowrap text-gray-500 dark:text-gray-400 group-hover/r:text-indigo-600 dark:group-hover/r:text-indigo-300">{{ bookReach(copies).readers }}/{{ bookReach(copies).audience }} opened<template v-if="bookReach(copies).finished"> · {{ bookReach(copies).finished }} done</template></span>
                   </button>
                 </template>
-                <p v-else-if="copies.some(c => c.status === 'published')" class="mt-1 text-[11px] text-gray-400">No students in this class yet</p>
-                <p v-else class="mt-1 flex items-center gap-2 text-[11px]">
+                <p v-if="copies.length > 1 && draftCopies(copies).length && draftCopies(copies).length < copies.length" class="mt-1 flex items-center gap-2 text-[11px] text-amber-700 dark:text-amber-300">
+                  {{ draftCopies(copies).length }} of {{ copies.length }} classes still draft
+                  <button type="button" class="font-semibold text-indigo-600 dark:text-indigo-300 hover:underline" @click="publishCopies(draftCopies(copies))">Publish them</button>
+                </p>
+                <p v-else-if="!bookReach(copies).audience && copies.some(c => c.status === 'published')" class="mt-1 text-[11px] text-gray-400">No students in this class yet</p>
+                <p v-else-if="!copies.some(c => c.status === 'published')" class="mt-1 flex items-center gap-2 text-[11px]">
                   <span class="px-1.5 py-0.5 rounded-full font-semibold" :class="statusChip(topic.status)">{{ statusLabel(topic.status) }}</span>
                   <button v-if="topic.status === 'draft'" type="button" class="font-semibold text-indigo-600 dark:text-indigo-300 hover:underline" @click="publishCopies(copies)">Publish</button>
                 </p>
@@ -1112,6 +1125,7 @@ const readingList = computed(() => toBooks(activeClassTopics.value).sort((a, b) 
 }))
 const readersFor = ref<TopicBook | null>(null)
 
+const draftCopies = (copies: ENoteTopic[]) => copies.filter(c => c.status === 'draft')
 const publishCopies = async (copies: ENoteTopic[]) => {
   try {
     await axios.post(`${API_BASE}/teacher/enotes/topics/bulk-status`, { ids: copies.map(c => c.id), status: 'published' })
