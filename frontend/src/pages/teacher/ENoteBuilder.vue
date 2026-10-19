@@ -1321,8 +1321,9 @@ const publishTopic = async () => {
     }
 
     await loadTopic()
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to publish topic:', error)
+    toast.error(error?.response?.data?.message || 'Failed to publish the topic', 9000)
   }
 }
 

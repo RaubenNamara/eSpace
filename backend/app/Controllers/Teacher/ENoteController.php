@@ -7,6 +7,7 @@ namespace eSpace\App\Controllers\Teacher;
 use eSpace\App\Services\ENotePageHistory;
 use eSpace\App\Controllers\Controller;
 use eSpace\App\Services\NotificationService;
+use eSpace\App\Services\ENoteDuplicateGuard;
 use eSpace\App\Utils\HtmlSanitizer;
 
 /**
@@ -867,6 +868,14 @@ class ENoteController extends Controller
             'status' => $data['status'] ?? 'draft'
         ];
 
+        if ($sanitizedData['status'] === 'published') {
+            $clash = ENoteDuplicateGuard::conflicts($db, $departmentId, $sanitizedData['subject_id'], $sanitizedData['title'], $sanitizedData['class_id'], $sanitizedData['class_group_name']);
+            if ($clash) {
+                $this->error(ENoteDuplicateGuard::message($clash, $sanitizedData['title']) . ' Save it as a draft, or pick another class.', 422);
+                return;
+            }
+        }
+
         // Insert topic
         $sql = "INSERT INTO enote_topics (teacher_id, class_id, class_group_name, subject_id, department_id, title, description, learning_outcomes, status, created_at, updated_at)
                 VALUES (:teacher_id, :class_id, :class_group_name, :subject_id, :department_id, :title, :description, :learning_outcomes, :status, NOW(), NOW())";
@@ -977,7 +986,7 @@ class ENoteController extends Controller
         $db = $this->getDb();
 
         // Verify topic belongs to teacher
-        $stmt = $db->prepare("SELECT id, status, content_group_id, subject_id FROM enote_topics WHERE id = :id AND teacher_id = :teacher_id AND deleted_at IS NULL");
+        $stmt = $db->prepare("SELECT id, status, content_group_id, subject_id, department_id, title, class_id, class_group_name FROM enote_topics WHERE id = :id AND teacher_id = :teacher_id AND deleted_at IS NULL");
         $stmt->execute(['id' => $id, 'teacher_id' => $teacherId]);
         $topic = $stmt->fetch();
 
@@ -1083,6 +1092,17 @@ class ENoteController extends Controller
         if (empty($updates)) {
             $this->error('No fields to update', 400);
             return;
+        }
+
+        if ($newStatus === 'published') {
+            $finalTitle = $params['title'] ?? $topic['title'];
+            $finalClassId = array_key_exists('class_id', $params) ? $params['class_id'] : ($topic['class_id'] !== null ? (int) $topic['class_id'] : null);
+            $finalGroup = array_key_exists('class_group_name', $params) ? $params['class_group_name'] : $topic['class_group_name'];
+            $clash = ENoteDuplicateGuard::conflicts($db, (int) $topic['department_id'], (int) $topic['subject_id'], $finalTitle, $finalClassId, $finalGroup, [$id]);
+            if ($clash) {
+                $this->error(ENoteDuplicateGuard::message($clash, $finalTitle), 422);
+                return;
+            }
         }
 
         $updates[] = 'updated_at = NOW()';
@@ -1196,11 +1216,18 @@ class ENoteController extends Controller
         $db = $this->getDb();
 
         // Verify topic belongs to teacher
-        $stmt = $db->prepare("SELECT id, title, department_id, class_id, class_group_name FROM enote_topics WHERE id = :id AND teacher_id = :teacher_id AND deleted_at IS NULL");
+        $stmt = $db->prepare("SELECT id, title, subject_id, department_id, class_id, class_group_name FROM enote_topics WHERE id = :id AND teacher_id = :teacher_id AND deleted_at IS NULL");
         $stmt->execute(['id' => $id, 'teacher_id' => $teacherId]);
         $topic = $stmt->fetch();
         if (!$topic) {
             $this->notFound('Topic not found');
+            return;
+        }
+
+        $clash = ENoteDuplicateGuard::conflicts($db, (int) $topic['department_id'], (int) $topic['subject_id'], $topic['title'],
+            $topic['class_id'] !== null ? (int) $topic['class_id'] : null, $topic['class_group_name'], [$id]);
+        if ($clash) {
+            $this->error(ENoteDuplicateGuard::message($clash, $topic['title']), 422);
             return;
         }
 
@@ -1380,15 +1407,29 @@ class ENoteController extends Controller
         try {
             // the topics that are newly going live, so their students hear about them (as with a single publish)
             $newlyLive = [];
+            $blocked = [];
             if ($status === 'published') {
-                $stmt = $db->prepare("SELECT id, title, department_id, class_id, class_group_name FROM enote_topics WHERE id IN ($placeholders) AND status <> 'published'");
+                $stmt = $db->prepare("SELECT id, title, subject_id, department_id, class_id, class_group_name FROM enote_topics WHERE id IN ($placeholders) AND status <> 'published'");
                 $stmt->execute($ids);
-                $newlyLive = $stmt->fetchAll();
+                $goLive = $db->prepare("UPDATE enote_topics SET status = 'published', published_at = NOW(), updated_at = NOW() WHERE id = ?");
+                $cands = $stmt->fetchAll();
+                foreach ($cands as $t) {
+                    $clash = ENoteDuplicateGuard::conflicts($db, (int) $t['department_id'], (int) $t['subject_id'], $t['title'],
+                        $t['class_id'] !== null ? (int) $t['class_id'] : null, $t['class_group_name'], [(int) $t['id']]);
+                    if ($clash) {
+                        $blocked[] = ENoteDuplicateGuard::message($clash, $t['title']);
+                        continue;
+                    }
+                    $goLive->execute([(int) $t['id']]);
+                    $newlyLive[] = $t;
+                }
             }
 
-            $sql = "UPDATE enote_topics SET status = ?{$extraClause}, updated_at = NOW() WHERE id IN ($placeholders)";
-            $stmt = $db->prepare($sql);
-            $stmt->execute([$status, ...$ids]);
+            if ($status !== 'published') {
+                $sql = "UPDATE enote_topics SET status = ?{$extraClause}, updated_at = NOW() WHERE id IN ($placeholders)";
+                $stmt = $db->prepare($sql);
+                $stmt->execute([$status, ...$ids]);
+            }
 
             foreach ($newlyLive as $t) {
                 try {
@@ -1406,6 +1447,16 @@ class ENoteController extends Controller
                 }
             }
 
+            if ($status === 'published') {
+                $n = count($newlyLive);
+                $msg = $n . ' topic(s) published' . ($blocked ? ' - ' . count($blocked) . ' not published: ' . implode(' ', array_unique($blocked)) : '');
+                if ($n === 0 && $blocked) {
+                    $this->error($msg, 422, ['blocked' => array_values(array_unique($blocked))]);
+                    return;
+                }
+                $this->success(['updated' => $n, 'blocked' => array_values(array_unique($blocked))], $msg);
+                return;
+            }
             $this->success(['updated' => count($ids)], count($ids) . ' topic(s) updated');
         } catch (\PDOException $e) {
             error_log('Failed to bulk update topics: ' . $e->getMessage());
@@ -2107,13 +2158,15 @@ class ENoteController extends Controller
         // Where this topic already is: itself and every linked copy in its group
         $coverage = ['streams' => [], 'classes' => [], 'streamClass' => []];
         $membersStmt = $db->prepare(
-            "SELECT et.class_id, et.class_group_name, c.name AS class_name
+            "SELECT et.id, et.class_id, et.class_group_name, c.name AS class_name
              FROM enote_topics et LEFT JOIN classes c ON c.id = et.class_id
              WHERE et.teacher_id = :teacher_id AND et.deleted_at IS NULL
                AND (et.id = :id OR (:gid IS NOT NULL AND et.content_group_id = :gid2))"
         );
         $membersStmt->execute(['teacher_id' => $teacherId, 'id' => $id, 'gid' => $topic['content_group_id'], 'gid2' => $topic['content_group_id']]);
+        $groupIds = [];
         foreach ($membersStmt->fetchAll() as $m) {
+            $groupIds[] = (int) $m['id'];
             $this->addToCoverage($coverage, [
                 'class_id' => $m['class_id'] !== null ? (int) $m['class_id'] : null,
                 'class_group_name' => $m['class_group_name'],
@@ -2141,6 +2194,19 @@ class ENoteController extends Controller
             if ($this->targetAlreadyCovered($classTarget, $coverage)) {
                 $skipped[] = [
                     'message' => 'Already has this topic',
+                    'class_id' => $classTarget['class_id'],
+                    'class_group_name' => $classTarget['class_group_name']
+                ];
+                continue;
+            }
+
+            // ...nor can one that already has the same lesson as a separate topic (same subject and
+            // title in this department, from this or another teacher)
+            $clash = ENoteDuplicateGuard::conflicts($db, $departmentId, (int) $topic['subject_id'], $topic['title'],
+                $classTarget['class_id'], $classTarget['class_group_name'], $groupIds);
+            if ($clash) {
+                $skipped[] = [
+                    'message' => ENoteDuplicateGuard::message($clash, $topic['title']),
                     'class_id' => $classTarget['class_id'],
                     'class_group_name' => $classTarget['class_group_name']
                 ];
@@ -2178,6 +2244,7 @@ class ENoteController extends Controller
                     'total_pages' => count($pages)
                 ]);
                 $newTopicId = (int) $db->lastInsertId();
+                $groupIds[] = $newTopicId;
                 if ($copyStatus === 'published') {
                     $db->prepare("UPDATE enote_topics SET published_at = NOW() WHERE id = :id")->execute(['id' => $newTopicId]);
                 }

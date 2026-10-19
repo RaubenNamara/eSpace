@@ -6,6 +6,7 @@ namespace eSpace\App\Controllers\Admin;
 
 use eSpace\App\Controllers\Controller;
 use eSpace\App\Services\NotificationService;
+use eSpace\App\Services\ENoteDuplicateGuard;
 
 /**
  * Admin eNotes Controller
@@ -196,7 +197,7 @@ class ENoteController extends Controller
             return;
         }
 
-        $stmt = $this->db->prepare("SELECT id, status, title, department_id, class_id FROM enote_topics WHERE id = :id AND deleted_at IS NULL");
+        $stmt = $this->db->prepare("SELECT id, status, title, subject_id, department_id, class_id, class_group_name FROM enote_topics WHERE id = :id AND deleted_at IS NULL");
         $stmt->execute(['id' => $id]);
         $topic = $stmt->fetch();
 
@@ -207,6 +208,16 @@ class ENoteController extends Controller
 
         $oldStatus = $topic['status'];
         $newStatus = $data['status'];
+
+        // the same lesson must not reach the same students twice
+        if ($oldStatus !== 'published' && $newStatus === 'published') {
+            $clash = ENoteDuplicateGuard::conflicts($this->db, (int) $topic['department_id'], (int) $topic['subject_id'], $topic['title'],
+                $topic['class_id'] !== null ? (int) $topic['class_id'] : null, $topic['class_group_name'], [$id]);
+            if ($clash) {
+                $this->error(ENoteDuplicateGuard::message($clash, $topic['title']), 422);
+                return;
+            }
+        }
 
         try {
             if ($oldStatus !== 'published' && $newStatus === 'published') {

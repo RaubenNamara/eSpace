@@ -754,6 +754,9 @@
 
           <div v-if="duplicateResult" class="mt-4 p-3 rounded-lg bg-green-50 dark:bg-green-900/20 text-sm text-green-800 dark:text-green-300">
             Created {{ duplicateResult.created }} {{ copyingShared ? 'draft cop' + (duplicateResult.created === 1 ? 'y' : 'ies') + ' in your eNotes' : `${duplicateStatus} cop${duplicateResult.created === 1 ? 'y' : 'ies'}` }}{{ duplicateResult.skipped ? `, skipped ${duplicateResult.skipped}` : '' }}.
+            <ul v-if="duplicateResult.reasons.length" class="mt-1 list-disc pl-5 text-xs text-amber-800 dark:text-amber-300">
+              <li v-for="r in duplicateResult.reasons" :key="r">{{ r }}</li>
+            </ul>
           </div>
 
           <div class="flex justify-end space-x-3 mt-6">
@@ -1128,8 +1131,10 @@ const readersFor = ref<TopicBook | null>(null)
 const draftCopies = (copies: ENoteTopic[]) => copies.filter(c => c.status === 'draft')
 const publishCopies = async (copies: ENoteTopic[]) => {
   try {
-    await axios.post(`${API_BASE}/teacher/enotes/topics/bulk-status`, { ids: copies.map(c => c.id), status: 'published' })
-    toast.success(`"${copies[0].title}" is now visible to students`)
+    const res = await axios.post(`${API_BASE}/teacher/enotes/topics/bulk-status`, { ids: copies.map(c => c.id), status: 'published' })
+    // a class that already has this lesson as another topic is left out (students would see it twice)
+    if (res.data?.data?.blocked?.length) toast.warning(res.data.message, 9000)
+    else toast.success(`"${copies[0].title}" is now visible to students`)
     await loadTopics()
   } catch (error: any) {
     toast.error(error.response?.data?.message || 'Failed to publish')
@@ -1184,8 +1189,9 @@ const bulkSetStatus = async (status: 'draft' | 'published' | 'archived') => {
   const ids = bulk.selectedArray()
   if (ids.length === 0) return
   try {
-    await axios.post(`${API_BASE}/teacher/enotes/topics/bulk-status`, { ids, status })
-    toast.success(`${ids.length} topic(s) updated`)
+    const res = await axios.post(`${API_BASE}/teacher/enotes/topics/bulk-status`, { ids, status })
+    if (res.data?.data?.blocked?.length) toast.warning(res.data.message, 9000)
+    else toast.success(res.data?.message || `${ids.length} topic(s) updated`)
     bulk.clear()
     await loadTopics()
   } catch (error: any) {
@@ -1451,7 +1457,7 @@ const showDuplicateModal = ref(false)
 const duplicatingTopic = ref<ENoteTopic | null>(null)
 const duplicateChecked = ref<Record<string, boolean>>({})
 const duplicating = ref(false)
-const duplicateResult = ref<{ created: number; skipped: number } | null>(null)
+const duplicateResult = ref<{ created: number; skipped: number; reasons: string[] } | null>(null)
 
 interface DuplicateClassGroup {
   name: string
@@ -1586,13 +1592,17 @@ const confirmDuplicate = async () => {
     if (response.data.success) {
       duplicateResult.value = {
         created: response.data.data.created.length,
-        skipped: response.data.data.skipped.length
+        skipped: response.data.data.skipped.length,
+        reasons: [...new Set<string>((response.data.data.skipped || []).map((s: { message: string }) => s.message).filter((m: string) => m && m !== 'Already has this topic'))]
       }
       await loadTopics()
       await loadDashboard()
     }
   } catch (error) {
     console.error('Failed to duplicate topic:', error)
+    const skipped: { message: string }[] = (error as any)?.response?.data?.errors?.skipped || (error as any)?.response?.data?.data?.skipped || []
+    const reasons = [...new Set(skipped.map(s => s.message))]
+    toast.error(reasons.length ? reasons.join(' ') : ((error as any)?.response?.data?.message || 'Could not duplicate the topic'), 9000)
   } finally {
     duplicating.value = false
   }

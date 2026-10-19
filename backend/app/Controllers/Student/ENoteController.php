@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace eSpace\App\Controllers\Student;
 
 use eSpace\App\Controllers\Controller;
+use eSpace\App\Services\ENoteDuplicateGuard;
 
 /**
  * Student eNotes Controller
@@ -111,6 +112,32 @@ class ENoteController extends Controller
     }
 
     /**
+     * The same lesson reaching a student twice (same department, subject and title - e.g. two
+     * teachers each publishing it, or one topic for the stream and another for "All Streams")
+     * is shown once: the copy the student has been reading, otherwise the one published first.
+     * Keeps the list's order.
+     */
+    private function withoutRepeats(array $topics): array
+    {
+        $keep = [];
+        foreach ($topics as $i => $t) {
+            $key = $t['department_id'] . '|' . $t['subject_id'] . '|' . ENoteDuplicateGuard::normalize((string) $t['title']);
+            if (!isset($keep[$key])) {
+                $keep[$key] = $i;
+                continue;
+            }
+            $cur = $topics[$keep[$key]];
+            $better = ($t['progress_last_read_at'] ?? null) !== null && (($cur['progress_last_read_at'] ?? null) === null || $t['progress_last_read_at'] > $cur['progress_last_read_at'])
+                || (($t['progress_last_read_at'] ?? null) === null && ($cur['progress_last_read_at'] ?? null) === null && (string) $t['published_at'] < (string) $cur['published_at']);
+            if ($better) {
+                $keep[$key] = $i;
+            }
+        }
+        $kept = array_flip($keep);
+        return array_values(array_filter($topics, fn ($i) => isset($kept[$i]), ARRAY_FILTER_USE_KEY));
+    }
+
+    /**
      * Get all eNote topics visible to the student
      * GET /student/enotes/topics
      */
@@ -151,7 +178,7 @@ class ENoteController extends Controller
 
         $whereClause = implode(' AND ', $where);
 
-        $sql = "SELECT et.id, et.title, et.description, et.learning_outcomes, et.subject_id, et.class_id, et.total_pages,
+        $sql = "SELECT et.id, et.title, et.description, et.learning_outcomes, et.subject_id, et.class_id, et.department_id, et.total_pages,
                        et.estimated_reading_time, et.published_at, et.created_at, et.cover_design,
                        GREATEST(et.updated_at, COALESCE((SELECT MAX(vp.updated_at) FROM enote_pages vp WHERE vp.topic_id = et.id), et.updated_at)) AS content_version,
                        s.name as subject_name, s.code as subject_code,
@@ -174,7 +201,7 @@ class ENoteController extends Controller
 
         $stmt = $db->prepare($sql);
         $stmt->execute($params);
-        $topics = array_map([$this, 'decodeLearningOutcomes'], $stmt->fetchAll());
+        $topics = $this->withoutRepeats(array_map([$this, 'decodeLearningOutcomes'], $stmt->fetchAll()));
 
         $this->success(['topics' => $topics, 'subjects' => $this->enrolledSubjects($db, $studentId)]);
     }
