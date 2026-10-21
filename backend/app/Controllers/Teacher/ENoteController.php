@@ -8,6 +8,7 @@ use eSpace\App\Services\ENotePageHistory;
 use eSpace\App\Controllers\Controller;
 use eSpace\App\Services\NotificationService;
 use eSpace\App\Services\ENoteDuplicateGuard;
+use eSpace\App\Services\ENoteAssessmentReach;
 use eSpace\App\Utils\HtmlSanitizer;
 
 /**
@@ -549,21 +550,26 @@ class ENoteController extends Controller
         $stmt->execute(['topic_id' => $id]);
         $pages = $stmt->fetchAll();
 
-        $topic['pages'] = $this->attachNarrations($pages);
-        $topic['pages'] = $this->attachPageLinkedAssignments($topic['pages'], $teacherId);
+        // A duplicated topic shares its LOA/AOI with every copy (see ENoteAssessmentReach), so a
+        // copy shows - and edits - the same ones rather than offering to create its own
+        $groupIds = ENoteAssessmentReach::groupTopicIds($db, $id);
 
-        // Most recent topic-scoped assignment this teacher has linked to this topic (AOI, or the
-        // older generic "Create Assessment" quick-link), any status (draft or published) - this is
-        // the teacher's own authoring view, not the gated student-visible lookup
-        // Student\ENoteController::show() does. Powers the "Create/Edit Assessment"/"AOI
-        // Assessment" button on the topic preview screen. enote_page_id IS NULL excludes
-        // page-scoped Learning Outcome Assessments, which are surfaced per-page instead.
+        $topic['pages'] = $this->attachNarrations($pages);
+        $topic['pages'] = $this->attachPageLinkedAssignments($topic['pages'], $teacherId, $groupIds);
+
+        // Most recent topic-scoped assignment this teacher has linked to this topic or a copy of it
+        // (AOI, or the older generic "Create Assessment" quick-link), this topic's own first, any
+        // status (draft or published) - this is the teacher's own authoring view, not the gated
+        // student-visible lookup Student\ENoteController::show() does. Powers the "Create/Edit
+        // Assessment"/"AOI Assessment" button on the topic preview screen. enote_page_id IS NULL
+        // excludes page-scoped Learning Outcome Assessments, which are surfaced per-page instead.
+        $in = implode(',', array_fill(0, count($groupIds), '?'));
         $stmt = $db->prepare(
-            'SELECT id, title, status FROM assignments
-             WHERE enote_topic_id = :topic_id AND enote_page_id IS NULL AND teacher_id = :teacher_id AND deleted_at IS NULL
-             ORDER BY created_at DESC LIMIT 1'
+            "SELECT id, title, status FROM assignments
+             WHERE enote_topic_id IN ($in) AND enote_page_id IS NULL AND teacher_id = ? AND deleted_at IS NULL
+             ORDER BY enote_topic_id = ? DESC, created_at DESC LIMIT 1"
         );
-        $stmt->execute(['topic_id' => $id, 'teacher_id' => $teacherId]);
+        $stmt->execute([...$groupIds, $teacherId, $id]);
         $linkedAssignment = $stmt->fetch();
         $topic['linked_assignment'] = $linkedAssignment ?: null;
 
@@ -615,31 +621,36 @@ class ENoteController extends Controller
     /**
      * Attach this teacher's own Learning Outcome Assessment (any status) to each page that has
      * one, batched over all pages at once. Mirrors attachNarrations()'s batching shape. Powers the
-     * per-page "Learning Outcome Assessment: Create/Edit" button in ENoteBuilder.vue.
+     * per-page "Learning Outcome Assessment: Create/Edit" button in ENoteBuilder.vue. An LOA set on
+     * the same page (by order_number) of a copy in $groupTopicIds counts too, this topic's own
+     * winning.
+     * @param int[] $groupTopicIds this topic first, then its copies
      */
-    private function attachPageLinkedAssignments(array $pages, int $teacherId): array
+    private function attachPageLinkedAssignments(array $pages, int $teacherId, array $groupTopicIds): array
     {
         if (empty($pages)) {
             return $pages;
         }
 
         $db = $this->getDb();
-        $pageIds = array_column($pages, 'id');
-        $placeholders = implode(',', array_fill(0, count($pageIds), '?'));
+        $ownTopicId = $groupTopicIds[0];
+        $placeholders = implode(',', array_fill(0, count($groupTopicIds), '?'));
 
         $stmt = $db->prepare(
-            "SELECT a.id, a.title, a.status, a.enote_page_id,
+            "SELECT a.id, a.title, a.status, lp.order_number,
                     elo.learning_outcome_id, elo2.learning_outcome AS learning_outcome_label
              FROM assignments a
+             INNER JOIN enote_pages lp ON lp.id = a.enote_page_id AND lp.deleted_at IS NULL
              LEFT JOIN assignment_learning_outcomes elo ON elo.assignment_id = a.id
              LEFT JOIN enote_learning_outcomes elo2 ON elo2.id = elo.learning_outcome_id
-             WHERE a.enote_page_id IN ({$placeholders}) AND a.teacher_id = ? AND a.deleted_at IS NULL"
+             WHERE lp.topic_id IN ({$placeholders}) AND a.teacher_id = ? AND a.deleted_at IS NULL
+             ORDER BY lp.topic_id = ? ASC, a.id ASC"
         );
-        $stmt->execute([...$pageIds, $teacherId]);
+        $stmt->execute([...$groupTopicIds, $teacherId, $ownTopicId]);
 
         $byPage = [];
         foreach ($stmt->fetchAll() as $row) {
-            $byPage[(int) $row['enote_page_id']] = [
+            $byPage[(int) $row['order_number']] = [
                 'id' => (int) $row['id'],
                 'title' => $row['title'],
                 'status' => $row['status'],
@@ -648,7 +659,7 @@ class ENoteController extends Controller
         }
 
         foreach ($pages as &$page) {
-            $page['linked_assignment'] = $byPage[(int) $page['id']] ?? null;
+            $page['linked_assignment'] = $byPage[(int) $page['order_number']] ?? null;
         }
         unset($page);
 
@@ -1117,6 +1128,7 @@ class ENoteController extends Controller
                 $updateSql = "UPDATE enote_topics SET published_at = NOW() WHERE id = :id";
                 $updateStmt = $db->prepare($updateSql);
                 $updateStmt->execute(['id' => $id]);
+                ENoteAssessmentReach::trySync($db, $id);
             } elseif ($oldStatus === 'published' && $newStatus === 'archived') {
                 $updateSql = "UPDATE enote_topics SET archived_at = NOW() WHERE id = :id";
                 $updateStmt = $db->prepare($updateSql);
@@ -1245,6 +1257,9 @@ class ENoteController extends Controller
                 ['topic_id' => $id],
                 $topic['class_group_name']
             );
+
+            // a copy going live brings its group's LOA/AOI to its students
+            ENoteAssessmentReach::trySync($db, $id);
 
             $this->success([], 'Topic published successfully');
         } catch (\PDOException $e) {
@@ -1445,6 +1460,7 @@ class ENoteController extends Controller
                 } catch (\Throwable $e) {
                     error_log('Bulk publish: notification failed: ' . $e->getMessage());
                 }
+                ENoteAssessmentReach::trySync($db, (int) $t['id']);
             }
 
             if ($status === 'published') {
@@ -2300,6 +2316,10 @@ class ENoteController extends Controller
             $this->error('Could not duplicate to any of the selected classes/streams', 422, ['skipped' => $skipped]);
             return;
         }
+
+        // The topic's LOA/AOI come with it to every published copy's streams (draft copies get
+        // them when they're published)
+        ENoteAssessmentReach::trySync($db, $id);
 
         $this->success(
             ['created' => $created, 'skipped' => $skipped],

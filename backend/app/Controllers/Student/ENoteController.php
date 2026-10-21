@@ -6,6 +6,7 @@ namespace eSpace\App\Controllers\Student;
 
 use eSpace\App\Controllers\Controller;
 use eSpace\App\Services\ENoteDuplicateGuard;
+use eSpace\App\Services\ENoteAssessmentReach;
 
 /**
  * Student eNotes Controller
@@ -343,9 +344,11 @@ class ENoteController extends Controller
 
         $previewService = new \eSpace\App\Services\StudentModulePreviewService();
         $topic['pages'] = $previewService->attachNarrationAudio($pages, $topic['narration_voice']);
-        $topic['pages'] = $this->attachPageLinkedAssignments($db, $topic['pages'], $studentId);
+        // A duplicated topic's copies share its LOA/AOI (see ENoteAssessmentReach)
+        $groupIds = ENoteAssessmentReach::groupTopicIds($db, $id);
+        $topic['pages'] = $this->attachPageLinkedAssignments($db, $topic['pages'], $studentId, $groupIds);
 
-        $topic['linked_assignment'] = $this->getLinkedAssignment($db, $id, $studentId);
+        $topic['linked_assignment'] = $this->getLinkedAssignment($db, $groupIds, $studentId);
 
         $this->success($topic);
     }
@@ -358,9 +361,12 @@ class ENoteController extends Controller
      * this one topic instead of the student's whole list. Powers the "Attempt Assessment"
      * quick-link the reader offers once a student finishes reading the topic. Null if there's no
      * linked assignment, or one exists but isn't (yet, or any longer) visible to this student.
+     * One set on another copy of the topic ($groupTopicIds, this topic first) counts too.
+     * @param int[] $groupTopicIds
      */
-    private function getLinkedAssignment($db, int $topicId, int $studentId): ?array
+    private function getLinkedAssignment($db, array $groupTopicIds, int $studentId): ?array
     {
+        $topicIn = implode(',', array_map('intval', $groupTopicIds));
         $sql = "SELECT a.id, a.title, a.due_date, a.assessment_category,
                        COALESCE(NULLIF(sub.status, ''), 'new') as submission_status, sub.id AS submission_id
                 FROM assignments a
@@ -371,7 +377,7 @@ class ENoteController extends Controller
                     ORDER BY s2.attempt_number DESC, s2.id DESC
                     LIMIT 1
                 )
-                WHERE a.enote_topic_id = :topic_id
+                WHERE a.enote_topic_id IN ({$topicIn})
                 AND a.enote_page_id IS NULL
                 AND a.status = 'published'
                 AND a.deleted_at IS NULL
@@ -397,11 +403,11 @@ class ENoteController extends Controller
                       AND ste.department_id = s.department_id
                       AND ste.status = 'withdrawn'
                 )
-                ORDER BY a.created_at DESC
+                ORDER BY a.enote_topic_id = :topic_id DESC, a.created_at DESC
                 LIMIT 1";
 
         $stmt = $db->prepare($sql);
-        $stmt->execute(['topic_id' => $topicId, 'student_id_sub' => $studentId, 'student_id_enroll' => $studentId, 'student_id_te' => $studentId]);
+        $stmt->execute(['topic_id' => (int) $groupTopicIds[0], 'student_id_sub' => $studentId, 'student_id_enroll' => $studentId, 'student_id_te' => $studentId]);
         $assignment = $stmt->fetch();
         return $assignment ?: null;
     }
@@ -411,23 +417,24 @@ class ENoteController extends Controller
      * Outcome Assessment (Teacher\AssignmentController's enote_page_id) for each page in one
      * batch, using the same eligibility rule (enrolled, within the enrollment window, not
      * withdrawn from that teacher). Powers ENotePreview.vue's per-page "Ignore/Attempt" prompt
-     * when a student finishes reading a page that has one attached.
-     * @return array<int, array> keyed by page id
+     * when a student finishes reading a page that has one attached. An LOA set on the same page
+     * (by order_number) of another copy of the topic ($groupTopicIds, this topic first) counts too.
+     * @param int[] $groupTopicIds
      */
-    private function attachPageLinkedAssignments($db, array $pages, int $studentId): array
+    private function attachPageLinkedAssignments($db, array $pages, int $studentId, array $groupTopicIds): array
     {
         if (empty($pages)) {
             return $pages;
         }
 
-        $pageIds = array_column($pages, 'id');
-        $placeholders = implode(',', array_fill(0, count($pageIds), '?'));
+        $placeholders = implode(',', array_fill(0, count($groupTopicIds), '?'));
 
-        $sql = "SELECT a.id, a.title, a.due_date, a.enote_page_id,
+        $sql = "SELECT a.id, a.title, a.due_date, lp.order_number,
                        elo.learning_outcome_id, elo2.learning_outcome AS learning_outcome_label,
                        COALESCE(NULLIF(sub.status, ''), 'new') as submission_status, sub.id AS submission_id
                 FROM assignments a
                 INNER JOIN subjects s ON a.subject_id = s.id
+                INNER JOIN enote_pages lp ON lp.id = a.enote_page_id AND lp.deleted_at IS NULL
                 LEFT JOIN assignment_learning_outcomes elo ON elo.assignment_id = a.id
                 LEFT JOIN enote_learning_outcomes elo2 ON elo2.id = elo.learning_outcome_id
                 LEFT JOIN assignment_submissions sub ON sub.id = (
@@ -436,7 +443,7 @@ class ENoteController extends Controller
                     ORDER BY s2.attempt_number DESC, s2.id DESC
                     LIMIT 1
                 )
-                WHERE a.enote_page_id IN ({$placeholders})
+                WHERE lp.topic_id IN ({$placeholders})
                 AND a.status = 'published'
                 AND a.deleted_at IS NULL
                 AND (a.open_at IS NULL OR a.open_at <= NOW())
@@ -460,14 +467,16 @@ class ENoteController extends Controller
                       AND ste.teacher_id = a.teacher_id
                       AND ste.department_id = s.department_id
                       AND ste.status = 'withdrawn'
-                )";
+                )
+                ORDER BY lp.topic_id = ? ASC, a.id ASC";
 
         $stmt = $db->prepare($sql);
-        $stmt->execute([$studentId, ...$pageIds, $studentId, $studentId]);
+        $stmt->execute([$studentId, ...$groupTopicIds, $studentId, $studentId, (int) $groupTopicIds[0]]);
 
+        // keyed by page position - this topic's own LOA (ordered last) wins over a copy's
         $byPage = [];
         foreach ($stmt->fetchAll() as $row) {
-            $byPage[(int) $row['enote_page_id']] = [
+            $byPage[(int) $row['order_number']] = [
                 'id' => (int) $row['id'],
                 'title' => $row['title'],
                 'due_date' => $row['due_date'],
@@ -478,7 +487,7 @@ class ENoteController extends Controller
         }
 
         foreach ($pages as &$page) {
-            $page['linked_assignment'] = $byPage[(int) $page['id']] ?? null;
+            $page['linked_assignment'] = $byPage[(int) $page['order_number']] ?? null;
         }
         unset($page);
 

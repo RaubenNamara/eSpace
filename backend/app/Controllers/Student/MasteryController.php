@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace eSpace\App\Controllers\Student;
 
 use eSpace\App\Controllers\Controller;
+use eSpace\App\Services\ENoteAssessmentReach;
 use eSpace\App\Services\ReportCardGradingService;
 
 /**
@@ -390,8 +391,9 @@ class MasteryController extends Controller
                 // Scores only once the teacher has returned the work
                 'percentage' => $state === 'marked' && $a['percentage'] !== null ? (float) $a['percentage'] : null,
                 'submission_id' => $a['submission_id'] !== null ? (int) $a['submission_id'] : null,
+                // an LOA shared across a duplicated topic's copies opens on the student's own copy
                 'page' => $a['enote_page_id'] && $a['enote_topic_id']
-                    ? ['topic_id' => (int) $a['enote_topic_id'], 'page_id' => (int) $a['enote_page_id']]
+                    ? ENoteAssessmentReach::studentPage($db, (int) $a['enote_topic_id'], (int) $a['enote_page_id'], $classIds)
                     : null,
             ];
             if ($state === 'marked' && $a['submission_id']) {

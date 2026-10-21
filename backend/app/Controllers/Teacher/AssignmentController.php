@@ -7,6 +7,7 @@ namespace eSpace\App\Controllers\Teacher;
 use eSpace\App\Utils\MimeType;
 use eSpace\App\Controllers\Controller;
 USE eSpace\Config\Database;
+use eSpace\App\Services\ENoteAssessmentReach;
 use eSpace\App\Services\NotificationService;
 use Exception;
 
@@ -884,6 +885,11 @@ class AssignmentController extends Controller
 
             Database::commit();
 
+            // An LOA/AOI set on a duplicated topic reaches every stream the topic's copies are in
+            if ($enoteTopicId) {
+                ENoteAssessmentReach::trySync($db, $enoteTopicId);
+            }
+
             $this->success(['id' => $assignmentId], 'Assignment created successfully');
 
         } catch (Exception $e) {
@@ -1071,6 +1077,10 @@ class AssignmentController extends Controller
             }
 
             Database::commit();
+
+            if (!empty($params['enote_topic_id'])) {
+                ENoteAssessmentReach::trySync($db, (int) $params['enote_topic_id']);
+            }
 
             $this->success([],'Assignment updated successfully');
 
