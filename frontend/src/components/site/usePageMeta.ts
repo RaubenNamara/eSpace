@@ -1,6 +1,6 @@
 import { onBeforeUnmount, watchEffect } from 'vue'
 
-const SITE = 'https://espace.stmark.sc.ug'
+const SITE = 'https://tusome.ug'
 
 const setMeta = (attr: 'name' | 'property', key: string, value: string) => {
   let el = document.head.querySelector<HTMLMetaElement>(`meta[${attr}="${key}"]`)

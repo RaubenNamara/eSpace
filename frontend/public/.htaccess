@@ -16,6 +16,17 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
 
+  # eSpace's address is https://tusome.ug. The old address (and the cPanel helper subdomain the
+  # addon domain sits on) send every path there permanently, and plain http goes to https.
+  # Certificate checks under /.well-known/ are left alone so AutoSSL renewals keep working.
+  RewriteCond %{REQUEST_URI} !^/\.well-known/
+  RewriteCond %{HTTP_HOST} ^(espace|tusome)\.stmark\.sc\.ug$ [NC]
+  RewriteRule ^(.*)$ https://tusome.ug/$1 [R=301,L]
+  RewriteCond %{REQUEST_URI} !^/\.well-known/
+  RewriteCond %{HTTP_HOST} ^(www\.)?tusome\.ug$ [NC]
+  RewriteCond %{HTTPS} !=on
+  RewriteRule ^(.*)$ https://tusome.ug/$1 [R=301,L]
+
   # If the docroot points straight at this folder itself (e.g. a subdomain whose docroot is set
   # to public_html/eSpace, rather than public_html one level up), incoming requests still carry
   # the leading "eSpace/" segment baked into every URL by Vite's base: '/eSpace/' config. Strip it
@@ -74,3 +85,27 @@
 </IfModule>
 
 Options -Indexes
+
+# The two blocks below are cPanel's own (MultiPHP / PHP 8.2 handler) copied from the live server,
+# so a git deploy that copies dist/ over public_html/eSpace/ never drops them and breaks PHP.
+
+# BEGIN cPanel-generated php ini directives, do not edit
+# Manual editing of this file may result in unexpected behavior.
+# To make changes to this file, use the cPanel MultiPHP INI Editor (Home >> Software >> MultiPHP INI Editor)
+# For more information, read our documentation (https://go.cpanel.net/EA4ModifyINI)
+<IfModule php8_module>
+   php_value error_log "/home/smacon/logs/php.error.log"
+   php_flag log_errors On
+</IfModule>
+<IfModule lsapi_module>
+   php_value error_log "/home/smacon/logs/php.error.log"
+   php_flag log_errors On
+</IfModule>
+# END cPanel-generated php ini directives, do not edit
+
+# php -- BEGIN cPanel-generated handler, do not edit
+# Set the “ea-php82” package as the default “PHP” programming language.
+<IfModule mime_module>
+  AddHandler application/x-httpd-ea-php82 .php .php8 .phtml
+</IfModule>
+# php -- END cPanel-generated handler, do not edit

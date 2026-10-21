@@ -11,4 +11,4 @@ Disallow: /admin
 Disallow: /login
 Disallow: /api
 
-Sitemap: https://espace.stmark.sc.ug/sitemap.xml
+Sitemap: https://tusome.ug/sitemap.xml

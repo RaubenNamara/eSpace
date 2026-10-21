@@ -4,7 +4,7 @@ import { fileURLToPath, URL } from 'node:url'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig(() => ({
-  // Production is deployed at the root of its own subdomain (https://espace.stmark.sc.ug/), so
+  // Production is deployed at the root of its own subdomain (https://tusome.ug/), so
   // every route, asset URL, and API call is root-relative - no prefix to strip anywhere. (An
   // older deployment lived under https://stmark.sc.ug/eSpace/ and needed base: '/eSpace/' plus
   // matching proxy rewrites here; that subpath deployment is no longer used.)
