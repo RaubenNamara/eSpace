@@ -2318,8 +2318,7 @@ class ENoteController extends Controller
             return;
         }
 
-        // The topic's LOA/AOI come with it to every published copy's streams (draft copies get
-        // them when they're published)
+        // The topic's LOA/AOI come with it to every copy's streams, draft or published
         ENoteAssessmentReach::trySync($db, $id);
 
         $this->success(

@@ -9,7 +9,7 @@ namespace eSpace\App\Services;
  * every class/stream it was duplicated to. There is still one assessment - set on whichever copy
  * the teacher authored it from - so its questions, marking and results stay in one place, the
  * same way a copy's content mirrors the rest of its group (Teacher\ENoteController::duplicateTopic()):
- *  - reach: every published copy's streams are added to the assessment's assignment_classes, so
+ *  - reach: every copy's streams (draft or published) are added to the assessment's assignment_classes, so
  *    those students get it (the assignment list, the reader, the Learning Map all use that table);
  *  - links: a copy's reader and builder find the group's assessment, a page matched to the page
  *    it was set on by order_number (pages are mirrored by order_number across a group).
@@ -36,7 +36,7 @@ class ENoteAssessmentReach
     }
 
     /**
-     * Add every published copy's streams to every LOA/AOI set on any topic in this topic's group.
+     * Add every copy's streams (draft or published) to every LOA/AOI set on any topic in this topic's group.
      * Safe to call any time (idempotent); a topic that was never duplicated is a no-op.
      */
     public static function sync(\PDO $db, int $topicId): void
@@ -54,15 +54,15 @@ class ENoteAssessmentReach
             return;
         }
 
-        // The streams the published copies reach: a single stream, or every stream of an
+        // The streams the copies reach: a single stream, or every stream of an
         // "All Streams" copy's class that has students in the topic's department
         $stmt = $db->prepare(
             "SELECT et.class_id AS class_id FROM enote_topics et
-             WHERE et.id IN ($in) AND et.status = 'published' AND et.class_id IS NOT NULL
+             WHERE et.id IN ($in) AND et.class_id IS NOT NULL
              UNION
              SELECT c.id FROM enote_topics et
              INNER JOIN classes c ON c.name = et.class_group_name AND c.deleted_at IS NULL
-             WHERE et.id IN ($in) AND et.status = 'published' AND et.class_id IS NULL AND et.class_group_name IS NOT NULL
+             WHERE et.id IN ($in) AND et.class_id IS NULL AND et.class_group_name IS NOT NULL
                AND EXISTS (SELECT 1 FROM student_department_enrollments se
                            WHERE se.class_id = c.id AND se.department_id = et.department_id AND se.deleted_at IS NULL)"
         );
@@ -132,7 +132,7 @@ class ENoteAssessmentReach
         }
         $checked = true;
 
-        $marker = dirname(__DIR__, 2) . '/storage/flags/enote_assessment_reach_v1';
+        $marker = dirname(__DIR__, 2) . '/storage/flags/enote_assessment_reach_v2';
         if (is_file($marker)) {
             return;
         }
