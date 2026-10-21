@@ -52,6 +52,15 @@
   <FilesMatch "^(index\.html|manifest\.webmanifest|registerSW\.js|sw\.js|push-sw\.js)$">
     Header set Cache-Control "no-cache"
   </FilesMatch>
+  # Anatomy models (anatomy/bodyparts3d/*.glb) and their manifest.json keep the same name across
+  # releases, so not "immutable": reused for a day, then refreshed in the background for a week
+  # while the cached copy is shown - repeat visits don't wait on the network for them.
+  <FilesMatch "(\.glb|^manifest\.json)$">
+    Header set Cache-Control "public, max-age=86400, stale-while-revalidate=604800"
+  </FilesMatch>
+</IfModule>
+<IfModule mod_mime.c>
+  AddType model/gltf-binary .glb
 </IfModule>
 
 # Compress text responses. The live server was sending everything uncompressed - the ~1.4MB
@@ -60,6 +69,8 @@
 <IfModule mod_deflate.c>
   AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml image/svg+xml
   AddOutputFilterByType DEFLATE application/javascript text/javascript application/json application/manifest+json
+  # the anatomy models: meshopt-packed already, gzip still takes ~30% off
+  AddOutputFilterByType DEFLATE model/gltf-binary
 </IfModule>
 
 Options -Indexes
