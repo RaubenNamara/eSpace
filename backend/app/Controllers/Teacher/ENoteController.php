@@ -341,6 +341,7 @@ class ENoteController extends Controller
         $limit = (int) $this->query('limit', 20);
 
         $db = $this->getDb();
+        ENoteAssessmentReach::backfillOnce($db);
 
         $where = ['et.teacher_id = :teacher_id', 'et.deleted_at IS NULL'];
         $params = ['teacher_id' => $teacherId];

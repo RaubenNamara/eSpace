@@ -98,6 +98,55 @@ class ENoteAssessmentReach
         }
     }
 
+    /**
+     * sync() every duplicated topic group that has an LOA/AOI anywhere in it - brings copies made
+     * before reach existed up to date.
+     * @return int groups synced
+     */
+    public static function syncAll(\PDO $db): int
+    {
+        $topicIds = $db->query(
+            "SELECT MIN(et.id) FROM enote_topics et
+             WHERE et.content_group_id IS NOT NULL AND et.deleted_at IS NULL
+               AND EXISTS (SELECT 1 FROM assignments a INNER JOIN enote_topics g ON g.id = a.enote_topic_id
+                           WHERE g.content_group_id = et.content_group_id AND a.deleted_at IS NULL)
+             GROUP BY et.content_group_id"
+        )->fetchAll(\PDO::FETCH_COLUMN);
+
+        foreach ($topicIds as $topicId) {
+            self::sync($db, (int) $topicId);
+        }
+        return count($topicIds);
+    }
+
+    /**
+     * syncAll() once per install, the first time a student or teacher opens eNotes/assessments
+     * after this shipped - so copies that already existed reach their students with no manual step.
+     * A marker file in backend/storage records that it ran.
+     */
+    public static function backfillOnce(\PDO $db): void
+    {
+        static $checked = false;
+        if ($checked) {
+            return;
+        }
+        $checked = true;
+
+        $marker = dirname(__DIR__, 2) . '/storage/flags/enote_assessment_reach_v1';
+        if (is_file($marker)) {
+            return;
+        }
+        try {
+            $groups = self::syncAll($db);
+            if (!is_dir(dirname($marker))) {
+                @mkdir(dirname($marker), 0775, true);
+            }
+            @file_put_contents($marker, date('c') . " {$groups} group(s) synced\n");
+        } catch (\Throwable $e) {
+            error_log('ENoteAssessmentReach backfill failed: ' . $e->getMessage());
+        }
+    }
+
     /** sync() that never fails the request it runs in - reach is re-derived on the next change anyway */
     public static function trySync(\PDO $db, int $topicId): void
     {

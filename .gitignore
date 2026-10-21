@@ -52,6 +52,7 @@ backend/public/uploads/*/*
 !backend/public/uploads/.htaccess
 storage/*/*
 !storage/.gitkeep
+backend/storage/flags/
 
 # Database
 *.sql

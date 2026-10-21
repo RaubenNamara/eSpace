@@ -5,6 +5,7 @@ namespace eSpace\App\Controllers\Student;
 use eSpace\App\Utils\MimeType;
 use eSpace\App\Controllers\Controller;
 use eSpace\Config\Database;
+use eSpace\App\Services\ENoteAssessmentReach;
 use eSpace\App\Utils\Grading;
 
 class AssignmentController extends Controller
@@ -26,6 +27,9 @@ class AssignmentController extends Controller
         $this->requireRole('student');
 
         $studentId = $this->getCurrentUserId();
+
+        // duplicated eNote topics' LOA/AOI, once after deploy (see ENoteAssessmentReach)
+        ENoteAssessmentReach::backfillOnce(Database::getInstance());
 
         try {
             $sql = "SELECT

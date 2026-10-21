@@ -159,6 +159,7 @@ class ENoteController extends Controller
         $subjectId = $this->query('subject_id', '');
 
         $db = $this->getDb();
+        ENoteAssessmentReach::backfillOnce($db);
 
         $where = [$this->visibilityClause()];
         $params = ['student_id' => $studentId, 'student_id_te' => $studentId, 'student_id_prog' => $studentId];
@@ -309,6 +310,7 @@ class ENoteController extends Controller
 
         $id = (int) $id;
         $db = $this->getDb();
+        ENoteAssessmentReach::backfillOnce($db);
 
         $whereClause = $this->visibilityClause();
 
