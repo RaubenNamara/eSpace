@@ -6,18 +6,24 @@ namespace eSpace\App\Services;
 
 /**
  * A topic's Learning Outcome Assessments (page-scoped) and AOI (topic-scoped) follow the topic to
- * every class/stream it was duplicated to. There is still one assessment - set on whichever copy
- * the teacher authored it from - so its questions, marking and results stay in one place, the
- * same way a copy's content mirrors the rest of its group (Teacher\ENoteController::duplicateTopic()):
- *  - reach: every copy's streams (draft or published) are added to the assessment's assignment_classes, so
- *    those students get it (the assignment list, the reader, the Learning Map all use that table);
+ * every class/stream it was duplicated to - but only once that copy is published; a draft copy
+ * shows its students nothing. There is still one assessment - set on whichever copy the teacher
+ * authored it from - so its questions, marking and results stay in one place, the same way a
+ * copy's content mirrors the rest of its group (Teacher\ENoteController::duplicateTopic()):
+ *  - reach: every published copy's streams are in the assessment's assignment_classes, so those
+ *    students get it (the assignment list, the reader, the Learning Map all use that table); a
+ *    copy that is unpublished or deleted takes its streams back out again;
  *  - links: a copy's reader and builder find the group's assessment, a page matched to the page
  *    it was set on by order_number (pages are mirrored by order_number across a group).
- * Reach only ever grows - a stream that later loses its copy keeps the assessment, since its
- * students may already have attempted it.
  */
 class ENoteAssessmentReach
 {
+    /**
+     * Rows added before this date are the teacher's own "visible to" picks, never this class's -
+     * withdrawing reach only ever touches rows from on/after it.
+     */
+    private const REACH_SINCE = '2026-10-21 00:00:00';
+
     /**
      * The topic itself and every live copy in its content group (the topic first).
      * @return int[]
@@ -36,15 +42,20 @@ class ENoteAssessmentReach
     }
 
     /**
-     * Add every copy's streams (draft or published) to every LOA/AOI set on any topic in this topic's group.
-     * Safe to call any time (idempotent); a topic that was never duplicated is a no-op.
+     * Bring every LOA/AOI set on any topic in this topic's group in line with the group's
+     * published copies: their streams are added, and a stream no published copy reaches any more
+     * is taken out - unless it is the assessment's own audience, or one of its students has
+     * already submitted. Safe to call any time (idempotent); a topic that was never duplicated
+     * is a no-op.
      */
     public static function sync(\PDO $db, int $topicId): void
     {
-        $groupIds = self::groupTopicIds($db, $topicId);
-        if (count($groupIds) < 2) {
+        $stmt = $db->prepare('SELECT content_group_id FROM enote_topics WHERE id = ?');
+        $stmt->execute([$topicId]);
+        if (!$stmt->fetchColumn()) {
             return;
         }
+        $groupIds = self::groupTopicIds($db, $topicId);
         $in = implode(',', array_fill(0, count($groupIds), '?'));
 
         $stmt = $db->prepare("SELECT id FROM assignments WHERE enote_topic_id IN ($in) AND deleted_at IS NULL");
@@ -54,20 +65,42 @@ class ENoteAssessmentReach
             return;
         }
 
-        // The streams the copies reach: a single stream, or every stream of an
+        // The streams the published copies reach: a single stream, or every stream of an
         // "All Streams" copy's class that has students in the topic's department
         $stmt = $db->prepare(
             "SELECT et.class_id AS class_id FROM enote_topics et
-             WHERE et.id IN ($in) AND et.class_id IS NOT NULL
+             WHERE et.id IN ($in) AND et.status = 'published' AND et.deleted_at IS NULL AND et.class_id IS NOT NULL
              UNION
              SELECT c.id FROM enote_topics et
              INNER JOIN classes c ON c.name = et.class_group_name AND c.deleted_at IS NULL
-             WHERE et.id IN ($in) AND et.class_id IS NULL AND et.class_group_name IS NOT NULL
+             WHERE et.id IN ($in) AND et.status = 'published' AND et.deleted_at IS NULL
+               AND et.class_id IS NULL AND et.class_group_name IS NOT NULL
                AND EXISTS (SELECT 1 FROM student_department_enrollments se
                            WHERE se.class_id = c.id AND se.department_id = et.department_id AND se.deleted_at IS NULL)"
         );
         $stmt->execute(array_merge($groupIds, $groupIds));
         $classIds = array_map('intval', $stmt->fetchAll(\PDO::FETCH_COLUMN));
+
+        // Withdraw what no published copy reaches (a copy unpublished, deleted - or, before this
+        // rule, a draft copy given reach)
+        $keep = $classIds ? implode(',', $classIds) : '0';
+        $withdraw = $db->prepare(
+            "DELETE ac FROM assignment_classes ac
+             INNER JOIN assignments a ON a.id = ac.assignment_id
+             LEFT JOIN classes c ON c.id = ac.class_id
+             WHERE ac.assignment_id = ? AND ac.created_at >= ?
+               AND ac.class_id NOT IN ($keep)
+               AND NOT (a.class_id <=> ac.class_id)
+               AND NOT (a.class_id IS NULL AND a.class_group_name IS NOT NULL AND c.name = a.class_group_name)
+               AND NOT EXISTS (SELECT 1 FROM assignment_submissions sub
+                               INNER JOIN student_department_enrollments se ON se.student_id = sub.student_id
+                                   AND se.class_id = ac.class_id AND se.deleted_at IS NULL
+                               WHERE sub.assignment_id = a.id)"
+        );
+        foreach ($assignmentIds as $assignmentId) {
+            $withdraw->execute([$assignmentId, self::REACH_SINCE]);
+        }
+
         if (!$classIds) {
             return;
         }
@@ -132,7 +165,7 @@ class ENoteAssessmentReach
         }
         $checked = true;
 
-        $marker = dirname(__DIR__, 2) . '/storage/flags/enote_assessment_reach_v2';
+        $marker = dirname(__DIR__, 2) . '/storage/flags/enote_assessment_reach_v3';
         if (is_file($marker)) {
             return;
         }

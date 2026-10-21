@@ -7,6 +7,7 @@ namespace eSpace\App\Controllers\Admin;
 use eSpace\App\Controllers\Controller;
 use eSpace\App\Services\NotificationService;
 use eSpace\App\Services\ENoteDuplicateGuard;
+use eSpace\App\Services\ENoteAssessmentReach;
 
 /**
  * Admin eNotes Controller
@@ -231,6 +232,9 @@ class ENoteController extends Controller
             $stmt = $this->db->prepare($sql);
             $stmt->execute(['status' => $newStatus, 'id' => $id]);
 
+            // only a published copy of a duplicated topic gives its stream(s) the LOA/AOI
+            ENoteAssessmentReach::trySync($this->db, (int) $id);
+
             if ($oldStatus !== 'published' && $newStatus === 'published') {
                 (new NotificationService())->notifyDepartmentClass(
                     (int) $topic['department_id'],
@@ -325,6 +329,8 @@ class ENoteController extends Controller
 
             $stmt = $this->db->prepare("UPDATE enote_pages SET deleted_at = NOW() WHERE topic_id = :topic_id");
             $stmt->execute(['topic_id' => $id]);
+
+            ENoteAssessmentReach::trySync($this->db, (int) $id);
 
             $this->success([], 'Topic deleted successfully');
         } catch (\PDOException $e) {

@@ -1129,11 +1129,15 @@ class ENoteController extends Controller
                 $updateSql = "UPDATE enote_topics SET published_at = NOW() WHERE id = :id";
                 $updateStmt = $db->prepare($updateSql);
                 $updateStmt->execute(['id' => $id]);
-                ENoteAssessmentReach::trySync($db, $id);
             } elseif ($oldStatus === 'published' && $newStatus === 'archived') {
                 $updateSql = "UPDATE enote_topics SET archived_at = NOW() WHERE id = :id";
                 $updateStmt = $db->prepare($updateSql);
                 $updateStmt->execute(['id' => $id]);
+            }
+
+            // only a published copy gives its stream(s) the group's LOA/AOI
+            if ($oldStatus !== $newStatus || array_key_exists('class_id', $params) || array_key_exists('class_group_name', $params)) {
+                ENoteAssessmentReach::trySync($db, $id);
             }
 
             // Mirror a title/competency/learning-outcomes edit onto every topic linked to this one
@@ -1200,6 +1204,9 @@ class ENoteController extends Controller
             $sql = "UPDATE enote_pages SET deleted_at = NOW() WHERE topic_id = :topic_id";
             $stmt = $db->prepare($sql);
             $stmt->execute(['topic_id' => $id]);
+
+            // a deleted copy's stream(s) lose the group's LOA/AOI
+            ENoteAssessmentReach::trySync($db, $id);
 
             $this->success([], 'Topic deleted successfully');
         } catch (\PDOException $e) {
@@ -1302,6 +1309,9 @@ class ENoteController extends Controller
             $stmt = $db->prepare($sql);
             $stmt->execute(['id' => $id]);
 
+            // back to draft: its stream(s) lose the group's LOA/AOI
+            ENoteAssessmentReach::trySync($db, $id);
+
             $this->success([], 'Topic unpublished successfully');
         } catch (\PDOException $e) {
             error_log("Failed to unpublish topic: " . $e->getMessage());
@@ -1341,6 +1351,8 @@ class ENoteController extends Controller
             $sql = "UPDATE enote_topics SET status = 'archived', archived_at = NOW(), updated_at = NOW() WHERE id = :id";
             $stmt = $db->prepare($sql);
             $stmt->execute(['id' => $id]);
+
+            ENoteAssessmentReach::trySync($db, $id);
 
             $this->success([], 'Topic archived successfully');
         } catch (\PDOException $e) {
@@ -1445,6 +1457,9 @@ class ENoteController extends Controller
                 $sql = "UPDATE enote_topics SET status = ?{$extraClause}, updated_at = NOW() WHERE id IN ($placeholders)";
                 $stmt = $db->prepare($sql);
                 $stmt->execute([$status, ...$ids]);
+                foreach ($ids as $topicId) {
+                    ENoteAssessmentReach::trySync($db, (int) $topicId);
+                }
             }
 
             foreach ($newlyLive as $t) {
@@ -1514,6 +1529,10 @@ class ENoteController extends Controller
 
             $stmt = $db->prepare("UPDATE enote_pages SET deleted_at = NOW() WHERE topic_id IN ($placeholders)");
             $stmt->execute($ids);
+
+            foreach ($ids as $topicId) {
+                ENoteAssessmentReach::trySync($db, (int) $topicId);
+            }
 
             $this->success(['deleted' => count($ids)], count($ids) . ' topic(s) deleted');
         } catch (\PDOException $e) {
@@ -2318,7 +2337,8 @@ class ENoteController extends Controller
             return;
         }
 
-        // The topic's LOA/AOI come with it to every copy's streams, draft or published
+        // The topic's LOA/AOI come with it to every published copy's streams (a draft copy's
+        // students get them once it's published)
         ENoteAssessmentReach::trySync($db, $id);
 
         $this->success(
