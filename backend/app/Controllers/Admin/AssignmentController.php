@@ -35,6 +35,10 @@ class AssignmentController extends Controller
 
         $db = $this->getDb();
         $where = ['a.deleted_at IS NULL'];
+        // assessments of a deleted teacher are closed (marks kept) - not listed for managing
+        if ($this->hasRemovedColumn($db)) {
+            $where[] = 'a.removed_at IS NULL';
+        }
         $params = [];
 
         if (!empty($status)) {
@@ -66,6 +70,46 @@ class AssignmentController extends Controller
         $stmt->execute($params);
 
         $this->success(['assignments' => $stmt->fetchAll()]);
+    }
+
+    private function hasRemovedColumn($db): bool
+    {
+        try {
+            return (bool) $db->query("SHOW COLUMNS FROM assignments LIKE 'removed_at'")->fetch();
+        } catch (\PDOException $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Delete any assessment school-wide. It disappears for its teacher and students, and its
+     * results no longer count on report cards (those read only assessments that aren't deleted).
+     * DELETE /admin/assignments/{id}
+     */
+    public function delete($id): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+
+        $db = $this->getDb();
+        $stmt = $db->prepare('SELECT id, title FROM assignments WHERE id = ? AND deleted_at IS NULL');
+        $stmt->execute([(int) $id]);
+        $assignment = $stmt->fetch();
+        if (!$assignment) {
+            $this->notFound('Assessment not found');
+            return;
+        }
+
+        try {
+            $db->prepare('UPDATE assignments SET deleted_at = NOW() WHERE id = ?')->execute([(int) $id]);
+        } catch (\PDOException $e) {
+            error_log('Admin assessment delete failed: ' . $e->getMessage());
+            $this->error('Failed to delete assessment', 500);
+            return;
+        }
+        $this->success([], "\"{$assignment['title']}\" deleted");
     }
 
     /**

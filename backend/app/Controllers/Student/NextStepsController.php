@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace eSpace\App\Controllers\Student;
 
 use eSpace\App\Controllers\Controller;
+use eSpace\App\Support\AssignmentRemoval;
 
 /**
  * "What should I do next?" - a short, ordered list of the student's most useful next steps, from
@@ -275,7 +276,7 @@ class NextStepsController extends Controller
                  WHERE s2.assignment_id = a.id AND s2.student_id = :student_id_sub AND s2.deleted_at IS NULL
                  ORDER BY s2.attempt_number DESC, s2.id DESC LIMIT 1
              )
-             WHERE a.status = 'published' AND a.deleted_at IS NULL
+             WHERE a.status = 'published' AND a.deleted_at IS NULL" . AssignmentRemoval::open() . "
                AND (a.open_at IS NULL OR a.open_at <= NOW())
                AND EXISTS (
                    SELECT 1 FROM student_department_enrollments sde

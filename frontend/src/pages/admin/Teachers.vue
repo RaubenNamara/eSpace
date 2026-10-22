@@ -16,6 +16,30 @@
       </template>
     </PageHeader>
 
+    <!-- Deleted teachers can come back, with all their work, for 30 days -->
+    <div v-if="removedTeachers.length" class="mb-4 rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/70 dark:bg-amber-900/10">
+      <button type="button" class="w-full flex items-center justify-between gap-3 px-4 py-3 text-left" @click="showRemoved = !showRemoved">
+        <span class="text-sm font-semibold text-amber-900 dark:text-amber-200">
+          Recently deleted teachers ({{ removedTeachers.length }}) - restorable for {{ restoreDays }} days
+        </span>
+        <svg class="w-4 h-4 text-amber-700 dark:text-amber-300 transition-transform" :class="showRemoved ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+      </button>
+      <ul v-if="showRemoved" class="divide-y divide-amber-200/70 dark:divide-amber-900/40 border-t border-amber-200/70 dark:border-amber-900/40">
+        <li v-for="r in removedTeachers" :key="r.id" class="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+          <div class="min-w-0">
+            <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ r.teacher_name }} <span class="font-normal text-gray-500 dark:text-gray-400">@{{ r.teacher_username }}</span></p>
+            <p class="text-xs text-gray-600 dark:text-gray-400 mt-0.5">Deleted {{ formatDate(r.removed_at) }} - {{ r.summary }}</p>
+            <p class="text-xs font-medium mt-0.5" :class="Number(r.days_left) <= 5 ? 'text-red-600 dark:text-red-400' : 'text-amber-800 dark:text-amber-300'">
+              {{ Number(r.days_left) === 1 ? '1 day' : `${r.days_left} days` }} left to restore, then removed for good
+            </p>
+          </div>
+          <button type="button" class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/30 disabled:opacity-50" :disabled="restoringId === r.id" @click="restoreRemoved(r)">
+            {{ restoringId === r.id ? 'Restoring…' : 'Restore' }}
+          </button>
+        </li>
+      </ul>
+    </div>
+
     <BulkActionBar :count="bulk.selectedCount.value" @clear="bulk.clear()">
       <select v-model="bulkAssignDepartmentId" class="px-2.5 py-1 min-h-[32px] text-xs border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white">
         <option value="">Add to department…</option>
@@ -643,12 +667,12 @@ const bulkSetActive = async (isActive: boolean) => {
 const bulkDeleteSelected = async () => {
   const ids = bulk.selectedArray()
   if (ids.length === 0) return
-  if (!await confirmDialog.open({ title: 'Delete teachers', message: `Are you sure you want to delete ${ids.length} teacher(s)? This cannot be undone.`, confirmLabel: 'Delete', danger: true })) return
+  if (!await confirmDialog.open({ title: 'Delete teachers', message: `Delete ${ids.length} teacher(s)? They will no longer be able to sign in and all their work disappears from eSpace (students keep their marks). You can restore them within ${restoreDays.value} days. To keep their work visible, suspend them instead.`, confirmLabel: 'Delete', danger: true })) return
   try {
     await apiService.post('/admin/teachers/bulk-delete', { ids })
-    toast.success(`${ids.length} teacher(s) deleted`)
+    toast.success(`${ids.length} teacher(s) deleted - restorable for ${restoreDays.value} days`)
     bulk.clear()
-    await fetchTeachers()
+    await Promise.all([fetchTeachers(), fetchRemoved()])
   } catch (error: any) {
     toast.error(error.response?.data?.message || 'Failed to delete teachers')
   }
@@ -845,7 +869,7 @@ const confirmResetPassword = async () => {
 }
 
 const suspendTeacher = async (teacher: Teacher) => {
-  if (!await confirmDialog.open({ title: 'Suspend teacher', message: `Are you sure you want to suspend ${teacher.first_name} ${teacher.last_name}?`, confirmLabel: 'Suspend', danger: true })) return
+  if (!await confirmDialog.open({ title: 'Suspend teacher', message: `Suspend ${teacher.first_name} ${teacher.last_name}? They will be signed out and can't sign in until you activate them again. Their eNotes, assessments and other work stay visible to students.`, confirmLabel: 'Suspend', danger: true })) return
 
   try {
     const response = await apiService.put(`/admin/teachers/${teacher.id}/suspend`)
@@ -881,20 +905,62 @@ const restoreTeacher = async (teacher: Teacher) => {
 }
 
 const deleteTeacher = async (teacher: Teacher) => {
-  if (!await confirmDialog.open({ title: 'Delete teacher', message: `Are you sure you want to delete ${teacher.first_name} ${teacher.last_name}? This action cannot be undone.`, confirmLabel: 'Delete', danger: true })) return
+  const name = `${teacher.first_name} ${teacher.last_name}`
+  let what = ''
+  try {
+    const { data } = await apiService.get(`/admin/teachers/${teacher.id}/removal-preview`)
+    const p = data.data
+    const parts = (p.work || []).map((w: { count: number; label: string }) => `${w.count} ${w.label}`)
+    if (p.assessments) parts.push(`${p.assessments} assessment${p.assessments === 1 ? '' : 's'} closed`)
+    what = parts.length ? `\n\nThis removes: ${parts.join(', ')}.` : '\n\nThey have no work in eSpace yet.'
+    if (p.submissions_kept) what += ` Students keep their marks on ${p.submissions_kept} submission${p.submissions_kept === 1 ? '' : 's'} (report cards stay complete).`
+  } catch {
+    // preview is a courtesy - the delete itself still explains itself afterwards
+  }
+  const message = `Delete ${name}? They will no longer be able to sign in, and all their work disappears from eSpace for everyone.${what}\n\nYou can restore ${name} and their work within ${restoreDays.value} days; after that it is removed for good.\n\nTo stop them signing in but keep their work visible, use Suspend instead.`
+  if (!await confirmDialog.open({ title: 'Delete teacher and their work', message, confirmLabel: 'Delete teacher', danger: true })) return
 
   try {
     const response = await apiService.delete(`/admin/teachers/${teacher.id}`)
-
     if (response.data.success) {
-      fetchTeachers()
-      toast.success('Teacher deleted successfully')
+      await Promise.all([fetchTeachers(), fetchRemoved()])
+      showRemoved.value = true
+      toast.success(response.data.message || 'Teacher deleted')
     } else {
       toast.error(response.data.message || 'Failed to delete teacher')
     }
   } catch (error: any) {
     console.error('Failed to delete teacher:', error)
     toast.error(error.response?.data?.message || 'Failed to delete teacher')
+  }
+}
+
+// --- Recently deleted teachers: restorable for 30 days (opening this list also purges any past it)
+interface RemovedTeacher { id: number; teacher_id: number; teacher_name: string; teacher_username: string; removed_at: string; restore_until: string; summary: string; days_left: number }
+const removedTeachers = ref<RemovedTeacher[]>([])
+const restoreDays = ref(30)
+const showRemoved = ref(false)
+const restoringId = ref<number | null>(null)
+const fetchRemoved = async () => {
+  try {
+    const { data } = await apiService.get('/admin/teachers/removed')
+    removedTeachers.value = data.data?.removed || []
+    restoreDays.value = data.data?.restore_days || 30
+  } catch {
+    removedTeachers.value = []
+  }
+}
+const restoreRemoved = async (r: RemovedTeacher) => {
+  if (!await confirmDialog.open({ title: 'Restore teacher', message: `Bring back ${r.teacher_name} and all the work that was removed with them (${r.summary})?`, confirmLabel: 'Restore' })) return
+  restoringId.value = r.id
+  try {
+    const { data } = await apiService.post(`/admin/teachers/removed/${r.id}/restore`)
+    toast.success(data.message || 'Teacher restored')
+    await Promise.all([fetchTeachers(), fetchRemoved()])
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Failed to restore teacher')
+  } finally {
+    restoringId.value = null
   }
 }
 
@@ -922,6 +988,7 @@ const getDepartmentName = (departmentId: number | null) => {
 onMounted(async () => {
   await fetchDepartments()
   fetchTeachers()
+  fetchRemoved()
 })
 </script>
 

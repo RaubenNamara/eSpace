@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace eSpace\App\Controllers\Student;
 
 use eSpace\App\Controllers\Controller;
+use eSpace\App\Support\AssignmentRemoval;
 use eSpace\App\Services\LiveClassService;
 
 /**
@@ -73,7 +74,7 @@ class DashboardController extends Controller
              LEFT JOIN (
                  SELECT * FROM assignment_submissions WHERE student_id = :student_id_sub ORDER BY attempt_number DESC
              ) sub ON a.id = sub.assignment_id
-             WHERE a.status = 'published' AND a.deleted_at IS NULL
+             WHERE a.status = 'published' AND a.deleted_at IS NULL" . (AssignmentRemoval::hasColumn() ? " AND (a.removed_at IS NULL OR sub.id IS NOT NULL)" : '') . "
                AND a.class_id IN (SELECT class_id FROM student_department_enrollments WHERE student_id = :student_id_enroll AND deleted_at IS NULL)
              ORDER BY a.due_date ASC"
         );

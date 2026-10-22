@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace eSpace\App\Controllers\Student;
 
 use eSpace\App\Controllers\Controller;
+use eSpace\App\Support\AssignmentRemoval;
 use eSpace\App\Services\ENoteAssessmentReach;
 use eSpace\App\Services\ReportCardGradingService;
 
@@ -366,7 +367,7 @@ class MasteryController extends Controller
                  ORDER BY s2.attempt_number DESC, s2.id DESC LIMIT 1
              )
              WHERE a.id IN (" . self::placeholders($allIds) . ")
-               AND a.status = 'published' AND a.deleted_at IS NULL
+               AND a.status = 'published' AND a.deleted_at IS NULL" . (AssignmentRemoval::hasColumn() ? " AND (a.removed_at IS NULL OR sub.id IS NOT NULL)" : '') . "
                AND (a.open_at IS NULL OR a.open_at <= NOW())
                AND (a.class_id IN (" . self::placeholders($classIds) . ")
                     OR EXISTS (SELECT 1 FROM assignment_classes ac

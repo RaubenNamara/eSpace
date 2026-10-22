@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace eSpace\App\Controllers\Admin;
 
 use eSpace\App\Controllers\Controller;
+use eSpace\App\Services\TeacherRemovalService;
 use eSpace\App\Models\User;
 use eSpace\App\Models\Teacher;
 use eSpace\App\Models\AuditLog;
@@ -814,40 +815,82 @@ class TeacherController extends Controller
             return;
         }
 
-        $id = (int) $id;
-
-        $db = $this->getDb();
-        
-        // Check if teacher exists
-        $stmt = $db->prepare("SELECT id FROM teachers WHERE id = :id AND deleted_at IS NULL");
-        $stmt->execute(['id' => $id]);
-        if (!$stmt->fetch()) {
-            $this->notFound('Teacher not found');
+        $service = new TeacherRemovalService();
+        if (!$service->isReady()) {
+            $this->error('Run database migration 141 (teacher removal) first', 503);
             return;
         }
 
-        // Soft delete teacher
-        $sql = "UPDATE teachers SET deleted_at = NOW() WHERE id = :id";
-        $stmt = $db->prepare($sql);
-        $result = $stmt->execute(['id' => $id]);
-
-        if ($result) {
-            $this->success([], 'Teacher deleted successfully');
-
-            // Log the action
-            $this->auditLog->logAction(
-                $this->getCurrentUserId(),
-                $this->getCurrentUserRole(),
-                'teacher_deleted',
-                'teacher',
-                $id,
-                $id,
-                null,
-                null
-            );
-        } else {
+        try {
+            $removalId = $service->remove((int) $id, $this->getCurrentUserId() !== null ? (int) $this->getCurrentUserId() : null);
+        } catch (\RuntimeException $e) {
+            $this->notFound($e->getMessage());
+            return;
+        } catch (\Throwable $e) {
+            error_log('Failed to remove teacher ' . (int) $id . ': ' . $e->getMessage());
             $this->error('Failed to delete teacher', 500);
+            return;
         }
+
+        $this->success(
+            ['removal_id' => $removalId, 'restore_days' => TeacherRemovalService::RESTORE_DAYS],
+            'Teacher deleted. Their work is hidden and can be restored within ' . TeacherRemovalService::RESTORE_DAYS . ' days.'
+        );
+    }
+
+    /**
+     * What deleting this teacher would remove (for the confirmation)
+     * GET /admin/teachers/{id}/removal-preview
+     */
+    public function removalPreview($id): void
+    {
+        if (!$this->isAdmin()) {
+            $this->forbidden();
+            return;
+        }
+        $this->success((new TeacherRemovalService())->preview((int) $id));
+    }
+
+    /**
+     * Deleted teachers that can still be restored (and purges any whose 30 days are up)
+     * GET /admin/teachers/removed
+     */
+    public function removed(): void
+    {
+        if (!$this->isAdmin()) {
+            $this->forbidden();
+            return;
+        }
+        $service = new TeacherRemovalService();
+        if (!$service->isReady()) {
+            $this->success(['removed' => [], 'restore_days' => TeacherRemovalService::RESTORE_DAYS]);
+            return;
+        }
+        $service->purgeDue();
+        $this->success(['removed' => $service->listRestorable(), 'restore_days' => TeacherRemovalService::RESTORE_DAYS]);
+    }
+
+    /**
+     * Undo a teacher delete within 30 days: the account and all the hidden work come back
+     * POST /admin/teachers/removed/{id}/restore
+     */
+    public function restoreRemoved($id): void
+    {
+        if (!$this->isAdmin()) {
+            $this->forbidden();
+            return;
+        }
+        try {
+            $r = (new TeacherRemovalService())->restore((int) $id);
+        } catch (\RuntimeException $e) {
+            $this->error($e->getMessage(), 422);
+            return;
+        } catch (\Throwable $e) {
+            error_log('Failed to restore teacher removal ' . (int) $id . ': ' . $e->getMessage());
+            $this->error('Failed to restore teacher', 500);
+            return;
+        }
+        $this->success($r, "{$r['teacher_name']} and their work are back");
     }
 
     /**
@@ -1513,22 +1556,27 @@ class TeacherController extends Controller
             return;
         }
 
-        $db = $this->getDb();
-        $placeholders = implode(',', array_fill(0, count($ids), '?'));
-
-        try {
-            $stmt = $db->prepare("UPDATE teachers SET deleted_at = NOW() WHERE id IN ($placeholders)");
-            $stmt->execute($ids);
-
-            foreach ($ids as $teacherId) {
-                $this->auditLog->logAction($this->getCurrentUserId(), $this->getCurrentUserRole(), 'teacher_deleted', 'teacher', $teacherId, $teacherId, null, null);
-            }
-
-            $this->success(['deleted' => count($ids)], count($ids) . ' teacher(s) deleted');
-        } catch (\PDOException $e) {
-            error_log('Failed to bulk delete teachers: ' . $e->getMessage());
-            $this->error('Failed to delete teachers', 500);
+        $service = new TeacherRemovalService();
+        if (!$service->isReady()) {
+            $this->error('Run database migration 141 (teacher removal) first', 503);
+            return;
         }
+
+        $done = 0;
+        foreach ($ids as $teacherId) {
+            try {
+                $service->remove((int) $teacherId, $this->getCurrentUserId() !== null ? (int) $this->getCurrentUserId() : null);
+                $done++;
+            } catch (\Throwable $e) {
+                error_log('Bulk teacher delete failed for ' . (int) $teacherId . ': ' . $e->getMessage());
+            }
+        }
+
+        if ($done === 0) {
+            $this->error('Failed to delete teachers', 500);
+            return;
+        }
+        $this->success(['deleted' => $done], $done . ' teacher(s) deleted - restorable for ' . TeacherRemovalService::RESTORE_DAYS . ' days');
     }
 
     /**

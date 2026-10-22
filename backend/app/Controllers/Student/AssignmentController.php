@@ -3,6 +3,7 @@
 namespace eSpace\App\Controllers\Student;
 
 use eSpace\App\Utils\MimeType;
+use eSpace\App\Support\AssignmentRemoval;
 use eSpace\App\Controllers\Controller;
 use eSpace\Config\Database;
 use eSpace\App\Services\ENoteAssessmentReach;
@@ -61,7 +62,7 @@ class AssignmentController extends Controller
                     ORDER BY attempt_number DESC
                 ) sub ON a.id = sub.assignment_id
                 WHERE a.status = 'published'
-                AND a.deleted_at IS NULL
+                AND a.deleted_at IS NULL" . AssignmentRemoval::openOrSubmitted((string) (int) $studentId) . "
                 AND (a.open_at IS NULL OR a.open_at <= NOW())
                 AND EXISTS (
                     SELECT 1 FROM student_department_enrollments sde
@@ -159,7 +160,7 @@ class AssignmentController extends Controller
                 INNER JOIN teachers t ON a.teacher_id = t.id
                 WHERE a.id = :assignment_id
                 AND a.status = 'published'
-                AND a.deleted_at IS NULL
+                AND a.deleted_at IS NULL" . AssignmentRemoval::openOrSubmitted((string) (int) $studentId) . "
                 AND EXISTS (
                     SELECT 1 FROM student_department_enrollments sde
                     LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
@@ -441,7 +442,8 @@ class AssignmentController extends Controller
             }
 
             // Validate assignment access
-            $checkSql = "SELECT * FROM assignments WHERE id = :assignment_id AND status = 'published'";
+            $checkSql = "SELECT * FROM assignments WHERE id = :assignment_id AND status = 'published'"
+                . AssignmentRemoval::openOrSubmitted((string) (int) $studentId, 'assignments');
             $stmt = $this->pdo->prepare($checkSql);
             $stmt->execute(['assignment_id' => $assignmentId]);
             $assignment = $stmt->fetch();
@@ -855,7 +857,7 @@ class AssignmentController extends Controller
 
             // Verify the assignment is published and the student is enrolled in its class
             $stmt = $this->pdo->prepare(
-                "SELECT id FROM assignments a WHERE a.id = :assignment_id AND a.status = 'published'
+                "SELECT id FROM assignments a WHERE a.id = :assignment_id AND a.status = 'published'" . AssignmentRemoval::openOrSubmitted((string) (int) $studentId) . "
                  AND EXISTS (
                      SELECT 1 FROM student_department_enrollments sde
                      LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
@@ -1056,7 +1058,7 @@ class AssignmentController extends Controller
 
         // Verify the assignment is published and the student is enrolled in its class
         $stmt = $this->pdo->prepare(
-            "SELECT id FROM assignments a WHERE a.id = :assignment_id AND a.status = 'published'
+            "SELECT id FROM assignments a WHERE a.id = :assignment_id AND a.status = 'published'" . AssignmentRemoval::openOrSubmitted((string) (int) $studentId) . "
              AND EXISTS (
                  SELECT 1 FROM student_department_enrollments sde
                  LEFT JOIN classes sde_c ON sde_c.id = sde.class_id

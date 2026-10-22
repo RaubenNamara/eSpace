@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace eSpace\App\Controllers\Student;
 
 use eSpace\App\Controllers\Controller;
+use eSpace\App\Support\AssignmentRemoval;
 use eSpace\App\Services\ENoteDuplicateGuard;
 use eSpace\App\Services\ENoteAssessmentReach;
 
@@ -382,7 +383,7 @@ class ENoteController extends Controller
                 WHERE a.enote_topic_id IN ({$topicIn})
                 AND a.enote_page_id IS NULL
                 AND a.status = 'published'
-                AND a.deleted_at IS NULL
+                AND a.deleted_at IS NULL" . AssignmentRemoval::open() . "
                 AND (a.open_at IS NULL OR a.open_at <= NOW())
                 AND EXISTS (
                     SELECT 1 FROM student_department_enrollments sde
@@ -447,7 +448,7 @@ class ENoteController extends Controller
                 )
                 WHERE lp.topic_id IN ({$placeholders})
                 AND a.status = 'published'
-                AND a.deleted_at IS NULL
+                AND a.deleted_at IS NULL" . AssignmentRemoval::open() . "
                 AND (a.open_at IS NULL OR a.open_at <= NOW())
                 AND EXISTS (
                     SELECT 1 FROM student_department_enrollments sde

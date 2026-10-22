@@ -791,6 +791,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         // Assignments - read-only, school-wide oversight + "Preview as Student"
         Router::get('/assignments', 'eSpace\App\Controllers\Admin\AssignmentController@index');
         Router::get('/assignments/{id}/preview', 'eSpace\App\Controllers\Admin\AssignmentController@preview');
+        Router::delete('/assignments/{id}', 'eSpace\App\Controllers\Admin\AssignmentController@delete');
 
         // Users
         Router::get('/users', 'eSpace\App\Controllers\Admin\UserController@index');
@@ -889,6 +890,9 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::post('/teachers/import', 'eSpace\App\Controllers\Admin\TeacherController@import');
         Router::post('/teachers/bulk-status', 'eSpace\App\Controllers\Admin\TeacherController@bulkStatus');
         Router::post('/teachers/bulk-delete', 'eSpace\App\Controllers\Admin\TeacherController@bulkDelete');
+        Router::get('/teachers/removed', 'eSpace\App\Controllers\Admin\TeacherController@removed');
+        Router::post('/teachers/removed/{id}/restore', 'eSpace\App\Controllers\Admin\TeacherController@restoreRemoved');
+        Router::get('/teachers/{id}/removal-preview', 'eSpace\App\Controllers\Admin\TeacherController@removalPreview');
         Router::post('/teachers/bulk-assign-department', 'eSpace\App\Controllers\Admin\TeacherController@bulkAssignDepartment');
         Router::post('/teachers/bulk-export', 'eSpace\App\Controllers\Admin\TeacherController@bulkExport');
         Router::get('/teachers/{id}', 'eSpace\App\Controllers\Admin\TeacherController@show');
