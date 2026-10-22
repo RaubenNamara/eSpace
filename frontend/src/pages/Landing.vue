@@ -34,6 +34,7 @@
                 <span class="w-6 h-6 rounded-full bg-slate-900 text-white dark:bg-white dark:text-slate-900 flex items-center justify-center"><svg class="w-3 h-3 ml-0.5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg></span>
                 Watch the 30-second tour
               </button>
+              <InstallAppButton variant="hero" />
             </div>
             <!-- A client -->
             <div class="mt-10 flex items-center gap-3">
@@ -481,6 +482,7 @@ import axios from 'axios'
 import AppIcon from '@/components/common/AppIcon.vue'
 import SiteHeader from '@/components/site/SiteHeader.vue'
 import SiteFooter from '@/components/site/SiteFooter.vue'
+import InstallAppButton from '@/components/site/InstallAppButton.vue'
 import ProductTour from '@/components/site/ProductTour.vue'
 import TourPlayer from '@/components/site/TourPlayer.vue'
 import ModuleSheet from '@/components/site/ModuleSheet.vue'
