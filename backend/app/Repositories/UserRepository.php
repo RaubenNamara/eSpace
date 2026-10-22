@@ -130,9 +130,19 @@ class UserRepository extends Repository
      * updateLastLogin). Called periodically while the user has the app open, so chat can show an
      * online indicator - last_login_at alone can't do this since it only ever updates at login.
      */
-    public function updateLastActive(int $userId): bool
+    public function updateLastActive(int $userId, ?string $role = null): bool
     {
         $db = \eSpace\Config\Database::getInstance();
+
+        // Ids repeat across the role tables (a teacher and an admin can both be id 8), so with the
+        // session's role, stamp only that person's own table - trying users first used to mark an
+        // unrelated admin active and leave the teacher / student looking offline.
+        $table = ['student' => 'students', 'teacher' => 'teachers', 'hod' => 'hods'][$role ?? ''] ?? ($role !== null ? 'users' : null);
+        if ($table !== null) {
+            $stmt = $db->prepare("UPDATE {$table} SET last_active_at = NOW() WHERE id = :id");
+            $stmt->execute(['id' => $userId]);
+            return $stmt->rowCount() > 0;
+        }
 
         $stmt = $db->prepare("UPDATE users SET last_active_at = NOW() WHERE id = :id");
         $stmt->execute(['id' => $userId]);

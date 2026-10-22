@@ -32,7 +32,7 @@ class PresenceController extends Controller
             return;
         }
 
-        (new UserRepository())->updateLastActive((int) $userId);
+        (new UserRepository())->updateLastActive((int) $userId, $_SESSION['role'] ?? null);
 
         $this->success([], 'ok');
     }
