@@ -89,6 +89,21 @@
       <svg class="w-5 h-5 text-indigo-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
     </RouterLink>
 
+    <!-- Boot-up and BIOS: power to desktop, and two start-up faults to fix -->
+    <RouterLink
+      :to="`/${role}/ict-lab/boot`"
+      class="flex items-center gap-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 hover:shadow-md hover:border-indigo-300 transition"
+    >
+      <span class="w-12 h-12 rounded-2xl bg-blue-900 text-white flex items-center justify-center flex-shrink-0 shadow-sm font-mono text-[10px] font-bold leading-tight text-center">BIOS</span>
+      <div class="min-w-0 flex-1">
+        <p class="text-[11px] font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">How a computer works · 4 parts</p>
+        <p class="text-lg font-bold text-gray-900 dark:text-white leading-snug">Boot-up and BIOS</p>
+        <p class="text-sm text-gray-600 dark:text-gray-300">Watch a computer start - power, POST, boot device, operating system - then fix "no boot device" in BIOS Setup and a clock that keeps resetting.</p>
+        <p v-if="bootDone" class="mt-1 text-xs font-bold text-emerald-600 dark:text-emerald-300">{{ bootDone }} of 4 parts done</p>
+      </div>
+      <svg class="w-5 h-5 text-indigo-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+    </RouterLink>
+
     <!-- Binary and storage: bits, bytes, letters as numbers, KB to TB -->
     <RouterLink
       :to="`/${role}/ict-lab/binary`"
@@ -228,6 +243,7 @@ const rulesDue = computed(() => role.value === 'student' && !rulesPassed.value)
 const quizBest = computed(() => best('parts-quiz', 'simple'))
 const journeyBest = computed(() => best('journey', 'simple'))
 const hazardsBest = computed(() => best('hazards', 'simple'))
+const bootDone = computed(() => progress.value.filter(p => p.activity_key.startsWith('boot-')).length)
 const safetyDone = computed(() => progress.value.filter(p => p.activity_key.startsWith('safety-')).length)
 const binaryDone = computed(() => progress.value.filter(p => p.activity_key.startsWith('binary-')).length)
 const networkDone = computed(() => progress.value.filter(p => p.activity_key.startsWith('network-')).length)

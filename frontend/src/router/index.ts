@@ -84,6 +84,7 @@ const IctLabHazards = () => import('../pages/common/IctLabHazards.vue')
 const IctLabNetwork = () => import('../pages/common/IctLabNetwork.vue')
 const IctLabBinary = () => import('../pages/common/IctLabBinary.vue')
 const IctLabOnlineSafety = () => import('../pages/common/IctLabOnlineSafety.vue')
+const IctLabBoot = () => import('../pages/common/IctLabBoot.vue')
 const AnatomyExplorer = () => import('../pages/common/AnatomyExplorer.vue')
 const AnatomyModules = () => import('../pages/common/AnatomyModules.vue')
 const AnatomyModule = () => import('../pages/common/AnatomyModule.vue')
@@ -258,6 +259,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'ict-lab/network', name: 'StudentIctLabNetwork', component: IctLabNetwork },
       { path: 'ict-lab/binary', name: 'StudentIctLabBinary', component: IctLabBinary },
       { path: 'ict-lab/online-safety', name: 'StudentIctLabOnlineSafety', component: IctLabOnlineSafety },
+      { path: 'ict-lab/boot', name: 'StudentIctLabBoot', component: IctLabBoot },
       { path: 'ict-lab/:activity', name: 'StudentIctLabActivity', component: IctLabActivity },
       { path: 'virtual-lab/playground', name: 'StudentVirtualLabPlayground', component: StudentVirtualLabPlayground },
       { path: 'constructs', name: 'StudentConstructs', component: StudentConstructs },
@@ -351,6 +353,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'ict-lab/network', name: 'TeacherIctLabNetwork', component: IctLabNetwork },
       { path: 'ict-lab/binary', name: 'TeacherIctLabBinary', component: IctLabBinary },
       { path: 'ict-lab/online-safety', name: 'TeacherIctLabOnlineSafety', component: IctLabOnlineSafety },
+      { path: 'ict-lab/boot', name: 'TeacherIctLabBoot', component: IctLabBoot },
       { path: 'ict-lab/:activity', name: 'TeacherIctLabActivity', component: IctLabActivity },
       { path: 'virtual-lab/playground', name: 'TeacherVirtualLabPlayground', component: StudentVirtualLabPlayground },
       // A teacher doing an experiment exactly like a student (same page; nothing saved, no submit)
@@ -392,6 +395,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'ict-lab/network', name: 'HODIctLabNetwork', component: IctLabNetwork },
       { path: 'ict-lab/binary', name: 'HODIctLabBinary', component: IctLabBinary },
       { path: 'ict-lab/online-safety', name: 'HODIctLabOnlineSafety', component: IctLabOnlineSafety },
+      { path: 'ict-lab/boot', name: 'HODIctLabBoot', component: IctLabBoot },
       { path: 'ict-lab/:activity', name: 'HODIctLabActivity', component: IctLabActivity },
       { path: 'virtual-lab/practice/:experimentId', name: 'HODVirtualLabPractice', component: StudentVirtualLabExperiment, meta: { practice: true, practiceRole: 'hod' } },
       { path: 'assessments', name: 'HODAssessments', component: HODAssessments },
@@ -468,6 +472,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'ict-lab/network', name: 'AdminIctLabNetwork', component: IctLabNetwork },
       { path: 'ict-lab/binary', name: 'AdminIctLabBinary', component: IctLabBinary },
       { path: 'ict-lab/online-safety', name: 'AdminIctLabOnlineSafety', component: IctLabOnlineSafety },
+      { path: 'ict-lab/boot', name: 'AdminIctLabBoot', component: IctLabBoot },
       { path: 'ict-lab/:activity', name: 'AdminIctLabActivity', component: IctLabActivity },
       // An admin opening an experiment to view its diagram/procedure - same page as the teacher
       // practice route, nothing saved, no submit.
