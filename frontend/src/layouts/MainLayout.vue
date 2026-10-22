@@ -74,7 +74,7 @@
                   :title="isIconOnly ? row.item.label : undefined"
                   :style="{ '--i': row.i }"
                   class="nav-item flex items-center gap-2.5 pr-2.5 py-1.5 rounded-xl transition-all duration-150 text-sm font-medium group"
-                  :class="[row.child && !isIconOnly ? 'pl-7' : 'pl-3.5', isActive(row.item.path) ? 'bg-indigo-50 text-indigo-900 font-semibold dark:bg-white/10 dark:text-white' : 'text-gray-800 dark:text-white/60 hover:bg-indigo-50 dark:hover:bg-white/[0.07] hover:text-indigo-800 dark:hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
+                  :class="[row.child && !isIconOnly ? 'pl-7' : 'pl-3.5', isActive(row.item.path) ? 'bg-indigo-100 text-indigo-900 font-semibold ring-1 ring-indigo-200 dark:bg-indigo-900/50 dark:ring-indigo-800 dark:text-white' : 'text-gray-800 dark:text-white/60 hover:bg-indigo-50 dark:hover:bg-white/[0.07] hover:text-indigo-800 dark:hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
                 >
                   <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-all duration-150"
                     :class="isActive(row.item.path) ? 'bg-indigo-600 text-white shadow-sm' : 'text-indigo-700 dark:text-indigo-300/80 group-hover:text-indigo-800 dark:group-hover:text-white/80'"

@@ -30,7 +30,7 @@ export interface IctActivity {
   title: string
   summary: string
   icon: string
-  scene: 'parts' | 'rj45' | 'assembly' | 'cleaning' | 'troubleshoot'
+  scene: 'parts' | 'rj45' | 'assembly' | 'cleaning' | 'troubleshoot' | 'connect'
   topic: string
   // `preset`: actions already done when the level starts (e.g. the motherboard already in the case)
   levels: Record<IctLevel, { intro: string; steps: IctStep[]; preset?: string[] }>
@@ -427,7 +427,48 @@ const troubleshootActivity: IctActivity = {
   }
 }
 
-export const ACTIVITIES: IctActivity[] = [partsActivity, assemblyActivity, cleaningActivity, troubleshootActivity, rj45Activity]
+// ---- Connecting a computer ----
+
+const POWER_LAST = 'Connect all the cables first and switch on last - plugging things in with the power on can damage them, and is not safe.'
+const con = {
+  monitor: { key: 'con-monitor', action: 'plug:monitor', title: 'Connect the monitor', text: 'Plug the monitor\'s video cable into the HDMI port at the back of the computer - the wide, flat port with two slanted corners.', hint: 'Tap the black HDMI plug on the desk (or the Monitor cable button), then the HDMI port in the column of ports at the back.', data: { dev: 'monitor' }, wrong: { 'wall:computer': POWER_LAST, 'socket-on': POWER_LAST, power: POWER_LAST } } as IctStep,
+  keyboard: { key: 'con-keyboard', action: 'plug:keyboard', title: 'Connect the keyboard', text: 'Plug the keyboard\'s USB cable into a USB port - a flat rectangle. Any free USB port works.', hint: 'Pick up the keyboard\'s USB plug, then tap one of the USB ports near the top of the column of ports.', data: { dev: 'keyboard' }, wrong: { 'wall:computer': POWER_LAST, 'socket-on': POWER_LAST, power: POWER_LAST } } as IctStep,
+  mouse: { key: 'con-mouse', action: 'plug:mouse', title: 'Connect the mouse', text: 'Plug the mouse into another USB port.', hint: 'Pick up the mouse\'s USB plug, then tap a free USB port.', data: { dev: 'mouse' }, wrong: { 'wall:computer': POWER_LAST, 'socket-on': POWER_LAST, power: POWER_LAST } } as IctStep,
+  speakers: { key: 'con-speakers', action: 'plug:speakers', title: 'Connect the speakers', text: 'Plug the speakers\' green jack into the green sound socket - green is always for speakers and headphones.', hint: 'Pick up the green jack, then tap the green socket at the bottom of the column of ports.', data: { dev: 'speakers' }, wrong: { 'wall:computer': POWER_LAST, 'socket-on': POWER_LAST, power: POWER_LAST } } as IctStep,
+  mic: { key: 'con-mic', action: 'plug:mic', title: 'Connect the microphone', text: 'Plug the microphone\'s pink jack into the pink socket.', hint: 'Pick up the pink jack, then tap the pink socket beside the green one.', data: { dev: 'mic' }, wrong: { 'wall:computer': POWER_LAST, 'socket-on': POWER_LAST, power: POWER_LAST } } as IctStep,
+  network: { key: 'con-network', action: 'plug:network', title: 'Connect to the network', text: 'Plug the network cable from the wall into the network (LAN) port - the square port with two small lights. Push until it clicks.', hint: 'Pick up the clear RJ45 plug, then tap the LAN port below the blue VGA port.', data: { dev: 'network' }, wrong: { 'wall:computer': POWER_LAST, 'socket-on': POWER_LAST, power: POWER_LAST } } as IctStep,
+  power: { key: 'con-power', action: 'plug:power', title: 'Connect the power cable', text: 'Plug the power cable into the power inlet on the power supply, at the top of the back.', hint: 'Pick up the big black power plug, then tap the three-pin inlet at the top left of the back.', data: { dev: 'power' }, wrong: { 'wall:computer': 'Plug the power cable into the computer first, then into the wall.', 'socket-on': POWER_LAST, power: POWER_LAST } } as IctStep,
+  wallComputer: { key: 'con-wall-pc', action: 'wall:computer', title: 'Plug the computer in at the wall', text: 'Push the computer\'s plug into the left outlet of the wall socket.', hint: 'Drag the black plug on the desk onto the wall socket (or tap it).', data: { obj: 'wall' }, wrong: { 'socket-on': 'Plug in first, then switch on.', power: 'It has no power yet - plug it in at the wall first.' } } as IctStep,
+  wallMonitor: { key: 'con-wall-monitor', action: 'wall:monitor', title: 'Plug the monitor in', text: 'The monitor has its own power cable - push its white plug into the right outlet.', hint: 'Drag the white plug onto the wall socket (or tap it).', data: { obj: 'wall' }, wrong: { 'socket-on': 'Plug the monitor in first, then switch on.', power: 'The monitor is not plugged in yet.' } } as IctStep,
+  psu: { key: 'con-psu', action: 'psu-on', title: 'Switch the power supply on', text: 'Flip the switch beside the power inlet to I (on). O means off.', hint: 'Tap the small rocker switch beside the power inlet, or use the PSU switch button.', data: { obj: 'psu' }, wrong: { power: 'The power supply\'s own switch is still on O - flip it to I first.' } } as IctStep,
+  socket: { key: 'con-socket', action: 'socket-on', title: 'Switch on at the wall', text: 'Switch on both outlets of the wall socket - one for the computer, one for the monitor.', hint: 'Tap both switches above the plugs, or use the Wall switches button.', data: { obj: 'socket' }, wrong: { power: 'Switch on at the wall first.' } } as IctStep,
+  start: { key: 'con-start', action: 'power', title: 'Press the power button', text: 'Press the power button on top of the computer. The screen should light up and the computer start.', hint: 'Tap the round button on the top front edge of the computer, or use the Power button button.', data: { obj: 'power' } } as IctStep
+}
+
+const connectActivity: IctActivity = {
+  key: 'connect',
+  title: 'Connecting a computer',
+  summary: 'Plug the monitor, keyboard, mouse, speakers and network into the right ports at the back, connect the power and switch on.',
+  icon: 'paperclip',
+  scene: 'connect',
+  topic: 'Computer hardware',
+  levels: {
+    simple: {
+      intro: 'A new computer, turned round so you can reach its back. Pick up each cable and put it in the port that matches - the one to use glows and every port has its name.',
+      steps: [con.monitor, con.keyboard, con.mouse, con.power, con.wallComputer, con.wallMonitor, con.socket, con.start]
+    },
+    intermediate: {
+      intro: 'Connect everything a classroom computer needs, then power it up in the right order. No names on the ports - hover to read them. A hint costs 3 points, a mistake 5.',
+      steps: [con.monitor, con.keyboard, con.mouse, con.speakers, con.network, con.power, con.wallComputer, con.wallMonitor, con.psu, con.socket, con.start]
+    },
+    advanced: {
+      intro: 'Set up the whole workstation from the shape and colour of each plug - the ports have no names. A hint costs 3 points, a mistake 5.',
+      steps: [con.monitor, con.keyboard, con.mouse, con.speakers, con.mic, con.network, con.power, con.wallComputer, con.wallMonitor, con.psu, con.socket, con.start]
+    }
+  }
+}
+
+export const ACTIVITIES: IctActivity[] = [partsActivity, connectActivity, assemblyActivity, cleaningActivity, troubleshootActivity, rj45Activity]
 
 // Planned next, shown on the lab's front page
 export const COMING: { title: string; summary: string; icon: string }[] = [

@@ -9,7 +9,7 @@
       accent="indigo"
     />
 
-    <!-- The parts showroom: every major part in 3D, on its own -->
+    <!-- The showroom: every major part, and the devices around a computer, in 3D on their own -->
     <RouterLink
       :to="`/${role}/ict-lab/showroom`"
       class="mb-4 flex items-center gap-4 rounded-2xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/70 dark:bg-indigo-900/20 p-4 hover:shadow-md transition-shadow"
@@ -17,8 +17,8 @@
       <span class="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 shadow-sm"><AppIcon name="photo" class="w-6 h-6" /></span>
       <div class="min-w-0 flex-1">
         <p class="text-[11px] font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">Start here</p>
-        <p class="text-lg font-bold text-gray-900 dark:text-white leading-snug">Parts showroom</p>
-        <p class="text-sm text-gray-600 dark:text-gray-300">Every major part of a computer in 3D - turn it round, see where it goes, what it does and how it fails.</p>
+        <p class="text-lg font-bold text-gray-900 dark:text-white leading-snug">Parts and devices showroom</p>
+        <p class="text-sm text-gray-600 dark:text-gray-300">Every part inside a computer, and 22 devices around it - keyboards, printers, routers, flash drives and more - in 3D. Turn each one round and learn what it does.</p>
       </div>
       <svg class="w-5 h-5 text-indigo-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
     </RouterLink>

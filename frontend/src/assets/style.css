@@ -431,10 +431,10 @@ html.dark .dash-box {
   border-color: rgba(255, 255, 255, 0.06);
 }
 .dash-bar {
-  @apply flex items-center gap-2 px-4 py-2.5 bg-indigo-50/80 text-indigo-900 border-b border-indigo-100 text-[0.95rem] font-bold tracking-tight;
+  @apply flex items-center gap-2 px-4 py-2.5 bg-indigo-100 text-indigo-900 border-b border-indigo-200 border-l-4 border-l-indigo-600 text-[0.95rem] font-bold tracking-tight;
 }
 html.dark .dash-bar {
-  @apply bg-white/[0.04] text-white border-white/10;
+  @apply bg-indigo-900/40 text-white border-indigo-900 border-l-indigo-500;
 }
 .dash-bar-link {
   @apply ml-auto text-xs font-semibold text-indigo-700 hover:text-indigo-900 hover:underline dark:text-indigo-300 dark:hover:text-indigo-200;
@@ -460,8 +460,8 @@ html.dark .dash-bar {
 }
 
 /* Chat: the list's and the conversation's title bars - a soft light-green band, dark words */
-.chat-bar { background: rgb(239 251 243 / 0.85) !important; border-bottom: 1px solid rgb(215 245 225); color: rgb(15 71 43); }
-.dark .chat-bar { background: rgb(255 255 255 / 0.04) !important; border-bottom-color: rgb(255 255 255 / 0.08); color: #fff; }
+.chat-bar { background: rgb(215 245 225) !important; border-bottom: 1px solid rgb(176 234 198); border-left: 4px solid rgb(21 135 74); color: rgb(15 71 43); }
+.dark .chat-bar { background: rgb(15 71 43 / 0.4) !important; border-bottom-color: rgb(15 71 43); border-left-color: rgb(34 164 93); color: #fff; }
 .chat-bar h1, .chat-bar h2 { color: rgb(15 71 43) !important; }
 .dark .chat-bar h1, .dark .chat-bar h2 { color: #fff !important; }
 .chat-bar p { color: rgb(18 108 61) !important; }

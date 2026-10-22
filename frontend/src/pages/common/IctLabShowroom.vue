@@ -6,11 +6,24 @@
       </RouterLink>
       <div class="min-w-0 flex-1">
         <p class="text-[11px] font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">ICT Lab · Computer hardware</p>
-        <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-tight">Parts showroom</h1>
+        <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-tight">Parts and devices showroom</h1>
       </div>
     </div>
 
-    <!-- The parts -->
+    <!-- The groups: inside the computer, then the devices around it -->
+    <div class="flex gap-1 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 [scrollbar-width:none]" role="tablist">
+      <button
+        v-for="g in GROUPS"
+        :key="g.key"
+        type="button"
+        role="tab"
+        :aria-selected="group === g.key"
+        class="flex-shrink-0 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-colors"
+        :class="group === g.key ? 'bg-indigo-800 text-white' : 'bg-white dark:bg-gray-800 ring-1 ring-gray-200 dark:ring-gray-700 text-gray-700 dark:text-gray-200 hover:ring-indigo-300'"
+        @click="setGroup(g.key)"
+      >{{ g.label }} <span class="text-xs opacity-70">{{ g.keys.length }}</span></button>
+    </div>
+    <!-- The items in this group -->
     <div class="flex gap-1.5 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
       <button
         v-for="(k, i) in SHOWN"
@@ -26,11 +39,11 @@
       <section class="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 sm:p-4">
         <div v-if="!unsupported" class="relative w-full h-[46vh] min-h-[300px] lg:h-[58vh] rounded-xl overflow-hidden bg-slate-200 dark:bg-slate-800">
           <div ref="host" class="absolute inset-0 cursor-grab"></div>
-          <div class="absolute top-2 left-2 flex flex-wrap gap-1.5">
+          <div v-if="isInside" class="absolute top-2 left-2 flex flex-wrap gap-1.5">
             <button type="button" class="px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm" :class="!inCase ? 'bg-indigo-600 text-white' : 'bg-white/90 text-gray-800 hover:bg-white'" @click="inCase = false">On its own</button>
             <button type="button" class="px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm" :class="inCase ? 'bg-indigo-600 text-white' : 'bg-white/90 text-gray-800 hover:bg-white'" @click="inCase = true">Where it goes</button>
           </div>
-          <span v-if="!inCase && enlarged" class="absolute top-2 right-2 px-2 py-1 rounded-lg bg-black/50 text-white text-[11px]">Shown larger than real size</span>
+          <span v-if="!inCase && sizeNote" class="absolute top-2 right-2 px-2 py-1 rounded-lg bg-black/50 text-white text-[11px]">{{ sizeNote }}</span>
           <div class="absolute bottom-2 left-2 right-2 flex items-center justify-between gap-2 pointer-events-none">
             <span class="px-2 py-1 rounded-lg bg-black/45 text-white text-[11px]">Drag to turn · pinch to zoom</span>
             <div class="flex gap-1.5 pointer-events-auto">
@@ -39,21 +52,22 @@
             </div>
           </div>
         </div>
-        <p v-else class="text-sm text-gray-500 dark:text-gray-400 p-6 text-center">This device cannot show 3D - here is everything about the part.</p>
+        <p v-else class="text-sm text-gray-500 dark:text-gray-400 p-6 text-center">This device cannot show 3D - here is everything about it.</p>
       </section>
 
       <!-- All about it -->
       <aside class="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 space-y-3 lg:sticky lg:top-20">
         <div>
           <p class="text-[11px] font-bold uppercase tracking-wide text-gray-400">{{ index + 1 }} of {{ SHOWN.length }}</p>
-          <h2 class="text-lg font-bold text-gray-900 dark:text-white leading-snug">{{ part.name }}</h2>
+          <h2 class="text-lg font-bold text-gray-900 dark:text-white leading-snug">{{ itemName }}</h2>
+          <p v-if="!isInside" class="mt-0.5 inline-block px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-200 text-xs font-semibold">{{ BADGE[group] || groupLabel }}</p>
         </div>
         <div v-for="row in rows" :key="row.label">
           <p class="text-xs font-bold text-indigo-600 dark:text-indigo-300 flex items-center gap-1"><AppIcon :name="row.icon" class="w-3.5 h-3.5" />{{ row.label }}</p>
           <p class="text-sm text-gray-700 dark:text-gray-200 mt-0.5">{{ row.text }}</p>
         </div>
         <p class="text-sm rounded-xl px-3 py-2 bg-amber-50 text-amber-900 dark:bg-amber-900/30 dark:text-amber-100">
-          <AppIcon name="bulb" class="w-4 h-4 inline -mt-0.5" /> <span class="font-semibold">Did you know?</span> {{ details.fact }}
+          <AppIcon name="bulb" class="w-4 h-4 inline -mt-0.5" /> <span class="font-semibold">Did you know?</span> {{ fact }}
         </p>
       </aside>
     </div>
@@ -68,24 +82,53 @@ import AppIcon from '@/components/common/AppIcon.vue'
 import { createWorkbench, type Workbench } from '@/components/ictlab/three/workbench'
 import { buildPc, setEmissive, fadeExcept, type PcRig, type PcPartKey } from '@/components/ictlab/three/pcModel'
 import { PC_PARTS, PART_DETAILS } from '@/components/ictlab/activities'
+import { DEVICES, DEVICE_GROUPS } from '@/components/ictlab/deviceInfo'
+import { buildDevice, type DeviceKey } from '@/components/ictlab/three/devices'
 import { labRoleOf } from '@/components/ictlab/types'
 
 const route = useRoute()
 const role = computed(() => labRoleOf(route.path))
 
-const SHOWN = ['motherboard', 'cpu', 'cooler', 'ram', 'psu', 'hdd', 'ssd', 'gpu', 'optical', 'casefan', 'cmos', 'sata', 'ports']
+// The parts inside the computer, then the devices around it (input, output, storage, networking
+// and power, other computers)
+const INSIDE = ['motherboard', 'cpu', 'cooler', 'ram', 'psu', 'hdd', 'ssd', 'gpu', 'optical', 'casefan', 'cmos', 'sata', 'ports']
+const GROUPS: { key: string; label: string; keys: string[] }[] = [{ key: 'inside', label: 'Inside the computer', keys: INSIDE }, ...DEVICE_GROUPS]
+const group = ref('inside')
+const BADGE: Record<string, string> = { input: 'Input device', output: 'Output device', storage: 'Storage device', network: 'Networking and power', computers: 'A computer' }
+const isInside = computed(() => group.value === 'inside')
+const groupLabel = computed(() => GROUPS.find(g => g.key === group.value)?.label || '')
+const SHOWN = computed(() => GROUPS.find(g => g.key === group.value)?.keys || INSIDE)
 const index = ref(0)
 const inCase = ref(false)
-const key = computed(() => SHOWN[index.value])
-const part = computed(() => PC_PARTS[key.value])
-const details = computed(() => PART_DETAILS[key.value])
-const shortName = (k: string) => PC_PARTS[k].name.replace(/ \(.*\)$/, '')
-const rows = computed(() => [
-  { label: 'What it looks like', icon: 'photo', text: details.value.looks },
-  { label: 'What it does', icon: 'bolt', text: part.value.does },
-  { label: 'Where it goes', icon: 'map', text: details.value.where },
-  { label: 'When it fails', icon: 'warning', text: part.value.fails }
-])
+const key = computed(() => SHOWN.value[index.value])
+const device = computed(() => (isInside.value ? null : DEVICES[key.value as DeviceKey]))
+const itemName = computed(() => device.value?.name || PC_PARTS[key.value].name)
+const fact = computed(() => device.value?.fact || PART_DETAILS[key.value].fact)
+const shortName = (k: string) => (DEVICES[k as DeviceKey]?.name || PC_PARTS[k].name).replace(/ \(.*\)$/, '')
+const rows = computed(() => {
+  const d = device.value
+  if (d) {
+    return [
+      { label: 'What it looks like', icon: 'photo', text: d.looks },
+      { label: 'What it does', icon: 'bolt', text: d.does },
+      { label: 'How it connects', icon: 'paperclip', text: d.connects }
+    ]
+  }
+  const part = PC_PARTS[key.value]
+  const details = PART_DETAILS[key.value]
+  return [
+    { label: 'What it looks like', icon: 'photo', text: details.looks },
+    { label: 'What it does', icon: 'bolt', text: part.does },
+    { label: 'Where it goes', icon: 'map', text: details.where },
+    { label: 'When it fails', icon: 'warning', text: part.fails }
+  ]
+})
+function setGroup(g: string) {
+  if (g === group.value) return
+  inCase.value = false
+  group.value = g
+  index.value = 0
+}
 
 // ---------------------------------------------------------------- 3D
 const host = ref<HTMLDivElement | null>(null)
@@ -96,10 +139,12 @@ let stand: THREE.Group
 let turntable: THREE.Group
 let shown: THREE.Object3D | null = null
 let computer: THREE.Group
-const enlarged = ref(false)
+// "Shown larger than real size" for a small part, "smaller" for a big device
+const sizeNote = ref('')
 
 // The one object for each part (some live on the motherboard, one is a cable)
 const objectFor = (k: string): THREE.Object3D | null => {
+  if (DEVICES[k as DeviceKey]) return buildDevice(k as DeviceKey)
   if (!rig) return null
   if (k === 'cmos') return rig.cmos
   if (k === 'ports') return rig.ports
@@ -180,8 +225,11 @@ function show() {
   const box = new THREE.Box3().setFromObject(copy)
   const size = box.getSize(new THREE.Vector3())
   const largest = Math.max(size.x, size.y, size.z)
-  const scale = Math.min(5, 0.17 / largest)
-  enlarged.value = scale > 1.3
+  // a flat thing (keyboard, cable, extension socket) lies across the whole turntable; a tall one stands
+  // in the middle of it
+  const flat = size.y < largest * 0.25
+  const scale = Math.min(5, (flat ? 0.3 : 0.17) / largest)
+  sizeNote.value = scale > 1.3 ? 'Shown larger than real size' : scale < 0.75 ? 'Shown smaller than real size' : ''
   const holder = new THREE.Group()
   holder.add(copy)
   holder.scale.setScalar(scale)
@@ -203,7 +251,7 @@ function fadeAllBut(target: THREE.Object3D | null) {
 }
 
 watch(key, () => {
-  for (const k of SHOWN) {
+  for (const k of INSIDE) {
     const o = objectFor(k)
     if (o) setEmissive(o, 0, 0)
   }
@@ -219,7 +267,7 @@ watch(inCase, on => {
   if (on) fadeAllBut(objectFor(key.value))
   else {
     fadeAllBut(null)
-    for (const k of SHOWN) {
+    for (const k of INSIDE) {
       const o = objectFor(k)
       if (o) setEmissive(o, 0, 0)
     }
