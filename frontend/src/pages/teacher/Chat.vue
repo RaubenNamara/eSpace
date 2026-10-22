@@ -6,7 +6,7 @@
     <!-- Icon rail (tablet and up) -->
     <nav class="hidden md:flex w-16 flex-shrink-0 flex-col items-center justify-between py-3 bg-[var(--wa-rail)] border-r border-[var(--wa-border)]" aria-label="Chat">
       <div class="flex flex-col items-center gap-1.5">
-        <button type="button" class="w-10 h-10 rounded-full flex items-center justify-center text-[var(--wa-icon)] hover:bg-black/5 dark:hover:bg-white/5" title="eSpace menu" aria-label="Open the eSpace menu" @click="openAppSidebar">
+        <button type="button" class="w-10 h-10 rounded-full flex items-center justify-center text-[var(--wa-icon)] hover:bg-black/5 dark:hover:bg-white/5" title="Tusome menu" aria-label="Open the Tusome menu" @click="openAppSidebar">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
         </button>
         <button type="button" class="relative w-10 h-10 rounded-full flex items-center justify-center text-[var(--wa-text)] bg-black/5 dark:bg-white/10" title="Chats" aria-current="page">
@@ -18,7 +18,7 @@
         </button>
       </div>
       <div class="flex flex-col items-center gap-2">
-        <router-link :to="homePath" class="w-10 h-10 rounded-full flex items-center justify-center text-[var(--wa-icon)] hover:bg-black/5 dark:hover:bg-white/5" title="eSpace home">
+        <router-link :to="homePath" class="w-10 h-10 rounded-full flex items-center justify-center text-[var(--wa-icon)] hover:bg-black/5 dark:hover:bg-white/5" title="Tusome home">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
         </router-link>
         <img v-if="myPhoto" :src="myPhoto" alt="" class="w-9 h-9 rounded-full object-cover" :title="myName">
@@ -150,15 +150,15 @@
         <MessageComposer :replying-to="replyingTo" :sending="sending" @send="sendMessage" @cancel-reply="replyingTo = null" @activity="live.reportActivity" />
       </template>
 
-      <!-- nothing open: WhatsApp's welcome panel, in eSpace's words -->
+      <!-- nothing open: WhatsApp's welcome panel, in Tusome's words -->
       <div v-else class="flex-1 flex flex-col items-center justify-center text-center px-8 bg-[var(--wa-panel-header)] border-b-[6px] border-[var(--wa-green)]">
         <div class="w-24 h-24 rounded-full bg-[var(--wa-chip-on)] flex items-center justify-center mb-6">
           <svg class="w-12 h-12 text-[var(--wa-green)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
         </div>
-        <h2 class="text-[28px] font-light text-[var(--wa-text)]">eSpace Chat</h2>
+        <h2 class="text-[28px] font-light text-[var(--wa-text)]">Tusome Chat</h2>
         <p class="mt-8 text-[13px] text-[var(--wa-muted)] flex items-center gap-1.5">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-          Your messages stay inside your school's eSpace.
+          Your messages stay inside your school's Tusome.
         </p>
       </div>
     </section>

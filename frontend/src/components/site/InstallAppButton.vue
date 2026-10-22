@@ -1,5 +1,5 @@
 <template>
-  <!-- "Download the app": installs eSpace (a PWA - see utils/install.ts) on a phone or computer.
+  <!-- "Download the app": installs Tusome (a PWA - see utils/install.ts) on a phone or computer.
        Where the browser can install it, its own dialog opens; otherwise (iPhone/iPad, Safari on a
        Mac, Firefox, or before the browser is ready) the steps for that device are shown. -->
   <button v-if="variant === 'hero'" type="button" :class="heroClass" @click="start">
@@ -12,7 +12,7 @@
   </button>
   <button v-else type="button" class="flex w-full items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-semibold text-indigo-700 hover:bg-slate-100 dark:text-indigo-300 dark:hover:bg-white/10" @click="start">
     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14" /></svg>
-    Download the eSpace app
+    Download the Tusome app
   </button>
 
   <Teleport to="body">
@@ -70,14 +70,14 @@ const b = (s: string) => `<b>${s}</b>`
 
 const start = async () => {
   if (installed.value || isStandalone()) {
-    show('eSpace is installed', 'You are already using the eSpace app on this device - open it from your home screen, Start menu or dock.')
+    show('Tusome is installed', 'You are already using the Tusome app on this device - open it from your home screen, Start menu or dock.')
     return
   }
 
   // Android, and Chrome / Edge on a computer: the browser's own install dialog
   if (installPromptAvailable.value) {
     if (await promptInstall()) {
-      show('eSpace is installed', 'Open it any time from your home screen, Start menu or dock - it opens straight into eSpace, like any other app.')
+      show('Tusome is installed', 'Open it any time from your home screen, Start menu or dock - it opens straight into Tusome, like any other app.')
     }
     return
   }
@@ -90,38 +90,38 @@ const start = async () => {
   const macSafari = /Macintosh/.test(ua) && /Safari/.test(ua) && !chromium && !isIos()
 
   if (isIos()) {
-    show('Add eSpace to your Home Screen', 'On iPhone and iPad, eSpace installs from the browser\'s Share menu:', [
+    show('Add Tusome to your Home Screen', 'On iPhone and iPad, Tusome installs from the browser\'s Share menu:', [
       `Tap the ${b('Share')} button ${SHARE} - at the bottom of Safari (or top right on iPad).`,
       `Scroll down and tap ${b('Add to Home Screen')}.`,
-      `Tap ${b('Add')}. eSpace now opens from its own icon, like any other app.`
+      `Tap ${b('Add')}. Tusome now opens from its own icon, like any other app.`
     ], 'Using Chrome on iPhone? The Share button is in the address bar - the same steps work.')
   } else if (android) {
-    show('Install eSpace on your phone', 'Install it from your browser menu:', [
+    show('Install Tusome on your phone', 'Install it from your browser menu:', [
       `Tap the menu ${DOTS} at the top right of the browser.`,
       `Tap ${b('Install app')} or ${b('Add to Home screen')}.`,
-      `Tap ${b('Install')}. eSpace appears with your other apps.`
+      `Tap ${b('Install')}. Tusome appears with your other apps.`
     ], firefox ? 'In Firefox the option is called "Install". If you don\'t see it, open this page in Chrome.' : '')
   } else if (macSafari) {
-    show('Add eSpace to your Dock', 'Safari on a Mac installs eSpace as an app:', [
+    show('Add Tusome to your Dock', 'Safari on a Mac installs Tusome as an app:', [
       `In the menu bar, click ${b('File')}.`,
       `Click ${b('Add to Dock')}, then ${b('Add')}.`
     ], 'Needs macOS Sonoma or newer. On older Macs, open this page in Chrome or Edge instead.')
   } else if (firefox) {
-    show('Install eSpace on your computer', 'Firefox on a computer can\'t install apps. Open this page in Google Chrome or Microsoft Edge, then:', [
+    show('Install Tusome on your computer', 'Firefox on a computer can\'t install apps. Open this page in Google Chrome or Microsoft Edge, then:', [
       `Click ${b('Download the app')} again - the install window opens.`,
-      `Click ${b('Install')}. eSpace gets its own window and Start menu / desktop icon.`
+      `Click ${b('Install')}. Tusome gets its own window and Start menu / desktop icon.`
     ])
   } else if (edge) {
-    show('Install eSpace on your computer', 'In Microsoft Edge:', [
+    show('Install Tusome on your computer', 'In Microsoft Edge:', [
       `Click the menu ${b('&middot;&middot;&middot;')} at the top right.`,
       `Click ${b('Apps')} &rarr; ${b('Install this site as an app')}.`,
-      `Click ${b('Install')}. eSpace gets its own window and Start menu icon.`
+      `Click ${b('Install')}. Tusome gets its own window and Start menu icon.`
     ], 'Or click the install icon at the right end of the address bar.')
   } else {
-    show('Install eSpace on your computer', 'In Google Chrome:', [
+    show('Install Tusome on your computer', 'In Google Chrome:', [
       `Click the install icon at the right end of the address bar, or the menu ${DOTS} at the top right.`,
       `Choose ${b('Cast, save and share')} &rarr; ${b('Install page as app')}.`,
-      `Click ${b('Install')}. eSpace gets its own window and a desktop / Start menu icon.`
+      `Click ${b('Install')}. Tusome gets its own window and a desktop / Start menu icon.`
     ])
   }
 }

@@ -1,6 +1,6 @@
 <template>
-  <!-- Chat runs full screen like WhatsApp Web; this brings eSpace's own menu in over it -->
-  <button type="button" class="p-1.5 -ml-1.5 rounded-full" title="eSpace menu" aria-label="Open the eSpace menu" @click="openAppSidebar">
+  <!-- Chat runs full screen like WhatsApp Web; this brings Tusome's own menu in over it -->
+  <button type="button" class="p-1.5 -ml-1.5 rounded-full" title="Tusome menu" aria-label="Open the Tusome menu" @click="openAppSidebar">
     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
     </svg>
