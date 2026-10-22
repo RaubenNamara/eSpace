@@ -1,5 +1,5 @@
 <template>
-  <!-- A paper written in eSpace, one question at a time: answer, check, see the right answer or
+  <!-- A paper written in Tusome, one question at a time: answer, check, see the right answer or
        the model, and move on. The dots along the top show where you are and how you did. -->
   <div class="w-full max-w-3xl mx-auto">
     <button type="button" class="mb-3 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white" @click="router.push('/student/itembank')">

@@ -61,7 +61,7 @@
         <button class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" @click="bulkSetStatus('draft')">Draft</button>
         <button class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" @click="bulkSetStatus('archived')">Archive</button>
         <button class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" title="Students can download these and save them for offline reading" @click="bulkSetDownload(true)">Allow download</button>
-        <button class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" title="Students can only read these inside eSpace" @click="bulkSetDownload(false)">No download</button>
+        <button class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" title="Students can only read these inside Tusome" @click="bulkSetDownload(false)">No download</button>
         <button class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" @click="bulkExport">Export CSV</button>
         <button class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors" @click="bulkDeleteSelected">Delete</button>
       </BulkActionBar>
@@ -267,7 +267,7 @@
                 <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Book cover</p>
                 <p class="text-xs text-gray-500 dark:text-gray-400">
                   {{ editingBook.cover_design
-                    ? 'A cover designed in eSpace.'
+                    ? 'A cover designed in Tusome.'
                     : editingBook.cover_image
                       ? (isAutoCover(editingBook.cover_image) ? 'Using the first page of the file.' : 'Using your own picture.')
                       : 'No picture - a printed jacket with the title and author is shown.' }}
@@ -528,7 +528,7 @@ const authStore = useAuthStore()
 const role: 'teacher' | 'hod' | 'admin' = authStore.userRole === 'hod' ? 'hod' : authStore.userRole === 'teacher' ? 'teacher' : 'admin'
 const libApi = `${API_BASE}/${role}/library`
 const COPY = {
-  teacher: { description: 'Textbooks, notes and slides for your classes - students read them right in eSpace.', emptyTitle: 'Your shelves are empty', emptyMessage: 'Add a PDF or PowerPoint - a textbook, revision notes, slides - and students read it in the browser. The first page becomes its cover.' },
+  teacher: { description: 'Textbooks, notes and slides for your classes - students read them right in Tusome.', emptyTitle: 'Your shelves are empty', emptyMessage: 'Add a PDF or PowerPoint - a textbook, revision notes, slides - and students read it in the browser. The first page becomes its cover.' },
   hod: { description: "Your department's books - yours and your teachers' - for the whole department, a class or one stream.", emptyTitle: "The department's shelves are empty", emptyMessage: 'Add a textbook or set of notes for the whole department, every stream of a class, or a single stream. The first page becomes its cover.' },
   admin: { description: "The school's books, in every department - upload one and choose the department and who it's for.", emptyTitle: "The school's shelves are empty", emptyMessage: "Add a textbook for a department - the whole department, every stream of a class, or one stream. Teachers' books show up here too." }
 }

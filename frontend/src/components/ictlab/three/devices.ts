@@ -73,7 +73,7 @@ function desktopTexture() {
     g.font = '11px sans-serif'
     g.fillText('10:24', 470, 294)
     g.font = 'bold 26px sans-serif'
-    g.fillText('eSpace', 330, 160)
+    g.fillText('Tusome', 330, 160)
   })
 }
 /** A product label */

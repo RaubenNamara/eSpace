@@ -23,8 +23,8 @@ export default defineConfig(() => ({
       injectRegister: false,
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'eSpace - the digital school',
-        short_name: 'eSpace',
+        name: 'Tusome - the digital school',
+        short_name: 'Tusome',
         description: 'Notes, books, videos, live lessons, competency-based assessment and Learning Maps for secondary schools',
         theme_color: '#15874a',
         background_color: '#ffffff',
@@ -53,7 +53,7 @@ export default defineConfig(() => ({
         ]
       },
       workbox: {
-        // Browser (Web Push) notifications - public/push-sw.js shows them and opens eSpace on tap
+        // Browser (Web Push) notifications - public/push-sw.js shows them and opens Tusome on tap
         importScripts: ['push-sw.js'],
         // .mjs and the standard fonts are the PDF reader's own (pdf.js worker) - kept so a PDF saved
         // for offline reading (utils/offline/docs.ts) opens with no network

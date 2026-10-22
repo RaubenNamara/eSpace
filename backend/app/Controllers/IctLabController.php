@@ -69,7 +69,8 @@ class IctLabController extends Controller
         $db = $this->db();
 
         $stmt = $db->prepare(
-            "SELECT activity_key, level, MAX(score) AS best, COUNT(*) AS attempts, MAX(completed_at) AS last_at
+            "SELECT activity_key, level, MAX(score) AS best, COUNT(*) AS attempts, MAX(completed_at) AS last_at,
+                    MAX(CASE WHEN activity_key LIKE 'typing-%' AND duration_seconds > 0 THEN ROUND(steps_total * 12 / duration_seconds) END) AS best_wpm
              FROM ict_lab_attempts WHERE student_id = ? GROUP BY activity_key, level"
         );
         $stmt->execute([$studentId]);
@@ -79,6 +80,7 @@ class IctLabController extends Controller
             'best' => (int) $r['best'],
             'attempts' => (int) $r['attempts'],
             'last_at' => $r['last_at'],
+            'best_wpm' => $r['best_wpm'] === null ? null : (int) $r['best_wpm'],
         ], $stmt->fetchAll());
 
         $stmt = $db->prepare(self::LINK_SELECT . " WHERE " . StudentENoteController::visibilityClause() . " ORDER BY l.updated_at DESC");
@@ -90,7 +92,10 @@ class IctLabController extends Controller
 
     /**
      * POST /student/ict-lab/attempts  { activity_key, level, steps_total, mistakes, hints_used, duration_seconds }
-     * The score: 100, less 5 for each mistake and 3 for each hint used.
+     * The score: 100, less 5 for each mistake and 3 for each hint used. A typing lesson
+     * (activity_key typing-...) sends the characters typed as steps_total and the wrong keys as
+     * mistakes; its score is the accuracy, and its speed (words a minute) is worked out from
+     * steps_total and duration_seconds.
      */
     public function saveAttempt(): void
     {
@@ -109,6 +114,11 @@ class IctLabController extends Controller
         $steps = max(0, min(999, (int) $this->input('steps_total', 0)));
         $seconds = max(0, min(86400, (int) $this->input('duration_seconds', 0)));
         $score = max(0, 100 - $mistakes * 5 - $hints * 3);
+        if (str_starts_with($activity, 'typing-')) {
+            // no faster than 200 words a minute - a faster "attempt" is not real typing
+            $seconds = max($seconds, (int) ceil($steps * 12 / 200));
+            $score = $steps + $mistakes > 0 ? (int) round(100 * $steps / ($steps + $mistakes)) : 0;
+        }
 
         $stmt = $this->db()->prepare(
             "INSERT INTO ict_lab_attempts (student_id, activity_key, level, steps_total, mistakes, hints_used, duration_seconds, score, completed_at)

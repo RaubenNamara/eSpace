@@ -1,5 +1,5 @@
 /**
- * The eSpace user guide (/guide): one part per role, each a list of short how-tos. Plain data, so
+ * The Tusome user guide (/guide): one part per role, each a list of short how-tos. Plain data, so
  * the guide page can search it and new sections are easy to add.
  */
 export interface GuideTopic {
@@ -23,25 +23,25 @@ export const GUIDE: GuidePart[] = [
   {
     key: 'start',
     label: 'Getting started',
-    blurb: 'Signing in, finding your way around, and using eSpace on a phone.',
+    blurb: 'Signing in, finding your way around, and using Tusome on a phone.',
     topics: [
       {
         id: 'sign-in', title: 'Signing in', icon: 'users',
         intro: 'Your school gives you your account - a username (or email) and a password.',
-        steps: ['Open your school\'s eSpace address and choose Sign in.', 'Enter your username or email, and your password.', 'Teachers given a temporary password are asked to choose a new one straight away.', 'Forgot your password? Choose "Forgot password" on the sign-in page and follow the email.'],
+        steps: ['Open your school\'s Tusome address and choose Sign in.', 'Enter your username or email, and your password.', 'Teachers given a temporary password are asked to choose a new one straight away.', 'Forgot your password? Choose "Forgot password" on the sign-in page and follow the email.'],
         tips: ['Sign out on shared computers - your account opens your marks and messages.']
       },
       {
         id: 'layout', title: 'Finding your way around', icon: 'map',
-        intro: 'Everything you can use is in the menu on the left (tap the ☰ button on a phone).',
-        steps: ['The dashboard is your home page - what\'s due, what\'s new and what to do next.', 'The search box at the top finds notes, assessments and books by name.', 'The bell shows notifications; the speech bubble opens your chats.', 'Tap your name (top right) for your profile, password and sign out.'],
+        intro: 'Everything you can use is in the menu on the left. On a phone, students have a bar at the bottom - Home, Learn, Work, Chats and More (More opens the full menu); everyone else taps the ☰ button.',
+        steps: ['The dashboard is your home page - what needs you today, in small cards. Each card shows a few things; tap "Show more" to open it up.', 'The search box at the top finds notes, assessments and books by name.', 'The bell shows notifications; the speech bubble opens your chats.', 'Tap your name (top right) for your profile, password and sign out.'],
         tips: ['The moon/sun button switches between dark and light mode.', 'Most lists remember the class and filters you last used.']
       },
       {
-        id: 'phone', title: 'Using eSpace on a phone', icon: 'keyboard',
-        intro: 'eSpace works in the browser on any phone - nothing to install.',
-        steps: ['Open eSpace in Chrome (or your phone\'s browser) - on the school website, tap the Sign in button at the bottom right.', 'Use the browser menu\'s "Add to Home screen" (or "Install app") to open it like an app, on phones and iPads.', 'On small screens, filters fold into a Filters button at the top of each page.'],
-        tips: ['When the school updates eSpace, the app picks up the new version as soon as you open it.']
+        id: 'phone', title: 'Using Tusome on a phone', icon: 'keyboard',
+        intro: 'Tusome works in the browser on any phone - nothing to install.',
+        steps: ['Open Tusome in Chrome (or your phone\'s browser) - on the school website, tap the Sign in button at the bottom right.', 'Use the browser menu\'s "Add to Home screen" (or "Install app") to open it like an app, on phones and iPads.', 'On small screens, filters fold into a Filters button at the top of each page, and long lists become short cards.', 'Some lists on the dashboard (like the learners who need attention) slide sideways - swipe to see more.'],
+        tips: ['When the school updates Tusome, the app picks up the new version as soon as you open it.']
       },
       {
         id: 'offline', title: 'Working offline', icon: 'download',
@@ -58,13 +58,14 @@ export const GUIDE: GuidePart[] = [
     topics: [
       {
         id: 's-dashboard', title: 'Your dashboard (eClass)', icon: 'sparkles',
-        intro: 'Open eSpace and your dashboard shows what matters today.',
-        steps: ['The banner at the top sums up your day, with a button for the most useful thing to do now.', 'Your week shows work due and live classes day by day - overdue work is in red.', '"What to do next" lists the most useful things to do, in order; Scores shows your latest results.', 'Your Learning Map, achievements and the newest books follow below.', 'If a live class has started, a red banner at the top lets you join in one tap.'],
+        intro: 'Open Tusome and your dashboard shows what matters today, in a few small cards.',
+        steps: ['The school\'s notices slide across the top - tap one to read it in full.', 'Pending assessments lists the work waiting for you, overdue first, with a Start button on each.', 'Jump in takes you straight to eNotes, Live classes, the eLibrary, the Item Bank and more - tap "Show more" for the rest.', 'My classes shows your subjects; My notes shows the notes you wrote most recently.', 'If a live class has started, a red banner at the top lets you join in one tap.'],
+        tips: ['How you are doing - work done and missed, your average and your reading - is in Reports, under My activity.']
       },
       {
         id: 's-enotes', title: 'Reading eNotes', icon: 'document',
         intro: 'eNotes are your teachers\' notes, read page by page like a book.',
-        steps: ['Open eNotes and tap a topic on the shelf (or "Continue reading").', 'Turn pages with Previous and Next, or by swiping from the edge of the page.', 'Tap the speaker to listen to a page read aloud.', 'Select text to highlight it in a colour - only you see your highlights.', 'Every page has its own "Add my summary" tab at its foot - two pages side by side each have one. Tap it to write what you understood from that page.', 'eSpace remembers your page, so you can carry on next time.'],
+        steps: ['Open eNotes and tap a topic on the shelf (or "Continue reading").', 'Turn pages with Previous and Next, or by swiping from the edge of the page.', 'Tap the speaker to listen to a page read aloud.', 'Select text to highlight it in a colour - only you see your highlights.', 'Every page has its own "Add my summary" tab at its foot - two pages side by side each have one. Tap it to write what you understood from that page.', 'Tusome remembers your page, so you can carry on next time.'],
         tips: ['The summary tabs stay in view at the foot of the book, even on a long page - you never have to scroll down to find them.', 'Some pages end with a quick assessment on that page\'s learning outcome - try it while it\'s fresh.']
       },
       {
@@ -74,9 +75,14 @@ export const GUIDE: GuidePart[] = [
       },
       {
         id: 's-ictlab', title: 'The ICT Lab', icon: 'keyboard',
-        intro: 'Hands-on computer activities in 3D - meet every part and 22 everyday devices (input, output, storage, networking and power, laptops and tablets) in the Parts and devices showroom, connect a computer (plug every cable into the right port at the back, then power it up), find the parts in a computer, build one, clean a dusty one, find and fix real faults (Troubleshooting), or terminate a network cable - one step at a time.',
-        steps: ['Open Virtual Lab in the menu, then ICT Lab.', 'Pick an activity and a level: Simple shows you what to use, Intermediate gives the steps without pointers, Advanced gives harder tasks.', 'Read the step, then do it - tap the part, pick a part from the tray and tap where it goes, or use the tool. When you get it right the step is ticked and the next one appears.', 'A wrong move counts as a mistake and tells you why. A hint costs 3 points, a mistake 5 - but after two tries on a step (or a long time stuck) the hint shows by itself, free, and what to use glows.', 'Drag to turn the computer round, pinch or scroll to zoom. In Assembling, drag a part from the desk into the case.', 'In Cleaning, choose the air can or the electric blower - the electric one must be plugged into the wall socket and switched on (the computer stays unplugged). Then press and hold on the dust.', 'At the end you see your score; your best score for each level shows on the ICT Lab page.'],
-        tips: ['"Read about this" on a step opens the page of your teacher\'s eNotes that explains it.']
+        intro: 'Hands-on computer activities in 3D. Start with the computer lab rules, then the Parts and devices showroom (every part inside a computer and 22 everyday devices - input, output, storage, networking and power, laptops and tablets), Connecting a computer, Parts of a computer, Assembling one, Cleaning a dusty one, Troubleshooting real faults, and terminating a network cable - one step at a time.',
+        steps: ['Open Virtual Lab in the menu, then ICT Lab.', 'Start with Computer lab rules: tap each of the 12 rules to see why it matters, then choose Check what I know and decide whether each situation is allowed. 80% earns your lab pass.', 'In the showroom, pick a group (Inside the computer, Input, Output, Storage, Networking & power, Computers) and a device. Drag to turn it, pinch or scroll to zoom, and read what it does and how it connects.', 'Tap a numbered dot on a part to fly in close and read what that detail is - the processor socket, the memory slots, a mouse\'s scroll wheel. Labels hides the numbers; Turn starts or stops it turning.', 'Choose Test yourself for 10 questions: name the part on the stand, pick the part that does a job, and name a marked detail on the motherboard.', 'Is it safe online? has 3 parts: sort an inbox into safe messages and scams (tap anything suspicious, and tap a link to see where it really goes), judge websites from their address bar, and test passwords with the strength meter - try made-up ones, nothing is saved.', 'Binary and storage has 3 parts: flip 8 light switches to make and read numbers in binary, make the codes for letters and see your name in 1s and 0s, then put bit, byte, KB, MB, GB and TB in order and fill a 16 GB flash disk.', 'Build a network has 5 missions on a classroom floor plan: connect the classroom, share a printer, go online, fix a broken network, add Wi-Fi. Drag devices from the tray to the places that light up, tap two devices to run a cable between them, then test with Ping, Print or Open a website and watch the data travel - or see where it stops. Tap a cable to test it with the cable tester.', 'Play Spot the hazard: a computer lab in 3D with 8 dangers hidden round it. Drag to look around, zoom in, and tap each one within 2 minutes - each tells you what is wrong and what to do. Things done right are there too; tapping them costs points. Hint shows a ring round one you have not found.', 'Open Inside a computer and press any letter: follow it in 3D from the keyboard, down the cable, along the motherboard to the processor, memory and graphics card, onto the monitor - and, when you save, to the hard disk. Each stop is marked Input, Process, Output or Storage; five questions at the end check what you learnt.', 'Open Typing tutor to learn to type without looking: 16 short lessons, from F and J on the home row to a one-minute speed test. The key to press lights up and the hand shows which finger to use. A wrong key does not move on - press the right one. 90% accuracy opens the next lesson; speed earns stars.', 'Pick an activity and a level: Simple shows you what to use, Intermediate gives the steps without pointers, Advanced gives harder tasks.', 'Read the step, then do it - tap the part, pick a part from the tray and tap where it goes, or use the tool. When you get it right the step is ticked and the next one appears.', 'Connecting a computer: drag a cable\'s plug onto the port it goes in at the back of the computer (or tap the plug, then the port) (HDMI for the monitor, USB for the keyboard and mouse, green for speakers, pink for a microphone, the LAN port for the network cable). Plug in at the wall and switch on last, then press the power button - and watch the monitor start up. A plug let go anywhere else goes back to its place.', 'A wrong move counts as a mistake and tells you why. A hint costs 3 points, a mistake 5 - but after two tries on a step (or a long time stuck) the hint shows by itself, free, and what to use glows.', 'Drag to turn the computer round, pinch or scroll to zoom. In Assembling, drag a part from the desk into the case.', 'In Cleaning, choose the air can or the electric blower - the electric one must be plugged into the wall socket and switched on (the computer stays unplugged). Then press and hold on the dust.', 'At the end you see your score; your best score for each level shows on the ICT Lab page.'],
+        tips: ['"Read about this" on a step opens the page of your teacher\'s eNotes that explains it.', 'At Advanced the ports have no names - match each plug by its shape and colour.']
+      },
+      {
+        id: 's-anatomy', title: 'The Anatomy Explorer', icon: 'beaker',
+        intro: 'A real 3D model of the human body for biology - turn it, zoom in and click any part to read what it does.',
+        steps: ['Open Virtual Lab in the menu, then Anatomy Explorer.', 'Choose a body system to show (skeleton, muscles, heart and blood vessels and more), search for a part, or open a system on its own.', 'Click a part to read its name and what it does.', 'Open the heart close-up to watch it pump - the valves and the blood flowing, inside and outside.', '"Modules, tours & quizzes" has step-by-step tours and quizzes on each system.']
       },
       {
         id: 's-live', title: 'Joining live classes', icon: 'video',
@@ -104,12 +110,12 @@ export const GUIDE: GuidePart[] = [
         steps: ['While reading, tap the speech-bubble button at the top.', 'Write your question - tick "About page" to say which page.', 'Classmates and your teacher answer; the teacher can mark the best answer.', 'You get a notification when someone answers.'],
       },
       {
-        id: 's-notices', title: 'The noticeboard', icon: 'speaker',
-        steps: ['New notices show on your dashboard and on the Noticeboard.', 'Open a notice to read it - your teacher can see that you have read it.'],
+        id: 's-notices', title: 'Notices from the school', icon: 'speaker',
+        steps: ['Notices slide across the top of your dashboard; new ones say NEW and the label shows how many.', 'Tap a notice to read it in full underneath - that counts as read, and your teacher can see you have read it.', 'Rest a finger or the pointer on the notices to stop them moving.']
       },
       {
         id: 's-more', title: 'Reports, achievements and chats', icon: 'trophy',
-        steps: ['Reports shows your end-of-term report cards once your class teacher generates them.', 'Achievements shows your badges and your class growth board - improvement counts, not just top marks.', 'Academic History lists every class and year you\'ve been part of.', 'Chats lets you message your teachers and classmates, with photos and voice notes.'],
+        steps: ['Reports opens on My activity: pick Week, Month, Term or Year to see the assessments set, done, missed and still open, your average, each subject, what you read and watched, the live classes you joined and the days you were active.', 'The Report cards tab has your end-of-term report cards once your class teacher generates them.', 'Achievements shows your badges and your class growth board - improvement counts, not just top marks.', 'Academic History lists every class and year you\'ve been part of.', 'Chats lets you message your teachers and classmates, with photos and voice notes.']
       }
     ]
   },
@@ -120,7 +126,9 @@ export const GUIDE: GuidePart[] = [
     topics: [
       {
         id: 't-dashboard', title: 'Your dashboard', icon: 'sparkles',
-        steps: ['The banner at the top sums up your day; below it, today\'s timeline shows your lessons and live classes in order.', 'Marking shows how many scripts are waiting and opens the next one - or says you\'re all caught up.', '"Need attention" lists learners who may be slipping, from Early warning.', '"Your classes" shows each class\'s hand-in and reading rates and this week\'s topics.', '"Recently" scrolls through the latest submissions, finished eNotes and messages.'],
+        intro: 'Your day in a few small cards - each shows a few things and opens up with "Show more".',
+        steps: ['The school\'s notices slide across the top; tap one to read it.', 'To mark lists each assessment with scripts waiting, with a Mark button - "Mark next" opens the oldest script.', 'Jump in goes straight to Assessments, eNotes, Live classes, My week, the Marksheet and more.', 'Today shows your live lessons and the assessments closing soon.', 'Need attention lists learners who may be slipping, from Early warning, each with a Message button. On a phone, swipe sideways through them.', 'My classes shows each class with how many learners need support - tap one for its Learning Map.'],
+        tips: ['Tap the students figure beside your department\'s name to see everyone enrolled.']
       },
       {
         id: 't-classes', title: 'My Classes and Student View', icon: 'users',
@@ -128,7 +136,7 @@ export const GUIDE: GuidePart[] = [
       },
       {
         id: 't-enotes', title: 'Writing eNotes', icon: 'document',
-        steps: ['Open eNotes and choose New topic. Pick the subject, class and (ideally) the curriculum topic.', 'Add pages: text, pictures, equations, tables and more. Add narration if you like.', 'Design a cover, then Publish when it\'s ready.', 'Use Duplicate to give the same topic to other streams - copies stay linked.', '"Who\'s reading" and Reading insights show who has opened it and the pages students stop on.'],
+        steps: ['Open eNotes and choose New topic. Pick the subject, the class stream(s) and (ideally) the curriculum topic.', 'Add pages: text, pictures, equations, tables and more. Add narration if you like.', 'Design a cover, then Publish when it\'s ready.', 'Use Duplicate to give the same topic to other streams. Streams that already have it are greyed out, so a stream never gets it twice.', 'Copies of a published topic can be published straight away or kept as drafts. When a topic has draft copies, "Publish them" publishes them all in one click and tells the students.', 'The topic\'s LOA and AOI reach every stream that has a published copy.', '"Who\'s reading" and Reading insights show who has opened it and the pages students stop on.'],
         tips: ['Share with colleagues to let others in your department copy a topic.']
       },
       {
@@ -138,7 +146,8 @@ export const GUIDE: GuidePart[] = [
       },
       {
         id: 't-ictlab', title: 'The ICT Lab and linking it to your notes', icon: 'keyboard',
-        steps: ['Open Virtual Lab in the menu, then ICT Lab. Try any activity at any level - your own runs are not saved.', 'Beside every step is a page icon. Tap it to link that step to one of your eNotes - the whole topic, or one page.', 'Students on that step then see "Read about this", which opens your page. A link works at every level.', 'Students\' best scores for each activity and level are kept as they finish.'],
+        steps: ['Open Virtual Lab in the menu, then ICT Lab. Try any activity at any level - your own runs are not saved.', 'Computer lab rules comes first for students: 12 rules, then situations to judge. A student who scores 80% has a lab pass, shown on their ICT Lab page.', 'The Parts and devices showroom shows every part and 22 devices in HD 3D, with numbered details to fly in to - useful on a projector when teaching input, output, storage and networking. Test yourself checks what students know.', 'Beside every step is a page icon. Tap it to link that step to one of your eNotes - the whole topic, or one page.', 'Students on that step then see "Read about this", which opens your page. A link works at every level.', 'Students\' best scores for each activity and level are kept as they finish.'],
+        tips: ['Each student\'s best Test yourself and lab rules scores are kept like any activity.', 'The Anatomy Explorer (Virtual Lab, then Anatomy Explorer) gives biology lessons a 3D human body, with tours and quizzes.']
       },
       {
         id: 't-live', title: 'Live classes', icon: 'video',
@@ -152,7 +161,7 @@ export const GUIDE: GuidePart[] = [
       },
       {
         id: 't-marking', title: 'Marking', icon: 'check-circle',
-        steps: ['Tap "Mark N" on an assessment (or a script on your dashboard).', 'Mark each answer on screen - you can write on drawings and PDFs.', 'Add feedback, then return the script to the student.', 'Returned results update the student\'s Learning Map straight away.'],
+        steps: ['Tap "Mark" on an assessment (or on your dashboard\'s To mark card).', 'Mark each answer on screen - write on drawings and PDFs in red, blue or green ink with the tools beside the part\'s label.', 'Your marks save as you go - "Marks saved" pops up to say so.', 'Add feedback, then return the script to the student.', 'Returned results update the student\'s Learning Map straight away.']
       },
       {
         id: 't-insight', title: 'Learning Map, coverage and engagement', icon: 'map',
@@ -178,7 +187,7 @@ export const GUIDE: GuidePart[] = [
       },
       {
         id: 't-notices', title: 'Posting a notice', icon: 'speaker',
-        steps: ['Open Noticeboard and tap Post a notice.', 'Choose one of your classes (or all its streams), write the notice, and post.', 'Open your notice to see how many have read it - and who hasn\'t yet.'],
+        steps: ['Open Noticeboard and tap Post a notice.', 'Choose one of your classes (or all its streams), write the notice, and post.', 'It slides across the top of your students\' dashboards until they read it.', 'Open your notice to see how many have read it - and who hasn\'t yet.']
       },
       {
         id: 't-results', title: 'Marksheets, physical exams and report cards', icon: 'chart',
@@ -193,7 +202,7 @@ export const GUIDE: GuidePart[] = [
     topics: [
       {
         id: 'h-overview', title: 'Your department at a glance', icon: 'chart',
-        steps: ['The HOD dashboard summarises teachers, classes, content and results in your department.', 'Performance and mastery views compare classes and subjects.', 'Marksheets and Physical Exams work across every class in the department.'],
+        steps: ['The dashboard shows what waits for your approval, the assessments set lately, and shortcuts to the Term report, Assessments, Marksheet and Analytics.', 'Need attention counts the learners who may be slipping, by reason.', 'Teachers shows who was in this week and how many scripts each has waiting.', 'Curriculum mastery and class comparisons are in the Term report and Analytics.', 'Marksheets and Physical Exams work across every class in the department.']
       },
       {
         id: 'h-warning', title: 'Early warning for the department', icon: 'warning',
@@ -217,11 +226,15 @@ export const GUIDE: GuidePart[] = [
   {
     key: 'admin',
     label: 'Admins',
-    blurb: 'Setting up and running the school\'s eSpace.',
+    blurb: 'Setting up and running the school\'s Tusome.',
     topics: [
       {
         id: 'a-setup', title: 'Setting up the school', icon: 'wrench',
         steps: ['Add academic years and terms, and mark the current one.', 'Add classes and their streams (e.g. S.1 A, S.1 B).', 'Add departments and their subjects.', 'Set the school details and crest under Settings - they appear on report cards.'],
+      },
+      {
+        id: 'a-dashboard', title: 'Your dashboard and school activity', icon: 'sparkles',
+        steps: ['Finish setting up lists what is still missing in the school\'s setup, each with a Fix button that takes you straight there.', 'Jump in: enrol students, see who is enrolled, Supervision, post a notice, Teachers, bulk enrolment, Reports and Settings.', 'Signed in this week and Enrolment show who is using Tusome and where the learners are.', 'School activity (Today, 7 days or 30 days) shows who signed in, when, from where and on what device, and what each teacher and HOD did - or "Viewed only".', 'Student sign-ins has the full list of students\' sign-ins.']
       },
       {
         id: 'a-people', title: 'Accounts and enrolment', icon: 'users',
@@ -240,7 +253,7 @@ export const GUIDE: GuidePart[] = [
       {
         id: 'a-bulk-enrol', title: 'Enrolling many students in a subject from a spreadsheet', icon: 'users',
         intro: 'For optional subjects: a workbook with a sheet per subject (a sitting plan or class list), each listing student names and streams.',
-        steps: ['Open Bulk subject enrolment (under People) and choose the file. Check the class and the academic year.', 'Each sheet shows how many students it lists, with its subject already picked when the sheet name matches one - change it if needed. A sheet can go into more than one subject.', 'Press Check the names. eSpace finds each student in that class by name and stream, even with small spelling slips or the names in a different order.', 'Names it is not sure of are shown first: choose the right student from the list, or leave them out. Students already in the subject are skipped.', 'Press Enrol. Each student is enrolled under their own stream; running the same sheet again never enrols anyone twice.'],
+        steps: ['Open Bulk subject enrolment (under People) and choose the file. Check the class and the academic year.', 'Each sheet shows how many students it lists, with its subject already picked when the sheet name matches one - change it if needed. A sheet can go into more than one subject.', 'Press Check the names. Tusome finds each student in that class by name and stream, even with small spelling slips or the names in a different order.', 'Names it is not sure of are shown first: choose the right student from the list, or leave them out. Students already in the subject are skipped.', 'Press Enrol. Each student is enrolled under their own stream; running the same sheet again never enrols anyone twice.'],
         tips: ['The sheet needs a NAME (or NAMES) column and a STREAM column. Titles, room labels like "S.1A" and blank rows are skipped.']
       },
       {
@@ -249,7 +262,7 @@ export const GUIDE: GuidePart[] = [
       },
       {
         id: 'a-run', title: 'Reports, analytics and logs', icon: 'chart',
-        steps: ['Report Cards: generate and publish end-of-term reports.', 'Engagement and analytics show activity across the whole school.', 'Rewards & Badges sets the rules for achievements.', 'Demo requests lists schools that asked for a demo on the website.', 'System Logs shows sign-ins; Backup keeps copies of the data.'],
+        steps: ['Reports: student competency reports (LOA, AOI, EOC) and report cards. The Curriculum mastery tab shows how much of the curriculum has an assessment linked, and how students are doing, subject by subject.', 'Report Cards: generate and publish end-of-term reports.', 'Engagement and analytics show activity across the whole school.', 'Rewards & Badges sets the rules for achievements.', 'Demo requests lists schools that asked for a demo on the website.', 'System Logs shows sign-ins; Backup keeps copies of the data.']
       },
       {
         id: 'a-parents', title: 'Parents and the weekly update', icon: 'users',
@@ -259,7 +272,7 @@ export const GUIDE: GuidePart[] = [
       },
       {
         id: 'a-notices', title: 'Noticeboard and exam dates', icon: 'speaker',
-        steps: ['Noticeboard: post to everyone, all students, all staff, or a class - pin important ones to the top, and set a date for it to come down.', 'Exam dates: add each exam (for one class or every class).'],
+        steps: ['Noticeboard: post to everyone, all students, all staff, or a class - pin important ones to the top, and set a date for it to come down.', 'Notices slide across the top of everyone\'s dashboard until they have read them.', 'Exam dates: add each exam (for one class or every class).']
       }
     ]
   }

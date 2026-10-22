@@ -1,5 +1,5 @@
 <template>
-  <!-- The eSpace app around a tour screen: a slim sidebar and a top bar, as in the real app -->
+  <!-- The Tusome app around a tour screen: a slim sidebar and a top bar, as in the real app -->
   <div class="w-full h-full flex bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white font-sans text-[0.6875rem]">
     <aside class="w-[9.375rem] flex-shrink-0 border-r border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 p-3 flex flex-col gap-0.5">
       <div class="mb-3 px-1"><Wordmark size="sm" /></div>

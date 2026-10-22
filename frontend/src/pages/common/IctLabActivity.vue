@@ -230,7 +230,11 @@ const onAct = (action: string, wrongMessage?: string) => {
     say('good', `Done - ${t}${/[.?!]$/.test(t) ? '' : '.'}`)
     stepIndex.value++
     hintShown.value = false
-    if (stepIndex.value >= steps.value.length) finish()
+    // Connecting a computer ends with it starting up - let the learner watch it before the score
+    if (stepIndex.value >= steps.value.length) {
+      if (activity.value?.scene === 'connect') setTimeout(() => finish(), 4800)
+      else finish()
+    }
     return
   }
   if (done.value.includes(action)) {

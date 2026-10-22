@@ -664,7 +664,7 @@ const authStore = useAuthStore()
 // --- the parts of the dashboard, and the period the activity sections show (remembered on this device) ---
 const SECTIONS = [
   { id: 'dash-glance', label: 'At a glance' },
-  { id: 'dash-usage', label: 'How eSpace is used' },
+  { id: 'dash-usage', label: 'How Tusome is used' },
   { id: 'dash-people', label: 'Who is active' },
 ]
 const goTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })

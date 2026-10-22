@@ -39,6 +39,8 @@ export interface ConnectTower {
 const mat = (color: number, roughness = 0.5, metalness = 0.05, extra: THREE.MeshStandardMaterialParameters = {}) =>
   new THREE.MeshStandardMaterial({ color, roughness, metalness, ...extra })
 const BACK_Z = 0.21
+/** Ports and plugs are drawn a little larger than life, so they read clearly from the bench */
+export const IO_SCALE = 1.35
 
 function rbox(w: number, h: number, d: number, m: THREE.Material, r = 0.003) {
   return new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 2, Math.min(r, w / 2.1, h / 2.1, d / 2.1)), m)
@@ -103,7 +105,12 @@ export function buildConnectTower(): ConnectTower {
   led.position.set(0.03, 0.4222, -0.17)
   group.add(led)
   // two USB ports and a headphone jack on the top front, as most cases have
-  for (const x of [-0.045, -0.03]) group.add(box(0.012, 0.002, 0.005, mat(0x0a0a0a), x, 0.4205, -0.17))
+  for (const x of [-0.05, -0.034]) group.add(box(0.013, 0.002, 0.0055, mat(0x0a0a0a), x, 0.4205, -0.17))
+  for (const [x, c] of [[0.05, 0x16a34a], [0.062, 0xec4899]] as const) {
+    const j = new THREE.Mesh(new THREE.CylinderGeometry(0.0035, 0.0035, 0.002, 20), mat(c, 0.4))
+    j.position.set(x, 0.4205, -0.17)
+    group.add(j)
+  }
 
   const ports: Port[] = []
   const at = (x: number, y: number) => new THREE.Vector3(x, y, BACK_Z + 0.0005)
@@ -112,8 +119,9 @@ export function buildConnectTower(): ConnectTower {
   const TAG_X = -0.13
   const addPort = (key: string, kind: PortKind, label: string, x: number, y: number, w: number, h: number, visual: THREE.Object3D, tagText: string, tagY = y, tagBg = '#115633') => {
     visual.position.set(x, y, BACK_Z + 0.0006)
+    if (kind !== 'c14') visual.scale.setScalar(IO_SCALE)
     group.add(visual)
-    const hit = new THREE.Mesh(new THREE.BoxGeometry(Math.max(w + 0.006, 0.016), Math.max(h + 0.006, 0.011), 0.006), new THREE.MeshBasicMaterial({ visible: false }))
+    const hit = new THREE.Mesh(new THREE.BoxGeometry(Math.max(w * IO_SCALE + 0.006, 0.018), Math.max(h * IO_SCALE + 0.006, 0.012), 0.006), new THREE.MeshBasicMaterial({ visible: false }))
     hit.position.set(x, y, BACK_Z + 0.003)
     group.add(hit)
     const tag = tagSprite(tagText, tagBg)
@@ -160,18 +168,20 @@ export function buildConnectTower(): ConnectTower {
   group.add(grille)
 
   // ---- the motherboard's I/O shield
-  const shieldX = -0.06
-  group.add(box(0.05, 0.15, 0.0015, mat(0xb8bcc3, 0.35, 0.85), shieldX, 0.24, BACK_Z + 0.001))
+  const shieldX = -0.055
+  group.add(box(0.068, 0.17, 0.0015, mat(0xc4c8ce, 0.35, 0.85), shieldX, 0.25, BACK_Z + 0.001))
+  // a dark frame round it, as on a real case
+  group.add(box(0.072, 0.174, 0.001, mat(0x111111, 0.6), shieldX, 0.25, BACK_Z + 0.0004))
   const usbPort = (blue: boolean) => {
     const g = new THREE.Group()
     g.add(box(0.0135, 0.006, 0.002, mat(0xc0c5cc, 0.25, 0.9)))
     g.add(box(0.011, 0.002, 0.0025, mat(blue ? 0x1d4ed8 : 0x0a0a0a, 0.5), 0, 0.0008, 0.0002))
     return g
   }
-  addPort('usb1', 'usb', 'USB port', shieldX - 0.0095, 0.3, 0.0135, 0.006, usbPort(false), 'USB')
-  addPort('usb2', 'usb', 'USB port', shieldX + 0.0095, 0.3, 0.0135, 0.006, usbPort(false), '')
-  addPort('usb3', 'usb3', 'USB 3.0 port (blue)', shieldX - 0.0095, 0.286, 0.0135, 0.006, usbPort(true), 'USB 3.0')
-  addPort('usb4', 'usb3', 'USB 3.0 port (blue)', shieldX + 0.0095, 0.286, 0.0135, 0.006, usbPort(true), '')
+  addPort('usb1', 'usb', 'USB port', shieldX - 0.0135, 0.318, 0.0135, 0.006, usbPort(false), 'USB')
+  addPort('usb2', 'usb', 'USB port', shieldX + 0.0135, 0.318, 0.0135, 0.006, usbPort(false), '')
+  addPort('usb3', 'usb3', 'USB 3.0 port (blue)', shieldX - 0.0135, 0.298, 0.0135, 0.006, usbPort(true), 'USB 3.0')
+  addPort('usb4', 'usb3', 'USB 3.0 port (blue)', shieldX + 0.0135, 0.298, 0.0135, 0.006, usbPort(true), '')
   {
     // HDMI: wide and flat, its two lower corners cut off
     const shape = new THREE.Shape()
@@ -188,7 +198,7 @@ export function buildConnectTower(): ConnectTower {
     inner.scale.setScalar(0.8)
     inner.position.z = 0.0021
     g.add(inner)
-    addPort('hdmi', 'hdmi', 'HDMI port (picture and sound)', shieldX, 0.264, 0.015, 0.0056, g, 'HDMI')
+    addPort('hdmi', 'hdmi', 'HDMI port (picture and sound)', shieldX, 0.276, 0.015, 0.0056, g, 'HDMI')
   }
   {
     // VGA: a blue D-shaped socket with 15 holes
@@ -205,7 +215,7 @@ export function buildConnectTower(): ConnectTower {
       hole.position.set(-0.0052 + c * 0.0026 + (r === 1 ? 0.0013 : 0), 0.0024 - r * 0.0024, 0.0021)
       g.add(hole)
     }
-    addPort('vga', 'vga', 'VGA port (older monitors)', shieldX, 0.244, 0.019, 0.008, g, 'VGA')
+    addPort('vga', 'vga', 'VGA port (older monitors)', shieldX, 0.252, 0.019, 0.008, g, 'VGA')
   }
   // RJ45 with its two lights
   const lanLeds = [new THREE.MeshStandardMaterial({ color: 0x14532d, emissive: 0x000000, emissiveIntensity: 2 }), new THREE.MeshStandardMaterial({ color: 0x713f12, emissive: 0x000000, emissiveIntensity: 2 })]
@@ -217,22 +227,25 @@ export function buildConnectTower(): ConnectTower {
     const l1 = box(0.0025, 0.0018, 0.003, lanLeds[0], -0.0055, 0.0055, 0.0002)
     const l2 = box(0.0025, 0.0018, 0.003, lanLeds[1], 0.0055, 0.0055, 0.0002)
     g.add(l1, l2)
-    addPort('rj45', 'rj45', 'Network (LAN) port', shieldX, 0.221, 0.016, 0.014, g, 'LAN')
+    addPort('rj45', 'rj45', 'Network (LAN) port', shieldX, 0.224, 0.016, 0.014, g, 'LAN')
   }
   // the three sound jacks: blue line in, green speakers, pink microphone
   const jack = (color: number) => {
     const g = new THREE.Group()
-    const ringM = new THREE.Mesh(new THREE.CylinderGeometry(0.0042, 0.0042, 0.002, 24), mat(color, 0.45))
+    const surround = new THREE.Mesh(new THREE.CircleGeometry(0.0058, 28), mat(0x1c1f24, 0.6))
+    g.add(surround)
+    const ringM = new THREE.Mesh(new THREE.CylinderGeometry(0.0044, 0.0044, 0.0025, 28), mat(color, 0.35, 0, { emissive: color, emissiveIntensity: 0.18 }))
     ringM.rotation.x = Math.PI / 2
+    ringM.position.z = 0.0008
     g.add(ringM)
     const hole = new THREE.Mesh(new THREE.CircleGeometry(0.0019, 20), mat(0x050505))
-    hole.position.z = 0.0011
+    hole.position.z = 0.0022
     g.add(hole)
     return g
   }
-  addPort('audio-blue', 'audio-blue', 'Line in (blue)', shieldX - 0.013, 0.195, 0.0084, 0.0084, jack(0x2563eb), 'LINE IN', 0.203, '#2563eb')
-  addPort('audio-green', 'audio-green', 'Speakers / headphones (green)', shieldX, 0.195, 0.0084, 0.0084, jack(0x16a34a), 'SPEAKERS', 0.19, '#15803d')
-  addPort('audio-pink', 'audio-pink', 'Microphone (pink)', shieldX + 0.013, 0.195, 0.0084, 0.0084, jack(0xec4899), 'MIC', 0.177, '#db2777')
+  addPort('audio-blue', 'audio-blue', 'Line in (blue)', shieldX - 0.019, 0.19, 0.0116, 0.0116, jack(0x2563eb), 'LINE IN', 0.2, '#2563eb')
+  addPort('audio-green', 'audio-green', 'Speakers / headphones (green)', shieldX, 0.19, 0.0116, 0.0116, jack(0x16a34a), 'SPEAKERS', 0.187, '#15803d')
+  addPort('audio-pink', 'audio-pink', 'Microphone (pink)', shieldX + 0.019, 0.19, 0.0116, 0.0116, jack(0xec4899), 'MIC', 0.174, '#db2777')
 
   // ---- the rear fan
   const fan = new THREE.Group()
@@ -250,7 +263,7 @@ export function buildConnectTower(): ConnectTower {
     g.position.z = 0.002
     fan.add(g)
   }
-  fan.position.set(0.035, 0.255, BACK_Z + 0.0015)
+  fan.position.set(0.042, 0.26, BACK_Z + 0.0015)
   group.add(fan)
 
   // ---- the expansion slot covers
@@ -274,6 +287,14 @@ export interface PlugModel {
   halfH: number
 }
 export function buildPlug(kind: PlugKind): PlugModel {
+  const m = buildPlugLifeSize(kind)
+  if (kind !== 'c13') {
+    m.group.scale.setScalar(IO_SCALE)
+    m.halfH *= IO_SCALE
+  }
+  return m
+}
+function buildPlugLifeSize(kind: PlugKind): PlugModel {
   const g = new THREE.Group()
   const black = mat(0x16181c, 0.55)
   const metal = mat(0xc0c5cc, 0.25, 0.9)

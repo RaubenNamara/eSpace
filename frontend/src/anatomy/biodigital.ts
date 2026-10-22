@@ -1,5 +1,5 @@
 /**
- * BioDigital Human embed (licensed service). eSpace never copies BioDigital content: it shows
+ * BioDigital Human embed (licensed service). Tusome never copies BioDigital content: it shows
  * BioDigital's own viewer in an iframe, using the school's developer key, which BioDigital only
  * honours on the domains the school registered. The key comes from the server (/api/anatomy/config).
  */

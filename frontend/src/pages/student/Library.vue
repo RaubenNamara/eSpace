@@ -97,7 +97,7 @@
 
 <script setup lang="ts">
 import { parseCoverDesign } from '@/utils/enoteCover'
-// A cover designed in eSpace, when the book has one
+// A cover designed in Tusome, when the book has one
 const designOf = (book: { cover_design?: string | null }) => parseCoverDesign(book.cover_design)
 import PageHeader from '@/components/ui/PageHeader.vue'
 import { ref, computed, onMounted, nextTick } from 'vue'

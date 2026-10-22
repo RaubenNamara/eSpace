@@ -1,6 +1,6 @@
 <template>
   <!-- The department's teachers - and what each is doing here: assessments and eNotes published,
-       scripts waiting to be marked, and when they were last on eSpace. -->
+       scripts waiting to be marked, and when they were last on Tusome. -->
   <div class="w-full">
     <PageHeader title="Teachers" description="Your department's teachers - what each has published, what's waiting to be marked, and who's been active." icon="teacher" accent="indigo">
       <StatStrip v-if="!loading && teachers.length" v-model="filter" :items="statItems" />

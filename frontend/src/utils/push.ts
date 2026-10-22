@@ -4,7 +4,7 @@ import axios from 'axios'
  * Browser (Web Push) notifications for this device. Turning them on asks the browser's permission
  * once, subscribes through the app's service worker, and registers the subscription for the
  * signed-in user (backend PushController / WebPushService). Every in-app notification is then
- * also delivered as a system notification, even when eSpace isn't open.
+ * also delivered as a system notification, even when Tusome isn't open.
  */
 
 export const pushSupported = (): boolean =>

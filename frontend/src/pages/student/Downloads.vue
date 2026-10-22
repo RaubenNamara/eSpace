@@ -6,7 +6,7 @@
     <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 mb-4">
       <div class="flex items-center justify-between gap-3 text-xs">
         <p class="font-semibold text-gray-900 dark:text-white">{{ items.length }} {{ items.length === 1 ? 'item' : 'items' }} saved · {{ formatBytes(totalBytes) }}</p>
-        <p v-if="quota" class="text-gray-500 dark:text-gray-400">{{ formatBytes(quota - usage) }} free for eSpace</p>
+        <p v-if="quota" class="text-gray-500 dark:text-gray-400">{{ formatBytes(quota - usage) }} free for Tusome</p>
       </div>
       <div v-if="quota" class="mt-2 h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
         <div class="h-full bg-indigo-600" :style="{ width: `${Math.min(100, Math.max(1, usage / quota * 100))}%` }"></div>

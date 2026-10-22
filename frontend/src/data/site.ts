@@ -2,12 +2,15 @@
  * Words for the public website (landing page and /for/* pages) that are not modules, the team or
  * the guide. Kept here so the copy can be changed without touching the page layout.
  *
- * Only say what eSpace really does - nothing here is a quote or a figure from a real school.
+ * Only say what Tusome really does - nothing here is a quote or a figure from a real school.
  */
+
+/** Where schools, teachers and students write to the Tusome team */
+export const SUPPORT_EMAIL = 'support@tusome.ug'
 
 /** The main menu. `to` is a route; "/#modules" scrolls to that part of the landing page. */
 export const SITE_NAV = [
-  { to: '/#features', label: 'Why eSpace' },
+  { to: '/#features', label: 'Why Tusome' },
   { to: '/#modules', label: 'Modules' },
   { to: '/#tour', label: 'Tour' },
   { to: '/#pricing', label: 'Pricing' },
@@ -42,7 +45,7 @@ export const PRICING = {
     'Training for teachers, module by module',
     'Your crest on report cards',
     'Updates and new features as they ship',
-    'Support from the people who build eSpace'
+    'Support from the people who build Tusome'
   ],
   steps: [
     { title: 'Tell us about your school', text: 'Number of learners, classes and what you want to start with.' },
@@ -56,23 +59,23 @@ export const TRUST = [
   { icon: 'users', title: 'Your data stays yours', text: 'Notes, books, assessments and results belong to your school and can be exported at any time.' },
   { icon: 'check-circle', title: 'Only the right people see it', text: 'Students see their own work, teachers see their classes, HODs their department - every page checks the role.' },
   { icon: 'clipboard', title: 'Every change is logged', text: 'Administrators have audit logs of important changes across the school.' },
-  { icon: 'download', title: 'Backed up', text: 'Administrators can take a full backup of the school\'s data from inside eSpace.' },
+  { icon: 'download', title: 'Backed up', text: 'Administrators can take a full backup of the school\'s data from inside Tusome.' },
   { icon: 'bolt', title: 'Light on data', text: 'Notes and books can be saved once and read offline, so learners do not spend data opening them again and again.' },
   { icon: 'kit', title: 'Works on the phones learners have', text: 'Any smartphone, tablet or computer with a browser. Add it to the home screen like an app - no store download.' }
 ]
 
-/** Why we built eSpace - the team's own words (edit freely) */
+/** Why we built Tusome - the team's own words (edit freely) */
 export const STORY = {
-  title: 'Why we built eSpace',
+  title: 'Why we built Tusome',
   paragraphs: [
     'The new curriculum asks teachers to follow every learner, outcome by outcome. On paper that means stacks of scripts, spreadsheets nobody has time to fill in, and report cards typed out by hand at the end of every term.',
-    'We built eSpace so that work happens once: a learner reads, attempts and hands in on any phone; a teacher marks on screen; and the Learning Map, the department view and the report card all fill themselves in.'
+    'We built Tusome so that work happens once: a learner reads, attempts and hands in on any phone; a teacher marks on screen; and the Learning Map, the department view and the report card all fill themselves in.'
   ]
 }
 
 /** Live totals from /api/public/stats - only shown once they are big enough to mean something */
 export const STAT_LABELS: { key: string; label: string; min: number }[] = [
-  { key: 'learners', label: 'learners on eSpace', min: 50 },
+  { key: 'learners', label: 'learners on Tusome', min: 50 },
   { key: 'teachers', label: 'teachers', min: 10 },
   { key: 'note_pages', label: 'pages of eNotes written', min: 50 },
   { key: 'marked', label: 'assessments marked on screen', min: 50 },

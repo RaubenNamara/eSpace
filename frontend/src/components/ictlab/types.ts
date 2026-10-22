@@ -16,6 +16,8 @@ export interface IctProgress {
   best: number
   attempts: number
   last_at: string | null
+  /** Typing lessons only: the fastest words a minute */
+  best_wpm?: number | null
 }
 
 // Which part of the app the lab was opened from - the first segment of the route

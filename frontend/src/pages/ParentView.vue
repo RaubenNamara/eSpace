@@ -79,7 +79,7 @@
 
         <p class="mt-8 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
           This private page is for {{ first }}'s parent or guardian - please don't share it. It updates every day.
-          <template v-if="data.student.last_active_at"> {{ first }} last used eSpace {{ timeAgo(data.student.last_active_at) }}.</template>
+          <template v-if="data.student.last_active_at"> {{ first }} last used Tusome {{ timeAgo(data.student.last_active_at) }}.</template>
           Questions? Please contact the school.
         </p>
       </template>
@@ -135,7 +135,7 @@ const tiles = computed(() => {
 })
 
 onMounted(async () => {
-  document.title = 'Weekly update - eSpace'
+  document.title = 'Weekly update - Tusome'
   let meta = document.head.querySelector<HTMLMetaElement>('meta[name="robots"]')
   if (!meta) { meta = document.createElement('meta'); meta.name = 'robots'; document.head.appendChild(meta) }
   meta.content = 'noindex, nofollow'

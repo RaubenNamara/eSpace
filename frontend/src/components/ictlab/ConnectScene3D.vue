@@ -22,9 +22,9 @@
       <div v-if="hoverName" class="absolute pointer-events-none px-2 py-1 rounded-lg bg-gray-900/85 text-white text-xs font-semibold whitespace-nowrap -translate-x-1/2 -translate-y-full" :style="{ left: `${hoverAt.x}px`, top: `${hoverAt.y - 14}px` }">{{ hoverName }}</div>
 
       <div class="absolute bottom-2 left-2 right-2 flex items-center justify-between gap-2 pointer-events-none">
-        <span class="px-2 py-1 rounded-lg bg-black/45 text-white text-[11px]">{{ selected ? 'Now tap the port it goes in' : 'Tap a plug to pick it up · drag to turn · pinch to zoom' }}</span>
+        <span class="px-2 py-1 rounded-lg bg-black/45 text-white text-[11px]">{{ selected ? 'Now tap (or drop it on) the port it goes in' : 'Drag a plug to its port, or tap it then the port · drag the bench to turn' }}</span>
         <div class="flex gap-1.5 pointer-events-auto">
-          <button type="button" class="px-2 py-1 rounded-lg bg-white/90 text-gray-800 text-[11px] font-semibold shadow-sm hover:bg-white" @click="lookAtPorts">Close-up of the ports</button>
+          <button type="button" class="px-2 py-1 rounded-lg bg-white/90 text-gray-800 text-[11px] font-semibold shadow-sm hover:bg-white" @click="lookAtPorts">Ports close-up</button>
           <button type="button" class="px-2 py-1 rounded-lg bg-white/90 text-gray-800 text-[11px] font-semibold shadow-sm hover:bg-white" @click="wb?.resetView()">Reset view</button>
         </div>
       </div>
@@ -91,13 +91,13 @@ interface Cable {
   rest: [number, number, number]
 }
 const ALL_CABLES: Cable[] = [
-  { dev: 'monitor', plug: 'hdmi', fits: ['hdmi'], short: 'monitor cable (HDMI)', button: 'Monitor cable', badge: 'HD', color: '#1f2937', shape: 'a wide, flat HDMI plug with two slanted corners', rest: [-0.25, 0.4, 0.17] },
-  { dev: 'keyboard', plug: 'usb', fits: ['usb', 'usb3'], short: 'keyboard cable (USB)', button: 'Keyboard', badge: 'USB', color: '#374151', shape: 'a flat, rectangular USB plug', rest: [-0.19, -0.3, 0.27] },
-  { dev: 'mouse', plug: 'usb', fits: ['usb', 'usb3'], short: 'mouse cable (USB)', button: 'Mouse', badge: 'USB', color: '#374151', shape: 'a flat, rectangular USB plug', rest: [-0.07, 0.2, 0.33] },
-  { dev: 'speakers', plug: 'audio-green', fits: ['audio-green'], short: 'speaker cable (green jack)', button: 'Speakers', badge: '🔊', color: '#16a34a', shape: 'a round green 3.5 mm jack', rest: [0.19, 0.5, 0.25] },
-  { dev: 'mic', plug: 'audio-pink', fits: ['audio-pink'], short: 'microphone cable (pink jack)', button: 'Microphone', badge: '🎤', color: '#ec4899', shape: 'a round pink 3.5 mm jack', rest: [0.27, -0.4, 0.34] },
-  { dev: 'network', plug: 'rj45', fits: ['rj45'], short: 'network cable (RJ45)', button: 'Network cable', badge: 'LAN', color: '#1d4ed8', shape: 'a clear RJ45 plug with a clip on top', rest: [0.13, 0.3, 0.15] },
-  { dev: 'power', plug: 'c13', fits: ['c14'], short: 'power cable', button: 'Power cable', badge: '⚡', color: '#111827', shape: 'a big three-hole power plug', rest: [0.3, -0.5, 0.1] }
+  { dev: 'monitor', plug: 'hdmi', fits: ['hdmi'], short: 'monitor cable (HDMI)', button: 'Monitor cable', badge: 'HD', color: '#1f2937', shape: 'a wide, flat HDMI plug with two slanted corners', rest: [-0.13, 0.1, 0.34] },
+  { dev: 'keyboard', plug: 'usb', fits: ['usb', 'usb3'], short: 'keyboard cable (USB)', button: 'Keyboard', badge: 'USB', color: '#374151', shape: 'a flat, rectangular USB plug', rest: [-0.06, -0.08, 0.36] },
+  { dev: 'mouse', plug: 'usb', fits: ['usb', 'usb3'], short: 'mouse cable (USB)', button: 'Mouse', badge: 'USB', color: '#374151', shape: 'a flat, rectangular USB plug', rest: [0.01, 0.08, 0.34] },
+  { dev: 'speakers', plug: 'audio-green', fits: ['audio-green'], short: 'speaker cable (green jack)', button: 'Speakers', badge: '🔊', color: '#16a34a', shape: 'a round green 3.5 mm jack', rest: [0.08, -0.1, 0.36] },
+  { dev: 'mic', plug: 'audio-pink', fits: ['audio-pink'], short: 'microphone cable (pink jack)', button: 'Microphone', badge: '🎤', color: '#ec4899', shape: 'a round pink 3.5 mm jack', rest: [0.14, 0.1, 0.34] },
+  { dev: 'network', plug: 'rj45', fits: ['rj45'], short: 'network cable (RJ45)', button: 'Network cable', badge: 'LAN', color: '#1d4ed8', shape: 'a clear RJ45 plug with a clip on top', rest: [0.2, -0.06, 0.36] },
+  { dev: 'power', plug: 'c13', fits: ['c14'], short: 'power cable', button: 'Power cable', badge: '⚡', color: '#111827', shape: 'a big three-hole power plug', rest: [0.28, 0.08, 0.34] }
 ]
 // Only the cables this level uses
 const levelSteps = computed<IctStep[]>(() => ACTIVITIES.find(a => a.key === 'connect')?.levels[props.level as 'simple']?.steps || [])
@@ -132,8 +132,77 @@ const cableMesh = new Map<string, THREE.Mesh>()
 const anchors = new Map<string, () => THREE.Vector3>()
 const portOf = new Map<string, Port>()
 let screenMesh: THREE.Mesh | null = null
-let screenOn: THREE.Material | null = null
-const screenOff = new THREE.MeshBasicMaterial({ color: 0x050608 })
+// The screen is a canvas we paint: off, the start-up logo, loading, then the desktop
+const screenCanvas = document.createElement('canvas')
+screenCanvas.width = 512
+screenCanvas.height = 300
+const screenTex = new THREE.CanvasTexture(screenCanvas)
+screenTex.colorSpace = THREE.SRGBColorSpace
+function drawScreen(state: 'off' | 'logo' | 'loading' | 'desktop', progress = 0) {
+  const g = screenCanvas.getContext('2d')!
+  g.fillStyle = '#050608'
+  g.fillRect(0, 0, 512, 300)
+  if (state === 'logo' || state === 'loading') {
+    g.fillStyle = '#ffffff'
+    g.font = '600 46px Inter, sans-serif'
+    g.textAlign = 'center'
+    g.fillText('Tusome', 256, 140)
+    g.fillStyle = '#22a45d'
+    g.beginPath()
+    g.arc(340, 106, 6, 0, Math.PI * 2)
+    g.fill()
+    g.font = '15px Inter, sans-serif'
+    g.fillStyle = '#9ca3af'
+    g.fillText(state === 'logo' ? 'Starting up...' : 'Loading your desktop...', 256, 178)
+    if (state === 'loading') {
+      g.fillStyle = '#1f2937'
+      g.fillRect(156, 200, 200, 6)
+      g.fillStyle = '#22a45d'
+      g.fillRect(156, 200, 200 * progress, 6)
+    }
+  } else if (state === 'desktop') {
+    const grad = g.createLinearGradient(0, 0, 512, 300)
+    grad.addColorStop(0, '#0f5b33')
+    grad.addColorStop(1, '#22a45d')
+    g.fillStyle = grad
+    g.fillRect(0, 0, 512, 300)
+    // icons down the left
+    const icons = ['Tusome', 'Files', 'Browser', 'Notes']
+    g.textAlign = 'center'
+    icons.forEach((name, i) => {
+      g.fillStyle = 'rgba(255,255,255,0.9)'
+      g.fillRect(22, 18 + i * 56, 30, 30)
+      g.fillStyle = '#fff'
+      g.font = '11px Inter, sans-serif'
+      g.fillText(name, 37, 62 + i * 56)
+    })
+    // a welcome window
+    g.fillStyle = 'rgba(255,255,255,0.95)'
+    g.fillRect(130, 66, 290, 128)
+    g.fillStyle = '#115633'
+    g.fillRect(130, 66, 290, 22)
+    g.fillStyle = '#fff'
+    g.font = '600 12px Inter, sans-serif'
+    g.textAlign = 'left'
+    g.fillText('Welcome', 140, 81)
+    g.fillStyle = '#111827'
+    g.font = '600 17px Inter, sans-serif'
+    g.fillText('Everything is connected!', 144, 118)
+    g.font = '13px Inter, sans-serif'
+    g.fillStyle = '#374151'
+    const lines = ['Monitor, keyboard and mouse working.', isConnected('network') ? 'Network: connected.' : 'Ready to use.', isConnected('speakers') ? 'Sound: speakers on.' : '']
+    lines.filter(Boolean).forEach((l, i) => g.fillText(l, 144, 142 + i * 18))
+    // the taskbar
+    g.fillStyle = 'rgba(0,0,0,0.55)'
+    g.fillRect(0, 280, 512, 20)
+    g.fillStyle = '#fff'
+    g.fillRect(8, 284, 12, 12)
+    g.font = '11px Inter, sans-serif'
+    g.textAlign = 'right'
+    g.fillText(new Date().toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }), 504, 294)
+  }
+  screenTex.needsUpdate = true
+}
 let monitorLed: THREE.MeshStandardMaterial
 let targetRing: THREE.Mesh
 let monitorPowerAnchor = () => new THREE.Vector3()
@@ -148,14 +217,14 @@ const restPose = (c: Cable) => {
     quat: new THREE.Quaternion().setFromEuler(new THREE.Euler(0, c.rest[1], 0))
   }
 }
-const portPose = (p: Port) => ({ pos: new THREE.Vector3(p.pos.x, p.pos.y, p.pos.z - 0.006), quat: new THREE.Quaternion() })
+const portPose = (p: Port) => ({ pos: new THREE.Vector3(p.pos.x, p.pos.y, p.pos.z - (p.kind === 'c14' ? 0.006 : 0.008)), quat: new THREE.Quaternion() })
 
 onMounted(async () => {
   await nextTick()
   if (!host.value) return
   const narrow = host.value.clientWidth < 640
   try {
-    wb.value = createWorkbench(host.value, { cameraPosition: narrow ? [0.35, 0.62, 1.25] : [0.26, 0.46, 0.82], target: narrow ? [0, 0.18, 0.1] : [-0.02, 0.2, 0.08], minDistance: 0.12, maxDistance: 2.2, near: 0.01 })
+    wb.value = createWorkbench(host.value, { cameraPosition: narrow ? [-0.1, 0.7, 1.32] : [-0.1, 0.56, 1.05], target: narrow ? [-0.08, 0.17, 0.05] : [-0.1, 0.16, 0.04], minDistance: 0.12, maxDistance: 2.4, near: 0.01 })
   } catch {
     unsupported.value = true
     return
@@ -163,6 +232,15 @@ onMounted(async () => {
   const w = wb.value
   tower = buildConnectTower()
   w.scene.add(tower.group)
+  // The back of the computer always faces the learner: the view turns up to about 50 degrees either
+  // side and never round to its sides or front, nor under the bench
+  w.controls.minAzimuthAngle = -0.9
+  w.controls.maxAzimuthAngle = 0.9
+  w.controls.maxPolarAngle = 1.38
+  // a soft light on the back of the computer, so its ports are not lost in shadow
+  const backLight = new THREE.PointLight(0xffffff, 0.9, 1.4, 1.5)
+  backLight.position.set(-0.08, 0.32, 0.62)
+  w.scene.add(backLight)
   for (const p of tower.ports) addPick(p.hit, `port:${p.key}`)
   addPick(tower.psuSwitch, 'psu')
   addPick(tower.powerButton, 'powerbtn')
@@ -176,15 +254,13 @@ onMounted(async () => {
     g.updateMatrixWorld(true)
     return g
   }
-  const monitor = place('monitor', -0.5, -0.13, 0.5)
+  const monitor = place('monitor', -0.5, -0.2, 0.3)
   monitor.traverse(o => {
     const m = o as THREE.Mesh
-    if (m.isMesh && (m.material as THREE.MeshBasicMaterial).isMeshBasicMaterial && (m.material as THREE.MeshBasicMaterial).map) {
-      screenMesh = m
-      screenOn = m.material as THREE.Material
-      m.material = screenOff
-    }
+    if (m.isMesh && (m.material as THREE.MeshBasicMaterial).isMeshBasicMaterial && (m.material as THREE.MeshBasicMaterial).map) screenMesh = m
   })
+  if (screenMesh) screenMesh.material = new THREE.MeshBasicMaterial({ map: screenTex })
+  drawScreen('off')
   monitorLed = new THREE.MeshStandardMaterial({ color: 0x1f2937, emissive: 0x000000, emissiveIntensity: 2 })
   const mLed = new THREE.Mesh(new THREE.SphereGeometry(0.0028, 8, 8), monitorLed)
   mLed.position.set(0.25, 0.118, 0.008)
@@ -192,19 +268,19 @@ onMounted(async () => {
   anchors.set('monitor', () => monitor.localToWorld(new THREE.Vector3(0.04, 0.12, -0.045)))
   monitorPowerAnchor = () => monitor.localToWorld(new THREE.Vector3(-0.04, 0.12, -0.045))
   if (hasStep('plug:keyboard')) {
-    const kb = place('keyboard', -0.42, 0.29, 0.25)
+    const kb = place('keyboard', -0.52, 0.18, 0.12)
     anchors.set('keyboard', () => kb.localToWorld(new THREE.Vector3(0, 0.012, -0.09)))
   }
   if (hasStep('plug:mouse')) {
-    const ms = place('mouse', -0.17, 0.37, 0.1)
+    const ms = place('mouse', -0.28, 0.24, 0.1)
     anchors.set('mouse', () => ms.localToWorld(new THREE.Vector3(0.03, 0.004, -0.14)))
   }
   if (hasStep('plug:speakers')) {
-    const sp = place('speakers', 0.44, -0.2, -0.35)
+    const sp = place('speakers', 0.4, -0.25, -0.35)
     anchors.set('speakers', () => sp.localToWorld(new THREE.Vector3(-0.08, 0.03, -0.06)))
   }
   if (hasStep('plug:mic')) {
-    const mic = place('microphone', 0.42, 0.3, -0.3)
+    const mic = place('microphone', 0.42, 0.12, -0.3)
     anchors.set('mic', () => mic.localToWorld(new THREE.Vector3(0, 0.006, -0.045)))
   }
   if (hasStep('plug:network')) {
@@ -270,6 +346,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   if (sayTimer) clearTimeout(sayTimer)
   if (bootTimer) clearTimeout(bootTimer)
+  screenTex.dispose()
   audio?.close().catch(() => undefined)
   wb.value?.dispose()
 })
@@ -313,9 +390,11 @@ function sync(animate = true) {
   tower.setPsuSwitch(psuOn.value)
   // running
   tower.powerLed.emissive.setHex(running.value ? 0x22c55e : 0)
+  if (running.value && !booting.value) drawScreen('desktop')
   monitorLed.emissive.setHex(running.value ? 0x22c55e : has('wall:monitor') && on ? 0xf59e0b : 0)
   const showTags = props.level === 'simple' || props.guide
-  for (const p of tower.ports) p.tag.visible = showTags && !portIsUsed(p)
+  tagsWanted = showTags
+  for (const p of tower.ports) p.tag.visible = showTags && !portIsUsed(p) && facingBack
 }
 const portIsUsed = (p: Port) => [...portOf.values()].includes(p)
 watch(() => props.done.join('|'), () => sync())
@@ -454,13 +533,22 @@ function pressPower() {
     return
   }
   emit('act', 'power')
-  // the computer starts: a light, the fan, the screen, a sound, the network lights
+  bootUp()
+}
+// The computer starts: the camera turns to the monitor, which shows the logo, loads, then the
+// desktop; the start-up sound plays and the network lights flicker
+const booting = ref(0)
+function bootUp() {
+  const w = wb.value
+  if (w) camGoal = { pos: new THREE.Vector3(-0.3, 0.36, 0.42), target: new THREE.Vector3(-0.5, 0.26, -0.2) }
+  drawScreen('logo')
+  booting.value = performance.now()
   bootTimer = setTimeout(() => {
-    if (screenMesh && screenOn) screenMesh.material = screenOn
     chime()
     say('It starts - the screen comes on, the speakers play the start-up sound and the network lights flicker.')
-  }, 1200)
+  }, 3200)
 }
+let camGoal: { pos: THREE.Vector3; target: THREE.Vector3 } | null = null
 
 // ---------------------------------------------------------------- sound
 let audio: AudioContext | null = null
@@ -508,20 +596,89 @@ function nameOf(key: string): string {
   if (key.startsWith('rocker:')) return key.endsWith('0') ? 'Wall switch (computer)' : 'Wall switch (monitor)'
   return ''
 }
+// Dragging a plug: it follows the pointer over the bench; let go on (or near) a port to plug it
+// in there, anywhere else and it goes back to its place - it never ends up lying on another device
+let dragDev: string | null = null
+let dragging = false
+const dragPlane = new THREE.Plane()
+const tmpV = new THREE.Vector3()
 function onDown(ev: PointerEvent) {
-  down = { x: ev.clientX, y: ev.clientY, key: keyAt(ev) }
+  const key = keyAt(ev)
+  down = { x: ev.clientX, y: ev.clientY, key }
+  const w = wb.value
+  if (w && key?.startsWith('plug:') && !isConnected(key.slice(5))) {
+    dragDev = key.slice(5)
+    w.controls.enabled = false
+    const m = plugs.get(dragDev)!
+    w.camera.getWorldDirection(tmpV)
+    dragPlane.setFromNormalAndCoplanarPoint(tmpV.clone().negate(), m.group.position.clone())
+  }
 }
+// The port nearest the pointer, if it is close enough to mean it
+function portNear(ev: PointerEvent, px = 46): Port | null {
+  const w = wb.value
+  if (!w) return null
+  const r = w.canvas.getBoundingClientRect()
+  let best: Port | null = null
+  let bestD = px
+  // a port that already has a plug in it is never the one a dropped plug goes to
+  for (const p of tower.ports) {
+    if (portIsUsed(p)) continue
+    const at = w.toScreen(p.pos)
+    const d = Math.hypot(at.x - (ev.clientX - r.left), at.y - (ev.clientY - r.top))
+    if (d < bestD) {
+      bestD = d
+      best = p
+    }
+  }
+  return best
+}
+// shallow: the port itself, not a reactive copy - the plug is recorded against the real port
+const dragHover = shallowRef<Port | null>(null)
 function onMove(ev: PointerEvent) {
   const w = wb.value
   if (!w) return
   const r = w.canvas.getBoundingClientRect()
   hoverAt.value = { x: ev.clientX - r.left, y: ev.clientY - r.top }
+  if (dragDev && down) {
+    if (!dragging && Math.hypot(ev.clientX - down.x, ev.clientY - down.y) > 6) {
+      dragging = true
+      if (selected.value && selected.value !== dragDev) dropBack(selected.value)
+      selected.value = dragDev
+    }
+    if (dragging) {
+      const m = plugs.get(dragDev)!
+      if (w.pointOnPlane(ev, dragPlane, tmpV)) {
+        tmpV.y = Math.max(0.012, tmpV.y)
+        m.group.position.copy(tmpV)
+        // turn it to face the back of the computer as it nears the ports
+        m.group.quaternion.slerp(new THREE.Quaternion(), 0.25)
+      }
+      dragHover.value = portNear(ev)
+      hoverName.value = dragHover.value ? nameOf(`port:${dragHover.value.key}`) : ''
+      return
+    }
+  }
   const k = keyAt(ev)
   hoverName.value = k ? nameOf(k) : ''
 }
 function onUp(ev: PointerEvent) {
   const d = down
   down = null
+  const w = wb.value
+  if (w) w.controls.enabled = true
+  if (dragDev && dragging) {
+    const dev = dragDev
+    dragDev = null
+    dragging = false
+    const p = dragHover.value
+    dragHover.value = null
+    hoverName.value = ''
+    if (p) tryPort(p)
+    else dropBack(dev)
+    return
+  }
+  dragDev = null
   if (!d || Math.hypot(ev.clientX - d.x, ev.clientY - d.y) > 6) return
   const key = d.key
   if (!key) {
@@ -548,11 +705,35 @@ function lookAtPorts() {
 
 // ---------------------------------------------------------------- every frame
 let lanBlink = 0
+// The port name tags show only while the back of the computer is in view
+let tagsWanted = false
+let facingBack = true
 const lastTail = new Map<string, THREE.Vector3>()
 function frame(dt: number) {
   const w = wb.value
   if (!w || !tower) return
   power?.update()
+  const az = Math.atan2(w.camera.position.x - w.controls.target.x, w.camera.position.z - w.controls.target.z)
+  const nowFacing = Math.abs(az) < 0.62
+  if (nowFacing !== facingBack) {
+    facingBack = nowFacing
+    for (const p of tower.ports) p.tag.visible = tagsWanted && !portIsUsed(p) && facingBack
+  }
+  if (camGoal) {
+    const k = 1 - Math.exp(-dt * 2.5)
+    w.camera.position.lerp(camGoal.pos, k)
+    w.controls.target.lerp(camGoal.target, k)
+    if (w.camera.position.distanceTo(camGoal.pos) < 0.003) camGoal = null
+  }
+  if (booting.value) {
+    const t = (performance.now() - booting.value) / 1000
+    if (t < 1.2) drawScreen('logo')
+    else if (t < 3.2) drawScreen('loading', (t - 1.2) / 2)
+    else {
+      drawScreen('desktop')
+      booting.value = 0
+    }
+  }
   // the cables follow their plugs
   for (const [dev, tube] of cableMesh) {
     const m = plugs.get(dev)
@@ -591,7 +772,7 @@ function frame(dt: number) {
     if (m) setEmissive(m.group, 0x60a5fa, 0.35)
   }
   const c = cableOf(selected.value)
-  const target = props.guide && c ? freePortFor(c) : null
+  const target = dragHover.value || (props.guide && c ? freePortFor(c) : null)
   targetRing.visible = !!target
   if (target) {
     targetRing.position.set(target.pos.x, target.pos.y, target.pos.z + 0.004)

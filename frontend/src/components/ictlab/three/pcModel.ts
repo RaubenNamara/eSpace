@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { motherboardTexture, ramTexture, stickerTexture, brushedMetalTexture, honeycombTexture, shroudTexture } from './textures'
+import { motherboardTexture, ramTexture, stickerTexture, brushedMetalTexture, honeycombTexture, shroudTexture, lgaPadTexture, capTopTexture, pinHolesTexture, headerPinsTexture, sataMouthTexture, coinCellTexture } from './textures'
 
 /**
  * A desktop computer in 3D, built from simple shapes (no model files to download): an open tower
@@ -170,23 +170,60 @@ export function buildPc(): PcRig {
   const BOARD = V(0.068, Y0 + 0.1875, -0.093)
   const mb = new THREE.Group()
   mb.add(facedBox(0.244, 0.305, 0.004, std(0x0f3d26, 0.2, 0.7), { pz: pictured(motherboardTexture(), 0.55, 0.15) }))
-  mb.add(box(0.05, 0.05, 0.004, std(0xd1d5db, 0.5, 0.4), -0.047, 0.078, 0.004)) // CPU socket
-  mb.add(box(0.034, 0.002, 0.003, std(0x9ca3af, 0.8, 0.3), -0.047, 0.106, 0.004)) // socket lever
-  for (const x of [0.035, 0.05]) mb.add(box(0.007, 0.135, 0.009, std(0x0f172a), x, 0.06, 0.006)) // RAM slots
-  mb.add(box(0.09, 0.008, 0.011, std(0x0f172a), 0.02, -0.035, 0.007)) // PCIe x16
-  mb.add(box(0.05, 0.007, 0.009, std(0x0f172a), 0.0, -0.075, 0.006)) // PCIe x1
-  mb.add(box(0.04, 0.04, 0.012, std(0x9ca3af, 0.8, 0.3), 0.04, -0.105, 0.008)) // chipset heat sink
-  mb.add(box(0.012, 0.06, 0.016, std(0x64748b, 0.8, 0.35), -0.088, 0.085, 0.009)) // power-stage heat sinks
-  mb.add(box(0.06, 0.012, 0.016, std(0x64748b, 0.8, 0.35), -0.045, 0.133, 0.009))
-  for (let i = 0; i < 6; i++) mb.add(cyl(0.003, 0.008, std(0x111827, 0.6, 0.3), 'z', -0.07 + i * 0.008, 0.032, 0.006)) // capacitors
-  const atx24 = box(0.008, 0.052, 0.014, std(0xf8fafc, 0, 0.6), 0.112, 0.02, 0.008)
+  // CPU socket (LGA): the gold contact grid inside a metal retention frame, with its lever
+  const metal = std(0xc3c8cf, 0.85, 0.3)
+  mb.add(facedBox(0.04, 0.04, 0.002, std(0x2a241b, 0.2, 0.6), { pz: pictured(lgaPadTexture(), 0.45, 0.5) }, -0.047, 0.078, 0.003))
+  mb.add(box(0.05, 0.005, 0.004, metal, -0.047, 0.1005, 0.004), box(0.05, 0.005, 0.004, metal, -0.047, 0.0555, 0.004))
+  mb.add(box(0.005, 0.04, 0.004, metal, -0.0695, 0.078, 0.004), box(0.005, 0.04, 0.004, metal, -0.0245, 0.078, 0.004))
+  mb.add(cyl(0.0011, 0.036, metal, 'x', -0.047, 0.1055, 0.0055)) // socket lever
+  mb.add(cyl(0.0011, 0.004, metal, 'z', -0.029, 0.1055, 0.0065)) // its bent end, to lift it by (under the cooler)
+  // RAM slots: a groove down the middle and a latch at each end
+  for (const x of [0.035, 0.05]) {
+    mb.add(box(0.007, 0.135, 0.009, std(0x0f172a), x, 0.06, 0.006))
+    mb.add(box(0.0018, 0.128, 0.0012, std(0x020617, 0.1, 0.9), x, 0.06, 0.0105))
+    for (const y of [-0.0095, 0.1295]) mb.add(box(0.0082, 0.006, 0.0115, std(0xd1d5db, 0.1, 0.5), x, y, 0.0068))
+  }
+  // expansion slots: the long x16 (with its latch) and a short x1
+  mb.add(box(0.09, 0.008, 0.011, std(0x0f172a), 0.02, -0.035, 0.007))
+  mb.add(box(0.085, 0.0016, 0.0012, std(0x020617, 0.1, 0.9), 0.018, -0.035, 0.0126))
+  mb.add(box(0.006, 0.0095, 0.012, std(0xd1d5db, 0.1, 0.5), 0.067, -0.035, 0.0072))
+  mb.add(box(0.05, 0.007, 0.009, std(0x0f172a), 0.0, -0.075, 0.006))
+  mb.add(box(0.046, 0.0015, 0.0012, std(0x020617, 0.1, 0.9), 0.0, -0.075, 0.0106))
+  // chipset heat sink, with fins
+  const sinkMat = std(0x9ca3af, 0.85, 0.3)
+  mb.add(box(0.04, 0.04, 0.008, sinkMat, 0.04, -0.105, 0.006))
+  for (let i = 0; i < 7; i++) mb.add(box(0.04, 0.0028, 0.006, sinkMat, 0.04, -0.123 + i * 0.006, 0.013))
+  // power-stage (VRM) heat sinks, finned
+  const vrmMat = std(0x64748b, 0.8, 0.35)
+  mb.add(box(0.012, 0.06, 0.01, vrmMat, -0.088, 0.085, 0.006))
+  for (let i = 0; i < 9; i++) mb.add(box(0.012, 0.0028, 0.007, vrmMat, -0.088, 0.058 + i * 0.0068, 0.0145))
+  mb.add(box(0.06, 0.012, 0.01, vrmMat, -0.045, 0.133, 0.006))
+  for (let i = 0; i < 9; i++) mb.add(box(0.0028, 0.012, 0.007, vrmMat, -0.072 + i * 0.0068, 0.133, 0.0145))
+  // capacitors: black sleeves with vented aluminium tops
+  const capTop = pictured(capTopTexture(), 0.35, 0.8)
+  const capSleeve = std(0x111827, 0.3, 0.45)
+  for (let i = 0; i < 6; i++) {
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.003, 0.003, 0.008, 28), [capSleeve, capTop, capSleeve])
+    cap.rotation.x = Math.PI / 2
+    cap.position.set(-0.07 + i * 0.008, 0.032, 0.006)
+    cap.castShadow = true
+    mb.add(cap)
+  }
+  const atx24 = facedBox(0.008, 0.052, 0.014, std(0xf8fafc, 0, 0.6), { pz: pictured(pinHolesTexture(2, 12)) }, 0.112, 0.02, 0.008)
   const sata = new THREE.Group()
-  sata.add(box(0.012, 0.006, 0.008, std(0x0f172a), -0.112, -0.05, 0.005), box(0.012, 0.006, 0.008, std(0x0f172a), -0.112, -0.062, 0.005))
-  const cpuFanHeader = box(0.012, 0.006, 0.008, std(0xf8fafc, 0, 0.6), 0.02, 0.13, 0.005)
-  const fpanel = box(0.022, 0.006, 0.008, std(0x0f172a), -0.06, -0.142, 0.005)
+  const sataFace = pictured(sataMouthTexture(), 0.5)
+  sata.add(facedBox(0.012, 0.006, 0.008, std(0x0f172a), { pz: sataFace }, -0.112, -0.05, 0.005), facedBox(0.012, 0.006, 0.008, std(0x0f172a), { pz: sataFace }, -0.112, -0.062, 0.005))
+  const cpuFanHeader = facedBox(0.012, 0.006, 0.008, std(0xf8fafc, 0, 0.6), { pz: pictured(pinHolesTexture(4, 1)) }, 0.02, 0.13, 0.005)
+  const fpanel = facedBox(0.022, 0.006, 0.008, std(0x0f172a), { pz: pictured(headerPinsTexture(9, 2), 0.4, 0.6) }, -0.06, -0.142, 0.005)
   mb.add(atx24, sata, cpuFanHeader, fpanel)
-  const cmos = cyl(0.01, 0.0032, std(0xe5e7eb, 0.9, 0.25), 'z', -0.07, -0.1, 0.004)
+  // the CMOS coin cell in its black holder, held by a metal clip
+  mb.add(cyl(0.0118, 0.002, std(0x111827, 0.2, 0.6), 'z', -0.07, -0.1, 0.001))
+  const cmos = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.0032, 40), [std(0xd1d5db, 0.9, 0.25), pictured(coinCellTexture(), 0.3, 0.85), std(0xd1d5db, 0.9, 0.25)])
+  cmos.rotation.x = Math.PI / 2
+  cmos.position.set(-0.07, -0.1, 0.004)
+  cmos.castShadow = true
   mb.add(cmos)
+  mb.add(box(0.003, 0.009, 0.0008, metal, -0.07, -0.0895, 0.0058))
   const ports = new THREE.Group()
   ports.add(box(0.02, 0.16, 0.035, std(0x9ca3af, 0.7, 0.35), 0, 0, 0))
   ports.add(box(0.002, 0.014, 0.012, std(0x2563eb), 0.011, 0.05, 0), box(0.002, 0.014, 0.012, std(0x2563eb), 0.011, 0.03, 0))

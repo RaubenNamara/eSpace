@@ -121,7 +121,7 @@
 /* ---------------------------------------------------------------------------------------------
    Framed cards - the bookcase look used across the app
    The bordered white cards everywhere (bg-white + border + rounded-lg/xl/2xl on a container)
-   get the same finish: clean white, a soft grey-green border (eSpace is green, white and black),
+   get the same finish: clean white, a soft grey-green border (Tusome is green, white and black),
    a light catching the top edge and a gentle shadow beneath. Card-shaped buttons (rounded-xl /
    2xl, e.g. clickable stat cards) are framed too; ordinary buttons, inputs and other controls are
    left as they are, and so is a card showing its own state with a coloured border (e.g. the

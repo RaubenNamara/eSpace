@@ -11,7 +11,7 @@
     </div>
     <div class="flex-1 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-800">
       <p v-if="state === 'loading'" class="p-6 text-sm text-gray-500" role="status">Loading…</p>
-      <AnatomyErrorState v-else-if="state === 'off'" class="h-full" title="BioDigital is not set up" message="The school has not added a BioDigital licence key, so BioDigital modules cannot be shown. The eSpace anatomy modules are available without one." />
+      <AnatomyErrorState v-else-if="state === 'off'" class="h-full" title="BioDigital is not set up" message="The school has not added a BioDigital licence key, so BioDigital modules cannot be shown. The Tusome anatomy modules are available without one." />
       <AnatomyErrorState v-else-if="state === 'bad'" class="h-full" title="Not a BioDigital module" message="This link is not a BioDigital module id or human.biodigital.com link." />
       <iframe
         v-else

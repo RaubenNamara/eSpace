@@ -1,0 +1,53 @@
+/**
+ * The computer laboratory rules every student learns before using the lab, and everyday
+ * situations to judge ("allowed or not?") - the Lab rules page (pages/common/IctLabRules.vue).
+ * A student who gets at least PASS_MARK of the situations right has passed; the result is saved as
+ * an ICT Lab attempt under RULES_KEY, so it shows on the ICT Lab page like any activity.
+ */
+export interface LabRule {
+  icon: string
+  rule: string
+  why: string
+}
+export interface LabScenario {
+  text: string
+  allowed: boolean
+  /** Index into LAB_RULES of the rule it is about */
+  rule: number
+  explain: string
+}
+
+export const RULES_KEY = 'lab-rules'
+export const PASS_MARK = 80
+
+export const LAB_RULES: LabRule[] = [
+  { icon: 'users', rule: 'Enter the lab only when a teacher or the lab technician is there.', why: 'Someone who knows the equipment must be present in case anything goes wrong.' },
+  { icon: 'warning', rule: 'No food, drinks or water bottles in the lab.', why: 'Crumbs jam keyboards, and a spilt drink can short-circuit a computer or give someone a shock.' },
+  { icon: 'hand', rule: 'Make sure your hands are clean and dry before you touch a computer.', why: 'Water and electricity do not mix, and dirty hands leave grease on keys and screens.' },
+  { icon: 'clock', rule: 'Walk, do not run, and never push or play in the lab.', why: 'Cables run across the floor and the equipment is expensive and easily knocked over.' },
+  { icon: 'bolt', rule: 'Switch on and off the right way: shut down from the Start menu first, then switch off at the socket.', why: 'Pulling the plug while it is running can damage files and the hard disk.' },
+  { icon: 'wrench', rule: 'Never open a computer or touch sockets and cables. Report any fault to the teacher.', why: 'There is high voltage inside; a teacher or technician deals with faults safely.' },
+  { icon: 'download', rule: 'Do not install programs or change settings without permission.', why: 'Unknown programs can bring viruses and stop the computer working for the next class.' },
+  { icon: 'check-circle', rule: 'Scan a flash disk for viruses before you open it.', why: 'Flash disks carry viruses from one computer to another.' },
+  { icon: 'key', rule: 'Keep your password to yourself, and log out when you finish.', why: 'Anyone with your password can read, change or hand in work as you.' },
+  { icon: 'keyboard', rule: 'Handle equipment gently: press keys lightly and never poke the screen.', why: 'Banging and poking break keys and leave marks or cracks on the screen.' },
+  { icon: 'flame', rule: 'Know where the fire extinguisher is. Never put water on an electrical fire.', why: 'Water conducts electricity. Switch off at the mains, tell the teacher, and use a CO2 extinguisher.' },
+  { icon: 'sparkles', rule: 'Leave your place tidy: chair pushed in, computer shut down and covered.', why: 'The next class finds the lab ready, and dust covers keep the machines clean.' }
+]
+
+export const LAB_SCENARIOS: LabScenario[] = [
+  { text: 'Brian sips a soda while he types his assignment.', allowed: false, rule: 1, explain: 'No food or drinks - one spill can damage the keyboard or the computer.' },
+  { text: 'Amina dries her hands before she sits down at the computer.', allowed: true, rule: 2, explain: 'Clean, dry hands keep her safe and the keyboard clean.' },
+  { text: 'The screen goes blank, so Peter opens the system unit to check the cables.', allowed: false, rule: 5, explain: 'Never open a computer - report the fault to the teacher.' },
+  { text: 'Sarah clicks Start, then Shut down, then switches off at the wall socket.', allowed: true, rule: 4, explain: 'That is the right way to switch off.' },
+  { text: 'Joel is in a hurry, so he pulls the plug out while the computer is still on.', allowed: false, rule: 4, explain: 'Pulling the plug can damage files and the hard disk - shut down first.' },
+  { text: 'Grace scans her flash disk for viruses before opening her files.', allowed: true, rule: 7, explain: 'Scanning first stops viruses spreading to the lab computers.' },
+  { text: 'Two friends race each other to the last free computer.', allowed: false, rule: 3, explain: 'Walk, never run - cables and equipment can be knocked over.' },
+  { text: 'Musa downloads a game and installs it on the lab computer.', allowed: false, rule: 6, explain: 'Never install programs without permission.' },
+  { text: 'Ruth tells her friend her password so he can hand in work for her.', allowed: false, rule: 8, explain: 'Keep your password to yourself.' },
+  { text: 'At the end of the lesson, Ali shuts down, covers the computer and pushes in his chair.', allowed: true, rule: 11, explain: 'Exactly - the lab is ready for the next class.' },
+  { text: 'A cable starts to smoke. Ivan grabs a bottle of water to pour on it.', allowed: false, rule: 10, explain: 'Never water on electricity: switch off at the mains, tell the teacher, use a CO2 extinguisher.' },
+  { text: 'The class waits outside until the teacher arrives to open the lab.', allowed: true, rule: 0, explain: 'Only enter when a teacher or the technician is there.' },
+  { text: 'Ken taps the screen hard with his pen to show his friend something.', allowed: false, rule: 9, explain: 'Never poke the screen - point without touching it.' },
+  { text: 'Lucy logs out when she has finished, before she leaves the computer.', allowed: true, rule: 8, explain: 'Logging out keeps her account and work safe.' }
+]

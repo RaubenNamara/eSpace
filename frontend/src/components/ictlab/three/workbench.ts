@@ -35,11 +35,33 @@ export interface WorkbenchOptions {
   maxDistance?: number
   /** Camera near plane - small for close-up work like a cable end */
   near?: number
+  /** A plain photo studio instead of the computer lab - for looking closely at one thing */
+  studio?: boolean
+  /** Render sharper (more pixels, finer shadows) - for close-ups */
+  hd?: boolean
+}
+
+/** The studio's background: white at the top, fading to a soft grey-green at the floor */
+function studioBackdrop() {
+  const c = document.createElement('canvas')
+  c.width = 4
+  c.height = 512
+  const g = c.getContext('2d')!
+  const grad = g.createLinearGradient(0, 0, 0, 512)
+  grad.addColorStop(0, '#ffffff')
+  grad.addColorStop(0.55, '#eef2f0')
+  grad.addColorStop(1, '#d5ddd8')
+  g.fillStyle = grad
+  g.fillRect(0, 0, 4, 512)
+  const t = new THREE.CanvasTexture(c)
+  t.colorSpace = THREE.SRGBColorSpace
+  return t
 }
 
 export function createWorkbench(host: HTMLElement, opts: WorkbenchOptions): Workbench {
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' })
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5))
+  // HD draws at least 1.5x and up to 2x the screen's pixels, so fine print and edges stay crisp
+  renderer.setPixelRatio(opts.hd ? Math.min(2, Math.max(1.5, window.devicePixelRatio)) : Math.min(window.devicePixelRatio, 1.5))
   renderer.shadowMap.enabled = true
   renderer.shadowMap.type = THREE.PCFSoftShadowMap
   renderer.outputColorSpace = THREE.SRGBColorSpace
@@ -63,7 +85,7 @@ export function createWorkbench(host: HTMLElement, opts: WorkbenchOptions): Work
   const key = new THREE.DirectionalLight(0xffffff, 1.6)
   key.position.set(0.8, 1.6, 1.2)
   key.castShadow = true
-  key.shadow.mapSize.set(1024, 1024)
+  key.shadow.mapSize.set(opts.hd ? 2048 : 1024, opts.hd ? 2048 : 1024)
   key.shadow.camera.left = -1
   key.shadow.camera.right = 1
   key.shadow.camera.top = 1
@@ -73,8 +95,24 @@ export function createWorkbench(host: HTMLElement, opts: WorkbenchOptions): Work
   key.shadow.bias = -0.0005
   scene.add(key)
 
-  // The computer lab: tiled floor, walls with a window, the wooden bench (its top is y = 0)
-  buildLabRoom(scene)
+  if (opts.studio) {
+    // A photo studio: a soft light sweep, a floor that only catches shadows, and a rim light from
+    // behind so edges stand out
+    scene.background = studioBackdrop()
+    const floor = new THREE.Mesh(new THREE.CircleGeometry(3, 64), new THREE.ShadowMaterial({ opacity: 0.18 }))
+    floor.rotation.x = -Math.PI / 2
+    floor.receiveShadow = true
+    scene.add(floor)
+    const rim = new THREE.DirectionalLight(0xffffff, 0.9)
+    rim.position.set(-0.9, 1.0, -1.2)
+    scene.add(rim)
+    const fill = new THREE.DirectionalLight(0xf1f5f9, 0.45)
+    fill.position.set(-1.2, 0.5, 0.8)
+    scene.add(fill)
+  } else {
+    // The computer lab: tiled floor, walls with a window, the wooden bench (its top is y = 0)
+    buildLabRoom(scene)
+  }
 
   const camera = new THREE.PerspectiveCamera(42, 1, opts.near ?? 0.02, 20)
   const startPos = new THREE.Vector3(...opts.cameraPosition)

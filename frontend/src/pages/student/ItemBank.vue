@@ -135,7 +135,7 @@ const previewResource = ref<ItemBankResource | null>(null)
 const opening = ref<{ item: ItemBankResource; el: HTMLElement | null } | null>(null)
 const router = useRouter()
 const openItem = (item: ItemBankResource, el: HTMLElement | null) => {
-  // A paper written in eSpace opens question by question, not in the PDF reader
+  // A paper written in Tusome opens question by question, not in the PDF reader
   if (item.question_type === 'paper') {
     router.push(`/student/itembank/${item.id}/paper`)
     return

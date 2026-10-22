@@ -5,7 +5,7 @@
     <div class="grid lg:grid-cols-2 gap-0 overflow-hidden">
       <div class="p-8 sm:p-12 bg-indigo-950 text-white">
         <h2 class="font-jakarta text-3xl sm:text-4xl font-extrabold tracking-tight">{{ title }}</h2>
-        <p class="mt-4 text-slate-300 leading-relaxed">Tell us a little about your school and we'll walk you through eSpace with your own classes and subjects - no obligation.</p>
+        <p class="mt-4 text-slate-300 leading-relaxed">Tell us a little about your school and we'll walk you through Tusome with your own classes and subjects - no obligation.</p>
         <ul class="mt-8 space-y-3">
           <li v-for="b in POINTS" :key="b" class="flex items-start gap-3 text-sm"><AppIcon name="check-circle" class="w-5 h-5 flex-shrink-0 text-indigo-300" />{{ b }}</li>
         </ul>
@@ -68,10 +68,10 @@ import { ref } from 'vue'
 import axios from 'axios'
 import AppIcon from '@/components/common/AppIcon.vue'
 
-withDefaults(defineProps<{ title?: string }>(), { title: 'See eSpace in your school.' })
+withDefaults(defineProps<{ title?: string }>(), { title: 'See Tusome in your school.' })
 
 const INPUT = 'w-full px-3.5 py-2.5 rounded-xl border bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500'
-const POINTS = ['A walk-through with your own classes and subjects', 'Answers to your questions from the people who build eSpace', 'A quote and a clear plan for your first term']
+const POINTS = ['A walk-through with your own classes and subjects', 'Answers to your questions from the people who build Tusome', 'A quote and a clear plan for your first term']
 const SIZES = ['Under 300', '300-600', '600-1,000', 'Over 1,000']
 
 const form = ref({ school_name: '', contact_name: '', role: '', email: '', phone: '', students: '', message: '', website: '' })

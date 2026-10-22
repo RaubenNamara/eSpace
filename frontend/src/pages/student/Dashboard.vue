@@ -1,5 +1,5 @@
 <template>
-  <!-- The student's home, in eSpace's green, white and black on cream. The school's notices slide
+  <!-- The student's home, in Tusome's green, white and black on cream. The school's notices slide
        past at the top; then the work waiting, shortcuts, classes and notes - each showing a few,
        opening up for the rest. How it is all going lives in Reports (My activity). -->
   <div class="w-full">

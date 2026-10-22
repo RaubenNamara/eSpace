@@ -6,7 +6,7 @@
       <div class="mx-auto w-full max-w-6xl min-[1920px]:max-w-7xl px-4 sm:px-6 lg:px-8 h-16 min-[1920px]:h-20 flex items-center justify-between">
         <div class="flex items-center gap-3">
           <img src="/images/stmark-logo.jpg" alt="" class="w-9 h-9 min-[1920px]:w-11 min-[1920px]:h-11 rounded-lg border border-gray-200 object-cover" />
-          <span class="text-lg min-[1920px]:text-xl font-semibold tracking-tight">eSpace</span>
+          <span class="text-lg min-[1920px]:text-xl font-semibold tracking-tight">Tusome</span>
         </div>
         <button
           type="button"
@@ -133,7 +133,7 @@
           </section>
         </div>
 
-        <p class="mt-6 text-center text-xs min-[1920px]:text-sm text-gray-400">© {{ year }} eSpace. All rights reserved.</p>
+        <p class="mt-6 text-center text-xs min-[1920px]:text-sm text-gray-400">© {{ year }} Tusome. All rights reserved.</p>
       </div>
     </main>
   </div>

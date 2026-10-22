@@ -5,6 +5,7 @@
       <div class="col-span-2">
         <Wordmark size="lg" />
         <p class="mt-3 max-w-sm text-sm text-slate-600 dark:text-slate-400">The digital school - learning, assessment and insight for competency-based education.</p>
+        <p class="mt-2 text-sm text-slate-600 dark:text-slate-400">Help: <a :href="`mailto:${SUPPORT_EMAIL}`" class="font-medium text-indigo-700 dark:text-indigo-300 hover:underline">{{ SUPPORT_EMAIL }}</a></p>
         <router-link to="/#demo" class="mt-5 inline-flex px-4 py-2 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition">Request a demo</router-link>
       </div>
       <div v-for="col in COLUMNS" :key="col.title">
@@ -15,14 +16,14 @@
       </div>
     </div>
     <div class="border-t border-slate-200 dark:border-white/10">
-      <p class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-5 text-xs text-slate-500 dark:text-slate-400">&copy; {{ year }} eSpace. All rights reserved.</p>
+      <p class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-5 text-xs text-slate-500 dark:text-slate-400">&copy; {{ year }} Tusome. All rights reserved.</p>
     </div>
   </footer>
 </template>
 
 <script setup lang="ts">
 import Wordmark from '@/components/brand/Wordmark.vue'
-import { AUDIENCE_LINKS } from '@/data/site'
+import { AUDIENCE_LINKS, SUPPORT_EMAIL } from '@/data/site'
 
 const year = new Date().getFullYear()
 

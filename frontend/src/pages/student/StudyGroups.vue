@@ -36,7 +36,7 @@
         </div>
       </article>
     </div>
-    <p v-if="groups.length" class="mt-4 text-xs text-gray-400">Study group chats can be seen by your school's heads of department, like every chat in eSpace.</p>
+    <p v-if="groups.length" class="mt-4 text-xs text-gray-400">Study group chats can be seen by your school's heads of department, like every chat in Tusome.</p>
 
     <!-- Change a group's date -->
     <div v-if="dateFor" class="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4" @click.self="dateFor = null">

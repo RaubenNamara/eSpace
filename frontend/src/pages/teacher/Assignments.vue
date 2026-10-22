@@ -30,7 +30,7 @@
       <button type="button" class="text-sm font-semibold text-rose-700 dark:text-rose-200 hover:underline" @click="loadAssignments">Try again</button>
     </div>
 
-    <EmptyState v-else-if="!assignments.length" icon="clipboard" tone="violet" title="No assessments yet" message="Build a quiz, a test or a take-home task - students answer in eSpace and you mark it here.">
+    <EmptyState v-else-if="!assignments.length" icon="clipboard" tone="violet" title="No assessments yet" message="Build a quiz, a test or a take-home task - students answer in Tusome and you mark it here.">
       <button type="button" class="px-4 py-2 rounded-xl text-sm font-semibold bg-violet-600 text-white hover:bg-violet-700" @click="router.push('/teacher/assignments/create')">Create your first assessment</button>
     </EmptyState>
 

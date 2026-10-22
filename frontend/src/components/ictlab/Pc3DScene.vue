@@ -731,7 +731,7 @@ function plugTo(inSocket: boolean) {
 }
 
 // ---------------------------------------------------------------- switching on
-const BOOT = ['eSpace PC  BIOS v1.0', 'Processor ........ OK', 'Memory 8192 MB ... OK', 'Graphics ......... OK', 'Drive: HDD 1TB ... found', '* one short beep - all good *', 'Starting the operating system...']
+const BOOT = ['Tusome PC  BIOS v1.0', 'Processor ........ OK', 'Memory 8192 MB ... OK', 'Graphics ......... OK', 'Drive: HDD 1TB ... found', '* one short beep - all good *', 'Starting the operating system...']
 const booting = ref(false)
 const bootShown = ref(0)
 let bootTimer: ReturnType<typeof setInterval> | null = null

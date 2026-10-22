@@ -1,5 +1,5 @@
 <template>
-  <!-- A browser window holding a drawing of an eSpace screen. The screen is laid out at a fixed
+  <!-- A browser window holding a drawing of an Tusome screen. The screen is laid out at a fixed
        55 x 32.5rem (880 x 520 at normal size) and scaled to whatever width the frame has, so it
        looks the same on a phone and on a large monitor. Screens use rem only, never px, so the
        whole drawing grows together when the site scales up on big screens. -->

@@ -22,7 +22,7 @@ export interface LibraryBook {
   // Root-relative cover picture ('/uploads/library/covers/...'): the PDF's first page captured
   // automatically ('auto_' files) or an image the teacher uploaded. Null = printed jacket design.
   cover_image?: string | null
-  // A cover designed in eSpace (JSON: template, colour, picture, words) - shown instead of the picture
+  // A cover designed in Tusome (JSON: template, colour, picture, words) - shown instead of the picture
   cover_design?: string | null
   uploaded_by?: number
   status: 'draft' | 'published' | 'archived'

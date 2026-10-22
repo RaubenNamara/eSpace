@@ -111,7 +111,7 @@ defineProps<{
   background: rgba(255, 255, 255, 0.2);
 }
 
-/* Back wall of the bookcase: a soft, light green in eSpace's colours */
+/* Back wall of the bookcase: a soft, light green in Tusome's colours */
 .shelf-cabinet {
   position: relative;
   border-radius: 14px;

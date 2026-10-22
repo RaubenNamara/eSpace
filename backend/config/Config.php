@@ -60,7 +60,7 @@ class Config
             'APP_ENV' => 'production',
             'APP_DEBUG' => 'false',
             'APP_URL' => 'http://localhost/eSpace/backend/public',
-            'APP_NAME' => 'eSpace',
+            'APP_NAME' => 'Tusome',
             'FRONTEND_URL' => 'http://localhost:3000',
             'SESSION_LIFETIME' => '7200',
             'CSRF_TOKEN_NAME' => 'csrf_token',

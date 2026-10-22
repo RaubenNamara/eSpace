@@ -273,7 +273,7 @@ const useTool = (key: string) => {
 const booting = ref(false)
 const bootShown = ref(0)
 const bootLines = computed(() => [
-  'eSpace PC  BIOS v1.0',
+  'Tusome PC  BIOS v1.0',
   'Processor ........ OK',
   'Memory 8192 MB ... OK',
   'Graphics ......... OK',

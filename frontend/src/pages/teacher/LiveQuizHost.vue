@@ -19,7 +19,7 @@
 
     <!-- Lobby: the code, and who has joined -->
     <main v-else-if="state.phase === 'lobby'" class="flex-1 flex flex-col items-center justify-center px-4 py-10 text-center">
-      <p class="text-slate-300 text-lg">On your phone: open <b class="text-white">Live Quiz</b> in eSpace and type</p>
+      <p class="text-slate-300 text-lg">On your phone: open <b class="text-white">Live Quiz</b> in Tusome and type</p>
       <p class="mt-4 font-jakarta font-extrabold tracking-[0.2em] text-6xl sm:text-8xl lg:text-9xl tabular-nums">{{ spacedCode }}</p>
       <div class="mt-10 w-full max-w-4xl">
         <p class="text-sm text-slate-400">{{ state.players.length ? `${state.players.length} joined` : 'Waiting for students to join…' }}</p>

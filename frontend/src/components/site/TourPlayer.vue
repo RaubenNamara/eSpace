@@ -3,7 +3,7 @@
        Space pauses, arrows step, Esc closes. -->
   <Teleport to="body">
     <Transition name="fade">
-      <div v-if="open" class="site-plain fixed inset-0 z-[80] bg-slate-950/[0.97] backdrop-blur-sm flex flex-col" role="dialog" aria-modal="true" aria-label="eSpace product tour" @click.self="close">
+      <div v-if="open" class="site-plain fixed inset-0 z-[80] bg-slate-950/[0.97] backdrop-blur-sm flex flex-col" role="dialog" aria-modal="true" aria-label="Tusome product tour" @click.self="close">
         <div class="mx-auto w-full max-w-5xl px-4 pt-4 sm:pt-6 flex items-center gap-1.5">
           <span v-for="(s, i) in TOUR" :key="s.key" class="flex-1 h-1 rounded-full bg-white/20 overflow-hidden">
             <span class="block h-full bg-white" :style="{ width: `${i < index ? 100 : i === index ? progress * 100 : 0}%` }"></span>

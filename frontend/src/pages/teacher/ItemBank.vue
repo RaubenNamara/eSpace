@@ -2,7 +2,7 @@
   <div class="w-full">
     <PageHeader title="Item Bank" :description="COPY[contentRole]" icon="clipboard" accent="amber" :active-filters="activeFilterCount">
       <template #actions>
-        <button v-if="contentRole === 'teacher'" type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold border border-indigo-300 dark:border-indigo-700 bg-white dark:bg-gray-800 text-indigo-800 dark:text-indigo-200 hover:bg-amber-50 dark:hover:bg-indigo-900/30" title="Write questions in eSpace, page by page, with answers students can check" @click="openCreateModal('paper')">
+        <button v-if="contentRole === 'teacher'" type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold border border-indigo-300 dark:border-indigo-700 bg-white dark:bg-gray-800 text-indigo-800 dark:text-indigo-200 hover:bg-amber-50 dark:hover:bg-indigo-900/30" title="Write questions in Tusome, page by page, with answers students can check" @click="openCreateModal('paper')">
           <AppIcon name="pencil" class="w-4 h-4" />
           <span class="hidden sm:inline">Write a paper</span><span class="sm:hidden">Write</span>
         </button>
@@ -65,7 +65,7 @@
         <button class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" @click="bulkSetStatus('draft')">Draft</button>
         <button class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" @click="bulkSetStatus('archived')">Archive</button>
         <button class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" title="Students can download these and save them for offline reading" @click="bulkSetDownload(true)">Allow download</button>
-        <button class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" title="Students can only read these inside eSpace" @click="bulkSetDownload(false)">No download</button>
+        <button class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" title="Students can only read these inside Tusome" @click="bulkSetDownload(false)">No download</button>
         <button class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" @click="bulkExport">Export CSV</button>
         <button class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors" @click="bulkDeleteSelected">Delete</button>
       </BulkActionBar>
@@ -480,7 +480,7 @@ const resourceForm = ref<ItemBankResourceForm>({
 const { role: contentRole, api: contentApi, options: contentOptions, optionsError, loadOptions, departmentFilter, departmentOptions, formDepartment, subjectChoices, missingLevels } =
   useContentRole('itembank', resourceForm, () => assignments.value?.subjects ?? [])
 const COPY = {
-  teacher: 'Past papers, practice questions and revision packs - students open them right in eSpace.',
+  teacher: 'Past papers, practice questions and revision packs - students open them right in Tusome.',
   hod: "Your department's papers and practice packs - yours and your teachers' - for the whole department, a class or one stream.",
   admin: "The school's papers and practice packs, in every department - upload one and choose the department and who it's for."
 }
@@ -783,12 +783,12 @@ const loadAssignments = async () => {
   }
 }
 
-// 'pdf' uploads a paper; 'paper' writes one in eSpace (questions added in its builder)
+// 'pdf' uploads a paper; 'paper' writes one in Tusome (questions added in its builder)
 const paperMode = ref(false)
 const openResource = (resource: ItemBankResource) => {
   if (resource.question_type === 'paper') {
     if (contentRole === 'teacher') router.push(`/teacher/itembank/papers/${resource.id}`)
-    else toast.info('This paper is written in eSpace - its teacher edits it in their Item Bank')
+    else toast.info('This paper is written in Tusome - its teacher edits it in their Item Bank')
   } else previewResource.value = resource
 }
 

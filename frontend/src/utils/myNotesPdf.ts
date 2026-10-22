@@ -45,7 +45,7 @@ export function buildMyNotesPdf(notes: MyNote[], who: { name: string; class_labe
 
   doc.setTextColor(71, 85, 105)
   doc.setFontSize(9.5)
-  doc.text(`${notes.length} ${notes.length === 1 ? 'note' : 'notes'} written while reading on eSpace.`, M, y)
+  doc.text(`${notes.length} ${notes.length === 1 ? 'note' : 'notes'} written while reading on Tusome.`, M, y)
   y += 8
 
   let subject = ''
@@ -113,7 +113,7 @@ export function buildMyNotesPdf(notes: MyNote[], who: { name: string; class_labe
     doc.setTextColor(148, 163, 184)
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(8)
-    doc.text(`${title(who.name)} - my notes from eSpace`, M, 297 - 9)
+    doc.text(`${title(who.name)} - my notes from Tusome`, M, 297 - 9)
     doc.text(`${i} / ${pages}`, W - M, 297 - 9, { align: 'right' })
   }
   return doc

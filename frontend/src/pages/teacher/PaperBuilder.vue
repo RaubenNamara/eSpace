@@ -1,5 +1,5 @@
 <template>
-  <!-- Writing an Item Bank paper in eSpace, one question per page - the question in the same
+  <!-- Writing an Item Bank paper in Tusome, one question per page - the question in the same
        editor as eNotes (text, pictures, equations, video), and how it's answered: choices,
        true/false, a short answer, or a written answer with a model answer. Students check their
        answers as they go; any question can also be placed on an eNote page. -->

@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 
 /**
- * Installing eSpace as an app (it is a PWA - see vite.config.ts's manifest).
+ * Installing Tusome as an app (it is a PWA - see vite.config.ts's manifest).
  *  - Android / Chrome / Edge: the browser fires `beforeinstallprompt`; it is kept here (captured
  *    from main.ts before the app mounts, since it can fire very early) so an "Install" button can
  *    show the browser's own install dialog.

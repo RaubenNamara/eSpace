@@ -13,8 +13,13 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-10-22', area: 'ICT Lab', icon: 'keyboard',
+    title: 'Lab rules, online safety, Build a network, Binary, a typing tutor and more',
+    text: 'Students learn the computer lab rules and judge real situations to earn a lab pass, then hunt for dangers hidden in a 3D computer lab, spot scam messages and fake websites, count in binary with light switches, build a classroom network mission by mission - switch, printer, router, Wi-Fi - and fix a broken one, and learn to touch-type in 16 lessons - the key lights up and the hand shows which finger to use - and follow one key press through the computer in 3D: input, process, output and storage. In the showroom every part and device turns in HD 3D, with numbered details to fly in to - the processor socket, the memory slots, a mouse\'s scroll wheel - and a Test yourself quiz.'
+  },
+  {
     date: '2026-10-15', area: 'Everyone', icon: 'sparkles',
-    title: 'A cleaner eSpace in green, white and black',
+    title: 'A cleaner Tusome in green, white and black',
     text: 'Simple dashboards for every role - school notices sliding past, the work waiting, shortcuts and classes in small cards that open up for more - and a My activity report for students: what they have done and not done over a week, a month, a term or the year.'
   },
   {

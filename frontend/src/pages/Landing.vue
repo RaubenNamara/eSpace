@@ -1,6 +1,6 @@
 <template>
-  <!-- The public eSpace website: what eSpace is, a tour, every module, who it's for, pricing, the
-       team, and a way for a school to ask for a demo. eSpace is the product; schools (St Mark's
+  <!-- The public Tusome website: what Tusome is, a tour, every module, who it's for, pricing, the
+       team, and a way for a school to ask for a demo. Tusome is the product; schools (St Mark's
        first) are clients. Words for most sections live in data/site.ts. -->
   <div class="site-plain min-h-screen bg-white font-sans text-slate-900 antialiased dark:bg-slate-950 dark:text-white overflow-x-hidden">
     <SiteHeader />
@@ -23,7 +23,7 @@
               <span class="text-indigo-600 dark:text-indigo-400">one space.</span>
             </h1>
             <p class="mt-5 max-w-xl text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed">
-              eSpace is a complete digital school: notes, books, videos and live lessons for students; LOA, AOI and EOC assessment and marking for teachers; and a live Learning Map that shows everyone exactly where each learner stands.
+              Tusome is a complete digital school: notes, books, videos and live lessons for students; LOA, AOI and EOC assessment and marking for teachers; and a live Learning Map that shows everyone exactly where each learner stands.
             </p>
             <div class="mt-8 flex flex-wrap gap-3">
               <a href="#demo" class="inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition">
@@ -42,7 +42,7 @@
             </div>
           </div>
 
-          <!-- Product preview: a few eSpace pieces, floating -->
+          <!-- Product preview: a few Tusome pieces, floating -->
           <div class="reveal relative mx-auto w-full max-w-lg lg:max-w-none h-[31rem] sm:h-[30rem]" aria-hidden="true">
             <div class="absolute inset-x-4 sm:inset-x-10 top-6 rounded-3xl bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-white/10 shadow-xl shadow-slate-900/5 backdrop-blur p-5 float-a">
               <div class="flex items-center justify-between">
@@ -101,7 +101,7 @@
       <section id="features" class="py-20 sm:py-28 scroll-mt-20">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div class="reveal max-w-2xl">
-            <p :class="EYEBROW">Why schools choose eSpace</p>
+            <p :class="EYEBROW">Why schools choose Tusome</p>
             <h2 :class="H2">Teaching, learning and leading - finally in one place.</h2>
           </div>
           <div class="mt-12 grid lg:grid-cols-3 gap-5">
@@ -124,7 +124,7 @@
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div class="reveal text-center max-w-2xl mx-auto mb-10">
             <p :class="EYEBROW">See it in action</p>
-            <h2 :class="H2">A look inside eSpace</h2>
+            <h2 :class="H2">A look inside Tusome</h2>
           </div>
           <ProductTour class="reveal" @watch="watchTour" />
         </div>
@@ -210,14 +210,14 @@
                 </ul>
                 <div class="mt-6 flex flex-wrap gap-x-6 gap-y-2">
                   <router-link :to="activeRole.page" class="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 dark:text-indigo-300 hover:underline">
-                    eSpace for {{ activeRole.label.toLowerCase() }}
+                    Tusome for {{ activeRole.label.toLowerCase() }}
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                   </router-link>
                   <router-link :to="`/guide#${activeRole.key}`" class="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:underline">Read the guide</router-link>
                 </div>
               </div>
               <div class="rounded-3xl p-6 sm:p-8 bg-indigo-950 text-white dark:bg-white/5 dark:border dark:border-white/10">
-                <p class="text-xs font-bold uppercase tracking-widest opacity-80">A day with eSpace</p>
+                <p class="text-xs font-bold uppercase tracking-widest opacity-80">A day with Tusome</p>
                 <ol class="mt-5 space-y-4">
                   <li v-for="(s, i) in activeRole.day" :key="s.time" class="flex gap-4">
                     <span class="flex-shrink-0 w-14 text-sm font-bold opacity-90">{{ s.time }}</span>
@@ -239,7 +239,7 @@
             <div class="reveal">
               <p class="text-sm font-bold uppercase tracking-widest text-indigo-300">Competency-based, by design</p>
               <h2 class="mt-3 font-jakarta text-3xl sm:text-4xl font-extrabold tracking-tight">From one learning outcome to the end-of-term report.</h2>
-              <p class="mt-4 text-slate-300 leading-relaxed">Teachers link each assessment to the curriculum. eSpace does the rest: every marked answer updates the learner's Learning Map, shows the class what to reteach, and feeds straight into the report card.</p>
+              <p class="mt-4 text-slate-300 leading-relaxed">Teachers link each assessment to the curriculum. Tusome does the rest: every marked answer updates the learner's Learning Map, shows the class what to reteach, and feeds straight into the report card.</p>
             </div>
             <div class="reveal grid gap-3">
               <div v-for="(c, i) in CBC" :key="c.code" class="flex items-start gap-4 rounded-2xl bg-white/5 border border-white/10 p-4" :style="{ marginLeft: `${i * 1.25}rem` }">
@@ -294,20 +294,20 @@
                   <img src="/images/stmark-logo.jpg" alt="" width="48" height="48" loading="lazy" class="w-12 h-12 rounded-xl object-contain bg-white p-0.5">
                   <div>
                     <p class="font-bold">St Mark's College Namagoma</p>
-                    <p class="text-xs text-slate-300">Running on eSpace</p>
+                    <p class="text-xs text-slate-300">Running on Tusome</p>
                   </div>
                 </div>
                 <p class="mt-6 font-jakarta text-2xl sm:text-3xl font-bold leading-snug">Every class, every subject - on one platform.</p>
-                <p class="mt-4 text-sm sm:text-base text-slate-300 leading-relaxed">At St Mark's, students read their notes, revise from the library, join live lessons and hand in their assessments on eSpace - and teachers follow each class, outcome by outcome, through to the end-of-term report card.</p>
+                <p class="mt-4 text-sm sm:text-base text-slate-300 leading-relaxed">At St Mark's, students read their notes, revise from the library, join live lessons and hand in their assessments on Tusome - and teachers follow each class, outcome by outcome, through to the end-of-term report card.</p>
               </div>
-              <!-- Live from eSpace - only figures big enough to mean something -->
+              <!-- Live from Tusome - only figures big enough to mean something -->
               <div v-if="liveStats.length" class="mt-10 flex flex-wrap gap-px rounded-2xl overflow-hidden bg-white/10 max-w-4xl">
                 <div v-for="s in liveStats" :key="s.key" class="flex-1 basis-[45%] sm:basis-0 bg-slate-950/70 backdrop-blur px-4 py-4 sm:px-5">
                   <p class="font-jakarta text-2xl sm:text-3xl font-extrabold tabular-nums">{{ s.shown.toLocaleString() }}</p>
                   <p class="text-xs sm:text-sm text-slate-300">{{ s.label }}</p>
                 </div>
               </div>
-              <p v-if="liveStats.length" class="mt-3 text-[11px] text-slate-400">Live totals from eSpace.</p>
+              <p v-if="liveStats.length" class="mt-3 text-[11px] text-slate-400">Live totals from Tusome.</p>
             </div>
           </div>
         </div>
@@ -372,7 +372,7 @@
           <div class="reveal flex flex-wrap items-end justify-between gap-4">
             <div class="max-w-2xl">
               <p :class="EYEBROW">What's new</p>
-              <h2 :class="H2">eSpace gets better every week.</h2>
+              <h2 :class="H2">Tusome gets better every week.</h2>
             </div>
             <p class="text-sm text-slate-500 dark:text-slate-400">Every school gets each improvement the day it ships.</p>
           </div>
@@ -402,7 +402,7 @@
             <div class="reveal lg:sticky lg:top-28">
               <p :class="EYEBROW">Meet the team</p>
               <h2 :class="H2">Four people. One mission.</h2>
-              <p class="mt-3 text-slate-600 dark:text-slate-400">An executive director and a product and technology team who build eSpace and stay close to the schools that use it - you talk to the people who make it.</p>
+              <p class="mt-3 text-slate-600 dark:text-slate-400">An executive director and a product and technology team who build Tusome and stay close to the schools that use it - you talk to the people who make it.</p>
               <div class="mt-8 rounded-2xl border-l-4 border-indigo-500 bg-white dark:bg-white/5 p-5">
                 <p class="font-jakarta font-bold">{{ STORY.title }}</p>
                 <p v-for="p in STORY.paragraphs" :key="p" class="mt-2 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{{ p }}</p>
@@ -554,7 +554,7 @@ const ROLES = [
   {
     key: 'teacher', label: 'Teachers', page: '/for/teachers',
     headline: 'Spend your time teaching - not chasing paper.',
-    text: 'Write eNotes, share books and videos, set competency-based assessments and mark them on screen. eSpace keeps track of who has read, watched and handed in.',
+    text: 'Write eNotes, share books and videos, set competency-based assessments and mark them on screen. Tusome keeps track of who has read, watched and handed in.',
     points: ['Write interactive eNotes', 'Build LOA / AOI / EOC assessments', 'Mark on screen, with annotations', 'See who needs support, by outcome', 'Run live classes with attendance', 'Message any student directly'],
     day: [{ time: '7:00', what: 'Dashboard: 11 scripts to mark, 1 live class today' }, { time: '10:00', what: 'Marks the S.1 LOA on screen between lessons' }, { time: '2:00', what: 'Learning Map flags one outcome - creates a support group' }, { time: '5:00', what: 'Messages the three students who haven\'t opened the notes' }]
   },
@@ -597,7 +597,7 @@ const initials = (name: string) => {
 }
 
 const FAQ = [
-  { q: 'Do students need a computer?', a: 'No. eSpace works on any smartphone, tablet or computer with a browser. Notes and books can be saved to the device to read without internet, and anything done offline is sent when the device reconnects.' },
+  { q: 'Do students need a computer?', a: 'No. Tusome works on any smartphone, tablet or computer with a browser. Notes and books can be saved to the device to read without internet, and anything done offline is sent when the device reconnects.' },
   { q: 'How much does it cost?', a: 'One price per learner, per term, depending on the size of your school - with every module, setup, training and support included. Request a demo and we will send a quote with a plan for your first term.' },
   { q: 'Does it follow the competency-based curriculum?', a: 'Yes - it\'s built around it. Assessments are tagged as LOA, AOI or EOC and linked to learning outcomes, topics and constructs, and every marked result feeds the Learning Map and the report card.' },
   { q: 'How long does it take to get started?', a: 'Usually a few weeks. We set up your classes, subjects and accounts, then train teachers module by module. Your school can start with eNotes and assessments and grow from there.' },

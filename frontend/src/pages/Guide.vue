@@ -1,15 +1,15 @@
 <template>
-  <!-- The public eSpace user guide: one part per role, searchable, every topic linkable
+  <!-- The public Tusome user guide: one part per role, searchable, every topic linkable
        (/guide#teacher, /guide#t-marking). Content lives in data/guide.ts. -->
   <div class="site-plain min-h-screen bg-white font-sans text-slate-900 antialiased dark:bg-slate-950 dark:text-white">
     <header class="sticky top-0 z-40 bg-white/90 dark:bg-slate-950/90 backdrop-blur-xl border-b border-slate-200 dark:border-white/10 print:hidden">
       <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-3">
         <!-- Back to the website -->
-        <router-link to="/" class="flex-shrink-0 inline-flex items-center gap-1.5 -ml-1.5 px-2 py-1.5 rounded-lg text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/10" title="Back to the eSpace home page">
+        <router-link to="/" class="flex-shrink-0 inline-flex items-center gap-1.5 -ml-1.5 px-2 py-1.5 rounded-lg text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/10" title="Back to the Tusome home page">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-          <span class="hidden md:inline">eSpace home</span>
+          <span class="hidden md:inline">Tusome home</span>
         </router-link>
-        <router-link to="/" aria-label="eSpace home" class="flex-shrink-0"><Wordmark size="sm" /></router-link>
+        <router-link to="/" aria-label="Tusome home" class="flex-shrink-0"><Wordmark size="sm" /></router-link>
         <span class="hidden sm:inline text-slate-300 dark:text-slate-600">/</span>
         <span class="hidden sm:inline text-sm font-semibold text-slate-600 dark:text-slate-300">User guide</span>
         <div class="flex-1"></div>
@@ -33,7 +33,7 @@
       <div class="absolute inset-0 -z-10 bg-slate-50 dark:bg-white/[0.02]" aria-hidden="true"></div>
       <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
         <p class="text-sm font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-300">User guide</p>
-        <h1 class="mt-2 font-jakarta text-3xl sm:text-5xl font-extrabold tracking-tight">How to use eSpace</h1>
+        <h1 class="mt-2 font-jakarta text-3xl sm:text-5xl font-extrabold tracking-tight">How to use Tusome</h1>
         <p class="mt-3 max-w-2xl text-slate-600 dark:text-slate-300">Short, step-by-step help for students, teachers, heads of department and administrators. Pick your role, or search for what you want to do.</p>
         <div class="mt-6 flex flex-wrap gap-2 print:hidden">
           <a v-for="p in GUIDE" :key="p.key" :href="`#${p.key}`" class="px-4 py-2 rounded-xl text-sm font-semibold bg-white border border-slate-200 text-slate-700 hover:border-indigo-300 hover:text-indigo-700 dark:bg-white/5 dark:border-white/10 dark:text-slate-200 dark:hover:text-white" @click="search = ''">{{ p.label }}</a>
@@ -87,10 +87,10 @@
 
         <div class="mt-4 rounded-3xl bg-slate-900 dark:bg-white/5 dark:border dark:border-white/10 p-6 sm:p-8 text-white print:hidden">
           <h2 class="font-jakarta text-xl font-bold">Still stuck?</h2>
-          <p class="mt-1 text-sm text-slate-300">Ask a teacher or your school's eSpace administrator - or, if your school isn't on eSpace yet, request a demo.</p>
+          <p class="mt-1 text-sm text-slate-300">Ask a teacher or your school's Tusome administrator - or, if your school isn't on Tusome yet, request a demo. You can also write to us at <a :href="`mailto:${SUPPORT_EMAIL}`" class="font-semibold text-white underline">{{ SUPPORT_EMAIL }}</a>.</p>
           <div class="mt-4 flex flex-wrap gap-2">
             <router-link :to="account.to" class="px-4 py-2 rounded-xl text-sm font-semibold bg-white text-slate-900">{{ account.label }}</router-link>
-            <router-link to="/" class="px-4 py-2 rounded-xl text-sm font-semibold bg-white/10 hover:bg-white/20">eSpace home</router-link>
+            <router-link to="/" class="px-4 py-2 rounded-xl text-sm font-semibold bg-white/10 hover:bg-white/20">Tusome home</router-link>
             <router-link :to="{ path: '/', hash: '#demo' }" class="px-4 py-2 rounded-xl text-sm font-semibold bg-white/10 hover:bg-white/20">Request a demo</router-link>
           </div>
         </div>
@@ -106,6 +106,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import Wordmark from '@/components/brand/Wordmark.vue'
 import SiteFooter from '@/components/site/SiteFooter.vue'
+import { SUPPORT_EMAIL } from '@/data/site'
 import { usePageMeta } from '@/components/site/usePageMeta'
 import { useSiteScale } from '@/components/site/useSiteScale'
 import AppIcon from '@/components/common/AppIcon.vue'
@@ -126,8 +127,8 @@ const account = computed(() => {
 })
 
 usePageMeta(() => ({
-  title: 'eSpace user guide - step-by-step help for students, teachers, HODs and admins',
-  description: 'How to use eSpace: reading eNotes, handing in assessments, marking on screen, the Learning Map, coverage, report cards and setting up a school - step by step.',
+  title: 'Tusome user guide - step-by-step help for students, teachers, HODs and admins',
+  description: 'How to use Tusome: reading eNotes, handing in assessments, marking on screen, the Learning Map, coverage, report cards and setting up a school - step by step.',
   path: '/guide'
 }))
 

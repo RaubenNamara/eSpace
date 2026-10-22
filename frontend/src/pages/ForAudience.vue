@@ -24,7 +24,7 @@
         </div>
       </section>
 
-      <!-- Before / with eSpace -->
+      <!-- Before / with Tusome -->
       <section class="py-16 sm:py-24 bg-slate-50 dark:bg-white/[0.02] border-y border-slate-200 dark:border-white/10">
         <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <h2 class="reveal text-center font-jakarta text-3xl sm:text-4xl font-extrabold tracking-tight">What changes</h2>
@@ -79,7 +79,7 @@
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 grid sm:grid-cols-2 gap-4">
           <router-link v-for="o in others" :key="o.to" :to="o.to" class="group flex items-center gap-4 rounded-2xl border border-slate-200 dark:border-white/10 p-5 hover:border-indigo-300 dark:hover:border-indigo-400/40 transition">
             <span class="w-11 h-11 rounded-xl flex items-center justify-center bg-slate-100 text-slate-600 dark:bg-white/5 dark:text-slate-300"><AppIcon :name="o.icon" class="w-5 h-5" /></span>
-            <span class="flex-1"><span class="block text-xs text-slate-500">eSpace for</span><span class="block font-bold">{{ o.label }}</span></span>
+            <span class="flex-1"><span class="block text-xs text-slate-500">Tusome for</span><span class="block font-bold">{{ o.label }}</span></span>
             <svg class="w-5 h-5 text-slate-400 group-hover:translate-x-1 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
           </router-link>
         </div>
@@ -124,7 +124,7 @@ const modules = computed(() => MODULES.filter(m => m.roles.some(r => a.value?.ro
 const others = computed(() => AUDIENCE_LINKS.filter(l => l.to !== `/for/${a.value?.key}`))
 
 usePageMeta(() => ({
-  title: a.value?.metaTitle ?? 'eSpace',
+  title: a.value?.metaTitle ?? 'Tusome',
   description: a.value?.metaDescription ?? '',
   path: route.path
 }))

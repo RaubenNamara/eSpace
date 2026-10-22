@@ -45,17 +45,17 @@
         <p v-if="bioLoading" class="mt-2 text-sm text-gray-500" role="status">Checking the school's BioDigital licence…</p>
         <template v-else-if="!bio?.enabled">
           <p class="mt-2 text-sm text-gray-700 dark:text-gray-200">
-            BioDigital Human is a paid 3D anatomy service. Its models and modules can be shown here once the school has a BioDigital licence - they are not copied into eSpace.
+            BioDigital Human is a paid 3D anatomy service. Its models and modules can be shown here once the school has a BioDigital licence - they are not copied into Tusome.
           </p>
           <ol class="mt-3 list-decimal pl-5 text-sm text-gray-700 dark:text-gray-200 space-y-1">
             <li>The school subscribes at <a href="https://www.biodigital.com" target="_blank" rel="noopener" class="underline text-indigo-700 dark:text-indigo-300">biodigital.com</a> and creates a developer account at <a href="https://developer.biodigital.com" target="_blank" rel="noopener" class="underline text-indigo-700 dark:text-indigo-300">developer.biodigital.com</a>.</li>
-            <li>It registers the eSpace web address there and gets a <span class="font-semibold">developer key</span>.</li>
+            <li>It registers the Tusome web address there and gets a <span class="font-semibold">developer key</span>.</li>
             <li>The administrator puts the key in the server settings (<code class="text-xs">BIODIGITAL_DEVELOPER_KEY</code> in <code class="text-xs">backend/.env</code>), optionally with a list of modules (<code class="text-xs">BIODIGITAL_MODULES</code>).</li>
           </ol>
-          <p class="mt-3 text-sm text-gray-600 dark:text-gray-300">Until then, use the eSpace modules - they work on the free BodyParts3D model.</p>
+          <p class="mt-3 text-sm text-gray-600 dark:text-gray-300">Until then, use the Tusome modules - they work on the free BodyParts3D model.</p>
         </template>
         <template v-else>
-          <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">Licensed by the school. These open in BioDigital's own viewer inside eSpace.</p>
+          <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">Licensed by the school. These open in BioDigital's own viewer inside Tusome.</p>
           <ul v-if="bio.modules.length" class="mt-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
             <li v-for="m in bio.modules" :key="m.id">
               <RouterLink :to="{ path: `/${role}/anatomy/biodigital`, query: { id: m.id, title: m.title } }" class="block rounded-xl border border-gray-200 dark:border-gray-700 p-3 hover:border-indigo-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
@@ -73,7 +73,7 @@
         </template>
       </section>
 
-      <!-- eSpace modules -->
+      <!-- Tusome modules -->
       <section v-else aria-live="polite">
         <p v-if="!shown.length" class="text-sm text-gray-500 p-6 text-center">No modules match.</p>
         <ul class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">

@@ -1,6 +1,6 @@
 /**
  * The "Who it's for" pages: /for/schools, /for/teachers, /for/students. One entry per page;
- * pages/ForAudience.vue lays them out. Only claim what eSpace really does.
+ * pages/ForAudience.vue lays them out. Only claim what Tusome really does.
  */
 import type { Role } from './modules'
 import type { TourScreen } from './site'
@@ -13,7 +13,7 @@ export interface Audience {
   // Search engines and link previews
   metaTitle: string
   metaDescription: string
-  // Before -> with eSpace
+  // Before -> with Tusome
   shifts: { before: string; after: string }[]
   benefits: { icon: string; title: string; text: string }[]
   // Which modules to list (by who uses them) and which tour screen to show
@@ -29,9 +29,9 @@ export const AUDIENCES: Audience[] = [
     key: 'schools',
     eyebrow: 'For head teachers, DOS and school owners',
     title: 'Run a competency-based school - without the paperwork.',
-    intro: 'eSpace puts learning, assessment and reporting in one place, so leaders see coverage, engagement and results across every class as they happen - and report cards come out of the work already done.',
-    metaTitle: 'eSpace for school leaders - curriculum coverage, results and report cards',
-    metaDescription: 'See curriculum coverage, engagement and competency-based results across every class, and generate report cards from marked work. eSpace for head teachers and directors of studies.',
+    intro: 'Tusome puts learning, assessment and reporting in one place, so leaders see coverage, engagement and results across every class as they happen - and report cards come out of the work already done.',
+    metaTitle: 'Tusome for school leaders - curriculum coverage, results and report cards',
+    metaDescription: 'See curriculum coverage, engagement and competency-based results across every class, and generate report cards from marked work. Tusome for head teachers and directors of studies.',
     shifts: [
       { before: 'Finding out a topic was never assessed when the exam comes', after: 'Coverage by topic, every week - LOA, AOI, constructs and notes' },
       { before: 'Report cards typed by hand at the end of every term', after: 'Report cards generated from marked work, with your crest' },
@@ -50,19 +50,19 @@ export const AUDIENCES: Audience[] = [
     screen: 'coverage',
     guide: '/guide#admin',
     faq: [
-      { q: 'How is eSpace priced?', a: 'One price per learner, per term, depending on the size of your school. Every module is included. Ask for a quote and we will send it with a plan for your first term.' },
-      { q: 'Do we need new computers or a server?', a: 'No. eSpace runs in the browser on the phones, tablets and computers your school and learners already have. We host it for you.' },
+      { q: 'How is Tusome priced?', a: 'One price per learner, per term, depending on the size of your school. Every module is included. Ask for a quote and we will send it with a plan for your first term.' },
+      { q: 'Do we need new computers or a server?', a: 'No. Tusome runs in the browser on the phones, tablets and computers your school and learners already have. We host it for you.' },
       { q: 'How long does it take to get going?', a: 'Usually a few weeks. We set up your classes, subjects and accounts, then train teachers module by module.' }
     ],
-    cta: 'See eSpace with your school\'s own classes.'
+    cta: 'See Tusome with your school\'s own classes.'
   },
   {
     key: 'teachers',
     eyebrow: 'For teachers and heads of department',
     title: 'Spend your time teaching - not chasing paper.',
-    intro: 'Write notes once, set competency-based assessments, mark them on screen and see straight away which outcomes your class still needs. eSpace keeps track of who has read, watched and handed in.',
-    metaTitle: 'eSpace for teachers - eNotes, LOA/AOI/EOC assessment and on-screen marking',
-    metaDescription: 'Write interactive eNotes, build LOA, AOI and EOC assessments, mark typed, drawn and uploaded work on screen, and see your class Learning Map. eSpace for teachers.',
+    intro: 'Write notes once, set competency-based assessments, mark them on screen and see straight away which outcomes your class still needs. Tusome keeps track of who has read, watched and handed in.',
+    metaTitle: 'Tusome for teachers - eNotes, LOA/AOI/EOC assessment and on-screen marking',
+    metaDescription: 'Write interactive eNotes, build LOA, AOI and EOC assessments, mark typed, drawn and uploaded work on screen, and see your class Learning Map. Tusome for teachers.',
     shifts: [
       { before: 'Carrying piles of scripts home to mark', after: 'Mark on screen between lessons, with ticks, comments and marks per question' },
       { before: 'Guessing which outcomes the class has not got', after: 'A class Learning Map that shows what to reteach' },
@@ -81,18 +81,18 @@ export const AUDIENCES: Audience[] = [
     screen: 'marking',
     guide: '/guide#teacher',
     faq: [
-      { q: 'Do I need to be good with computers?', a: 'No. If you can use a smartphone you can use eSpace. We train every teacher, module by module, and the user guide has step-by-step help.' },
+      { q: 'Do I need to be good with computers?', a: 'No. If you can use a smartphone you can use Tusome. We train every teacher, module by module, and the user guide has step-by-step help.' },
       { q: 'Can I reuse my existing notes and past papers?', a: 'Yes. Upload books, slides and past papers to the library and item bank, and turn your notes into eNotes page by page.' },
       { q: 'Does it work for practical subjects?', a: 'Yes - learners can draw and upload photos of their work, and the Virtual Lab runs science practicals with real apparatus and readings.' }
     ],
-    cta: 'Bring eSpace to your school.'
+    cta: 'Bring Tusome to your school.'
   },
   {
     key: 'students',
     eyebrow: 'For students and their families',
     title: 'Everything for your classes, in your pocket.',
     intro: 'Notes, books, videos, live lessons and assessments in one place - on the phone you already have, even offline. And a Learning Map that shows exactly what you can already do and what to work on next.',
-    metaTitle: 'eSpace for students - notes, books, videos and your Learning Map',
+    metaTitle: 'Tusome for students - notes, books, videos and your Learning Map',
     metaDescription: 'Read your notes page by page, revise from the library and past papers, join live lessons, hand in assessments and see your Learning Map - on any phone, even offline.',
     shifts: [
       { before: 'Copying notes you could not read off the board', after: 'Clear notes page by page, with narration, on your phone' },
@@ -112,11 +112,11 @@ export const AUDIENCES: Audience[] = [
     screen: 'enotes',
     guide: '/guide#student',
     faq: [
-      { q: 'What phone do I need?', a: 'Any smartphone with a browser. You can add eSpace to your home screen like an app - no download from a store.' },
+      { q: 'What phone do I need?', a: 'Any smartphone with a browser. You can add Tusome to your home screen like an app - no download from a store.' },
       { q: 'Does it use a lot of data?', a: 'Save notes and books once and read them offline as often as you like. Work done offline is sent when you are back online.' },
-      { q: 'How do I get an account?', a: 'Your school gives you one. If your school is not on eSpace yet, ask your head teacher to request a demo.' }
+      { q: 'How do I get an account?', a: 'Your school gives you one. If your school is not on Tusome yet, ask your head teacher to request a demo.' }
     ],
-    cta: 'Want eSpace at your school? Tell your head teacher - or ask for a demo.'
+    cta: 'Want Tusome at your school? Tell your head teacher - or ask for a demo.'
   }
 ]
 

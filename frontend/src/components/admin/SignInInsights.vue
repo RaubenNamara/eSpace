@@ -1,8 +1,8 @@
 <template>
-  <!-- Sign-in insights: how much the school uses eSpace, when, where (departments, classes,
+  <!-- Sign-in insights: how much the school uses Tusome, when, where (departments, classes,
        streams) and on what. -->
   <section class="dash-box min-w-0">
-    <h2 class="dash-bar">How eSpace is used <span class="font-normal opacity-75">· {{ periodTitle }}</span></h2>
+    <h2 class="dash-bar">How Tusome is used <span class="font-normal opacity-75">· {{ periodTitle }}</span></h2>
 
     <div v-if="loading && !data" class="p-3 grid grid-cols-2 md:grid-cols-6 gap-2" aria-busy="true">
       <div v-for="i in 6" :key="i" class="h-16 rounded-xl bg-gray-100 dark:bg-gray-700/50 animate-pulse"></div>

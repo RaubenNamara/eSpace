@@ -77,6 +77,13 @@ const ENotePreview = () => import('../pages/teacher/ENotePreview.vue')
 const IctLab = () => import('../pages/common/IctLab.vue')
 const IctLabActivity = () => import('../pages/common/IctLabActivity.vue')
 const IctLabShowroom = () => import('../pages/common/IctLabShowroom.vue')
+const IctLabRules = () => import('../pages/common/IctLabRules.vue')
+const IctLabTyping = () => import('../pages/common/IctLabTyping.vue')
+const IctLabJourney = () => import('../pages/common/IctLabJourney.vue')
+const IctLabHazards = () => import('../pages/common/IctLabHazards.vue')
+const IctLabNetwork = () => import('../pages/common/IctLabNetwork.vue')
+const IctLabBinary = () => import('../pages/common/IctLabBinary.vue')
+const IctLabOnlineSafety = () => import('../pages/common/IctLabOnlineSafety.vue')
 const AnatomyExplorer = () => import('../pages/common/AnatomyExplorer.vue')
 const AnatomyModules = () => import('../pages/common/AnatomyModules.vue')
 const AnatomyModule = () => import('../pages/common/AnatomyModule.vue')
@@ -244,6 +251,13 @@ const routes: RouteRecordRaw[] = [
       { path: 'anatomy/biodigital', name: 'StudentAnatomyBioDigital', component: AnatomyBioDigital },
       { path: 'anatomy/systems/:key', name: 'StudentAnatomySystem', component: AnatomySystem },
       { path: 'ict-lab/showroom', name: 'StudentIctLabShowroom', component: IctLabShowroom },
+      { path: 'ict-lab/rules', name: 'StudentIctLabRules', component: IctLabRules },
+      { path: 'ict-lab/typing', name: 'StudentIctLabTyping', component: IctLabTyping },
+      { path: 'ict-lab/journey', name: 'StudentIctLabJourney', component: IctLabJourney },
+      { path: 'ict-lab/hazards', name: 'StudentIctLabHazards', component: IctLabHazards },
+      { path: 'ict-lab/network', name: 'StudentIctLabNetwork', component: IctLabNetwork },
+      { path: 'ict-lab/binary', name: 'StudentIctLabBinary', component: IctLabBinary },
+      { path: 'ict-lab/online-safety', name: 'StudentIctLabOnlineSafety', component: IctLabOnlineSafety },
       { path: 'ict-lab/:activity', name: 'StudentIctLabActivity', component: IctLabActivity },
       { path: 'virtual-lab/playground', name: 'StudentVirtualLabPlayground', component: StudentVirtualLabPlayground },
       { path: 'constructs', name: 'StudentConstructs', component: StudentConstructs },
@@ -330,6 +344,13 @@ const routes: RouteRecordRaw[] = [
       { path: 'anatomy/biodigital', name: 'TeacherAnatomyBioDigital', component: AnatomyBioDigital },
       { path: 'anatomy/systems/:key', name: 'TeacherAnatomySystem', component: AnatomySystem },
       { path: 'ict-lab/showroom', name: 'TeacherIctLabShowroom', component: IctLabShowroom },
+      { path: 'ict-lab/rules', name: 'TeacherIctLabRules', component: IctLabRules },
+      { path: 'ict-lab/typing', name: 'TeacherIctLabTyping', component: IctLabTyping },
+      { path: 'ict-lab/journey', name: 'TeacherIctLabJourney', component: IctLabJourney },
+      { path: 'ict-lab/hazards', name: 'TeacherIctLabHazards', component: IctLabHazards },
+      { path: 'ict-lab/network', name: 'TeacherIctLabNetwork', component: IctLabNetwork },
+      { path: 'ict-lab/binary', name: 'TeacherIctLabBinary', component: IctLabBinary },
+      { path: 'ict-lab/online-safety', name: 'TeacherIctLabOnlineSafety', component: IctLabOnlineSafety },
       { path: 'ict-lab/:activity', name: 'TeacherIctLabActivity', component: IctLabActivity },
       { path: 'virtual-lab/playground', name: 'TeacherVirtualLabPlayground', component: StudentVirtualLabPlayground },
       // A teacher doing an experiment exactly like a student (same page; nothing saved, no submit)
@@ -364,6 +385,13 @@ const routes: RouteRecordRaw[] = [
       { path: 'anatomy/biodigital', name: 'HODAnatomyBioDigital', component: AnatomyBioDigital },
       { path: 'anatomy/systems/:key', name: 'HODAnatomySystem', component: AnatomySystem },
       { path: 'ict-lab/showroom', name: 'HODIctLabShowroom', component: IctLabShowroom },
+      { path: 'ict-lab/rules', name: 'HODIctLabRules', component: IctLabRules },
+      { path: 'ict-lab/typing', name: 'HODIctLabTyping', component: IctLabTyping },
+      { path: 'ict-lab/journey', name: 'HODIctLabJourney', component: IctLabJourney },
+      { path: 'ict-lab/hazards', name: 'HODIctLabHazards', component: IctLabHazards },
+      { path: 'ict-lab/network', name: 'HODIctLabNetwork', component: IctLabNetwork },
+      { path: 'ict-lab/binary', name: 'HODIctLabBinary', component: IctLabBinary },
+      { path: 'ict-lab/online-safety', name: 'HODIctLabOnlineSafety', component: IctLabOnlineSafety },
       { path: 'ict-lab/:activity', name: 'HODIctLabActivity', component: IctLabActivity },
       { path: 'virtual-lab/practice/:experimentId', name: 'HODVirtualLabPractice', component: StudentVirtualLabExperiment, meta: { practice: true, practiceRole: 'hod' } },
       { path: 'assessments', name: 'HODAssessments', component: HODAssessments },
@@ -433,6 +461,13 @@ const routes: RouteRecordRaw[] = [
       { path: 'anatomy/biodigital', name: 'AdminAnatomyBioDigital', component: AnatomyBioDigital },
       { path: 'anatomy/systems/:key', name: 'AdminAnatomySystem', component: AnatomySystem },
       { path: 'ict-lab/showroom', name: 'AdminIctLabShowroom', component: IctLabShowroom },
+      { path: 'ict-lab/rules', name: 'AdminIctLabRules', component: IctLabRules },
+      { path: 'ict-lab/typing', name: 'AdminIctLabTyping', component: IctLabTyping },
+      { path: 'ict-lab/journey', name: 'AdminIctLabJourney', component: IctLabJourney },
+      { path: 'ict-lab/hazards', name: 'AdminIctLabHazards', component: IctLabHazards },
+      { path: 'ict-lab/network', name: 'AdminIctLabNetwork', component: IctLabNetwork },
+      { path: 'ict-lab/binary', name: 'AdminIctLabBinary', component: IctLabBinary },
+      { path: 'ict-lab/online-safety', name: 'AdminIctLabOnlineSafety', component: IctLabOnlineSafety },
       { path: 'ict-lab/:activity', name: 'AdminIctLabActivity', component: IctLabActivity },
       // An admin opening an experiment to view its diagram/procedure - same page as the teacher
       // practice route, nothing saved, no submit.
@@ -526,7 +561,7 @@ router.beforeEach((to, from, next) => {
   }
 
   // A signed-in user may still go back to the website from the guide or a /for/* page (its
-  // "eSpace home" links); opening the site fresh still takes them to their dashboard.
+  // "Tusome home" links); opening the site fresh still takes them to their dashboard.
   const fromPublicPage = from.matched.length > 0 && (from.path === '/guide' || from.path.startsWith('/for/'))
   if (authStore.isAuthenticated && to.path === '/' && fromPublicPage) {
     next()

@@ -1,5 +1,5 @@
 /**
- * What eSpace does - one entry per module. The landing page shows them as cards; the user guide
+ * What Tusome does - one entry per module. The landing page shows them as cards; the user guide
  * (/guide) uses the same list so the two never disagree.
  */
 export type ModuleCategory = 'learn' | 'assess' | 'insight' | 'connect'

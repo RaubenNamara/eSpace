@@ -146,7 +146,7 @@ class ParentDigestService
         }
         $first = $sum['student']['first_name'];
         $url = rtrim($siteUrl, '/') . '/parent/' . $link['token'];
-        $subject = "{$first}'s week on eSpace";
+        $subject = "{$first}'s week on Tusome";
         $html = self::emailHtml($sum, (string) $link['guardian_name'], $url);
 
         $from = (string) (\eSpace\Config\Config::get('MAIL_FROM_ADDRESS') ?: 'no-reply@' . (parse_url($siteUrl, PHP_URL_HOST) ?: 'localhost'));
@@ -206,7 +206,7 @@ class ParentDigestService
     " . ($due ? "<h2 style=\"font-size:15px;margin:20px 0 6px\">Coming up</h2><ul style=\"padding-left:18px;margin:0;font-size:14px;color:#334155\">{$due}</ul>" : '') . "
     <p style=\"margin:24px 0 0\"><a href=\"{$e($url)}\" style=\"display:inline-block;background:#4f46e5;color:#fff;text-decoration:none;padding:10px 18px;border-radius:10px;font-weight:700;font-size:14px\">See the full update</a></p>
   </div>
-  <p style=\"color:#94a3b8;font-size:12px;margin:16px 4px\">You get this because the school added you as {$first}'s parent or guardian on eSpace. To stop it, ask the school.</p>
+  <p style=\"color:#94a3b8;font-size:12px;margin:16px 4px\">You get this because the school added you as {$first}'s parent or guardian on Tusome. To stop it, ask the school.</p>
 </div></body></html>";
     }
 }

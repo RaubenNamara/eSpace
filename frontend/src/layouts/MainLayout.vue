@@ -13,9 +13,9 @@
 
       <!-- The brand bar: the logo in white on dark green -->
       <div class="relative px-4 py-3.5 border-b app-frame-divider flex-shrink-0">
-        <!-- The eSpace word logo; just the "e" mark when the sidebar is folded to icons -->
+        <!-- The Tusome word logo; just the "T" mark when the sidebar is folded to icons -->
         <div class="flex items-center gap-3" :class="{ 'justify-center': isIconOnly }">
-          <img v-if="isIconOnly" src="/favicon.svg" alt="eSpace" class="w-9 h-9 rounded-xl">
+          <img v-if="isIconOnly" src="/favicon.svg" alt="Tusome" class="w-9 h-9 rounded-xl">
           <div v-else class="min-w-0">
             <h1 class="leading-none"><Wordmark size="sm" /></h1>
             <p class="text-[10.5px] text-gray-500 dark:text-white/40 capitalize font-semibold tracking-wide leading-tight mt-1">{{ userRole }} Console</p>
@@ -144,7 +144,7 @@
       >
         <div class="flex items-center justify-between px-3 sm:px-6 py-2.5 sm:py-3">
           <div class="flex items-center gap-2 flex-shrink-0">
-            <RouterLink v-if="showStudentTabs" to="/student/dashboard" class="lg:hidden leading-none" aria-label="eSpace home"><Wordmark size="sm" /></RouterLink>
+            <RouterLink v-if="showStudentTabs" to="/student/dashboard" class="lg:hidden leading-none" aria-label="Tusome home"><Wordmark size="sm" /></RouterLink>
             <button
               @click="sidebarOpen = !sidebarOpen"
               class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
@@ -227,7 +227,7 @@
               </svg>
             </button>
 
-            <!-- Messages (eSpace's own chat) -->
+            <!-- Messages (Tusome's own chat) -->
             <router-link
               :to="`/${userRole}/chat`"
               class="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
@@ -395,7 +395,7 @@
       </main>
     </div>
 
-    <!-- Install eSpace as an app (Android: the browser's own dialog; iPhone/iPad: Safari's steps) -->
+    <!-- Install Tusome as an app (Android: the browser's own dialog; iPhone/iPad: Safari's steps) -->
     <div
       v-if="showInstallCard && !labAlert && !shouldHideAppChrome"
       class="fixed z-[9997] right-4 left-4 sm:left-auto sm:w-96 bottom-24 lg:bottom-6 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl ring-1 ring-indigo-200 dark:ring-indigo-800 p-4"
@@ -404,11 +404,11 @@
         <img src="/pwa-192x192.png" alt="" class="w-10 h-10 rounded-xl flex-shrink-0" />
         <div class="min-w-0 flex-1">
           <template v-if="iosDevice">
-            <p class="text-sm font-bold text-gray-900 dark:text-white">Add eSpace to your Home Screen</p>
+            <p class="text-sm font-bold text-gray-900 dark:text-white">Add Tusome to your Home Screen</p>
             <ol class="text-sm text-gray-600 dark:text-gray-300 mt-1 space-y-0.5 list-decimal list-inside">
               <li>Tap <span class="inline-flex items-center align-middle mx-0.5"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v12m0-12l-4 4m4-4l4 4M6 11H5a2 2 0 00-2 2v6a2 2 0 002 2h14a2 2 0 002-2v-6a2 2 0 00-2-2h-1" /></svg></span> Share in Safari {{ ipadDevice ? '(top right)' : '(bottom bar)' }}</li>
               <li>Choose <strong>Add to Home Screen</strong>, then <strong>Add</strong></li>
-              <li>Open eSpace from its new icon</li>
+              <li>Open Tusome from its new icon</li>
             </ol>
             <p class="text-[11px] text-gray-400 mt-1">It opens full screen, updates by itself, and can send you notifications.</p>
             <div class="flex gap-2 mt-3">
@@ -416,8 +416,8 @@
             </div>
           </template>
           <template v-else>
-            <p class="text-sm font-bold text-gray-900 dark:text-white">Install the eSpace app</p>
-            <p class="text-sm text-gray-600 dark:text-gray-300 mt-0.5">Open eSpace from your home screen like any other app - full screen, always up to date, with notifications.</p>
+            <p class="text-sm font-bold text-gray-900 dark:text-white">Install the Tusome app</p>
+            <p class="text-sm text-gray-600 dark:text-gray-300 mt-0.5">Open Tusome from your home screen like any other app - full screen, always up to date, with notifications.</p>
             <div class="flex gap-2 mt-3">
               <button type="button" @click="installApp" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">Install</button>
               <button type="button" @click="dismissInstallCard" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">Not now</button>
@@ -439,7 +439,7 @@
         </span>
         <div class="min-w-0 flex-1">
           <p class="text-sm font-bold text-gray-900 dark:text-white">Turn on notifications</p>
-          <p class="text-sm text-gray-600 dark:text-gray-300 mt-0.5">Get alerts for new practicals, assessments, notes and marks on this device - even when eSpace is closed.</p>
+          <p class="text-sm text-gray-600 dark:text-gray-300 mt-0.5">Get alerts for new practicals, assessments, notes and marks on this device - even when Tusome is closed.</p>
           <div class="flex gap-2 mt-3">
             <button type="button" :disabled="enablingPush" @click="turnOnPush" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60">{{ enablingPush ? 'Turning on...' : 'Turn on' }}</button>
             <button type="button" @click="dismissPushPrompt" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">Not now</button>
@@ -688,7 +688,7 @@ onMounted(() => {
 
 // --- Browser (Web Push) notifications - see utils/push.ts ---
 // Students are asked once (again after 14 days if they chose "Not now"); a browser that already
-// allowed them is re-registered for whoever signs in on it. Tapping a notification while eSpace is
+// allowed them is re-registered for whoever signs in on it. Tapping a notification while Tusome is
 // open routes this tab there (public/push-sw.js posts the url).
 const PUSH_PROMPT_KEY = 'espace_push_prompt_dismissed_at'
 const showPushPrompt = ref(false)
@@ -727,7 +727,7 @@ const dismissPushPrompt = () => {
   try { localStorage.setItem(PUSH_PROMPT_KEY, String(Date.now())) } catch { /* private mode */ }
 }
 
-// --- Install eSpace as an app - see utils/install.ts ---
+// --- Install Tusome as an app - see utils/install.ts ---
 // Offered to students in a browser tab (not once installed): on Android/Chrome when the browser
 // says it can install, on iPhone/iPad always (Safari has no install dialog). "Not now" hides it for
 // 14 days.
@@ -746,7 +746,7 @@ const dismissInstallCard = () => {
 }
 const installApp = async () => {
   const accepted = await promptInstall()
-  if (accepted) toast.success('eSpace is installed - open it from your home screen')
+  if (accepted) toast.success('Tusome is installed - open it from your home screen')
   else dismissInstallCard()
 }
 

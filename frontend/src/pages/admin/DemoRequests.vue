@@ -1,8 +1,8 @@
 <template>
-  <!-- Schools that asked for a demo on the eSpace website - newest and unanswered first. Each one
+  <!-- Schools that asked for a demo on the Tusome website - newest and unanswered first. Each one
        moves from New to Contacted to Closed as it's followed up. -->
   <div class="w-full">
-    <PageHeader title="Demo requests" description="Schools that asked for a demo on the eSpace website - follow each one up, then mark it." icon="users" accent="violet">
+    <PageHeader title="Demo requests" description="Schools that asked for a demo on the Tusome website - follow each one up, then mark it." icon="users" accent="violet">
       <StatStrip v-if="requests.length" v-model="statusFilter" :items="statItems" />
     </PageHeader>
 

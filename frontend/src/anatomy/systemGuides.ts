@@ -22,7 +22,7 @@ export interface GuideStep {
   extraSystems?: SystemKey[]
   /** labels with textbook names: an organ (group key) or the structures whose names match */
   labels?: { name: string; group?: string; match?: RegExp }[]
-  /** trusted outside resources, opened on their own site (never copied into eSpace) */
+  /** trusted outside resources, opened on their own site (never copied into Tusome) */
   links?: { label: string; url: string; note: string }[]
 }
 

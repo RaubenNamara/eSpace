@@ -3,7 +3,7 @@
        landing page and the /for/* pages. -->
   <header class="fixed inset-x-0 top-0 z-50 transition-all duration-300" :class="solid ? 'bg-white/85 dark:bg-slate-950/85 backdrop-blur-xl border-b border-slate-200/70 dark:border-white/10' : 'bg-transparent'">
     <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
-      <router-link to="/" class="flex-shrink-0" aria-label="eSpace home"><Wordmark size="md" /></router-link>
+      <router-link to="/" class="flex-shrink-0" aria-label="Tusome home"><Wordmark size="md" /></router-link>
 
       <nav class="hidden xl:flex items-center gap-6 whitespace-nowrap" aria-label="Main">
         <router-link v-for="l in SITE_NAV" :key="l.to" :to="l.to" class="text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition">{{ l.label }}</router-link>

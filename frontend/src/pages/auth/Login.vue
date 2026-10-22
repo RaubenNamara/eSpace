@@ -19,9 +19,9 @@
       >
         <!-- Top logo -->
         <div class="animate-fade-down">
-          <!-- eSpace is the brand; the badge says whose school space this is -->
+          <!-- Tusome is the brand; the badge says whose school space this is -->
           <div class="flex flex-wrap items-center gap-4">
-            <router-link to="/" aria-label="eSpace home"><Wordmark size="lg" /></router-link>
+            <router-link to="/" aria-label="Tusome home"><Wordmark size="lg" /></router-link>
             <span class="inline-flex items-center gap-2 rounded-full bg-white/90 dark:bg-white/10 border border-slate-200 dark:border-white/10 pl-1 pr-3 py-1 shadow-sm">
                 <img src="/images/stmark-logo.jpg" alt="" class="h-6 w-6 rounded-full object-contain bg-white">
                 <span class="text-xs font-semibold text-slate-700 dark:text-slate-200">St Mark's College Namagoma</span>
@@ -204,7 +204,7 @@
         <div
           class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400"
         >
-          <p>© {{ currentYear }} eSpace. All rights reserved.</p>
+          <p>© {{ currentYear }} Tusome. All rights reserved.</p>
           <p>Empowering learners for lifelong learning.</p>
         </div>
       </section>
@@ -217,7 +217,7 @@
           <!-- Mobile logo -->
           <div class="mb-8 flex justify-center lg:hidden">
             <div class="flex flex-col items-center gap-3">
-              <router-link to="/" aria-label="eSpace home"><Wordmark size="lg" /></router-link>
+              <router-link to="/" aria-label="Tusome home"><Wordmark size="lg" /></router-link>
               <span class="inline-flex items-center gap-2 rounded-full bg-white/90 dark:bg-white/10 border border-slate-200 dark:border-white/10 pl-1 pr-3 py-1 shadow-sm">
                 <img src="/images/stmark-logo.jpg" alt="" class="h-6 w-6 rounded-full object-contain bg-white">
                 <span class="text-xs font-semibold text-slate-700 dark:text-slate-200">St Mark's College Namagoma</span>
@@ -277,7 +277,7 @@
               </h2>
 
               <p class="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
-                Enter your credentials to access your school's eSpace.
+                Enter your credentials to access your school's Tusome.
               </p>
             </div>
 
@@ -491,7 +491,7 @@
                   v-if="!isLoading"
                   class="flex items-center justify-center gap-2"
                 >
-                  Sign in to eSpace
+                  Sign in to Tusome
 
                   <svg
                     class="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1"
@@ -542,12 +542,12 @@
             <div class="mt-7 border-t border-slate-100 pt-6 text-center dark:border-slate-700">
               <p class="text-sm text-slate-500 dark:text-slate-400">
                 Having trouble accessing your account?
-                <router-link
-                  to="/support"
+                <a
+                  :href="`mailto:${SUPPORT_EMAIL}`"
                   class="font-semibold text-indigo-600 transition hover:text-indigo-700 hover:underline dark:text-indigo-400 dark:hover:text-indigo-300"
                 >
-                  Contact support
-                </router-link>
+                  {{ SUPPORT_EMAIL }}
+                </a>
               </p>
             </div>
           </div>
@@ -556,7 +556,7 @@
           <div
             class="mt-7 flex flex-col items-center justify-center gap-2 text-center text-xs text-slate-500 dark:text-slate-400 sm:flex-row sm:gap-4"
           >
-            <span>© {{ currentYear }} eSpace</span>
+            <span>© {{ currentYear }} Tusome</span>
 
             <span class="hidden h-1 w-1 rounded-full bg-slate-300 dark:bg-slate-600 sm:block"></span>
 
@@ -584,6 +584,7 @@
 
 <script setup lang="ts">
 import Wordmark from '@/components/brand/Wordmark.vue'
+import { SUPPORT_EMAIL } from '@/data/site'
 import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'

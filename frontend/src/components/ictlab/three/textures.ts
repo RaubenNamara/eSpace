@@ -192,3 +192,123 @@ export function shroudTexture() {
   g.fillText('GRAPHICS  8GB GDDR6', 560, 80)
   return tex(c)
 }
+
+/** The processor socket's contact area (LGA): a grid of gold pins round an empty middle, with the pin-1 triangle */
+export function lgaPadTexture() {
+  const { c, g } = canvas(512, 512)
+  g.fillStyle = '#3a3226'
+  g.fillRect(0, 0, 512, 512)
+  const n = 44
+  const step = 512 / n
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      const x = (i + 0.5) * step
+      const y = (j + 0.5) * step
+      // the middle has no pins
+      if (i > 15 && i < 28 && j > 15 && j < 28) continue
+      const grad = g.createRadialGradient(x - 1, y - 1, 0, x, y, step * 0.42)
+      grad.addColorStop(0, '#fff3c4')
+      grad.addColorStop(0.5, '#d4a72c')
+      grad.addColorStop(1, '#7a5a12')
+      g.fillStyle = grad
+      g.beginPath()
+      g.arc(x, y, step * 0.36, 0, Math.PI * 2)
+      g.fill()
+    }
+  }
+  g.fillStyle = '#2a241b'
+  g.fillRect(16 * step, 16 * step, 12 * step, 12 * step)
+  g.fillStyle = '#facc15'
+  g.beginPath()
+  g.moveTo(6, 506); g.lineTo(46, 506); g.lineTo(6, 466)
+  g.fill()
+  return tex(c)
+}
+
+/** The top of an electrolytic capacitor: aluminium with a pressed safety vent */
+export function capTopTexture() {
+  const { c, g } = canvas(128, 128)
+  const grad = g.createRadialGradient(54, 50, 4, 64, 64, 64)
+  grad.addColorStop(0, '#f1f5f9')
+  grad.addColorStop(1, '#8b95a3')
+  g.fillStyle = grad
+  g.fillRect(0, 0, 128, 128)
+  g.strokeStyle = '#5b6470'
+  g.lineWidth = 6
+  g.beginPath()
+  g.moveTo(64, 18); g.lineTo(64, 110)
+  g.moveTo(64, 64); g.lineTo(26, 30)
+  g.moveTo(64, 64); g.lineTo(102, 30)
+  g.stroke()
+  return tex(c)
+}
+
+/** A connector's face: square pin holes in a grid (24-pin power, fan header) */
+export function pinHolesTexture(cols: number, rows: number, body = '#f1f5f9') {
+  const W = 64 * cols
+  const H = 64 * rows
+  const { c, g } = canvas(W, H)
+  g.fillStyle = body
+  g.fillRect(0, 0, W, H)
+  for (let i = 0; i < cols; i++) {
+    for (let j = 0; j < rows; j++) {
+      g.fillStyle = '#1f2937'
+      g.fillRect(i * 64 + 14, j * 64 + 14, 36, 36)
+      g.fillStyle = '#b08d57'
+      g.fillRect(i * 64 + 26, j * 64 + 26, 12, 12)
+    }
+  }
+  return tex(c)
+}
+
+/** Header pins seen from above: gold pins standing in a black strip */
+export function headerPinsTexture(cols: number, rows: number) {
+  const W = 48 * cols
+  const H = 48 * rows
+  const { c, g } = canvas(W, H)
+  g.fillStyle = '#0b0f14'
+  g.fillRect(0, 0, W, H)
+  for (let i = 0; i < cols; i++) {
+    for (let j = 0; j < rows; j++) {
+      g.fillStyle = '#e3b341'
+      g.fillRect(i * 48 + 16, j * 48 + 16, 16, 16)
+    }
+  }
+  return tex(c)
+}
+
+/** A SATA port's mouth: the L-shaped opening */
+export function sataMouthTexture() {
+  const { c, g } = canvas(192, 96)
+  g.fillStyle = '#111827'
+  g.fillRect(0, 0, 192, 96)
+  g.fillStyle = '#020617'
+  g.fillRect(14, 30, 164, 26)
+  g.fillRect(150, 30, 28, 46)
+  g.fillStyle = '#b08d57'
+  for (let i = 0; i < 7; i++) g.fillRect(24 + i * 18, 36, 8, 12)
+  return tex(c)
+}
+
+/** The CMOS coin cell's face */
+export function coinCellTexture() {
+  const { c, g } = canvas(256, 256)
+  const grad = g.createRadialGradient(100, 90, 10, 128, 128, 140)
+  grad.addColorStop(0, '#f8fafc')
+  grad.addColorStop(1, '#94a3b8')
+  g.fillStyle = grad
+  g.fillRect(0, 0, 256, 256)
+  g.fillStyle = '#334155'
+  g.textAlign = 'center'
+  g.font = 'bold 58px sans-serif'
+  g.fillText('+', 128, 84)
+  g.font = 'bold 44px sans-serif'
+  g.fillText('CR2032', 128, 150)
+  g.font = '30px sans-serif'
+  g.fillText('3V LITHIUM', 128, 196)
+  // turned so it reads upright on the cell lying flat on the board
+  const t = tex(c)
+  t.center.set(0.5, 0.5)
+  t.rotation = Math.PI / 2
+  return t
+}

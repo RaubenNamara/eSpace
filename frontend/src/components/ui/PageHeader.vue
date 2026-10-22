@@ -72,7 +72,7 @@ withDefaults(defineProps<{
   activeFilters?: number
 }>(), { accent: 'indigo', activeFilters: 0 })
 
-// Every page header uses the brand green, whatever accent a page asks for - one look across eSpace
+// Every page header uses the brand green, whatever accent a page asks for - one look across Tusome
 const GREEN = { icon: 'bg-indigo-600 text-white', badge: 'bg-indigo-600', text: 'text-indigo-600 dark:text-indigo-300' }
 const ACCENT: Record<Accent, { icon: string; badge: string; text: string }> = { indigo: GREEN, emerald: GREEN, violet: GREEN, amber: GREEN, rose: GREEN, sky: GREEN }
 
