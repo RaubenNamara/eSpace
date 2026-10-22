@@ -285,7 +285,36 @@ abstract class Controller
      */
     public function isAuthenticated(): bool
     {
-        return isset($_SESSION['user_id']) && isset($_SESSION['role']);
+        if (!isset($_SESSION['user_id']) || !isset($_SESSION['role'])) {
+            return false;
+        }
+        // A teacher suspended or deleted by an admin is signed out on their next request, not when
+        // their session happens to expire
+        if ($_SESSION['role'] === 'teacher' && !self::teacherCanUseAccount((int) $_SESSION['user_id'])) {
+            $_SESSION = [];
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                session_destroy();
+            }
+            return false;
+        }
+        return true;
+    }
+
+    /** @var array<int, bool> per request */
+    private static array $teacherAccountOk = [];
+
+    private static function teacherCanUseAccount(int $teacherId): bool
+    {
+        if (!isset(self::$teacherAccountOk[$teacherId])) {
+            try {
+                $stmt = \eSpace\Config\Database::getInstance()->prepare('SELECT 1 FROM teachers WHERE id = ? AND is_active = 1 AND deleted_at IS NULL');
+                $stmt->execute([$teacherId]);
+                self::$teacherAccountOk[$teacherId] = (bool) $stmt->fetchColumn();
+            } catch (\Throwable $e) {
+                self::$teacherAccountOk[$teacherId] = true; // never lock everyone out on a DB hiccup
+            }
+        }
+        return self::$teacherAccountOk[$teacherId];
     }
 
     /**

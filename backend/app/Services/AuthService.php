@@ -55,12 +55,16 @@ class AuthService extends Service
         }
 
 
-        // Check if user is active
-        if (!$this->userRepository->isActive($user['id'])) {
+        // Check if user is active - on the account that was actually found: ids repeat across the
+        // role tables, so looking the id up again (users first) could read someone else's flag
+        $active = array_key_exists('is_active', $user)
+            ? (bool) $user['is_active']
+            : $this->userRepository->isActive((int) $user['id'], $user['table_name'] ?? null);
+        if (!$active) {
             error_log("Login failed: User inactive");
             return [
                 'success' => false,
-                'message' => 'Account is inactive. Please contact administrator.'
+                'message' => 'Your account is suspended. Please contact the administrator.'
             ];
         }
 

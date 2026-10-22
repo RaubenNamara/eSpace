@@ -286,9 +286,19 @@ class UserRepository extends Repository
     /**
      * Check if user is active (works with all role tables)
      */
-    public function isActive(int $userId): bool
+    public function isActive(int $userId, ?string $table = null): bool
     {
         $db = \eSpace\Config\Database::getInstance();
+
+        // With the account's own table (ids repeat across tables), check only that one
+        $tables = ['admin' => 'users', 'users' => 'users', 'teacher' => 'teachers', 'teachers' => 'teachers',
+                   'student' => 'students', 'students' => 'students', 'hod' => 'hods', 'hods' => 'hods'];
+        if ($table !== null && isset($tables[$table])) {
+            $stmt = $db->prepare("SELECT is_active FROM {$tables[$table]} WHERE id = :id AND deleted_at IS NULL");
+            $stmt->execute(['id' => $userId]);
+            $row = $stmt->fetch();
+            return $row ? (bool) $row['is_active'] : false;
+        }
         
         // Try users table first (admin/super_admin)
         $stmt = $db->prepare("SELECT is_active FROM users WHERE id = :id");
