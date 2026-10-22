@@ -1,10 +1,10 @@
 <template>
-  <div class="h-[calc(100vh-6rem)] -m-6 flex bg-gray-100 dark:bg-gray-950 p-2 sm:p-4">
-    <div class="flex-1 flex rounded-2xl border border-gray-200 dark:border-black/40 shadow-lg overflow-hidden bg-white dark:bg-[rgb(17_24_39)]">
+  <div class="wa h-[100dvh] flex bg-gray-100 dark:bg-gray-950">
+    <div class="flex-1 flex overflow-hidden bg-white dark:bg-[rgb(17_24_39)]">
       <!-- Sidebar -->
       <div class="w-full md:w-80 lg:w-96 flex-shrink-0 md:border-r border-gray-200 dark:border-white/5 bg-white dark:bg-[rgb(17_24_39)] flex flex-col" :class="activeConversation ? 'hidden md:flex' : 'flex'">
         <div class="chat-bar px-4 py-3.5 bg-indigo-800">
-          <h1 class="text-xl font-bold text-gray-900 dark:text-white">Chat Monitoring</h1>
+          <div class="flex items-center gap-1.5"><AppMenuButton /><h1 class="text-xl font-bold text-gray-900 dark:text-white">Chat Monitoring</h1></div>
           <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 mb-3">School-wide conversations</p>
           <select v-model="departmentFilter" @change="loadConversations" class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-[rgb(55_65_81)] dark:text-white">
             <option value="">All Departments</option>
@@ -117,6 +117,7 @@ import { niceName } from '@/components/dashboard/teacher/time'
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import axios from 'axios'
 import MessageBubble from '@/components/chat/MessageBubble.vue'
+import AppMenuButton from '@/components/chat/AppMenuButton.vue'
 import type { Conversation, ChatMessage } from '@/types/chat'
 
 const API_BASE = '/api/admin/chat'

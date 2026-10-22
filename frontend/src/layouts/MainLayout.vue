@@ -8,7 +8,7 @@
     <aside
       v-if="!shouldHideAppChrome"
       class="print:hidden overflow-hidden fixed left-0 top-3 bottom-3 lg:left-3 lg:top-3 lg:bottom-3 rounded-r-2xl lg:rounded-2xl app-frame-sidebar backdrop-blur-xl transform transition-all duration-300 z-50 flex flex-col"
-      :class="[isIconOnly ? 'w-16' : 'w-48 md:w-56', { '-translate-x-full': !sidebarOpen, 'translate-x-0': sidebarOpen }]"
+      :class="[isIconOnly ? 'w-16' : 'w-48 md:w-56', { '-translate-x-[calc(100%+1rem)]': !sidebarOpen, 'translate-x-0': sidebarOpen }]"
     >
 
       <!-- The brand bar: the logo in white on dark green -->
@@ -111,7 +111,7 @@
          desktop only. Sits outside the sidebar (rather than inside it) so it isn't clipped by
          the sidebar's own overflow-hidden, and its `left` tracks the sidebar's current width. -->
     <button
-      v-if="sidebarOpen && !shouldHideAppChrome"
+      v-if="sidebarOpen && !shouldHideAppChrome && !isFullScreenChat"
       @click="sidebarCollapsed = !sidebarCollapsed"
       :title="isIconOnly ? 'Expand sidebar' : 'Collapse sidebar'"
       class="print:!hidden hidden lg:flex fixed top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white dark:bg-slate-800 border border-slate-400 dark:border-white/10 shadow-md items-center justify-center text-slate-600 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-500/50 transition-all duration-300 z-50"
@@ -126,18 +126,19 @@
     <div
       v-if="sidebarOpen && !shouldHideAppChrome"
       @click="sidebarOpen = false"
-      class="fixed inset-0 bg-black/50 z-40 lg:hidden"
+      class="fixed inset-0 bg-black/50 z-40"
+      :class="isFullScreenChat ? '' : 'lg:hidden'"
     ></div>
 
     <!-- Main Content -->
     <div
       class="print:!ml-0 min-h-screen flex flex-col transition-all duration-300 ml-0"
-      :class="shouldHideAppChrome ? '' : { 'lg:ml-[248px]': sidebarOpen && !sidebarCollapsed, 'lg:ml-[88px]': sidebarOpen && sidebarCollapsed }"
+      :class="shouldHideAppChrome || isFullScreenChat ? '' : { 'lg:ml-[248px]': sidebarOpen && !sidebarCollapsed, 'lg:ml-[88px]': sidebarOpen && sidebarCollapsed }"
     >
       <!-- Top Bar - hides on scroll-down and reappears on scroll-up (like the Landing header),
            so it doesn't permanently eat vertical space on long pages. -->
       <header
-        v-if="!shouldHideAppChrome"
+        v-if="!shouldHideAppChrome && !isFullScreenChat"
         class="print:hidden bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-40 transition-transform duration-300"
         :class="[{ '-translate-y-full': headerHidden }, isImmersiveReader ? 'hidden lg:block' : '']"
       >
@@ -380,16 +381,16 @@
 
       <!-- Page Content -->
       <!-- No network: say so, and (students) point at what still works -->
-      <div v-if="!offline.online && !shouldHideAppChrome" class="flex items-center justify-center gap-2 px-4 py-1.5 bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-100 text-xs font-medium">
+      <div v-if="!offline.online && !shouldHideAppChrome && !isFullScreenChat" class="flex items-center justify-center gap-2 px-4 py-1.5 bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-100 text-xs font-medium">
         <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728M5.636 18.364a9 9 0 010-12.728M3 3l18 18" /></svg>
         <span>You're offline<template v-if="authStore.userRole === 'student'"> - your saved eNotes still open.</template></span>
         <router-link v-if="authStore.userRole === 'student' && route.path !== '/student/downloads'" to="/student/downloads" class="underline font-semibold">Downloads</router-link>
       </div>
-      <div v-else-if="offline.pending > 0 && authStore.userRole === 'student' && !shouldHideAppChrome" class="px-4 py-1 text-center bg-indigo-50 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-200 text-[11px]">
+      <div v-else-if="offline.pending > 0 && authStore.userRole === 'student' && !shouldHideAppChrome && !isFullScreenChat" class="px-4 py-1 text-center bg-indigo-50 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-200 text-[11px]">
         Sending {{ offline.pending }} {{ offline.pending === 1 ? 'change' : 'changes' }} you made offline…
       </div>
 
-      <main class="flex-1 print:!p-0" :class="[shouldHideAppChrome ? 'p-0' : (isImmersiveReader ? 'p-0 lg:p-6' : 'p-4 sm:p-6'), showStudentTabs ? 'pb-24 lg:pb-6' : '']">
+      <main class="flex-1 print:!p-0" :class="[shouldHideAppChrome || isFullScreenChat ? 'p-0' : (isImmersiveReader ? 'p-0 lg:p-6' : 'p-4 sm:p-6'), showStudentTabs ? 'pb-24 lg:pb-6' : '']">
         <router-view />
       </main>
     </div>
@@ -476,7 +477,8 @@
 <script setup lang="ts">
 import { usePersistedRef } from '@/composables/usePersistedRef'
 import Wordmark from '@/components/brand/Wordmark.vue'
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { appSidebarRequests } from '@/utils/appSidebar'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
 import { useAuthStore } from '../stores/auth'
@@ -531,19 +533,31 @@ const isImmersiveReader = computed(() => !!route.meta.immersiveReader)
 // same way eNotes' Read Mode does.
 const shouldHideAppChrome = computed(() => readModeStore.isActive)
 
+// Chat runs full screen like WhatsApp Web (route meta fullScreenChat): no top bar or tabs, and the
+// menu stays closed - on desktop too - until the chat's own menu button asks for it
+// (utils/appSidebar), then slides in over the chat instead of pushing it aside.
+const isFullScreenChat = computed(() => !!route.meta.fullScreenChat)
+
 // Pixel offset for the collapse-arrow button: it sits centered on the sidebar's right edge,
 // which is 12px (the `lg:left-3` inset) plus the sidebar's own width - since the button is 24px
 // wide, centering it there means its own `left` equals the width exactly (the two 12s cancel).
 const sidebarToggleLeftPx = computed(() => (isIconOnly.value ? 64 : 224))
 
 const applyResponsiveSidebar = () => {
-  sidebarOpen.value = window.innerWidth >= DESKTOP_BREAKPOINT
+  sidebarOpen.value = !isFullScreenChat.value && window.innerWidth >= DESKTOP_BREAKPOINT
   if (!sidebarOpen.value) {
     // Mobile's sidebar is a manually-toggled full-width overlay - the collapsed icon-only rail
     // is a desktop-only affordance, so drop any collapsed state left over from a resize.
     sidebarCollapsed.value = false
   }
 }
+
+// Entering chat hides the menu; leaving it restores the usual open-on-desktop menu
+watch(isFullScreenChat, () => applyResponsiveSidebar(), { immediate: true })
+// The chat's menu button
+watch(appSidebarRequests, () => { sidebarOpen.value = true })
+// Picking something from the menu over a chat closes it again
+watch(() => route.fullPath, () => { if (isFullScreenChat.value) sidebarOpen.value = false })
 
 // Top bar hide-on-scroll: hidden while scrolling down past a small threshold, shown again on
 // any scroll up or near the top - mirrors the Landing page header behaviour.
@@ -956,7 +970,7 @@ const STUDENT_TABS = [
   { path: '/student/assignments', label: 'Work', icon: 'DocumentTextIcon', also: ['/student/itembank'] },
   { path: '/student/chat', label: 'Chats', icon: 'ChatIcon', also: ['/student/study-groups'] }
 ]
-const showStudentTabs = computed(() => menuRole.value === 'student' && !shouldHideAppChrome.value && !isImmersiveReader.value)
+const showStudentTabs = computed(() => menuRole.value === 'student' && !shouldHideAppChrome.value && !isImmersiveReader.value && !isFullScreenChat.value)
 
 // ---- The command palette (Ctrl/Cmd + K) ----
 const paletteActions = computed<PaletteAction[]>(() => {

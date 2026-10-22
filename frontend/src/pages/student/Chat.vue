@@ -1,135 +1,167 @@
 <template>
-  <!-- Cancels the layout's padding (16px on a phone, 24px from sm up) to fill the screen edge to edge -->
-  <div class="h-[calc(100dvh-8.75rem)] sm:h-[calc(100dvh-9.75rem)] lg:h-[calc(100vh-6rem)] -m-4 sm:-m-6 flex bg-gray-100 dark:bg-gray-950 p-2 sm:p-4">
-    <div class="flex-1 flex rounded-2xl border border-gray-200 dark:border-black/40 shadow-lg overflow-hidden bg-white dark:bg-[rgb(17_24_39)]">
-      <!-- Sidebar -->
-      <div class="w-full md:w-80 lg:w-96 flex-shrink-0 md:border-r border-gray-200 dark:border-white/5 bg-white dark:bg-[rgb(17_24_39)] flex flex-col" :class="activeConversation ? 'hidden md:flex' : 'flex'">
-        <div class="chat-bar px-4 py-3.5 bg-indigo-800 flex items-center justify-between">
-          <h1 class="text-xl font-bold text-gray-900 dark:text-white">Chats</h1>
-          <button @click="showNewChat = true" class="chat-new p-2 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white transition-shadow dark:shadow-[0_0_12px_2px_rgba(21,135,74,0.5)]" title="New chat">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-            </svg>
+  <!-- WhatsApp Web layout (assets/whatsapp.css): an icon rail, the chat list, and the open
+       conversation on a doodle wallpaper. Full screen - the app's own menu and top bar are hidden
+       on chat (route meta fullScreenChat, see MainLayout) and the menu buttons bring the menu in. -->
+  <div class="wa h-[100dvh] flex overflow-hidden bg-[var(--wa-panel)]">
+    <!-- Icon rail (tablet and up) -->
+    <nav class="hidden md:flex w-16 flex-shrink-0 flex-col items-center justify-between py-3 bg-[var(--wa-rail)] border-r border-[var(--wa-border)]" aria-label="Chat">
+      <div class="flex flex-col items-center gap-1.5">
+        <button type="button" class="w-10 h-10 rounded-full flex items-center justify-center text-[var(--wa-icon)] hover:bg-black/5 dark:hover:bg-white/5" title="eSpace menu" aria-label="Open the eSpace menu" @click="openAppSidebar">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+        </button>
+        <button type="button" class="relative w-10 h-10 rounded-full flex items-center justify-center text-[var(--wa-text)] bg-black/5 dark:bg-white/10" title="Chats" aria-current="page">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+          <span v-if="totalUnread" class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--wa-green)] text-white text-[10px] font-bold leading-[18px] text-center">{{ totalUnread > 99 ? '99+' : totalUnread }}</span>
+        </button>
+        <button type="button" class="w-10 h-10 rounded-full flex items-center justify-center text-[var(--wa-icon)] hover:bg-black/5 dark:hover:bg-white/5" title="New chat" @click="showNewChat = true">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8.5v7M8.5 12h7" /></svg>
+        </button>
+      </div>
+      <div class="flex flex-col items-center gap-2">
+        <router-link :to="homePath" class="w-10 h-10 rounded-full flex items-center justify-center text-[var(--wa-icon)] hover:bg-black/5 dark:hover:bg-white/5" title="eSpace home">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+        </router-link>
+        <img v-if="myPhoto" :src="myPhoto" alt="" class="w-9 h-9 rounded-full object-cover" :title="myName">
+        <div v-else class="w-9 h-9 rounded-full bg-[var(--wa-green)] text-white text-xs font-semibold flex items-center justify-center" :title="myName">{{ myInitials }}</div>
+      </div>
+    </nav>
+
+    <!-- Chat list -->
+    <section class="w-full md:w-[340px] lg:w-[400px] flex-shrink-0 flex flex-col bg-[var(--wa-panel)] md:border-r border-[var(--wa-border)]" :class="activeConversation ? 'hidden md:flex' : 'flex'">
+      <header class="h-16 flex-shrink-0 px-4 flex items-center justify-between">
+        <div class="flex items-center gap-2"><AppMenuButton class="md:hidden text-[var(--wa-icon)]" /><h1 class="text-[22px] font-bold text-[var(--wa-text)]">Chats</h1></div>
+        <button type="button" class="w-10 h-10 rounded-full flex items-center justify-center text-[var(--wa-icon)] hover:bg-black/5 dark:hover:bg-white/5" title="New chat" @click="showNewChat = true">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8.5v7M8.5 12h7" /></svg>
+        </button>
+      </header>
+
+      <div class="px-3 flex-shrink-0">
+        <label class="flex items-center gap-3 h-[35px] px-3 rounded-lg bg-[var(--wa-search)] focus-within:ring-2 focus-within:ring-[var(--wa-green)]">
+          <svg class="w-4 h-4 flex-shrink-0 text-[var(--wa-icon)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+          <input v-model="conversationSearch" type="text" placeholder="Search or start a new chat" class="flex-1 min-w-0 bg-transparent border-0 p-0 text-[15px] text-[var(--wa-text)] placeholder-[var(--wa-muted)] focus:ring-0 focus:outline-none">
+        </label>
+        <!-- Quick filters -->
+        <div class="mt-2.5 mb-1.5 flex gap-2 overflow-x-auto [scrollbar-width:none]">
+          <button
+            v-for="f in chatFilters"
+            :key="f.key"
+            type="button"
+            class="flex-shrink-0 px-3 py-[5px] rounded-full text-[14px] transition-colors border"
+            :class="chatFilter === f.key ? 'bg-[var(--wa-chip-on)] text-[var(--wa-chip-on-text)] border-transparent font-medium' : 'border-[var(--wa-border)] text-[var(--wa-muted)] hover:bg-[var(--wa-hover)]'"
+            @click="chatFilter = f.key"
+          >{{ f.label }}<span v-if="f.count" class="ml-1">{{ f.count }}</span></button>
+        </div>
+      </div>
+
+      <div class="wa-scroll flex-1 overflow-y-auto px-2 pb-2">
+        <div v-if="loadingConversations" class="text-center py-12 text-[var(--wa-muted)] text-sm">Loading…</div>
+        <div v-else-if="conversations.length === 0" class="text-center py-16 px-6">
+          <p class="text-sm text-[var(--wa-muted)]">No chats yet. Tap the new chat button to message a classmate, a teacher or your class group.</p>
+        </div>
+        <div v-else-if="filteredConversations.length === 0" class="text-center py-16 px-6">
+          <p class="text-sm text-[var(--wa-muted)]">{{ conversationSearch ? `No chats match "${conversationSearch}".` : 'No chats here yet.' }}</p>
+        </div>
+        <ConversationListItem
+          v-for="conv in filteredConversations"
+          :key="conv.id"
+          :conversation="conv"
+          :active="activeConversation?.id === conv.id"
+          @click="openConversation(conv)"
+        />
+      </div>
+    </section>
+
+    <!-- Open conversation -->
+    <section class="flex-1 flex flex-col min-w-0" :class="activeConversation ? 'flex' : 'hidden md:flex'">
+      <template v-if="activeConversation">
+        <header class="h-[59px] flex-shrink-0 px-2 sm:px-4 flex items-center gap-3 bg-[var(--wa-panel-header)] border-b border-[var(--wa-border)] z-10">
+          <button @click="activeConversation = null" class="md:hidden p-1 text-[var(--wa-icon)]" aria-label="Back to chats">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+          </button>
+          <div class="relative flex-shrink-0">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-semibold" :style="{ background: threadAvatarColor }">
+              <svg v-if="isGroup" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-4-4" /></svg>
+              <template v-else>{{ initials(activeConversation.name) }}</template>
+            </div>
+          </div>
+          <div class="min-w-0 flex-1">
+            <h2 class="text-[16px] leading-[21px] text-[var(--wa-text)] truncate">{{ activeConversation.type === 'direct' ? niceName(activeConversation.name) : activeConversation.name }}</h2>
+            <p v-if="headerLine.text" class="text-[13px] leading-5 truncate" :class="headerLine.live && headerLine.text !== 'online' ? 'text-[var(--wa-green)]' : 'text-[var(--wa-muted)]'">{{ headerLine.text }}</p>
+          </div>
+
+          <div class="flex items-center gap-1 text-[var(--wa-icon)] flex-shrink-0">
+            <button type="button" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/5" :class="threadSearchOpen ? 'bg-black/5 dark:bg-white/10' : ''" title="Search" @click="toggleThreadSearch">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            </button>
+            <div class="relative" ref="threadMenuRef">
+              <button @click="showThreadMenu = !showThreadMenu" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/5" title="Menu">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="12" cy="19" r="1.8" /></svg>
+              </button>
+              <div v-if="showThreadMenu" class="absolute right-0 top-full mt-1 w-52 rounded-lg shadow-xl bg-[var(--wa-panel)] py-2 z-20 border border-[var(--wa-border)]">
+                <button @click="showThreadMenu = false; toggleThreadSearch()" class="w-full text-left px-5 py-2.5 text-[14.5px] text-[var(--wa-text)] hover:bg-[var(--wa-hover)]">Search</button>
+                <button @click="clearActiveChat" class="w-full text-left px-5 py-2.5 text-[14.5px] text-[var(--wa-text)] hover:bg-[var(--wa-hover)]">Clear chat</button>
+                <button @click="showThreadMenu = false; activeConversation = null" class="w-full text-left px-5 py-2.5 text-[14.5px] text-[var(--wa-text)] hover:bg-[var(--wa-hover)]">Close chat</button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <div v-if="threadSearchOpen" class="flex-shrink-0 px-4 py-2 bg-[var(--wa-panel-header)] border-b border-[var(--wa-border)]">
+          <label class="flex items-center gap-3 h-[35px] px-3 rounded-lg bg-[var(--wa-input)]">
+            <svg class="w-4 h-4 text-[var(--wa-icon)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            <input ref="threadSearchInput" v-model="threadSearch" type="text" placeholder="Search messages" class="flex-1 min-w-0 bg-transparent border-0 p-0 text-[15px] text-[var(--wa-text)] placeholder-[var(--wa-muted)] focus:ring-0 focus:outline-none">
+            <span v-if="threadSearch" class="text-xs text-[var(--wa-muted)]">{{ messageRows.length }} found</span>
+          </label>
+        </div>
+
+        <div class="wa-wallpaper relative flex-1 min-h-0">
+          <div ref="messagesContainer" class="wa-scroll absolute inset-0 overflow-y-auto py-3" @scroll="onMessagesScroll">
+            <div v-if="loadingMessages" class="text-center py-8 text-[var(--wa-muted)] text-sm">Loading messages…</div>
+            <template v-else>
+              <template v-for="row in messageRows" :key="row.msg.id">
+                <div v-if="row.day" class="flex justify-center my-3">
+                  <span class="px-3 py-1.5 rounded-lg text-[12.5px] bg-[var(--wa-date)] text-[var(--wa-muted)] shadow-sm">{{ row.day }}</span>
+                </div>
+                <MessageBubble
+                  :id="`msg-${row.msg.id}`"
+                  :message="row.msg"
+                  :tail="row.tail"
+                  :show-avatar="isGroup ? row.tail : undefined"
+                  :show-sender-name="isGroup && !row.msg.is_mine"
+                  @reply="replyingTo = $event"
+                  @scroll-to="scrollToMessage"
+                  @preview-image="previewImage = $event"
+                />
+              </template>
+              <div v-if="messages.length === 0" class="flex justify-center mt-6">
+                <span class="px-3 py-1.5 rounded-lg text-[12.5px] bg-[var(--wa-date)] text-[var(--wa-muted)] shadow-sm">No messages yet. Say hi!</span>
+              </div>
+              <div v-else-if="threadSearch && messageRows.length === 0" class="flex justify-center mt-6">
+                <span class="px-3 py-1.5 rounded-lg text-[12.5px] bg-[var(--wa-date)] text-[var(--wa-muted)] shadow-sm">No messages match "{{ threadSearch }}"</span>
+              </div>
+            </template>
+          </div>
+          <!-- jump to the newest message -->
+          <button v-if="showJump" type="button" class="absolute right-5 bottom-4 w-10 h-10 rounded-full bg-[var(--wa-panel)] shadow-lg flex items-center justify-center text-[var(--wa-icon)]" title="Scroll to bottom" @click="scrollToBottom">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
           </button>
         </div>
 
-        <div class="px-3 py-2 bg-white dark:bg-[rgb(17_24_39)]">
-          <div class="relative">
-            <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-            </svg>
-            <input
-              v-model="conversationSearch"
-              type="text"
-              placeholder="Search or start a new chat"
-              class="w-full pl-9 pr-3 py-1.5 rounded-lg text-sm bg-gray-100 dark:bg-[rgb(31_41_55)] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 border-0 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            >
-          </div>
-          <!-- Quick filters -->
-          <div class="mt-2 flex gap-1.5 overflow-x-auto [scrollbar-width:none]">
-            <button
-              v-for="f in chatFilters"
-              :key="f.key"
-              type="button"
-              class="flex-shrink-0 px-3 py-1 rounded-full text-xs font-semibold transition-colors"
-              :class="chatFilter === f.key ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-[rgb(31_41_55)] dark:text-gray-300 dark:hover:bg-[rgb(55_65_81)]'"
-              @click="chatFilter = f.key"
-            >{{ f.label }}<span v-if="f.count" class="ml-1 opacity-80">{{ f.count }}</span></button>
-          </div>
-        </div>
+        <MessageComposer :replying-to="replyingTo" :sending="sending" @send="sendMessage" @cancel-reply="replyingTo = null" @activity="live.reportActivity" />
+      </template>
 
-        <div class="flex-1 overflow-y-auto">
-          <div v-if="loadingConversations" class="text-center py-12 text-gray-400 text-sm">Loading...</div>
-          <div v-else-if="conversations.length === 0" class="text-center py-16 px-6">
-            <p class="text-sm text-gray-500 dark:text-gray-400">No chats yet. Tap the + to message a classmate, teacher, or your class group.</p>
-          </div>
-          <div v-else-if="filteredConversations.length === 0" class="text-center py-16 px-6">
-            <p class="text-sm text-gray-500 dark:text-gray-400">{{ conversationSearch ? `No chats match "${conversationSearch}".` : 'No chats here yet.' }}</p>
-          </div>
-          <ConversationListItem
-            v-for="conv in filteredConversations"
-            :key="conv.id"
-            :conversation="conv"
-            :active="activeConversation?.id === conv.id"
-            @click="openConversation(conv)"
-          />
+      <!-- nothing open: WhatsApp's welcome panel, in eSpace's words -->
+      <div v-else class="flex-1 flex flex-col items-center justify-center text-center px-8 bg-[var(--wa-panel-header)] border-b-[6px] border-[var(--wa-green)]">
+        <div class="w-24 h-24 rounded-full bg-[var(--wa-chip-on)] flex items-center justify-center mb-6">
+          <svg class="w-12 h-12 text-[var(--wa-green)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
         </div>
+        <h2 class="text-[28px] font-light text-[var(--wa-text)]">eSpace Chat</h2>
+        <p class="mt-8 text-[13px] text-[var(--wa-muted)] flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+          Your messages stay inside your school's eSpace.
+        </p>
       </div>
-
-      <!-- Thread -->
-      <div class="flex-1 flex flex-col min-w-0" :class="activeConversation ? 'flex' : 'hidden md:flex'">
-        <template v-if="activeConversation">
-          <div class="chat-bar px-4 py-3 bg-indigo-800 flex items-center gap-3 z-10 shadow-sm">
-            <button @click="activeConversation = null" class="md:hidden p-1 -ml-1 text-gray-500">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-            </button>
-            <div class="relative flex-shrink-0">
-              <div class="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center text-white text-sm font-semibold">
-                <AppIcon v-if="activeConversation.type === 'class' || activeConversation.type === 'group'" name="users" class="w-5 h-5" /><template v-else>{{ initials(activeConversation.name) }}</template>
-              </div>
-              <span
-                v-if="activeConversation.type === 'direct' && activeConversation.is_online"
-                class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-indigo-500 border-2 border-white dark:border-[rgb(31_41_55)] dark:shadow-[0_0_6px_2px_rgba(21,135,74,0.65)]"
-              ></span>
-            </div>
-            <div class="min-w-0 flex-1">
-              <h2 class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ activeConversation.type === 'direct' ? niceName(activeConversation.name) : activeConversation.name }}</h2>
-              <p v-if="activeConversation.type === 'class' || activeConversation.type === 'group'" class="text-xs text-gray-500 dark:text-gray-400">{{ activeConversation.type === 'group' ? 'Study group' : 'Class group' }}</p>
-              <p v-else-if="activeConversation.is_online" class="text-xs text-indigo-600 dark:text-indigo-400">Online</p>
-            </div>
-
-            <div class="relative flex-shrink-0" ref="threadMenuRef">
-              <button @click="showThreadMenu = !showThreadMenu" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-[rgb(55_65_81)] text-gray-500 dark:text-gray-400" title="Menu">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01"></path>
-                </svg>
-              </button>
-              <div
-                v-if="showThreadMenu"
-                class="absolute right-0 top-full mt-1 w-44 rounded-lg shadow-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[rgb(31_41_55)] py-1 z-20"
-              >
-                <button
-                  @click="clearActiveChat"
-                  class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[rgb(55_65_81)]"
-                >
-                  Clear Chat
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div ref="messagesContainer" class="wa-chat-bg flex-1 overflow-y-auto px-4 py-4 space-y-0.5">
-            <div v-if="loadingMessages" class="text-center py-8 text-gray-400 text-sm">Loading messages...</div>
-            <template v-else>
-              <MessageBubble
-                v-for="msg in messages"
-                :key="msg.id"
-                :id="`msg-${msg.id}`"
-                :message="msg"
-                :show-sender-name="(activeConversation.type === 'class' || activeConversation.type === 'group') && !msg.is_mine"
-                @reply="replyingTo = $event"
-                @scroll-to="scrollToMessage"
-                @preview-image="previewImage = $event"
-              />
-              <p v-if="messages.length === 0" class="text-center text-sm text-gray-400 py-8">No messages yet. Say hi!</p>
-            </template>
-          </div>
-
-          <MessageComposer :replying-to="replyingTo" :sending="sending" @send="sendMessage" @cancel-reply="replyingTo = null" />
-        </template>
-
-        <div v-else class="wa-chat-bg flex-1 flex items-center justify-center">
-          <div class="text-center px-6 py-8 rounded-2xl bg-white/70 dark:bg-[rgb(31_41_55)]/70 backdrop-blur-sm border border-white/60 dark:border-white/5 shadow-sm">
-            <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center">
-              <svg class="w-10 h-10 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
-              </svg>
-            </div>
-            <p class="text-gray-500 dark:text-gray-400">Select a chat or start a new one</p>
-          </div>
-        </div>
-      </div>
-    </div>
+    </section>
 
     <NewChatModal
       v-if="showNewChat"
@@ -149,15 +181,20 @@
 
 <script setup lang="ts">
 import { niceName } from '@/components/dashboard/teacher/time'
-import AppIcon from '@/components/common/AppIcon.vue'
-import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
 import ConversationListItem from '@/components/chat/ConversationListItem.vue'
 import MessageBubble from '@/components/chat/MessageBubble.vue'
+import AppMenuButton from '@/components/chat/AppMenuButton.vue'
 import MessageComposer from '@/components/chat/MessageComposer.vue'
 import NewChatModal from '@/components/chat/NewChatModal.vue'
 import { useChatBadgeStore } from '@/stores/chatBadge'
+import { useChatLive } from '@/composables/useChatLive'
+import { useAuthStore } from '@/stores/auth'
+import { openAppSidebar } from '@/utils/appSidebar'
+import { resolveAssetUrl } from '@/utils/url'
+import '@/assets/whatsapp.css'
 import type { Conversation, ChatMessage, ChatContact, ChatClassGroup } from '@/types/chat'
 import { useToastStore } from '@/stores/toast'
 import { useConfirmStore } from '@/stores/confirm'
@@ -172,6 +209,9 @@ const chatBadge = useChatBadgeStore()
 const conversations = ref<Conversation[]>([])
 const conversationSearch = ref('')
 const activeConversation = ref<Conversation | null>(null)
+// typing / recording / online / last seen (see composables/useChatLive)
+const live = useChatLive(API_BASE, activeConversation)
+const headerLine = computed(() => live.headerLine())
 const messages = ref<ChatMessage[]>([])
 const loadingConversations = ref(false)
 const loadingMessages = ref(false)
@@ -247,6 +287,7 @@ const loadMessages = async (conversationId: number, showLoading = true) => {
     if (response.data.success) {
       const wasAtBottom = !messagesContainer.value || messagesContainer.value.scrollHeight - messagesContainer.value.scrollTop - messagesContainer.value.clientHeight < 100
       messages.value = response.data.data.messages || []
+      if (activeConversation.value?.id === conversationId) live.status.value = response.data.data.status ?? null
       if (wasAtBottom || showLoading) scrollToBottom()
     }
   } catch (error) {
@@ -280,6 +321,7 @@ const loadClassGroups = async () => {
 }
 
 const openConversation = async (conv: Conversation) => {
+  if (activeConversation.value?.id !== conv.id) { live.stopActivity(); live.status.value = null }
   activeConversation.value = conv
   replyingTo.value = null
   showThreadMenu.value = false
@@ -391,30 +433,59 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  live.stopActivity()
   if (messagePollTimer) window.clearInterval(messagePollTimer)
   if (conversationPollTimer) window.clearInterval(conversationPollTimer)
   document.removeEventListener('click', handleThreadMenuClickOutside)
 })
+
+// --- WhatsApp Web look: rail, day separators, runs, search in chat, jump to newest ---
+const auth = useAuthStore()
+const myName = computed(() => auth.userName)
+const myInitials = computed(() => String(auth.userName || '?').split(/\s+/).filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase())
+const myPhoto = computed(() => ((auth.user as any)?.profile_photo ? resolveAssetUrl((auth.user as any).profile_photo) : ''))
+const homePath = computed(() => `/${auth.userRole || 'student'}/dashboard`)
+const totalUnread = computed(() => conversations.value.reduce((n, c) => n + (c.unread_count || 0), 0))
+const isGroup = computed(() => !!activeConversation.value && activeConversation.value.type !== 'direct')
+const THREAD_COLORS = ['#00a884', '#128c7e', '#25d366', '#34b7f1', '#7f66ff', '#e542a3', '#fa6533', '#54656f', '#008069']
+const threadAvatarColor = computed(() => THREAD_COLORS[Math.abs(activeConversation.value?.id ?? 0) % THREAD_COLORS.length])
+
+const threadSearchOpen = ref(false)
+const threadSearch = ref('')
+const threadSearchInput = ref<HTMLInputElement | null>(null)
+const toggleThreadSearch = () => {
+  threadSearchOpen.value = !threadSearchOpen.value
+  if (!threadSearchOpen.value) threadSearch.value = ''
+  else nextTick(() => threadSearchInput.value?.focus())
+}
+
+const dayKey = (s: string) => new Date(s.replace(' ', 'T')).toDateString()
+const dayLabel = (s: string) => {
+  const d = new Date(s.replace(' ', 'T'))
+  const today = new Date()
+  const yesterday = new Date(); yesterday.setDate(today.getDate() - 1)
+  if (d.toDateString() === today.toDateString()) return 'Today'
+  if (d.toDateString() === yesterday.toDateString()) return 'Yesterday'
+  if (today.getTime() - d.getTime() < 6 * 86400000) return d.toLocaleDateString('en-US', { weekday: 'long' })
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+/** Each message with: a day chip before it when the day changes, and whether it starts a run (tail) */
+const messageRows = computed(() => {
+  const q = threadSearch.value.trim().toLowerCase()
+  const list = q ? messages.value.filter(m => (m.message || '').toLowerCase().includes(q)) : messages.value
+  return list.map((msg, i) => {
+    const prev = list[i - 1]
+    const newDay = !prev || dayKey(prev.created_at) !== dayKey(msg.created_at)
+    const sameSender = !!prev && prev.sender_id === msg.sender_id && prev.sender_role === msg.sender_role
+    return { msg, day: newDay ? dayLabel(msg.created_at) : '', tail: newDay || !sameSender }
+  })
+})
+
+const showJump = ref(false)
+const onMessagesScroll = () => {
+  const el = messagesContainer.value
+  if (el) showJump.value = el.scrollHeight - el.scrollTop - el.clientHeight > 300
+}
+watch(() => activeConversation.value?.id, () => { threadSearchOpen.value = false; threadSearch.value = ''; showJump.value = false })
 </script>
 
-<style>
-.wa-chat-bg {
-  background-color: #eef5f0;
-  background-image:
-    radial-gradient(circle at 12% 18%, rgba(21, 135, 74, 0.10) 1.5px, transparent 1.5px),
-    radial-gradient(circle at 62% 42%, rgba(21, 135, 74, 0.08) 1.5px, transparent 1.5px),
-    radial-gradient(circle at 38% 78%, rgba(21, 135, 74, 0.09) 1.5px, transparent 1.5px),
-    radial-gradient(circle at 88% 88%, rgba(21, 135, 74, 0.07) 1.5px, transparent 1.5px);
-  background-size: 120px 120px;
-}
-
-.dark .wa-chat-bg {
-  background-color: rgb(13 21 18);
-  background-image:
-    radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.035) 1.5px, transparent 1.5px),
-    radial-gradient(circle at 62% 42%, rgba(255, 255, 255, 0.028) 1.5px, transparent 1.5px),
-    radial-gradient(circle at 38% 78%, rgba(255, 255, 255, 0.032) 1.5px, transparent 1.5px),
-    radial-gradient(circle at 88% 88%, rgba(255, 255, 255, 0.024) 1.5px, transparent 1.5px);
-  background-size: 120px 120px;
-}
-</style>

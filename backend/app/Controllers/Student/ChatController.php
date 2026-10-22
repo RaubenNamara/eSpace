@@ -241,7 +241,40 @@ class ChatController extends Controller
             return;
         }
 
-        $this->success(['messages' => $this->chat->getMessages($conversationId, $studentId, 'student')]);
+        $this->success([
+            'messages' => $this->chat->getMessages($conversationId, $studentId, 'student'),
+            // typing / recording, and the other person's online / last seen (direct chats)
+            'status' => $this->chat->getThreadStatus($conversationId, $studentId, 'student'),
+        ]);
+    }
+
+    /**
+     * Typing or recording a voice note in a conversation (or stopped) - shown to the others as
+     * "typing..." / "recording audio..."
+     * POST /student/chat/conversations/{id}/activity  { activity: 'typing' | 'recording' | null }
+     */
+    public function activity($id): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+
+        $studentId = $this->getStudentId();
+        if (!$studentId) {
+            $this->error('Not found', 403);
+            return;
+        }
+
+        $conversationId = (int) $id;
+        if (!$this->chat->isParticipant($conversationId, $studentId, 'student')) {
+            $this->notFound('Conversation not found');
+            return;
+        }
+
+        $activity = $this->input('activity');
+        $this->chat->setActivity($conversationId, $studentId, 'student', is_string($activity) ? $activity : null);
+        $this->success([]);
     }
 
     /**

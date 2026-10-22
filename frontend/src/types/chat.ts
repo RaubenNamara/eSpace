@@ -29,6 +29,8 @@ export interface ConversationLastMessage {
   attachment_type: AttachmentType | null
   sender_name: string
   is_mine?: boolean
+  /** my last message: sent / delivered / read (ticks in the chat list) */
+  status?: 'sent' | 'delivered' | 'read' | null
   created_at: string
 }
 
@@ -46,6 +48,8 @@ export interface Conversation {
   other_role?: ChatRole | null
   last_message: ConversationLastMessage | null
   unread_count?: number
+  /** Others typing / recording in this conversation right now */
+  activity?: ChatActivity[]
   participants?: { id: number; role: ChatRole; name: string; is_online?: boolean; last_active_at?: string | null }[]
 }
 
@@ -61,8 +65,10 @@ export interface ChatMessage {
   sender_role: ChatRole
   sender_name: string
   is_mine?: boolean
-  /** Only meaningful for is_mine messages in a direct (1:1) chat - the other person has read up to this message. */
+  /** is_mine messages: read by everyone else (same as status === 'read') */
   is_read?: boolean
+  /** is_mine messages: one grey tick (sent), two grey (delivered), two blue (read) */
+  status?: 'sent' | 'delivered' | 'read' | null
   message: string
   attachment: string | null
   attachment_type: AttachmentType | null
@@ -70,4 +76,16 @@ export interface ChatMessage {
   attachment_size: number | null
   reply_to: ReplyPreview | null
   created_at: string
+}
+
+export interface ChatActivity {
+  name: string
+  activity: 'typing' | 'recording'
+}
+
+/** Live state of the open conversation, polled with its messages */
+export interface ChatThreadStatus {
+  activity: ChatActivity[]
+  /** Direct chats: the other person */
+  presence: { is_online: boolean; last_active_at: string | null; seen_seconds_ago?: number | null } | null
 }

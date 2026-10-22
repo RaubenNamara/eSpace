@@ -24,6 +24,12 @@ class ChatService
     /** A user counts as "online" if their last heartbeat was within this many seconds. */
     private const ONLINE_THRESHOLD_SECONDS = 90;
 
+    /** "typing..." / "recording audio..." shows while the last report is this fresh (the composer re-reports every few seconds). */
+    private const ACTIVITY_FRESH_SECONDS = 6;
+
+    /** chat_participants.last_delivered_at / activity / activity_at exist (migration 140) */
+    private static ?bool $liveColumns = null;
+
     /** MIME type => attachment category */
     private const ALLOWED_MIME = [
         'image/jpeg' => 'image',
@@ -89,23 +95,25 @@ class ChatService
         $db = $this->getDb();
 
         if ($role === 'student') {
-            $stmt = $db->prepare("SELECT last_active_at FROM students WHERE id = :id");
+            $stmt = $db->prepare("SELECT last_active_at, TIMESTAMPDIFF(SECOND, last_active_at, NOW()) AS seen_ago FROM students WHERE id = :id");
         } elseif ($role === 'teacher') {
-            $stmt = $db->prepare("SELECT last_active_at FROM teachers WHERE id = :id");
+            $stmt = $db->prepare("SELECT last_active_at, TIMESTAMPDIFF(SECOND, last_active_at, NOW()) AS seen_ago FROM teachers WHERE id = :id");
         } elseif ($role === 'hod') {
-            $stmt = $db->prepare("SELECT last_active_at FROM hods WHERE id = :id");
+            $stmt = $db->prepare("SELECT last_active_at, TIMESTAMPDIFF(SECOND, last_active_at, NOW()) AS seen_ago FROM hods WHERE id = :id");
         } else {
-            $stmt = $db->prepare("SELECT last_active_at FROM users WHERE id = :id");
+            $stmt = $db->prepare("SELECT last_active_at, TIMESTAMPDIFF(SECOND, last_active_at, NOW()) AS seen_ago FROM users WHERE id = :id");
         }
 
         $stmt->execute(['id' => $id]);
         $row = $stmt->fetch();
         $lastActiveAt = $row['last_active_at'] ?? null;
 
-        $isOnline = $lastActiveAt !== null
-            && (time() - strtotime($lastActiveAt)) <= self::ONLINE_THRESHOLD_SECONDS;
+        // Measured against MySQL's own clock - the same one that wrote last_active_at (NOW()). PHP's
+        // clock is UTC while MySQL's can be local time, which used to keep people "online" for hours.
+        $seenAgo = isset($row['seen_ago']) && $row['seen_ago'] !== null ? max(0, (int) $row['seen_ago']) : null;
+        $isOnline = $seenAgo !== null && $seenAgo <= self::ONLINE_THRESHOLD_SECONDS;
 
-        return ['is_online' => $isOnline, 'last_active_at' => $lastActiveAt];
+        return ['is_online' => $isOnline, 'last_active_at' => $lastActiveAt, 'seen_seconds_ago' => $seenAgo];
     }
 
     /**
@@ -267,9 +275,125 @@ class ChatService
      * count, and a resolved display name (the other person for direct chats, the group/class
      * name otherwise).
      */
+    /**
+     * Whether migration 140 (delivered ticks, typing/recording) has run - until it has, chat keeps
+     * working exactly as before, just without those extras.
+     */
+    private function hasLiveColumns(): bool
+    {
+        if (self::$liveColumns === null) {
+            try {
+                self::$liveColumns = (bool) $this->getDb()->query("SHOW COLUMNS FROM chat_participants LIKE 'activity_at'")->fetch();
+            } catch (\PDOException $e) {
+                self::$liveColumns = false;
+            }
+        }
+        return self::$liveColumns;
+    }
+
+    /**
+     * This person's eSpace has just fetched their chats, so every message sent to them so far has
+     * reached them (two grey ticks for the sender). Called from the chat list and the unread badge,
+     * which every open eSpace polls.
+     */
+    public function markDelivered(int $userId, string $userRole): void
+    {
+        if (!$this->hasLiveColumns()) {
+            return;
+        }
+        $this->getDb()->prepare(
+            "UPDATE chat_participants SET last_delivered_at = NOW() WHERE user_id = :uid AND user_role = :role"
+        )->execute(['uid' => $userId, 'role' => $userRole]);
+    }
+
+    /**
+     * Report that this participant is typing / recording a voice note in a conversation, or has
+     * stopped (null).
+     */
+    public function setActivity(int $conversationId, int $userId, string $userRole, ?string $activity): void
+    {
+        if (!$this->hasLiveColumns()) {
+            return;
+        }
+        $activity = in_array($activity, ['typing', 'recording'], true) ? $activity : null;
+        $this->getDb()->prepare(
+            "UPDATE chat_participants SET activity = :a, activity_at = " . ($activity === null ? 'NULL' : 'NOW()') . "
+             WHERE conversation_id = :cid AND user_id = :uid AND user_role = :role"
+        )->execute(['a' => $activity, 'cid' => $conversationId, 'uid' => $userId, 'role' => $userRole]);
+    }
+
+    /**
+     * Who else in the conversation is typing or recording right now.
+     * @return array<int, array{name: string, activity: string}>
+     */
+    public function getActivity(int $conversationId, int $userId, string $userRole): array
+    {
+        if (!$this->hasLiveColumns()) {
+            return [];
+        }
+        $stmt = $this->getDb()->prepare(
+            "SELECT user_id, user_role, activity FROM chat_participants
+             WHERE conversation_id = :cid AND activity IS NOT NULL
+               AND activity_at >= NOW() - INTERVAL " . self::ACTIVITY_FRESH_SECONDS . " SECOND
+               AND NOT (user_id = :uid AND user_role = :role)"
+        );
+        $stmt->execute(['cid' => $conversationId, 'uid' => $userId, 'role' => $userRole]);
+        return array_map(fn($r) => [
+            'name' => $this->getUserName((int) $r['user_id'], $r['user_role']),
+            'activity' => $r['activity'],
+        ], $stmt->fetchAll());
+    }
+
+    /**
+     * Live status for an open conversation: who is typing/recording, and for a direct chat the
+     * other person's online / last-seen. Polled alongside the messages.
+     */
+    public function getThreadStatus(int $conversationId, int $userId, string $userRole): array
+    {
+        $stmt = $this->getDb()->prepare(
+            "SELECT c.type, cp.user_id, cp.user_role FROM chat_conversations c
+             LEFT JOIN chat_participants cp ON cp.conversation_id = c.id AND NOT (cp.user_id = :uid AND cp.user_role = :role)
+             WHERE c.id = :cid LIMIT 1"
+        );
+        $stmt->execute(['cid' => $conversationId, 'uid' => $userId, 'role' => $userRole]);
+        $row = $stmt->fetch();
+        $presence = ($row && $row['type'] === 'direct' && $row['user_id'] !== null)
+            ? $this->getUserPresence((int) $row['user_id'], $row['user_role'])
+            : null;
+
+        return ['activity' => $this->getActivity($conversationId, $userId, $userRole), 'presence' => $presence];
+    }
+
+    /**
+     * How far the slowest other participant has got: [read up to, delivered up to] (MySQL
+     * datetimes, null = not yet). A message of mine is read / delivered once it is at or before
+     * these - in a group that means every other member, as on WhatsApp.
+     */
+    private function othersProgress(array $others): array
+    {
+        $readUpTo = null;
+        $deliveredUpTo = null;
+        foreach (array_values($others) as $i => $o) {
+            $read = $o['last_read_at'];
+            $delivered = max((string) $o['last_read_at'], (string) ($o['last_delivered_at'] ?? '')) ?: null;
+            $readUpTo = $i === 0 ? $read : ($read === null || $readUpTo === null ? null : min($readUpTo, $read));
+            $deliveredUpTo = $i === 0 ? $delivered : ($delivered === null || $deliveredUpTo === null ? null : min($deliveredUpTo, $delivered));
+        }
+        return [$readUpTo, $deliveredUpTo];
+    }
+
+    private static function tickStatus(string $createdAt, ?string $readUpTo, ?string $deliveredUpTo): string
+    {
+        if ($readUpTo !== null && $createdAt <= $readUpTo) {
+            return 'read';
+        }
+        return $deliveredUpTo !== null && $createdAt <= $deliveredUpTo ? 'delivered' : 'sent';
+    }
+
     public function listConversations(int $userId, string $userRole): array
     {
         $db = $this->getDb();
+        $this->markDelivered($userId, $userRole);
 
         $stmt = $db->prepare(
             "SELECT c.id, c.type, c.name, c.class_id, c.department_id, c.updated_at, cp.last_read_at, cp.cleared_at
@@ -300,7 +424,7 @@ class ChatService
                 }
             }
 
-            $lastMessageSql = "SELECT message, attachment_type, sender_id, sender_role, created_at
+            $lastMessageSql = "SELECT message, attachment_type, attachment_name, sender_id, sender_role, created_at
                  FROM chat_messages WHERE conversation_id = :cid";
             $lastMessageParams = ['cid' => $conv['id']];
             if ($conv['cleared_at']) {
@@ -311,6 +435,19 @@ class ChatService
             $stmt = $db->prepare($lastMessageSql);
             $stmt->execute($lastMessageParams);
             $lastMessage = $stmt->fetch();
+
+            // ticks beside my own last message in the list, as on WhatsApp
+            $lastStatus = null;
+            if ($lastMessage && (int) $lastMessage['sender_id'] === $userId && $lastMessage['sender_role'] === $userRole) {
+                $deliveredCol = $this->hasLiveColumns() ? 'last_delivered_at' : 'NULL AS last_delivered_at';
+                $st = $db->prepare(
+                    "SELECT last_read_at, {$deliveredCol} FROM chat_participants
+                     WHERE conversation_id = :cid AND NOT (user_id = :uid AND user_role = :role)"
+                );
+                $st->execute(['cid' => $conv['id'], 'uid' => $userId, 'role' => $userRole]);
+                [$readUpTo, $deliveredUpTo] = $this->othersProgress($st->fetchAll());
+                $lastStatus = self::tickStatus($lastMessage['created_at'], $readUpTo, $deliveredUpTo);
+            }
 
             $unreadWhere = "conversation_id = :cid AND NOT (sender_id = :uid AND sender_role = :role)";
             $params = ['cid' => $conv['id'], 'uid' => $userId, 'role' => $userRole];
@@ -340,12 +477,15 @@ class ChatService
                 'other_role' => $other ? $other['user_role'] : null,
                 'last_message' => $lastMessage ? [
                     'message' => $lastMessage['message'],
-                    'attachment_type' => $lastMessage['attachment_type'],
+                    'attachment_type' => self::isVoiceNoteName($lastMessage['attachment_name'] ?? null) ? 'audio' : $lastMessage['attachment_type'],
                     'sender_name' => $this->getUserName((int) $lastMessage['sender_id'], $lastMessage['sender_role']),
                     'is_mine' => (int) $lastMessage['sender_id'] === $userId && $lastMessage['sender_role'] === $userRole,
+                    'status' => $lastStatus,
                     'created_at' => $lastMessage['created_at'],
                 ] : null,
                 'unread_count' => $unread,
+                // someone typing / recording here right now ("typing..." in the list, like WhatsApp)
+                'activity' => $this->getActivity((int) $conv['id'], $userId, $userRole),
             ];
         }
 
@@ -359,6 +499,7 @@ class ChatService
      */
     public function totalUnreadCount(int $userId, string $userRole): int
     {
+        $this->markDelivered($userId, $userRole);
         $stmt = $this->getDb()->prepare(
             "SELECT COUNT(*) as cnt
              FROM chat_messages m
@@ -380,11 +521,12 @@ class ChatService
     {
         $db = $this->getDb();
 
-        // Read receipts (ticks) only make sense for a direct (1:1) chat, where
-        // "the other person" is unambiguous - if there's more than one other participant (a
-        // group/class chat), read status per-member isn't tracked and messages just show as sent.
+        // Ticks, as in WhatsApp: one grey = sent, two grey = delivered to everyone else (their
+        // eSpace has fetched it), two blue = read by everyone else. In a group that means every
+        // other member, so a busy class chat mostly shows delivered.
+        $deliveredCol = $this->hasLiveColumns() ? 'last_delivered_at' : 'NULL AS last_delivered_at';
         $stmt = $db->prepare(
-            "SELECT user_id, user_role, last_read_at, cleared_at FROM chat_participants
+            "SELECT user_id, user_role, last_read_at, {$deliveredCol}, cleared_at FROM chat_participants
              WHERE conversation_id = :cid"
         );
         $stmt->execute(['cid' => $conversationId]);
@@ -399,7 +541,7 @@ class ChatService
                 $others[] = $p;
             }
         }
-        $otherLastReadAt = count($others) === 1 ? $others[0]['last_read_at'] : null;
+        [$readUpTo, $deliveredUpTo] = $this->othersProgress($others);
 
         $sql = "SELECT m.*, r.message as reply_message, r.sender_id as reply_sender_id, r.sender_role as reply_sender_role
              FROM chat_messages m
@@ -419,8 +561,9 @@ class ChatService
         $stmt->execute();
         $rows = array_reverse($stmt->fetchAll());
 
-        $messages = array_map(function ($row) use ($userId, $userRole, $otherLastReadAt) {
+        $messages = array_map(function ($row) use ($userId, $userRole, $readUpTo, $deliveredUpTo) {
             $isMine = (int) $row['sender_id'] === $userId && $row['sender_role'] === $userRole;
+            $status = $isMine ? self::tickStatus($row['created_at'], $readUpTo, $deliveredUpTo) : null;
 
             return [
                 'id' => (int) $row['id'],
@@ -428,10 +571,11 @@ class ChatService
                 'sender_role' => $row['sender_role'],
                 'sender_name' => $this->getUserName((int) $row['sender_id'], $row['sender_role']),
                 'is_mine' => $isMine,
-                'is_read' => $isMine && $otherLastReadAt !== null && $row['created_at'] <= $otherLastReadAt,
+                'is_read' => $status === 'read',
+                'status' => $status,
                 'message' => $row['message'],
                 'attachment' => $row['attachment'],
-                'attachment_type' => $row['attachment_type'],
+                'attachment_type' => self::isVoiceNoteName($row['attachment_name'] ?? null) ? 'audio' : $row['attachment_type'],
                 'attachment_name' => $row['attachment_name'],
                 'attachment_size' => $row['attachment_size'] ? (int) $row['attachment_size'] : null,
                 'reply_to' => $row['reply_to_id'] ? [
@@ -444,7 +588,7 @@ class ChatService
         }, $rows);
 
         $stmt = $db->prepare(
-            "UPDATE chat_participants SET last_read_at = NOW() WHERE conversation_id = :cid AND user_id = :uid AND user_role = :role"
+            "UPDATE chat_participants SET last_read_at = NOW()" . ($this->hasLiveColumns() ? ', last_delivered_at = NOW()' : '') . " WHERE conversation_id = :cid AND user_id = :uid AND user_role = :role"
         );
         $stmt->execute(['cid' => $conversationId, 'uid' => $userId, 'role' => $userRole]);
 
@@ -480,6 +624,9 @@ class ChatService
 
         $stmt = $db->prepare("UPDATE chat_conversations SET updated_at = NOW() WHERE id = :id");
         $stmt->execute(['id' => $conversationId]);
+
+        // the message is out, so the sender is no longer "typing..."
+        $this->setActivity($conversationId, $senderId, $senderRole, null);
 
         return $messageId;
     }
@@ -622,7 +769,7 @@ class ChatService
                 'sender_name' => $this->getUserName((int) $row['sender_id'], $row['sender_role']),
                 'message' => $row['message'],
                 'attachment' => $row['attachment'],
-                'attachment_type' => $row['attachment_type'],
+                'attachment_type' => self::isVoiceNoteName($row['attachment_name'] ?? null) ? 'audio' : $row['attachment_type'],
                 'attachment_name' => $row['attachment_name'],
                 'attachment_size' => $row['attachment_size'] ? (int) $row['attachment_size'] : null,
                 'reply_to' => $row['reply_to_id'] ? [
@@ -640,6 +787,12 @@ class ChatService
      * ['url','path','category','name','size'], or null (having sent an error response via
      * $controller) if validation fails.
      */
+    /** voice notes recorded in chat before uploads kept them as audio were saved as "video" */
+    public static function isVoiceNoteName(?string $name): bool
+    {
+        return $name !== null && preg_match('/^voice-note-\d+\./i', $name) === 1;
+    }
+
     public function handleUpload(\eSpace\App\Controllers\Controller $controller): ?array
     {
         if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
@@ -662,6 +815,11 @@ class ChatService
         }
 
         $category = self::ALLOWED_MIME[$mimeType];
+        // A recorded voice note is a .webm, which file sniffing calls video/webm - the composer names
+        // them voice-note-<time>.webm, so keep those as voice messages
+        if ($category === 'video' && preg_match('/^voice-note-\d+\.(webm|ogg|m4a|mp4)$/i', (string) ($file['name'] ?? ''))) {
+            $category = 'audio';
+        }
 
         $uploadDir = __DIR__ . '/../../public/uploads/' . self::UPLOAD_SUBDIR . '/';
         if (!file_exists($uploadDir)) {

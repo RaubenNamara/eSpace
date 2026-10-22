@@ -175,6 +175,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/chat/conversations/{id}', 'eSpace\App\Controllers\Student\ChatController@messages');
         Router::post('/chat/conversations/{id}/send', 'eSpace\App\Controllers\Student\ChatController@sendMessage');
         Router::post('/chat/conversations/{id}/clear', 'eSpace\App\Controllers\Student\ChatController@clearChat');
+        Router::post('/chat/conversations/{id}/activity', 'eSpace\App\Controllers\Student\ChatController@activity');
         Router::post('/chat/conversations', 'eSpace\App\Controllers\Student\ChatController@createConversation');
 
         // Global search (shared eSpace\App\Controllers\SearchController - see notes there)
@@ -487,6 +488,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/chat/conversations/{id}', 'eSpace\App\Controllers\Teacher\ChatController@messages');
         Router::post('/chat/conversations/{id}/send', 'eSpace\App\Controllers\Teacher\ChatController@sendMessage');
         Router::post('/chat/conversations/{id}/clear', 'eSpace\App\Controllers\Teacher\ChatController@clearChat');
+        Router::post('/chat/conversations/{id}/activity', 'eSpace\App\Controllers\Teacher\ChatController@activity');
         Router::post('/chat/conversations', 'eSpace\App\Controllers\Teacher\ChatController@createConversation');
 
         // Global search (shared eSpace\App\Controllers\SearchController - see notes there)

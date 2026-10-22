@@ -1,9 +1,10 @@
 <template>
-  <div class="border-t border-gray-200 dark:border-white/5 bg-white dark:bg-[rgb(31_41_55)] p-3">
+  <!-- WhatsApp Web style composer (assets/whatsapp.css): grey bar, white rounded input, grey icons -->
+  <div class="bg-[var(--wa-panel-header)] px-2 sm:px-4 py-2.5">
     <!-- Reply preview -->
-    <div v-if="replyingTo" class="flex items-start justify-between gap-2 mb-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-[rgb(55_65_81)] border-l-4 border-indigo-500">
+    <div v-if="replyingTo" class="flex items-start justify-between gap-2 mb-2 px-3 py-2 rounded-lg bg-[var(--wa-input)] border-l-4 border-[var(--wa-green)]">
       <div class="min-w-0">
-        <p class="text-xs font-medium text-indigo-600 dark:text-indigo-400">Replying to {{ replyingTo.sender_name }}</p>
+        <p class="text-xs font-medium text-[var(--wa-green-dark)] dark:text-[var(--wa-green)]">Replying to {{ replyingTo.sender_name }}</p>
         <p class="text-xs text-gray-600 dark:text-gray-300 truncate">{{ replyingTo.message || 'Attachment' }}</p>
       </div>
       <button @click="$emit('cancel-reply')" class="p-1 hover:bg-gray-200 dark:hover:bg-[rgb(75_85_99)] rounded flex-shrink-0">
@@ -14,7 +15,7 @@
     </div>
 
     <!-- Pending attachment preview -->
-    <div v-if="pendingFile" class="flex items-center justify-between gap-2 mb-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-[rgb(55_65_81)]">
+    <div v-if="pendingFile" class="flex items-center justify-between gap-2 mb-2 px-3 py-2 rounded-lg bg-[var(--wa-input)]">
       <div class="flex items-center gap-2 min-w-0">
         <img v-if="pendingPreviewUrl" :src="pendingPreviewUrl" class="w-10 h-10 rounded object-cover flex-shrink-0">
         <svg v-else class="w-6 h-6 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -29,68 +30,74 @@
       </button>
     </div>
 
-    <!-- Recording bar -->
-    <div v-if="recorder.isRecording.value" class="flex items-center gap-3 px-2">
-      <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse flex-shrink-0"></span>
-      <span class="text-sm text-gray-700 dark:text-gray-300 flex-1">Recording... {{ formatDuration(recorder.seconds.value) }}</span>
-      <button @click="recorder.cancel()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-[rgb(55_65_81)] text-gray-500">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+    <!-- Recording: delete, red dot + time, send - in the same rounded bar, as on WhatsApp -->
+    <div v-if="recorder.isRecording.value" class="flex items-center gap-2 h-[46px] pl-2 pr-1.5 rounded-full bg-[var(--wa-input)]">
+      <button type="button" @click="recorder.cancel()" class="w-9 h-9 rounded-full flex items-center justify-center text-[var(--wa-icon)] hover:bg-black/5 dark:hover:bg-white/5" title="Delete recording" aria-label="Delete recording">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
       </button>
-      <button @click="stopAndSend" class="p-2.5 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+      <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse flex-shrink-0"></span>
+      <span class="text-[15px] text-[var(--wa-text)] tabular-nums">{{ formatDuration(recorder.seconds.value) }}</span>
+      <span class="flex-1 text-[13px] text-[var(--wa-muted)] truncate">Recording…</span>
+      <button type="button" @click="stopAndSend" class="w-[38px] h-[38px] rounded-full bg-[var(--wa-green)] hover:brightness-95 text-white flex items-center justify-center" title="Send voice message" aria-label="Send voice message">
+        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M3.4 20.4l17.45-7.48a1 1 0 000-1.84L3.4 3.6a.993.993 0 00-1.39.91L2 9.12c0 .5.37.93.87.99L17 12 2.87 13.88c-.5.07-.87.5-.87 1l.01 4.61c0 .71.73 1.2 1.39.91z" /></svg>
       </button>
     </div>
 
-    <!-- Normal input row -->
-    <div v-else class="flex items-end gap-2">
+    <!-- Normal row: one rounded bar with attach, emoji, the message box and mic / send -->
+    <div v-else class="flex items-end gap-1 min-h-[46px] pl-1.5 pr-1.5 py-[5px] rounded-[24px] bg-[var(--wa-input)]">
+      <div class="relative flex-shrink-0" ref="attachWrapperRef">
+        <button type="button" @click="showAttachMenu = !showAttachMenu" class="w-9 h-9 rounded-full flex items-center justify-center text-[var(--wa-icon)] hover:bg-black/5 dark:hover:bg-white/5 transition-transform" :class="showAttachMenu ? 'rotate-45 bg-black/5 dark:bg-white/10' : ''" title="Attach" aria-label="Attach">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14" /></svg>
+        </button>
+        <!-- WhatsApp's attach menu -->
+        <div v-if="showAttachMenu" class="absolute bottom-full left-0 mb-3 w-56 rounded-2xl bg-[var(--wa-panel)] shadow-xl border border-[var(--wa-border)] py-2 z-30">
+          <button type="button" class="w-full flex items-center gap-3.5 px-4 py-2.5 text-[15px] text-[var(--wa-text)] hover:bg-[var(--wa-hover)]" @click="pickFile('image/*,video/*')">
+            <span class="w-6 h-6 flex items-center justify-center text-[#007bfc]"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M20 5h-3.17L15 3H9L7.17 5H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V7a2 2 0 00-2-2zm-8 13a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z" /></svg></span>
+            Photos &amp; videos
+          </button>
+          <button type="button" class="w-full flex items-center gap-3.5 px-4 py-2.5 text-[15px] text-[var(--wa-text)] hover:bg-[var(--wa-hover)]" @click="showAttachMenu = false; showCamera = true">
+            <span class="w-6 h-6 flex items-center justify-center text-[#ff2e74]"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 15.2a3.2 3.2 0 100-6.4 3.2 3.2 0 000 6.4z" /><path d="M9 2L7.17 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2h-3.17L15 2H9zm3 15a5 5 0 110-10 5 5 0 010 10z" /></svg></span>
+            Camera
+          </button>
+          <button type="button" class="w-full flex items-center gap-3.5 px-4 py-2.5 text-[15px] text-[var(--wa-text)] hover:bg-[var(--wa-hover)]" @click="pickFile('.pdf,.doc,.docx,audio/*')">
+            <span class="w-6 h-6 flex items-center justify-center text-[#7f66ff]"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 7V3.5L18.5 9H13z" /></svg></span>
+            Document
+          </button>
+        </div>
+      </div>
+      <input ref="fileInput" type="file" :accept="fileAccept" class="hidden" @change="handleFileSelect">
+      <CameraCapture v-if="showCamera" @close="showCamera = false" @capture="handleCameraCapture" />
+
       <div class="relative flex-shrink-0" ref="emojiWrapperRef">
-        <button @click="showEmojiPicker = !showEmojiPicker" class="p-2.5 rounded-full hover:bg-gray-100 dark:hover:bg-[rgb(55_65_81)] text-gray-500 dark:text-gray-400" title="Emoji">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-          </svg>
+        <button type="button" @click="showEmojiPicker = !showEmojiPicker" class="w-9 h-9 rounded-full flex items-center justify-center text-[var(--wa-icon)] hover:bg-black/5 dark:hover:bg-white/5" title="Emoji" aria-label="Emoji">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
         </button>
         <EmojiPicker v-if="showEmojiPicker" @select="insertEmoji" />
       </div>
 
-      <button @click="fileInput?.click()" class="p-2.5 rounded-full hover:bg-gray-100 dark:hover:bg-[rgb(55_65_81)] text-gray-500 dark:text-gray-400 flex-shrink-0" title="Attach">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
-        </svg>
-      </button>
-      <input ref="fileInput" type="file" accept="image/*,video/*,audio/*,.pdf,.doc,.docx" class="hidden" @change="handleFileSelect">
-
-      <button @click="showCamera = true" class="p-2.5 rounded-full hover:bg-gray-100 dark:hover:bg-[rgb(55_65_81)] text-gray-500 dark:text-gray-400 flex-shrink-0" title="Camera">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
-        </svg>
-      </button>
-      <CameraCapture v-if="showCamera" @close="showCamera = false" @capture="handleCameraCapture" />
-
       <textarea
         v-model="text"
         rows="1"
-        placeholder="Type a message..."
-        class="flex-1 resize-none px-4 py-2.5 rounded-2xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-[rgb(55_65_81)] text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none max-h-32"
+        placeholder="Type a message"
+        class="flex-1 min-w-0 resize-none px-2 py-[8px] border-0 bg-transparent text-[var(--wa-text)] placeholder-[var(--wa-muted)] text-[15px] leading-5 focus:ring-0 focus:outline-none max-h-32"
         @keydown.enter.exact.prevent="handleSend"
         ref="textareaRef"
-        @input="autoGrow"
+        @input="autoGrow(); emit('activity', text.trim() ? 'typing' : null)"
       ></textarea>
 
       <button
         v-if="text.trim() || pendingFile"
+        type="button"
         @click="handleSend"
         :disabled="sending"
-        class="p-2.5 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white flex-shrink-0 disabled:opacity-50 transition-shadow dark:shadow-[0_0_14px_2px_rgba(21,135,74,0.55)]"
+        class="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center bg-[var(--wa-green)] hover:brightness-95 text-white disabled:opacity-50"
+        title="Send"
+        aria-label="Send"
       >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
-        </svg>
+        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M3.4 20.4l17.45-7.48a1 1 0 000-1.84L3.4 3.6a.993.993 0 00-1.39.91L2 9.12c0 .5.37.93.87.99L17 12 2.87 13.88c-.5.07-.87.5-.87 1l.01 4.61c0 .71.73 1.2 1.39.91z" /></svg>
       </button>
-      <button v-else @click="startRecording" class="p-2.5 rounded-full hover:bg-gray-100 dark:hover:bg-[rgb(55_65_81)] text-gray-500 dark:text-gray-400 flex-shrink-0" title="Record voice message">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-14 0m7 7v3m-3 0h6M12 15a3 3 0 003-3V6a3 3 0 00-6 0v6a3 3 0 003 3z"></path>
-        </svg>
+      <button v-else type="button" @click="startRecording" class="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center text-[var(--wa-icon)] hover:bg-black/5 dark:hover:bg-white/5" title="Record voice message" aria-label="Record voice message">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 11a7 7 0 01-14 0m7 7v3m-3 0h6M12 15a3 3 0 003-3V6a3 3 0 00-6 0v6a3 3 0 003 3z" /></svg>
       </button>
     </div>
     <p v-if="recorder.error.value" class="text-xs text-red-500 mt-1">{{ recorder.error.value }}</p>
@@ -98,7 +105,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useAudioRecorder } from '@/composables/useAudioRecorder'
 import EmojiPicker from './EmojiPicker.vue'
 import CameraCapture from './CameraCapture.vue'
@@ -108,6 +115,8 @@ const props = defineProps<{ replyingTo: ChatMessage | null; sending?: boolean }>
 const emit = defineEmits<{
   send: [{ message: string; file: File | null; replyToId: number | null }]
   'cancel-reply': []
+  /** typing / recording a voice note, or stopped - the others see "typing..." / "recording audio..." */
+  activity: ['typing' | 'recording' | null]
 }>()
 
 const text = ref('')
@@ -116,6 +125,15 @@ const fileInput = ref<HTMLInputElement | null>(null)
 const showCamera = ref(false)
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const showEmojiPicker = ref(false)
+const showAttachMenu = ref(false)
+const attachWrapperRef = ref<HTMLElement | null>(null)
+const fileAccept = ref('image/*,video/*,audio/*,.pdf,.doc,.docx')
+/** Attach menu: open the file picker for photos/videos or for documents */
+const pickFile = (accept: string) => {
+  showAttachMenu.value = false
+  fileAccept.value = accept
+  nextTick(() => fileInput.value?.click())
+}
 const emojiWrapperRef = ref<HTMLElement | null>(null)
 const recorder = useAudioRecorder()
 
@@ -164,10 +182,19 @@ const handleClickOutside = (event: MouseEvent) => {
   if (showEmojiPicker.value && emojiWrapperRef.value && !emojiWrapperRef.value.contains(event.target as Node)) {
     showEmojiPicker.value = false
   }
+  if (showAttachMenu.value && attachWrapperRef.value && !attachWrapperRef.value.contains(event.target as Node)) {
+    showAttachMenu.value = false
+  }
 }
+
+// recording: reported every second while it lasts (the page throttles), cleared when it ends
+watch([() => recorder.isRecording.value, () => recorder.seconds.value], ([recording]) => {
+  emit('activity', recording ? 'recording' : null)
+})
 
 const handleSend = () => {
   if (props.sending || (!text.value.trim() && !pendingFile.value)) return
+  emit('activity', null)
   emit('send', { message: text.value.trim(), file: pendingFile.value, replyToId: props.replyingTo?.id ?? null })
   text.value = ''
   pendingFile.value = null
