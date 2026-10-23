@@ -270,6 +270,7 @@
                   <span class="px-1.5 py-0.5 rounded-full font-semibold" :class="statusChip(topic.status)">{{ statusLabel(topic.status) }}</span>
                   <button v-if="topic.status === 'draft'" type="button" class="font-semibold text-indigo-600 dark:text-indigo-300 hover:underline" @click="publishCopies(copies)">Publish</button>
                 </p>
+                <ApprovalNotice :status="topic.status" :note="topic.review_note" :sent="topic.submitted_at" />
               </div>
               <div class="flex items-center flex-shrink-0">
                 <button class="p-2 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/30" title="Reading insights - page by page" @click="insightsTopic = topic">
@@ -784,6 +785,7 @@
 </template>
 
 <script setup lang="ts">
+import ApprovalNotice from '@/components/teacher/ApprovalNotice.vue'
 import { ref, computed, watch, onMounted } from 'vue'
 import ClassStreamMultiSelect from '@/components/enotes/ClassStreamMultiSelect.vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
@@ -1038,6 +1040,7 @@ const removeLearningOutcome = (index: number) => {
 const statItems = computed<StatItem[]>(() => [
   { label: 'All topics', value: topics.value.length, tone: 'gray' },
   { label: 'Published', value: topics.value.filter(t => t.status === 'published').length, key: 'published', tone: 'emerald' },
+  ...(topics.value.some(t => t.status === 'pending') ? [{ label: 'Waiting for HOD', value: topics.value.filter(t => t.status === 'pending').length, key: 'pending', tone: 'amber' as const }] : []),
   { label: 'Draft', value: topics.value.filter(t => t.status === 'draft').length, key: 'draft', tone: 'amber' },
   { label: 'Archived', value: topics.value.filter(t => t.status === 'archived').length, key: 'archived', tone: 'gray' }
 ])
@@ -1134,6 +1137,7 @@ const publishCopies = async (copies: ENoteTopic[]) => {
     const res = await axios.post(`${API_BASE}/teacher/enotes/topics/bulk-status`, { ids: copies.map(c => c.id), status: 'published' })
     // a class that already has this lesson as another topic is left out (students would see it twice)
     if (res.data?.data?.blocked?.length) toast.warning(res.data.message, 9000)
+    else if (res.data?.data?.pending) toast.info('Sent to your HOD for approval - students will see it once it is approved')
     else toast.success(`"${copies[0].title}" is now visible to students`)
     await loadTopics()
   } catch (error: any) {
@@ -1156,10 +1160,12 @@ const activeClassSubjectShelves = computed(() => {
 const classLabel = (topic: ENoteTopic) => topic.class_group_name
   ? `${topic.class_group_name} (All Streams)`
   : topic.class_stream_name ? `${topic.class_name} - ${topic.class_stream_name}` : (topic.class_name || 'Unassigned')
-const statusLabel = (status: string) => status.charAt(0).toUpperCase() + status.slice(1)
+const statusLabel = (status: string) => (status === 'pending' ? 'Waiting for HOD' : status.charAt(0).toUpperCase() + status.slice(1))
 const statusChip = (status: string) => status === 'published'
   ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-  : status === 'draft'
+  : status === 'pending'
+    ? 'bg-amber-100 text-amber-900 dark:bg-amber-900/50 dark:text-amber-100'
+    : status === 'draft'
     ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
     : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
 
@@ -1335,7 +1341,7 @@ const editTopic = (topic: ENoteTopic) => {
     classTarget: topic.class_group_name
       ? { scope: 'all_streams', class_id: null, class_group_name: topic.class_group_name }
       : { scope: 'stream', class_id: topic.class_id, class_group_name: null },
-    status: topic.status
+    status: topic.status === 'pending' ? 'published' : topic.status
   }
   topicSaveError.value = null
   showTopicModal.value = true

@@ -800,7 +800,7 @@ const MENU: Record<string, NavGroup[]> = {
       { path: '/student/downloads', label: 'Downloads', icon: 'CloudArrowDownIcon' }
     ] },
     { key: 'revision', name: 'Revision', items: [
-      { path: '/student/assignments', label: 'Assessments', icon: 'DocumentTextIcon' },
+      { path: '/student/assignments', label: 'Assessments', icon: 'DocumentTextIcon' }
     ] },
     { key: 'resources', name: 'Resources', items: [
       { path: '/student/library', label: 'eLibrary', icon: 'LibraryIcon' },
@@ -813,7 +813,6 @@ const MENU: Record<string, NavGroup[]> = {
       ] }
     ] },
     { key: 'progress', name: 'Progress', items: [
-      { path: '/student/reports', label: 'Reports', icon: 'ChartBarIcon' },
       { path: '/student/academic-history', label: 'Academic History', icon: 'AcademicCapIcon' },
       { path: '/student/achievements', label: 'Achievements', icon: 'TrophyIcon' },
       { path: '/student/learning-map', label: 'Learning Map', icon: 'MapIcon' }
@@ -845,8 +844,7 @@ const MENU: Record<string, NavGroup[]> = {
     { key: 'assessment', name: 'Assessment', items: [
       { path: '/teacher/assignments', label: 'Assessments', icon: 'DocumentTextIcon' },
       { path: '/teacher/marksheet', label: 'Marksheet', icon: 'TableCellsIcon' },
-      { path: '/teacher/physical-exams', label: 'Physical Exams', icon: 'DocumentTextIcon' },
-      { path: '/teacher/reports', label: 'Reports', icon: 'ChartBarIcon' }
+      { path: '/teacher/physical-exams', label: 'Physical Exams', icon: 'DocumentTextIcon' }
     ] },
     { key: 'insights', name: 'Insights', items: [
       { path: '/teacher/class-map', label: 'Class Learning Map', icon: 'MapIcon' },
@@ -863,6 +861,7 @@ const MENU: Record<string, NavGroup[]> = {
       { path: '/hod/dashboard', label: 'Dashboard', icon: 'DashboardIcon' }
     ] },
     { key: 'department', name: 'Department', items: [
+      { path: '/hod/approvals', label: 'Approvals', icon: 'CheckCircleIcon' },
       { path: '/hod/teachers', label: 'Teachers', icon: 'UsersIcon' },
       { path: '/hod/students', label: 'Students', icon: 'AcademicCapIcon' },
       { path: '/hod/live-classes', label: 'Live Classes', icon: 'VideoCameraIcon' }
@@ -881,8 +880,7 @@ const MENU: Record<string, NavGroup[]> = {
     { key: 'assessment', name: 'Assessment', items: [
       { path: '/hod/assessments', label: 'Assessments', icon: 'DocumentTextIcon' },
       { path: '/hod/marksheet', label: 'Marksheet', icon: 'TableCellsIcon' },
-      { path: '/hod/physical-exams', label: 'Physical Exams', icon: 'DocumentTextIcon' },
-      { path: '/hod/reports', label: 'Reports', icon: 'ChartBarIcon' }
+      { path: '/hod/physical-exams', label: 'Physical Exams', icon: 'DocumentTextIcon' }
     ] },
     { key: 'insights', name: 'Insights', items: [
       { path: '/hod/term-report', label: 'Term report', icon: 'ClipboardListIcon' },

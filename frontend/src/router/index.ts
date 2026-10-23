@@ -25,7 +25,6 @@ const StudentVideos = () => import('../pages/student/Videos.vue')
 const StudentNotes = () => import('../pages/student/Notes.vue')
 const StudentItemBank = () => import('../pages/student/ItemBank.vue')
 const StudentChat = () => import('../pages/student/Chat.vue')
-const StudentReports = () => import('../pages/student/Reports.vue')
 const StudentLearningMap = () => import('../pages/student/LearningMap.vue')
 const StudentDownloads = () => import('../pages/student/Downloads.vue')
 const StudentSettings = () => import('../pages/student/Settings.vue')
@@ -54,7 +53,6 @@ const TeacherNotes = () => import('../pages/teacher/Notes.vue')
 const TeacherItemBank = () => import('../pages/teacher/ItemBank.vue')
 const TeacherChat = () => import('../pages/teacher/Chat.vue')
 const TeacherSearch = () => import('../pages/teacher/Search.vue')
-const TeacherReports = () => import('../pages/teacher/Reports.vue')
 const TeacherEngagement = () => import('../pages/teacher/Engagement.vue')
 const TeacherConstructs = () => import('../pages/teacher/Constructs.vue')
 const TeacherCoverage = () => import('../pages/teacher/Coverage.vue')
@@ -98,7 +96,6 @@ const HODAnalytics = () => import('../pages/hod/Analytics.vue')
 const HODTeachers = () => import('../pages/hod/Teachers.vue')
 const HODStudents = () => import('../pages/hod/Students.vue')
 const HODSubjects = () => import('../pages/hod/Subjects.vue')
-const HODReports = () => import('../pages/hod/Reports.vue')
 const HODMarksheet = () => import('../pages/hod/Marksheet.vue')
 const HODPhysicalExams = () => import('../pages/hod/PhysicalExams.vue')
 const HODApprovals = () => import('../pages/hod/Approvals.vue')
@@ -112,7 +109,6 @@ const HODAssessments = () => import('../pages/hod/Assessments.vue')
 const HODAssignmentSubmissions = () => import('../pages/hod/AssignmentSubmissions.vue')
 const HODCharts = () => import('../pages/hod/Charts.vue')
 const HODLiveClasses = () => import('../pages/hod/LiveClasses.vue')
-const HODChat = () => import('../pages/hod/Chat.vue')
 const HODSearch = () => import('../pages/hod/Search.vue')
 
 // Admin Pages
@@ -234,7 +230,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'itembank', name: 'StudentItemBank', component: StudentItemBank },
       { path: 'itembank/:id/paper', name: 'StudentPaperReader', component: () => import('../pages/student/PaperReader.vue') },
       { path: 'chat', name: 'StudentChat', component: StudentChat, meta: { fullScreenChat: true } },
-      { path: 'reports', name: 'StudentReports', component: StudentReports },
+      { path: 'reports', redirect: '/student/dashboard' },
       { path: 'learning-map', name: 'StudentLearningMap', component: StudentLearningMap },
       { path: 'study-groups', name: 'StudentStudyGroups', component: () => import('../pages/student/StudyGroups.vue') },
       { path: 'notices', name: 'StudentNotices', component: () => import('../pages/common/Noticeboard.vue') },
@@ -319,7 +315,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'notes', name: 'TeacherNotes', component: TeacherNotes },
       { path: 'itembank', name: 'TeacherItemBank', component: TeacherItemBank },
       { path: 'chat', name: 'TeacherChat', component: TeacherChat, meta: { fullScreenChat: true } },
-      { path: 'reports', name: 'TeacherReports', component: TeacherReports },
+      { path: 'reports', redirect: '/teacher/dashboard' },
       { path: 'engagement', name: 'TeacherEngagement', component: TeacherEngagement },
       { path: 'constructs', name: 'TeacherConstructs', component: TeacherConstructs },
       { path: 'coverage', name: 'TeacherCoverage', component: TeacherCoverage },
@@ -371,7 +367,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'teachers', name: 'HODTeachers', component: HODTeachers },
       { path: 'students', name: 'HODStudents', component: HODStudents },
       { path: 'subjects', name: 'HODSubjects', component: HODSubjects },
-      { path: 'reports', name: 'HODReports', component: HODReports },
+      { path: 'reports', redirect: '/hod/dashboard' },
       { path: 'term-report', name: 'HODTermReport', component: () => import('../pages/hod/TermReport.vue') },
       { path: 'approvals', name: 'HODApprovals', component: HODApprovals },
       { path: 'library', name: 'HODLibrary', component: HODLibrary },
@@ -404,7 +400,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'assessments/:id/submissions/:submissionId', name: 'HODSubmissionDetail', component: StudentAssignmentResult, meta: { previewRole: 'hod' } },
       { path: 'charts', name: 'HODCharts', component: HODCharts },
       { path: 'live-classes', name: 'HODLiveClasses', component: HODLiveClasses },
-      { path: 'chat', name: 'HODChat', component: HODChat, meta: { fullScreenChat: true } },
+      { path: 'chat', name: 'HODChat', component: TeacherChat, meta: { fullScreenChat: true } },
       { path: 'early-warning', name: 'HODEarlyWarning', component: () => import('../pages/teacher/EarlyWarning.vue') },
       { path: 'notices', name: 'HODNotices', component: () => import('../pages/common/Noticeboard.vue') },
       { path: 'marksheet', name: 'HODMarksheet', component: HODMarksheet },

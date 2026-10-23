@@ -120,7 +120,7 @@ interface ContactTab {
   contacts: ChatContact[]
 }
 
-const props = defineProps<{ contactTabs: ContactTab[]; classGroups?: ChatClassGroup[] }>()
+const props = defineProps<{ contactTabs: ContactTab[]; classGroups?: ChatClassGroup[]; classesLabel?: string }>()
 defineEmits<{ close: []; 'select-contact': [ChatContact]; 'select-class': [ChatClassGroup] }>()
 
 const search = ref('')
@@ -130,7 +130,7 @@ const mode = ref<'choose' | 'list'>('choose')
 const tabs = computed(() => {
   const t = props.contactTabs.map(t => ({ key: t.key, label: t.label }))
   if (props.classGroups && props.classGroups.length > 0) {
-    t.push({ key: 'classes', label: 'My Classes' })
+    t.push({ key: 'classes', label: props.classesLabel || 'My Classes' })
   }
   return t
 })

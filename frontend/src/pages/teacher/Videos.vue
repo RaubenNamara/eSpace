@@ -113,6 +113,7 @@
                 Students can't see it yet
                 <button type="button" class="font-semibold text-violet-600 dark:text-violet-300 hover:underline" @click="publishOne(video)">Publish</button>
               </p>
+              <ApprovalNotice :status="video.status" :note="video.review_note" :sent="video.submitted_at" />
             </template>
           </VideoTile>
         </div>
@@ -271,6 +272,7 @@
 </template>
 
 <script setup lang="ts">
+import ApprovalNotice from '@/components/teacher/ApprovalNotice.vue'
 import { ref, computed, watch, onMounted } from 'vue'
 import axios from 'axios'
 import PageHeader from '@/components/ui/PageHeader.vue'
@@ -351,6 +353,7 @@ const stats = computed(() => ({
 const statItems = computed<StatItem[]>(() => [
   { label: 'All videos', value: stats.value.total, tone: 'gray' },
   { label: 'Published', value: stats.value.published, key: 'published', tone: 'emerald' },
+  ...(videos.value.some(x => x.status === 'pending') ? [{ label: 'Waiting for HOD', value: videos.value.filter(x => x.status === 'pending').length, key: 'pending', tone: 'amber' as const }] : []),
   { label: 'Draft', value: stats.value.draft, key: 'draft', tone: 'amber' },
   { label: 'Archived', value: stats.value.archived, key: 'archived', tone: 'gray' }
 ])
@@ -434,7 +437,12 @@ const bulkSetStatus = async (status: 'draft' | 'published' | 'archived') => {
 
 const publishOne = async (video: VideoResource) => {
   try {
-    await axios.post(`${contentApi}/bulk-status`, { ids: [video.id], status: 'published' })
+    const res = await axios.post(`${contentApi}/bulk-status`, { ids: [video.id], status: 'published' })
+    if (res.data?.data?.pending) {
+      toast.info('Sent to your HOD for approval - students will see it once it is approved')
+      await loadVideos()
+      return
+    }
     toast.success(`"${video.title}" is now visible to students`)
     await loadVideos()
   } catch (error: any) {
@@ -517,7 +525,7 @@ const editVideo = (video: VideoResource) => {
     classTarget: video.class_group_name
       ? { scope: 'all_streams', class_id: null, class_group_name: video.class_group_name }
       : video.class_id ? { scope: 'stream', class_id: video.class_id, class_group_name: null } : { scope: 'department', class_id: null, class_group_name: null },
-    status: video.status,
+    status: video.status === 'pending' ? 'published' : video.status,
     file: null
   }
   showVideoModal.value = true

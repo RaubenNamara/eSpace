@@ -388,8 +388,7 @@ const shortcuts = [
   { label: 'My week', to: '/teacher/planner', icon: 'clock' },
   { label: 'Marksheet', to: '/teacher/marksheet', icon: 'chart' },
   { label: 'Item Bank', to: '/teacher/itembank', icon: 'target' },
-  { label: 'Learning Map', to: '/teacher/class-map', icon: 'map' },
-  { label: 'Reports', to: '/teacher/reports', icon: 'trend' }
+  { label: 'Learning Map', to: '/teacher/class-map', icon: 'map' }
 ]
 const toDate = (v: string) => new Date(v.replace(' ', 'T'))
 const when = (v: string) => {

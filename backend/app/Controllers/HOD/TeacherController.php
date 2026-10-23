@@ -89,7 +89,8 @@ class TeacherController extends Controller
         // What each teacher is doing in this department: assessments and eNotes published, scripts
         // waiting to be marked, and when they were last on eSpace
         $sql = "SELECT t.id, t.username, t.email, t.employee_number, t.first_name, t.last_name, t.phone, 
-                       t.is_active, t.created_at, t.department_id, t.last_active_at,
+                       t.is_active, t.created_at, t.department_id, t.last_active_at, t.last_login_at,
+                       TIMESTAMPDIFF(SECOND, t.last_active_at, NOW()) AS seen_seconds_ago,
                        d.name as department_name, d.code as department_code,
                        (SELECT COUNT(*) FROM assignments a INNER JOIN subjects s ON s.id = a.subject_id AND s.department_id = :dept_a
                          WHERE a.teacher_id = t.id AND a.deleted_at IS NULL AND a.status = 'published') AS assessments_count,
@@ -107,6 +108,11 @@ class TeacherController extends Controller
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params + ['dept_a' => $departmentId, 'dept_e' => $departmentId, 'dept_m' => $departmentId]);
         $teachers = $stmt->fetchAll();
+        // online = the app pinged in the last 90 seconds (it pings every 30 while open), as in chat
+        foreach ($teachers as &$t) {
+            $t['is_online'] = $t['seen_seconds_ago'] !== null && (int) $t['seen_seconds_ago'] <= 90;
+        }
+        unset($t);
 
         $this->success([
             'teachers' => $teachers,

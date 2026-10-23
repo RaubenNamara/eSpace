@@ -209,16 +209,8 @@ class ReportCardService
         $this->recomputeReportAggregates($reportCardId, $actorId, $actorRole);
 
         if ($onlySubjectId === null) {
+            // students are not told: report cards are made and handed out by the school's admin
             $this->generateSummaryComments($reportCardId, $computed);
-
-            (new NotificationService())->notify(
-                $studentId,
-                'student',
-                'report_card_ready',
-                'Report card ready',
-                "Your report card for {$term['name']} has been generated and is ready to view.",
-                ['report_card_id' => $reportCardId, 'term_id' => $termId]
-            );
         }
 
         return $this->getFullReport($reportCardId);

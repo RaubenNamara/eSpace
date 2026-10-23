@@ -60,7 +60,6 @@ export const GUIDE: GuidePart[] = [
         id: 's-dashboard', title: 'Your dashboard (eClass)', icon: 'sparkles',
         intro: 'Open Tusome and your dashboard shows what matters today, in a few small cards.',
         steps: ['The school\'s notices slide across the top - tap one to read it in full.', 'Pending assessments lists the work waiting for you, overdue first, with a Start button on each.', 'Jump in takes you straight to eNotes, Live classes, the eLibrary, the Item Bank and more - tap "Show more" for the rest.', 'My classes shows your subjects; My notes shows the notes you wrote most recently.', 'If a live class has started, a red banner at the top lets you join in one tap.'],
-        tips: ['How you are doing - work done and missed, your average and your reading - is in Reports, under My activity.']
       },
       {
         id: 's-enotes', title: 'Reading eNotes', icon: 'document',
@@ -114,8 +113,8 @@ export const GUIDE: GuidePart[] = [
         steps: ['Notices slide across the top of your dashboard; new ones say NEW and the label shows how many.', 'Tap a notice to read it in full underneath - that counts as read, and your teacher can see you have read it.', 'Rest a finger or the pointer on the notices to stop them moving.']
       },
       {
-        id: 's-more', title: 'Reports, achievements and chats', icon: 'trophy',
-        steps: ['Reports opens on My activity: pick Week, Month, Term or Year to see the assessments set, done, missed and still open, your average, each subject, what you read and watched, the live classes you joined and the days you were active.', 'The Report cards tab has your end-of-term report cards once your class teacher generates them.', 'Achievements shows your badges and your class growth board - improvement counts, not just top marks.', 'Academic History lists every class and year you\'ve been part of.', 'Chats lets you message your teachers and classmates, with photos and voice notes.']
+        id: 's-more', title: 'Achievements, history and chats', icon: 'trophy',
+        steps: ['Achievements shows your badges and your class growth board - improvement counts, not just top marks.', 'Academic History lists every class and year you\'ve been part of.', 'Chats lets you message your teachers and classmates, with photos and voice notes.']
       }
     ]
   },
@@ -137,7 +136,7 @@ export const GUIDE: GuidePart[] = [
       {
         id: 't-enotes', title: 'Writing eNotes', icon: 'document',
         steps: ['Open eNotes and choose New topic. Pick the subject, the class stream(s) and (ideally) the curriculum topic.', 'Add pages: text, pictures, equations, tables and more. Add narration if you like.', 'Design a cover, then Publish when it\'s ready.', 'Use Duplicate to give the same topic to other streams. Streams that already have it are greyed out, so a stream never gets it twice.', 'Copies of a published topic can be published straight away or kept as drafts. When a topic has draft copies, "Publish them" publishes them all in one click and tells the students.', 'The topic\'s LOA and AOI reach every stream that has a published copy.', '"Who\'s reading" and Reading insights show who has opened it and the pages students stop on.'],
-        tips: ['Share with colleagues to let others in your department copy a topic.']
+        tips: ['Share with colleagues to let others in your department copy a topic.', 'If your department has an HOD, Publish sends the topic to the HOD first - it shows "Waiting for HOD" until it is approved. If the HOD returns it, their note shows on the topic: make the changes and publish again. Books, Item Bank papers and videos work the same way.']
       },
       {
         id: 't-content', title: 'eLibrary, Item Bank and Videos', icon: 'upload',
@@ -190,8 +189,8 @@ export const GUIDE: GuidePart[] = [
         steps: ['Open Noticeboard and tap Post a notice.', 'Choose one of your classes (or all its streams), write the notice, and post.', 'It slides across the top of your students\' dashboards until they read it.', 'Open your notice to see how many have read it - and who hasn\'t yet.']
       },
       {
-        id: 't-results', title: 'Marksheets, physical exams and report cards', icon: 'chart',
-        steps: ['Marksheets: every mark for a class and subject, with averages and grades - Download CSV for a spreadsheet.', 'Physical Exams: record a test sat on paper, type in the marks (Enter moves to the next learner) and choose if it counts on report cards.', 'Report Cards: class teachers generate a full report for each learner - or all missing ones at once - then print.'],
+        id: 't-results', title: 'Marksheets and physical exams', icon: 'chart',
+        steps: ['Marksheets: every mark for a class and subject, with averages and grades - Download CSV for a spreadsheet.', 'Physical Exams: record a test sat on paper, type in the marks (Enter moves to the next learner) and choose if it counts on report cards.', 'Report cards are made by the school\'s admin.'],
       }
     ]
   },
@@ -202,15 +201,17 @@ export const GUIDE: GuidePart[] = [
     topics: [
       {
         id: 'h-overview', title: 'Your department at a glance', icon: 'chart',
-        steps: ['The dashboard shows what waits for your approval, the assessments set lately, and shortcuts to the Term report, Assessments, Marksheet and Analytics.', 'Need attention counts the learners who may be slipping, by reason.', 'Teachers shows who was in this week and how many scripts each has waiting.', 'Curriculum mastery and class comparisons are in the Term report and Analytics.', 'Marksheets and Physical Exams work across every class in the department.']
+        steps: ['The dashboard shows the assessments set lately, and shortcuts to the Term report, Assessments, Marksheet and Analytics.', 'Need attention counts the learners who may be slipping, by reason.', 'Teachers shows who was in this week and how many scripts each has waiting.', 'Curriculum mastery and class comparisons are in the Term report and Analytics.', 'Marksheets and Physical Exams work across every class in the department.']
       },
       {
         id: 'h-warning', title: 'Early warning for the department', icon: 'warning',
         steps: ['Early warning lists learners across your whole department with low or falling results, who have gone quiet, or who are missing deadlines.', 'Filter by class or by signal, and message a learner from the list.'],
       },
       {
-        id: 'h-approve', title: 'Approving content', icon: 'check-circle',
-        steps: ['Open Approvals to see eLibrary books and other content waiting for review.', 'Open an item to check it, then approve it (or send it back).', 'Approved content appears on students\' shelves.'],
+        id: 'h-approve', title: 'Approving your teachers\' work', icon: 'check-circle',
+        intro: 'When a teacher in your department publishes an eNote, a library book, an Item Bank paper or a video, it waits for you. Students only see it once you approve it.',
+        steps: ['Open Approvals in the menu: it lists everything, one box per class (or "all streams" of a class). Filter by eNotes, books, Item Bank or videos, or search by title or teacher.', 'Read it (eNotes) or Open it (books, papers, videos) to check it.', 'Approve publishes it - the class is told it is there, and the teacher is told it was approved.', 'Return sends it back to the teacher as a draft. Pick a reason or write your own note; the teacher sees it, fixes the work and publishes again.'],
+        tips: ['Work you approve once does not come back if the teacher unpublishes and publishes it again.', 'On the dashboard and the Teachers page, a green dot means the teacher is online now; grey shows when they were last on.']
       },
       {
         id: 'h-content', title: 'Books, videos and past papers for the department', icon: 'upload',
@@ -220,6 +221,11 @@ export const GUIDE: GuidePart[] = [
       {
         id: 'h-teach', title: 'Teaching your own classes', icon: 'teacher',
         intro: 'An HOD who also teaches can switch to the teacher view and use every teacher module for their own classes.',
+      },
+      {
+        id: 'h-chat', title: 'Chats with your department', icon: 'chat',
+        steps: ['Open Chats. My chats are your own conversations.', 'Tap the new chat button to message a teacher in your department, a student enrolled in it, or a whole class - a class message goes to the class group chat, and every student in it sees it.', 'Department chats shows your department\'s students\' chats - teachers with students, students with each other, and your department\'s class groups. Filter them, or search by name.', 'Department chats are read only: you can read them, but you cannot write in them, and the people in them are not told you looked.'],
+        tips: ['Chats between teachers alone are not shown in Department chats - only chats with your students.']
       }
     ]
   },

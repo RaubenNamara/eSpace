@@ -16,7 +16,7 @@ export const useChatBadgeStore = defineStore('chatBadge', () => {
   async function refresh() {
     const authStore = useAuthStore()
     const role = authStore.userRole
-    if (role !== 'student' && role !== 'teacher') {
+    if (role !== 'student' && role !== 'teacher' && role !== 'hod') {
       return
     }
     try {

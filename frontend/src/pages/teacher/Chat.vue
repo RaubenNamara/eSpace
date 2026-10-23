@@ -1,7 +1,9 @@
 <template>
   <!-- WhatsApp Web layout (assets/whatsapp.css): an icon rail, the chat list, and the open
        conversation on a doodle wallpaper. Full screen - the app's own menu and top bar are hidden
-       on chat (route meta fullScreenChat, see MainLayout) and the menu buttons bring the menu in. -->
+       on chat (route meta fullScreenChat, see MainLayout) and the menu buttons bring the menu in.
+       Teachers and HODs both use this page (the API follows the route). An HOD also has
+       "Department chats": their department's students' chats, read only. -->
   <div class="wa h-[100dvh] flex overflow-hidden bg-[var(--wa-panel)]">
     <!-- Icon rail (tablet and up) -->
     <nav class="hidden md:flex w-16 flex-shrink-0 flex-col items-center justify-between py-3 bg-[var(--wa-rail)] border-r border-[var(--wa-border)]" aria-label="Chat">
@@ -29,13 +31,20 @@
     <!-- Chat list -->
     <section class="w-full md:w-[340px] lg:w-[400px] flex-shrink-0 flex flex-col bg-[var(--wa-panel)] md:border-r border-[var(--wa-border)]" :class="activeConversation ? 'hidden md:flex' : 'flex'">
       <header class="h-16 flex-shrink-0 px-4 flex items-center justify-between">
-        <div class="flex items-center gap-2"><AppMenuButton class="md:hidden text-[var(--wa-icon)]" /><h1 class="text-[22px] font-bold text-[var(--wa-text)]">Chats</h1></div>
-        <button type="button" class="w-10 h-10 rounded-full flex items-center justify-center text-[var(--wa-icon)] hover:bg-black/5 dark:hover:bg-white/5" title="New chat" @click="showNewChat = true">
+        <div class="flex items-center gap-2"><AppMenuButton class="md:hidden text-[var(--wa-icon)]" /><h1 class="text-[22px] font-bold text-[var(--wa-text)]">{{ watching ? 'Department chats' : 'Chats' }}</h1></div>
+        <button v-if="!watching" type="button" class="w-10 h-10 rounded-full flex items-center justify-center text-[var(--wa-icon)] hover:bg-black/5 dark:hover:bg-white/5" title="New chat" @click="showNewChat = true">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8.5v7M8.5 12h7" /></svg>
         </button>
       </header>
 
       <div class="px-3 flex-shrink-0">
+        <!-- HOD: my chats, or the department's students' chats -->
+        <div v-if="isHod" class="mb-2.5 grid grid-cols-2 gap-1 p-1 rounded-lg bg-[var(--wa-search)]" role="tablist">
+          <button type="button" role="tab" :aria-selected="!watching" class="py-1.5 rounded-md text-[13.5px] font-medium transition-colors" :class="!watching ? 'bg-[var(--wa-panel)] text-[var(--wa-text)] shadow-sm' : 'text-[var(--wa-muted)]'" @click="setWatching(false)">
+            My chats<span v-if="totalUnread" class="ml-1.5 px-1.5 rounded-full bg-[var(--wa-green)] text-white text-[11px]">{{ totalUnread }}</span>
+          </button>
+          <button type="button" role="tab" :aria-selected="watching" class="py-1.5 rounded-md text-[13.5px] font-medium transition-colors" :class="watching ? 'bg-[var(--wa-panel)] text-[var(--wa-text)] shadow-sm' : 'text-[var(--wa-muted)]'" @click="setWatching(true)">Department chats</button>
+        </div>
         <label class="flex items-center gap-3 h-[35px] px-3 rounded-lg bg-[var(--wa-search)] focus-within:ring-2 focus-within:ring-[var(--wa-green)]">
           <svg class="w-4 h-4 flex-shrink-0 text-[var(--wa-icon)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
           <input v-model="conversationSearch" type="text" placeholder="Search or start a new chat" class="flex-1 min-w-0 bg-transparent border-0 p-0 text-[15px] text-[var(--wa-text)] placeholder-[var(--wa-muted)] focus:ring-0 focus:outline-none">
@@ -56,7 +65,7 @@
       <div class="wa-scroll flex-1 overflow-y-auto px-2 pb-2">
         <div v-if="loadingConversations" class="text-center py-12 text-[var(--wa-muted)] text-sm">Loading…</div>
         <div v-else-if="conversations.length === 0" class="text-center py-16 px-6">
-          <p class="text-sm text-[var(--wa-muted)]">No chats yet. Tap the new chat button to message a colleague or a student.</p>
+          <p class="text-sm text-[var(--wa-muted)]">{{ watching ? 'No student chats in your department yet.' : isHod ? 'No chats yet. Tap the new chat button to message a teacher, a student or a whole class.' : 'No chats yet. Tap the new chat button to message a colleague or a student.' }}</p>
         </div>
         <div v-else-if="filteredConversations.length === 0" class="text-center py-16 px-6">
           <p class="text-sm text-[var(--wa-muted)]">{{ conversationSearch ? `No chats match "${conversationSearch}".` : 'No chats here yet.' }}</p>
@@ -99,7 +108,7 @@
               </button>
               <div v-if="showThreadMenu" class="absolute right-0 top-full mt-1 w-52 rounded-lg shadow-xl bg-[var(--wa-panel)] py-2 z-20 border border-[var(--wa-border)]">
                 <button @click="showThreadMenu = false; toggleThreadSearch()" class="w-full text-left px-5 py-2.5 text-[14.5px] text-[var(--wa-text)] hover:bg-[var(--wa-hover)]">Search</button>
-                <button @click="clearActiveChat" class="w-full text-left px-5 py-2.5 text-[14.5px] text-[var(--wa-text)] hover:bg-[var(--wa-hover)]">Clear chat</button>
+                <button v-if="!watching" @click="clearActiveChat" class="w-full text-left px-5 py-2.5 text-[14.5px] text-[var(--wa-text)] hover:bg-[var(--wa-hover)]">Clear chat</button>
                 <button @click="showThreadMenu = false; activeConversation = null" class="w-full text-left px-5 py-2.5 text-[14.5px] text-[var(--wa-text)] hover:bg-[var(--wa-hover)]">Close chat</button>
               </div>
             </div>
@@ -127,14 +136,14 @@
                   :message="row.msg"
                   :tail="row.tail"
                   :show-avatar="isGroup ? row.tail : undefined"
-                  :show-sender-name="isGroup && !row.msg.is_mine"
+                  :show-sender-name="(isGroup || watching) && !row.msg.is_mine"
                   @reply="replyingTo = $event"
                   @scroll-to="scrollToMessage"
                   @preview-image="previewImage = $event"
                 />
               </template>
               <div v-if="messages.length === 0" class="flex justify-center mt-6">
-                <span class="px-3 py-1.5 rounded-lg text-[12.5px] bg-[var(--wa-date)] text-[var(--wa-muted)] shadow-sm">No messages yet. Say hi!</span>
+                <span class="px-3 py-1.5 rounded-lg text-[12.5px] bg-[var(--wa-date)] text-[var(--wa-muted)] shadow-sm">{{ watching ? 'No messages yet.' : 'No messages yet. Say hi!' }}</span>
               </div>
               <div v-else-if="threadSearch && messageRows.length === 0" class="flex justify-center mt-6">
                 <span class="px-3 py-1.5 rounded-lg text-[12.5px] bg-[var(--wa-date)] text-[var(--wa-muted)] shadow-sm">No messages match "{{ threadSearch }}"</span>
@@ -147,7 +156,11 @@
           </button>
         </div>
 
-        <MessageComposer :replying-to="replyingTo" :sending="sending" @send="sendMessage" @cancel-reply="replyingTo = null" @activity="live.reportActivity" />
+        <div v-if="watching" class="flex-shrink-0 px-4 py-3 bg-[var(--wa-panel-header)] border-t border-[var(--wa-border)] text-center text-[13px] text-[var(--wa-muted)]">
+          <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+          You are viewing this chat as HOD - read only. The people in it are not told.
+        </div>
+        <MessageComposer v-else :replying-to="replyingTo" :sending="sending" @send="sendMessage" @cancel-reply="replyingTo = null" @activity="live.reportActivity" />
       </template>
 
       <!-- nothing open: WhatsApp's welcome panel, in Tusome's words -->
@@ -166,8 +179,11 @@
     <NewChatModal
       v-if="showNewChat"
       :contact-tabs="contactTabs"
+      :class-groups="classGroups"
+      classes-label="Classes"
       @close="showNewChat = false"
       @select-contact="startDirectChat"
+      @select-class="startClassChat"
     />
 
     <!-- Image lightbox -->
@@ -195,17 +211,22 @@ import { resolveAssetUrl } from '@/utils/url'
 import '@/assets/whatsapp.css'
 import { useToastStore } from '@/stores/toast'
 import { useConfirmStore } from '@/stores/confirm'
-import type { Conversation, ChatMessage, ChatContact } from '@/types/chat'
+import type { Conversation, ChatMessage, ChatContact, ChatClassGroup } from '@/types/chat'
 
 const toast = useToastStore()
 const confirmDialog = useConfirmStore()
 
-const API_BASE = '/api/teacher/chat'
+const route = useRoute()
+// teachers and HODs share this page; the API follows the route
+const isHod = route.path.startsWith('/hod')
+const API_BASE = isHod ? '/api/hod/chat' : '/api/teacher/chat'
 const chatBadge = useChatBadgeStore()
 
 const conversations = ref<Conversation[]>([])
 const conversationSearch = ref('')
-const route = useRoute()
+// HOD: watching the department's students' chats (read only) instead of their own
+const watching = ref(false)
+const ownConversations = ref<Conversation[]>([])
 const activeConversation = ref<Conversation | null>(null)
 // typing / recording / online / last seen (see composables/useChatLive)
 const live = useChatLive(API_BASE, activeConversation)
@@ -221,12 +242,13 @@ const messagesContainer = ref<HTMLElement | null>(null)
 const showNewChat = ref(false)
 const colleagues = ref<ChatContact[]>([])
 const students = ref<ChatContact[]>([])
+const classGroups = ref<ChatClassGroup[]>([])
 
 const showThreadMenu = ref(false)
 const threadMenuRef = ref<HTMLElement | null>(null)
 
 const contactTabs = computed(() => [
-  { key: 'colleagues', label: 'Colleagues', contacts: colleagues.value },
+  { key: 'colleagues', label: isHod ? 'Teachers' : 'Colleagues', contacts: colleagues.value },
   { key: 'students', label: 'Students', contacts: students.value }
 ])
 
@@ -234,16 +256,31 @@ const contactTabs = computed(() => [
 type ChatFilter = 'all' | 'unread' | 'students' | 'colleagues' | 'groups'
 const chatFilter = ref<ChatFilter>('all')
 const otherRole = (c: Conversation) => c.other_role ?? c.participants?.find(p => p.role === 'student')?.role
-const kindOf = (c: Conversation): Exclude<ChatFilter, 'all' | 'unread'> =>
-  c.type !== 'direct' ? 'groups' : otherRole(c) === 'student' ? 'students' : 'colleagues'
+const kindOf = (c: Conversation): Exclude<ChatFilter, 'all' | 'unread'> => {
+  if (watching.value) {
+    // department chats: teacher and student, students together, or a class group
+    if (c.type !== 'direct') return 'groups'
+    return c.participants?.some(p => p.role !== 'student') ? 'colleagues' : 'students'
+  }
+  return c.type !== 'direct' ? 'groups' : otherRole(c) === 'student' ? 'students' : 'colleagues'
+}
 const chatFilters = computed(() => {
+  if (watching.value) {
+    const count = (k: ChatFilter) => conversations.value.filter(c => kindOf(c) === k).length
+    return [
+      { key: 'all' as ChatFilter, label: 'All', count: 0 },
+      { key: 'colleagues' as ChatFilter, label: 'Teacher & student', count: count('colleagues') },
+      { key: 'students' as ChatFilter, label: 'Students together', count: count('students') },
+      { key: 'groups' as ChatFilter, label: 'Class groups', count: count('groups') }
+    ].filter(f => f.key === 'all' || f.count > 0)
+  }
   const count = (k: ChatFilter) => conversations.value.filter(c => (k === 'unread' ? (c.unread_count || 0) > 0 : kindOf(c) === k)).length
   return [
     { key: 'all' as ChatFilter, label: 'All', count: 0 },
     { key: 'unread' as ChatFilter, label: 'Unread', count: count('unread') },
     { key: 'students' as ChatFilter, label: 'Students', count: 0 },
-    { key: 'colleagues' as ChatFilter, label: 'Colleagues', count: 0 },
-    { key: 'groups' as ChatFilter, label: 'Groups', count: 0 }
+    { key: 'colleagues' as ChatFilter, label: isHod ? 'Teachers' : 'Colleagues', count: 0 },
+    { key: 'groups' as ChatFilter, label: isHod ? 'Classes' : 'Groups', count: 0 }
   ].filter(f => f.key === 'all' || f.key === 'unread' || count(f.key) > 0)
 })
 
@@ -269,19 +306,36 @@ const scrollToMessage = (id: number) => {
 
 const loadConversations = async () => {
   try {
-    const response = await axios.get(`${API_BASE}/conversations`)
+    const response = await axios.get(`${API_BASE}/${watching.value ? 'monitor' : 'conversations'}`)
     if (response.data.success) {
-      conversations.value = response.data.data.conversations || []
+      const list = response.data.data.conversations || []
+      if (watching.value) conversations.value = list
+      else {
+        ownConversations.value = list
+        conversations.value = list
+      }
     }
   } catch (error) {
     console.error('Failed to load conversations:', error)
   }
 }
+// HOD: switch between their own chats and the department's
+const setWatching = async (on: boolean) => {
+  if (watching.value === on) return
+  live.stopActivity()
+  activeConversation.value = null
+  messages.value = []
+  chatFilter.value = 'all'
+  watching.value = on
+  loadingConversations.value = true
+  await loadConversations()
+  loadingConversations.value = false
+}
 
 const loadMessages = async (conversationId: number, showLoading = true) => {
   if (showLoading) loadingMessages.value = true
   try {
-    const response = await axios.get(`${API_BASE}/conversations/${conversationId}`)
+    const response = await axios.get(`${API_BASE}/${watching.value ? 'monitor' : 'conversations'}/${conversationId}`)
     if (response.data.success) {
       const wasAtBottom = !messagesContainer.value || messagesContainer.value.scrollHeight - messagesContainer.value.scrollTop - messagesContainer.value.clientHeight < 100
       messages.value = response.data.data.messages || []
@@ -301,6 +355,7 @@ const loadContacts = async () => {
     if (response.data.success) {
       colleagues.value = response.data.data.colleagues || []
       students.value = response.data.data.students || []
+      classGroups.value = response.data.data.classes || []
     }
   } catch (error) {
     console.error('Failed to load contacts:', error)
@@ -339,6 +394,21 @@ const clearActiveChat = async () => {
 const handleThreadMenuClickOutside = (event: MouseEvent) => {
   if (showThreadMenu.value && threadMenuRef.value && !threadMenuRef.value.contains(event.target as Node)) {
     showThreadMenu.value = false
+  }
+}
+
+// HOD: a class's group chat (all its students in this department)
+const startClassChat = async (cls: ChatClassGroup) => {
+  try {
+    const response = await axios.post(`${API_BASE}/conversations`, { class_id: cls.class_id })
+    if (response.data.success) {
+      showNewChat.value = false
+      await loadConversations()
+      const conv = conversations.value.find(c => c.id === response.data.data.id)
+      if (conv) openConversation(conv)
+    }
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Failed to open the class chat')
   }
 }
 
@@ -395,7 +465,7 @@ onMounted(() => {
     const studentId = Number(route.query.student)
     if (!studentId) return
     try {
-      const response = await axios.post('/api/teacher/chat/conversations', { contact_id: studentId, contact_role: 'student' })
+      const response = await axios.post(`${API_BASE}/conversations`, { contact_id: studentId, contact_role: 'student' })
       const id = response.data?.data?.id
       await loadConversations()
       const conv = conversations.value.find(c => c.id === id)
@@ -405,7 +475,15 @@ onMounted(() => {
     }
   })
 
-  conversationPollTimer = window.setInterval(loadConversations, 8000)
+  conversationPollTimer = window.setInterval(async () => {
+    await loadConversations()
+    if (watching.value) {
+      try {
+        const r = await axios.get(`${API_BASE}/conversations`)
+        ownConversations.value = r.data?.data?.conversations || ownConversations.value
+      } catch { /* the count catches up next time */ }
+    }
+  }, 8000)
   messagePollTimer = window.setInterval(() => {
     if (activeConversation.value) loadMessages(activeConversation.value.id, false)
   }, 3000)
@@ -426,7 +504,7 @@ const myName = computed(() => auth.userName)
 const myInitials = computed(() => String(auth.userName || '?').split(/\s+/).filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase())
 const myPhoto = computed(() => ((auth.user as any)?.profile_photo ? resolveAssetUrl((auth.user as any).profile_photo) : ''))
 const homePath = computed(() => `/${auth.userRole || 'teacher'}/dashboard`)
-const totalUnread = computed(() => conversations.value.reduce((n, c) => n + (c.unread_count || 0), 0))
+const totalUnread = computed(() => ownConversations.value.reduce((n, c) => n + (c.unread_count || 0), 0))
 const isGroup = computed(() => !!activeConversation.value && activeConversation.value.type !== 'direct')
 const THREAD_COLORS = ['#00a884', '#128c7e', '#25d366', '#34b7f1', '#7f66ff', '#e542a3', '#fa6533', '#54656f', '#008069']
 const threadAvatarColor = computed(() => THREAD_COLORS[Math.abs(activeConversation.value?.id ?? 0) % THREAD_COLORS.length])

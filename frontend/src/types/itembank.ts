@@ -26,7 +26,10 @@ export interface ItemBankResource {
   total_pages?: number | null
   // Students may download it / save it for offline reading (off unless the teacher allows it)
   allow_download?: boolean | number
-  status: 'draft' | 'published' | 'archived'
+  status: 'draft' | 'pending' | 'published' | 'archived'
+  /** When it was sent to the HOD for approval, and the HOD's note if it came back (see ContentApproval) */
+  submitted_at?: string | null
+  review_note?: string | null
   published_at: string | null
   created_at: string
   updated_at?: string

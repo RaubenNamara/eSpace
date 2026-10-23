@@ -46,7 +46,7 @@
           <span v-if="tag" class="px-1.5 py-0.5 rounded-md text-[9px] font-bold tracking-wide text-white bg-black/45 backdrop-blur-sm truncate">{{ tag }}</span>
           <span v-if="isNew" class="px-1.5 py-0.5 rounded-md text-[9px] font-bold tracking-wide text-white bg-rose-600">NEW</span>
         </span>
-        <span v-if="status" class="px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide flex-shrink-0" :class="statusClass">{{ status }}</span>
+        <span v-if="status" class="px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide flex-shrink-0" :class="statusClass">{{ status === 'pending' ? 'Waiting for HOD' : status }}</span>
       </span>
 
       <!-- Bottom: saved-on-device + duration -->
@@ -185,6 +185,7 @@ const tag = computed(() => subjectTag(props.video.subject_name, props.video.subj
 const status = computed(() => (props.showStatus ? props.video.status : ''))
 const statusClass = computed(() => ({
   published: 'bg-emerald-500 text-white',
+  pending: 'bg-orange-500 text-white',
   draft: 'bg-amber-400 text-amber-950',
   archived: 'bg-gray-500 text-white'
 }[props.video.status]))

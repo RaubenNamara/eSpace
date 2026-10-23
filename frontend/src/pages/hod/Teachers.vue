@@ -22,7 +22,10 @@
     >
       <template #cell-name="{ row }">
         <div class="flex items-center gap-3 min-w-0">
-          <span class="w-9 h-9 flex-shrink-0 rounded-full flex items-center justify-center text-xs font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200">{{ initials(row.name) }}</span>
+          <span class="relative w-9 h-9 flex-shrink-0 rounded-full flex items-center justify-center text-xs font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200">
+            {{ initials(row.name) }}
+            <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full ring-2 ring-white dark:ring-gray-800" :class="row.is_online ? 'bg-emerald-500' : 'bg-gray-400 dark:bg-gray-500'" :title="row.is_online ? 'Online now' : 'Offline'"></span>
+          </span>
           <span class="min-w-0">
             <span class="block font-semibold text-gray-900 dark:text-white truncate">{{ row.name }}</span>
             <span class="block text-xs text-gray-500 dark:text-gray-400 truncate">{{ row.email || '@' + row.username }}</span>
@@ -40,7 +43,9 @@
         <span v-else class="text-gray-400">0</span>
       </template>
       <template #cell-last_active="{ row }">
-        <span :class="row.last_active_at ? 'text-gray-700 dark:text-gray-200' : 'text-gray-400'">{{ row.last_active_at ? timeAgo(row.last_active_at) : 'Never' }}</span>
+        <span v-if="row.is_online" class="inline-flex items-center gap-1.5 font-semibold text-emerald-700 dark:text-emerald-300"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>Online now</span>
+        <span v-else :class="row.last_active_at || row.last_login_at ? 'text-gray-700 dark:text-gray-200' : 'text-gray-400'">{{ row.last_active_at || row.last_login_at ? timeAgo(row.last_active_at || row.last_login_at!) : 'Never' }}</span>
+        <span v-if="row.last_login_at" class="block text-[11px] text-gray-500 dark:text-gray-400">Signed in {{ timeAgo(row.last_login_at) }}</span>
       </template>
       <template #cell-status="{ row }">
         <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold" :class="row.is_active ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'">{{ row.is_active ? 'Active' : 'Suspended' }}</span>
@@ -67,6 +72,8 @@ interface Teacher {
   phone: string | null
   is_active: number
   last_active_at: string | null
+  last_login_at: string | null
+  is_online: boolean
   assessments_count: number
   enotes_count: number
   to_mark_count: number
@@ -79,7 +86,7 @@ const columns: Column[] = [
   { key: 'assessments_count', label: 'Assessments', sortable: true, align: 'center' },
   { key: 'enotes_count', label: 'eNotes', sortable: true, align: 'center' },
   { key: 'to_mark_count', label: 'To mark', sortable: true, align: 'center' },
-  { key: 'last_active', label: 'Last active', sortable: true, value: (r: Row) => r.last_active_at || '' },
+  { key: 'last_active', label: 'Last on', sortable: true, value: (r: Row) => (r.is_online ? '9999' : r.last_active_at || r.last_login_at || '') },
   { key: 'status', label: 'Status', value: (r: Row) => (r.is_active ? 1 : 0) }
 ]
 
@@ -93,11 +100,13 @@ const activeThisWeek = (t: Row) => !!t.last_active_at && new Date(t.last_active_
 
 const statItems = computed<StatItem[]>(() => [
   { label: 'Teachers', value: teachers.value.length, key: 'all', tone: 'indigo' },
+  { label: 'Online now', value: teachers.value.filter(t => t.is_online).length, key: 'online', tone: 'emerald' },
   { label: 'Active this week', value: teachers.value.filter(activeThisWeek).length, key: 'active', tone: 'emerald' },
   { label: 'Scripts to mark', value: teachers.value.reduce((n, t) => n + t.to_mark_count, 0), key: 'marking', tone: 'amber', hint: 'across the department' },
   { label: 'Nothing published', value: teachers.value.filter(t => !t.assessments_count && !t.enotes_count).length, key: 'quiet', tone: 'rose', hint: 'no assessment or eNote yet' }
 ])
 const shown = computed(() => teachers.value.filter(t => {
+  if (filter.value === 'online') return t.is_online
   if (filter.value === 'active') return activeThisWeek(t)
   if (filter.value === 'marking') return t.to_mark_count > 0
   if (filter.value === 'quiet') return !t.assessments_count && !t.enotes_count

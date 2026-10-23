@@ -197,8 +197,7 @@ const shortcuts = [
   { label: 'Item Bank', to: '/student/itembank', icon: 'target' },
   { label: 'Videos', to: '/student/videos', icon: 'video' },
   { label: 'Virtual Lab', to: '/student/virtual-lab', icon: 'beaker' },
-  { label: 'Learning Map', to: '/student/learning-map', icon: 'map' },
-  { label: 'Reports', to: '/student/reports', icon: 'chart' }
+  { label: 'Learning Map', to: '/student/learning-map', icon: 'map' }
 ]
 const myNotes = ref<MyNote[]>([])
 const notesLoaded = ref(false)
