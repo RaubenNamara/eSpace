@@ -667,7 +667,7 @@ const bulkSetActive = async (isActive: boolean) => {
 const bulkDeleteSelected = async () => {
   const ids = bulk.selectedArray()
   if (ids.length === 0) return
-  if (!await confirmDialog.open({ title: 'Delete teachers', message: `Delete ${ids.length} teacher(s)? They will no longer be able to sign in and all their work disappears from eSpace (students keep their marks). You can restore them within ${restoreDays.value} days. To keep their work visible, suspend them instead.`, confirmLabel: 'Delete', danger: true })) return
+  if (!await confirmDialog.open({ title: 'Delete teachers', message: `Delete ${ids.length} teacher(s)? They will no longer be able to sign in and all their work disappears from Tusome (students keep their marks). You can restore them within ${restoreDays.value} days. To keep their work visible, suspend them instead.`, confirmLabel: 'Delete', danger: true })) return
   try {
     await apiService.post('/admin/teachers/bulk-delete', { ids })
     toast.success(`${ids.length} teacher(s) deleted - restorable for ${restoreDays.value} days`)
@@ -912,12 +912,12 @@ const deleteTeacher = async (teacher: Teacher) => {
     const p = data.data
     const parts = (p.work || []).map((w: { count: number; label: string }) => `${w.count} ${w.label}`)
     if (p.assessments) parts.push(`${p.assessments} assessment${p.assessments === 1 ? '' : 's'} closed`)
-    what = parts.length ? `\n\nThis removes: ${parts.join(', ')}.` : '\n\nThey have no work in eSpace yet.'
+    what = parts.length ? `\n\nThis removes: ${parts.join(', ')}.` : '\n\nThey have no work in Tusome yet.'
     if (p.submissions_kept) what += ` Students keep their marks on ${p.submissions_kept} submission${p.submissions_kept === 1 ? '' : 's'} (report cards stay complete).`
   } catch {
     // preview is a courtesy - the delete itself still explains itself afterwards
   }
-  const message = `Delete ${name}? They will no longer be able to sign in, and all their work disappears from eSpace for everyone.${what}\n\nYou can restore ${name} and their work within ${restoreDays.value} days; after that it is removed for good.\n\nTo stop them signing in but keep their work visible, use Suspend instead.`
+  const message = `Delete ${name}? They will no longer be able to sign in, and all their work disappears from Tusome for everyone.${what}\n\nYou can restore ${name} and their work within ${restoreDays.value} days; after that it is removed for good.\n\nTo stop them signing in but keep their work visible, use Suspend instead.`
   if (!await confirmDialog.open({ title: 'Delete teacher and their work', message, confirmLabel: 'Delete teacher', danger: true })) return
 
   try {
