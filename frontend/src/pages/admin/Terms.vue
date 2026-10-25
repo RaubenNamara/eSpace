@@ -6,6 +6,14 @@
         <button type="button" class="btn-primary" @click="openTermModal()">Add term</button>
       </template>
     </PageHeader>
+    <!-- the current term follows the calendar, unless the admin turns that off -->
+    <label class="mb-4 flex items-start gap-3 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 cursor-pointer">
+      <input type="checkbox" class="mt-0.5 w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500" :checked="autoSwitch" :disabled="savingSwitch" @change="setAutoSwitch(($event.target as HTMLInputElement).checked)">
+      <span class="min-w-0">
+        <span class="block text-sm font-semibold text-gray-900 dark:text-white">Change the current term by date</span>
+        <span class="block text-xs text-gray-500 dark:text-gray-400">{{ autoSwitch ? 'On: when a term starts, it becomes the current term by itself. During the holidays the last term stays current.' : 'Off: the current term only changes when you choose another one here.' }}</span>
+      </span>
+    </label>
     <SchoolCalendar
       :years="academicYears"
       :terms="terms"
@@ -292,8 +300,29 @@ const executeDelete = async () => {
   }
 }
 
-onMounted(() => {
+// the current term follows the calendar (TermService on the server)
+const autoSwitch = ref(true)
+const savingSwitch = ref(false)
+const setAutoSwitch = async (on: boolean) => {
+  savingSwitch.value = true
+  try {
+    const res = await apiService.put('/admin/terms/auto-switch', { on })
+    autoSwitch.value = !!res.data.data?.on
+    toast.success(res.data.message || 'Saved')
+    if (res.data.data?.switched_to) fetchTerms()
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Could not save')
+  } finally {
+    savingSwitch.value = false
+  }
+}
+
+onMounted(async () => {
   fetchAcademicYears()
   fetchTerms()
+  try {
+    const res = await apiService.get('/admin/terms/auto-switch')
+    autoSwitch.value = !!res.data.data?.on
+  } catch { /* stays on */ }
 })
 </script>

@@ -13,6 +13,11 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-10-25', area: 'School admin', icon: 'check-circle',
+    title: 'End of term: report cards for a whole class, and a teacher report to print',
+    text: 'A new End of term checklist shows what is left before a term closes - marking, paper exam marks, report cards class by class, promotion and the next term. Report cards for a whole class are made in one go, after a check of which learners still have no marks. The current term now changes by itself when the next one starts. And the teacher follow-up report prints who missed the marking deadline, who has not marked, who set nothing, whose learners are not handing in and which classes had nothing this term.'
+  },
+  {
     date: '2026-10-24', area: 'ICT Lab', icon: 'wrench',
     title: 'Laptop repair: "No bootable device", from start to finish',
     text: 'Students work through a real repair: find out why a laptop says "No bootable device" from the screen, the BIOS and the owner, pack the right toolkit and choose the matching SSD, then open the laptop in 3D - screws, the one hidden under a foot, the battery first - and swap the failed drive. They make a Windows installer USB with Microsoft\'s own tool and install Windows screen by screen, through to activation and updates.'

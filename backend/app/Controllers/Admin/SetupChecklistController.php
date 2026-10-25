@@ -21,6 +21,7 @@ class SetupChecklistController extends Controller
             $this->unauthorized();
             return;
         }
+        \eSpace\App\Services\TermService::syncCurrent();
         if (!$this->hasAnyRole(['admin', 'super_admin'])) {
             $this->forbidden();
             return;

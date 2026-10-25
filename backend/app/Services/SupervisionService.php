@@ -337,6 +337,169 @@ class SupervisionService
         return $out;
     }
 
+    /**
+     * Every class stream with learners in a department, and what reached it this term: assessments
+     * set for it and eNotes published to it. A class with learners and neither is "not active".
+     * Its teacher is the one assigned to teach it (class_subjects) where there is one, else
+     * whoever last set it work in that department.
+     * @return array<int, array<string, mixed>>
+     */
+    public function classActivity(array $term): array
+    {
+        $db = $this->db();
+        $range = ['t_start' => $term['start_date'], 't_end' => $term['end_date']];
+
+        // class streams with learners enrolled in a department during the term
+        $stmt = $db->prepare(
+            "SELECT sde.class_id, sde.department_id, c.name AS class_name, c.stream_name, d.name AS department_name,
+                    COUNT(DISTINCT sde.student_id) AS learners
+             FROM student_department_enrollments sde
+             JOIN classes c ON c.id = sde.class_id AND c.deleted_at IS NULL
+             JOIN departments d ON d.id = sde.department_id AND d.deleted_at IS NULL
+             WHERE sde.deleted_at IS NULL AND sde.status = 'active'
+               AND sde.start_date < DATE_ADD(:t_end, INTERVAL 1 DAY) AND COALESCE(sde.end_date, NOW()) >= :t_start
+             GROUP BY sde.class_id, sde.department_id, c.name, c.stream_name, d.name"
+        );
+        $stmt->execute($range);
+        $pairs = [];
+        foreach ($stmt->fetchAll() as $r) {
+            $pairs[$r['class_id'] . ':' . $r['department_id']] = [
+                'class_id' => (int) $r['class_id'],
+                'department_id' => (int) $r['department_id'],
+                'class' => trim($r['class_name'] . ' ' . ($r['stream_name'] ?? '')),
+                'class_name' => $r['class_name'],
+                'department' => $r['department_name'],
+                'learners' => (int) $r['learners'],
+                'assessments' => 0,
+                'enotes' => 0,
+                'teachers' => [],
+            ];
+        }
+        if (!$pairs) return [];
+
+        // which class streams carry each class name (an "all streams" target reaches all of them)
+        $streamsByName = [];
+        foreach ($pairs as $p) $streamsByName[$p['class_name']][$p['class_id']] = true;
+        $reach = function (?int $classId, ?string $groupName, array $extra) use ($streamsByName): array {
+            $ids = $classId ? [$classId => true] : [];
+            if ($groupName !== null && $groupName !== '') $ids += $streamsByName[$groupName] ?? [];
+            foreach ($extra as $x) $ids[(int) $x] = true;
+            return array_keys($ids);
+        };
+
+        // assessments set this term
+        $stmt = $db->prepare(
+            "SELECT a.id, a.class_id, a.class_group_name, s.department_id,
+                    (SELECT GROUP_CONCAT(ac.class_id) FROM assignment_classes ac WHERE ac.assignment_id = a.id) AS extra
+             FROM assignments a JOIN subjects s ON s.id = a.subject_id
+             WHERE a.deleted_at IS NULL AND a.status = 'published' AND " . self::termSql()
+        );
+        $stmt->execute($range);
+        foreach ($stmt->fetchAll() as $a) {
+            $extra = $a['extra'] ? explode(',', (string) $a['extra']) : [];
+            foreach ($reach($a['class_id'] !== null ? (int) $a['class_id'] : null, $a['class_group_name'], $extra) as $cid) {
+                $k = $cid . ':' . (int) $a['department_id'];
+                if (isset($pairs[$k])) $pairs[$k]['assessments']++;
+            }
+        }
+
+        // eNotes published this term
+        $stmt = $db->prepare(
+            "SELECT class_id, class_group_name, department_id FROM enote_topics
+             WHERE deleted_at IS NULL AND status = 'published'
+               AND published_at >= :t_start AND published_at < DATE_ADD(:t_end, INTERVAL 1 DAY)"
+        );
+        $stmt->execute($range);
+        foreach ($stmt->fetchAll() as $e) {
+            foreach ($reach($e['class_id'] !== null ? (int) $e['class_id'] : null, $e['class_group_name'], []) as $cid) {
+                $k = $cid . ':' . (int) $e['department_id'];
+                if (isset($pairs[$k])) $pairs[$k]['enotes']++;
+            }
+        }
+
+        // who teaches it: assigned for the term, else whoever last set it work
+        $stmt = $db->prepare(
+            "SELECT cs.class_id, s.department_id, TRIM(CONCAT(t.first_name, ' ', t.last_name)) AS name
+             FROM class_subjects cs JOIN subjects s ON s.id = cs.subject_id JOIN teachers t ON t.id = cs.teacher_id AND t.deleted_at IS NULL
+             WHERE cs.term_id = ?"
+        );
+        $stmt->execute([(int) $term['id']]);
+        foreach ($stmt->fetchAll() as $r) {
+            $k = (int) $r['class_id'] . ':' . (int) $r['department_id'];
+            if (isset($pairs[$k]) && !in_array($r['name'], $pairs[$k]['teachers'], true)) $pairs[$k]['teachers'][] = $r['name'];
+        }
+        $rows = $db->query(
+            "SELECT a.class_id, s.department_id, TRIM(CONCAT(t.first_name, ' ', t.last_name)) AS name, MAX(COALESCE(a.published_at, a.created_at)) AS last_set
+             FROM assignments a JOIN subjects s ON s.id = a.subject_id JOIN teachers t ON t.id = a.teacher_id AND t.deleted_at IS NULL
+             WHERE a.deleted_at IS NULL AND a.status = 'published' AND a.class_id IS NOT NULL
+             GROUP BY a.class_id, s.department_id, t.id
+             ORDER BY last_set DESC"
+        )->fetchAll();
+        foreach ($rows as $r) {
+            $k = (int) $r['class_id'] . ':' . (int) $r['department_id'];
+            if (isset($pairs[$k]) && !$pairs[$k]['teachers']) $pairs[$k]['teachers'][] = $r['name'];
+        }
+
+        $out = array_values($pairs);
+        usort($out, fn ($a, $b) => [$a['department'], $a['class']] <=> [$b['department'], $b['class']]);
+        return $out;
+    }
+
+    /**
+     * The printable follow-up report for a term: who missed the marking deadline, who is still
+     * marking, who set nothing, whose learners are not handing in, who has gone quiet, and which
+     * classes had nothing set or published. Optionally for one department.
+     */
+    public function followUpReport(array $term, ?int $departmentId = null): array
+    {
+        $overview = $this->overview($term);
+        $teachers = $overview['teachers'];
+        if ($departmentId) {
+            $teachers = array_values(array_filter($teachers, fn ($t) => in_array($departmentId, $t['department_ids'], true)));
+        }
+        $deptNames = [];
+        foreach ($overview['departments'] as $d) $deptNames[$d['id']] = $d['name'];
+        $withDepts = fn (array $t) => $t + ['departments' => implode(', ', array_map(fn ($id) => $deptNames[$id] ?? '', $t['department_ids']))];
+
+        // the assessments behind each teacher's marking, to name them in the report
+        $byTeacher = [];
+        foreach ($this->assessments($term) as $a) {
+            if ($a['waiting'] > 0) $byTeacher[$a['teacher_id']][] = $a;
+        }
+        $marking = function (array $t) use ($byTeacher) {
+            $list = $byTeacher[$t['id']] ?? [];
+            usort($list, fn ($x, $y) => ($y['waiting_days'] ?? 0) <=> ($x['waiting_days'] ?? 0));
+            return array_map(fn ($a) => ['title' => $a['title'], 'subject' => $a['subject'], 'class' => $a['class'], 'waiting' => $a['waiting'], 'days' => $a['waiting_days']], $list);
+        };
+
+        $late = $still = $noneSet = $lowHandIn = $quiet = [];
+        foreach ($teachers as $t) {
+            $row = $withDepts($t);
+            if ($t['overdue'] > 0) $late[] = $row + ['assessments' => $marking($t)];
+            elseif ($t['waiting'] > 0) $still[] = $row + ['assessments' => $marking($t)];
+            if (in_array('none_set', $t['flags'], true)) $noneSet[] = $row;
+            if (in_array('low_hand_in', $t['flags'], true)) $lowHandIn[] = $row;
+            if (in_array('quiet', $t['flags'], true)) $quiet[] = $row;
+        }
+        usort($late, fn ($a, $b) => [$b['overdue'], $b['oldest_days']] <=> [$a['overdue'], $a['oldest_days']]);
+        usort($still, fn ($a, $b) => $b['waiting'] <=> $a['waiting']);
+
+        $classes = array_values(array_filter(
+            $this->classActivity($term),
+            fn ($c) => $c['assessments'] === 0 && $c['enotes'] === 0 && (!$departmentId || $c['department_id'] === $departmentId)
+        ));
+
+        return [
+            'late_marking' => $late,
+            'still_marking' => $still,
+            'none_set' => $noneSet,
+            'low_hand_in' => $lowHandIn,
+            'quiet' => $quiet,
+            'inactive_classes' => $classes,
+            'teachers_total' => count($teachers),
+        ];
+    }
+
     /** The learners who should have handed an assessment in and haven't - and who started it. */
     public function missingLearners(int $assignmentId): ?array
     {

@@ -33,6 +33,7 @@ class ReportCardController extends Controller
             return;
         }
 
+        \eSpace\App\Services\TermService::syncCurrent();
         $stmt = $this->getDb()->query(
             "SELECT t.id, t.name, ay.name AS academic_year, t.is_current
              FROM terms t LEFT JOIN academic_years ay ON t.academic_year_id = ay.id
@@ -78,6 +79,126 @@ class ReportCardController extends Controller
         $stmt->execute($params);
 
         $this->success(['students' => $stmt->fetchAll()]);
+    }
+
+    /**
+     * Before a class's report cards are made: for every assessment that goes on them (returned
+     * online work due in the term, and paper exams set to count - the same rule ReportCardService
+     * uses), how many of the class's learners have a mark, are waiting to be marked, or never
+     * handed in. And the learners with no mark at all, whose card cannot be made yet.
+     * GET /admin/report-cards/readiness?term_id=&class_id=
+     */
+    public function readiness(): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+        $termId = (int) $this->query('term_id', 0);
+        $classId = (int) $this->query('class_id', 0);
+        if (!$termId || !$classId) {
+            $this->validationError(['class_id' => 'term_id and class_id are required']);
+            return;
+        }
+        $db = $this->getDb();
+        $stmt = $db->prepare('SELECT id, start_date, end_date FROM terms WHERE id = ? AND deleted_at IS NULL');
+        $stmt->execute([$termId]);
+        $term = $stmt->fetch();
+        $stmt = $db->prepare('SELECT id, name FROM classes WHERE id = ? AND deleted_at IS NULL');
+        $stmt->execute([$classId]);
+        $class = $stmt->fetch();
+        if (!$term || !$class) {
+            $this->notFound('Term or class not found');
+            return;
+        }
+
+        // the class's learners, and the departments each is enrolled in
+        $stmt = $db->prepare('SELECT id, first_name, last_name FROM students WHERE class_id = ? AND deleted_at IS NULL ORDER BY first_name, last_name');
+        $stmt->execute([$classId]);
+        $learners = $stmt->fetchAll();
+        $ids = array_map(fn ($l) => (int) $l['id'], $learners);
+        if (!$ids) {
+            $this->success(['learners' => 0, 'subjects' => [], 'no_marks' => []]);
+            return;
+        }
+        $in = implode(',', $ids);
+        $inDept = [];
+        foreach ($db->query("SELECT DISTINCT student_id, department_id FROM student_department_enrollments
+                             WHERE student_id IN ($in) AND deleted_at IS NULL AND status = 'active'")->fetchAll() as $r) {
+            $inDept[(int) $r['department_id']][(int) $r['student_id']] = true;
+        }
+
+        $subjects = [];
+        $hasMark = [];
+        $add = function (array $row, string $kind, array $statusByStudent, bool $open) use (&$subjects, &$hasMark, $inDept) {
+            $expected = array_keys($inDept[(int) $row['department_id']] ?? []);
+            $marked = $waiting = 0;
+            foreach ($expected as $sid) {
+                $st = $statusByStudent[$sid] ?? null;
+                if ($st === 'marked') { $marked++; $hasMark[$sid] = true; }
+                elseif ($st === 'waiting') $waiting++;
+            }
+            $sub = (int) $row['subject_id'];
+            $subjects[$sub] ??= ['subject' => $row['subject_name'], 'items' => []];
+            $subjects[$sub]['items'][] = [
+                'title' => $row['title'],
+                'kind' => $kind,
+                'expected' => count($expected),
+                'marked' => $marked,
+                'waiting' => $waiting,
+                'missing' => $open ? 0 : max(0, count($expected) - $marked - $waiting),
+                'open' => $open,
+            ];
+        };
+
+        // online assessments that go on the card
+        $stmt = $db->prepare(
+            "SELECT a.id, a.title, a.subject_id, s.name AS subject_name, s.department_id, COALESCE(a.deadline_at, a.due_date) AS deadline
+             FROM assignments a JOIN subjects s ON s.id = a.subject_id
+             WHERE a.deleted_at IS NULL AND a.status = 'published' AND a.subject_id IS NOT NULL
+               AND a.due_date BETWEEN :start AND :end
+               AND (a.class_id = :cid OR a.class_group_name = :cname
+                    OR EXISTS (SELECT 1 FROM assignment_classes ac WHERE ac.assignment_id = a.id AND ac.class_id = :cid2))
+             ORDER BY s.name, a.due_date"
+        );
+        $stmt->execute(['start' => $term['start_date'], 'end' => $term['end_date'], 'cid' => $classId, 'cname' => $class['name'], 'cid2' => $classId]);
+        $subStmt = $db->prepare(
+            "SELECT student_id, MAX(CASE WHEN status IN ('graded','returned') THEN 2 WHEN status IN ('submitted','marking') THEN 1 ELSE 0 END) AS st
+             FROM assignment_submissions WHERE assignment_id = ? AND deleted_at IS NULL AND student_id IN ($in) GROUP BY student_id"
+        );
+        foreach ($stmt->fetchAll() as $a) {
+            $subStmt->execute([(int) $a['id']]);
+            $status = [];
+            foreach ($subStmt->fetchAll() as $s) {
+                $status[(int) $s['student_id']] = (int) $s['st'] === 2 ? 'marked' : ((int) $s['st'] === 1 ? 'waiting' : null);
+            }
+            $add($a, 'online', $status, $a['deadline'] && strtotime((string) $a['deadline']) > time());
+        }
+
+        // paper exams set to count on the card
+        $stmt = $db->prepare(
+            "SELECT pa.id, pa.title, pa.subject_id, s.name AS subject_name, s.department_id
+             FROM physical_assessments pa JOIN subjects s ON s.id = pa.subject_id
+             WHERE pa.class_id = ? AND pa.term_id = ? AND pa.include_on_report = 1 AND pa.deleted_at IS NULL
+             ORDER BY s.name, pa.exam_date"
+        );
+        $stmt->execute([$classId, $termId]);
+        $scoreStmt = $db->prepare("SELECT student_id FROM physical_assessment_scores WHERE physical_assessment_id = ? AND score IS NOT NULL");
+        foreach ($stmt->fetchAll() as $p) {
+            $scoreStmt->execute([(int) $p['id']]);
+            $status = [];
+            foreach ($scoreStmt->fetchAll(\PDO::FETCH_COLUMN) as $sid) $status[(int) $sid] = 'marked';
+            $add($p, 'paper', $status, false);
+        }
+
+        ksort($subjects);
+        $list = array_values($subjects);
+        usort($list, fn ($x, $y) => strcmp($x['subject'], $y['subject']));
+        $noMarks = [];
+        foreach ($learners as $l) {
+            if (empty($hasMark[(int) $l['id']])) $noMarks[] = ['id' => (int) $l['id'], 'name' => trim($l['first_name'] . ' ' . $l['last_name'])];
+        }
+        $this->success(['learners' => count($learners), 'subjects' => $list, 'no_marks' => $noMarks]);
     }
 
     /**

@@ -230,6 +230,61 @@
       </div>
     </div>
 
+    <!-- A whole class at once: what is still missing first, then every card made in one go -->
+    <section v-if="selectedClassId && selectedTermId" class="dash-box mb-6">
+      <h2 class="dash-bar">
+        Before you make {{ selectedClassName }}'s report cards
+        <span v-if="readiness" class="px-2 py-0.5 rounded-full text-xs font-extrabold tabular-nums" :class="readiness.no_marks.length ? 'bg-amber-400 text-gray-900' : 'bg-indigo-600 text-white'">{{ readiness.learners - readiness.no_marks.length }}/{{ readiness.learners }} ready</span>
+      </h2>
+      <div class="px-4 py-3">
+      <div class="flex flex-wrap items-start gap-3">
+        <div class="min-w-0 flex-1">
+          <p v-if="readiness" class="text-sm text-gray-700 dark:text-gray-200">
+            {{ readiness.learners }} learners · {{ readiness.subjects.length }} subject{{ readiness.subjects.length === 1 ? '' : 's' }} with marks that count this term
+            <template v-if="readiness.no_marks.length"> · <b class="text-rose-700 dark:text-rose-300">{{ readiness.no_marks.length }} with no mark yet</b></template>
+          </p>
+          <p v-else-if="loadingReadiness" class="text-xs text-gray-400">Checking the marks…</p>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <button v-if="!batch.running" type="button" class="px-4 py-2 text-sm font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50" :disabled="!students.length || bulkDownloading" @click="generateAll">
+            Generate all ({{ students.length }})
+          </button>
+          <button v-else type="button" class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200" @click="batch.stop = true">Stop</button>
+        </div>
+      </div>
+
+      <!-- generating -->
+      <div v-if="batch.running || batch.done" class="mt-3">
+        <div class="h-2 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden"><div class="h-full bg-indigo-600 transition-all" :style="{ width: `${(batch.at / Math.max(1, batch.total)) * 100}%` }"></div></div>
+        <p class="mt-1.5 text-xs text-gray-600 dark:text-gray-300">
+          <template v-if="batch.running">Making card {{ batch.at + 1 }} of {{ batch.total }}{{ batch.current ? ` - ${batch.current}` : '' }}…</template>
+          <template v-else>{{ batch.made }} made{{ batch.skipped.length ? `, ${batch.skipped.length} not made` : '' }}{{ batch.stopped ? ' (stopped)' : '' }}. <span v-if="batch.made">Download Class PDF puts them all in one file to print.</span></template>
+        </p>
+        <p v-if="batch.skipped.length && !batch.running" class="mt-1 text-xs text-rose-700 dark:text-rose-300">Not made: {{ batch.skipped.slice(0, 12).join(', ') }}{{ batch.skipped.length > 12 ? ` and ${batch.skipped.length - 12} more` : '' }} - no returned marks this term yet.</p>
+      </div>
+
+      <!-- subject by subject -->
+      <div v-if="readiness && readiness.subjects.length" class="mt-3 divide-y divide-gray-100 dark:divide-gray-700">
+        <div v-for="s in readiness.subjects" :key="s.subject" class="py-2 grid sm:grid-cols-[9rem_minmax(0,1fr)] gap-x-4 gap-y-1">
+          <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ s.subject }}</p>
+          <ul class="space-y-0.5">
+            <li v-for="(it, i) in s.items" :key="i" class="text-xs flex flex-wrap gap-x-2">
+              <span class="text-gray-700 dark:text-gray-200">{{ it.title }}<span class="text-gray-400"> · {{ it.kind === 'paper' ? 'paper exam' : 'online' }}</span></span>
+              <span class="tabular-nums" :class="it.marked >= it.expected ? 'text-emerald-700 dark:text-emerald-300' : 'text-gray-600 dark:text-gray-300'">{{ it.marked }}/{{ it.expected }} marked</span>
+              <span v-if="it.waiting" class="tabular-nums text-amber-700 dark:text-amber-300">{{ it.waiting }} waiting to be marked</span>
+              <span v-if="it.missing" class="tabular-nums text-rose-700 dark:text-rose-300">{{ it.missing }} {{ it.kind === 'paper' ? 'without a mark' : 'never handed in' }}</span>
+              <span v-if="it.open" class="text-gray-400">still open</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <p v-else-if="readiness" class="mt-3 text-sm text-amber-700 dark:text-amber-300">Nothing counts towards this class's report cards this term yet - no returned online work due in the term, and no paper exams set to count.</p>
+      <p v-if="readiness && readiness.no_marks.length" class="mt-2 text-xs text-gray-600 dark:text-gray-300">
+        <b>No mark yet</b> (their card cannot be made): {{ readiness.no_marks.slice(0, 15).map(l => l.name).join(', ') }}{{ readiness.no_marks.length > 15 ? ` and ${readiness.no_marks.length - 15} more` : '' }}
+      </p>
+      </div>
+    </section>
+
     <div v-if="error" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6 text-red-600 dark:text-red-400 text-sm">
       {{ error }}
     </div>
@@ -504,6 +559,55 @@ const bulkReport = ref<ReportCardType | null>(null)
 const bulkCardRef = ref<InstanceType<typeof ReportCard> | null>(null)
 
 const generatedCount = computed(() => students.value.filter(s => s.report_card_id).length)
+const selectedClassName = computed(() => {
+  const c = classes.value.find(x => x.id === selectedClassId.value)
+  return c ? `${c.name}${c.stream_name ? ` ${c.stream_name}` : ''}` : 'this class'
+})
+
+// --- a whole class: what is missing first (readiness), then every card in one go -------------
+interface Readiness {
+  learners: number
+  subjects: { subject: string; items: { title: string; kind: 'online' | 'paper'; expected: number; marked: number; waiting: number; missing: number; open: boolean }[] }[]
+  no_marks: { id: number; name: string }[]
+}
+const readiness = ref<Readiness | null>(null)
+const loadingReadiness = ref(false)
+const loadReadiness = async () => {
+  readiness.value = null
+  if (!selectedClassId.value || !selectedTermId.value) return
+  loadingReadiness.value = true
+  try {
+    const res = await axios.get(`${API_BASE}/report-cards/readiness`, { params: { class_id: selectedClassId.value, term_id: selectedTermId.value } })
+    readiness.value = res.data.data
+  } catch {
+    readiness.value = null
+  } finally {
+    loadingReadiness.value = false
+  }
+}
+const batch = ref({ running: false, done: false, stop: false, stopped: false, at: 0, total: 0, made: 0, current: '', skipped: [] as string[] })
+const generateAll = async () => {
+  if (!selectedTermId.value || !students.value.length) return
+  const list = [...students.value]
+  batch.value = { running: true, done: false, stop: false, stopped: false, at: 0, total: list.length, made: 0, current: '', skipped: [] }
+  error.value = null
+  // one at a time: each card writes its comments with the AI, which takes a few seconds
+  for (const st of list) {
+    if (batch.value.stop) { batch.value.stopped = true; break }
+    batch.value.current = `${st.first_name} ${st.last_name}`
+    try {
+      await axios.post(`${API_BASE}/report-cards/${st.id}/${selectedTermId.value}/generate`)
+      batch.value.made++
+    } catch {
+      batch.value.skipped.push(`${st.first_name} ${st.last_name}`)
+    }
+    batch.value.at++
+  }
+  batch.value.running = false
+  batch.value.done = true
+  batch.value.current = ''
+  await loadStudents()
+}
 
 const loadTerms = async () => {
   const res = await axios.get(`${API_BASE}/report-cards/terms`)
@@ -538,7 +642,10 @@ const loadStudents = async () => {
 }
 
 watch([selectedTermId, selectedClassId], () => {
+  if (batch.value.running) batch.value.stop = true
+  batch.value = { running: false, done: false, stop: false, stopped: false, at: 0, total: 0, made: 0, current: '', skipped: [] }
   loadStudents()
+  loadReadiness()
 })
 
 const generateFull = async (studentId: number) => {
@@ -687,6 +794,9 @@ watch(reportTab, async t => {
 onMounted(async () => {
   window.addEventListener('keydown', handleEscape)
   await Promise.all([loadTerms(), loadClasses(), loadAcademicYears()])
+  const q = new URLSearchParams(window.location.search)
+  if (Number(q.get('term_id'))) selectedTermId.value = Number(q.get('term_id'))
+  if (Number(q.get('class_id'))) selectedClassId.value = Number(q.get('class_id'))
   await loadStudents()
 })
 

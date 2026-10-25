@@ -87,6 +87,8 @@ class AuthService extends Service
 
         // Create session
         $this->createSession($user);
+        // the current term follows the calendar (see TermService)
+        TermService::syncCurrent();
 
         return [
             'success' => true,

@@ -33,6 +33,7 @@
     </div>
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-10">
       <div class="lg:col-span-2 flex flex-col gap-4 min-w-0">
+        <EndOfTermCard />
         <SetupChecklist @figures="onFigures" @progress="(d: number, t: number) => (setup = { done: d, total: t })" />
 
         <!-- Shortcuts -->
@@ -611,6 +612,7 @@ import AppIcon from '@/components/common/AppIcon.vue'
 import NoticesTicker from '@/components/dashboard/NoticesTicker.vue'
 import EnrolmentCard from '@/components/admin/EnrolmentCard.vue'
 import SetupChecklist, { type SetupFigures } from '@/components/admin/SetupChecklist.vue'
+import EndOfTermCard from '@/components/admin/EndOfTermCard.vue'
 import { useToastStore } from '@/stores/toast'
 import { useConfirmStore } from '@/stores/confirm'
 

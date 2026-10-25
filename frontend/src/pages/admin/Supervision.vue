@@ -7,6 +7,9 @@
       accent="indigo"
       :active-filters="departmentId ? 1 : 0"
     >
+      <template #actions>
+        <RouterLink :to="{ path: '/admin/supervision/report', query: { ...(termId ? { term_id: String(termId) } : {}), ...(departmentId ? { department_id: String(departmentId) } : {}) } }" class="btn-primary">Print report</RouterLink>
+      </template>
       <template #filters>
         <select v-model.number="termId" aria-label="Term" class="w-full sm:w-auto py-2 pl-3 pr-8 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white">
           <option v-for="t in data?.terms || []" :key="t.id" :value="t.id">{{ t.name }}</option>

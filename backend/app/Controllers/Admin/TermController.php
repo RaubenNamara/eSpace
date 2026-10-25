@@ -40,6 +40,7 @@ class TermController extends Controller
             $this->unauthorized();
             return;
         }
+        \eSpace\App\Services\TermService::syncCurrent();
 
         // Check role (admin or super_admin only)
         if (!$this->hasAnyRole(['admin', 'super_admin'])) {
@@ -264,5 +265,42 @@ class TermController extends Controller
             error_log("TermController::destroy - Error: " . $e->getMessage());
             $this->error('Failed to delete term', 500);
         }
+    }
+
+    /**
+     * Whether the current term follows the calendar (see TermService)
+     * GET /admin/terms/auto-switch
+     */
+    public function autoSwitch(): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+        $this->success(['on' => \eSpace\App\Services\TermService::autoSwitchOn()]);
+    }
+
+    /**
+     * PUT /admin/terms/auto-switch  { on: bool }
+     */
+    public function setAutoSwitch(): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+        if (!$this->hasAnyRole(['admin', 'super_admin'])) {
+            $this->forbidden();
+            return;
+        }
+        $on = (bool) $this->input('on');
+        try {
+            $this->termModel->getDb()->prepare("UPDATE school_settings SET term_auto_switch = ? WHERE id = 1")->execute([$on ? 1 : 0]);
+        } catch (\Throwable $e) {
+            $this->error('This needs a database update first (migration 144).', 409);
+            return;
+        }
+        $switched = $on ? \eSpace\App\Services\TermService::syncCurrent() : null;
+        $this->success(['on' => $on, 'switched_to' => $switched], $on ? 'The current term now follows the calendar' : 'You choose the current term');
     }
 }

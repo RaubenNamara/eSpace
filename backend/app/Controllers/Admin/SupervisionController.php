@@ -52,6 +52,49 @@ class SupervisionController extends Controller
     }
 
     /**
+     * The printable teacher follow-up report
+     * GET /admin/supervision/report?term_id=&department_id=
+     */
+    public function report(): void
+    {
+        if (!$this->allowed()) return;
+        $service = new SupervisionService();
+        $term = $this->pickTerm($service);
+        if (!$term) {
+            $this->notFound('Term not found');
+            return;
+        }
+        $db = \eSpace\Config\Database::getInstance();
+        $departmentId = (int) ($this->query('department_id') ?? 0) ?: null;
+        $department = null;
+        if ($departmentId) {
+            $stmt = $db->prepare("SELECT name FROM departments WHERE id = ? AND deleted_at IS NULL");
+            $stmt->execute([$departmentId]);
+            $department = $stmt->fetchColumn() ?: null;
+        }
+        $stmt = $db->prepare(
+            "SELECT t.name, ay.name AS year_name FROM terms t LEFT JOIN academic_years ay ON ay.id = t.academic_year_id WHERE t.id = ?"
+        );
+        $stmt->execute([(int) $term['id']]);
+        $names = $stmt->fetch() ?: ['name' => '', 'year_name' => ''];
+        $school = $db->query("SELECT school_name, logo_path, box_number, motto FROM school_settings WHERE id = 1")->fetch() ?: null;
+
+        $this->success([
+            'school' => $school,
+            'term' => [
+                'id' => (int) $term['id'],
+                'name' => trim($names['name'] . ($names['year_name'] ? ' ' . $names['year_name'] : '')),
+                'start_date' => $term['start_date'],
+                'end_date' => $term['end_date'],
+            ],
+            'department' => $department,
+            'marking_days' => SupervisionService::MARKING_DAYS,
+            'quiet_days' => SupervisionService::QUIET_DAYS,
+            'generated_at' => date('Y-m-d H:i'),
+        ] + $service->followUpReport($term, $departmentId));
+    }
+
+    /**
      * GET /admin/supervision/teachers/{id}?term_id=
      * One teacher's assessments this term, each with its hand-in and marking figures.
      */

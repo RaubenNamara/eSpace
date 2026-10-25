@@ -769,6 +769,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
 
         // Supervision - every department and teacher: work set, marking, hand-in, reminders
         Router::get('/supervision', 'eSpace\App\Controllers\Admin\SupervisionController@index');
+        Router::get('/supervision/report', 'eSpace\App\Controllers\Admin\SupervisionController@report');
         Router::get('/supervision/teachers/{id}', 'eSpace\App\Controllers\Admin\SupervisionController@teacher');
         Router::post('/supervision/teachers/{id}/remind', 'eSpace\App\Controllers\Admin\SupervisionController@remind');
         Router::get('/supervision/assignments/{id}/missing', 'eSpace\App\Controllers\Admin\SupervisionController@missing');
@@ -930,6 +931,9 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/academic-years/{id}/terms', 'eSpace\App\Controllers\Admin\AcademicYearController@terms');
         
         // Terms
+        Router::get('/terms/auto-switch', 'eSpace\App\Controllers\Admin\TermController@autoSwitch');
+        Router::put('/terms/auto-switch', 'eSpace\App\Controllers\Admin\TermController@setAutoSwitch');
+        Router::get('/end-of-term', 'eSpace\App\Controllers\Admin\EndOfTermController@index');
         Router::get('/terms', 'eSpace\App\Controllers\Admin\TermController@index');
         Router::post('/terms', 'eSpace\App\Controllers\Admin\TermController@store');
         Router::put('/terms/{id}', 'eSpace\App\Controllers\Admin\TermController@update');
@@ -960,6 +964,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         // Report Cards
         Router::get('/report-cards/terms', 'eSpace\App\Controllers\Admin\ReportCardController@listTerms');
         Router::get('/report-cards/students', 'eSpace\App\Controllers\Admin\ReportCardController@listStudents');
+        Router::get('/report-cards/readiness', 'eSpace\App\Controllers\Admin\ReportCardController@readiness');
         Router::post('/report-cards/{studentId}/{termId}/generate', 'eSpace\App\Controllers\Admin\ReportCardController@generate');
         Router::get('/report-cards/{studentId}/{termId}', 'eSpace\App\Controllers\Admin\ReportCardController@show');
         Router::put('/report-cards/{studentId}/{termId}/head-teacher-comment', 'eSpace\App\Controllers\Admin\ReportCardController@updateHeadTeacherComment');

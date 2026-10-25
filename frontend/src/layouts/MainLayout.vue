@@ -940,6 +940,7 @@ const MENU: Record<string, NavGroup[]> = {
       { path: '/admin/marksheet', label: 'Marksheet', icon: 'TableCellsIcon' },
       { path: '/admin/physical-exams', label: 'Physical Exams', icon: 'DocumentTextIcon' },
       { path: '/admin/reports', label: 'Reports', icon: 'ChartBarIcon' },
+      { path: '/admin/end-of-term', label: 'End of term', icon: 'CheckCircleIcon' },
       { path: '/admin/rewards', label: 'Rewards & Badges', icon: 'TrophyIcon' },
       { path: '/admin/charts', label: 'Engagement', icon: 'ChartIcon' }
     ] },

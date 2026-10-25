@@ -243,7 +243,7 @@ export const GUIDE: GuidePart[] = [
       {
         id: 'a-supervise', title: 'Supervising departments and teachers', icon: 'target',
         intro: 'Supervision follows up teaching across the school, one term at a time - down to each teacher and each assessment.',
-        steps: ['Open Supervision and pick the term. The figures at the top count the teachers to follow up - tap one to list only those teachers.', 'Each department card shows work set, scripts waiting to be marked, how many learners handed in, and teachers who have set nothing. Tap a card for just that department\'s teachers.', 'Tap a teacher to see every assessment they set: handed in, waiting to be marked (and for how long), and marked.', 'Tap "didn\'t hand in" on an assessment for those learners by name, class and admission number.', 'Send a reminder notifies the teacher - the message is already written from what needs following up, and you can change it.'],
+        steps: ['Open Supervision and pick the term. The figures at the top count the teachers to follow up - tap one to list only those teachers.', 'Each department card shows work set, scripts waiting to be marked, how many learners handed in, and teachers who have set nothing. Tap a card for just that department\'s teachers.', 'Tap a teacher to see every assessment they set: handed in, waiting to be marked (and for how long), and marked.', 'Tap "didn\'t hand in" on an assessment for those learners by name, class and admission number.', 'Send a reminder notifies the teacher - the message is already written from what needs following up, and you can change it.', 'Print report opens the teacher follow-up report for the term (or one department): who missed the marking deadline, who has not marked yet, who set nothing, whose learners are not handing in, classes with nothing set or published, and who has not signed in. Press Print - it comes out with the school\'s name and lines for the Director of Studies and the head teacher to sign.'],
         tips: ['A teacher is flagged when they have set nothing this term, have scripts waiting more than 7 days, fewer than half their learners hand in, or have not signed in for 14 days.']
       },
       {
@@ -257,8 +257,10 @@ export const GUIDE: GuidePart[] = [
         tips: ['The sheet needs a NAME (or NAMES) column and a STREAM column. Titles, room labels like "S.1A" and blank rows are skipped.']
       },
       {
-        id: 'a-year', title: 'Promotion and the new year', icon: 'clock',
-        steps: ['At the end of the year, use Promotion to move students up to their next class.', 'Their history stays in Academic History.', 'Open the new year\'s first term to start fresh.'],
+        id: 'a-year', title: 'End of term, promotion and the new year', icon: 'clock',
+        intro: 'End of term (in the menu, and on the dashboard in a term\'s last four weeks) lists what is left before the term closes.',
+        steps: ['Marking finished: open the teacher report to see who still has scripts to mark.', 'Paper exam marks entered: every paper exam set to count on report cards needs a mark for each learner.', 'Report cards made: tap a class to open Reports with it chosen. Read the check at the top - each subject\'s assessments, how many learners have a mark, and who has none - then press Generate all. Download Class PDF puts the whole class in one file to print.', 'In the last term of the year, use Promotion to move students up to their next class. Their history stays in Academic History.', 'Add the next term on Terms, so dashboards and report cards move on.'],
+        tips: ['The current term changes by itself when the next term starts. To choose it by hand instead, turn off "Change the current term by date" on Terms.', 'A learner with no mark at all this term cannot have a report card yet - Generate all skips them and lists their names.']
       },
       {
         id: 'a-run', title: 'Reports, analytics and logs', icon: 'chart',
