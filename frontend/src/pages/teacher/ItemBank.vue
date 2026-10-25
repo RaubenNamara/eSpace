@@ -187,10 +187,9 @@
               </button>
               <p v-else-if="resource.status === 'published'" class="mt-1 text-[11px] text-gray-400">No students in this class yet</p>
               <p v-else class="mt-1 flex items-center gap-2 text-[11px]">
-                <span class="px-1.5 py-0.5 rounded-full font-semibold" :class="statusChip(resource.status)">{{ resource.status === 'draft' ? 'Draft' : resource.status === 'pending' ? 'Waiting for HOD' : 'Archived' }}</span>
+                <span class="px-1.5 py-0.5 rounded-full font-semibold" :class="statusChip(resource.status)">{{ resource.status === 'draft' ? 'Draft' : 'Archived' }}</span>
                 <button v-if="resource.status === 'draft'" type="button" class="font-semibold text-indigo-600 dark:text-indigo-300 hover:underline" @click="publishOne(resource)">Publish</button>
               </p>
-              <ApprovalNotice :status="resource.status" :note="resource.review_note" :sent="resource.submitted_at" />
             </div>
             <div class="flex items-center flex-shrink-0">
               <button class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" title="Edit" @click="editResource(resource)">
@@ -411,7 +410,6 @@
 </template>
 
 <script setup lang="ts">
-import ApprovalNotice from '@/components/teacher/ApprovalNotice.vue'
 import { ref, computed, watch, onMounted } from 'vue'
 import axios from 'axios'
 import PageHeader from '@/components/ui/PageHeader.vue'
@@ -501,7 +499,6 @@ const stats = computed(() => ({
 const statItems = computed<StatItem[]>(() => [
   { label: 'All papers', value: stats.value.total, tone: 'gray' },
   { label: 'Published', value: stats.value.published, key: 'published', tone: 'emerald' },
-  ...(resources.value.some(x => x.status === 'pending') ? [{ label: 'Waiting for HOD', value: resources.value.filter(x => x.status === 'pending').length, key: 'pending', tone: 'amber' as const }] : []),
   { label: 'Draft', value: stats.value.draft, key: 'draft', tone: 'amber' },
   { label: 'Archived', value: stats.value.archived, key: 'archived', tone: 'gray' }
 ])
@@ -557,7 +554,7 @@ const audienceLabel = (resource: ItemBankResource) => {
     : resource.class_stream_name ? `${resource.class_name}-${resource.class_stream_name}` : (resource.class_name || 'Whole department')
   return contentRole === 'admin' && resource.department_name && resource.department_name !== resource.subject_name ? `${resource.department_name} · ${who}` : who
 }
-const statusChip = (status: string) => status === 'pending' ? 'bg-amber-100 text-amber-900 dark:bg-amber-900/50 dark:text-amber-100' : status === 'published'
+const statusChip = (status: string) => status === 'published'
   ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200'
   : status === 'draft' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
 
@@ -602,12 +599,7 @@ const bulkSetDownload = async (allow: boolean) => {
 
 const publishOne = async (resource: ItemBankResource) => {
   try {
-    const res = await axios.post(`${contentApi}/bulk-status`, { ids: [resource.id], status: 'published' })
-    if (res.data?.data?.pending) {
-      toast.info('Sent to your HOD for approval - students will see it once it is approved')
-      await loadResources()
-      return
-    }
+    await axios.post(`${contentApi}/bulk-status`, { ids: [resource.id], status: 'published' })
     toast.success(`"${resource.title}" is now visible to students`)
     await loadResources()
   } catch (error: any) {
@@ -818,7 +810,7 @@ const editResource = (resource: ItemBankResource) => {
     classTarget: resource.class_group_name
       ? { scope: 'all_streams', class_id: null, class_group_name: resource.class_group_name }
       : resource.class_id ? { scope: 'stream', class_id: resource.class_id, class_group_name: null } : { scope: 'department', class_id: null, class_group_name: null },
-    status: resource.status === 'pending' ? 'published' : resource.status,
+    status: resource.status,
     allow_download: !!Number(resource.allow_download),
     file: null
   }

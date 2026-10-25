@@ -571,10 +571,6 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/notices/{id}/readers', 'eSpace\App\Controllers\NoticeController@readers');
         Router::delete('/notices/{id}', 'eSpace\App\Controllers\NoticeController@destroy');
         // Dashboard
-        // teachers' work waiting for the HOD's approval (see Services/ContentApproval)
-        Router::get('/approvals', 'eSpace\App\Controllers\HOD\ApprovalController@index');
-        Router::post('/approvals/{type}/{id}/approve', 'eSpace\App\Controllers\HOD\ApprovalController@approve');
-        Router::post('/approvals/{type}/{id}/return', 'eSpace\App\Controllers\HOD\ApprovalController@returnToTeacher');
         Router::get('/mastery-overview', 'eSpace\App\Controllers\HOD\MasteryOverviewController@index');
         Router::get('/term-report', 'eSpace\App\Controllers\HOD\TermReportController@index');
         Router::get('/early-warning', 'eSpace\App\Controllers\Teacher\EarlyWarningController@index');
@@ -593,9 +589,6 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/department/stats', 'eSpace\App\Controllers\HOD\DepartmentController@getStats');
         Router::get('/department/teachers', 'eSpace\App\Controllers\HOD\DepartmentController@getTeachers');
         Router::get('/department/subjects', 'eSpace\App\Controllers\HOD\DepartmentController@getSubjects');
-        Router::get('/department/approvals', 'eSpace\App\Controllers\HOD\DepartmentController@getApprovals');
-        Router::post('/department/approve', 'eSpace\App\Controllers\HOD\DepartmentController@approveContent');
-        Router::post('/department/reject', 'eSpace\App\Controllers\HOD\DepartmentController@rejectContent');
         
         // Department Analytics
         Router::get('/analytics', 'eSpace\App\Controllers\HOD\AnalyticsController@index');
@@ -686,9 +679,6 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::post('/chat/conversations/{id}/send', 'eSpace\App\Controllers\HOD\ChatController@sendMessage');
         Router::post('/chat/conversations/{id}/activity', 'eSpace\App\Controllers\HOD\ChatController@activity');
         Router::post('/chat/conversations/{id}/clear', 'eSpace\App\Controllers\HOD\ChatController@clearChat');
-        // watching over the department's students' chats, read only
-        Router::get('/chat/monitor', 'eSpace\App\Controllers\HOD\ChatController@monitor');
-        Router::get('/chat/monitor/{id}', 'eSpace\App\Controllers\HOD\ChatController@monitorMessages');
 
         // Assignments - read-only oversight + "Preview as Student"
         Router::get('/assignments', 'eSpace\App\Controllers\HOD\AssignmentController@index');

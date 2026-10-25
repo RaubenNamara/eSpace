@@ -42,7 +42,7 @@ export const AUDIENCES: Audience[] = [
       { icon: 'target', title: 'Curriculum coverage', text: 'Which topics have outcomes assessed, an AOI, constructs and notes - for every class and subject.' },
       { icon: 'trend', title: 'Engagement', text: 'Who is reading, watching and attending, and who has gone quiet - so support starts early.' },
       { icon: 'clipboard', title: 'Marksheets and report cards', text: 'Every mark for a class in one sheet, and competency report cards generated at the end of term.' },
-      { icon: 'users', title: 'Departments that run themselves', text: 'Heads of department approve shared content and follow their teachers\' classes in their own view.' },
+      { icon: 'users', title: 'Departments that run themselves', text: 'Heads of department follow their teachers\' classes, coverage and results in their own view, and message their teachers in one place.' },
       { icon: 'wrench', title: 'Set up for you', text: 'Classes, streams, subjects, terms and accounts are set up with you, and promotion between years is one step.' },
       { icon: 'check-circle', title: 'Your data, your school', text: 'Content and results belong to the school, only the right roles see them, and admins can back everything up.' }
     ],

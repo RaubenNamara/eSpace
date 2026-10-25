@@ -1,6 +1,6 @@
 <template>
   <!-- The HOD's home, in the same format as every role's: notices sliding past, then cards with
-       dark-green title bars - what waits for approval, what was set lately, shortcuts, who may be
+       dark-green title bars - what was set lately, shortcuts, who may be
        slipping, and each teacher's week. Each card shows a few and opens up for the rest. The
        curriculum figures live in Term report and Analytics. -->
   <div class="w-full">
@@ -113,7 +113,7 @@ import AppIcon from '@/components/common/AppIcon.vue'
 import NoticesTicker from '@/components/dashboard/NoticesTicker.vue'
 import { initials, niceName, timeAgo } from '@/components/dashboard/teacher/time'
 
-interface Stats { teachers_count: number; students_count: number; subjects_count: number; pending_approvals: number }
+interface Stats { teachers_count: number; students_count: number; subjects_count: number }
 interface TeacherRow { id: number; name: string; assessments_count: number; enotes_count: number; to_mark_count: number; last_active_at: string | null; last_login_at: string | null; is_online: boolean }
 
 const QUICK = [

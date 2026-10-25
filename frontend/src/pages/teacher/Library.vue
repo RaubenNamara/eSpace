@@ -186,10 +186,9 @@
               </button>
               <p v-else-if="book.status === 'published'" class="mt-1 text-[11px] text-gray-400">No students in this class yet</p>
               <p v-else class="mt-1 flex items-center gap-2 text-[11px]">
-                <span class="px-1.5 py-0.5 rounded-full font-semibold" :class="statusChip(book.status)">{{ book.status === 'draft' ? 'Draft' : book.status === 'pending' ? 'Waiting for HOD' : 'Archived' }}</span>
+                <span class="px-1.5 py-0.5 rounded-full font-semibold" :class="statusChip(book.status)">{{ book.status === 'draft' ? 'Draft' : 'Archived' }}</span>
                 <button v-if="book.status === 'draft'" type="button" class="font-semibold text-emerald-600 dark:text-emerald-300 hover:underline" @click="publishOne(book)">Publish</button>
               </p>
-              <ApprovalNotice :status="book.status" :note="book.review_note" :sent="book.submitted_at" />
             </div>
             <div class="flex items-center flex-shrink-0">
               <button class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" title="Edit" @click="editBook(book)">
@@ -485,7 +484,6 @@
 </template>
 
 <script setup lang="ts">
-import ApprovalNotice from '@/components/teacher/ApprovalNotice.vue'
 import { ref, computed, watch, onMounted } from 'vue'
 import axios from 'axios'
 import PageHeader from '@/components/ui/PageHeader.vue'
@@ -589,7 +587,6 @@ const stats = computed(() => ({
 const statItems = computed<StatItem[]>(() => [
   { label: 'All books', value: stats.value.total, tone: 'gray' },
   { label: 'Published', value: stats.value.published, key: 'published', tone: 'emerald' },
-  ...(books.value.some(x => x.status === 'pending') ? [{ label: 'Waiting for HOD', value: books.value.filter(x => x.status === 'pending').length, key: 'pending', tone: 'amber' as const }] : []),
   { label: 'Draft', value: stats.value.draft, key: 'draft', tone: 'amber' },
   { label: 'Archived', value: stats.value.archived, key: 'archived', tone: 'gray' }
 ])
@@ -666,7 +663,7 @@ const audienceLabel = (book: LibraryBook) => {
 }
 // Share of the class that has opened it
 const reach = (book: LibraryBook) => book.audience ? Math.min(100, Math.round(((book.readers || 0) / book.audience) * 100)) : 0
-const statusChip = (status: string) => status === 'pending' ? 'bg-amber-100 text-amber-900 dark:bg-amber-900/50 dark:text-amber-100' : status === 'published'
+const statusChip = (status: string) => status === 'published'
   ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200'
   : status === 'draft' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
 
@@ -711,12 +708,7 @@ const bulkSetDownload = async (allow: boolean) => {
 
 const publishOne = async (book: LibraryBook) => {
   try {
-    const res = await axios.post(`${libApi}/bulk-status`, { ids: [book.id], status: 'published' })
-    if (res.data?.data?.pending) {
-      toast.info('Sent to your HOD for approval - students will see it once it is approved')
-      await loadBooks()
-      return
-    }
+    await axios.post(`${libApi}/bulk-status`, { ids: [book.id], status: 'published' })
     toast.success(`"${book.title}" is now on your students' shelves`)
     await loadBooks()
   } catch (error: any) {
@@ -950,7 +942,7 @@ const editBook = (book: LibraryBook) => {
     classTarget: book.class_group_name
       ? { scope: 'all_streams', class_id: null, class_group_name: book.class_group_name }
       : book.class_id ? { scope: 'stream', class_id: book.class_id, class_group_name: null } : { scope: 'department', class_id: null, class_group_name: null },
-    status: book.status === 'pending' ? 'published' : book.status,
+    status: book.status,
     allow_download: !!book.allow_download,
     author: book.author || '',
     file: null

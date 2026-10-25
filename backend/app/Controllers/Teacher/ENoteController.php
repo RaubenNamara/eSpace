@@ -9,7 +9,6 @@ use eSpace\App\Controllers\Controller;
 use eSpace\App\Services\NotificationService;
 use eSpace\App\Services\ENoteDuplicateGuard;
 use eSpace\App\Services\ENoteAssessmentReach;
-use eSpace\App\Services\ContentApproval;
 use eSpace\App\Utils\HtmlSanitizer;
 
 /**
@@ -889,9 +888,6 @@ class ENoteController extends Controller
             }
         }
 
-        // publishing in a department with an HOD sends it for approval first
-        $sanitizedData['status'] = ContentApproval::statusFor($db, 'enote', null, (int) $sanitizedData['department_id'], (int) $teacherId, (string) $sanitizedData['status']);
-
         // Insert topic
         $sql = "INSERT INTO enote_topics (teacher_id, class_id, class_group_name, subject_id, department_id, title, description, learning_outcomes, status, created_at, updated_at)
                 VALUES (:teacher_id, :class_id, :class_group_name, :subject_id, :department_id, :title, :description, :learning_outcomes, :status, NOW(), NOW())";
@@ -920,15 +916,11 @@ class ENoteController extends Controller
                 );
             }
 
-            if ($sanitizedData['status'] === 'pending') {
-                ContentApproval::submitted($db, 'enote', [$topicId]);
-            }
-
             $this->success([
                 'id' => $topicId,
                 'title' => $sanitizedData['title'],
                 'status' => $sanitizedData['status']
-            ], $sanitizedData['status'] === 'pending' ? 'Topic created and sent to your HOD for approval' : 'Topic created successfully');
+            ], 'Topic created successfully');
         } catch (\PDOException $e) {
             error_log("Failed to create topic: " . $e->getMessage());
             $this->error('Failed to create topic', 500);
@@ -1016,11 +1008,7 @@ class ENoteController extends Controller
         }
 
         $oldStatus = $topic['status'];
-        // asking to publish may mean "send to the HOD" (see ContentApproval)
-        $requestedStatus = $data['status'] ?? $oldStatus;
-        $newStatus = !empty($data['status'])
-            ? ContentApproval::statusFor($db, 'enote', (int) $id, (int) $topic['department_id'], (int) $teacherId, (string) $data['status'])
-            : $oldStatus;
+        $newStatus = $data['status'] ?? $oldStatus;
 
         // Sanitize input
         $updates = [];
@@ -1062,7 +1050,7 @@ class ENoteController extends Controller
 
         if (!empty($data['status'])) {
             $updates[] = 'status = :status';
-            $params['status'] = $newStatus;
+            $params['status'] = $data['status'];
         }
 
         // One-time link from this eNote topic to an admin-authored curriculum-bank topic, so a
@@ -1118,7 +1106,7 @@ class ENoteController extends Controller
             return;
         }
 
-        if ($requestedStatus === 'published') {
+        if ($newStatus === 'published') {
             $finalTitle = $params['title'] ?? $topic['title'];
             $finalClassId = array_key_exists('class_id', $params) ? $params['class_id'] : ($topic['class_id'] !== null ? (int) $topic['class_id'] : null);
             $finalGroup = array_key_exists('class_group_name', $params) ? $params['class_group_name'] : $topic['class_group_name'];
@@ -1135,10 +1123,6 @@ class ENoteController extends Controller
         try {
             $stmt = $db->prepare($sql);
             $stmt->execute($params);
-
-            if ($newStatus === 'pending') {
-                ContentApproval::submitted($db, 'enote', [(int) $id]);
-            }
 
             // Handle status changes
             if ($oldStatus !== 'published' && $newStatus === 'published') {
@@ -1264,14 +1248,6 @@ class ENoteController extends Controller
             $topic['class_id'] !== null ? (int) $topic['class_id'] : null, $topic['class_group_name'], [$id]);
         if ($clash) {
             $this->error(ENoteDuplicateGuard::message($clash, $topic['title']), 422);
-            return;
-        }
-
-        // waiting for the HOD first?
-        if (ContentApproval::statusFor($db, 'enote', $id, (int) $topic['department_id'], (int) $teacherId, 'published') === 'pending') {
-            $db->prepare("UPDATE enote_topics SET status = 'pending', updated_at = NOW() WHERE id = ?")->execute([$id]);
-            ContentApproval::submitted($db, 'enote', [$id]);
-            $this->success(['status' => 'pending'], 'Sent to your HOD for approval - students will see it once it is approved');
             return;
         }
 
@@ -1460,7 +1436,6 @@ class ENoteController extends Controller
             // the topics that are newly going live, so their students hear about them (as with a single publish)
             $newlyLive = [];
             $blocked = [];
-            $sentForApproval = [];
             if ($status === 'published') {
                 $stmt = $db->prepare("SELECT id, title, subject_id, department_id, class_id, class_group_name FROM enote_topics WHERE id IN ($placeholders) AND status <> 'published'");
                 $stmt->execute($ids);
@@ -1473,16 +1448,9 @@ class ENoteController extends Controller
                         $blocked[] = ENoteDuplicateGuard::message($clash, $t['title']);
                         continue;
                     }
-                    // in a department with an HOD it waits for approval first
-                    if (ContentApproval::statusFor($db, 'enote', (int) $t['id'], (int) $t['department_id'], (int) $teacherId, 'published') === 'pending') {
-                        $db->prepare("UPDATE enote_topics SET status = 'pending', updated_at = NOW() WHERE id = ?")->execute([(int) $t['id']]);
-                        $sentForApproval[] = (int) $t['id'];
-                        continue;
-                    }
                     $goLive->execute([(int) $t['id']]);
                     $newlyLive[] = $t;
                 }
-                ContentApproval::submitted($db, 'enote', $sentForApproval);
             }
 
             if ($status !== 'published') {
@@ -1513,14 +1481,12 @@ class ENoteController extends Controller
 
             if ($status === 'published') {
                 $n = count($newlyLive);
-                $msg = $n . ' topic(s) published'
-                    . ($sentForApproval ? ' - ' . count($sentForApproval) . ' sent to your HOD for approval' : '')
-                    . ($blocked ? ' - ' . count($blocked) . ' not published: ' . implode(' ', array_unique($blocked)) : '');
-                if ($n === 0 && !$sentForApproval && $blocked) {
+                $msg = $n . ' topic(s) published' . ($blocked ? ' - ' . count($blocked) . ' not published: ' . implode(' ', array_unique($blocked)) : '');
+                if ($n === 0 && $blocked) {
                     $this->error($msg, 422, ['blocked' => array_values(array_unique($blocked))]);
                     return;
                 }
-                $this->success(['updated' => $n, 'pending' => count($sentForApproval), 'blocked' => array_values(array_unique($blocked))], $msg);
+                $this->success(['updated' => $n, 'blocked' => array_values(array_unique($blocked))], $msg);
                 return;
             }
             $this->success(['updated' => count($ids)], count($ids) . ' topic(s) updated');
@@ -2209,8 +2175,6 @@ class ENoteController extends Controller
         if (!in_array($copyStatus, ['draft', 'published'], true)) {
             $copyStatus = 'draft';
         }
-        // copies of a topic the HOD already approved go straight out; otherwise they wait too
-        $copyStatus = ContentApproval::statusFor($db, 'enote', (int) $id, $departmentId, (int) $teacherId, $copyStatus);
 
         // The group id every duplicate (and the source topic itself) will share, so a later edit
         // to any one of them can find and mirror onto the rest (see getLinkedTopicIds()) - a
@@ -2353,9 +2317,6 @@ class ENoteController extends Controller
                     }
                 }
 
-                if ($copyStatus === 'published') {
-                    $db->prepare("UPDATE enote_topics SET approved_at = NOW() WHERE id = ?")->execute([$newTopicId]);
-                }
                 $created[] = [
                     'id' => $newTopicId,
                     'status' => $copyStatus,
@@ -2374,10 +2335,6 @@ class ENoteController extends Controller
         if (empty($created)) {
             $this->error('Could not duplicate to any of the selected classes/streams', 422, ['skipped' => $skipped]);
             return;
-        }
-
-        if ($copyStatus === 'pending') {
-            ContentApproval::submitted($db, 'enote', array_column($created, 'id'));
         }
 
         // The topic's LOA/AOI come with it to every published copy's streams (a draft copy's

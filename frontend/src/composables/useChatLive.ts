@@ -72,7 +72,8 @@ export function useChatLive(apiBase: string, active: Ref<Conversation | null>) {
     const isGroup = conv.type !== 'direct'
     const activity = activityText(status.value?.activity, isGroup)
     if (activity) return { text: activity, live: true }
-    if (isGroup) return { text: conv.type === 'group' ? 'Study group' : 'Class group', live: false }
+    // a 'group' is a study group for students; for staff it is their department's teachers group
+    if (isGroup) return { text: conv.type === 'group' ? (apiBase.includes('/student/') ? 'Study group' : 'Department teachers') : 'Class group', live: false }
     const presence = status.value?.presence ?? { is_online: !!conv.is_online, last_active_at: conv.last_active_at ?? null }
     if (presence.is_online) return { text: 'online', live: true }
     return { text: lastSeen(presence.last_active_at, 'seen_seconds_ago' in presence ? presence.seen_seconds_ago : null), live: false }

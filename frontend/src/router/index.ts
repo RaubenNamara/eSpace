@@ -98,7 +98,6 @@ const HODTeachers = () => import('../pages/hod/Teachers.vue')
 const HODStudents = () => import('../pages/hod/Students.vue')
 const HODMarksheet = () => import('../pages/hod/Marksheet.vue')
 const HODPhysicalExams = () => import('../pages/hod/PhysicalExams.vue')
-const HODApprovals = () => import('../pages/hod/Approvals.vue')
 // HODs and admins share the teacher's eLibrary shelves (the page adapts to the role)
 const HODLibrary = () => import('../pages/teacher/Library.vue')
 const HODENotes = () => import('../pages/hod/ENotes.vue')
@@ -368,7 +367,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'subjects', redirect: '/hod/dashboard' },
       { path: 'reports', redirect: '/hod/dashboard' },
       { path: 'term-report', name: 'HODTermReport', component: () => import('../pages/hod/TermReport.vue') },
-      { path: 'approvals', name: 'HODApprovals', component: HODApprovals },
+      { path: 'approvals', redirect: '/hod/dashboard' },
       { path: 'library', name: 'HODLibrary', component: HODLibrary },
       { path: 'enotes', name: 'HODENotes', component: HODENotes },
       { path: 'enotes/:id', name: 'HODENoteTopic', component: ENotePreview, meta: { previewRole: 'hod', immersiveReader: true } },

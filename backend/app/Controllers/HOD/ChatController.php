@@ -10,12 +10,9 @@ use eSpace\App\Services\ChatService;
 /**
  * HOD Chat Controller
  *
- * The HOD chats like anyone else - with any teacher in their department, any student enrolled
- * in it, and any of its classes (the class group chat) - as participant role 'hod'.
- *
- * The HOD also watches over their department's students' chats, read only (/hod/chat/monitor):
- * teachers with students, and students with students and in class groups. Conversations with no
- * student in them (colleagues talking to each other) are not shown, nor the HOD's own chats.
+ * The HOD messages the teachers of their department - one teacher at a time, or all of them at
+ * once in the department's teachers group - as participant role 'hod'. The HOD only ever sees
+ * chats they are in; other people's chats stay private.
  */
 class ChatController extends Controller
 {
@@ -60,23 +57,16 @@ class ChatController extends Controller
         return ['id' => $hodId, 'department_id' => $departmentId];
     }
 
-    // ------------------------------------------------------------------ the HOD's own chats
-
     /**
-     * Who the HOD can message: the department's teachers, its students, and its classes
-     * GET /hod/chat/contacts
+     * The department's active teachers - their main department, or also assigned to it - except
+     * the HOD's own teacher account (an HOD who also teaches)
      */
-    public function contacts(): void
+    private function departmentTeachers(int $departmentId): array
     {
-        $me = $this->me();
-        if (!$me) {
-            return;
-        }
-        $db = $this->chat->getDb();
-        $dept = $me['department_id'];
-
-        // teachers of the department - their main department, or also assigned to it
-        $stmt = $db->prepare(
+        $own = $this->chat->getDb()->prepare("SELECT teacher_id FROM hods WHERE id = ?");
+        $own->execute([$this->hodId()]);
+        $ownTeacherId = (int) ($own->fetchColumn() ?: 0);
+        $stmt = $this->chat->getDb()->prepare(
             "SELECT DISTINCT t.id, t.first_name, t.last_name, 'teacher' AS role, d.name AS department_name
              FROM teachers t
              LEFT JOIN departments d ON d.id = t.department_id
@@ -86,32 +76,57 @@ class ChatController extends Controller
              )
              ORDER BY t.first_name, t.last_name"
         );
-        $stmt->execute(['dept' => $dept, 'dept2' => $dept]);
-        $teachers = $this->chat->attachPresence($stmt->fetchAll());
+        $stmt->execute(['dept' => $departmentId, 'dept2' => $departmentId]);
+        return array_values(array_filter($stmt->fetchAll(), fn ($t) => (int) $t['id'] !== $ownTeacherId));
+    }
 
+    /**
+     * Who the HOD can message: the department's teachers (one at a time, or all together)
+     * GET /hod/chat/contacts
+     */
+    public function contacts(): void
+    {
+        $me = $this->me();
+        if (!$me) {
+            return;
+        }
+        $stmt = $this->chat->getDb()->prepare("SELECT name FROM departments WHERE id = ?");
+        $stmt->execute([$me['department_id']]);
+        $this->success([
+            'colleagues' => $this->chat->attachPresence($this->departmentTeachers($me['department_id'])),
+            'department_name' => (string) ($stmt->fetchColumn() ?: ''),
+        ]);
+    }
+
+    /**
+     * The department's teachers group - one per department, started by its HOD. Everyone who
+     * teaches in the department now is added each time it is opened (a new teacher joins it then).
+     */
+    private function teachersGroup(array $me): int
+    {
+        $db = $this->chat->getDb();
         $stmt = $db->prepare(
-            "SELECT DISTINCT s.id, s.first_name, s.last_name, 'student' AS role
-             FROM students s
-             INNER JOIN student_department_enrollments sde ON sde.student_id = s.id
-             WHERE sde.department_id = :dept AND sde.deleted_at IS NULL AND s.deleted_at IS NULL
-             ORDER BY s.first_name, s.last_name"
+            "SELECT id FROM chat_conversations
+             WHERE type = 'group' AND created_by_role = 'hod' AND department_id = ? AND class_id IS NULL AND deleted_at IS NULL
+             ORDER BY id LIMIT 1"
         );
-        $stmt->execute(['dept' => $dept]);
-        $students = $this->chat->attachPresence($stmt->fetchAll());
-
-        $stmt = $db->prepare(
-            "SELECT c.id AS class_id, c.name AS class_name, c.stream_name, sde.department_id, d.name AS department_name, COUNT(DISTINCT sde.student_id) AS students
-             FROM student_department_enrollments sde
-             INNER JOIN classes c ON c.id = sde.class_id
-             LEFT JOIN departments d ON d.id = sde.department_id
-             WHERE sde.department_id = :dept AND sde.deleted_at IS NULL AND c.deleted_at IS NULL
-             GROUP BY c.id, c.name, c.stream_name, sde.department_id, d.name
-             ORDER BY c.name, c.stream_name"
-        );
-        $stmt->execute(['dept' => $dept]);
-        $classes = $stmt->fetchAll();
-
-        $this->success(['colleagues' => $teachers, 'students' => $students, 'classes' => $classes]);
+        $stmt->execute([$me['department_id']]);
+        $id = (int) ($stmt->fetchColumn() ?: 0);
+        if (!$id) {
+            $stmt = $db->prepare("SELECT name FROM departments WHERE id = ?");
+            $stmt->execute([$me['department_id']]);
+            $name = trim((string) ($stmt->fetchColumn() ?: 'Department')) . ' teachers';
+            $db->prepare(
+                "INSERT INTO chat_conversations (type, name, created_by, created_by_role, class_id, department_id, created_at, updated_at)
+                 VALUES ('group', ?, ?, 'hod', NULL, ?, NOW(), NOW())"
+            )->execute([mb_substr($name, 0, 100), $me['id'], $me['department_id']]);
+            $id = (int) $db->lastInsertId();
+        }
+        $this->chat->ensureParticipant($id, $me['id'], 'hod');
+        foreach ($this->departmentTeachers($me['department_id']) as $t) {
+            $this->chat->ensureParticipant($id, (int) $t['id'], 'teacher');
+        }
+        return $id;
     }
 
     /**
@@ -139,8 +154,8 @@ class ChatController extends Controller
     }
 
     /**
-     * Open (or start) a chat with a teacher or student of the department, or a class's group chat
-     * POST /hod/chat/conversations  { contact_id, contact_role } | { class_id }
+     * Open (or start) a chat with one teacher of the department, or the department's teachers group
+     * POST /hod/chat/conversations  { contact_id, contact_role: 'teacher' } | { all_teachers: true }
      */
     public function createConversation(): void
     {
@@ -148,41 +163,24 @@ class ChatController extends Controller
         if (!$me) {
             return;
         }
-        $db = $this->chat->getDb();
         $data = $this->input();
 
-        if (!empty($data['class_id'])) {
-            $classId = (int) $data['class_id'];
-            $stmt = $db->prepare("SELECT 1 FROM student_department_enrollments WHERE class_id = ? AND department_id = ? AND deleted_at IS NULL LIMIT 1");
-            $stmt->execute([$classId, $me['department_id']]);
-            if (!$stmt->fetch()) {
-                $this->error('That class has no students in your department', 403);
-                return;
-            }
-            $conversationId = $this->chat->findOrCreateClassConversation($classId, $me['department_id'], $me['id'], 'hod');
-            $this->chat->ensureParticipant($conversationId, $me['id'], 'hod');
-            $this->success(['id' => $conversationId]);
+        if (!empty($data['all_teachers'])) {
+            $this->success(['id' => $this->teachersGroup($me)]);
             return;
         }
 
         $contactId = (int) ($data['contact_id'] ?? 0);
-        $contactRole = (string) ($data['contact_role'] ?? '');
-        if (!$contactId || !in_array($contactRole, ['student', 'teacher'], true)) {
-            $this->validationError(['contact_id' => 'A valid contact is required']);
+        if (!$contactId || ($data['contact_role'] ?? '') !== 'teacher') {
+            $this->validationError(['contact_id' => 'Choose a teacher in your department']);
             return;
         }
-        if ($contactRole === 'teacher') {
-            $stmt = $db->prepare("SELECT 1 FROM teachers WHERE id = ? AND deleted_at IS NULL AND is_active = 1");
-            $stmt->execute([$contactId]);
-        } else {
-            $stmt = $db->prepare("SELECT 1 FROM student_department_enrollments WHERE student_id = ? AND department_id = ? AND deleted_at IS NULL LIMIT 1");
-            $stmt->execute([$contactId, $me['department_id']]);
-        }
-        if (!$stmt->fetch()) {
-            $this->error('That contact is not reachable', 403);
+        $inDepartment = in_array($contactId, array_map(fn ($t) => (int) $t['id'], $this->departmentTeachers($me['department_id'])), true);
+        if (!$inDepartment) {
+            $this->error('You can message the teachers of your department', 403);
             return;
         }
-        $this->success(['id' => $this->chat->findOrCreateDirectConversation($me['id'], 'hod', $contactId, $contactRole)]);
+        $this->success(['id' => $this->chat->findOrCreateDirectConversation($me['id'], 'hod', $contactId, 'teacher')]);
     }
 
     /**
@@ -271,109 +269,5 @@ class ChatController extends Controller
             return;
         }
         $this->success([], 'Chat cleared');
-    }
-
-    // ------------------------------------------------------------------ watching over the department
-
-    /**
-     * The department's students' chats, read only
-     * GET /hod/chat/monitor
-     */
-    public function monitor(): void
-    {
-        $me = $this->me();
-        if (!$me) {
-            return;
-        }
-        $people = $this->departmentPeople($me['department_id']);
-        $list = array_values(array_filter(
-            $this->chat->listConversationsInScope($me['department_id']),
-            fn ($c) => $this->watchable($c, $people, $me)
-        ));
-        $this->success(['conversations' => $list]);
-    }
-
-    /**
-     * GET /hod/chat/monitor/{id}
-     */
-    public function monitorMessages($id): void
-    {
-        $me = $this->me();
-        if (!$me) {
-            return;
-        }
-        $conversationId = (int) $id;
-        if (!$this->chat->isConversationInDepartmentScope($conversationId, $me['department_id'])) {
-            $this->notFound('Conversation not found');
-            return;
-        }
-        $db = $this->chat->getDb();
-        $stmt = $db->prepare("SELECT type, department_id FROM chat_conversations WHERE id = ?");
-        $stmt->execute([$conversationId]);
-        $conv = $stmt->fetch() ?: [];
-        $stmt = $db->prepare("SELECT user_id AS id, user_role AS role FROM chat_participants WHERE conversation_id = ?");
-        $stmt->execute([$conversationId]);
-        $conv['participants'] = $stmt->fetchAll();
-        if (!$this->watchable($conv, $this->departmentPeople($me['department_id']), $me)) {
-            $this->notFound('Conversation not found');
-            return;
-        }
-        $this->success(['messages' => $this->chat->getMessagesReadOnly($conversationId)]);
-    }
-
-    /** The department's teachers and students, as id => true */
-    private function departmentPeople(int $departmentId): array
-    {
-        $db = $this->chat->getDb();
-        $stmt = $db->prepare(
-            "SELECT t.id FROM teachers t WHERE t.deleted_at IS NULL AND (t.department_id = :d
-                OR EXISTS (SELECT 1 FROM teacher_department_assignments tda WHERE tda.teacher_id = t.id AND tda.department_id = :d2 AND tda.deleted_at IS NULL))"
-        );
-        $stmt->execute(['d' => $departmentId, 'd2' => $departmentId]);
-        $teachers = array_fill_keys(array_map('intval', $stmt->fetchAll(\PDO::FETCH_COLUMN)), true);
-        $stmt = $db->prepare("SELECT DISTINCT student_id FROM student_department_enrollments WHERE department_id = ? AND deleted_at IS NULL");
-        $stmt->execute([$departmentId]);
-        $students = array_fill_keys(array_map('intval', $stmt->fetchAll(\PDO::FETCH_COLUMN)), true);
-        return ['teachers' => $teachers, 'students' => $students];
-    }
-
-    /**
-     * What the HOD may watch: this department's class groups, and chats between this
-     * department's teachers and students or among its students. Never a chat the HOD is in,
-     * nor one without a student (colleagues talking to each other).
-     */
-    private function watchable(array $conv, array $people, array $me): bool
-    {
-        $participants = $conv['participants'] ?? [];
-        $students = 0;
-        $ourStudents = 0;
-        $teachers = 0;
-        $ourTeachers = 0;
-        foreach ($participants as $p) {
-            $role = $p['role'] ?? '';
-            $id = (int) ($p['id'] ?? 0);
-            if ($role === 'hod' && $id === $me['id']) {
-                return false;
-            }
-            if ($role === 'student') {
-                $students++;
-                if (isset($people['students'][$id])) {
-                    $ourStudents++;
-                }
-            } elseif ($role === 'teacher') {
-                $teachers++;
-                if (isset($people['teachers'][$id])) {
-                    $ourTeachers++;
-                }
-            }
-        }
-        if (($conv['type'] ?? '') === 'class') {
-            return (int) ($conv['department_id'] ?? 0) === $me['department_id'];
-        }
-        if (!$students || !$ourStudents) {
-            return false;
-        }
-        // a teacher in it must be one of this department's
-        return $teachers === 0 || $ourTeachers > 0;
     }
 }

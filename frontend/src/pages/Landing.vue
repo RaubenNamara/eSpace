@@ -561,9 +561,9 @@ const ROLES = [
   {
     key: 'hod', label: 'HODs', page: '/for/teachers',
     headline: 'Your whole department, at a glance.',
-    text: 'See curriculum coverage, engagement and results across every teacher and class in your department - and approve what goes out to students.',
-    points: ['Department-wide dashboards', 'Approve shared content', 'Curriculum coverage by topic', 'Marksheets for any class', 'Engagement across classes', 'Teach your own classes too'],
-    day: [{ time: '8:00', what: 'Checks coverage: two topics still have no AOI' }, { time: '12:00', what: 'Approves new eLibrary books for S.3' }, { time: '3:00', what: 'Compares marksheets across all streams' }]
+    text: 'See curriculum coverage, engagement and results across every teacher and class in your department - and message your teachers in one place.',
+    points: ['Department-wide dashboards', 'Message all your teachers at once', 'Curriculum coverage by topic', 'Marksheets for any class', 'Engagement across classes', 'Teach your own classes too'],
+    day: [{ time: '8:00', what: 'Checks coverage: two topics still have no AOI' }, { time: '12:00', what: 'Messages all the teachers about Friday\'s meeting' }, { time: '3:00', what: 'Compares marksheets across all streams' }]
   },
   {
     key: 'admin', label: 'Admins', page: '/for/schools',

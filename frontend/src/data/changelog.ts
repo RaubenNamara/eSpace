@@ -18,9 +18,9 @@ export const CHANGELOG: ChangelogEntry[] = [
     text: 'Students work through a real repair: find out why a laptop says "No bootable device" from the screen, the BIOS and the owner, pack the right toolkit and choose the matching SSD, then open the laptop in 3D - screws, the one hidden under a foot, the battery first - and swap the failed drive. They make a Windows installer USB with Microsoft\'s own tool and install Windows screen by screen, through to activation and updates.'
   },
   {
-    date: '2026-10-23', area: 'Heads of department', icon: 'check-circle',
-    title: 'HODs approve teachers\' work, and chat with the department',
-    text: 'eNotes, library books, Item Bank papers and videos now wait for the head of department, grouped by class on a new Approvals page. Approve to publish it, or return it to the teacher with a note. The HOD can also see which teachers are online now and when the others were last on, message any teacher, student or whole class in the department, and read their students\' chats.'
+    date: '2026-10-23', area: 'Heads of department', icon: 'chat',
+    title: 'HODs see who is online, and message their teachers',
+    text: 'On the dashboard and the Teachers page a green dot shows which teachers are online now, and the others show when they were last on. The HOD can message any teacher in the department, or all of them at once in the department\'s teachers group.'
   },
   {
     date: '2026-10-22', area: 'ICT Lab', icon: 'keyboard',

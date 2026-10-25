@@ -20,6 +20,23 @@
       <!-- Step 1: choose a group -->
       <div v-if="mode === 'choose'" class="flex-1 overflow-y-auto p-4 space-y-2">
         <button
+          v-if="everyone"
+          type="button"
+          @click="$emit('select-everyone')"
+          class="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border border-gray-200 dark:border-white/10 hover:border-indigo-300 dark:hover:border-indigo-700 hover:bg-gray-50 dark:hover:bg-[rgb(55_65_81)] transition-colors text-left"
+        >
+          <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-white bg-indigo-600">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-4-4"></path>
+            </svg>
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ everyone.label }}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">{{ everyone.detail }}</p>
+          </div>
+          <svg class="w-4 h-4 text-gray-300 dark:text-gray-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+        </button>
+        <button
           v-for="tab in tabs"
           :key="tab.key"
           @click="chooseGroup(tab.key)"
@@ -120,8 +137,8 @@ interface ContactTab {
   contacts: ChatContact[]
 }
 
-const props = defineProps<{ contactTabs: ContactTab[]; classGroups?: ChatClassGroup[]; classesLabel?: string }>()
-defineEmits<{ close: []; 'select-contact': [ChatContact]; 'select-class': [ChatClassGroup] }>()
+const props = defineProps<{ contactTabs: ContactTab[]; classGroups?: ChatClassGroup[]; classesLabel?: string; everyone?: { label: string; detail: string } }>()
+defineEmits<{ close: []; 'select-contact': [ChatContact]; 'select-class': [ChatClassGroup]; 'select-everyone': [] }>()
 
 const search = ref('')
 const activeTab = ref(props.contactTabs[0]?.key || '')

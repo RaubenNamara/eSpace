@@ -7,7 +7,6 @@ namespace eSpace\App\Controllers\Teacher;
 use eSpace\App\Utils\MimeType;
 use eSpace\App\Controllers\Controller;
 use eSpace\App\Services\NotificationService;
-use eSpace\App\Services\ContentApproval;
 
 /**
  * Teacher Video Controller
@@ -377,8 +376,6 @@ class VideoController extends Controller
         }
 
         $status = in_array($data['status'] ?? 'draft', ['draft', 'published', 'archived'], true) ? $data['status'] : 'draft';
-        // in a department with an HOD, publishing sends it for approval first
-        $status = ContentApproval::statusFor($db, 'video', null, $departmentId !== null ? (int) $departmentId : null, (int) $this->getTeacherId(), $status);
 
         $sanitizedData = [
             'title' => htmlspecialchars(trim($data['title']), ENT_QUOTES, 'UTF-8'),
@@ -409,9 +406,6 @@ class VideoController extends Controller
             ]));
 
             $videoId = (int) $db->lastInsertId();
-            if ($status === 'pending') {
-                ContentApproval::submitted($db, 'video', [$videoId]);
-            }
 
             if ($sanitizedData['status'] === 'published') {
                 (new NotificationService())->notifyDepartmentClass(
@@ -429,7 +423,7 @@ class VideoController extends Controller
                 'id' => $videoId,
                 'title' => $sanitizedData['title'],
                 'status' => $sanitizedData['status']
-            ], $status === 'pending' ? 'Video uploaded and sent to your HOD for approval' : 'Video uploaded successfully');
+            ], 'Video uploaded successfully');
         } catch (\PDOException $e) {
             @unlink($upload['path']);
             error_log('Failed to save video: ' . $e->getMessage());
@@ -470,9 +464,7 @@ class VideoController extends Controller
         }
 
         $oldStatus = $video['status'];
-        $newStatus = !empty($data['status'])
-            ? ContentApproval::statusFor($db, 'video', (int) $id, $video['department_id'] !== null ? (int) $video['department_id'] : null, (int) $this->getTeacherId(), (string) $data['status'])
-            : $oldStatus;
+        $newStatus = $data['status'] ?? $oldStatus;
 
         $updates = [];
         $params = ['id' => $id];
@@ -537,7 +529,7 @@ class VideoController extends Controller
 
         if (!empty($data['status']) && in_array($data['status'], ['draft', 'published', 'archived'], true)) {
             $updates[] = 'status = :status';
-            $params['status'] = $newStatus;
+            $params['status'] = $data['status'];
         }
 
         if (empty($updates)) {
@@ -551,9 +543,6 @@ class VideoController extends Controller
         try {
             $stmt = $db->prepare($sql);
             $stmt->execute($params);
-            if ($newStatus === 'pending') {
-                ContentApproval::submitted($db, 'video', [(int) $id]);
-            }
 
             if ($oldStatus !== 'published' && $newStatus === 'published') {
                 $updateSql = "UPDATE videos SET published_at = NOW() WHERE id = :id";
@@ -682,33 +671,10 @@ class VideoController extends Controller
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
 
         try {
-            $sentForApproval = [];
-            if ($status === 'published') {
-                $rows = $db->prepare("SELECT id, department_id FROM videos WHERE id IN ($placeholders)");
-                $rows->execute($ids);
-                foreach ($rows->fetchAll() as $r) {
-                    if (ContentApproval::statusFor($db, 'video', (int) $r['id'], $r['department_id'] !== null ? (int) $r['department_id'] : null, (int) $teacherId, 'published') === 'pending') {
-                        $sentForApproval[] = (int) $r['id'];
-                    }
-                }
-                if ($sentForApproval) {
-                    $in = implode(',', array_fill(0, count($sentForApproval), '?'));
-                    $db->prepare("UPDATE videos SET status = 'pending', updated_at = NOW() WHERE id IN ($in)")->execute($sentForApproval);
-                    ContentApproval::submitted($db, 'video', $sentForApproval);
-                    $ids = array_values(array_diff($ids, $sentForApproval));
-                    $placeholders = implode(',', array_fill(0, max(1, count($ids)), '?'));
-                }
-            }
-            if ($ids) {
-                $publishedAtClause = $status === 'published' ? ", published_at = NOW()" : "";
-                $sql = "UPDATE videos SET status = ?{$publishedAtClause}, updated_at = NOW() WHERE id IN ($placeholders)";
-                $stmt = $db->prepare($sql);
-                $stmt->execute([$status, ...$ids]);
-            }
-            if ($sentForApproval) {
-                $this->success(['updated' => count($ids), 'pending' => count($sentForApproval)], count($ids) . ' updated - ' . count($sentForApproval) . ' sent to your HOD for approval');
-                return;
-            }
+            $publishedAtClause = $status === 'published' ? ", published_at = NOW()" : "";
+            $sql = "UPDATE videos SET status = ?{$publishedAtClause}, updated_at = NOW() WHERE id IN ($placeholders)";
+            $stmt = $db->prepare($sql);
+            $stmt->execute([$status, ...$ids]);
 
             $this->success(['updated' => count($ids)], count($ids) . ' video(s) updated');
         } catch (\PDOException $e) {

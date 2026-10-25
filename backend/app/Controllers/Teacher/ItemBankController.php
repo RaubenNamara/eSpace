@@ -9,7 +9,6 @@ use eSpace\App\Utils\ItemBankCover;
 use eSpace\App\Utils\ItemBankDownload;
 use eSpace\App\Controllers\Controller;
 use eSpace\App\Services\NotificationService;
-use eSpace\App\Services\ContentApproval;
 
 /**
  * Teacher Item Bank Controller
@@ -195,7 +194,7 @@ class ItemBankController extends Controller
         $download = ItemBankDownload::select($db);
         $sql = "SELECT q.id, q.subject_id, q.class_id, q.class_group_name, q.department_id, q.question_text as title,
                        q.explanation as description, q.file_path, q.file_type, q.file_size, q.question_type, {$cover}, {$download},
-                       q.status, q.published_at, q.created_at, q.updated_at, q.review_note, q.submitted_at,
+                       q.status, q.published_at, q.created_at, q.updated_at,
                        s.name as subject_name,
                        s.code as subject_code,
                        c.name as class_name,
@@ -293,7 +292,7 @@ class ItemBankController extends Controller
         $download = ItemBankDownload::select($db);
         $sql = "SELECT q.id, q.subject_id, q.class_id, q.class_group_name, q.department_id, q.question_text as title,
                        q.explanation as description, q.file_path, q.file_type, q.file_size, q.question_type, {$cover}, {$download},
-                       q.status, q.published_at, q.created_at, q.updated_at, q.review_note, q.submitted_at,
+                       q.status, q.published_at, q.created_at, q.updated_at,
                        s.name as subject_name,
                        s.code as subject_code,
                        c.name as class_name,
@@ -374,8 +373,6 @@ class ItemBankController extends Controller
         }
 
         $status = in_array($data['status'] ?? 'draft', ['draft', 'published', 'archived'], true) ? $data['status'] : 'draft';
-        // in a department with an HOD, publishing sends it for approval first
-        $status = ContentApproval::statusFor($db, 'itembank', null, $departmentId !== null ? (int) $departmentId : null, (int) $this->getTeacherId(), $status);
 
         $sanitizedData = [
             'title' => htmlspecialchars(trim($data['title']), ENT_QUOTES, 'UTF-8'),
@@ -424,9 +421,6 @@ class ItemBankController extends Controller
             $stmt->execute($insertParams);
 
             $resourceId = (int) $db->lastInsertId();
-            if ($status === 'pending') {
-                ContentApproval::submitted($db, 'itembank', [$resourceId]);
-            }
 
             if ($sanitizedData['status'] === 'published') {
                 (new NotificationService())->notifyDepartmentClass(
@@ -444,7 +438,7 @@ class ItemBankController extends Controller
                 'id' => $resourceId,
                 'title' => $sanitizedData['title'],
                 'status' => $sanitizedData['status']
-            ], $status === 'pending' ? 'Resource uploaded and sent to your HOD for approval' : 'Resource uploaded successfully');
+            ], 'Resource uploaded successfully');
         } catch (\PDOException $e) {
             if ($upload['path']) {
                 @unlink($upload['path']);
@@ -487,9 +481,7 @@ class ItemBankController extends Controller
         }
 
         $oldStatus = $resource['status'];
-        $newStatus = !empty($data['status'])
-            ? ContentApproval::statusFor($db, 'itembank', (int) $id, $resource['department_id'] !== null ? (int) $resource['department_id'] : null, (int) $this->getTeacherId(), (string) $data['status'])
-            : $oldStatus;
+        $newStatus = $data['status'] ?? $oldStatus;
 
         $updates = [];
         $params = ['id' => $id];
@@ -554,7 +546,7 @@ class ItemBankController extends Controller
 
         if (!empty($data['status']) && in_array($data['status'], ['draft', 'published', 'archived'], true)) {
             $updates[] = 'status = :status';
-            $params['status'] = $newStatus;
+            $params['status'] = $data['status'];
         }
 
         if (array_key_exists('allow_download', $data) && ItemBankDownload::available($db)) {
@@ -573,9 +565,6 @@ class ItemBankController extends Controller
         try {
             $stmt = $db->prepare($sql);
             $stmt->execute($params);
-            if ($newStatus === 'pending') {
-                ContentApproval::submitted($db, 'itembank', [(int) $id]);
-            }
 
             if ($oldStatus !== 'published' && $newStatus === 'published') {
                 $updateSql = "UPDATE item_bank_questions SET published_at = NOW() WHERE id = :id";
@@ -1069,33 +1058,10 @@ class ItemBankController extends Controller
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
 
         try {
-            $sentForApproval = [];
-            if ($status === 'published') {
-                $rows = $db->prepare("SELECT id, department_id FROM item_bank_questions WHERE id IN ($placeholders)");
-                $rows->execute($ids);
-                foreach ($rows->fetchAll() as $r) {
-                    if (ContentApproval::statusFor($db, 'itembank', (int) $r['id'], $r['department_id'] !== null ? (int) $r['department_id'] : null, (int) $teacherId, 'published') === 'pending') {
-                        $sentForApproval[] = (int) $r['id'];
-                    }
-                }
-                if ($sentForApproval) {
-                    $in = implode(',', array_fill(0, count($sentForApproval), '?'));
-                    $db->prepare("UPDATE item_bank_questions SET status = 'pending', updated_at = NOW() WHERE id IN ($in)")->execute($sentForApproval);
-                    ContentApproval::submitted($db, 'itembank', $sentForApproval);
-                    $ids = array_values(array_diff($ids, $sentForApproval));
-                    $placeholders = implode(',', array_fill(0, max(1, count($ids)), '?'));
-                }
-            }
-            if ($ids) {
-                $publishedAtClause = $status === 'published' ? ", published_at = NOW()" : "";
-                $sql = "UPDATE item_bank_questions SET status = ?{$publishedAtClause}, updated_at = NOW() WHERE id IN ($placeholders)";
-                $stmt = $db->prepare($sql);
-                $stmt->execute([$status, ...$ids]);
-            }
-            if ($sentForApproval) {
-                $this->success(['updated' => count($ids), 'pending' => count($sentForApproval)], count($ids) . ' updated - ' . count($sentForApproval) . ' sent to your HOD for approval');
-                return;
-            }
+            $publishedAtClause = $status === 'published' ? ", published_at = NOW()" : "";
+            $sql = "UPDATE item_bank_questions SET status = ?{$publishedAtClause}, updated_at = NOW() WHERE id IN ($placeholders)";
+            $stmt = $db->prepare($sql);
+            $stmt->execute([$status, ...$ids]);
 
             $this->success(['updated' => count($ids)], count($ids) . ' resource(s) updated');
         } catch (\PDOException $e) {

@@ -8,7 +8,6 @@ use eSpace\App\Utils\MimeType;
 use eSpace\App\Utils\CoverDesign;
 use eSpace\App\Controllers\Controller;
 use eSpace\App\Services\NotificationService;
-use eSpace\App\Services\ContentApproval;
 
 /**
  * Teacher Library Controller
@@ -386,8 +385,6 @@ class LibraryController extends Controller
         }
 
         $status = in_array($data['status'] ?? 'draft', ['draft', 'published', 'archived'], true) ? $data['status'] : 'draft';
-        // in a department with an HOD, publishing sends it for approval first
-        $status = ContentApproval::statusFor($db, 'library', null, $departmentId !== null ? (int) $departmentId : null, (int) $this->getTeacherId(), $status);
         $allowDownload = $this->toBool($data['allow_download'] ?? false) ? 1 : 0;
 
         $sanitizedData = [
@@ -420,9 +417,6 @@ class LibraryController extends Controller
             ]));
 
             $bookId = (int) $db->lastInsertId();
-            if ($status === 'pending') {
-                ContentApproval::submitted($db, 'library', [$bookId]);
-            }
 
             if ($sanitizedData['status'] === 'published') {
                 (new NotificationService())->notifyDepartmentClass(
@@ -440,7 +434,7 @@ class LibraryController extends Controller
                 'id' => $bookId,
                 'title' => $sanitizedData['title'],
                 'status' => $sanitizedData['status']
-            ], $status === 'pending' ? 'Book uploaded and sent to your HOD for approval' : 'Book uploaded successfully');
+            ], 'Book uploaded successfully');
         } catch (\PDOException $e) {
             @unlink($upload['path']);
             error_log('Failed to save library book: ' . $e->getMessage());
@@ -481,9 +475,7 @@ class LibraryController extends Controller
         }
 
         $oldStatus = $book['status'];
-        $newStatus = !empty($data['status'])
-            ? ContentApproval::statusFor($db, 'library', (int) $id, $book['department_id'] !== null ? (int) $book['department_id'] : null, (int) $this->getTeacherId(), (string) $data['status'])
-            : $oldStatus;
+        $newStatus = $data['status'] ?? $oldStatus;
 
         $updates = [];
         $params = ['id' => $id];
@@ -548,7 +540,7 @@ class LibraryController extends Controller
 
         if (!empty($data['status']) && in_array($data['status'], ['draft', 'published', 'archived'], true)) {
             $updates[] = 'status = :status';
-            $params['status'] = $newStatus;
+            $params['status'] = $data['status'];
         }
 
         if (array_key_exists('author', $data)) {
@@ -585,9 +577,6 @@ class LibraryController extends Controller
         try {
             $stmt = $db->prepare($sql);
             $stmt->execute($params);
-            if ($newStatus === 'pending') {
-                ContentApproval::submitted($db, 'library', [(int) $id]);
-            }
 
             if ($oldStatus !== 'published' && $newStatus === 'published') {
                 $updateSql = "UPDATE library_books SET published_at = NOW() WHERE id = :id";
@@ -1016,33 +1005,10 @@ class LibraryController extends Controller
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
 
         try {
-            $sentForApproval = [];
-            if ($status === 'published') {
-                $rows = $db->prepare("SELECT id, department_id FROM library_books WHERE id IN ($placeholders)");
-                $rows->execute($ids);
-                foreach ($rows->fetchAll() as $r) {
-                    if (ContentApproval::statusFor($db, 'library', (int) $r['id'], $r['department_id'] !== null ? (int) $r['department_id'] : null, (int) $teacherId, 'published') === 'pending') {
-                        $sentForApproval[] = (int) $r['id'];
-                    }
-                }
-                if ($sentForApproval) {
-                    $in = implode(',', array_fill(0, count($sentForApproval), '?'));
-                    $db->prepare("UPDATE library_books SET status = 'pending', updated_at = NOW() WHERE id IN ($in)")->execute($sentForApproval);
-                    ContentApproval::submitted($db, 'library', $sentForApproval);
-                    $ids = array_values(array_diff($ids, $sentForApproval));
-                    $placeholders = implode(',', array_fill(0, max(1, count($ids)), '?'));
-                }
-            }
-            if ($ids) {
-                $publishedAtClause = $status === 'published' ? ", published_at = NOW()" : "";
-                $sql = "UPDATE library_books SET status = ?{$publishedAtClause}, updated_at = NOW() WHERE id IN ($placeholders)";
-                $stmt = $db->prepare($sql);
-                $stmt->execute([$status, ...$ids]);
-            }
-            if ($sentForApproval) {
-                $this->success(['updated' => count($ids), 'pending' => count($sentForApproval)], count($ids) . ' updated - ' . count($sentForApproval) . ' sent to your HOD for approval');
-                return;
-            }
+            $publishedAtClause = $status === 'published' ? ", published_at = NOW()" : "";
+            $sql = "UPDATE library_books SET status = ?{$publishedAtClause}, updated_at = NOW() WHERE id IN ($placeholders)";
+            $stmt = $db->prepare($sql);
+            $stmt->execute([$status, ...$ids]);
 
             $this->success(['updated' => count($ids)], count($ids) . ' resource(s) updated');
         } catch (\PDOException $e) {

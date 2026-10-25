@@ -22,10 +22,7 @@ export interface VideoResource {
   mime_type?: string
   duration: number | null
   teacher_id?: number
-  status: 'draft' | 'pending' | 'published' | 'archived'
-  /** When it was sent to the HOD for approval, and the HOD's note if it came back (see ContentApproval) */
-  submitted_at?: string | null
-  review_note?: string | null
+  status: 'draft' | 'published' | 'archived'
   published_at: string | null
   created_at: string
   updated_at?: string

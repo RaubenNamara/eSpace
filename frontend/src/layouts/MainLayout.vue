@@ -869,7 +869,6 @@ const MENU: Record<string, NavGroup[]> = {
       { path: '/hod/dashboard', label: 'Dashboard', icon: 'DashboardIcon' }
     ] },
     { key: 'department', name: 'Department', items: [
-      { path: '/hod/approvals', label: 'Approvals', icon: 'CheckCircleIcon' },
       { path: '/hod/teachers', label: 'Teachers', icon: 'UsersIcon' },
       { path: '/hod/students', label: 'Students', icon: 'AcademicCapIcon' },
       { path: '/hod/live-classes', label: 'Live Classes', icon: 'VideoCameraIcon' }

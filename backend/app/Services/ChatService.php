@@ -160,7 +160,7 @@ class ChatService
     /**
      * Clear this participant's own view of a conversation's history. This only stamps
      * chat_participants.cleared_at for (conversationId, userId, userRole) - it never touches
-     * chat_messages, so the other participant(s) and HOD/Admin monitoring (which reads
+     * chat_messages, so the other participant(s) and admin monitoring (which reads
      * chat_messages directly and never joins chat_participants) are completely unaffected.
      * Returns false if the caller isn't actually a participant.
      */
@@ -632,7 +632,7 @@ class ChatService
     }
 
     /**
-     * List conversations for HOD/Admin monitoring. When $departmentId is null (Admin), every
+     * List conversations for admin monitoring. When $departmentId is null, every
      * conversation is in scope; otherwise only conversations touching that department (a
      * participating teacher of that department, a participating student enrolled in that
      * department, or a class conversation tagged with that department) are included. Unlike
@@ -716,38 +716,7 @@ class ChatService
     }
 
     /**
-     * Whether $conversationId touches $departmentId (same scope rule as
-     * listConversationsInScope()), for authorizing a single-conversation monitoring view.
-     */
-    public function isConversationInDepartmentScope(int $conversationId, int $departmentId): bool
-    {
-        $stmt = $this->getDb()->prepare(
-            "SELECT 1 FROM chat_conversations c
-             WHERE c.id = :cid AND c.deleted_at IS NULL AND (
-                c.department_id = :dept_direct
-                OR EXISTS (
-                    SELECT 1 FROM chat_participants cp
-                    INNER JOIN teachers t ON cp.user_id = t.id AND cp.user_role = 'teacher'
-                    WHERE cp.conversation_id = c.id AND t.department_id = :dept_teacher
-                )
-                OR EXISTS (
-                    SELECT 1 FROM chat_participants cp
-                    INNER JOIN student_department_enrollments sde ON cp.user_id = sde.student_id AND cp.user_role = 'student'
-                    WHERE cp.conversation_id = c.id AND sde.department_id = :dept_student AND sde.deleted_at IS NULL
-                )
-             ) LIMIT 1"
-        );
-        $stmt->execute([
-            'cid' => $conversationId,
-            'dept_direct' => $departmentId,
-            'dept_teacher' => $departmentId,
-            'dept_student' => $departmentId,
-        ]);
-        return (bool) $stmt->fetch();
-    }
-
-    /**
-     * Get messages in a conversation for a read-only monitor (HOD/Admin) - same shape as
+     * Get messages in a conversation for the admin's read-only monitor - same shape as
      * getMessages() but never marks anything read since the monitor isn't a real participant.
      */
     public function getMessagesReadOnly(int $conversationId): array

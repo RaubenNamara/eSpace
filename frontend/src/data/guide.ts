@@ -136,7 +136,7 @@ export const GUIDE: GuidePart[] = [
       {
         id: 't-enotes', title: 'Writing eNotes', icon: 'document',
         steps: ['Open eNotes and choose New topic. Pick the subject, the class stream(s) and (ideally) the curriculum topic.', 'Add pages: text, pictures, equations, tables and more. Add narration if you like.', 'Design a cover, then Publish when it\'s ready.', 'Use Duplicate to give the same topic to other streams. Streams that already have it are greyed out, so a stream never gets it twice.', 'Copies of a published topic can be published straight away or kept as drafts. When a topic has draft copies, "Publish them" publishes them all in one click and tells the students.', 'The topic\'s LOA and AOI reach every stream that has a published copy.', '"Who\'s reading" and Reading insights show who has opened it and the pages students stop on.'],
-        tips: ['Share with colleagues to let others in your department copy a topic.', 'If your department has an HOD, Publish sends the topic to the HOD first - it shows "Waiting for HOD" until it is approved. If the HOD returns it, their note shows on the topic: make the changes and publish again. Books, Item Bank papers and videos work the same way.']
+        tips: ['Share with colleagues to let others in your department copy a topic.',]
       },
       {
         id: 't-content', title: 'eLibrary, Item Bank and Videos', icon: 'upload',
@@ -197,7 +197,7 @@ export const GUIDE: GuidePart[] = [
   {
     key: 'hod',
     label: 'HODs',
-    blurb: 'Leading a department: approvals, coverage and results across classes.',
+    blurb: 'Leading a department: your teachers, coverage and results across classes.',
     topics: [
       {
         id: 'h-overview', title: 'Your department at a glance', icon: 'chart',
@@ -206,12 +206,6 @@ export const GUIDE: GuidePart[] = [
       {
         id: 'h-warning', title: 'Early warning for the department', icon: 'warning',
         steps: ['Early warning lists learners across your whole department with low or falling results, who have gone quiet, or who are missing deadlines.', 'Filter by class or by signal, and message a learner from the list.'],
-      },
-      {
-        id: 'h-approve', title: 'Approving your teachers\' work', icon: 'check-circle',
-        intro: 'When a teacher in your department publishes an eNote, a library book, an Item Bank paper or a video, it waits for you. Students only see it once you approve it.',
-        steps: ['Open Approvals in the menu: it lists everything, one box per class (or "all streams" of a class). Filter by eNotes, books, Item Bank or videos, or search by title or teacher.', 'Read it (eNotes) or Open it (books, papers, videos) to check it.', 'Approve publishes it - the class is told it is there, and the teacher is told it was approved.', 'Return sends it back to the teacher as a draft. Pick a reason or write your own note; the teacher sees it, fixes the work and publishes again.'],
-        tips: ['Work you approve once does not come back if the teacher unpublishes and publishes it again.', 'On the dashboard and the Teachers page, a green dot means the teacher is online now; grey shows when they were last on.']
       },
       {
         id: 'h-content', title: 'Books, videos and past papers for the department', icon: 'upload',
@@ -223,9 +217,9 @@ export const GUIDE: GuidePart[] = [
         intro: 'An HOD who also teaches can switch to the teacher view and use every teacher module for their own classes.',
       },
       {
-        id: 'h-chat', title: 'Chats with your department', icon: 'chat',
-        steps: ['Open Chats. My chats are your own conversations.', 'Tap the new chat button to message a teacher in your department, a student enrolled in it, or a whole class - a class message goes to the class group chat, and every student in it sees it.', 'Department chats shows your department\'s students\' chats - teachers with students, students with each other, and your department\'s class groups. Filter them, or search by name.', 'Department chats are read only: you can read them, but you cannot write in them, and the people in them are not told you looked.'],
-        tips: ['Chats between teachers alone are not shown in Department chats - only chats with your students.']
+        id: 'h-chat', title: 'Messaging your teachers', icon: 'chat',
+        steps: ['Open Chats and tap the new chat button.', 'Choose Teachers to message one teacher in your department, or All teachers to write to every teacher at once - it opens your department\'s teachers group, and everyone in it can reply.', 'A new teacher in the department joins the group the next time you open it.'],
+        tips: ['You only see the chats you are in - other people\'s chats stay private.', 'On the dashboard and the Teachers page, a green dot means the teacher is online now; grey shows when they were last on.']
       }
     ]
   },
