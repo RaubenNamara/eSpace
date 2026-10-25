@@ -704,7 +704,7 @@ const generateMissingCovers = async () => {
   generatingCovers = true
   try {
     for (;;) {
-      const resource = resources.value.find(r => !r.cover_image && !coverAttempted.has(r.id))
+      const resource = resources.value.find(r => !r.cover_image && r.file_path && !coverAttempted.has(r.id))
       if (!resource) break
       coverAttempted.add(resource.id)
       try {

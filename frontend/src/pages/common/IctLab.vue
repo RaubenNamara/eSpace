@@ -104,6 +104,21 @@
       <svg class="w-5 h-5 text-indigo-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
     </RouterLink>
 
+    <!-- Laptop repair: "No bootable device" - diagnose, toolkit, replace the SSD in 3D, install Windows -->
+    <RouterLink
+      :to="`/${role}/ict-lab/laptop-repair`"
+      class="flex items-center gap-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 hover:shadow-md hover:border-indigo-300 transition"
+    >
+      <span class="w-12 h-12 rounded-2xl bg-gray-800 text-white flex items-center justify-center flex-shrink-0 shadow-sm text-2xl">💻</span>
+      <div class="min-w-0 flex-1">
+        <p class="text-[11px] font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">Computer maintenance · 6 stages</p>
+        <p class="text-lg font-bold text-gray-900 dark:text-white leading-snug">Laptop repair: "No bootable device"</p>
+        <p class="text-sm text-gray-600 dark:text-gray-300">A real repair job: find why the laptop will not start, pack the right toolkit, open it and replace the failed SSD in 3D, make a Windows USB and install Windows step by step.</p>
+        <p v-if="laptopDone" class="mt-1 text-xs font-bold text-emerald-600 dark:text-emerald-300">{{ laptopDone }} of 6 stages done</p>
+      </div>
+      <svg class="w-5 h-5 text-indigo-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+    </RouterLink>
+
     <!-- Binary and storage: bits, bytes, letters as numbers, KB to TB -->
     <RouterLink
       :to="`/${role}/ict-lab/binary`"
@@ -244,6 +259,7 @@ const quizBest = computed(() => best('parts-quiz', 'simple'))
 const journeyBest = computed(() => best('journey', 'simple'))
 const hazardsBest = computed(() => best('hazards', 'simple'))
 const bootDone = computed(() => progress.value.filter(p => p.activity_key.startsWith('boot-')).length)
+const laptopDone = computed(() => progress.value.filter(p => p.activity_key.startsWith('laptop-')).length)
 const safetyDone = computed(() => progress.value.filter(p => p.activity_key.startsWith('safety-')).length)
 const binaryDone = computed(() => progress.value.filter(p => p.activity_key.startsWith('binary-')).length)
 const networkDone = computed(() => progress.value.filter(p => p.activity_key.startsWith('network-')).length)

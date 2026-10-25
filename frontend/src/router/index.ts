@@ -83,6 +83,7 @@ const IctLabNetwork = () => import('../pages/common/IctLabNetwork.vue')
 const IctLabBinary = () => import('../pages/common/IctLabBinary.vue')
 const IctLabOnlineSafety = () => import('../pages/common/IctLabOnlineSafety.vue')
 const IctLabBoot = () => import('../pages/common/IctLabBoot.vue')
+const IctLabLaptopRepair = () => import('../pages/common/IctLabLaptopRepair.vue')
 const AnatomyExplorer = () => import('../pages/common/AnatomyExplorer.vue')
 const AnatomyModules = () => import('../pages/common/AnatomyModules.vue')
 const AnatomyModule = () => import('../pages/common/AnatomyModule.vue')
@@ -95,7 +96,6 @@ const HODDashboard = () => import('../pages/hod/Dashboard.vue')
 const HODAnalytics = () => import('../pages/hod/Analytics.vue')
 const HODTeachers = () => import('../pages/hod/Teachers.vue')
 const HODStudents = () => import('../pages/hod/Students.vue')
-const HODSubjects = () => import('../pages/hod/Subjects.vue')
 const HODMarksheet = () => import('../pages/hod/Marksheet.vue')
 const HODPhysicalExams = () => import('../pages/hod/PhysicalExams.vue')
 const HODApprovals = () => import('../pages/hod/Approvals.vue')
@@ -131,11 +131,8 @@ const AdminMarksheet = () => import('../pages/admin/Marksheet.vue')
 const AdminPhysicalExams = () => import('../pages/admin/PhysicalExams.vue')
 const AdminRewards = () => import('../pages/admin/Rewards.vue')
 const AdminVirtualLab = () => import('../pages/admin/VirtualLab.vue')
-const AdminAuditLogs = () => import('../pages/admin/AuditLogs.vue')
 const AdminDemoRequests = () => import('../pages/admin/DemoRequests.vue')
-const AdminPermissions = () => import('../pages/admin/Permissions.vue')
 const AdminSettings = () => import('../pages/admin/Settings.vue')
-const AdminBackup = () => import('../pages/admin/Backup.vue')
 const AdminLogs = () => import('../pages/admin/Logs.vue')
 const AdminLibrary = () => import('../pages/teacher/Library.vue')
 const AdminVideos = () => import('../pages/teacher/Videos.vue')
@@ -256,6 +253,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'ict-lab/binary', name: 'StudentIctLabBinary', component: IctLabBinary },
       { path: 'ict-lab/online-safety', name: 'StudentIctLabOnlineSafety', component: IctLabOnlineSafety },
       { path: 'ict-lab/boot', name: 'StudentIctLabBoot', component: IctLabBoot },
+      { path: 'ict-lab/laptop-repair', name: 'StudentIctLabLaptopRepair', component: IctLabLaptopRepair },
       { path: 'ict-lab/:activity', name: 'StudentIctLabActivity', component: IctLabActivity },
       { path: 'virtual-lab/playground', name: 'StudentVirtualLabPlayground', component: StudentVirtualLabPlayground },
       { path: 'constructs', name: 'StudentConstructs', component: StudentConstructs },
@@ -350,6 +348,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'ict-lab/binary', name: 'TeacherIctLabBinary', component: IctLabBinary },
       { path: 'ict-lab/online-safety', name: 'TeacherIctLabOnlineSafety', component: IctLabOnlineSafety },
       { path: 'ict-lab/boot', name: 'TeacherIctLabBoot', component: IctLabBoot },
+      { path: 'ict-lab/laptop-repair', name: 'TeacherIctLabLaptopRepair', component: IctLabLaptopRepair },
       { path: 'ict-lab/:activity', name: 'TeacherIctLabActivity', component: IctLabActivity },
       { path: 'virtual-lab/playground', name: 'TeacherVirtualLabPlayground', component: StudentVirtualLabPlayground },
       // A teacher doing an experiment exactly like a student (same page; nothing saved, no submit)
@@ -366,7 +365,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'analytics', name: 'HODAnalytics', component: HODAnalytics },
       { path: 'teachers', name: 'HODTeachers', component: HODTeachers },
       { path: 'students', name: 'HODStudents', component: HODStudents },
-      { path: 'subjects', name: 'HODSubjects', component: HODSubjects },
+      { path: 'subjects', redirect: '/hod/dashboard' },
       { path: 'reports', redirect: '/hod/dashboard' },
       { path: 'term-report', name: 'HODTermReport', component: () => import('../pages/hod/TermReport.vue') },
       { path: 'approvals', name: 'HODApprovals', component: HODApprovals },
@@ -392,6 +391,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'ict-lab/binary', name: 'HODIctLabBinary', component: IctLabBinary },
       { path: 'ict-lab/online-safety', name: 'HODIctLabOnlineSafety', component: IctLabOnlineSafety },
       { path: 'ict-lab/boot', name: 'HODIctLabBoot', component: IctLabBoot },
+      { path: 'ict-lab/laptop-repair', name: 'HODIctLabLaptopRepair', component: IctLabLaptopRepair },
       { path: 'ict-lab/:activity', name: 'HODIctLabActivity', component: IctLabActivity },
       { path: 'virtual-lab/practice/:experimentId', name: 'HODVirtualLabPractice', component: StudentVirtualLabExperiment, meta: { practice: true, practiceRole: 'hod' } },
       { path: 'assessments', name: 'HODAssessments', component: HODAssessments },
@@ -431,14 +431,14 @@ const routes: RouteRecordRaw[] = [
       { path: 'constructs', name: 'AdminConstructs', component: AdminConstructs },
       { path: 'promotion', name: 'AdminPromotion', component: AdminPromotion },
       { path: 'reports', name: 'AdminReports', component: AdminReports },
-      { path: 'audit-logs', name: 'AdminAuditLogs', component: AdminAuditLogs },
+      { path: 'audit-logs', redirect: '/admin/logs' },
       { path: 'demo-requests', name: 'AdminDemoRequests', component: AdminDemoRequests },
       { path: 'parent-links', name: 'AdminParentLinks', component: () => import('../pages/admin/ParentLinks.vue') },
       { path: 'notices', name: 'AdminNotices', component: () => import('../pages/common/Noticeboard.vue') },
       { path: 'exam-dates', name: 'AdminExamDates', component: () => import('../pages/admin/ExamDates.vue') },
-      { path: 'permissions', name: 'AdminPermissions', component: AdminPermissions },
+      { path: 'permissions', redirect: '/admin/dashboard' },
       { path: 'settings', name: 'AdminSettings', component: AdminSettings },
-      { path: 'backup', name: 'AdminBackup', component: AdminBackup },
+      { path: 'backup', redirect: '/admin/dashboard' },
       { path: 'logs', name: 'AdminLogs', component: AdminLogs },
       { path: 'library', name: 'AdminLibrary', component: AdminLibrary },
       { path: 'videos', name: 'AdminVideos', component: AdminVideos },
@@ -469,6 +469,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'ict-lab/binary', name: 'AdminIctLabBinary', component: IctLabBinary },
       { path: 'ict-lab/online-safety', name: 'AdminIctLabOnlineSafety', component: IctLabOnlineSafety },
       { path: 'ict-lab/boot', name: 'AdminIctLabBoot', component: IctLabBoot },
+      { path: 'ict-lab/laptop-repair', name: 'AdminIctLabLaptopRepair', component: IctLabLaptopRepair },
       { path: 'ict-lab/:activity', name: 'AdminIctLabActivity', component: IctLabActivity },
       // An admin opening an experiment to view its diagram/procedure - same page as the teacher
       // practice route, nothing saved, no submit.

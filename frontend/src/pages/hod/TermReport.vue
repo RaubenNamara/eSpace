@@ -31,8 +31,8 @@
         <div v-for="lvl in levels" :key="lvl.level" class="mt-4 break-inside-avoid">
           <h3 class="text-sm font-bold text-gray-900 dark:text-white mb-1.5">{{ lvl.level }}</h3>
           <div class="overflow-x-auto">
-            <table class="w-full text-sm table-fixed min-w-[40rem]">
-              <colgroup><col class="w-[16%]"><col class="w-[11%]"><col class="w-[13%]"><col class="w-[25%]"><col class="w-[25%]"><col class="w-[10%]"></colgroup>
+            <table class="w-full text-sm table-fixed min-w-[44rem]">
+              <colgroup><col class="w-[15%]"><col class="w-[11%]"><col class="w-[15%]"><col class="w-[24%]"><col class="w-[25%]"><col class="w-[10%]"></colgroup>
               <thead>
                 <tr class="text-left text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
                   <th class="py-1.5 pr-3 font-semibold">Stream</th>

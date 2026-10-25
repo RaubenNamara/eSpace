@@ -93,7 +93,7 @@ import { ref, computed, onMounted } from 'vue'
 import { Bar, Doughnut, Line } from 'vue-chartjs'
 import {
   Chart as ChartJS, Title, Tooltip, Legend, BarElement, LineElement, PointElement,
-  CategoryScale, LinearScale, ArcElement
+  CategoryScale, LinearScale, ArcElement, Filler
 } from 'chart.js'
 import apiService from '@/services/api'
 import PageHeader from '@/components/ui/PageHeader.vue'
@@ -103,7 +103,7 @@ import EmptyState from '@/components/ui/EmptyState.vue'
 import Skeleton from '@/components/ui/Skeleton.vue'
 import { niceName } from '@/components/dashboard/teacher/time'
 
-ChartJS.register(Title, Tooltip, Legend, BarElement, LineElement, PointElement, CategoryScale, LinearScale, ArcElement)
+ChartJS.register(Title, Tooltip, Legend, BarElement, LineElement, PointElement, CategoryScale, LinearScale, ArcElement, Filler)
 
 interface StatusCount { status: string; count: number }
 interface TeacherStat {

@@ -182,7 +182,6 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/search', 'eSpace\App\Controllers\SearchController@index');
         Router::get('/search/suggestions', 'eSpace\App\Controllers\SearchController@suggestions');
 
-        // Reports
         // The student's own activity report (what they did and did not do over a period)
         Router::get('/reports/activity', 'eSpace\App\Controllers\Student\ActivityReportController@activity');
 
@@ -625,10 +624,6 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::put('/students/{id}', 'eSpace\App\Controllers\HOD\StudentController@update');
         Router::post('/students/{id}/photo', 'eSpace\App\Controllers\HOD\StudentController@uploadPhoto');
 
-        // Subjects
-        Router::get('/subjects', 'eSpace\App\Controllers\HOD\SubjectController@index');
-        Router::get('/subjects/{id}', 'eSpace\App\Controllers\HOD\SubjectController@show');
-
         // eLibrary - department-scoped moderation
         // eLibrary - the teacher's shelves over the department (HOD) or the whole school (admin), with upload
         Router::get('/library', 'eSpace\App\Controllers\SchoolLibraryController@index');
@@ -706,11 +701,6 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::post('/enotes/bulk-export', 'eSpace\App\Controllers\HOD\ENoteController@bulkExport');
         Router::get('/enotes/{id}', 'eSpace\App\Controllers\HOD\ENoteController@show');
 
-        // Reports
-        Router::get('/reports/department', 'eSpace\App\Controllers\HOD\ReportController@department');
-        Router::get('/reports/teacher-monitoring', 'eSpace\App\Controllers\HOD\ReportController@teacherMonitoring');
-        Router::get('/reports/assignment-monitoring', 'eSpace\App\Controllers\HOD\ReportController@assignmentMonitoring');
-
         // Report Cards (CBC assessment report - read-only, department-scoped)
         Router::get('/report-cards/terms', 'eSpace\App\Controllers\HOD\ReportCardController@listTerms');
         Router::get('/report-cards/students', 'eSpace\App\Controllers\HOD\ReportCardController@listStudents');
@@ -731,13 +721,6 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/performance/marksheet', 'eSpace\App\Controllers\HOD\PerformanceController@marksheet');
         Router::get('/performance/students/{studentId}/subjects/{subjectId}', 'eSpace\App\Controllers\HOD\PerformanceController@studentSubject');
         Router::get('/performance/students/{studentId}', 'eSpace\App\Controllers\HOD\PerformanceController@studentGeneral');
-
-
-        // Resource Approval
-        Router::get('/approvals/notes', 'eSpace\App\Controllers\HOD\ApprovalController@notes');
-        Router::put('/approvals/notes/{id}', 'eSpace\App\Controllers\HOD\ApprovalController@approveNotes');
-        Router::get('/approvals/itembank', 'eSpace\App\Controllers\HOD\ApprovalController@itemBank');
-        Router::put('/approvals/itembank/{id}', 'eSpace\App\Controllers\HOD\ApprovalController@approveItemBank');
 
         // Global search (shared eSpace\App\Controllers\SearchController - see notes there)
         Router::get('/search', 'eSpace\App\Controllers\SearchController@index');
@@ -773,7 +756,6 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::put('/parent-links/{id}', 'eSpace\App\Controllers\Admin\ParentLinkController@update');
         Router::delete('/parent-links/{id}', 'eSpace\App\Controllers\Admin\ParentLinkController@destroy');
         // Dashboard
-        Router::get('/dashboard', 'eSpace\App\Controllers\Admin\DashboardController@index');
         Router::get('/mastery-overview', 'eSpace\App\Controllers\Admin\MasteryOverviewController@index');
         Router::get('/staff-activity', 'eSpace\App\Controllers\Admin\StaffActivityController@index');
         Router::get('/student-sign-ins', 'eSpace\App\Controllers\Admin\StaffActivityController@students');
@@ -980,19 +962,6 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::put('/constructs/{id}', 'eSpace\App\Controllers\Admin\ConstructController@update');
         Router::delete('/constructs/{id}', 'eSpace\App\Controllers\Admin\ConstructController@destroy');
 
-        // Reports
-        Router::get('/reports/system', 'eSpace\App\Controllers\Admin\ReportController@system');
-        Router::get('/reports/users', 'eSpace\App\Controllers\Admin\ReportController@users');
-        Router::get('/reports/activity', 'eSpace\App\Controllers\Admin\ReportController@activity');
-        
-        // Audit Logs
-        Router::get('/audit-logs', 'eSpace\App\Controllers\Admin\AuditLogController@index');
-        Router::get('/audit-logs/{id}', 'eSpace\App\Controllers\Admin\AuditLogController@show');
-        
-        // Permissions
-        Router::get('/permissions', 'eSpace\App\Controllers\Admin\PermissionController@index');
-        Router::put('/permissions/{id}', 'eSpace\App\Controllers\Admin\PermissionController@update');
-        
         // Settings
         Router::get('/settings', 'eSpace\App\Controllers\Admin\SettingsController@index');
         Router::put('/settings', 'eSpace\App\Controllers\Admin\SettingsController@update');
@@ -1062,15 +1031,8 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::post('/virtual-lab/experiments/{id}/practice/action', 'eSpace\App\Controllers\Admin\VirtualLabController@practiceAction');
         Router::get('/virtual-lab/analytics', 'eSpace\App\Controllers\Admin\VirtualLabController@analytics');
 
-        // Backup
-        Router::post('/backup/create', 'eSpace\App\Controllers\Admin\BackupController@create');
-        Router::get('/backups', 'eSpace\App\Controllers\Admin\BackupController@index');
-        Router::post('/backups/{id}/restore', 'eSpace\App\Controllers\Admin\BackupController@restore');
-        Router::delete('/backups/{id}', 'eSpace\App\Controllers\Admin\BackupController@delete');
-        
         // System Logs
         Router::get('/logs', 'eSpace\App\Controllers\Admin\LogController@index');
-        Router::get('/logs/{file}', 'eSpace\App\Controllers\Admin\LogController@show');
 
         // Global search (shared eSpace\App\Controllers\SearchController - see notes there)
         Router::get('/search', 'eSpace\App\Controllers\SearchController@index');

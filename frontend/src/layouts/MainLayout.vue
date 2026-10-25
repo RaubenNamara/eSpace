@@ -17,8 +17,8 @@
         <div class="flex items-center gap-3" :class="{ 'justify-center': isIconOnly }">
           <img v-if="isIconOnly" src="/favicon.svg" alt="Tusome" class="w-9 h-9 rounded-xl">
           <div v-else class="min-w-0">
-            <h1 class="leading-none"><Wordmark size="sm" /></h1>
-            <p class="text-[10.5px] text-gray-500 dark:text-white/40 capitalize font-semibold tracking-wide leading-tight mt-1">{{ userRole }} Console</p>
+            <p class="leading-none"><Wordmark size="sm" /></p>
+            <p class="text-[10.5px] text-gray-500 dark:text-white/40 font-semibold tracking-wide leading-tight mt-1">{{ consoleName }}</p>
           </div>
         </div>
       </div>
@@ -283,7 +283,7 @@
                 </div>
                 <div class="hidden md:block text-left">
                   <p class="text-sm font-medium text-gray-900 dark:text-white">{{ userName }}</p>
-                  <p class="text-xs text-gray-500 dark:text-gray-400 capitalize">{{ userRole }}</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">{{ roleName }}</p>
                 </div>
                 <svg class="w-4 h-4 text-gray-400 hidden md:block transition-transform" :class="{ 'rotate-180': showProfileDropdown }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -297,7 +297,7 @@
               >
                 <div class="px-4 py-2.5 border-b border-gray-100 dark:border-gray-700">
                   <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ userName }}</p>
-                  <p class="text-xs text-gray-500 dark:text-gray-400 capitalize">{{ userRole }}</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">{{ roleName }}</p>
                 </div>
                 <!-- A student's photo is admin/HOD-managed (it appears on official report
                      cards), not self-service - so this entry (which opens the photo section of
@@ -343,7 +343,7 @@
               </div>
               <div class="hidden md:block">
                 <p class="text-sm font-medium text-gray-900 dark:text-white">{{ userName }}</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400 capitalize">{{ userRole }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">{{ roleName }}</p>
               </div>
             </div>
           </div>
@@ -763,6 +763,14 @@ onBeforeUnmount(() => {
 const isDarkMode = computed(() => themeStore.isDarkMode)
 
 const userRole = computed(() => authStore.userRole || 'Guest')
+// The role as people say it - 'HOD', 'Super admin', 'Teacher' - and under the logo, 'HOD console'
+const roleName = computed(() => {
+  const r = String(userRole.value)
+  if (r === 'hod') return 'HOD'
+  const name = r.replace(/_/g, ' ')
+  return name.charAt(0).toUpperCase() + name.slice(1)
+})
+const consoleName = computed(() => `${roleName.value} console`)
 const activeRole = computed(() => authStore.activeRole || authStore.userRole || 'Guest')
 const hasDualRoles = computed(() => authStore.hasDualRoles)
 const userName = computed(() => {
@@ -899,7 +907,7 @@ const MENU: Record<string, NavGroup[]> = {
     ] },
     { key: 'people', name: 'People', items: [
       { path: '/admin/students', label: 'Students', icon: 'AcademicCapIcon' },
-      { path: '/admin/bulk-enrol', label: 'Bulk subject enrolment', icon: 'TableCellsIcon' },
+      { path: '/admin/bulk-enrol', label: 'Bulk enrolment', icon: 'TableCellsIcon' },
       { path: '/admin/teachers', label: 'Teachers', icon: 'BriefcaseIcon' },
       { path: '/admin/hods', label: 'HODs', icon: 'UserGroupIcon' },
       { path: '/admin/assign-teachers', label: 'Assign Teachers', icon: 'CheckCircleIcon' },
@@ -913,7 +921,7 @@ const MENU: Record<string, NavGroup[]> = {
       { path: '/admin/academic-years', label: 'Academic Years', icon: 'CalendarIcon' },
       { path: '/admin/terms', label: 'Terms', icon: 'CalendarDaysIcon' },
       { path: '/admin/exam-dates', label: 'Exam dates', icon: 'TargetIcon' },
-      { path: '/admin/enotes-curriculum', label: 'eNotes Curriculum Setup', icon: 'NoteIcon' }
+      { path: '/admin/enotes-curriculum', label: 'Curriculum', icon: 'NoteIcon' }
     ] },
     { key: 'content', name: 'Content', items: [
       { path: '/admin/notes', label: 'eNotes', icon: 'NoteIcon' },

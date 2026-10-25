@@ -10,7 +10,7 @@
       <button v-for="t in TYPES" :key="t.key" type="button" class="px-3 py-1.5 rounded-xl text-sm font-semibold border transition-colors" :class="kind === t.key ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:border-indigo-300'" @click="kind = t.key">
         {{ t.label }} <span class="ml-0.5 text-xs opacity-75">{{ countOf(t.key) }}</span>
       </button>
-      <input v-model="q" type="search" placeholder="Search title or teacher" class="ml-auto w-full sm:w-60 rounded-xl border-gray-200 dark:border-gray-700 dark:bg-gray-800 text-sm">
+      <input v-model="q" type="search" placeholder="Search title or teacher" class="ml-auto w-full sm:w-60 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500">
     </div>
 
     <div v-if="loading" class="space-y-3"><div v-for="i in 3" :key="i" class="h-24 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse"></div></div>
@@ -62,7 +62,7 @@
               <div class="mt-2 flex flex-wrap gap-1.5">
                 <button v-for="r in REASONS" :key="r" type="button" class="px-2 py-1 rounded-lg text-xs font-medium border border-gray-200 dark:border-gray-600 hover:border-rose-400" @click="note = note ? `${note} ${r}` : r">{{ r }}</button>
               </div>
-              <textarea v-model="note" rows="2" maxlength="500" class="mt-2 w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 text-sm" placeholder="Your note to the teacher"></textarea>
+              <textarea v-model="note" rows="2" maxlength="500" class="mt-2 w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Your note to the teacher"></textarea>
               <div class="mt-2 flex justify-end gap-2">
                 <button type="button" class="btn-secondary !py-1.5 !text-sm" @click="returning = null">Cancel</button>
                 <button type="button" class="px-3 py-1.5 rounded-xl text-sm font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-60" :disabled="!note.trim() || busy === key(a)" @click="sendBack(a)">Send back to the teacher</button>
