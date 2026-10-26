@@ -171,6 +171,7 @@ class ParentDigestService
     private static function emailHtml(array $sum, string $guardian, string $url): string
     {
         $e = fn($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
+        $support = (string) \eSpace\Config\Config::get('SUPPORT_EMAIL', 'support@tusome.ug');
         $w = $sum['week'];
         $first = $e($sum['student']['first_name']);
         $rows = '';
@@ -206,7 +207,7 @@ class ParentDigestService
     " . ($due ? "<h2 style=\"font-size:15px;margin:20px 0 6px\">Coming up</h2><ul style=\"padding-left:18px;margin:0;font-size:14px;color:#334155\">{$due}</ul>" : '') . "
     <p style=\"margin:24px 0 0\"><a href=\"{$e($url)}\" style=\"display:inline-block;background:#4f46e5;color:#fff;text-decoration:none;padding:10px 18px;border-radius:10px;font-weight:700;font-size:14px\">See the full update</a></p>
   </div>
-  <p style=\"color:#94a3b8;font-size:12px;margin:16px 4px\">You get this because the school added you as {$first}'s parent or guardian on Tusome. To stop it, ask the school.</p>
+  <p style=\"color:#94a3b8;font-size:12px;margin:16px 4px\">You get this because the school added you as {$first}'s parent or guardian on Tusome. To stop it, ask the school. Trouble opening the update? Write to <a href=\"mailto:{$e($support)}\" style=\"color:#64748b\">{$e($support)}</a>.</p>
 </div></body></html>";
     }
 }

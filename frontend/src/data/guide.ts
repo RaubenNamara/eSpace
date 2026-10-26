@@ -2,6 +2,8 @@
  * The Tusome user guide (/guide): one part per role, each a list of short how-tos. Plain data, so
  * the guide page can search it and new sections are easy to add.
  */
+import { SUPPORT_EMAIL } from './site'
+
 export interface GuideTopic {
   id: string
   title: string
@@ -35,7 +37,7 @@ export const GUIDE: GuidePart[] = [
         id: 'layout', title: 'Finding your way around', icon: 'map',
         intro: 'Everything you can use is in the menu on the left. On a phone, students have a bar at the bottom - Home, Learn, Work, Chats and More (More opens the full menu); everyone else taps the ☰ button.',
         steps: ['The dashboard is your home page - what needs you today, in small cards. Each card shows a few things; tap "Show more" to open it up.', 'The search box at the top finds notes, assessments and books by name.', 'The bell shows notifications; the speech bubble opens your chats.', 'Tap your name (top right) for your profile, password and sign out.'],
-        tips: ['The moon/sun button switches between dark and light mode.', 'Most lists remember the class and filters you last used.']
+        tips: ['The moon/sun button switches between dark and light mode.', 'Most lists remember the class and filters you last used.', 'User guide and Support are at the bottom of the menu, and in the menu under your name.']
       },
       {
         id: 'phone', title: 'Using Tusome on a phone', icon: 'keyboard',
@@ -48,6 +50,17 @@ export const GUIDE: GuidePart[] = [
         intro: 'Notes and books can be saved to your device and read with no internet at all.',
         steps: ['On an eNote or book, choose Save for offline.', 'Open Downloads to see everything saved on this device and how much space it uses.', 'Read, highlight and write notes as usual when offline.', 'When you\'re back online, your notes and highlights are sent automatically.'],
         tips: ['Saved copies are kept for 30 days and renewed whenever you\'re online.']
+      },
+      {
+        id: 'help', title: 'Getting help', icon: 'chat',
+        intro: `Stuck? This guide is open from the menu at any time (User guide). For anything else, here is who to ask.`,
+        steps: [
+          'Your account, password, class or subjects: ask your school\'s Tusome administrator - they can reset a password or move you to the right class straight away.',
+          'Your work, marks or a lesson: ask your teacher, or message them in Chats.',
+          `Something in Tusome is not working: write to Tusome support at ${SUPPORT_EMAIL} (Support, at the bottom of the menu, opens an email for you).`,
+          'In your email, say your school, whether you are a student, teacher, HOD or admin, the page you were on and what happened - a screenshot helps a lot.'
+        ],
+        tips: ['Never send your password to anyone, support included - Tusome support will never ask for it.']
       }
     ]
   },
@@ -185,6 +198,11 @@ export const GUIDE: GuidePart[] = [
         steps: ['Student questions lists questions on your eNotes that still need an answer.', 'Open one to answer it - or mark a classmate\'s good answer as the best.', 'You can also open the questions from the speech-bubble button while previewing a topic.'],
       },
       {
+        id: 't-chat', title: 'Chats', icon: 'chat',
+        steps: ['Open Chats (the speech bubble at the top, or Chats in the menu).', 'Tap the new chat button to message a colleague, a student, or one of your classes - a class message goes to its group chat, which every student in it sees.', 'Send photos, files and voice notes; grey ticks mean delivered, blue ticks read.', 'Your HOD can message you, or every teacher in the department at once - that is your department\'s teachers group, and you can reply in it.'],
+        tips: ['Clear chat removes the messages from your view only.']
+      },
+      {
         id: 't-notices', title: 'Posting a notice', icon: 'speaker',
         steps: ['Open Noticeboard and tap Post a notice.', 'Choose one of your classes (or all its streams), write the notice, and post.', 'It slides across the top of your students\' dashboards until they read it.', 'Open your notice to see how many have read it - and who hasn\'t yet.']
       },
@@ -202,6 +220,11 @@ export const GUIDE: GuidePart[] = [
       {
         id: 'h-overview', title: 'Your department at a glance', icon: 'chart',
         steps: ['The dashboard shows the assessments set lately, and shortcuts to the Term report, Assessments, Marksheet and Analytics.', 'Need attention counts the learners who may be slipping, by reason.', 'Teachers shows who was in this week and how many scripts each has waiting.', 'Curriculum mastery and class comparisons are in the Term report and Analytics.', 'Marksheets and Physical Exams work across every class in the department.']
+      },
+      {
+        id: 'h-term-report', title: 'The term report for staff meetings', icon: 'document',
+        steps: ['Open Term report and pick the term.', 'It shows the department\'s figures, every class\'s streams side by side (streams behind are marked), curriculum mastery, the learners who need attention and what each teacher has done.', 'Press Print - the app\'s menus are left off the page.'],
+        tips: ['Analytics and Engagement show the same department in charts, and who is reading, watching and attending.']
       },
       {
         id: 'h-warning', title: 'Early warning for the department', icon: 'warning',
@@ -230,7 +253,7 @@ export const GUIDE: GuidePart[] = [
     topics: [
       {
         id: 'a-setup', title: 'Setting up the school', icon: 'wrench',
-        steps: ['Add academic years and terms, and mark the current one.', 'Add classes and their streams (e.g. S.1 A, S.1 B).', 'Add departments and their subjects.', 'Set the school details and crest under Settings - they appear on report cards.'],
+        steps: ['Add academic years and terms. The current term follows the calendar - when a term starts it becomes the current one by itself (you can turn that off on Terms).', 'Add classes and their streams (e.g. S.1 A, S.1 B).', 'Add departments and their subjects.', 'Set the school details and crest under Settings - they appear on report cards.'],
       },
       {
         id: 'a-dashboard', title: 'Your dashboard and school activity', icon: 'sparkles',
@@ -238,7 +261,7 @@ export const GUIDE: GuidePart[] = [
       },
       {
         id: 'a-people', title: 'Accounts and enrolment', icon: 'users',
-        steps: ['Add students, teachers and HODs (teachers can also be imported from a spreadsheet).', 'Assign teachers to departments and HODs to lead them.', 'Enrol students in their class and departments.', 'Reset passwords when someone is locked out; teachers then choose their own.'],
+        steps: ['Add students, teachers and HODs (teachers can also be imported from a spreadsheet).', 'Assign teachers to departments and HODs to lead them.', 'Enrol students in their class and departments.', 'Reset passwords when someone is locked out; teachers then choose their own.', 'Suspend a teacher to stop them signing in at once (they are signed out everywhere) - their eNotes, assessments and other work stay for students.', 'Delete a teacher who has left: they can no longer sign in and their work disappears from Tusome, but students keep the marks they earned. Restore them, with their work, within 30 days if it was a mistake; after that it is gone for good.'],
       },
       {
         id: 'a-supervise', title: 'Supervising departments and teachers', icon: 'target',
@@ -264,7 +287,7 @@ export const GUIDE: GuidePart[] = [
       },
       {
         id: 'a-run', title: 'Reports, analytics and logs', icon: 'chart',
-        steps: ['Reports: student competency reports (LOA, AOI, EOC) and report cards. The Curriculum mastery tab shows how much of the curriculum has an assessment linked, and how students are doing, subject by subject.', 'Report Cards: generate and publish end-of-term reports.', 'Engagement and analytics show activity across the whole school.', 'Rewards & Badges sets the rules for achievements.', 'Demo requests lists schools that asked for a demo on the website.', 'System Logs shows sign-ins; Backup keeps copies of the data.']
+        steps: ['Reports: student competency reports (LOA, AOI, EOC) and report cards. The Curriculum mastery tab shows how much of the curriculum has an assessment linked, and how students are doing, subject by subject.', 'Report Cards: pick the term and a class, check what is still missing, then Generate all - or make one learner\'s card at a time. Download Class PDF prints the class.', 'Engagement and analytics show activity across the whole school.', 'Rewards & Badges sets the rules for achievements.', 'Demo requests lists schools that asked for a demo on the website.', 'System Logs shows every sign-in; Chats lets you read conversations across the school.']
       },
       {
         id: 'a-parents', title: 'Parents and the weekly update', icon: 'users',

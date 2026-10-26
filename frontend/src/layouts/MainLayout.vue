@@ -91,7 +91,37 @@
 
       <!-- Footer -->
       <div class="relative border-t app-frame-divider flex-shrink-0">
-        <div class="p-2.5">
+        <div class="p-2.5 space-y-0.5">
+          <!-- Help: the user guide, and Tusome support by email -->
+          <a
+            href="/guide"
+            target="_blank"
+            rel="noopener"
+            :title="isIconOnly ? 'User guide' : undefined"
+            class="flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-xl text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white w-full transition-colors duration-150"
+            :class="isIconOnly ? 'justify-center px-0' : ''"
+          >
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <span v-if="!isIconOnly" class="min-w-0">
+              <span class="block text-sm font-medium">User guide</span>
+            </span>
+          </a>
+          <a
+            :href="`mailto:${SUPPORT_EMAIL}`"
+            :title="isIconOnly ? `Support: ${SUPPORT_EMAIL}` : undefined"
+            class="flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-xl text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white w-full transition-colors duration-150"
+            :class="isIconOnly ? 'justify-center px-0' : ''"
+          >
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+            </svg>
+            <span v-if="!isIconOnly" class="min-w-0">
+              <span class="block text-sm font-medium leading-tight">Support</span>
+              <span class="block text-[11px] leading-tight opacity-75 truncate">{{ SUPPORT_EMAIL }}</span>
+            </span>
+          </a>
           <button
             @click="handleLogout"
             :title="isIconOnly ? 'Logout' : undefined"
@@ -323,6 +353,28 @@
                   </svg>
                   Change Password
                 </button>
+                <a
+                  role="menuitem"
+                  href="/guide"
+                  target="_blank"
+                  rel="noopener"
+                  class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2.5 transition-colors"
+                >
+                  <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                  User guide
+                </a>
+                <a
+                  role="menuitem"
+                  :href="`mailto:${SUPPORT_EMAIL}`"
+                  class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2.5 transition-colors"
+                >
+                  <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                  </svg>
+                  <span class="min-w-0"><span class="block">Email support</span><span class="block text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ SUPPORT_EMAIL }}</span></span>
+                </a>
                 <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
                 <button
                   role="menuitem"
@@ -477,6 +529,7 @@
 <script setup lang="ts">
 import { usePersistedRef } from '@/composables/usePersistedRef'
 import Wordmark from '@/components/brand/Wordmark.vue'
+import { SUPPORT_EMAIL } from '@/data/site'
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { appSidebarRequests } from '@/utils/appSidebar'
 import { useRouter, useRoute } from 'vue-router'

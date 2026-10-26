@@ -13,6 +13,11 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-10-26', area: 'Everyone', icon: 'chat',
+    title: 'Help is one tap away',
+    text: 'The user guide and Tusome support (support@tusome.ug) are now at the bottom of the menu for everyone, and in the menu under your name. The guide is up to date with every recent change, and has a new Getting help section on who to ask about what.'
+  },
+  {
     date: '2026-10-25', area: 'School admin', icon: 'check-circle',
     title: 'End of term: report cards for a whole class, and a teacher report to print',
     text: 'A new End of term checklist shows what is left before a term closes - marking, paper exam marks, report cards class by class, promotion and the next term. Report cards for a whole class are made in one go, after a check of which learners still have no marks. The current term now changes by itself when the next one starts. And the teacher follow-up report prints who missed the marking deadline, who has not marked, who set nothing, whose learners are not handing in and which classes had nothing this term.'
