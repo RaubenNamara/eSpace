@@ -39,6 +39,21 @@ class ENoteController extends Controller
     }
 
     /**
+     * The topics this teacher may change: their own - and, when their HOD allows it, every topic in
+     * that department. Bound to :teacher_id (or the given placeholder). See Services/DepartmentContent.
+     */
+    private function editableSql(string $alias = '', string $placeholder = ':teacher_id'): string
+    {
+        return \eSpace\App\Services\DepartmentContent::editable($alias, 'teacher_id', $placeholder, (int) $this->getTeacherId());
+    }
+
+    /** The topics this teacher may open: the editable ones, plus every topic in their department (read only) */
+    private function viewableSql(string $alias = '', string $placeholder = ':teacher_id'): string
+    {
+        return \eSpace\App\Services\DepartmentContent::viewable($alias, 'teacher_id', $placeholder, (int) $this->getTeacherId(), $this->getTeacherDepartmentId());
+    }
+
+    /**
      * A class belongs to the teacher's department either because a student is actively enrolled
      * there, OR because admin has authored curriculum for some subject in this department
      * targeting that class - curriculum and enrollment are entered independently and can
@@ -175,9 +190,10 @@ class ENoteController extends Controller
         $db = $this->getDb();
         $stmt = $db->prepare(
             "SELECT id FROM enote_topics
-             WHERE content_group_id = :gid AND id != :id AND teacher_id = :teacher_id AND deleted_at IS NULL"
+             WHERE content_group_id = :gid AND id != :id AND deleted_at IS NULL
+               AND teacher_id = (SELECT o.teacher_id FROM enote_topics o WHERE o.id = :id2)"
         );
-        $stmt->execute(['gid' => $contentGroupId, 'id' => $topicId, 'teacher_id' => $teacherId]);
+        $stmt->execute(['gid' => $contentGroupId, 'id' => $topicId, 'id2' => $topicId]);
         return array_map('intval', array_column($stmt->fetchAll(), 'id'));
     }
 
@@ -273,7 +289,7 @@ class ENoteController extends Controller
         }
 
         $db = $this->getDb();
-        $stmt = $db->prepare("SELECT id, content_group_id FROM enote_topics WHERE id = :id AND teacher_id = :teacher_id AND deleted_at IS NULL");
+        $stmt = $db->prepare("SELECT id, content_group_id, teacher_id FROM enote_topics WHERE id = :id AND " . $this->viewableSql() . " AND deleted_at IS NULL");
         $stmt->execute(['id' => (int) $id, 'teacher_id' => $teacherId]);
         $topic = $stmt->fetch(\PDO::FETCH_ASSOC);
         if (!$topic) {
@@ -284,7 +300,7 @@ class ENoteController extends Controller
         $topicIds = [(int) $topic['id']];
         if ($this->query('with_copies') && $topic['content_group_id']) {
             $stmt = $db->prepare("SELECT id FROM enote_topics WHERE content_group_id = :gid AND teacher_id = :teacher_id AND deleted_at IS NULL");
-            $stmt->execute(['gid' => $topic['content_group_id'], 'teacher_id' => $teacherId]);
+            $stmt->execute(['gid' => $topic['content_group_id'], 'teacher_id' => (int) $topic['teacher_id']]);
             $topicIds = array_map('intval', $stmt->fetchAll(\PDO::FETCH_COLUMN));
         }
         $in = implode(',', $topicIds);
@@ -343,7 +359,13 @@ class ENoteController extends Controller
         $db = $this->getDb();
         ENoteAssessmentReach::backfillOnce($db);
 
-        $where = ['et.teacher_id = :teacher_id', 'et.deleted_at IS NULL'];
+        // ?scope=department: the colleagues' topics in this department (read only unless this
+        // teacher is a department editor - see can_edit)
+        if ($this->query('scope', '') === 'department') {
+            $where = ['et.department_id = ' . (int) $this->getTeacherDepartmentId(), 'et.teacher_id <> :teacher_id', 'et.deleted_at IS NULL'];
+        } else {
+            $where = ['et.teacher_id = :teacher_id', 'et.deleted_at IS NULL'];
+        }
         $params = ['teacher_id' => $teacherId];
 
         if (!empty($status)) {
@@ -394,12 +416,15 @@ class ENoteController extends Controller
                        (SELECT COUNT(*) FROM enote_progress ep WHERE ep.topic_id = et.id AND ep.completed_at IS NOT NULL) AS finished,
                        (SELECT ROUND(AVG(ep.percentage_completed)) FROM enote_progress ep WHERE ep.topic_id = et.id) AS avg_read" : '';
         $sql = "SELECT et.*,
+                       CASE WHEN " . $this->editableSql('et.', ':teacher_edit') . " THEN 1 ELSE 0 END AS can_edit,
+                       TRIM(CONCAT(COALESCE(ot.first_name, ''), ' ', COALESCE(ot.last_name, ''))) AS owner_name,
                        s.name as subject_name,
                        s.code as subject_code,
                        c.name as class_name,
                        c.level as class_level,
                        c.stream_name as class_stream_name{$reach}
                 FROM enote_topics et
+                LEFT JOIN teachers ot ON ot.id = et.teacher_id
                 LEFT JOIN subjects s ON et.subject_id = s.id
                 LEFT JOIN classes c ON et.class_id = c.id
                 WHERE {$whereClause}
@@ -407,7 +432,7 @@ class ENoteController extends Controller
                 LIMIT {$limit} OFFSET {$offset}";
         
         $stmt = $db->prepare($sql);
-        $stmt->execute($params);
+        $stmt->execute($params + ['teacher_edit' => $teacherId]);
         $topics = array_map([$this, 'decodeLearningOutcomes'], $stmt->fetchAll());
 
         $this->success([
@@ -529,7 +554,7 @@ class ENoteController extends Controller
                 FROM enote_topics et
                 LEFT JOIN subjects s ON et.subject_id = s.id
                 LEFT JOIN classes c ON et.class_id = c.id
-                WHERE et.id = :id AND et.teacher_id = :teacher_id AND et.deleted_at IS NULL";
+                WHERE et.id = :id AND " . $this->viewableSql('et.') . " AND et.deleted_at IS NULL";
         
         $stmt = $db->prepare($sql);
         $stmt->execute(['id' => $id, 'teacher_id' => $teacherId]);
@@ -573,6 +598,10 @@ class ENoteController extends Controller
         $stmt->execute([...$groupIds, $teacherId, $id]);
         $linkedAssignment = $stmt->fetch();
         $topic['linked_assignment'] = $linkedAssignment ?: null;
+
+        $stmt = $db->prepare("SELECT 1 FROM enote_topics WHERE id = :id AND " . $this->editableSql() . " AND deleted_at IS NULL");
+        $stmt->execute(['id' => $id, 'teacher_id' => $teacherId]);
+        $topic['can_edit'] = (bool) $stmt->fetch();
 
         $this->success($topic);
     }
@@ -694,7 +723,7 @@ class ENoteController extends Controller
         }
 
         $db = $this->getDb();
-        $stmt = $db->prepare("SELECT id FROM enote_topics WHERE id = :id AND teacher_id = :teacher_id AND deleted_at IS NULL");
+        $stmt = $db->prepare("SELECT id FROM enote_topics WHERE id = :id AND " . $this->editableSql() . " AND deleted_at IS NULL");
         $stmt->execute(['id' => $id, 'teacher_id' => $teacherId]);
         if (!$stmt->fetch()) {
             $this->notFound('Topic not found');
@@ -739,7 +768,7 @@ class ENoteController extends Controller
         $stmt = $db->prepare(
             "SELECT p.id, p.content FROM enote_pages p
              INNER JOIN enote_topics et ON p.topic_id = et.id
-             WHERE p.id = :page_id AND et.teacher_id = :teacher_id AND p.deleted_at IS NULL AND et.deleted_at IS NULL"
+             WHERE p.id = :page_id AND " . $this->editableSql('et.') . " AND p.deleted_at IS NULL AND et.deleted_at IS NULL"
         );
         $stmt->execute(['page_id' => $pageId, 'teacher_id' => $teacherId]);
         $page = $stmt->fetch();
@@ -998,7 +1027,7 @@ class ENoteController extends Controller
         $db = $this->getDb();
 
         // Verify topic belongs to teacher
-        $stmt = $db->prepare("SELECT id, status, content_group_id, subject_id, department_id, title, class_id, class_group_name FROM enote_topics WHERE id = :id AND teacher_id = :teacher_id AND deleted_at IS NULL");
+        $stmt = $db->prepare("SELECT id, status, content_group_id, subject_id, department_id, title, class_id, class_group_name FROM enote_topics WHERE id = :id AND " . $this->editableSql() . " AND deleted_at IS NULL");
         $stmt->execute(['id' => $id, 'teacher_id' => $teacherId]);
         $topic = $stmt->fetch();
 
@@ -1188,7 +1217,7 @@ class ENoteController extends Controller
         $db = $this->getDb();
 
         // Verify topic belongs to teacher
-        $stmt = $db->prepare("SELECT id FROM enote_topics WHERE id = :id AND teacher_id = :teacher_id AND deleted_at IS NULL");
+        $stmt = $db->prepare("SELECT id FROM enote_topics WHERE id = :id AND " . $this->editableSql() . " AND deleted_at IS NULL");
         $stmt->execute(['id' => $id, 'teacher_id' => $teacherId]);
         if (!$stmt->fetch()) {
             $this->notFound('Topic not found');
@@ -1236,7 +1265,7 @@ class ENoteController extends Controller
         $db = $this->getDb();
 
         // Verify topic belongs to teacher
-        $stmt = $db->prepare("SELECT id, title, subject_id, department_id, class_id, class_group_name FROM enote_topics WHERE id = :id AND teacher_id = :teacher_id AND deleted_at IS NULL");
+        $stmt = $db->prepare("SELECT id, title, subject_id, department_id, class_id, class_group_name FROM enote_topics WHERE id = :id AND " . $this->editableSql() . " AND deleted_at IS NULL");
         $stmt->execute(['id' => $id, 'teacher_id' => $teacherId]);
         $topic = $stmt->fetch();
         if (!$topic) {
@@ -1297,7 +1326,7 @@ class ENoteController extends Controller
         $db = $this->getDb();
 
         // Verify topic belongs to teacher
-        $stmt = $db->prepare("SELECT id FROM enote_topics WHERE id = :id AND teacher_id = :teacher_id AND deleted_at IS NULL");
+        $stmt = $db->prepare("SELECT id FROM enote_topics WHERE id = :id AND " . $this->editableSql() . " AND deleted_at IS NULL");
         $stmt->execute(['id' => $id, 'teacher_id' => $teacherId]);
         if (!$stmt->fetch()) {
             $this->notFound('Topic not found');
@@ -1340,7 +1369,7 @@ class ENoteController extends Controller
         $db = $this->getDb();
 
         // Verify topic belongs to teacher
-        $stmt = $db->prepare("SELECT id FROM enote_topics WHERE id = :id AND teacher_id = :teacher_id AND deleted_at IS NULL");
+        $stmt = $db->prepare("SELECT id FROM enote_topics WHERE id = :id AND " . $this->editableSql() . " AND deleted_at IS NULL");
         $stmt->execute(['id' => $id, 'teacher_id' => $teacherId]);
         if (!$stmt->fetch()) {
             $this->notFound('Topic not found');
@@ -1385,7 +1414,7 @@ class ENoteController extends Controller
         }
         $db = $this->getDb();
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
-        $stmt = $db->prepare("SELECT id FROM enote_topics WHERE id IN ($placeholders) AND teacher_id = ? AND deleted_at IS NULL");
+        $stmt = $db->prepare("SELECT id FROM enote_topics WHERE id IN ($placeholders) AND " . $this->editableSql('', '?') . " AND deleted_at IS NULL");
         $stmt->execute([...$ids, $teacherId]);
         return array_map('intval', array_column($stmt->fetchAll(), 'id'));
     }
@@ -1627,7 +1656,7 @@ class ENoteController extends Controller
         $db = $this->getDb();
 
         // Verify topic belongs to teacher
-        $stmt = $db->prepare("SELECT id, content_group_id FROM enote_topics WHERE id = :topic_id AND teacher_id = :teacher_id AND deleted_at IS NULL");
+        $stmt = $db->prepare("SELECT id, content_group_id FROM enote_topics WHERE id = :topic_id AND " . $this->editableSql() . " AND deleted_at IS NULL");
         $stmt->execute(['topic_id' => $topicId, 'teacher_id' => $teacherId]);
         $topicRow = $stmt->fetch();
         if (!$topicRow) {
@@ -1718,7 +1747,7 @@ class ENoteController extends Controller
         $sql = "SELECT ep.id, ep.topic_id, ep.order_number, ep.title, ep.content, ep.revision, ep.updated_at, et.content_group_id
                 FROM enote_pages ep
                 INNER JOIN enote_topics et ON ep.topic_id = et.id
-                WHERE ep.id = :id AND et.teacher_id = :teacher_id AND ep.deleted_at IS NULL AND et.deleted_at IS NULL";
+                WHERE ep.id = :id AND " . $this->editableSql('et.') . " AND ep.deleted_at IS NULL AND et.deleted_at IS NULL";
 
         $stmt = $db->prepare($sql);
         $stmt->execute(['id' => $id, 'teacher_id' => $teacherId]);
@@ -1855,7 +1884,7 @@ class ENoteController extends Controller
         $sql = "SELECT ep.id, ep.topic_id, ep.order_number, ep.title, ep.content, et.content_group_id
                 FROM enote_pages ep
                 INNER JOIN enote_topics et ON ep.topic_id = et.id
-                WHERE ep.id = :id AND et.teacher_id = :teacher_id AND ep.deleted_at IS NULL AND et.deleted_at IS NULL";
+                WHERE ep.id = :id AND " . $this->editableSql('et.') . " AND ep.deleted_at IS NULL AND et.deleted_at IS NULL";
 
         $stmt = $db->prepare($sql);
         $stmt->execute(['id' => $id, 'teacher_id' => $teacherId]);
@@ -1936,7 +1965,7 @@ class ENoteController extends Controller
         $sql = "SELECT ep.*, et.teacher_id, et.content_group_id
                 FROM enote_pages ep
                 INNER JOIN enote_topics et ON ep.topic_id = et.id
-                WHERE ep.id = :id AND et.teacher_id = :teacher_id AND ep.deleted_at IS NULL AND et.deleted_at IS NULL";
+                WHERE ep.id = :id AND " . $this->editableSql('et.') . " AND ep.deleted_at IS NULL AND et.deleted_at IS NULL";
 
         $stmt = $db->prepare($sql);
         $stmt->execute(['id' => $id, 'teacher_id' => $teacherId]);
@@ -2035,7 +2064,7 @@ class ENoteController extends Controller
         $db = $this->getDb();
 
         // Verify topic belongs to teacher
-        $stmt = $db->prepare("SELECT id, content_group_id FROM enote_topics WHERE id = :topic_id AND teacher_id = :teacher_id AND deleted_at IS NULL");
+        $stmt = $db->prepare("SELECT id, content_group_id FROM enote_topics WHERE id = :topic_id AND " . $this->editableSql() . " AND deleted_at IS NULL");
         $stmt->execute(['topic_id' => $topicId, 'teacher_id' => $teacherId]);
         $topicRow = $stmt->fetch();
         if (!$topicRow) {

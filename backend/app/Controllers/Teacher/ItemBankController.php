@@ -40,10 +40,33 @@ class ItemBankController extends Controller
         return $_SESSION['user_id'] ?? null;
     }
 
-    /** Which items this user manages: a teacher's own. A HOD's department and an admin's whole school override it. */
+    /**
+     * Which items this user manages: a teacher's own - and, when their HOD allows it, every item in
+     * that department (Services/DepartmentContent). A HOD's department and an admin's whole school
+     * override it.
+     */
     protected function scopeClause(string $alias, string $placeholder): string
     {
-        return "{$alias}created_by = {$placeholder}";
+        return \eSpace\App\Services\DepartmentContent::editable($alias, 'created_by', $placeholder, (int) $this->getTeacherId());
+    }
+
+    /**
+     * What this user may OPEN: everything they may change (scopeClause()), plus everything in
+     * their department - a teacher sees colleagues' work read-only (Services/DepartmentContent).
+     */
+    protected function viewClause(string $alias, string $placeholder): string
+    {
+        $edit = $this->scopeClause($alias, $placeholder);
+        $dept = $this->getActiveDepartmentId();
+        return $dept ? "({$edit} OR {$alias}department_id = " . (int) $dept . ")" : $edit;
+    }
+
+    /** Whether this user may change one row (their own, or as a department editor) */
+    protected function canEditRow($db, int $id): bool
+    {
+        $stmt = $db->prepare("SELECT 1 FROM item_bank_questions WHERE id = :id AND " . $this->scopeClause('', ':teacher_id') . " AND deleted_at IS NULL");
+        $stmt->execute(['id' => $id, 'teacher_id' => $this->getTeacherId()]);
+        return (bool) $stmt->fetch();
     }
 
     /** The department a new item goes to (and an edited one is checked against) */
@@ -164,8 +187,17 @@ class ItemBankController extends Controller
 
         $db = $this->getDb();
 
-        $where = [$this->scopeClause('q.', ':teacher_id'), 'q.deleted_at IS NULL'];
-        $params = ['teacher_id' => $teacherId];
+        // ?scope=department: the colleagues' work in this department (read-only unless this
+        // teacher is a department editor). Otherwise a teacher's own list - the HOD and admin
+        // subclasses list everything they manage.
+        if ($this->query('scope', '') === 'department') {
+            $where = ['q.department_id = ' . (int) $this->getActiveDepartmentId(), 'NOT (q.created_by <=> :teacher_id)', 'q.deleted_at IS NULL'];
+        } elseif (static::class === self::class) {
+            $where = ['q.created_by = :teacher_id', 'q.deleted_at IS NULL'];
+        } else {
+            $where = [$this->scopeClause('q.', ':teacher_id'), 'q.deleted_at IS NULL'];
+        }
+        $params = ['teacher_id' => $teacherId, 'teacher_edit' => $teacherId];
 
         if (!empty($status)) {
             $where[] = 'q.status = :status';
@@ -192,7 +224,8 @@ class ItemBankController extends Controller
 
         $cover = ItemBankCover::select($db);
         $download = ItemBankDownload::select($db);
-        $sql = "SELECT q.id, q.subject_id, q.class_id, q.class_group_name, q.department_id, q.question_text as title,
+        $sql = "SELECT q.id, q.created_by, q.subject_id, q.class_id, q.class_group_name, q.department_id, q.question_text as title,
+                       CASE WHEN " . $this->scopeClause('q.', ':teacher_edit') . " THEN 1 ELSE 0 END AS can_edit,
                        q.explanation as description, q.file_path, q.file_type, q.file_size, q.question_type, {$cover}, {$download},
                        q.status, q.published_at, q.created_at, q.updated_at,
                        s.name as subject_name,
@@ -301,7 +334,7 @@ class ItemBankController extends Controller
                 FROM item_bank_questions q
                 LEFT JOIN subjects s ON q.subject_id = s.id
                 LEFT JOIN classes c ON q.class_id = c.id
-                WHERE q.id = :id AND " . $this->scopeClause('q.', ':teacher_id') . " AND q.deleted_at IS NULL";
+                WHERE q.id = :id AND " . $this->viewClause('q.', ':teacher_id') . " AND q.deleted_at IS NULL";
 
         $stmt = $db->prepare($sql);
         $stmt->execute(['id' => $id, 'teacher_id' => $teacherId]);
@@ -312,6 +345,7 @@ class ItemBankController extends Controller
             return;
         }
 
+        $resource['can_edit'] = $this->canEditRow($db, $id);
         $this->success($resource);
     }
 
@@ -890,7 +924,7 @@ class ItemBankController extends Controller
         }
         $teacherId = $this->getTeacherId();
         $db = $this->getDb();
-        $resource = $this->ownedResource($db, (int) $id, (int) $teacherId);
+        $resource = $this->ownedResource($db, (int) $id, (int) $teacherId, true);
         if (!$resource) {
             $this->notFound('Resource not found');
             return;
@@ -928,11 +962,11 @@ class ItemBankController extends Controller
         $this->success(['linked' => count(array_intersect_key($groups, array_flip($chosen)))], 'Topics saved');
     }
 
-    private function ownedResource($db, int $id, int $teacherId): ?array
+    private function ownedResource($db, int $id, int $teacherId, bool $forEdit = false): ?array
     {
         $stmt = $db->prepare(
             "SELECT id, subject_id, class_id, class_group_name FROM item_bank_questions
-             WHERE id = ? AND " . $this->scopeClause('', '?') . " AND deleted_at IS NULL"
+             WHERE id = ? AND " . ($forEdit ? $this->scopeClause('', '?') : $this->viewClause('', '?')) . " AND deleted_at IS NULL"
         );
         $stmt->execute([$id, $teacherId]);
         return $stmt->fetch() ?: null;

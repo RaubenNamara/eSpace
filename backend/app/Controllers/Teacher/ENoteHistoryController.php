@@ -21,7 +21,7 @@ class ENoteHistoryController extends Controller
     private function ownTopic(int $topicId): ?array
     {
         $stmt = \eSpace\Config\Database::getInstance()->prepare(
-            "SELECT id, title FROM enote_topics WHERE id = ? AND teacher_id = ? AND deleted_at IS NULL"
+            "SELECT id, title FROM enote_topics WHERE id = ? AND " . \eSpace\App\Services\DepartmentContent::editable('', 'teacher_id', '?', $this->teacherId()) . " AND deleted_at IS NULL"
         );
         $stmt->execute([$topicId, $this->teacherId()]);
         return $stmt->fetch(\PDO::FETCH_ASSOC) ?: null;
@@ -113,7 +113,7 @@ class ENoteHistoryController extends Controller
         $db = \eSpace\Config\Database::getInstance();
         $stmt = $db->prepare(
             "SELECT h.* FROM enote_page_history h
-               JOIN enote_topics t ON t.id = h.topic_id AND t.teacher_id = ? AND t.deleted_at IS NULL
+               JOIN enote_topics t ON t.id = h.topic_id AND " . \eSpace\App\Services\DepartmentContent::editable('t.', 'teacher_id', '?', $this->teacherId()) . " AND t.deleted_at IS NULL
               WHERE h.id = ?"
         );
         $stmt->execute([$this->teacherId(), (int) $id]);

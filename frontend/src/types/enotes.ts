@@ -8,6 +8,10 @@ import type { ClassTarget } from '@/components/teacher/TeacherClassSelector.vue'
 export interface ENoteTopic {
   id: number
   teacher_id: number
+  // May this teacher change it: their own, or a colleague's when the HOD allows (Services/DepartmentContent)
+  can_edit?: boolean | number
+  // The teacher who wrote it (on a department list)
+  owner_name?: string
   content_group_id?: number | null
   class_id: number | null
   class_group_name?: string | null

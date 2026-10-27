@@ -13,6 +13,11 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-10-27', area: 'Teachers', icon: 'users',
+    title: 'See your department\'s work',
+    text: 'eNotes, the eLibrary, the Item Bank and Videos now have a Department tab: every teacher sees what the other teachers in their department have added, and can open it. Each teacher still changes only their own work - unless their head of department lets them edit colleagues\' work, from the Teachers page.'
+  },
+  {
     date: '2026-10-26', area: 'Everyone', icon: 'chat',
     title: 'Help is one tap away',
     text: 'The user guide and Tusome support (support@tusome.ug) are now at the bottom of the menu for everyone, and in the menu under your name. The guide is up to date with every recent change, and has a new Getting help section on who to ask about what.'

@@ -47,7 +47,7 @@ class ItemBankPaperController extends Controller
     {
         $stmt = $this->db()->prepare(
             "SELECT id, question_text AS title, status, subject_id, department_id FROM item_bank_questions
-              WHERE id = ? AND created_by = ? AND question_type = 'paper' AND deleted_at IS NULL"
+              WHERE id = ? AND " . \eSpace\App\Services\DepartmentContent::editable('', 'created_by', '?', (int) $this->teacherId()) . " AND question_type = 'paper' AND deleted_at IS NULL"
         );
         $stmt->execute([$id, $this->teacherId()]);
         return $stmt->fetch(\PDO::FETCH_ASSOC) ?: null;
@@ -97,7 +97,7 @@ class ItemBankPaperController extends Controller
         if (!$paper) {
             $stmt = $this->db()->prepare(
                 "SELECT id, question_text AS title, status, subject_id, department_id FROM item_bank_questions
-                  WHERE id = :id AND question_type = 'paper' AND status = 'published' AND deleted_at IS NULL
+                  WHERE id = :id AND question_type = 'paper' AND deleted_at IS NULL
                     AND department_id IN (SELECT department_id FROM teachers WHERE id = :t1 AND department_id IS NOT NULL
                                           UNION SELECT department_id FROM teacher_department_assignments WHERE teacher_id = :t2 AND deleted_at IS NULL)"
             );

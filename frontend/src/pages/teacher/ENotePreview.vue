@@ -1056,9 +1056,9 @@ const topicId = computed(() => parseInt(route.params.id as string))
 const previewRole = computed(() => route.meta.previewRole as string | undefined)
 const isPreviewMode = computed(() => !!previewRole.value)
 const isStudentMode = computed(() => route.meta.studentMode === true)
-const isReadOnly = computed(() => isPreviewMode.value || isStudentMode.value)
-
 const topic = ref<ENoteTopic | null>(null)
+// a colleague's topic this teacher may not change (Services/DepartmentContent) reads like a preview
+const isReadOnly = computed(() => isPreviewMode.value || isStudentMode.value || (topic.value as any)?.can_edit === false)
 
 // "Title · author" running footer on every page, like a printed book - on for every topic (with or
 // without a designed cover) unless the teacher switched it off in the cover designer

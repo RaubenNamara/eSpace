@@ -162,6 +162,12 @@ export const GUIDE: GuidePart[] = [
         tips: ['Each student\'s best Test yourself and lab rules scores are kept like any activity.', 'The Anatomy Explorer (Virtual Lab, then Anatomy Explorer) gives biology lessons a 3D human body, with tours and quizzes.']
       },
       {
+        id: 't-department', title: 'Your colleagues\' work', icon: 'users',
+        intro: 'eNotes, eLibrary, Item Bank and Videos each have two tabs: your own work, and Department - everything the other teachers in your department have added.',
+        steps: ['Open Department on any of the four pages: the work is grouped by teacher, with its class and whether it is published.', 'Read, Open or Play opens it - a colleague\'s eNote opens in the reader, their book in the book viewer.', 'You can only change your own work. If your HOD lets you edit colleagues\' work, Edit and Delete appear beside theirs too.'],
+        tips: ['Want a colleague\'s eNote for your own class? Use Shared by colleagues to copy it - the copy is yours to change.']
+      },
+      {
         id: 't-live', title: 'Live classes', icon: 'video',
         steps: ['Choose Schedule class, set the time, class and whether to record.', 'Students see it under Coming up and get a reminder.', 'Tap Start when it\'s time; the Live now banner shows Join, Attendance and End.', 'Past classes keep attendance and recordings; "Schedule again" repeats a lesson a week later.'],
       },
@@ -234,6 +240,11 @@ export const GUIDE: GuidePart[] = [
         id: 'h-content', title: 'Books, videos and past papers for the department', icon: 'upload',
         intro: 'eLibrary, Videos and Item Bank work just like a teacher\'s - and what you add can go to the whole department.',
         steps: ['Open eLibrary (or Videos, or Item Bank) and choose Add.', 'Choose who gets it: the whole department, every stream of one class, or a single stream.', 'Design a cover for a book, or use your own picture.', 'Teachers\' uploads in your department show here too, with who added them.'],
+      },
+      {
+        id: 'h-editors', title: 'Who may edit colleagues\' work', icon: 'users',
+        intro: 'Every teacher in your department sees the eNotes, books, papers and videos the others have added - but changes only their own.',
+        steps: ['Open Teachers.', 'Turn on Edit colleagues\' work for a teacher who should be able to change everyone\'s work in the department - for example a subject lead.', 'The teacher is told, and Edit and Delete appear for them on the Department tab of each page. Turn it off to take it back.']
       },
       {
         id: 'h-teach', title: 'Teaching your own classes', icon: 'teacher',

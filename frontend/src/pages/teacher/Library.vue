@@ -20,6 +20,8 @@
 
     <p v-if="assignmentsError" class="mb-4 text-sm text-rose-600 dark:text-rose-300">{{ assignmentsError }}</p>
 
+    <WorkScopeSwitch v-if="role === 'teacher'" v-model="view" mine-label="My books" />
+    <div v-show="view === 'mine'">
     <Skeleton v-if="loading && !books.length" variant="cards" :count="6" />
 
     <EmptyState v-else-if="!books.length" icon="book" tone="emerald" :title="COPY[role].emptyTitle" :message="COPY[role].emptyMessage">
@@ -202,6 +204,9 @@
         </ul>
       </section>
     </template>
+
+    </div>
+    <DepartmentWork v-if="view === 'department'" :items="deptItems" :loading="deptLoading" noun="books" open-label="Read" @open="previewBook = ($event as LibraryBook)" @edit="editBook($event as LibraryBook)" @remove="deleteBook(($event as LibraryBook).id)" />
 
     <!-- Upload/Edit Modal -->
     <div v-if="showBookModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -487,6 +492,8 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import axios from 'axios'
 import PageHeader from '@/components/ui/PageHeader.vue'
+import WorkScopeSwitch from '@/components/teacher/WorkScopeSwitch.vue'
+import DepartmentWork, { type DeptItem } from '@/components/teacher/DepartmentWork.vue'
 import StatStrip, { type StatItem } from '@/components/ui/StatStrip.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import Skeleton from '@/components/ui/Skeleton.vue'
@@ -764,6 +771,7 @@ const formatFileSize = (bytes: number | null) => {
 }
 
 const loadBooks = async () => {
+  if (view.value === 'department') loadDepartmentWork()
   try {
     loading.value = true
     const response = await axios.get(`${libApi}`)
@@ -1115,6 +1123,34 @@ const deleteBook = async (id: number) => {
     toast.error('Failed to delete book. Please try again.')
   }
 }
+
+
+// ---- Mine | Department: the colleagues' work in this department, read only unless the HOD lets
+// this teacher edit it (can_edit - see components/teacher/DepartmentWork.vue)
+const view = ref<'mine' | 'department'>('mine')
+const deptItems = ref<DeptItem[]>([])
+const deptLoading = ref(false)
+const deptClassLabel = (x: any) => x.class_group_name ? `${x.class_group_name} (all streams)` : x.class_name ? `${x.class_name}${x.class_stream_name ? ` ${x.class_stream_name}` : ''}` : 'Whole department'
+const loadDepartmentWork = async () => {
+  deptLoading.value = true
+  try {
+    const rows: any[] = (await axios.get(`${libApi}`, { params: { scope: 'department' } })).data.data.books || []
+    deptItems.value = rows.map((x: any) => ({
+      id: x.id,
+      title: x.title,
+      owner: x.uploader_name || '',
+      detail: [x.subject_name, deptClassLabel(x)].filter(Boolean).join(' · '),
+      status: x.status,
+      canEdit: !!Number(x.can_edit),
+      raw: x
+    }))
+  } catch {
+    deptItems.value = []
+  } finally {
+    deptLoading.value = false
+  }
+}
+watch(view, v => { if (v === 'department') loadDepartmentWork() })
 
 onMounted(async () => {
   await Promise.all([loadBooks(), role === 'teacher' ? loadAssignments() : loadLibraryOptions()])

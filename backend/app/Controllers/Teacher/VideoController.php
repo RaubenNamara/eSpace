@@ -43,10 +43,33 @@ class VideoController extends Controller
         return $_SESSION['user_id'] ?? null;
     }
 
-    /** Which items this user manages: a teacher's own. A HOD's department and an admin's whole school override it. */
+    /**
+     * Which videos this user manages: a teacher's own - and, when their HOD allows it, every video in
+     * that department (Services/DepartmentContent). A HOD's department and an admin's whole school
+     * override it.
+     */
     protected function scopeClause(string $alias, string $placeholder): string
     {
-        return "{$alias}teacher_id = {$placeholder}";
+        return \eSpace\App\Services\DepartmentContent::editable($alias, 'teacher_id', $placeholder, (int) $this->getTeacherId());
+    }
+
+    /**
+     * What this user may OPEN: everything they may change (scopeClause()), plus everything in
+     * their department - a teacher sees colleagues' work read-only (Services/DepartmentContent).
+     */
+    protected function viewClause(string $alias, string $placeholder): string
+    {
+        $edit = $this->scopeClause($alias, $placeholder);
+        $dept = $this->getActiveDepartmentId();
+        return $dept ? "({$edit} OR {$alias}department_id = " . (int) $dept . ")" : $edit;
+    }
+
+    /** Whether this user may change one row (their own, or as a department editor) */
+    protected function canEditRow($db, int $id): bool
+    {
+        $stmt = $db->prepare("SELECT 1 FROM videos WHERE id = :id AND " . $this->scopeClause('', ':teacher_id') . " AND deleted_at IS NULL");
+        $stmt->execute(['id' => $id, 'teacher_id' => $this->getTeacherId()]);
+        return (bool) $stmt->fetch();
     }
 
     /** The department a new item goes to (and an edited one is checked against) */
@@ -107,8 +130,17 @@ class VideoController extends Controller
 
         $db = $this->getDb();
 
-        $where = [$this->scopeClause('v.', ':teacher_id'), 'v.deleted_at IS NULL'];
-        $params = ['teacher_id' => $teacherId];
+        // ?scope=department: the colleagues' work in this department (read-only unless this
+        // teacher is a department editor). Otherwise a teacher's own list - the HOD and admin
+        // subclasses list everything they manage.
+        if ($this->query('scope', '') === 'department') {
+            $where = ['v.department_id = ' . (int) $this->getActiveDepartmentId(), 'NOT (v.teacher_id <=> :teacher_id)', 'v.deleted_at IS NULL'];
+        } elseif (static::class === self::class) {
+            $where = ['v.teacher_id = :teacher_id', 'v.deleted_at IS NULL'];
+        } else {
+            $where = [$this->scopeClause('v.', ':teacher_id'), 'v.deleted_at IS NULL'];
+        }
+        $params = ['teacher_id' => $teacherId, 'teacher_edit' => $teacherId];
 
         if (!empty($status)) {
             $where[] = 'v.status = :status';
@@ -137,6 +169,7 @@ class VideoController extends Controller
         // (same rule students see it by), how many have opened it, finished it, and the
         // average share watched among those who opened it
         $sql = "SELECT v.*,
+                       CASE WHEN " . $this->scopeClause('v.', ':teacher_edit') . " THEN 1 ELSE 0 END AS can_edit,
                        s.name as subject_name,
                        s.code as subject_code,
                        c.name as class_name,
@@ -241,7 +274,7 @@ class VideoController extends Controller
         }
 
         $db = $this->getDb();
-        $stmt = $db->prepare("SELECT id FROM videos WHERE id = :id AND " . $this->scopeClause('', ':teacher_id') . " AND deleted_at IS NULL");
+        $stmt = $db->prepare("SELECT id FROM videos WHERE id = :id AND " . $this->viewClause('', ':teacher_id') . " AND deleted_at IS NULL");
         $stmt->execute(['id' => (int) $id, 'teacher_id' => $teacherId]);
         if (!$stmt->fetch()) {
             $this->notFound('Video not found');
@@ -307,7 +340,7 @@ class VideoController extends Controller
                 FROM videos v
                 LEFT JOIN subjects s ON v.subject_id = s.id
                 LEFT JOIN classes c ON v.class_id = c.id
-                WHERE v.id = :id AND " . $this->scopeClause('v.', ':teacher_id') . " AND v.deleted_at IS NULL";
+                WHERE v.id = :id AND " . $this->viewClause('v.', ':teacher_id') . " AND v.deleted_at IS NULL";
 
         $stmt = $db->prepare($sql);
         $stmt->execute(['id' => $id, 'teacher_id' => $teacherId]);
@@ -318,6 +351,7 @@ class VideoController extends Controller
             return;
         }
 
+        $video['can_edit'] = $this->canEditRow($db, $id);
         $this->success($video);
     }
 

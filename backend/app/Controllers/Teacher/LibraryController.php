@@ -8,6 +8,7 @@ use eSpace\App\Utils\MimeType;
 use eSpace\App\Utils\CoverDesign;
 use eSpace\App\Controllers\Controller;
 use eSpace\App\Services\NotificationService;
+use eSpace\App\Services\DepartmentContent;
 
 /**
  * Teacher Library Controller
@@ -51,10 +52,33 @@ class LibraryController extends Controller
         return $_SESSION['user_id'] ?? null;
     }
 
-    /** Which books this user manages: a teacher's own. A HOD's department and an admin's whole school override it. */
+    /**
+     * Which books this user manages: a teacher's own - and, when their HOD allows it, every book in
+     * that department (Services/DepartmentContent). A HOD's department and an admin's whole school
+     * override it.
+     */
     protected function scopeClause(string $alias, string $placeholder): string
     {
-        return "{$alias}uploaded_by = {$placeholder}";
+        return DepartmentContent::editable($alias, 'uploaded_by', $placeholder, (int) $this->getTeacherId());
+    }
+
+    /**
+     * What this user may OPEN: everything they may change (scopeClause()), plus everything in
+     * their department - a teacher sees colleagues' work read-only (Services/DepartmentContent).
+     */
+    protected function viewClause(string $alias, string $placeholder): string
+    {
+        $edit = $this->scopeClause($alias, $placeholder);
+        $dept = $this->getActiveDepartmentId();
+        return $dept ? "({$edit} OR {$alias}department_id = " . (int) $dept . ")" : $edit;
+    }
+
+    /** Whether this user may change one row (their own, or as a department editor) */
+    protected function canEditRow($db, int $id): bool
+    {
+        $stmt = $db->prepare("SELECT 1 FROM library_books WHERE id = :id AND " . $this->scopeClause('', ':teacher_id') . " AND deleted_at IS NULL");
+        $stmt->execute(['id' => $id, 'teacher_id' => $this->getTeacherId()]);
+        return (bool) $stmt->fetch();
     }
 
     /** The department a new book goes to (and an edited one is checked against) */
@@ -115,7 +139,7 @@ class LibraryController extends Controller
         }
 
         $db = $this->getDb();
-        $stmt = $db->prepare("SELECT id FROM library_books WHERE id = :id AND " . $this->scopeClause('', ':teacher_id') . " AND deleted_at IS NULL");
+        $stmt = $db->prepare("SELECT id FROM library_books WHERE id = :id AND " . $this->viewClause('', ':teacher_id') . " AND deleted_at IS NULL");
         $stmt->execute(['id' => (int) $id, 'teacher_id' => $teacherId]);
         if (!$stmt->fetch()) {
             $this->notFound('Book not found');
@@ -176,8 +200,17 @@ class LibraryController extends Controller
 
         $db = $this->getDb();
 
-        $where = [$this->scopeClause('lb.', ':teacher_id'), 'lb.deleted_at IS NULL'];
-        $params = ['teacher_id' => $teacherId];
+        // ?scope=department: the colleagues' work in this department (read-only unless this
+        // teacher is a department editor). Otherwise a teacher's own list - the HOD and admin
+        // subclasses list everything they manage.
+        if ($this->query('scope', '') === 'department') {
+            $where = ['lb.department_id = ' . (int) $this->getActiveDepartmentId(), 'NOT (lb.uploaded_by <=> :teacher_id)', 'lb.deleted_at IS NULL'];
+        } elseif (static::class === self::class) {
+            $where = ['lb.uploaded_by = :teacher_id', 'lb.deleted_at IS NULL'];
+        } else {
+            $where = [$this->scopeClause('lb.', ':teacher_id'), 'lb.deleted_at IS NULL'];
+        }
+        $params = ['teacher_id' => $teacherId, 'teacher_edit' => $teacherId];
 
         if (!empty($status)) {
             $where[] = 'lb.status = :status';
@@ -206,6 +239,7 @@ class LibraryController extends Controller
         // (same rule students see it by), how many have opened it, finished it (read to 95%+),
         // and the average share read among those who opened it
         $sql = "SELECT lb.*,
+                       CASE WHEN " . $this->scopeClause('lb.', ':teacher_edit') . " THEN 1 ELSE 0 END AS can_edit,
                        s.name as subject_name,
                        s.code as subject_code,
                        c.name as class_name,
@@ -316,7 +350,7 @@ class LibraryController extends Controller
                 FROM library_books lb
                 LEFT JOIN subjects s ON lb.subject_id = s.id
                 LEFT JOIN classes c ON lb.class_id = c.id
-                WHERE lb.id = :id AND " . $this->scopeClause('lb.', ':teacher_id') . " AND lb.deleted_at IS NULL";
+                WHERE lb.id = :id AND " . $this->viewClause('lb.', ':teacher_id') . " AND lb.deleted_at IS NULL";
 
         $stmt = $db->prepare($sql);
         $stmt->execute(['id' => $id, 'teacher_id' => $teacherId]);
@@ -327,6 +361,7 @@ class LibraryController extends Controller
             return;
         }
 
+        $book['can_edit'] = $this->canEditRow($db, $id);
         $this->success($book);
     }
 

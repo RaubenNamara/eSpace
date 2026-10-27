@@ -31,7 +31,7 @@ class ENoteInsightsController extends Controller
         }
         $teacherId = ($_SESSION['role'] ?? null) === 'hod' ? (int) ($_SESSION['teacher_id'] ?? 0) : (int) ($_SESSION['user_id'] ?? 0);
         $db = \eSpace\Config\Database::getInstance();
-        $stmt = $db->prepare("SELECT id, title FROM enote_topics WHERE id = ? AND teacher_id = ? AND deleted_at IS NULL");
+        $stmt = $db->prepare("SELECT id, title FROM enote_topics WHERE id = ? AND " . \eSpace\App\Services\DepartmentContent::viewable('', 'teacher_id', '?', $teacherId, $this->getActiveDepartmentId()) . " AND deleted_at IS NULL");
         $stmt->execute([(int) $id, $teacherId]);
         $topic = $stmt->fetch();
         if (!$topic) {

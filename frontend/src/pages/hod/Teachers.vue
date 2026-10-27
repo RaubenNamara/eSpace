@@ -6,6 +6,10 @@
       <StatStrip v-if="!loading && teachers.length" v-model="filter" :items="statItems" />
     </PageHeader>
 
+    <p v-if="!loading && teachers.length" class="mb-3 text-sm text-gray-600 dark:text-gray-300">
+      Every teacher sees the department's eNotes, books, papers and videos, but changes only their own. Turn on <b>Edit colleagues' work</b> for a teacher who should be able to change everyone's.
+    </p>
+
     <div v-if="error" class="rounded-2xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-900/20 p-4 text-sm text-rose-800 dark:text-rose-200">{{ error }}</div>
 
     <DataTable
@@ -47,6 +51,20 @@
         <span v-else :class="row.last_active_at || row.last_login_at ? 'text-gray-700 dark:text-gray-200' : 'text-gray-400'">{{ row.last_active_at || row.last_login_at ? timeAgo(row.last_active_at || row.last_login_at!) : 'Never' }}</span>
         <span v-if="row.last_login_at" class="block text-[11px] text-gray-500 dark:text-gray-400">Signed in {{ timeAgo(row.last_login_at) }}</span>
       </template>
+      <template #cell-can_edit_colleagues="{ row }">
+        <button
+          type="button"
+          role="switch"
+          :aria-checked="row.can_edit_colleagues"
+          :disabled="savingId === row.id"
+          class="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors disabled:opacity-50"
+          :class="row.can_edit_colleagues ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'"
+          :title="row.can_edit_colleagues ? 'Can edit colleagues\' eNotes, books, papers and videos - tap to turn off' : 'Only edits their own work - tap to let them edit colleagues\' work too'"
+          @click="toggleEditor(row)"
+        >
+          <span class="inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform" :class="row.can_edit_colleagues ? 'translate-x-5' : 'translate-x-0.5'"></span>
+        </button>
+      </template>
       <template #cell-status="{ row }">
         <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold" :class="row.is_active ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'">{{ row.is_active ? 'Active' : 'Suspended' }}</span>
       </template>
@@ -57,6 +75,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { apiService } from '@/services/api'
+import { useToastStore } from '@/stores/toast'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import StatStrip, { type StatItem } from '@/components/ui/StatStrip.vue'
 import DataTable, { type Column } from '@/components/ui/DataTable.vue'
@@ -77,6 +96,8 @@ interface Teacher {
   assessments_count: number
   enotes_count: number
   to_mark_count: number
+  // may edit the other teachers' work in the department (Services/DepartmentContent)
+  can_edit_colleagues: boolean
 }
 type Row = Teacher & { name: string }
 
@@ -87,6 +108,7 @@ const columns: Column[] = [
   { key: 'enotes_count', label: 'eNotes', sortable: true, align: 'center' },
   { key: 'to_mark_count', label: 'To mark', sortable: true, align: 'center' },
   { key: 'last_active', label: 'Last on', sortable: true, value: (r: Row) => (r.is_online ? '9999' : r.last_active_at || r.last_login_at || '') },
+  { key: 'can_edit_colleagues', label: 'Edit colleagues\' work', align: 'center', value: (r: Row) => (r.can_edit_colleagues ? 1 : 0) },
   { key: 'status', label: 'Status', value: (r: Row) => (r.is_active ? 1 : 0) }
 ]
 
@@ -94,6 +116,22 @@ const teachers = ref<Row[]>([])
 const loading = ref(true)
 const error = ref('')
 const filter = ref<string | null>(null)
+const toast = useToastStore()
+
+// Let a teacher edit their colleagues' work, or take it back
+const savingId = ref<number | null>(null)
+const toggleEditor = async (t: Row) => {
+  savingId.value = t.id
+  try {
+    const res = await apiService.put(`/hod/teachers/${t.id}/content-editor`, { on: !t.can_edit_colleagues })
+    t.can_edit_colleagues = !!res.data.data?.on
+    toast.success(res.data.message || 'Saved')
+  } catch (err: any) {
+    toast.error(err.response?.data?.message || 'Could not save')
+  } finally {
+    savingId.value = null
+  }
+}
 
 const weekAgo = () => Date.now() - 7 * 86400000
 const activeThisWeek = (t: Row) => !!t.last_active_at && new Date(t.last_active_at.replace(' ', 'T')).getTime() >= weekAgo()
@@ -121,7 +159,8 @@ onMounted(async () => {
       name: niceName(`${t.first_name} ${t.last_name}`),
       assessments_count: Number(t.assessments_count) || 0,
       enotes_count: Number(t.enotes_count) || 0,
-      to_mark_count: Number(t.to_mark_count) || 0
+      to_mark_count: Number(t.to_mark_count) || 0,
+      can_edit_colleagues: !!t.can_edit_colleagues
     }))
   } catch (err: any) {
     error.value = err.response?.data?.message || 'Could not load the teachers'

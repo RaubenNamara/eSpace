@@ -1,6 +1,6 @@
 <template>
   <!-- One tour screen inside its browser frame -->
-  <ScaledFrame :url="`espace / ${screen.label.toLowerCase()}`">
+  <ScaledFrame :url="`tusome / ${screen.label.toLowerCase()}`">
     <component :is="SCREENS[screen.key]" />
   </ScaledFrame>
 </template>

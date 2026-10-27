@@ -39,6 +39,8 @@ export interface LibraryBook {
   // Who added it: a teacher's name, the HOD's, or 'School admin'
   uploader_name?: string | null
   uploader_role?: 'teacher' | 'hod' | 'admin'
+  // May this teacher change it: their own, or a colleague's when the HOD allows (Services/DepartmentContent)
+  can_edit?: boolean | number
   teacher_first_name?: string
   teacher_last_name?: string
   // Teacher list only: who it's aimed at and how far they've got

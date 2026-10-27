@@ -29,6 +29,8 @@
 
     <p v-if="assignmentsError" class="mb-4 text-sm text-rose-600 dark:text-rose-300">{{ assignmentsError }}</p>
 
+    <WorkScopeSwitch v-model="view" mine-label="My eNotes" />
+    <div v-show="view === 'mine'">
     <Skeleton v-if="loading && !topics.length" variant="cards" :count="6" />
 
     <EmptyState v-else-if="!topics.length" icon="document" tone="indigo" title="No eNotes yet" message="Write a topic page by page - text, pictures, equations, narration - and your students read it like a book, with their progress tracked.">
@@ -284,6 +286,9 @@
         </section>
       </template>
     </template>
+
+    </div>
+    <DepartmentWork v-if="view === 'department'" :items="deptItems" :loading="deptLoading" noun="eNotes" open-label="Read" @open="router.push(`/teacher/enotes/preview/${($event as ENoteTopic).id}`)" @edit="openBuilder(($event as ENoteTopic).id)" @remove="deleteBook([$event as ENoteTopic])" />
 
     <AudiencePanel
       v-if="readersFor"
@@ -787,6 +792,8 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import ClassStreamMultiSelect from '@/components/enotes/ClassStreamMultiSelect.vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
+import WorkScopeSwitch from '@/components/teacher/WorkScopeSwitch.vue'
+import DepartmentWork, { type DeptItem } from '@/components/teacher/DepartmentWork.vue'
 import StatStrip, { type StatItem } from '@/components/ui/StatStrip.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import Skeleton from '@/components/ui/Skeleton.vue'
@@ -1256,6 +1263,7 @@ const loadDashboard = async () => {
 }
 
 const loadTopics = async () => {
+  if (view.value === 'department') loadDepartmentWork()
   try {
     loading.value = true
     // This page has no pagination UI - it groups every loaded topic into "Browse by Class" cards
@@ -1611,6 +1619,34 @@ const confirmDuplicate = async () => {
 // How many student questions on these eNotes are waiting for an answer
 const waitingQuestions = ref(0)
 axios.get('/api/teacher/enote-questions').then(res => { waitingQuestions.value = (res.data.data.questions || []).length }).catch(() => {})
+
+
+// ---- Mine | Department: the colleagues' work in this department, read only unless the HOD lets
+// this teacher edit it (can_edit - see components/teacher/DepartmentWork.vue)
+const view = ref<'mine' | 'department'>('mine')
+const deptItems = ref<DeptItem[]>([])
+const deptLoading = ref(false)
+const deptClassLabel = (x: any) => x.class_group_name ? `${x.class_group_name} (all streams)` : x.class_name ? `${x.class_name}${x.class_stream_name ? ` ${x.class_stream_name}` : ''}` : 'Whole department'
+const loadDepartmentWork = async () => {
+  deptLoading.value = true
+  try {
+    const rows: any[] = (await axios.get(`${API_BASE}/teacher/enotes/topics`, { params: { scope: 'department', limit: 500 } })).data.data.topics || []
+    deptItems.value = rows.map((x: any) => ({
+      id: x.id,
+      title: x.title,
+      owner: x.owner_name || '',
+      detail: [x.subject_name, deptClassLabel(x), `${x.total_pages} ${Number(x.total_pages) === 1 ? 'page' : 'pages'}`].filter(Boolean).join(' · '),
+      status: x.status,
+      canEdit: !!Number(x.can_edit),
+      raw: x
+    }))
+  } catch {
+    deptItems.value = []
+  } finally {
+    deptLoading.value = false
+  }
+}
+watch(view, v => { if (v === 'department') loadDepartmentWork() })
 
 onMounted(async () => {
   // Warm the builder chunk (and the CKEditor bundle it imports) in the background while the

@@ -6,7 +6,7 @@
     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14" /></svg>
     Download the app
   </button>
-  <button v-else-if="variant === 'header'" type="button" class="hidden lg:inline-flex items-center gap-1.5 whitespace-nowrap px-3 py-2 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10" @click="start">
+  <button v-else-if="variant === 'header'" type="button" class="hidden lg:inline-flex items-center gap-1.5 whitespace-nowrap px-3 py-2 rounded-xl text-sm font-semibold" :class="light ? 'text-white/90 hover:bg-white/10 hover:text-white' : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10'" @click="start">
     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14" /></svg>
     Get the app
   </button>
@@ -49,7 +49,8 @@
 import { ref } from 'vue'
 import { isIos, isStandalone, installed, installPromptAvailable, promptInstall } from '@/utils/install'
 
-withDefaults(defineProps<{ variant?: 'hero' | 'header' | 'menu' }>(), { variant: 'hero' })
+// light: on a dark background (the site header over the green hero)
+withDefaults(defineProps<{ variant?: 'hero' | 'header' | 'menu'; light?: boolean }>(), { variant: 'hero', light: false })
 
 const heroClass = 'inline-flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-200 dark:border-indigo-500/30 dark:hover:bg-indigo-500/20 transition'
 

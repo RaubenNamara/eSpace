@@ -15,195 +15,63 @@
     <div class="relative z-10 flex min-h-screen">
       <!-- Left section -->
       <section
-        class="relative hidden w-[54%] flex-col justify-between overflow-hidden px-12 py-10 lg:flex xl:px-20 xl:py-14"
+        class="relative hidden w-[54%] flex-col justify-between overflow-hidden px-12 py-10 text-white lg:flex xl:px-20 xl:py-14"
       >
+        <!-- Students at their laptops in class (public/images/login-students), under a deep green
+             wash that keeps the words readable -->
+        <picture class="absolute inset-0 -z-0">
+          <source srcset="/images/login-students.webp" type="image/webp">
+          <img src="/images/login-students.jpg" alt="" class="h-full w-full object-cover object-[35%_center]" fetchpriority="high">
+        </picture>
+        <div class="absolute inset-0 bg-gradient-to-r from-indigo-950/90 via-indigo-950/60 to-indigo-950/10"></div>
+        <div class="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-indigo-950/80 to-transparent"></div>
+
         <!-- Top logo -->
-        <div class="animate-fade-down">
+        <div class="relative animate-fade-down">
           <!-- Tusome is the brand; the badge says whose school space this is -->
           <div class="flex flex-wrap items-center gap-4">
-            <router-link to="/" aria-label="Tusome home"><Wordmark size="lg" /></router-link>
-            <span class="inline-flex items-center gap-2 rounded-full bg-white/90 dark:bg-white/10 border border-slate-200 dark:border-white/10 pl-1 pr-3 py-1 shadow-sm">
-                <img src="/images/stmark-logo.jpg" alt="" class="h-6 w-6 rounded-full object-contain bg-white">
-                <span class="text-xs font-semibold text-slate-700 dark:text-slate-200">St Mark's College Namagoma</span>
-              </span>
+            <router-link to="/" aria-label="Tusome home"><Wordmark size="lg" light /></router-link>
+            <span class="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/20 backdrop-blur pl-1 pr-3 py-1">
+              <img src="/images/stmark-logo.jpg" alt="" class="h-6 w-6 rounded-full object-contain bg-white">
+              <span class="text-xs font-semibold text-white/90">St Mark's College Namagoma</span>
+            </span>
           </div>
         </div>
 
         <!-- Hero content -->
-        <div class="my-auto max-w-2xl 2xl:max-w-4xl animate-fade-up">
-          <div
-            class="mb-7 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-medium text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 2xl:px-5 2xl:py-2.5 2xl:text-base"
-          >
+        <div class="relative my-auto max-w-2xl 2xl:max-w-4xl animate-fade-up">
+          <div class="mb-7 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white backdrop-blur 2xl:px-5 2xl:py-2.5 2xl:text-base">
             <span class="relative flex h-2.5 w-2.5">
-              <span
-                class="absolute inline-flex h-full w-full animate-ping rounded-full bg-slate-400 opacity-75 dark:bg-slate-500"
-              ></span>
-              <span
-                class="relative inline-flex h-2.5 w-2.5 rounded-full bg-slate-500 dark:bg-slate-400"
-              ></span>
+              <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-300 opacity-75"></span>
+              <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-indigo-300"></span>
             </span>
-
             Your complete digital learning workspace
           </div>
 
-          <h2
-            class="max-w-xl 2xl:max-w-3xl text-4xl font-bold leading-tight tracking-tight text-slate-900 dark:text-white xl:text-6xl xl:leading-[1.08] 2xl:text-7xl"
-          >
-            Learn, teach and grow together.
+          <h2 class="max-w-xl 2xl:max-w-3xl text-4xl font-bold leading-tight tracking-tight text-white drop-shadow-sm xl:text-6xl xl:leading-[1.08] 2xl:text-7xl">
+            Learn, teach and grow <span class="text-indigo-300">together.</span>
           </h2>
 
-          <p
-            class="mt-6 max-w-xl 2xl:max-w-2xl text-base leading-8 text-slate-600 dark:text-slate-300 xl:text-lg 2xl:text-xl 2xl:leading-9"
-          >
+          <p class="mt-6 max-w-xl 2xl:max-w-2xl text-base leading-8 text-white/85 xl:text-lg 2xl:text-xl 2xl:leading-9">
             Access lessons, live classes, assignments, digital resources and
             performance insights from one secure and connected platform.
           </p>
 
-          <!-- Features -->
-          <div class="mt-10 grid max-w-xl 2xl:max-w-2xl grid-cols-2 gap-4 2xl:gap-5">
-            <div
+          <!-- What's inside, in a line -->
+          <div class="mt-8 flex flex-wrap gap-2">
+            <span
               v-for="feature in features"
               :key="feature.title"
-              class="group rounded-2xl border border-slate-200 bg-slate-50 p-4 transition duration-300 hover:-translate-y-1 hover:border-slate-300 hover:bg-slate-100 dark:border-white/10 dark:bg-white/[0.055] dark:hover:border-white/20 dark:hover:bg-white/[0.08]"
+              :title="feature.description"
+              class="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold text-white ring-1 ring-white/20 backdrop-blur"
             >
-              <div class="flex items-start gap-3">
-                <div
-                  class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-100 transition group-hover:bg-indigo-100 dark:bg-indigo-500/15 dark:text-indigo-300 dark:ring-indigo-400/20 dark:group-hover:bg-indigo-500/25"
-                >
-                  <svg
-                    v-if="feature.icon === 'classes'"
-                    class="h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="1.8"
-                      d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                    />
-                  </svg>
-
-                  <svg
-                    v-else-if="feature.icon === 'library'"
-                    class="h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="1.8"
-                      d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-                    />
-                  </svg>
-
-                  <svg
-                    v-else-if="feature.icon === 'analytics'"
-                    class="h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="1.8"
-                      d="M9 17v-6m4 6V7m4 10v-3M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z"
-                    />
-                  </svg>
-
-                  <svg
-                    v-else
-                    class="h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="1.8"
-                      d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.031 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                    />
-                  </svg>
-                </div>
-
-                <div>
-                  <h3 class="text-sm font-semibold text-slate-900 dark:text-white">
-                    {{ feature.title }}
-                  </h3>
-                  <p class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                    {{ feature.description }}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Trust row -->
-          <div
-            class="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-slate-500 dark:text-slate-400"
-          >
-            <div class="flex items-center gap-2">
-              <svg
-                class="h-4 w-4 text-slate-400 dark:text-slate-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              Secure access
-            </div>
-
-            <div class="flex items-center gap-2">
-              <svg
-                class="h-4 w-4 text-slate-400 dark:text-slate-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              Easy collaboration
-            </div>
-
-            <div class="flex items-center gap-2">
-              <svg
-                class="h-4 w-4 text-slate-400 dark:text-slate-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              Available anywhere
-            </div>
+              <span class="h-1.5 w-1.5 rounded-full bg-indigo-300"></span>{{ feature.title }}
+            </span>
           </div>
         </div>
 
         <!-- Left footer -->
-        <div
-          class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400"
-        >
+        <div class="relative flex items-center justify-between text-xs text-white/70">
           <p>© {{ currentYear }} Tusome. All rights reserved.</p>
           <p>Empowering learners for lifelong learning.</p>
         </div>
@@ -211,7 +79,7 @@
 
       <!-- Right section -->
       <section
-        class="flex min-h-screen flex-1 items-center justify-center bg-slate-50 px-4 py-8 dark:bg-slate-900 sm:px-8 lg:px-10"
+        class="flex min-h-screen flex-1 items-center justify-center bg-indigo-50/50 px-4 py-8 dark:bg-slate-900 sm:px-8 lg:px-10"
       >
         <div class="w-full max-w-[460px] animate-card-in">
           <!-- Mobile logo -->
@@ -224,6 +92,10 @@
               </span>
             </div>
           </div>
+          <picture class="lg:hidden">
+            <source srcset="/images/login-students.webp" type="image/webp">
+            <img src="/images/login-students.jpg" alt="Students learning on Tusome in class" class="-mt-2 mb-5 h-40 w-full rounded-3xl object-cover object-[30%_40%] shadow-lg ring-1 ring-indigo-900/10">
+          </picture>
 
           <!-- Login card -->
           <div

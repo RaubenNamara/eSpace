@@ -607,6 +607,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::post('/teachers', 'eSpace\App\Controllers\HOD\TeacherController@create');
         Router::get('/teachers/{id}', 'eSpace\App\Controllers\HOD\TeacherController@show');
         Router::put('/teachers/{id}', 'eSpace\App\Controllers\HOD\TeacherController@update');
+        Router::put('/teachers/{id}/content-editor', 'eSpace\App\Controllers\HOD\TeacherController@contentEditor');
         Router::delete('/teachers/{id}', 'eSpace\App\Controllers\HOD\TeacherController@delete');
         
         // Students

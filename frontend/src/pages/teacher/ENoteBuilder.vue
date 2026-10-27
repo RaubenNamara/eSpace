@@ -978,6 +978,11 @@ const loadTopic = async () => {
   try {
     const response = await axios.get(`${API_BASE}/teacher/enotes/topics/${topicId.value}`)
     if (response.data.success) {
+      // A colleague's topic this teacher may not change (Services/DepartmentContent): read it instead
+      if (response.data.data.can_edit === false) {
+        router.replace(`/teacher/enotes/preview/${topicId.value}`)
+        return
+      }
       hasUnsavedChanges.value = false
       topic.value = response.data.data
       pages.value = (response.data.data.pages || []).map((page: ENotePage) => ({

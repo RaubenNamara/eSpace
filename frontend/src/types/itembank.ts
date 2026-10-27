@@ -6,6 +6,8 @@
 import type { ClassTarget } from '@/components/teacher/TeacherClassSelector.vue'
 
 export interface ItemBankResource {
+  // May this teacher change it: their own, or a colleague's when the HOD allows (Services/DepartmentContent)
+  can_edit?: boolean | number
   // Who added it (a teacher's name, the HOD's, or 'School admin') and its department - HOD/admin lists
   uploader_name?: string | null
   id: number

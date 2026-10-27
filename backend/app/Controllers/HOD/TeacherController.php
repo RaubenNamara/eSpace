@@ -109,8 +109,11 @@ class TeacherController extends Controller
         $stmt->execute($params + ['dept_a' => $departmentId, 'dept_e' => $departmentId, 'dept_m' => $departmentId]);
         $teachers = $stmt->fetchAll();
         // online = the app pinged in the last 90 seconds (it pings every 30 while open), as in chat
+        $editors = \eSpace\App\Services\DepartmentContent::editorsOf($departmentId);
         foreach ($teachers as &$t) {
             $t['is_online'] = $t['seen_seconds_ago'] !== null && (int) $t['seen_seconds_ago'] <= 90;
+            // may edit their colleagues' eNotes, books, papers and videos (see contentEditor())
+            $t['can_edit_colleagues'] = isset($editors[(int) $t['id']]);
         }
         unset($t);
 
@@ -336,6 +339,59 @@ class TeacherController extends Controller
         }
 
         $this->success([], 'Teacher updated successfully');
+    }
+
+    /**
+     * Let a teacher edit their colleagues' work in the department - eNotes, eLibrary books, Item Bank
+     * papers and videos - or take that back. Every teacher can already see it; only their own is
+     * theirs to change otherwise (Services/DepartmentContent).
+     * PUT /hod/teachers/{id}/content-editor  { on: bool }
+     */
+    public function contentEditor($id): void
+    {
+        if (!$this->isHOD()) {
+            $this->forbidden();
+            return;
+        }
+        $departmentId = $this->getHODDepartmentId();
+        if (!$departmentId) {
+            $this->error('Department not found for HOD', 404);
+            return;
+        }
+        $teacherId = (int) $id;
+        $stmt = $this->db->prepare(
+            "SELECT t.id, t.first_name, t.last_name FROM teachers t
+             WHERE t.id = ? AND t.deleted_at IS NULL AND (t.department_id = ?
+                OR EXISTS (SELECT 1 FROM teacher_department_assignments tda WHERE tda.teacher_id = t.id AND tda.department_id = ? AND tda.deleted_at IS NULL))"
+        );
+        $stmt->execute([$teacherId, $departmentId, $departmentId]);
+        $teacher = $stmt->fetch();
+        if (!$teacher) {
+            $this->notFound('Teacher not found in your department');
+            return;
+        }
+        $on = (bool) $this->input('on');
+        try {
+            \eSpace\App\Services\DepartmentContent::setEditor($departmentId, $teacherId, $on, (int) ($_SESSION['user_id'] ?? 0) ?: null);
+        } catch (\Throwable $e) {
+            $this->error('This needs a database update first (migration 145).', 409);
+            return;
+        }
+        $stmt = $this->db->prepare("SELECT name FROM departments WHERE id = ?");
+        $stmt->execute([$departmentId]);
+        $dept = (string) ($stmt->fetchColumn() ?: 'your department');
+        (new \eSpace\App\Services\NotificationService())->notify(
+            $teacherId,
+            'teacher',
+            'department_content_editor',
+            $on ? 'You can edit your colleagues\' work' : 'Editing colleagues\' work turned off',
+            $on
+                ? "Your HOD has let you edit the eNotes, books, papers and videos of every teacher in {$dept}. Find them under Department on each page."
+                : "You can still see your colleagues' work in {$dept}, but only change your own.",
+            ['department_id' => $departmentId]
+        );
+        $name = trim($teacher['first_name'] . ' ' . $teacher['last_name']);
+        $this->success(['on' => $on], $on ? "{$name} can now edit colleagues' work" : "{$name} can now only edit their own work");
     }
 
     /**
