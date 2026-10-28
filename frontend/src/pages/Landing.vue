@@ -1,7 +1,8 @@
 <template>
-  <!-- The public Tusome website: what Tusome is, a tour, every module, who it's for, pricing, the
-       team, and a way for a school to ask for a demo. Tusome is the product; schools (St Mark's
-       first) are clients. Words for most sections live in data/site.ts. -->
+  <!-- The public Tusome website, told for one person at a time - a school (the default), a
+       teacher or a student, picked with the switch in the header (useAudience). Each sees their
+       own hero, reasons, day, modules and questions; the team and the demo form are for
+       schools. Tusome is the product; schools (St Mark's first) are clients. -->
   <div class="site-plain min-h-screen bg-white font-sans text-slate-900 antialiased dark:bg-slate-950 dark:text-white overflow-x-clip">
     <SiteHeader on-dark />
 
@@ -16,29 +17,38 @@
 
         <div class="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 grid lg:grid-cols-[1.05fr_1fr] gap-14 lg:gap-10 items-center">
           <div class="reveal">
+            <!-- Phones and tablets: the switch lives here (the header has it on wide screens) -->
+            <AudienceSwitch light label class="lg:hidden mb-6" />
+            <Transition name="fade" mode="out-in">
+            <div :key="audience">
             <span class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold text-indigo-100 backdrop-blur">
               <span class="w-1.5 h-1.5 rounded-full bg-indigo-300"></span>
-              Built for the competency-based curriculum
+              {{ hero.eyebrow }}
             </span>
-            <h1 class="mt-5 font-jakarta text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.05]" aria-label="One space for every lesson, learner, teacher and school">
-              One space<br>for every<br>
+            <h1 class="mt-5 font-jakarta text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.05]" :aria-label="`${hero.lines.join(' ')} ${hero.words.join(', ')}`">
+              {{ hero.lines[0] }}<br>{{ hero.lines[1] }}<br>
               <span class="relative inline-block min-w-[6ch] text-indigo-300" aria-hidden="true">
                 <Transition name="word" mode="out-in"><span :key="heroWord" class="inline-block">{{ heroWord }}.</span></Transition>
               </span>
             </h1>
-            <p class="mt-5 max-w-xl text-base sm:text-lg text-white/80 leading-relaxed">
-              Tusome is a complete digital school: notes, books, videos and live lessons for students; LOA, AOI and EOC assessment and marking for teachers; and a live Learning Map that shows everyone exactly where each learner stands.
-            </p>
+            <p class="mt-5 max-w-xl text-base sm:text-lg text-white/80 leading-relaxed">{{ hero.text }}</p>
             <div class="mt-8 flex flex-wrap gap-3">
-              <a href="#demo" class="group inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold text-indigo-900 bg-white hover:bg-indigo-50 shadow-lg shadow-black/20 transition">
-                Request a demo
+              <component
+                :is="hero.primary.to.startsWith('#') ? 'a' : 'router-link'"
+                v-bind="hero.primary.to.startsWith('#') ? { href: hero.primary.to } : { to: hero.primary.to }"
+                class="group inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold text-indigo-900 bg-white hover:bg-indigo-50 shadow-lg shadow-black/20 transition"
+              >
+                {{ hero.primary.label }}
                 <svg class="w-4 h-4 group-hover:translate-x-0.5 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
-              </a>
-              <button type="button" class="inline-flex items-center gap-2.5 px-5 py-3 rounded-2xl text-sm font-bold text-white border border-white/25 hover:bg-white/10 transition" @click="watchTour(0)">
+              </component>
+              <router-link v-if="audience === 'student'" to="/login" class="inline-flex items-center gap-2.5 px-5 py-3 rounded-2xl text-sm font-bold text-white border border-white/25 hover:bg-white/10 transition">Sign in</router-link>
+              <button v-else type="button" class="inline-flex items-center gap-2.5 px-5 py-3 rounded-2xl text-sm font-bold text-white border border-white/25 hover:bg-white/10 transition" @click="watchTour(0)">
                 <span class="w-6 h-6 rounded-full bg-white text-indigo-900 flex items-center justify-center"><svg class="w-3 h-3 ml-0.5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg></span>
                 Watch the 30-second tour
               </button>
             </div>
+            </div>
+            </Transition>
             <!-- A client -->
             <div class="mt-10 flex items-center gap-3">
               <img src="/images/stmark-logo.jpg" alt="" width="40" height="40" class="w-10 h-10 rounded-xl object-contain bg-white p-0.5 shadow ring-1 ring-black/5">
@@ -55,40 +65,44 @@
               </picture>
               <div class="absolute inset-0 bg-gradient-to-t from-indigo-950/60 via-transparent to-transparent"></div>
             </div>
+            <Transition name="fade" mode="out-in">
+            <div :key="audience">
             <div class="hidden sm:block absolute -left-6 lg:-left-10 top-6 w-60 transition-transform duration-300 ease-out" :style="drift(1.2)" aria-hidden="true">
               <div class="rounded-2xl bg-white text-slate-900 shadow-xl p-4 float-a">
-                <p class="text-[11px] font-medium text-slate-400">Good morning,</p>
-                <p class="font-jakarta font-bold">Ashley</p>
+                <p class="text-[11px] font-medium text-slate-400">{{ cards.a.hello }}</p>
+                <p class="font-jakarta font-bold">{{ cards.a.name }}</p>
                 <div class="mt-3 flex items-center gap-2.5 rounded-xl bg-indigo-600 p-2.5 text-white">
-                  <span class="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center"><AppIcon name="book" class="w-4 h-4" /></span>
+                  <span class="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center"><AppIcon :name="cards.a.icon" class="w-4 h-4" /></span>
                   <span class="flex-1 min-w-0">
-                    <span class="block text-[9px] font-bold uppercase tracking-wider text-indigo-100">Continue reading</span>
-                    <span class="block text-xs font-bold truncate">Measurements in Physics</span>
-                    <span class="mt-1 block h-1 rounded-full bg-white/25"><span class="block h-1 w-2/3 rounded-full bg-white"></span></span>
+                    <span class="block text-[9px] font-bold uppercase tracking-wider text-indigo-100">{{ cards.a.tag }}</span>
+                    <span class="block text-xs font-bold truncate">{{ cards.a.title }}</span>
+                    <span v-if="cards.a.progress !== null" class="mt-1 block h-1 rounded-full bg-white/25"><span class="block h-1 rounded-full bg-white" :style="{ width: `${cards.a.progress * 100}%` }"></span></span>
                   </span>
                 </div>
               </div>
             </div>
             <div class="absolute -right-2 lg:-right-8 top-1/3 w-48 transition-transform duration-300 ease-out" :style="drift(1.6)" aria-hidden="true">
               <div class="rounded-2xl bg-white text-slate-900 shadow-xl p-3.5 float-c">
-                <p class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-500"><span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>Live now</p>
-                <p class="mt-1 text-sm font-bold">Photosynthesis Q&amp;A</p>
-                <p class="text-[11px] text-slate-500">Biology · S.2</p>
-                <span class="mt-2 inline-flex px-3 py-1 rounded-lg bg-indigo-600 text-white text-xs font-bold">Join now</span>
+                <p class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-500"><span class="w-2 h-2 rounded-full" :class="cards.b.live ? 'bg-red-500 animate-pulse' : 'bg-amber-400'"></span>{{ cards.b.label }}</p>
+                <p class="mt-1 text-sm font-bold">{{ cards.b.title }}</p>
+                <p class="text-[11px] text-slate-500">{{ cards.b.sub }}</p>
+                <span class="mt-2 inline-flex px-3 py-1 rounded-lg bg-indigo-600 text-white text-xs font-bold">{{ cards.b.button }}</span>
               </div>
             </div>
             <div class="hidden sm:block absolute left-8 -bottom-8 w-48 transition-transform duration-300 ease-out" :style="drift(1)" aria-hidden="true">
               <div class="rounded-2xl bg-white text-slate-900 shadow-xl p-3.5 float-b">
-                <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Learning Map</p>
+                <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">{{ cards.c.label }}</p>
                 <div class="flex items-center gap-3">
-                  <svg class="w-12 h-12 -rotate-90" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.5" fill="none" stroke-width="4" class="stroke-slate-100" /><circle cx="18" cy="18" r="15.5" fill="none" stroke-width="4" stroke-linecap="round" stroke="#22a45d" stroke-dasharray="68 97.4" /></svg>
+                  <svg class="w-12 h-12 -rotate-90" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.5" fill="none" stroke-width="4" class="stroke-slate-100" /><circle cx="18" cy="18" r="15.5" fill="none" stroke-width="4" stroke-linecap="round" stroke="#22a45d" :stroke-dasharray="`${cards.c.pct * 0.974} 97.4`" /></svg>
                   <div>
-                    <p class="font-jakarta text-lg font-extrabold">70%</p>
-                    <p class="text-[10px] text-slate-500">outcomes achieved</p>
+                    <p class="font-jakarta text-lg font-extrabold">{{ cards.c.pct }}%</p>
+                    <p class="text-[10px] text-slate-500">{{ cards.c.caption }}</p>
                   </div>
                 </div>
               </div>
             </div>
+            </div>
+            </Transition>
           </div>
         </div>
 
@@ -108,8 +122,8 @@
       <section id="features" class="py-20 sm:py-28 scroll-mt-20">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div class="reveal max-w-2xl">
-            <p :class="EYEBROW">Why schools choose Tusome</p>
-            <h2 :class="H2">Teaching, learning and leading - finally in one place.</h2>
+            <p :class="EYEBROW">{{ why.eyebrow }}</p>
+            <h2 :class="H2">{{ why.title }}</h2>
           </div>
           <div class="mt-12 grid lg:grid-cols-2 gap-5">
             <!-- Learn anywhere: the big green tile, with narration playing -->
@@ -122,11 +136,11 @@
                 <li v-for="b in PILLARS[0].points" :key="b" class="flex items-start gap-2 text-sm"><AppIcon name="check-circle" class="w-4 h-4 mt-0.5 flex-shrink-0 text-indigo-200" />{{ b }}</li>
               </ul>
               <div class="relative mt-8 rounded-2xl bg-indigo-950/40 ring-1 ring-white/10 p-4 max-w-sm" aria-hidden="true">
-                <p class="text-[10px] font-bold uppercase tracking-widest text-indigo-200">Narration · Page 3 of 12</p>
+                <p class="text-[10px] font-bold uppercase tracking-widest text-indigo-200">{{ audience === 'teacher' ? 'Your eNote · read aloud' : 'Narration · Page 3 of 12' }}</p>
                 <div class="mt-3 flex items-end gap-1 h-10">
                   <span v-for="i in 22" :key="i" class="wave flex-1 rounded-full bg-white/80" :style="{ animationDelay: `${(i % 7) * 0.12}s`, height: `${30 + ((i * 37) % 60)}%` }"></span>
                 </div>
-                <p class="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold"><AppIcon name="download" class="w-3.5 h-3.5" />Saved for offline</p>
+                <p class="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold"><AppIcon name="download" class="w-3.5 h-3.5" />{{ audience === 'teacher' ? 'Read by 38 of 41' : 'Saved for offline' }}</p>
               </div>
             </div>
             <!-- Teach with insight: a class's outcomes, coloured in -->
@@ -165,7 +179,7 @@
 
           <!-- How it works -->
           <div id="how" class="reveal mt-20 scroll-mt-24">
-            <h3 class="font-jakarta text-2xl sm:text-3xl font-extrabold tracking-tight">Your school, live in weeks - not terms</h3>
+            <h3 class="font-jakarta text-2xl sm:text-3xl font-extrabold tracking-tight">{{ why.stepsTitle }}</h3>
             <ol class="mt-8 grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
               <li v-for="(st, i) in STEPS" :key="st.title" class="relative">
                 <div class="flex items-center gap-3">
@@ -181,22 +195,22 @@
       </section>
 
       <!-- ===== A day with Tusome: told as you scroll ===== -->
-      <section id="day" class="relative py-20 sm:py-28 bg-indigo-950 text-white scroll-mt-20">
+      <section v-if="audience !== 'school'" id="day" class="relative py-20 sm:py-28 bg-indigo-950 text-white scroll-mt-20">
         <div class="absolute inset-0 overflow-hidden" aria-hidden="true">
           <div class="absolute top-1/3 -right-40 w-[36rem] h-[36rem] rounded-full bg-indigo-600/25 blur-3xl"></div>
         </div>
         <div class="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div class="reveal max-w-2xl">
             <p class="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-indigo-200 ring-1 ring-white/10">A day with Tusome</p>
-            <h2 class="mt-3 font-jakarta text-3xl sm:text-4xl font-extrabold tracking-tight">One learner, one phone, a whole school day.</h2>
-            <p class="mt-3 text-white/70">Scroll through Ashley's day - from reading on the way in to an outcome turning green that evening.</p>
+            <h2 class="mt-3 font-jakarta text-3xl sm:text-4xl font-extrabold tracking-tight">{{ day.title }}</h2>
+            <p class="mt-3 text-white/70">{{ day.text }}</p>
           </div>
-          <DayStory class="mt-6" />
+          <DayStory class="mt-6" :only="audience" />
         </div>
       </section>
 
       <!-- ===== Before and after: drag to compare ===== -->
-      <section id="compare" class="py-20 sm:py-28 scroll-mt-20">
+      <section v-if="audience !== 'student'" id="compare" class="py-20 sm:py-28 scroll-mt-20">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div class="reveal max-w-2xl">
             <p :class="EYEBROW">Before and after</p>
@@ -207,109 +221,8 @@
         </div>
       </section>
 
-      <!-- ===== Tour ===== -->
-      <section id="tour" class="py-20 sm:py-28 bg-indigo-50/60 dark:bg-indigo-950/20 scroll-mt-20">
-        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div class="reveal text-center max-w-2xl mx-auto mb-10">
-            <p :class="EYEBROW">See it in action</p>
-            <h2 :class="H2">A look inside Tusome</h2>
-          </div>
-          <ProductTour class="reveal" @watch="watchTour" />
-        </div>
-      </section>
-
-      <!-- ===== Try a lesson ===== -->
-      <section id="try" class="py-20 sm:py-28 scroll-mt-20">
-        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div class="reveal max-w-2xl mb-10">
-            <p :class="EYEBROW">Try it yourself</p>
-            <h2 :class="H2">Read a lesson like a student.</h2>
-            <p class="mt-3 text-slate-600 dark:text-slate-400">Turn the pages, listen to the narration, then hand in the quick check - and watch your outcomes fill in, the way they do on a learner's Learning Map.</p>
-          </div>
-          <ENoteSample class="reveal" />
-        </div>
-      </section>
-
-      <!-- ===== Modules: an explorer ===== -->
-      <section id="modules" class="py-20 sm:py-28 bg-indigo-50/60 dark:bg-indigo-950/20 scroll-mt-20">
-        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div class="reveal max-w-2xl">
-            <p :class="EYEBROW">The modules</p>
-            <h2 :class="H2">{{ MODULES.length }} modules. One sign-in.</h2>
-            <p class="mt-3 text-slate-600 dark:text-slate-400">Every part of school life that happens on a screen - built to work together, so what a student reads, attempts and achieves all lands on the same Learning Map. Pick one to see it.</p>
-          </div>
-          <ModuleExplorer class="reveal mt-10" @open="openModule" />
-        </div>
-      </section>
-
-      <!-- ===== Learn by doing: the lab, in 3D ===== -->
-      <section id="lab" class="py-20 sm:py-28 scroll-mt-20">
-        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] gap-10 lg:gap-14 items-center">
-          <div class="reveal">
-            <p :class="EYEBROW">Virtual Lab</p>
-            <h2 :class="H2">Learn by doing - in 3D.</h2>
-            <p class="mt-3 text-slate-600 dark:text-slate-400 leading-relaxed">Practicals a school can't always run for every learner: open a real computer and name its parts, repair a laptop, build a network, run science experiments, explore the human body. Try it - this is the ICT Lab's own computer.</p>
-            <ul class="mt-6 grid sm:grid-cols-2 gap-2">
-              <li v-for="a in LAB_ITEMS" :key="a.label" class="flex items-center gap-2.5 rounded-xl bg-indigo-50/70 dark:bg-white/5 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
-                <span class="w-8 h-8 flex-shrink-0 rounded-lg bg-indigo-600 text-white flex items-center justify-center"><AppIcon :name="a.icon" class="w-4 h-4" /></span>{{ a.label }}
-              </li>
-            </ul>
-          </div>
-          <div ref="labSlot" class="reveal min-w-0">
-            <LabTeaser v-if="labReady" />
-            <div v-else class="h-[25rem] sm:h-[31rem] rounded-3xl bg-gradient-to-br from-indigo-50 to-white ring-1 ring-slate-200 dark:from-white/5 dark:to-transparent dark:ring-white/10 flex items-center justify-center text-sm text-slate-400">Loading the lab…</div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ===== Who it's for ===== -->
-      <section id="roles" class="py-20 sm:py-28 bg-indigo-50/60 dark:bg-indigo-950/20 scroll-mt-20">
-        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div class="reveal text-center max-w-2xl mx-auto">
-            <p :class="EYEBROW">Who it's for</p>
-            <h2 :class="H2">A space for everyone in the school</h2>
-          </div>
-          <div class="reveal mt-10 flex justify-center">
-            <div class="inline-flex gap-1 p-1 rounded-2xl bg-white dark:bg-white/5 ring-1 ring-indigo-100 dark:ring-white/10 overflow-x-auto max-w-full [scrollbar-width:none]" role="tablist">
-              <button v-for="r in ROLES" :key="r.key" type="button" role="tab" :aria-selected="roleTab === r.key" class="flex-shrink-0 px-5 py-2.5 rounded-xl text-sm font-semibold transition" :class="roleTab === r.key ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 dark:text-slate-400'" @click="roleTab = r.key">{{ r.label }}</button>
-            </div>
-          </div>
-          <Transition name="fade" mode="out-in">
-            <div :key="activeRole.key" class="mt-10 grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-              <div>
-                <h3 class="font-jakarta text-2xl sm:text-3xl font-extrabold tracking-tight">{{ activeRole.headline }}</h3>
-                <p class="mt-3 text-slate-600 dark:text-slate-400 leading-relaxed">{{ activeRole.text }}</p>
-                <ul class="mt-6 grid sm:grid-cols-2 gap-3">
-                  <li v-for="p in activeRole.points" :key="p" class="flex items-start gap-2.5 rounded-xl bg-white dark:bg-white/5 p-3 text-sm text-slate-700 dark:text-slate-200 ring-1 ring-indigo-100 dark:ring-white/10">
-                    <AppIcon name="check-circle" class="w-4 h-4 mt-0.5 flex-shrink-0 text-indigo-500" />{{ p }}
-                  </li>
-                </ul>
-                <div class="mt-6 flex flex-wrap gap-x-6 gap-y-2">
-                  <router-link :to="activeRole.page" class="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 dark:text-indigo-300 hover:underline">
-                    Tusome for {{ activeRole.label.toLowerCase() }}
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                  </router-link>
-                  <router-link :to="`/guide#${activeRole.key}`" class="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:underline">Read the guide</router-link>
-                </div>
-              </div>
-              <div class="rounded-3xl p-6 sm:p-8 bg-indigo-950 text-white dark:bg-white/5 dark:border dark:border-white/10">
-                <p class="text-xs font-bold uppercase tracking-widest opacity-80">A day with Tusome</p>
-                <ol class="mt-5 space-y-4">
-                  <li v-for="(s, i) in activeRole.day" :key="s.time" class="flex gap-4">
-                    <span class="flex-shrink-0 w-14 text-sm font-bold opacity-90">{{ s.time }}</span>
-                    <span class="flex-1 pb-4" :class="i < activeRole.day.length - 1 ? 'border-b border-white/20' : ''">
-                      <span class="block text-sm font-semibold">{{ s.what }}</span>
-                    </span>
-                  </li>
-                </ol>
-              </div>
-            </div>
-          </Transition>
-        </div>
-      </section>
-
       <!-- ===== Curriculum + try the Learning Map ===== -->
-      <section id="learning-map" class="py-20 sm:py-28 bg-indigo-950 text-white scroll-mt-20">
+      <section v-if="audience !== 'student'" id="learning-map" class="py-20 sm:py-28 bg-indigo-950 text-white scroll-mt-20">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div class="grid lg:grid-cols-2 gap-12 items-center">
             <div class="reveal">
@@ -333,6 +246,61 @@
               <p class="text-sm text-slate-400">Press "Mark" and watch the Learning Map fill in. Sample learners.</p>
             </div>
             <LearningMapDemo />
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Tour ===== -->
+      <section v-if="audience === 'teacher'" id="tour" class="py-20 sm:py-28 scroll-mt-20">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="reveal text-center max-w-2xl mx-auto mb-10">
+            <p :class="EYEBROW">See it in action</p>
+            <h2 :class="H2">A look inside Tusome</h2>
+          </div>
+          <ProductTour class="reveal" @watch="watchTour" />
+        </div>
+      </section>
+
+      <!-- ===== Try a lesson ===== -->
+      <section v-if="audience === 'student'" id="try" class="py-20 sm:py-28 scroll-mt-20">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="reveal max-w-2xl mb-10">
+            <p :class="EYEBROW">Try it yourself</p>
+            <h2 :class="H2">Read a lesson like a student.</h2>
+            <p class="mt-3 text-slate-600 dark:text-slate-400">Turn the pages, listen to the narration, then hand in the quick check - and watch your outcomes fill in, the way they do on a learner's Learning Map.</p>
+          </div>
+          <ENoteSample class="reveal" />
+        </div>
+      </section>
+
+      <!-- ===== Modules: an explorer ===== -->
+      <section id="modules" class="py-20 sm:py-28 bg-indigo-50/60 dark:bg-indigo-950/20 scroll-mt-20">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="reveal max-w-2xl">
+            <p :class="EYEBROW">The modules</p>
+            <h2 :class="H2">{{ shownModules.length }} modules{{ audience === 'student' ? ' for learners' : audience === 'teacher' ? ' for teachers' : '' }}. One sign-in.</h2>
+            <p class="mt-3 text-slate-600 dark:text-slate-400">{{ modulesText }}</p>
+          </div>
+          <ModuleExplorer class="reveal mt-10" :role="moduleRole" @open="openModule" />
+        </div>
+      </section>
+
+      <!-- ===== Learn by doing: the lab, in 3D ===== -->
+      <section id="lab" class="py-20 sm:py-28 scroll-mt-20">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] gap-10 lg:gap-14 items-center">
+          <div class="reveal">
+            <p :class="EYEBROW">Virtual Lab</p>
+            <h2 :class="H2">Learn by doing - in 3D.</h2>
+            <p class="mt-3 text-slate-600 dark:text-slate-400 leading-relaxed">{{ labText }}</p>
+            <ul class="mt-6 grid sm:grid-cols-2 gap-2">
+              <li v-for="a in LAB_ITEMS" :key="a.label" class="flex items-center gap-2.5 rounded-xl bg-indigo-50/70 dark:bg-white/5 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                <span class="w-8 h-8 flex-shrink-0 rounded-lg bg-indigo-600 text-white flex items-center justify-center"><AppIcon :name="a.icon" class="w-4 h-4" /></span>{{ a.label }}
+              </li>
+            </ul>
+          </div>
+          <div ref="labSlot" class="reveal min-w-0">
+            <LabTeaser v-if="labReady" />
+            <div v-else class="h-[25rem] sm:h-[31rem] rounded-3xl bg-gradient-to-br from-indigo-50 to-white ring-1 ring-slate-200 dark:from-white/5 dark:to-transparent dark:ring-white/10 flex items-center justify-center text-sm text-slate-400">Loading the lab…</div>
           </div>
         </div>
       </section>
@@ -363,40 +331,36 @@
         </div>
       </section>
 
-      <!-- ===== Pricing ===== -->
-      <section id="pricing" class="py-20 sm:py-28 bg-indigo-50/60 dark:bg-indigo-950/20 scroll-mt-20">
+      <!-- ===== Students: signing in, or getting your school on Tusome ===== -->
+      <section v-if="audience === 'student'" id="start" class="pb-20 sm:pb-28 scroll-mt-20">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 grid md:grid-cols-2 gap-5">
+          <div class="reveal relative overflow-hidden rounded-3xl bg-indigo-600 text-white p-7 sm:p-9">
+            <div class="absolute -right-16 -bottom-16 w-56 h-56 rounded-full bg-white/10" aria-hidden="true"></div>
+            <p class="relative text-xs font-bold uppercase tracking-widest text-indigo-100">Your school is on Tusome</p>
+            <h2 class="relative mt-3 font-jakarta text-2xl sm:text-3xl font-extrabold">Sign in and pick up where you stopped.</h2>
+            <p class="relative mt-2 text-white/85 leading-relaxed">Use the username and password your school gave you - on any phone or computer. Add Tusome to your home screen and it opens like an app.</p>
+            <div class="relative mt-6 flex flex-wrap items-center gap-3">
+              <router-link to="/login" class="inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold text-indigo-900 bg-white hover:bg-indigo-50 transition">Sign in</router-link>
+              <router-link to="/guide#student" class="inline-flex items-center px-5 py-3 rounded-2xl text-sm font-bold text-white ring-1 ring-white/30 hover:bg-white/10 transition">How to use it</router-link>
+            </div>
+          </div>
+          <div class="reveal rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.03] p-7 sm:p-9">
+            <p class="text-xs font-bold uppercase tracking-widest text-slate-400">Not on Tusome yet?</p>
+            <h2 class="mt-3 font-jakarta text-2xl sm:text-3xl font-extrabold">Tell your school about it.</h2>
+            <p class="mt-2 text-slate-600 dark:text-slate-400 leading-relaxed">Show this page to your teacher or head teacher. They can ask us for a demo, and we set up the whole school - every class and subject.</p>
+            <button type="button" class="mt-6 inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition" @click="shareWithSchool">
+              <AppIcon name="send" class="w-4 h-4" />{{ shared ? 'Link copied' : 'Share with my school' }}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Your data, your school ===== -->
+      <section v-if="audience === 'school'" id="trust" class="py-20 sm:py-28 bg-indigo-50/60 dark:bg-indigo-950/20 scroll-mt-20">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div class="reveal text-center max-w-2xl mx-auto">
-            <p :class="EYEBROW">Pricing</p>
-            <h2 :class="H2">Simple, per learner, everything included</h2>
-          </div>
-          <div class="reveal mt-12 grid lg:grid-cols-[1.1fr_1fr] rounded-3xl border border-indigo-100 dark:border-white/10 bg-white dark:bg-slate-900 overflow-hidden shadow-xl shadow-indigo-900/5">
-            <div class="p-8 sm:p-10">
-              <p class="font-jakarta text-2xl sm:text-3xl font-extrabold">{{ PRICING.model }}</p>
-              <p class="mt-3 text-slate-600 dark:text-slate-400 leading-relaxed">{{ PRICING.note }}</p>
-              <ul class="mt-6 grid sm:grid-cols-2 gap-x-6 gap-y-3">
-                <li v-for="i in PRICING.included" :key="i" class="flex items-start gap-2.5 text-sm text-slate-700 dark:text-slate-200">
-                  <AppIcon name="check-circle" class="w-4 h-4 mt-0.5 flex-shrink-0 text-indigo-500" />{{ i }}
-                </li>
-              </ul>
-              <a href="#demo" class="mt-8 inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition">Get a quote for your school</a>
-            </div>
-            <div class="p-8 sm:p-10 bg-indigo-950 text-white border-t lg:border-t-0 lg:border-l border-white/10">
-              <p class="text-sm font-bold uppercase tracking-widest text-indigo-300">How it goes</p>
-              <ol class="mt-6 space-y-6">
-                <li v-for="(s, i) in PRICING.steps" :key="s.title" class="flex gap-4">
-                  <span class="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-500 text-white flex items-center justify-center text-sm font-bold">{{ i + 1 }}</span>
-                  <span>
-                    <span class="block font-semibold">{{ s.title }}</span>
-                    <span class="block text-sm text-white/70">{{ s.text }}</span>
-                  </span>
-                </li>
-              </ol>
-            </div>
-          </div>
-          <!-- Your data, your school -->
-          <div id="trust" class="reveal mt-16 scroll-mt-24">
-            <h3 class="font-jakarta text-2xl sm:text-3xl font-extrabold tracking-tight max-w-2xl">Safe, private - and built for the phones and connections learners really have.</h3>
+          <div class="reveal">
+            <p :class="EYEBROW">Your data</p>
+            <h2 class="mt-3 font-jakarta text-3xl sm:text-4xl font-extrabold tracking-tight max-w-2xl">Safe, private - and built for the phones and connections learners really have.</h2>
             <div class="mt-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div v-for="t in TRUST" :key="t.title" class="flex gap-4 rounded-2xl bg-white dark:bg-white/[0.03] p-5 ring-1 ring-indigo-100 dark:ring-white/10">
                 <span class="flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center bg-indigo-600 text-white"><AppIcon :name="t.icon" class="w-5 h-5" /></span>
@@ -411,7 +375,7 @@
       </section>
 
       <!-- ===== What's new ===== -->
-      <section id="new" class="pb-20 sm:pb-28 scroll-mt-20">
+      <section v-if="audience !== 'student'" id="new" class="pb-20 sm:pb-28 scroll-mt-20" :class="{ 'pt-20 sm:pt-28': audience === 'school' }">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div class="reveal flex flex-wrap items-end justify-between gap-4">
             <div class="max-w-2xl">
@@ -450,7 +414,7 @@
       </section>
 
       <!-- ===== Team ===== -->
-      <section id="team" class="py-20 sm:py-28 bg-indigo-50/60 dark:bg-indigo-950/20 scroll-mt-20">
+      <section v-if="audience === 'school'" id="team" class="py-20 sm:py-28 bg-indigo-50/60 dark:bg-indigo-950/20 scroll-mt-20">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div class="grid lg:grid-cols-[1fr_1.4fr] gap-10 lg:gap-16 items-start">
             <div class="reveal lg:sticky lg:top-28">
@@ -499,10 +463,10 @@
         <div class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
           <div class="reveal text-center">
             <p :class="EYEBROW">Questions</p>
-            <h2 :class="H2">Asked by schools like yours</h2>
+            <h2 :class="H2">{{ faqTitle }}</h2>
           </div>
           <div class="mt-10 divide-y divide-slate-200 dark:divide-white/10 border-y border-slate-200 dark:border-white/10">
-            <div v-for="(f, i) in FAQ" :key="f.q">
+            <div v-for="(f, i) in faq" :key="f.q">
               <button type="button" class="w-full flex items-center justify-between gap-4 py-5 text-left" :aria-expanded="openFaq === i" @click="openFaq = openFaq === i ? -1 : i">
                 <span class="font-semibold text-slate-900 dark:text-white">{{ f.q }}</span>
                 <span class="w-7 h-7 flex-shrink-0 rounded-full border border-slate-300 dark:border-white/20 flex items-center justify-center transition" :class="openFaq === i ? 'rotate-45 bg-indigo-600 text-white border-indigo-600' : ''">
@@ -516,7 +480,7 @@
       </section>
 
       <!-- ===== Request a demo ===== -->
-      <section id="demo" class="pb-20 sm:pb-28 scroll-mt-20">
+      <section v-if="audience !== 'student'" id="demo" class="pb-20 sm:pb-28 scroll-mt-20">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <DemoForm class="reveal" />
         </div>
@@ -530,7 +494,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import axios from 'axios'
 import AppIcon from '@/components/common/AppIcon.vue'
 import SiteHeader from '@/components/site/SiteHeader.vue'
@@ -544,6 +509,9 @@ import DemoForm from '@/components/site/DemoForm.vue'
 import ModuleExplorer from '@/components/site/ModuleExplorer.vue'
 import DayStory from '@/components/site/DayStory.vue'
 import BeforeAfter from '@/components/site/BeforeAfter.vue'
+import AudienceSwitch from '@/components/site/AudienceSwitch.vue'
+import { useAudience, type Audience } from '@/components/site/useAudience'
+import { audienceByKey } from '@/data/audiences'
 // three.js is big - the 3D lab loads in its own file, only when scrolled to
 const LabTeaser = defineAsyncComponent(() => import('@/components/site/LabTeaser.vue'))
 import { useReveal } from '@/components/site/useReveal'
@@ -551,7 +519,7 @@ import { useSiteScale } from '@/components/site/useSiteScale'
 import { MODULES, type EModule } from '@/data/modules'
 import { CHANGELOG } from '@/data/changelog'
 import { teamLead, teamStakeholders } from '@/data/team'
-import { PRICING, TRUST, STORY, STAT_LABELS } from '@/data/site'
+import { TRUST, STORY, STAT_LABELS } from '@/data/site'
 
 const EYEBROW = 'inline-flex items-center rounded-full bg-indigo-100 px-3 py-1 text-xs font-bold uppercase tracking-widest text-indigo-800 dark:bg-indigo-500/15 dark:text-indigo-200'
 const H2 = 'mt-3 font-jakarta text-3xl sm:text-4xl font-extrabold tracking-tight'
@@ -563,9 +531,63 @@ const NUMBERS = [
   { value: '4', label: 'roles: students, teachers, HODs, admins' }
 ]
 
-// The hero: "One space for every ..." - the word changes every few seconds
-const HERO_WORDS = ['lesson', 'learner', 'teacher', 'school']
-const heroWord = ref(HERO_WORDS[0])
+// Whose side of Tusome the page tells (School / Teacher / Student - the switch in the header)
+const route = useRoute()
+const { audience, fromLink } = useAudience()
+fromLink()
+watch(() => route.query.for, fromLink)
+
+// The hero, for each: the last word of the headline changes every few seconds
+const HEROES: Record<Audience, { eyebrow: string; lines: [string, string]; words: string[]; text: string; primary: { label: string; to: string } }> = {
+  school: {
+    eyebrow: 'Built for the competency-based curriculum',
+    lines: ['One space', 'for every'],
+    words: ['lesson', 'learner', 'teacher', 'school'],
+    text: 'Tusome is a complete digital school: notes, books, videos and live lessons for students; LOA, AOI and EOC assessment and marking for teachers; and a live Learning Map that shows everyone exactly where each learner stands.',
+    primary: { label: 'Request a demo', to: '#demo' }
+  },
+  teacher: {
+    eyebrow: 'For teachers and heads of department',
+    lines: ['Less paper.', 'More'],
+    words: ['teaching', 'feedback', 'insight', 'time'],
+    text: 'Write your notes once and every stream reads them. Set LOA, AOI and EOC work, mark it on screen between lessons, and see straight away which outcomes your class still needs - Tusome keeps track of who has read, watched and handed in.',
+    primary: { label: 'See a teacher\'s day', to: '#day' }
+  },
+  student: {
+    eyebrow: 'For students',
+    lines: ['Learn', 'anywhere,'],
+    words: ['anytime', 'offline', 'your way'],
+    text: 'Your notes, books, videos and live lessons on any phone - even with no data. Hand in your work from the same phone, and watch your Learning Map turn green as your teachers mark it.',
+    primary: { label: 'Try a lesson', to: '#try' }
+  }
+}
+const hero = computed(() => HEROES[audience.value])
+const heroWord = ref(hero.value.words[0])
+watch(audience, () => { heroWord.value = hero.value.words[0] })
+
+// The pieces of the app floating around the photo, for each
+const CARDS: Record<Audience, {
+  a: { hello: string; name: string; icon: string; tag: string; title: string; progress: number | null }
+  b: { live: boolean; label: string; title: string; sub: string; button: string }
+  c: { label: string; pct: number; caption: string }
+}> = {
+  school: {
+    a: { hello: 'Good morning,', name: 'Head teacher', icon: 'chart', tag: 'End of term', title: 'Report cards: 9 of 12 classes', progress: 0.75 },
+    b: { live: false, label: 'Follow up', title: '3 teachers', sub: 'missed this week\'s marking', button: 'Print report' },
+    c: { label: 'Curriculum coverage', pct: 82, caption: 'topics assessed' }
+  },
+  teacher: {
+    a: { hello: 'Good morning,', name: 'Mr Okello', icon: 'check-circle', tag: 'To mark', title: '11 scripts · S.2 LOA', progress: 0.35 },
+    b: { live: false, label: 'Reteach next', title: 'Converting units', sub: '12 learners not yet', button: 'Make a group' },
+    c: { label: 'Class Learning Map', pct: 64, caption: 'outcomes achieved' }
+  },
+  student: {
+    a: { hello: 'Good morning,', name: 'Ashley', icon: 'book', tag: 'Continue reading', title: 'Measurements in Physics', progress: 0.66 },
+    b: { live: true, label: 'Live now', title: 'Photosynthesis Q&A', sub: 'Biology · S.2', button: 'Join now' },
+    c: { label: 'Learning Map', pct: 70, caption: 'outcomes achieved' }
+  }
+}
+const cards = computed(() => CARDS[audience.value])
 let wordTimer = 0
 // The floating pieces drift a little with the pointer (depth = how far)
 const heroPointer = ref({ x: 0, y: 0 })
@@ -582,11 +604,78 @@ const heroNumbers = computed(() => [
 // A class's outcomes on the "Teach with insight" tile
 const MAP_DOTS = ['bg-indigo-500', 'bg-indigo-500', 'bg-amber-400', 'bg-indigo-500', 'bg-rose-400', 'bg-indigo-300', 'bg-indigo-500', 'bg-amber-400']
 
-const PILLARS = [
-  { title: 'Learn anywhere', icon: 'book', text: 'Notes, textbooks, past papers and videos that students open on any phone or computer - even offline.', points: ['Read page by page, with narration', 'Save for offline, sync later', 'Continue where you stopped'] },
-  { title: 'Teach with insight', icon: 'map', text: 'Set competency-based work, mark it on screen, and see straight away which outcomes the class still needs.', points: ['LOA, AOI and EOC assessments', 'Mark typed, drawn or uploaded work', 'Reteach the outcomes that need it'] },
-  { title: 'Lead with clarity', icon: 'chart', text: 'Heads of department and administrators see coverage, engagement and results across every class, as it happens.', points: ['Curriculum coverage by topic', 'Engagement and quiet learners', 'Report cards in a few clicks'] }
-]
+// Why, for each: three tiles (the big green one first) and how to get going
+const WHY: Record<Audience, { eyebrow: string; title: string; stepsTitle: string; pillars: { title: string; icon: string; text: string; points: string[] }[]; steps: { title: string; text: string }[] }> = {
+  school: {
+    eyebrow: 'Why schools choose Tusome',
+    title: 'Teaching, learning and leading - finally in one place.',
+    stepsTitle: 'Your school, live in weeks - not terms',
+    pillars: [
+      { title: 'Learn anywhere', icon: 'book', text: 'Notes, textbooks, past papers and videos that students open on any phone or computer - even offline.', points: ['Read page by page, with narration', 'Save for offline, sync later', 'Continue where you stopped'] },
+      { title: 'Teach with insight', icon: 'map', text: 'Set competency-based work, mark it on screen, and see straight away which outcomes the class still needs.', points: ['LOA, AOI and EOC assessments', 'Mark typed, drawn or uploaded work', 'Reteach the outcomes that need it'] },
+      { title: 'Lead with clarity', icon: 'chart', text: 'Heads of department and administrators see coverage, engagement and results across every class, as it happens.', points: ['Curriculum coverage by topic', 'Engagement and quiet learners', 'Report cards in a few clicks'] }
+    ],
+    steps: [
+      { title: 'We set up your school', text: 'Classes, streams, subjects, terms and accounts - imported and ready, with your crest on every report.' },
+      { title: 'Teachers add content', text: 'eNotes, books, videos and assessments, linked to the curriculum. We train every teacher.' },
+      { title: 'Students learn anywhere', text: 'On any phone or computer, in school or at home - and offline when the internet drops.' },
+      { title: 'Everyone sees progress', text: 'Learning Maps, coverage and engagement update as work is marked - right through to report cards.' }
+    ]
+  },
+  teacher: {
+    eyebrow: 'Why teachers like it',
+    title: 'Everything you do for a class - in one place.',
+    stepsTitle: 'Getting going as a teacher',
+    pillars: [
+      { title: 'Write once, every stream reads', icon: 'document', text: 'Turn your notes into eNotes read aloud page by page, or upload the books, slides and videos you already have. Every stream you teach opens them on their phones.', points: ['Reuse your notes and past papers', 'Narration, without recording yourself', 'See who has read each topic'] },
+      { title: 'Mark on screen', icon: 'check-circle', text: 'Typed, drawn and uploaded answers in one place - tick, comment and mark each question; the auto-marked ones are done for you.', points: ['LOA, AOI and EOC', 'Ink, comments and voice notes', 'Marks reach the report card'] },
+      { title: 'Know who needs you', icon: 'chart', text: 'Your class Learning Map shows which outcomes the class has and has not got yet - and who has gone quiet.', points: ['Reteach next, by outcome', 'Support groups in one tap', 'Message the quiet ones'] }
+    ],
+    steps: [
+      { title: 'We train you', text: 'Module by module, at your school, in a few short sessions - and the user guide is always one tap away.' },
+      { title: 'Bring your notes', text: 'Upload what you have - notes, slides, past papers - or write eNotes in the builder. Your department shares its work.' },
+      { title: 'Set and mark', text: 'Build an LOA in minutes, mark on screen between lessons, and return it with feedback.' },
+      { title: 'Watch the map', text: 'Every returned script updates your class Learning Map, and the marks go straight to the report card.' }
+    ]
+  },
+  student: {
+    eyebrow: 'Why learners love it',
+    title: 'Your school day - on your phone.',
+    stepsTitle: 'Getting started',
+    pillars: [
+      { title: 'Learn anywhere', icon: 'book', text: 'Your notes, textbooks, past papers and videos on any phone or computer - even with no data.', points: ['Listen to any page read aloud', 'Save for offline, read at home', 'Continue where you stopped'] },
+      { title: 'See where you stand', icon: 'map', text: 'Your Learning Map turns green outcome by outcome as your teachers mark your work - so you know exactly what to revise.', points: ['Your marks and feedback', 'What to revise next', 'Badges for improving'] },
+      { title: 'Never miss work', icon: 'clipboard', text: 'A new assessment comes with a notification and a red number on your menu - with the deadline, and a Start button.', points: ['Hand in from your phone', 'Join live classes in one tap', 'Ask your teacher in Chats'] }
+    ],
+    steps: [
+      { title: 'Get your account', text: 'Your school gives you a username and a password.' },
+      { title: 'Sign in on any phone', text: 'In the browser - then add Tusome to your home screen and it opens like an app.' },
+      { title: 'Save for offline', text: 'Save notes and books at school, and read them at home with no data.' },
+      { title: 'Watch your map fill', text: 'Every marked assessment turns outcomes green on your Learning Map.' }
+    ]
+  }
+}
+const why = computed(() => WHY[audience.value])
+const PILLARS = computed(() => why.value.pillars)
+const STEPS = computed(() => why.value.steps)
+
+const DAYS: Record<Audience, { title: string; text: string }> = {
+  school: { title: 'One learner, one phone, a whole school day.', text: 'Scroll through Ashley\'s day - from reading on the way in to an outcome turning green that evening. Or switch to Mr Okello\'s.' },
+  teacher: { title: 'A teaching day, without the paper chase.', text: 'Scroll through Mr Okello\'s day - from his dashboard before the first bell to the replies before supper.' },
+  student: { title: 'Your school day, on one phone.', text: 'Scroll through Ashley\'s day - from reading on the way in to an outcome turning green that evening.' }
+}
+const day = computed(() => DAYS[audience.value])
+
+// Modules: a student or a teacher sees the ones they use
+const moduleRole = computed(() => (audience.value === 'school' ? undefined : audience.value))
+const modulesText = computed(() => ({
+  school: 'Every part of school life that happens on a screen - built to work together, so what a student reads, attempts and achieves all lands on the same Learning Map. Pick one to see it.',
+  teacher: 'What you teach with, set work in, mark and follow your classes with - all in one sign-in. Pick one to see it.',
+  student: 'Everything you read, watch, attempt and practise - all in one sign-in. Pick one to see it.'
+})[audience.value])
+const labText = computed(() => audience.value === 'student'
+  ? 'Practicals you can\'t always do at school: open a real computer and name its parts, repair a laptop, build a network, run science experiments, explore the human body. Try it - this is the ICT Lab\'s own computer.'
+  : 'Practicals a school can\'t always run for every learner: open a real computer and name its parts, repair a laptop, build a network, run science experiments, explore the human body. Try it - this is the ICT Lab\'s own computer.')
 
 // The product tour, full screen
 const tourOpen = ref(false)
@@ -623,54 +712,14 @@ const labSlot = ref<HTMLElement | null>(null)
 const labReady = ref(false)
 let labObserver: IntersectionObserver | null = null
 
-// The module sheet steps through every module
-const shownModules = computed(() => MODULES)
-
-const ROLES = [
-  {
-    key: 'student', label: 'Students', page: '/for/students',
-    headline: 'Everything for your classes, in your pocket.',
-    text: 'Your notes, books, videos and assessments in one place - with a Learning Map that shows exactly what you can already do and what to work on next.',
-    points: ['Continue reading where you stopped', 'Join live classes in one tap', 'Attempt and hand in assessments', 'See your marks and Learning Map', 'Save notes to read offline', 'Earn badges for improving'],
-    day: [{ time: '7:30', what: 'Reads the next pages of Physics eNotes on the way in' }, { time: '11:00', what: 'Joins the live Biology Q&A from the dashboard' }, { time: '4:00', what: 'Hands in the LOA on measurements before the deadline' }, { time: '8:00', what: 'Sees it marked - and a new outcome turns green' }]
-  },
-  {
-    key: 'teacher', label: 'Teachers', page: '/for/teachers',
-    headline: 'Spend your time teaching - not chasing paper.',
-    text: 'Write eNotes, share books and videos, set competency-based assessments and mark them on screen. Tusome keeps track of who has read, watched and handed in.',
-    points: ['Write interactive eNotes', 'Build LOA / AOI / EOC assessments', 'Mark on screen, with annotations', 'See who needs support, by outcome', 'Run live classes with attendance', 'Message any student directly'],
-    day: [{ time: '7:00', what: 'Dashboard: 11 scripts to mark, 1 live class today' }, { time: '10:00', what: 'Marks the S.1 LOA on screen between lessons' }, { time: '2:00', what: 'Learning Map flags one outcome - creates a support group' }, { time: '5:00', what: 'Messages the three students who haven\'t opened the notes' }]
-  },
-  {
-    key: 'hod', label: 'HODs', page: '/for/teachers',
-    headline: 'Your whole department, at a glance.',
-    text: 'See curriculum coverage, engagement and results across every teacher and class in your department - and message your teachers in one place.',
-    points: ['Department-wide dashboards', 'Message all your teachers at once', 'Curriculum coverage by topic', 'Marksheets for any class', 'Engagement across classes', 'Teach your own classes too'],
-    day: [{ time: '8:00', what: 'Checks coverage: two topics still have no AOI' }, { time: '12:00', what: 'Messages all the teachers about Friday\'s meeting' }, { time: '3:00', what: 'Compares marksheets across all streams' }]
-  },
-  {
-    key: 'admin', label: 'Admins', page: '/for/schools',
-    headline: 'Run the school\'s digital space with ease.',
-    text: 'Set up classes, streams, subjects and terms, manage every account, generate report cards and keep an eye on the whole school.',
-    points: ['Classes, streams, subjects, terms', 'Students, teachers and HODs', 'Promotion between years', 'Report cards and settings', 'School-wide analytics', 'System logs and backups'],
-    day: [{ time: 'Start of term', what: 'Opens the new term and promotes students in one go' }, { time: 'Weekly', what: 'Reviews engagement across the school' }, { time: 'End of term', what: 'Generates and publishes report cards' }]
-  }
-] as const
-const roleTab = ref<(typeof ROLES)[number]['key']>('student')
-const activeRole = computed(() => ROLES.find(r => r.key === roleTab.value) ?? ROLES[0])
+// The module sheet steps through the modules being shown
+const shownModules = computed(() => (moduleRole.value ? MODULES.filter(m => m.roles.includes(moduleRole.value!)) : MODULES))
 
 const CBC = [
   { code: 'LOA', name: 'Learning Outcome Assessment', text: 'Short checks on single outcomes - each one updates the learner\'s map.' },
   { code: 'AOI', name: 'Activity of Integration', text: 'Real-life tasks that show a topic\'s competency in action.' },
   { code: 'EOC', name: 'Elements of Construct', text: 'End-of-chapter work against the assessment objectives.' },
   { code: 'RC', name: 'Report card', text: 'Generated from all of the above - nothing typed in twice.' }
-]
-
-const STEPS = [
-  { title: 'We set up your school', icon: 'wrench', text: 'Classes, streams, subjects, terms and accounts - imported and ready, with your crest on every report.' },
-  { title: 'Teachers add content', icon: 'upload', text: 'eNotes, books, videos and assessments, linked to the curriculum. We train every teacher.' },
-  { title: 'Students learn anywhere', icon: 'book', text: 'On any phone or computer, in school or at home - and offline when the internet drops.' },
-  { title: 'Everyone sees progress', icon: 'chart', text: 'Learning Maps, coverage and engagement update as work is marked - right through to report cards.' }
 ]
 
 // First and last name only, so a long name still makes two letters
@@ -681,14 +730,38 @@ const initials = (name: string) => {
 
 const FAQ = [
   { q: 'Do students need a computer?', a: 'No. Tusome works on any smartphone, tablet or computer with a browser. Notes and books can be saved to the device to read without internet, and anything done offline is sent when the device reconnects.' },
-  { q: 'How much does it cost?', a: 'One price per learner, per term, depending on the size of your school - with every module, setup, training and support included. Request a demo and we will send a quote with a plan for your first term.' },
   { q: 'Does it follow the competency-based curriculum?', a: 'Yes - it\'s built around it. Assessments are tagged as LOA, AOI or EOC and linked to learning outcomes, topics and constructs, and every marked result feeds the Learning Map and the report card.' },
   { q: 'How long does it take to get started?', a: 'Usually a few weeks. We set up your classes, subjects and accounts, then train teachers module by module. Your school can start with eNotes and assessments and grow from there.' },
   { q: 'Who owns our school\'s content and data?', a: 'Your school does. Your notes, books, assessments and results belong to you, are only visible to your own staff and students, and can be exported.' },
   { q: 'Can parents or the school leadership see progress?', a: 'School leadership - heads of department and administrators - have their own views of coverage, engagement and results. Report cards can be printed for parents at the end of every term.' }
 ]
 
+// Questions, for each
+const faq = computed(() => audience.value === 'school'
+  ? FAQ
+  : audience.value === 'teacher'
+    ? [...(audienceByKey('teachers')?.faq ?? []), FAQ.find(f => f.q.startsWith('Does it follow'))!, { q: 'Who sees my classes\' results?', a: 'You see the classes you teach. Your head of department sees your department\'s classes, and the school\'s administrators see the whole school. Learners see only their own work.' }]
+    : [...(audienceByKey('students')?.faq ?? []), { q: 'Can my parents see my results?', a: 'Your school prints your report card for your parents at the end of every term. Your marks, feedback and Learning Map are in your own account.' }])
+const faqTitle = computed(() => ({ school: 'Asked by schools like yours', teacher: 'Asked by teachers', student: 'Asked by students' })[audience.value])
 const openFaq = ref(0)
+watch(audience, () => { openFaq.value = 0 })
+
+// A student sends this page (the school's side of it) to their teacher or head teacher
+const shared = ref(false)
+const shareWithSchool = async () => {
+  const url = `${window.location.origin}/`
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: 'Tusome - the digital school', url })
+      return
+    }
+    await navigator.clipboard.writeText(url)
+    shared.value = true
+    setTimeout(() => { shared.value = false }, 2500)
+  } catch {
+    // Shared nothing - the button stays as it was
+  }
+}
 
 // Live totals, counted up when they come into view
 const stats = ref<Record<string, number>>({})
@@ -728,13 +801,15 @@ onMounted(async () => {
   }
   if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     wordTimer = window.setInterval(() => {
-      heroWord.value = HERO_WORDS[(HERO_WORDS.indexOf(heroWord.value) + 1) % HERO_WORDS.length]
+      const words = hero.value.words
+      heroWord.value = words[(words.indexOf(heroWord.value) + 1) % words.length]
     }, 2600)
   }
 })
 onBeforeUnmount(() => { clearInterval(wordTimer); labObserver?.disconnect() })
 
-useReveal()
+// switching audience brings in new sections - fade them in too
+useReveal(() => audience.value)
 
 useSiteScale()
 </script>

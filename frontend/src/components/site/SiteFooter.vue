@@ -34,7 +34,6 @@ const COLUMNS = [
       { to: '/#modules', label: 'Modules' },
       { to: '/#tour', label: 'Product tour' },
       { to: '/#try', label: 'Try a lesson' },
-      { to: '/#pricing', label: 'Pricing' },
       { to: '/#trust', label: 'Your data' },
       { to: '/#new', label: "What's new" },
       { to: '/#faq', label: 'Questions' }

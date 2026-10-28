@@ -5,7 +5,7 @@
   <div>
     <div class="flex gap-1.5 overflow-x-auto [scrollbar-width:none] -mx-4 px-4 lg:mx-0 lg:px-0" role="tablist" aria-label="Module groups">
       <button
-        v-for="c in [{ key: 'all', label: 'All' }, ...CATEGORIES]"
+        v-for="c in [{ key: 'all', label: 'All' }, ...CATEGORIES.filter(c => forRole.some(m => m.category === c.key))]"
         :key="c.key"
         type="button"
         role="tab"
@@ -75,7 +75,7 @@ import ScreenENotes from './screens/ScreenENotes.vue'
 import ScreenMap from './screens/ScreenMap.vue'
 import ScreenMarking from './screens/ScreenMarking.vue'
 import ScreenCoverage from './screens/ScreenCoverage.vue'
-import { MODULES, CATEGORIES, ROLE_LABEL, type ModuleCategory, type EModule } from '@/data/modules'
+import { MODULES, CATEGORIES, ROLE_LABEL, type ModuleCategory, type EModule, type Role } from '@/data/modules'
 
 defineEmits<{ open: [EModule] }>()
 
@@ -84,8 +84,12 @@ const REAL: Record<string, Component> = { enotes: ScreenENotes, learningmap: Scr
 const STEP_MS = 5000
 
 const filter = ref<ModuleCategory | 'all'>('all')
-const list = computed(() => (filter.value === 'all' ? MODULES : MODULES.filter(m => m.category === filter.value)))
+// role: only the modules that person uses (the site is showing a student's or a teacher's side)
+const props = defineProps<{ role?: Role }>()
+const forRole = computed(() => (props.role ? MODULES.filter(m => m.roles.includes(props.role!)) : MODULES))
+const list = computed(() => (filter.value === 'all' ? forRole.value : forRole.value.filter(m => m.category === filter.value)))
 const active = ref<EModule>(MODULES[0])
+watch(() => props.role, () => { filter.value = 'all'; active.value = list.value[0]; cycle.value++ })
 const cycle = ref(0)
 
 // Plays through by itself until the visitor picks one - and pauses while the pointer is over it

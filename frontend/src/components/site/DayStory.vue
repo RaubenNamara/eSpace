@@ -3,7 +3,7 @@
        left while the phone on the right stays put and changes to match (on a phone, each moment
        has its own phone). -->
   <div>
-    <div class="mb-4 inline-flex rounded-2xl bg-white/10 p-1 ring-1 ring-white/10" role="tablist" aria-label="Whose day">
+    <div v-if="!only" class="mb-4 inline-flex rounded-2xl bg-white/10 p-1 ring-1 ring-white/10" role="tablist" aria-label="Whose day">
       <button
         v-for="p in PEOPLE"
         :key="p.key"
@@ -57,11 +57,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import AppIcon from '@/components/common/AppIcon.vue'
 import PhoneMock from './PhoneMock.vue'
 
 type Who = 'student' | 'teacher'
+// only: tell just this person's day, with no switch (the site is showing a student's or a teacher's side)
+const props = defineProps<{ only?: Who }>()
 const PEOPLE: { key: Who; label: string; initials: string }[] = [
   { key: 'student', label: "Ashley's day (student)", initials: 'AN' },
   { key: 'teacher', label: "Mr Okello's day (teacher)", initials: 'MO' }
@@ -90,7 +92,7 @@ const DAYS = {
   ]
 }
 
-const who = ref<Who>('student')
+const who = ref<Who>(props.only ?? 'student')
 const moments = computed(() => DAYS[who.value])
 const active = ref(0)
 let steps: HTMLElement[] = []
@@ -117,6 +119,8 @@ const setWho = async (w: Who) => {
   // the list changes with a fade - observe the new moments once they're in
   setTimeout(observe, 450)
 }
+
+watch(() => props.only, w => { if (w) setWho(w) })
 
 onMounted(observe)
 onBeforeUnmount(() => observer?.disconnect())

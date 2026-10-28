@@ -8,14 +8,30 @@
 /** Where schools, teachers and students write to the Tusome team */
 export const SUPPORT_EMAIL = 'support@tusome.ug'
 
-/** The main menu. `to` is a route; "/#modules" scrolls to that part of the landing page. */
-export const SITE_NAV = [
-  { to: '/#features', label: 'Why Tusome' },
-  { to: '/#modules', label: 'Modules' },
-  { to: '/#tour', label: 'Tour' },
-  { to: '/#pricing', label: 'Pricing' },
-  { to: '/#team', label: 'Team' }
-]
+/**
+ * The main menu - a few links, for whoever the site is showing (School / Teacher / Student, see
+ * components/site/useAudience). `to` is a route; "/#modules" scrolls to that part of the landing page.
+ */
+export const SITE_NAV: Record<'school' | 'teacher' | 'student', { to: string; label: string }[]> = {
+  school: [
+    { to: '/#compare', label: 'Before and after' },
+    { to: '/#modules', label: 'Modules' },
+    { to: '/#faq', label: 'Questions' },
+    { to: '/guide', label: 'User guide' }
+  ],
+  teacher: [
+    { to: '/#day', label: 'A teacher\'s day' },
+    { to: '/#compare', label: 'Marking' },
+    { to: '/#modules', label: 'Modules' },
+    { to: '/guide#teacher', label: 'User guide' }
+  ],
+  student: [
+    { to: '/#try', label: 'Try a lesson' },
+    { to: '/#lab', label: 'Virtual Lab' },
+    { to: '/#modules', label: 'Modules' },
+    { to: '/guide#student', label: 'User guide' }
+  ]
+}
 
 /** "Who it's for" pages, also in the menu */
 export const AUDIENCE_LINKS = [
@@ -34,32 +50,12 @@ export const TOUR: { key: TourScreen; label: string; icon: string; title: string
   { key: 'dashboard', label: 'Teacher dashboard', icon: 'chart', title: 'The day, at a glance', text: 'Scripts to mark, live classes, deadlines and the students who have gone quiet - first thing in the morning.' }
 ]
 
-/** Pricing: no figures on the site - each school gets a quote for its size */
-export const PRICING = {
-  model: 'One price per learner, per term',
-  note: 'Priced by the size of your school. Ask for a quote - it comes with a plan for your first term.',
-  included: [
-    'Every module - nothing locked behind a higher plan',
-    'Accounts for all students, teachers, HODs and admins',
-    'Setting up your classes, subjects and terms',
-    'Training for teachers, module by module',
-    'Your crest on report cards',
-    'Updates and new features as they ship',
-    'Support from the people who build Tusome'
-  ],
-  steps: [
-    { title: 'Tell us about your school', text: 'Number of learners, classes and what you want to start with.' },
-    { title: 'Get a quote and a plan', text: 'One price per learner per term, and a timeline for your first term.' },
-    { title: 'Go live', text: 'We set up, train and stay with you through the first weeks.' }
-  ]
-}
-
 /** "Your data, your school" */
 export const TRUST = [
   { icon: 'users', title: 'Your data stays yours', text: 'Notes, books, assessments and results belong to your school and can be exported at any time.' },
   { icon: 'check-circle', title: 'Only the right people see it', text: 'Students see their own work, teachers see their classes, HODs their department - every page checks the role.' },
   { icon: 'clipboard', title: 'Every change is logged', text: 'Administrators have audit logs of important changes across the school.' },
-  { icon: 'download', title: 'Backed up', text: 'Administrators can take a full backup of the school\'s data from inside Tusome.' },
+  { icon: 'key', title: 'Safe sign-in', text: 'Every account has its own password, and a teacher given a temporary one must choose their own the first time they sign in.' },
   { icon: 'bolt', title: 'Light on data', text: 'Notes and books can be saved once and read offline, so learners do not spend data opening them again and again.' },
   { icon: 'kit', title: 'Works on the phones learners have', text: 'Any smartphone, tablet or computer with a browser. Add it to the home screen like an app - no store download.' }
 ]

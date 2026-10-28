@@ -50,7 +50,6 @@ export const AUDIENCES: Audience[] = [
     screen: 'coverage',
     guide: '/guide#admin',
     faq: [
-      { q: 'How is Tusome priced?', a: 'One price per learner, per term, depending on the size of your school. Every module is included. Ask for a quote and we will send it with a plan for your first term.' },
       { q: 'Do we need new computers or a server?', a: 'No. Tusome runs in the browser on the phones, tablets and computers your school and learners already have. We host it for you.' },
       { q: 'How long does it take to get going?', a: 'Usually a few weeks. We set up your classes, subjects and accounts, then train teachers module by module.' }
     ],

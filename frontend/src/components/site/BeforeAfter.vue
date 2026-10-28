@@ -1,7 +1,8 @@
 <template>
-  <!-- The same school week on paper and on Tusome: drag the handle (or use the arrow keys) to wipe
-       from one to the other. Both scenes are drawn at a fixed 60 x 34rem and scaled to the width. -->
-  <div ref="box" class="relative select-none touch-none rounded-3xl overflow-hidden ring-1 ring-slate-200 dark:ring-white/10 shadow-2xl shadow-slate-900/10 cursor-ew-resize" :style="{ height: `${H * rem * scale}px` }" @pointerdown="startDrag">
+  <!-- The same school week on paper and on Tusome. The handle sweeps from one to the other by
+       itself, resting a moment on each; drag it (or use the arrow keys) to compare at your own pace.
+       Both scenes are drawn at a fixed 60 x 34rem and scaled to the width. -->
+  <div ref="box" class="relative select-none touch-none rounded-3xl overflow-hidden ring-1 ring-slate-200 dark:ring-white/10 shadow-2xl shadow-slate-900/10 cursor-ew-resize" :style="{ height: `${H * rem * scale}px` }" @pointerdown="startDrag" @pointerenter="hovering = true" @pointerleave="hovering = false">
     <div class="absolute left-0 top-0 origin-top-left" :style="{ width: `${W}rem`, height: `${H}rem`, transform: `scale(${scale})` }">
       <!-- ================= on paper ================= -->
       <div class="absolute inset-0 bg-[#f1e7d3] font-sans text-slate-800" aria-hidden="true">
@@ -135,7 +136,6 @@ const box = ref<HTMLElement | null>(null)
 const scale = ref(1)
 const rem = ref(16)
 const pos = ref(50)
-let touched = false
 
 const SHEET = [
   'Name', 'Test 1', 'Test 2', 'LOA', 'AOI', 'Avg',
@@ -159,54 +159,74 @@ const setFrom = (clientX: number) => {
 }
 const onMove = (e: PointerEvent) => setFrom(e.clientX)
 const stopDrag = () => {
+  heldByVisitor()
   window.removeEventListener('pointermove', onMove)
   window.removeEventListener('pointerup', stopDrag)
 }
 const startDrag = (e: PointerEvent) => {
-  touched = true
+  heldByVisitor()
   setFrom(e.clientX)
   window.addEventListener('pointermove', onMove)
   window.addEventListener('pointerup', stopDrag)
 }
 const nudge = (d: number) => {
-  touched = true
+  heldByVisitor()
   pos.value = Math.min(97, Math.max(3, pos.value + d))
 }
 
-// The first time it comes into view: a little swing to show it moves
-let observer: IntersectionObserver | null = null
-const hint = () => {
-  if (touched || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-  const keys = [50, 22, 78, 50]
-  const start = performance.now()
-  const each = 700
-  const frame = (t: number) => {
-    if (touched) return
-    const k = Math.min(keys.length - 1, (t - start) / each)
-    const i = Math.floor(k)
-    const f = k - i
-    const ease = f < 0.5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2
-    pos.value = i >= keys.length - 1 ? keys[keys.length - 1] : keys[i] + (keys[i + 1] - keys[i]) * ease
-    if (k < keys.length - 1) requestAnimationFrame(frame)
+// It sweeps by itself, edge to edge at a steady speed, resting a moment on each side - while it
+// is on screen, and not while the pointer is over it or for a few seconds after a visitor moves it
+const SWEEP_SECONDS = 5 // from one edge to the other
+const REST_MS = 1500 // on each side
+const AFTER_VISITOR_MS = 4000
+const MIN = 3
+const MAX = 97
+const hovering = ref(false)
+let inView = false
+let dir = 1
+let restUntil = 0
+let frameId = 0
+let last = 0
+const reduced = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+const heldByVisitor = () => { restUntil = performance.now() + AFTER_VISITOR_MS }
+
+const sweep = (t: number) => {
+  const dt = last ? Math.min(100, t - last) : 0
+  last = t
+  if (inView && !hovering.value && t >= restUntil) {
+    const next = pos.value + dir * ((MAX - MIN) / (SWEEP_SECONDS * 1000)) * dt
+    if (next >= MAX || next <= MIN) {
+      pos.value = next >= MAX ? MAX : MIN
+      dir = -dir
+      restUntil = t + REST_MS
+    } else {
+      pos.value = next
+    }
   }
-  requestAnimationFrame(frame)
+  frameId = requestAnimationFrame(sweep)
 }
+
+let observer: IntersectionObserver | null = null
 
 let ro: ResizeObserver | null = null
 onMounted(() => {
   fit()
   ro = new ResizeObserver(fit)
   if (box.value) ro.observe(box.value)
-  if ('IntersectionObserver' in window && box.value) {
-    observer = new IntersectionObserver(entries => {
-      if (entries.some(e => e.isIntersecting)) { observer?.disconnect(); setTimeout(hint, 300) }
-    }, { threshold: 0.5 })
+  if (reduced || !box.value) return
+  if ('IntersectionObserver' in window) {
+    observer = new IntersectionObserver(entries => { inView = entries.some(e => e.isIntersecting) }, { threshold: 0.3 })
     observer.observe(box.value)
+  } else {
+    inView = true
   }
+  frameId = requestAnimationFrame(sweep)
 })
 onBeforeUnmount(() => {
   ro?.disconnect()
   observer?.disconnect()
-  stopDrag()
+  cancelAnimationFrame(frameId)
+  window.removeEventListener('pointermove', onMove)
+  window.removeEventListener('pointerup', stopDrag)
 })
 </script>
