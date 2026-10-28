@@ -104,7 +104,7 @@ export const GUIDE: GuidePart[] = [
         id: 's-assess', title: 'Attempting assessments', icon: 'pencil',
         intro: 'Assessments are grouped by what needs doing: Overdue, In progress, To do, Waiting for marks, Marked.',
         steps: ['Open Assessments and tap Start (or Continue for one you began).', 'Answer each question - type, choose, draw or upload as the question asks.', 'Your answers are saved as you go, so you can come back.', 'Tap Submit when you\'re finished. You can\'t change answers after submitting.', 'When it\'s marked, tap See result for your score and your teacher\'s feedback.'],
-        tips: ['LOA, AOI and EOC show what kind of assessment it is - each one counts on your Learning Map.', 'Late work can only be handed in if your teacher allows it.']
+        tips: ['When a teacher sets a new assessment you get a notification, it shows under Pending assessments on your dashboard, and a red number on Assessments in the menu (Work on a phone) counts the new ones you have not started.', 'LOA, AOI and EOC show what kind of assessment it is - each one counts on your Learning Map.', 'Late work can only be handed in if your teacher allows it.']
       },
       {
         id: 's-map', title: 'Your Learning Map', icon: 'map',
@@ -175,7 +175,7 @@ export const GUIDE: GuidePart[] = [
         id: 't-assess', title: 'Setting assessments', icon: 'pencil',
         intro: 'The Assessments page groups your work by what needs you: Waiting to be marked, Open now, Opening soon, Drafts, Closed.',
         steps: ['Choose New assessment and pick its kind: LOA, AOI or EOC.', 'Link it to the learning outcomes, topic or construct it assesses.', 'Add questions - multiple choice, typed, drawn, annotated PDFs or file uploads - with marks.', 'Set when it opens and closes, and whether late work is allowed.', 'Publish to send it to the class.'],
-        tips: ['Linking assessments to the curriculum is what fills in the Learning Map and report cards.']
+        tips: ['Linking assessments to the curriculum is what fills in the Learning Map and report cards.', 'Catching up or working ahead? Under Curriculum Alignment, "Counts in" is the term whose marks and report cards it goes into (the current term), and "Topic from" can be any year, class and term - an S.5 topic for your S.6 class, last term\'s topic, or next term\'s. The topic shows on the class\'s Learning Map, marked "From S.5 · 2025".']
       },
       {
         id: 't-marking', title: 'Marking', icon: 'check-circle',

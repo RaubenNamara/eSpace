@@ -9,6 +9,7 @@ use eSpace\App\Controllers\Controller;
 USE eSpace\Config\Database;
 use eSpace\App\Services\ENoteAssessmentReach;
 use eSpace\App\Services\NotificationService;
+use eSpace\App\Services\AssignmentAccess;
 use Exception;
 
 /**
@@ -271,7 +272,7 @@ class AssignmentController extends Controller
         $db = $this->getDb();
 
         $topicsStmt = $db->prepare(
-            'SELECT ct.id, ct.theme_branch, ct.topic
+            'SELECT ct.id, ct.theme_branch, ct.topic, ct.class_id, ct.academic_year_id, ct.term_id
              FROM assignment_curriculum_topics act
              INNER JOIN enote_curriculum_topics ct ON act.curriculum_topic_id = ct.id
              WHERE act.assignment_id = :id
@@ -1312,24 +1313,40 @@ class AssignmentController extends Controller
             Database::commit();
 
             $stmt = $db->prepare(
-                'SELECT a.title, a.class_id, a.class_group_name, s.department_id
+                'SELECT a.title, a.due_date, s.name AS subject_name
                  FROM assignments a LEFT JOIN subjects s ON a.subject_id = s.id
                  WHERE a.id = :id'
             );
             $stmt->execute(['id' => $assignmentId]);
             $assignment = $stmt->fetch();
-            if ($assignment && $assignment['department_id'] !== null) {
-                // notifyDepartmentClass (not notifyClass) so an "All Streams" assignment notifies
-                // every stream of that class level in the department, not zero students.
-                (new NotificationService())->notifyDepartmentClass(
-                    (int) $assignment['department_id'],
-                    $assignment['class_id'] !== null ? (int) $assignment['class_id'] : null,
-                    'new_assessment',
-                    'New assessment',
-                    "A new assessment \"{$assignment['title']}\" has been posted.",
-                    ['assignment_id' => $assignmentId],
-                    $assignment['class_group_name']
+            if ($assignment) {
+                // Every learner it is for - its class, its stream group and its extra classes,
+                // the same rule as their Assessments page (AssignmentAccess) - each told once, so
+                // publishing again after a change does not tell them twice
+                $told = $db->prepare(
+                    "SELECT DISTINCT user_id FROM notifications
+                     WHERE user_role = 'student' AND type = 'new_assessment'
+                       AND JSON_UNQUOTE(JSON_EXTRACT(data, '$.assignment_id')) = :id"
                 );
+                $told->execute(['id' => (string) $assignmentId]);
+                $alreadyTold = array_flip(array_map('intval', array_column($told->fetchAll(), 'user_id')));
+
+                $due = !empty($assignment['due_date']) ? ' Hand it in by ' . date('j M, g:i a', strtotime((string) $assignment['due_date'])) . '.' : '';
+                $subject = $assignment['subject_name'] ? " in {$assignment['subject_name']}" : '';
+                $notifications = new NotificationService();
+                foreach (AssignmentAccess::studentIds($db, $assignmentId) as $studentId) {
+                    if (isset($alreadyTold[$studentId])) {
+                        continue;
+                    }
+                    $notifications->notify(
+                        $studentId,
+                        'student',
+                        'new_assessment',
+                        'New assessment',
+                        "\"{$assignment['title']}\"{$subject} is waiting for you.{$due}",
+                        ['assignment_id' => $assignmentId]
+                    );
+                }
             }
 
             $this->success([],'Assignment published successfully');

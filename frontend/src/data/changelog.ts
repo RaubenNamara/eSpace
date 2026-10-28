@@ -13,6 +13,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-10-28', area: 'Students', icon: 'pencil',
+    title: 'New assessments never go unnoticed',
+    text: 'Every learner an assessment is for is told the moment it is published - including those in the other streams it was sent to - with the subject and when to hand it in. It shows under Pending assessments on the dashboard, ahead of old overdue work, and a red number on Assessments in the menu counts the new ones not started yet.'
+  },
+  {
+    date: '2026-10-28', area: 'Assessments', icon: 'pencil',
+    title: 'Assess any topic - catching up or working ahead',
+    text: 'A teacher can now set an assessment on a topic from another term, another class or another year - an S.5 topic for an S.6 class, last term\'s topic, or next term\'s - and its marks still count in the term it is given, on this term\'s report cards. The topic shows on the class\'s and the learner\'s Learning Map, labelled with where it comes from.'
+  },
+  {
     date: '2026-10-27', area: 'Teachers', icon: 'users',
     title: 'See your department\'s work',
     text: 'eNotes, the eLibrary, the Item Bank and Videos now have a Department tab: every teacher sees what the other teachers in their department have added, and can open it. Each teacher still changes only their own work - unless their head of department lets them edit colleagues\' work, from the Teachers page.'

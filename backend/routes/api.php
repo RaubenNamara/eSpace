@@ -108,6 +108,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
 
         // Assignments
         Router::get('/assignments', 'eSpace\App\Controllers\Student\AssignmentController@index');
+        Router::get('/assignments/new-count', 'eSpace\App\Controllers\Student\AssignmentController@newCount');
         Router::get('/assignments/{id}', 'eSpace\App\Controllers\Student\AssignmentController@show');
         Router::post('/assignments/{id}/submit', 'eSpace\App\Controllers\Student\AssignmentController@submit');
         Router::get('/assignments/{id}/feedback', 'eSpace\App\Controllers\Student\AssignmentController@feedback');

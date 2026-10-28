@@ -140,6 +140,36 @@ class AssignmentController extends Controller
     }
 
     /**
+     * How many assessments are waiting that the student has not started - open now, not past
+     * their deadline, nothing handed in - for the red count on Assessments in the menu.
+     * GET /student/assignments/new-count
+     */
+    public function newCount()
+    {
+        $this->requireAuth();
+        $this->requireRole('student');
+        $studentId = (int) $this->getCurrentUserId();
+
+        try {
+            $stmt = $this->pdo->prepare(
+                "SELECT COUNT(DISTINCT a.id)
+                 FROM assignments a
+                 INNER JOIN subjects s ON a.subject_id = s.id
+                 WHERE a.status = 'published' AND a.deleted_at IS NULL" . AssignmentRemoval::openOrSubmitted((string) $studentId) . "
+                   AND (a.open_at IS NULL OR a.open_at <= NOW())
+                   AND (a.due_date IS NULL OR a.due_date > NOW())
+                   AND NOT EXISTS (SELECT 1 FROM assignment_submissions sb WHERE sb.assignment_id = a.id AND sb.student_id = ? AND sb.deleted_at IS NULL)
+                   AND " . \eSpace\App\Services\AssignmentAccess::clause()
+            );
+            $stmt->execute([$studentId, $studentId, $studentId]);
+            $this->success(['count' => (int) $stmt->fetchColumn()]);
+        } catch (\Exception $e) {
+            error_log('Assessment count failed: ' . $e->getMessage());
+            $this->success(['count' => 0]);
+        }
+    }
+
+    /**
      * Get single assignment for student to answer
      */
     public function show()

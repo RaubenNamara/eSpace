@@ -140,6 +140,16 @@ class MasteryController extends Controller
         );
         $stmt->execute(array_merge([$yearId], $classIds, $subjectIds));
         $topics = $stmt->fetchAll();
+        // ...then topics from another class or year the student was assessed on this year
+        // (a teacher catching up or working ahead)
+        // - filed under the term they were assessed in, so they sit with this term's work
+        foreach (\eSpace\App\Services\OffScheduleTopics::find($db, [$studentId], $subjectIds, $classIds) as $extra) {
+            if ($extra['assessed_term_id'] !== null) {
+                $extra['term_id'] = $extra['assessed_term_id'];
+                $extra['term_name'] = $extra['assessed_term_name'];
+            }
+            $topics[] = $extra;
+        }
         $topicIds = array_map(fn($t) => (int) $t['id'], $topics);
 
         $outcomesByTopic = [];
@@ -156,6 +166,13 @@ class MasteryController extends Controller
                 $outcomesByTopic[(int) $o['curriculum_topic_id']][] = $o;
                 $outcomeIds[] = (int) $o['id'];
             }
+        }
+
+        $stmt = $db->prepare("SELECT id, name FROM terms WHERE academic_year_id = ? AND deleted_at IS NULL");
+        $stmt->execute([$yearId]);
+        $termNames = [];
+        foreach ($stmt->fetchAll() as $tr) {
+            $termNames[(int) $tr['id']] = $tr['name'];
         }
 
         [$assessments, $outcomeLinks, $topicLinks, $eocByTopic] = $this->loadEvidence($db, $studentId, $classIds, $topicIds, $outcomeIds);
@@ -201,6 +218,27 @@ class MasteryController extends Controller
                 fn($id) => isset($assessments[$id]) && $assessments[$id]['category'] === 'AOI'
             )));
             $aoi = $aoiLinked ? $this->stateFrom($aoiLinked) : null;
+
+            // The terms its assessments were set in - a Term 3 topic assessed in Term 2 shows
+            // under Term 2 as well, where the student is now
+            $setIn = [];
+            foreach ($outcomesByTopic[$topicId] ?? [] as $o) {
+                foreach ($outcomeLinks[(int) $o['id']] ?? [] as $aid) {
+                    if (isset($assessments[$aid]) && $assessments[$aid]['term_id'] !== null) {
+                        $setIn[$assessments[$aid]['term_id']] = true;
+                    }
+                }
+            }
+            foreach ($topicLinks[$topicId] ?? [] as $aid) {
+                if (isset($assessments[$aid]) && $assessments[$aid]['term_id'] !== null) {
+                    $setIn[$assessments[$aid]['term_id']] = true;
+                }
+            }
+            unset($setIn[(int) $t['term_id']]);
+            $setInTerms = array_values(array_filter(array_map(
+                fn($id) => isset($termNames[$id]) ? ['id' => $id, 'name' => $termNames[$id]] : null,
+                array_keys($setIn)
+            )));
             // The topic's competency: where its Activity of Integration puts the student, built on
             // the topic's outcomes
             $competency = ($aoi ?? $this->stateFrom([])) + [
@@ -218,6 +256,10 @@ class MasteryController extends Controller
                 'id' => $topicId,
                 'term_id' => $t['term_id'] !== null ? (int) $t['term_id'] : null,
                 'term_name' => $t['term_name'],
+                // other terms it was assessed in (it is listed under those too)
+                'set_in_terms' => $setInTerms,
+                // Set for a topic from another class or year (OffScheduleTopics), e.g. "S.5 · 2025"
+                'from' => $t['from_label'] ?? null,
                 'theme' => $t['theme_branch'],
                 'topic' => $t['topic'],
                 'competence' => $t['competence'],
@@ -358,7 +400,7 @@ class MasteryController extends Controller
         // the page to revise when the outcome needs strengthening
         $pageCols = $this->hasEnotePageLink($db) ? 'a.enote_topic_id, a.enote_page_id,' : 'NULL AS enote_topic_id, NULL AS enote_page_id,';
         $stmt = $db->prepare(
-            "SELECT a.id, a.title, a.assessment_category, a.due_date, {$pageCols}
+            "SELECT a.id, a.title, a.assessment_category, a.due_date, a.term_id, {$pageCols}
                     sub.id AS submission_id, sub.status AS submission_status, sub.percentage
              FROM assignments a
              LEFT JOIN assignment_submissions sub ON sub.id = (
@@ -371,9 +413,12 @@ class MasteryController extends Controller
                AND (a.open_at IS NULL OR a.open_at <= NOW())
                AND (a.class_id IN (" . self::placeholders($classIds) . ")
                     OR EXISTS (SELECT 1 FROM assignment_classes ac
-                               WHERE ac.assignment_id = a.id AND ac.class_id IN (" . self::placeholders($classIds) . ")))"
+                               WHERE ac.assignment_id = a.id AND ac.class_id IN (" . self::placeholders($classIds) . "))
+                    OR EXISTS (SELECT 1 FROM classes gc
+                               WHERE a.class_group_name IS NOT NULL AND gc.name = a.class_group_name
+                                 AND gc.id IN (" . self::placeholders($classIds) . ")))"
         );
-        $stmt->execute(array_merge([$studentId], $allIds, $classIds, $classIds));
+        $stmt->execute(array_merge([$studentId], $allIds, $classIds, $classIds, $classIds));
         $returnedSubmissions = [];
         foreach ($stmt->fetchAll() as $a) {
             $status = $a['submission_status'] ?: 'new';
@@ -388,6 +433,8 @@ class MasteryController extends Controller
                 'title' => $a['title'],
                 'category' => $a['assessment_category'],
                 'due_date' => $a['due_date'],
+                // the term it was set in - a topic shows under that term too (catching up, working ahead)
+                'term_id' => $a['term_id'] !== null ? (int) $a['term_id'] : null,
                 'state' => $state,
                 // Scores only once the teacher has returned the work
                 'percentage' => $state === 'marked' && $a['percentage'] !== null ? (float) $a['percentage'] : null,

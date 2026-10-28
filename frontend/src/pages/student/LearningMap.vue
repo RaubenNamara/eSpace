@@ -158,6 +158,8 @@
                 <div class="min-w-0 flex-1">
                   <p v-if="topic.theme" class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 truncate">{{ topic.theme }}<template v-if="activeTerm === 'all' && topic.term_name"> · {{ topic.term_name }}</template></p>
                   <p class="text-sm sm:text-base font-semibold text-gray-900 dark:text-white leading-snug">{{ topic.topic }}</p>
+                  <span v-if="topic.from" class="inline-block mt-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-200" title="A topic from another class or year, assessed this year">From {{ topic.from }}</span>
+                  <span v-else-if="activeTerm !== 'all' && topic.term_id !== activeTerm && topic.term_name" class="inline-block mt-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-200" title="Your teacher assessed this topic in this term">A {{ topic.term_name }} topic, assessed this term</span>
                   <!-- Outcomes at a glance -->
                   <div class="flex gap-1 mt-2" :title="`${topic.summary.achieved} of ${topic.summary.outcomes} outcomes achieved`">
                     <span v-for="o in topic.outcomes" :key="o.id" class="h-1.5 flex-1 max-w-[42px] rounded-full" :class="statusStyle(o.status).bar"></span>
@@ -243,6 +245,8 @@
                 <div class="min-w-0 flex-1">
                   <p v-if="topic.theme" class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 truncate">{{ topic.theme }}<template v-if="activeTerm === 'all' && topic.term_name"> · {{ topic.term_name }}</template></p>
                   <p class="text-sm sm:text-base font-semibold text-gray-900 dark:text-white leading-snug">{{ topic.topic }}</p>
+                  <span v-if="topic.from" class="inline-block mt-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-200" title="A topic from another class or year, assessed this year">From {{ topic.from }}</span>
+                  <span v-else-if="activeTerm !== 'all' && topic.term_id !== activeTerm && topic.term_name" class="inline-block mt-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-200" title="Your teacher assessed this topic in this term">A {{ topic.term_name }} topic, assessed this term</span>
                   <p class="text-xs text-gray-600 dark:text-gray-300 mt-1 italic leading-snug">
                     {{ topic.competency.text ? `“${topic.competency.text}”` : 'The competency for this topic hasn\'t been written yet' }}
                   </p>
@@ -452,6 +456,10 @@ interface Topic {
   id: number
   term_id: number | null
   term_name: string | null
+  // a topic from another class or year, e.g. "S.5 · 2025" (catching up or working ahead)
+  from?: string | null
+  // other terms it was assessed in - it is listed under those too
+  set_in_terms?: { id: number; name: string }[]
   theme: string | null
   topic: string
   competence: string | null
@@ -606,7 +614,10 @@ const activeSubject = computed(() => data.value?.subjects.find(s => s.id === act
 
 const termTabs = computed(() => {
   const seen = new Map<number, string>()
-  activeSubject.value?.topics.forEach(t => { if (t.term_id !== null && !seen.has(t.term_id)) seen.set(t.term_id, t.term_name || `Term ${t.term_id}`) })
+  activeSubject.value?.topics.forEach(t => {
+    if (t.term_id !== null && !seen.has(t.term_id)) seen.set(t.term_id, t.term_name || `Term ${t.term_id}`)
+    t.set_in_terms?.forEach(x => { if (!seen.has(x.id)) seen.set(x.id, x.name) })
+  })
   const tabs: { key: 'all' | number; label: string; current: boolean }[] = [{ key: 'all', label: 'All', current: false }]
   Array.from(seen.entries()).sort((a, b) => a[0] - b[0]).forEach(([id, name]) => tabs.push({ key: id, label: name, current: id === data.value?.current_term_id }))
   return tabs
@@ -616,8 +627,12 @@ const needsAttention = (t: Topic) => view.value === 'outcomes'
   ? t.outcomes.some(o => ['available', 'developing', 'needs_support'].includes(o.status)) || (t.aoi && ['available', 'developing', 'needs_support'].includes(t.aoi.status))
   : ['available', 'developing', 'needs_support'].includes(t.competency.status)
 
+// A topic belongs to its own term, and to any term it was assessed in (a teacher catching up or
+// working ahead)
+const inTerm = (t: Topic, termId: number) => t.term_id === termId || !!t.set_in_terms?.some(x => x.id === termId)
+
 const shownTopics = computed(() => (activeSubject.value?.topics ?? [])
-  .filter(t => activeTerm.value === 'all' || t.term_id === activeTerm.value)
+  .filter(t => activeTerm.value === 'all' || inTerm(t, activeTerm.value))
   .filter(t => !onlyToDo.value || needsAttention(t)))
 
 const attentionCount = (t: Totals) => t.available + t.developing + t.needs_support
@@ -724,7 +739,7 @@ function selectSubject(id: number) {
   const subject = data.value?.subjects.find(s => s.id === id)
   // Start on this term when the subject has topics in it
   const current = data.value?.current_term_id
-  activeTerm.value = current && subject?.topics.some(t => t.term_id === current) ? current : 'all'
+  activeTerm.value = current && subject?.topics.some(t => inTerm(t, current)) ? current : 'all'
 }
 
 onMounted(async () => {

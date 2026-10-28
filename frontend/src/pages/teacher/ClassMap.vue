@@ -70,7 +70,7 @@
           <button type="button" class="w-full text-left p-4 flex items-center gap-3" :aria-expanded="isTopicOpen(t)" @click="toggleTopic(t)">
             <div class="min-w-0 flex-1">
               <p class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 truncate">{{ [t.term_name, t.theme].filter(Boolean).join(' · ') }}</p>
-              <p class="text-sm font-bold text-gray-900 dark:text-white">{{ t.topic }}</p>
+              <p class="text-sm font-bold text-gray-900 dark:text-white">{{ t.topic }}<span v-if="t.from" class="ml-2 align-middle px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-200" title="A topic from another class or year, assessed this year">From {{ t.from }}</span></p>
               <div class="mt-1.5 flex items-center gap-2">
                 <span class="flex h-1.5 flex-1 max-w-xs rounded-full overflow-hidden bg-gray-100 dark:bg-gray-700">
                   <span v-for="k in KEYS" :key="k" :class="STYLE[k].bar" :style="{ width: `${share(topicCounts(t), k)}%` }"></span>
@@ -194,7 +194,7 @@ import CompetencyReportDialog from '@/components/learningmap/CompetencyReportDia
 type Key = 'achieved' | 'developing' | 'needs_support' | 'not_assessed'
 interface Summary { assessed: boolean; counts: Record<Key, number>; support: { student_id: number; name: string; percentage: number; status: 'developing' | 'needs_support' }[] }
 // ids: every stream's copy of the outcome / topic (the class level's streams each have their own)
-interface Topic { id: number; ids: number[]; topic: string; theme: string | null; term_name: string | null; competence: string | null; outcomes: (Summary & { id: number; ids: number[]; text: string })[]; competency: Summary }
+interface Topic { id: number; ids: number[]; topic: string; theme: string | null; term_name: string | null; from?: string | null; competence: string | null; outcomes: (Summary & { id: number; ids: number[]; text: string })[]; competency: Summary }
 interface StudentRow { id: number; name: string; admission_number: string; class_name: string | null; achieved: number; developing: number; needs_support: number; results: number; improvement: number | null; outcomes_term: number }
 interface ClassMap { subject: { id: number; name: string }; student_count: number; topics: Topic[]; students: StudentRow[]; outcome_count: number }
 

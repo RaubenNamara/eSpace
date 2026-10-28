@@ -29,14 +29,19 @@
     </header>
 
     <!-- Hero -->
-    <section class="relative overflow-hidden border-b border-slate-200 dark:border-white/10 print:border-0">
-      <div class="absolute inset-0 -z-10 bg-slate-50 dark:bg-white/[0.02]" aria-hidden="true"></div>
-      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
-        <p class="text-sm font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-300">User guide</p>
-        <h1 class="mt-2 font-jakarta text-3xl sm:text-5xl font-extrabold tracking-tight">How to use Tusome</h1>
-        <p class="mt-3 max-w-2xl text-slate-600 dark:text-slate-300">Short, step-by-step help for students, teachers, heads of department and administrators. Pick your role, or search for what you want to do.</p>
-        <div class="mt-6 flex flex-wrap gap-2 print:hidden">
-          <a v-for="p in GUIDE" :key="p.key" :href="`#${p.key}`" class="px-4 py-2 rounded-xl text-sm font-semibold bg-white border border-slate-200 text-slate-700 hover:border-indigo-300 hover:text-indigo-700 dark:bg-white/5 dark:border-white/10 dark:text-slate-200 dark:hover:text-white" @click="search = ''">{{ p.label }}</a>
+    <section class="relative overflow-hidden bg-indigo-950 text-white print:bg-white print:text-slate-900">
+      <div class="absolute inset-0 print:hidden" aria-hidden="true">
+        <div class="absolute -top-40 -right-32 w-[36rem] h-[36rem] rounded-full bg-indigo-600/30 blur-3xl"></div>
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.07)_1px,transparent_0)] [background-size:28px_28px] [mask-image:linear-gradient(to_bottom,black,transparent_85%)]"></div>
+      </div>
+      <div class="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+        <span class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold text-indigo-100 print:hidden">
+          <span class="w-1.5 h-1.5 rounded-full bg-indigo-300"></span>User guide
+        </span>
+        <h1 class="mt-4 font-jakarta text-3xl sm:text-5xl font-extrabold tracking-tight">How to use Tusome</h1>
+        <p class="mt-3 max-w-2xl text-white/80 print:text-slate-600">Short, step-by-step help for students, teachers, heads of department and administrators. Pick your role, or search for what you want to do.</p>
+        <div class="mt-7 flex flex-wrap gap-2 print:hidden">
+          <a v-for="p in GUIDE" :key="p.key" :href="`#${p.key}`" class="px-4 py-2 rounded-xl text-sm font-semibold bg-white/10 ring-1 ring-white/15 text-white hover:bg-white hover:text-indigo-950 transition" @click="search = ''">{{ p.label }}</a>
         </div>
       </div>
     </section>
@@ -58,7 +63,7 @@
 
         <section v-for="p in shownParts" :id="p.key" :key="p.key" class="mb-14 scroll-mt-24">
           <div class="mb-6 pb-3 border-b border-slate-200 dark:border-white/10">
-            <h2 class="font-jakarta text-2xl sm:text-3xl font-extrabold tracking-tight">{{ p.label }}</h2>
+            <h2 class="flex items-center gap-3 font-jakarta text-2xl sm:text-3xl font-extrabold tracking-tight"><span class="w-1.5 h-7 rounded-full bg-indigo-600" aria-hidden="true"></span>{{ p.label }}</h2>
             <p class="mt-1 text-slate-600 dark:text-slate-400">{{ p.blurb }}</p>
           </div>
           <div class="grid gap-5">
@@ -67,14 +72,14 @@
                 <span class="w-10 h-10 flex-shrink-0 rounded-xl bg-indigo-100 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300 flex items-center justify-center"><AppIcon :name="t.icon" class="w-5 h-5" /></span>
                 <div class="min-w-0 flex-1">
                   <h3 class="font-jakarta text-lg font-bold">
-                    <a :href="`#${t.id}`" class="hover:underline">{{ t.title }}</a>
+                    <a :href="`#${t.id}`" class="hover:text-indigo-700 dark:hover:text-indigo-300">{{ t.title }}</a>
                   </h3>
                   <p v-if="t.intro" class="mt-1 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{{ t.intro }}</p>
                 </div>
               </div>
               <ol v-if="t.steps?.length" class="mt-4 space-y-2.5">
                 <li v-for="(s, i) in t.steps" :key="i" class="flex gap-3 text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
-                  <span class="w-6 h-6 flex-shrink-0 rounded-full bg-slate-100 dark:bg-white/10 text-xs font-bold flex items-center justify-center text-slate-600 dark:text-slate-300">{{ i + 1 }}</span>
+                  <span class="w-6 h-6 flex-shrink-0 rounded-full bg-indigo-50 dark:bg-indigo-500/15 text-xs font-bold flex items-center justify-center text-indigo-700 dark:text-indigo-200">{{ i + 1 }}</span>
                   <span class="pt-0.5">{{ s }}</span>
                 </li>
               </ol>
@@ -85,9 +90,9 @@
           </div>
         </section>
 
-        <div class="mt-4 rounded-3xl bg-slate-900 dark:bg-white/5 dark:border dark:border-white/10 p-6 sm:p-8 text-white print:hidden">
+        <div class="mt-4 rounded-3xl bg-indigo-950 dark:bg-white/5 dark:border dark:border-white/10 p-6 sm:p-8 text-white print:hidden">
           <h2 class="font-jakarta text-xl font-bold">Still stuck?</h2>
-          <p class="mt-1 text-sm text-slate-300">Ask a teacher or your school's Tusome administrator - or, if your school isn't on Tusome yet, request a demo. You can also write to us at <a :href="`mailto:${SUPPORT_EMAIL}`" class="font-semibold text-white underline">{{ SUPPORT_EMAIL }}</a>.</p>
+          <p class="mt-1 text-sm text-indigo-100/80">Ask a teacher or your school's Tusome administrator - or, if your school isn't on Tusome yet, request a demo. You can also write to us at <a :href="`mailto:${SUPPORT_EMAIL}`" class="font-semibold text-white underline">{{ SUPPORT_EMAIL }}</a>.</p>
           <div class="mt-4 flex flex-wrap gap-2">
             <router-link :to="account.to" class="px-4 py-2 rounded-xl text-sm font-semibold bg-white text-slate-900">{{ account.label }}</router-link>
             <router-link to="/" class="px-4 py-2 rounded-xl text-sm font-semibold bg-white/10 hover:bg-white/20">Tusome home</router-link>

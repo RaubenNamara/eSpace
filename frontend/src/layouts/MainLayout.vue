@@ -76,12 +76,19 @@
                   class="nav-item flex items-center gap-2.5 pr-2.5 py-1.5 rounded-xl transition-all duration-150 text-sm font-medium group"
                   :class="[row.child && !isIconOnly ? 'pl-7' : 'pl-3.5', isActive(row.item.path) ? 'bg-indigo-100 text-indigo-900 font-semibold ring-1 ring-indigo-200 dark:bg-indigo-900/50 dark:ring-indigo-800 dark:text-white' : 'text-gray-800 dark:text-white/60 hover:bg-indigo-50 dark:hover:bg-white/[0.07] hover:text-indigo-800 dark:hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
                 >
-                  <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-all duration-150"
+                  <div class="relative w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-all duration-150"
                     :class="isActive(row.item.path) ? 'bg-indigo-600 text-white shadow-sm' : 'text-indigo-700 dark:text-indigo-300/80 group-hover:text-indigo-800 dark:group-hover:text-white/80'"
                   >
                     <component :is="iconMap[row.item.icon]" class="w-4 h-4" />
+                    <!-- Folded sidebar: the count sits on the icon -->
+                    <span v-if="isIconOnly && badgeFor(row.item.path)" class="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-semibold leading-4 text-center ring-2 ring-white dark:ring-gray-900">{{ badgeFor(row.item.path) > 9 ? '9+' : badgeFor(row.item.path) }}</span>
                   </div>
                   <span v-if="!isIconOnly" class="truncate">{{ row.item.label }}</span>
+                  <span
+                    v-if="!isIconOnly && badgeFor(row.item.path)"
+                    class="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-rose-500 text-white text-[11px] font-semibold leading-5 text-center"
+                    :title="`${badgeFor(row.item.path)} new ${badgeFor(row.item.path) === 1 ? 'assessment' : 'assessments'} to do`"
+                  >{{ badgeFor(row.item.path) > 9 ? '9+' : badgeFor(row.item.path) }}</span>
                 </router-link>
               </template>
             </div>
@@ -418,6 +425,7 @@
         <component :is="iconMap[tab.icon]" class="w-5 h-5" />
         {{ tab.label }}
         <span v-if="tab.path === '/student/chat' && chatBadge.unreadCount > 0" class="absolute top-1 right-[calc(50%-1.25rem)] min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] leading-4 text-center">{{ chatBadge.unreadCount > 9 ? '9+' : chatBadge.unreadCount }}</span>
+        <span v-else-if="badgeFor(tab.path)" class="absolute top-1 right-[calc(50%-1.25rem)] min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] leading-4 text-center">{{ badgeFor(tab.path) > 9 ? '9+' : badgeFor(tab.path) }}</span>
       </RouterLink>
       <button type="button" class="flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-semibold text-gray-500 dark:text-gray-400" aria-label="Open the full menu" @click="sidebarOpen = true">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
@@ -651,7 +659,22 @@ const showNotifications = ref(false)
 const notificationsContainer = ref<HTMLElement | null>(null)
 let notificationsTimer: ReturnType<typeof setInterval> | null = null
 
+// A student's red count on Assessments: work open now that they have not started yet. Checked
+// with the notifications, and again on every page change (so it drops once they hand one in).
+const newAssessmentCount = ref(0)
+const fetchNewAssessmentCount = () => {
+  if (menuRole.value !== 'student') return
+  axios.get('/api/student/assignments/new-count')
+    .then(res => { newAssessmentCount.value = Number(res.data.data?.count) || 0 })
+    .catch(() => {
+      // Best-effort - the count just stays at its last known value.
+    })
+}
+watch(() => route.path, fetchNewAssessmentCount)
+const badgeFor = (path: string) => (path === '/student/assignments' ? newAssessmentCount.value : 0)
+
 const fetchUnreadNotificationCount = () => {
+  fetchNewAssessmentCount()
   axios.get('/api/notifications/unread-count')
     .then(res => {
       const count = res.data.data.count

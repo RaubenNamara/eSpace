@@ -180,7 +180,7 @@ class ReportCardController extends Controller
         }
 
         $stmt = $this->getDb()->query(
-            "SELECT t.id, t.name, ay.name AS academic_year, t.is_current
+            "SELECT t.id, t.name, t.academic_year_id, ay.name AS academic_year, t.is_current
              FROM terms t LEFT JOIN academic_years ay ON t.academic_year_id = ay.id
              WHERE t.deleted_at IS NULL ORDER BY t.start_date DESC"
         );

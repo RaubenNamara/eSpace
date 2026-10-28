@@ -6,6 +6,7 @@ namespace eSpace\App\Controllers\Student;
 
 use eSpace\App\Controllers\Controller;
 use eSpace\App\Support\AssignmentRemoval;
+use eSpace\App\Services\AssignmentAccess;
 use eSpace\App\Services\LiveClassService;
 
 /**
@@ -72,13 +73,14 @@ class DashboardController extends Controller
              FROM assignments a
              INNER JOIN subjects s ON a.subject_id = s.id
              LEFT JOIN (
-                 SELECT * FROM assignment_submissions WHERE student_id = :student_id_sub ORDER BY attempt_number DESC
+                 SELECT * FROM assignment_submissions WHERE student_id = ? ORDER BY attempt_number DESC
              ) sub ON a.id = sub.assignment_id
              WHERE a.status = 'published' AND a.deleted_at IS NULL" . (AssignmentRemoval::hasColumn() ? " AND (a.removed_at IS NULL OR sub.id IS NOT NULL)" : '') . "
-               AND a.class_id IN (SELECT class_id FROM student_department_enrollments WHERE student_id = :student_id_enroll AND deleted_at IS NULL)
+               AND (a.open_at IS NULL OR a.open_at <= NOW())
+               AND " . AssignmentAccess::clause() . "
              ORDER BY a.due_date ASC"
         );
-        $stmt->execute(['student_id_sub' => $studentId, 'student_id_enroll' => $studentId]);
+        $stmt->execute([$studentId, $studentId, $studentId]);
         $assignmentRows = $stmt->fetchAll();
 
         $statusMap = ['marking' => 'submitted', 'graded' => 'submitted', 'returned' => 'marked'];
@@ -97,15 +99,13 @@ class DashboardController extends Controller
 
             if (in_array($status, ['new', 'in_progress', 'overdue'], true)) {
                 $pendingCount++;
-                if (count($upcomingAssignments) < 6) {
-                    $upcomingAssignments[] = [
-                        'id' => (int) $row['id'],
-                        'title' => $row['title'],
-                        'subject_name' => $row['subject_name'],
-                        'due_date' => $row['due_date'],
-                        'status' => $status,
-                    ];
-                }
+                $upcomingAssignments[] = [
+                    'id' => (int) $row['id'],
+                    'title' => $row['title'],
+                    'subject_name' => $row['subject_name'],
+                    'due_date' => $row['due_date'],
+                    'status' => $status,
+                ];
             } elseif (in_array($status, ['submitted', 'marked'], true)) {
                 $completedCount++;
                 if ($status === 'marked' && $row['percentage'] !== null) {
@@ -113,6 +113,20 @@ class DashboardController extends Controller
                 }
             }
         }
+
+        // Work still to do first, soonest deadline first; overdue work after it, most recent first -
+        // so a new assessment is never pushed off the dashboard by old overdue ones
+        usort($upcomingAssignments, function ($x, $y) {
+            $xo = $x['status'] === 'overdue';
+            $yo = $y['status'] === 'overdue';
+            if ($xo !== $yo) {
+                return $xo ? 1 : -1;
+            }
+            $xd = $x['due_date'] ?: '9999-12-31';
+            $yd = $y['due_date'] ?: '9999-12-31';
+            return $xo ? strcmp($yd, $xd) : strcmp($xd, $yd);
+        });
+        $upcomingAssignments = array_slice($upcomingAssignments, 0, 6);
         $averageScore = !empty($scores) ? round(array_sum($scores) / count($scores), 1) : null;
 
         // Performance trend: the student's own graded scores in chronological (completion) order,

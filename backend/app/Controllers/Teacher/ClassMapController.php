@@ -170,6 +170,9 @@ class ClassMapController extends Controller
         );
         $stmt->execute(array_merge($classIds, [$subjectId]));
         $topics = $stmt->fetchAll();
+        // ...then topics from another class or year these learners were assessed on this year
+        // (catching up or working ahead)
+        $topics = array_merge($topics, \eSpace\App\Services\OffScheduleTopics::find($db, $studentIds, [$subjectId], $classIds));
         $topicIds = array_map(fn($t) => (int) $t['id'], $topics);
 
         $outcomes = [];
@@ -278,7 +281,7 @@ class ClassMapController extends Controller
         // its own copy); a student's results come from their own stream's copy
         $groups = [];
         foreach ($topics as $t) {
-            $key = mb_strtolower(trim((string) $t['theme_branch'])) . '|' . mb_strtolower(trim((string) $t['topic'])) . '|' . $t['term_id'];
+            $key = mb_strtolower(trim((string) $t['theme_branch'])) . '|' . mb_strtolower(trim((string) $t['topic'])) . '|' . $t['term_id'] . '|' . ($t['from_label'] ?? '');
             $groups[$key] ??= ['topic' => $t, 'ids' => [], 'outcomes' => []];
             $groups[$key]['ids'][] = (int) $t['id'];
             foreach ($outcomes[(int) $t['id']] ?? [] as $o) {
@@ -321,6 +324,8 @@ class ClassMapController extends Controller
                 'topic' => $t['topic'],
                 'theme' => $t['theme_branch'],
                 'term_name' => $t['term_name'],
+                // Set for a topic from another class or year (OffScheduleTopics), e.g. "S.5 · 2025"
+                'from' => $t['from_label'] ?? null,
                 'competence' => $t['competence'],
                 'outcomes' => $outcomesOut,
                 'competency' => $summarise($merge($topicResults, $g['ids']), (bool) array_intersect_key($topicAssessed, array_flip($g['ids']))),

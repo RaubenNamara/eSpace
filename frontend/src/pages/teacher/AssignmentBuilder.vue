@@ -220,31 +220,68 @@
               <template v-else>
                 <!-- Academic Year is already chosen once, above in Target Audience - reused here
                      automatically instead of asking again. -->
-                <div v-if="curriculumMissingYear" class="flex items-start gap-3 text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3.5">
+                <div v-if="curriculumMissingYear && !topicYearPicked" class="flex items-start gap-3 text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3.5">
                   <svg class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                   </svg>
-                  <span>No curriculum has been configured for Academic Year {{ form.academic_year || '—' }} yet. Choose a different Academic Year above, or contact the administrator.</span>
+                  <span>No curriculum has been configured for Academic Year {{ form.academic_year || '—' }} yet. Pick the year the topic comes from below, or contact the administrator.</span>
                 </div>
-                <template v-else>
-                  <div class="flex flex-wrap items-center justify-between gap-3">
-                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
-                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                      Academic Year {{ form.academic_year }}
-                    </span>
-                    <div class="flex-1 min-w-[160px] sm:max-w-[220px]">
+
+                <!-- When the assessment counts (its term's marks and report cards) is separate from
+                     where its topic comes from, so a teacher can catch up on an earlier class's,
+                     term's or year's topic, or work ahead, and the marks still land in this term -->
+                <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Counts in</label>
+                    <select
+                      v-model="countsInTermId"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white text-sm"
+                    >
+                      <option value="">Select term</option>
+                      <option v-for="t in countsInTerms" :key="t.id" :value="t.id">{{ t.name }}, {{ t.academic_year }}{{ Number(t.is_current) ? ' (current)' : '' }}</option>
+                    </select>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">The term whose marks and report cards this goes into.</p>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Topic from</label>
+                    <div class="grid grid-cols-3 gap-2">
+                      <select
+                        v-model="curriculumSelection.academic_year_id"
+                        aria-label="Year the topic comes from"
+                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white text-sm"
+                        @change="onTopicYearChange"
+                      >
+                        <option value="">Year</option>
+                        <option v-for="y in curriculumMeta?.academic_years" :key="y.id" :value="y.id">{{ y.name }}</option>
+                      </select>
+                      <select
+                        :value="topicClass"
+                        aria-label="Class the topic comes from"
+                        :disabled="!curriculumSelection.academic_year_id"
+                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white disabled:opacity-50 text-sm"
+                        @change="onTopicClassChange(Number(($event.target as HTMLSelectElement).value))"
+                      >
+                        <option v-if="!topicClassListed" :value="topicClass">This class</option>
+                        <option v-for="c in curriculumMeta?.class_streams" :key="c.id" :value="c.id">{{ c.display_name }}</option>
+                      </select>
                       <select
                         v-model="curriculumSelection.term_id"
+                        aria-label="Term the topic comes from"
                         :disabled="!curriculumSelection.academic_year_id"
                         class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white disabled:opacity-50 text-sm"
                         @change="onCurriculumStepChange('term_id')"
                       >
-                        <option value="">Select term</option>
+                        <option value="">Term</option>
                         <option v-for="t in curriculumMeta?.terms" :key="t.id" :value="t.id">{{ t.name }}</option>
                       </select>
                     </div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Usually this class, year and term. Choose another to catch up on a topic (an S.5 topic in S.6, say) or to work ahead.</p>
                   </div>
-                </template>
+                </div>
+                <p v-if="topicSourceNote" class="flex items-start gap-2 text-sm text-indigo-800 dark:text-indigo-200 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-lg p-3">
+                  <svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                  <span>{{ topicSourceNote }}</span>
+                </p>
 
                 <!-- Assessment Category -->
                 <div v-if="curriculumSelection.term_id">
@@ -1531,6 +1568,76 @@ const curriculumSelection = ref({
   theme_branch: '',
   curriculum_topic_id: '' as number | ''
 })
+
+// Where the topic comes from can differ from the class and term being assessed - a teacher
+// catching up on an S.5 topic in S.6, or working ahead. topicClassId '' = the class being assessed;
+// topicYearPicked = the teacher chose the topic's year (otherwise it follows the assessment's year).
+const topicClassId = ref<number | ''>('')
+const topicYearPicked = ref(false)
+const topicClass = computed(() => topicClassId.value || form.value.classTarget.class_id || '')
+const topicClassListed = computed(() => (curriculumMeta.value?.class_streams || []).some(c => c.id === topicClass.value))
+
+// The term this assessment counts in - its marks and report cards. By default the current term.
+interface TermOption { id: number; name: string; academic_year_id: number; academic_year: string; is_current: number | string }
+const allTerms = ref<TermOption[]>([])
+const countsInTermId = ref<number | ''>('')
+const countsInTerms = computed(() => allTerms.value.filter(t => String(t.academic_year) === String(form.value.academic_year)))
+const countsInYearId = computed(() => allTerms.value.find(t => t.id === countsInTermId.value)?.academic_year_id ?? null)
+
+const defaultCountsIn = () => {
+  if (countsInTerms.value.some(t => t.id === countsInTermId.value)) return
+  const list = countsInTerms.value
+  countsInTermId.value = (list.find(t => Number(t.is_current)) ?? list[list.length - 1])?.id ?? ''
+}
+const loadTerms = async () => {
+  try {
+    const response = await axios.get(`${API_BASE}/teacher/report-cards/terms`)
+    if (response.data.success) allTerms.value = response.data.data.terms || []
+  } catch (err) {
+    console.error('Failed to load terms:', err)
+  }
+}
+watch([() => form.value.academic_year, allTerms], () => { if (allTerms.value.length) defaultCountsIn() })
+
+// A plain line saying where the topic comes from, when it is not this class's topic for this term
+const topicSourceNote = computed(() => {
+  const sel = curriculumSelection.value
+  if (!sel.term_id || !curriculumMeta.value) return ''
+  const yearName = curriculumMeta.value.academic_years.find(y => y.id === Number(sel.academic_year_id))?.name ?? ''
+  const termName = curriculumMeta.value.terms.find(t => t.id === Number(sel.term_id))?.name ?? ''
+  const className = curriculumMeta.value.class_streams.find(c => c.id === topicClass.value)?.display_name ?? ''
+  const counts = allTerms.value.find(t => t.id === countsInTermId.value)
+  const otherClass = !!topicClassId.value && topicClassId.value !== form.value.classTarget.class_id
+  const otherYear = !!yearName && String(yearName) !== String(form.value.academic_year)
+  const otherTerm = !!counts && Number(sel.term_id) !== counts.id
+  if (!otherClass && !otherYear && !otherTerm) return ''
+  const from = [className, termName, yearName].filter(Boolean).join(', ')
+  return `A topic from ${from}${counts ? ` - its marks count in ${counts.name}, ${counts.academic_year}` : ''}. It shows on the class's Learning Map after their own topics.`
+})
+
+const clearTopicChoice = () => {
+  curriculumSelection.value.term_id = ''
+  curriculumSelection.value.theme_branch = ''
+  curriculumSelection.value.curriculum_topic_id = ''
+  selectedTopicIds.value = {}
+  loaTopicDetail.value = null
+  selectedLearningOutcomeIds.value = {}
+}
+const onTopicYearChange = async () => {
+  topicYearPicked.value = true
+  clearTopicChoice()
+  await loadCurriculumMeta()
+}
+const onTopicClassChange = async (classId: number) => {
+  topicClassId.value = classId === form.value.classTarget.class_id ? '' : classId
+  clearTopicChoice()
+  await loadCurriculumMeta()
+}
+// Picking another class to assess starts the topic over from that class
+watch(() => form.value.classTarget.class_id, () => {
+  topicClassId.value = ''
+  topicYearPicked.value = false
+})
 const loaTopicDetail = ref<LoaTopicDetail | null>(null)
 const selectedLearningOutcomeIds = ref<Record<number, boolean>>({})
 const selectedTopicIds = ref<Record<number, boolean>>({})
@@ -1701,6 +1808,7 @@ const removeQuestionPdf = () => {
 const loadDropdownData = async () => {
   await loadAssignments()
   await loadAcademicYears()
+  await loadTerms()
   await loadClasses()
 }
 
@@ -1755,6 +1863,8 @@ const loadAssignment = async () => {
       }
       curriculumSelection.value.academic_year_id = assignment.academic_year_id || ''
       curriculumSelection.value.term_id = assignment.term_id || ''
+      // The term it counts in; the topic's own class/year/term are restored from its topic below
+      countsInTermId.value = assignment.term_id || ''
 
       // Pre-check whichever Class-Stream(s) this assignment is already visible to: the new
       // multi-class list if any rows exist there, else fall back to the legacy single class_id /
@@ -1792,6 +1902,16 @@ const loadAssignment = async () => {
           const curriculumResponse = await axios.get(`${API_BASE}/teacher/assignments/${route.params.id}/curriculum`)
           if (curriculumResponse.data.success) {
             const { topics, learning_outcomes, construct_id } = curriculumResponse.data.data
+            // Where the topic comes from - another class, year or term when the teacher was
+            // catching up or working ahead
+            const source = topics[0]
+            if (source?.term_id) {
+              topicYearPicked.value = true
+              topicClassId.value = Number(source.class_id) === form.value.classTarget.class_id ? '' : Number(source.class_id)
+              curriculumSelection.value.academic_year_id = Number(source.academic_year_id)
+              curriculumSelection.value.term_id = Number(source.term_id)
+              await loadCurriculumMeta()
+            }
             if (assignment.assessment_category === 'LOA' && topics.length > 0) {
               // Re-applied (not just relied on from earlier in this function) - the
               // loadCurriculumMeta() calls around this block each hand curriculumMeta.value a
@@ -1800,7 +1920,7 @@ const loadAssignment = async () => {
               // year "changed" - a false positive was silently wiping the term this same restore
               // had just set. Setting it again here, once everything above has settled, is what
               // actually survives.
-              curriculumSelection.value.term_id = assignment.term_id || ''
+              curriculumSelection.value.term_id = source?.term_id ? Number(source.term_id) : (assignment.term_id || '')
               curriculumSelection.value.theme_branch = topics[0].theme_branch
               curriculumSelection.value.curriculum_topic_id = topics[0].id
               await loadCurriculumMeta()
@@ -1860,7 +1980,7 @@ const loadCurriculumMeta = async () => {
   try {
     const params: Record<string, string> = {
       subject_id: String(form.value.subject_id),
-      class_id: String(form.value.classTarget.class_id)
+      class_id: String(topicClass.value)
     }
     if (curriculumSelection.value.academic_year_id) params.academic_year_id = String(curriculumSelection.value.academic_year_id)
     if (curriculumSelection.value.term_id) params.term_id = String(curriculumSelection.value.term_id)
@@ -1893,6 +2013,11 @@ const curriculumMissingYear = ref(false)
 function syncCurriculumAcademicYear() {
   const years = curriculumMeta.value?.academic_years
   if (!years || years.length === 0) return
+  // The teacher chose the topic's year themselves (catching up or working ahead) - keep it
+  if (topicYearPicked.value) {
+    curriculumMissingYear.value = false
+    return
+  }
   const match = years.find(y => String(y.name) === String(form.value.academic_year))
   curriculumMissingYear.value = !match
   // Compared as numbers, not with the raw !== below - the two sides can legitimately be a string
@@ -2630,8 +2755,9 @@ const persistAssignment = async (): Promise<number | string | null> => {
     enote_topic_id: form.value.enote_topic_id || '',
     rubric: form.value.rubric,
     assessment_category: form.value.assessment_category,
-    academic_year_id: curriculumSelection.value.academic_year_id || null,
-    term_id: curriculumSelection.value.term_id || null
+    // The term it counts in (not the topic's own term - see countsInTermId)
+    academic_year_id: countsInYearId.value ?? (curriculumSelection.value.academic_year_id || null),
+    term_id: countsInTermId.value || curriculumSelection.value.term_id || null
   }
 
   // Only force status back to 'draft' when creating a brand-new assignment (its sensible
@@ -2813,8 +2939,8 @@ const publishAssignment = async () => {
       class_group_name: form.value.classTarget.class_group_name,
       rubric: form.value.rubric,
       assessment_category: form.value.assessment_category,
-      academic_year_id: curriculumSelection.value.academic_year_id || null,
-      term_id: curriculumSelection.value.term_id || null,
+      academic_year_id: countsInYearId.value ?? (curriculumSelection.value.academic_year_id || null),
+      term_id: countsInTermId.value || curriculumSelection.value.term_id || null,
       status: 'published',
       is_published: true
     }

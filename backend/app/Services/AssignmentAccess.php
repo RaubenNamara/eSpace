@@ -41,6 +41,38 @@ class AssignmentAccess
             )";
     }
 
+    /**
+     * Every learner the assessment is for, by the same rule as clause() (its class, stream group
+     * or extra classes, in the subject's department, still enrolled, not withdrawn from the
+     * teacher) - who to tell when it is published.
+     *
+     * @return int[]
+     */
+    public static function studentIds($db, int $assignmentId): array
+    {
+        $stmt = $db->prepare(
+            "SELECT DISTINCT sde.student_id
+             FROM assignments a
+             INNER JOIN subjects s ON s.id = a.subject_id
+             INNER JOIN student_department_enrollments sde ON sde.department_id = s.department_id
+                    AND sde.deleted_at IS NULL AND sde.status = 'active'
+             LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
+             WHERE a.id = ?
+               AND (
+                 sde.class_id = a.class_id
+                 OR (a.class_group_name IS NOT NULL AND sde_c.name = a.class_group_name)
+                 OR EXISTS (SELECT 1 FROM assignment_classes ac WHERE ac.assignment_id = a.id AND ac.class_id = sde.class_id)
+               )
+               AND NOT EXISTS (
+                 SELECT 1 FROM student_teacher_enrollments ste
+                 WHERE ste.student_id = sde.student_id AND ste.teacher_id = a.teacher_id
+                   AND ste.department_id = s.department_id AND ste.status = 'withdrawn'
+               )"
+        );
+        $stmt->execute([$assignmentId]);
+        return array_map('intval', array_column($stmt->fetchAll(\PDO::FETCH_ASSOC), 'student_id'));
+    }
+
     public static function canSee($db, int $studentId, int $assignmentId): bool
     {
         $stmt = $db->prepare(
