@@ -99,10 +99,10 @@
               </button>
               <div v-if="open[row.key] && row.assessed" class="pb-3 text-xs">
                 <p class="text-gray-500 dark:text-gray-400 mb-1.5">
-                  {{ row.counts.achieved }} achieved · {{ row.counts.developing }} developing · {{ row.counts.needs_support }} need support · {{ row.counts.not_assessed }} not assessed yet
+                  {{ row.counts.achieved }} achieved · {{ row.counts.developing }} developing · {{ row.counts.needs_support }} need support · {{ row.counts.not_assessed }} not assessed yet<template v-if="row.earlier"> · {{ row.earlier }} done in an earlier year</template>
                 </p>
                 <div v-if="row.support.length" class="flex flex-wrap gap-1.5">
-                  <span v-for="s in row.support" :key="s.student_id" class="px-2 py-0.5 rounded-full" :class="STYLE[s.status].chip">{{ s.name }} · {{ s.percentage }}%</span>
+                  <span v-for="s in row.support" :key="s.student_id" class="px-2 py-0.5 rounded-full" :class="STYLE[s.status].chip">{{ s.name }} · {{ s.percentage }}%{{ s.earlier ? ' (earlier year)' : '' }}</span>
                 </div>
                 <p v-else class="text-emerald-700 dark:text-emerald-300 font-semibold">Everyone assessed has achieved it.</p>
                 <!-- Re-teach: send the students who need help to revise it -->
@@ -192,7 +192,9 @@ import SupportGroupList, { type SupportGroup } from '@/components/classmap/Suppo
 import CompetencyReportDialog from '@/components/learningmap/CompetencyReportDialog.vue'
 
 type Key = 'achieved' | 'developing' | 'needs_support' | 'not_assessed'
-interface Summary { assessed: boolean; counts: Record<Key, number>; support: { student_id: number; name: string; percentage: number; status: 'developing' | 'needs_support' }[] }
+// earlier: how many of the results were done in an earlier year (on that year's copy of the topic -
+// worked ahead, or a repeated class); support[].earlier marks those learners
+interface Summary { assessed: boolean; counts: Record<Key, number>; support: { student_id: number; name: string; percentage: number; status: 'developing' | 'needs_support'; earlier?: boolean }[]; earlier?: number }
 // ids: every stream's copy of the outcome / topic (the class level's streams each have their own)
 interface Topic { id: number; ids: number[]; topic: string; theme: string | null; term_name: string | null; from?: string | null; competence: string | null; outcomes: (Summary & { id: number; ids: number[]; text: string })[]; competency: Summary }
 interface StudentRow { id: number; name: string; admission_number: string; class_name: string | null; achieved: number; developing: number; needs_support: number; results: number; improvement: number | null; outcomes_term: number }

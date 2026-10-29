@@ -130,7 +130,7 @@
                         {{ a.department_name }}
                       </span>
                       <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
-                        Due {{ formatDate(a.due_date) }}
+                        {{ a.due_date ? `Due ${formatDate(a.due_date)}` : 'No deadline' }}
                       </span>
                       <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
                         {{ a.submissions_count }} submission{{ a.submissions_count === 1 ? '' : 's' }}

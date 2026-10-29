@@ -178,6 +178,11 @@ class MasteryController extends Controller
         [$assessments, $outcomeLinks, $topicLinks, $eocByTopic] = $this->loadEvidence($db, $studentId, $classIds, $topicIds, $outcomeIds);
         $enotes = $this->loadEnotes($db, $studentId, $topicIds, $classIds, $classNames);
         $practice = $this->loadPractice($db, $topicIds);
+        // This year's topics done in an earlier year, as that year's copy of the topic (a teacher
+        // working ahead - an S.6 topic in S.5 - or a repeated class)
+        [$earlier, $earlierOutcomeLinks, $earlierTopicLinks] = $this->loadEarlierEvidence(
+            $db, $studentId, \eSpace\App\Services\EarlierTopics::match($db, $topicIds)
+        );
 
         // Assemble per subject
         $bySubject = [];
@@ -207,6 +212,7 @@ class MasteryController extends Controller
                     $outcomeLinks[(int) $o['id']] ?? [],
                     fn($id) => isset($assessments[$id])
                 )));
+                $linked = $this->withEarlier($linked, $earlierOutcomeLinks[(int) $o['id']] ?? [], $earlier);
                 $state = $this->stateFrom($linked);
                 $page = array_values(array_filter(array_column($linked, 'page')))[0] ?? null;
                 $outcomes[] = ['id' => (int) $o['id'], 'text' => $o['learning_outcome'], 'revise' => $page] + $state;
@@ -217,6 +223,10 @@ class MasteryController extends Controller
                 $topicLinks[$topicId] ?? [],
                 fn($id) => isset($assessments[$id]) && $assessments[$id]['category'] === 'AOI'
             )));
+            $aoiLinked = $this->withEarlier($aoiLinked, array_values(array_filter(
+                $earlierTopicLinks[$topicId] ?? [],
+                fn($id) => $earlier[$id]['category'] === 'AOI'
+            )), $earlier);
             $aoi = $aoiLinked ? $this->stateFrom($aoiLinked) : null;
 
             // The terms its assessments were set in - a Term 3 topic assessed in Term 2 shows
@@ -762,6 +772,117 @@ class MasteryController extends Controller
      * Where the student stands from a set of assessments: averaged returned results give the
      * level; otherwise awaiting marking / available to attempt / not assessed.
      */
+    /**
+     * The student's own work, handed in during an earlier year, on earlier years' copies of this
+     * year's topics and outcomes (EarlierTopics::match), keyed back to this year's ids.
+     *
+     * @param array{topics: array<int, int[]>, outcomes: array<int, int[]>} $match
+     * @return array{0: array<int, array>, 1: array<int, int[]>, 2: array<int, int[]>} assessments by id,
+     *         and their ids by this year's outcome id and topic id
+     */
+    private function loadEarlierEvidence($db, int $studentId, array $match): array
+    {
+        $oldOutcomes = array_values(array_unique(array_merge([], ...array_values($match['outcomes']))));
+        $oldTopics = array_values(array_unique(array_merge([], ...array_values($match['topics']))));
+        if (!$oldOutcomes && !$oldTopics) {
+            return [[], [], []];
+        }
+        $byOldOutcome = [];
+        $byOldTopic = [];
+        if ($oldOutcomes) {
+            $stmt = $db->prepare(
+                "SELECT assignment_id, learning_outcome_id FROM assignment_learning_outcomes
+                 WHERE learning_outcome_id IN (" . self::placeholders($oldOutcomes) . ")"
+            );
+            $stmt->execute($oldOutcomes);
+            foreach ($stmt->fetchAll() as $l) {
+                $byOldOutcome[(int) $l['learning_outcome_id']][] = (int) $l['assignment_id'];
+            }
+        }
+        if ($oldTopics) {
+            $stmt = $db->prepare(
+                "SELECT assignment_id, curriculum_topic_id FROM assignment_curriculum_topics
+                 WHERE curriculum_topic_id IN (" . self::placeholders($oldTopics) . ")"
+            );
+            $stmt->execute($oldTopics);
+            foreach ($stmt->fetchAll() as $l) {
+                $byOldTopic[(int) $l['curriculum_topic_id']][] = (int) $l['assignment_id'];
+            }
+        }
+        $ids = array_values(array_unique(array_merge([], ...array_values($byOldOutcome), ...array_values($byOldTopic))));
+        if (!$ids) {
+            return [[], [], []];
+        }
+
+        // Only work the student handed in - last year's assessments are closed to them now
+        $stmt = $db->prepare(
+            "SELECT a.id, a.title, a.assessment_category, sub.id AS submission_id, sub.status AS submission_status, sub.percentage
+             FROM assignments a
+             INNER JOIN assignment_submissions sub ON sub.id = (
+                 SELECT s2.id FROM assignment_submissions s2
+                 WHERE s2.assignment_id = a.id AND s2.student_id = ? AND s2.deleted_at IS NULL
+                 ORDER BY s2.attempt_number DESC, s2.id DESC LIMIT 1
+             )
+             WHERE a.id IN (" . self::placeholders($ids) . ") AND a.status = 'published' AND a.deleted_at IS NULL
+               AND sub.status IN ('submitted', 'marking', 'graded', 'returned')"
+        );
+        $stmt->execute(array_merge([$studentId], $ids));
+        $rows = $stmt->fetchAll();
+        $labels = \eSpace\App\Services\EarlierTopics::labels($db, array_map(fn($a) => (int) $a['id'], $rows));
+        $assessments = [];
+        foreach ($rows as $a) {
+            $marked = $a['submission_status'] === 'returned';
+            $assessments[(int) $a['id']] = [
+                'id' => (int) $a['id'],
+                'title' => $a['title'],
+                'category' => $a['assessment_category'],
+                'due_date' => null,
+                'term_id' => null,
+                'state' => $marked ? 'marked' : 'awaiting',
+                'percentage' => $marked && $a['percentage'] !== null ? (float) $a['percentage'] : null,
+                'submission_id' => (int) $a['submission_id'],
+                'page' => null,
+                'earlier' => $labels[(int) $a['id']] ?? null,
+            ];
+        }
+
+        $keyBack = function (array $currentToOld, array $byOld) use ($assessments): array {
+            $out = [];
+            foreach ($currentToOld as $current => $olds) {
+                $found = [];
+                foreach ($olds as $old) {
+                    foreach ($byOld[$old] ?? [] as $aid) {
+                        if (isset($assessments[$aid])) {
+                            $found[$aid] = true;
+                        }
+                    }
+                }
+                if ($found) {
+                    $out[$current] = array_keys($found);
+                }
+            }
+            return $out;
+        };
+        return [$assessments, $keyBack($match['outcomes'], $byOldOutcome), $keyBack($match['topics'], $byOldTopic)];
+    }
+
+    /**
+     * This year's assessments of an outcome or topic, with the student's earlier-year work on it
+     * added while this year has no result yet - a result from this year always comes first.
+     */
+    private function withEarlier(array $linked, array $earlierIds, array $earlier): array
+    {
+        if (!$earlierIds) {
+            return $linked;
+        }
+        foreach ($linked as $a) {
+            if ($a['state'] === 'marked' && $a['percentage'] !== null) {
+                return $linked;
+            }
+        }
+        return array_merge($linked, array_map(fn($id) => $earlier[$id], $earlierIds));
+    }
+
     private function stateFrom(array $assessments): array
     {
         $marked = array_values(array_filter($assessments, fn($a) => $a['state'] === 'marked' && $a['percentage'] !== null));
@@ -772,6 +893,8 @@ class MasteryController extends Controller
             'state' => $a['state'],
             'percentage' => $a['percentage'],
             'submission_id' => $a['submission_id'],
+            // done in an earlier year: where, e.g. "S.5 · Term 2, 2026"
+            'earlier' => $a['earlier'] ?? null,
         ], $assessments);
 
         if ($marked) {

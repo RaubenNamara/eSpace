@@ -85,7 +85,7 @@ class AssignmentController extends Controller
                       AND ste.department_id = s.department_id
                       AND ste.status = 'withdrawn'
                 )
-                ORDER BY a.due_date DESC";
+                ORDER BY COALESCE(a.due_date, a.published_at, a.created_at) DESC";
 
             $stmt = $this->pdo->prepare($sql);
             $stmt->execute(['student_id_sub' => $studentId, 'student_id_enroll' => $studentId, 'student_id_te' => $studentId]);
@@ -486,8 +486,8 @@ class AssignmentController extends Controller
 
             // Check deadline
             $now = new \DateTime();
-            $dueDate = new \DateTime($assignment['due_date']);
-            $isLate = $now > $dueDate;
+            // No deadline: never late
+            $isLate = !empty($assignment['due_date']) && $now > new \DateTime($assignment['due_date']);
 
             if ($isLate && !$assignment['allow_late_submission']) {
                 $this->pdo->rollBack();
@@ -610,7 +610,9 @@ class AssignmentController extends Controller
             // a separate column - submitted_at + due_date already fully determine it).
             $submissionTiming = null;
             if ($status === 'submitted') {
-                $hoursBeforeDue = ($dueDate->getTimestamp() - $now->getTimestamp()) / 3600;
+                $hoursBeforeDue = !empty($assignment['due_date'])
+                    ? ((new \DateTime($assignment['due_date']))->getTimestamp() - $now->getTimestamp()) / 3600
+                    : 0;
                 if ($isLate) {
                     $submissionTiming = 'late';
                 } elseif ($hoursBeforeDue >= 24) {

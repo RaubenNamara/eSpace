@@ -156,7 +156,7 @@ class ReportCardController extends Controller
             "SELECT a.id, a.title, a.subject_id, s.name AS subject_name, s.department_id, COALESCE(a.deadline_at, a.due_date) AS deadline
              FROM assignments a JOIN subjects s ON s.id = a.subject_id
              WHERE a.deleted_at IS NULL AND a.status = 'published' AND a.subject_id IS NOT NULL
-               AND a.due_date BETWEEN :start AND :end
+               AND COALESCE(a.due_date, a.published_at, a.created_at) BETWEEN :start AND :end
                AND (a.class_id = :cid OR a.class_group_name = :cname
                     OR EXISTS (SELECT 1 FROM assignment_classes ac WHERE ac.assignment_id = a.id AND ac.class_id = :cid2))
              ORDER BY s.name, a.due_date"

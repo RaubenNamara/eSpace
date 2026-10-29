@@ -13,6 +13,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-10-29', area: 'Learning Map', icon: 'map',
+    title: 'Topics done early still count when learners move up',
+    text: 'When a teacher works ahead - an S.6 topic with an S.5 class - the result now follows the learners. Next year, on their S.6 Learning Map, that topic shows the result they got, marked "Done in S.5 · Term 2, 2026", and the teacher\'s class map counts it too. A result from the current year always comes first.'
+  },
+  {
+    date: '2026-10-29', area: 'Assessments', icon: 'pencil',
+    title: 'Setting an assessment is shorter, and the deadline is optional',
+    text: 'The assessment form is now four numbered steps: who it is for, what it covers, when it is due, and the questions. The term, and the subject and class when a teacher has only one, are filled in already; the opening time, time limit, pass mark, attempts and the rest fold under More options. A deadline is no longer needed - without one the assessment stays open until the teacher closes it. A To publish list shows what is still missing.'
+  },
+  {
     date: '2026-10-29', area: 'eLibrary', icon: 'book',
     title: 'Publications: A level students\' work, published by GP',
     text: 'A GP teacher picks the A level student who wrote a piece, uploads it as a PDF and publishes it. Every A level student is told, finds it in Publications and on their dashboard, and reads it page by page like a book, with the author\'s name on the cover. O level students never see it. A piece can be kept as a draft first, edited, or taken down.'

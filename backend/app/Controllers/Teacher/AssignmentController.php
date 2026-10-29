@@ -742,7 +742,8 @@ class AssignmentController extends Controller
 
         $data = $this->input();
 
-        $required = ['title', 'total_marks', 'due_date'];
+        // The deadline is optional - none means it stays open until the teacher closes it
+        $required = ['title', 'total_marks'];
         $errors = $this->validateRequired($required, $data);
         
         if (!empty($errors)) {
@@ -857,7 +858,7 @@ class AssignmentController extends Controller
                 'description' => $data['description'] ?? null,
                 'type' => $data['type'] ?? 'mixed',
                 'total_marks' => $data['total_marks'],
-                'due_date' => $data['due_date'],
+                'due_date' => !empty($data['due_date']) ? $data['due_date'] : null,
                 'instructions' => $data['instructions'] ?? null,
                 'attachments' => $data['attachments'] ?? null,
                 'rubric' => $data['rubric'] ?? null,
@@ -867,7 +868,7 @@ class AssignmentController extends Controller
                 'academic_year_id' => !empty($data['academic_year_id']) ? (int) $data['academic_year_id'] : null,
                 'term_id' => !empty($data['term_id']) ? (int) $data['term_id'] : null,
                 'open_at' => $data['open_at'] ?? null,
-                'deadline_at' => $data['deadline_at'] ?? $data['due_date'],
+                'deadline_at' => !empty($data['deadline_at']) ? $data['deadline_at'] : (!empty($data['due_date']) ? $data['due_date'] : null),
                 'duration_minutes' => $data['duration_minutes'] ?? null,
                 'pass_mark' => $data['pass_mark'] ?? null,
                 'allow_late_submission' => $data['allow_late_submission'] ?? 1,
@@ -1055,10 +1056,10 @@ class AssignmentController extends Controller
                     // not 0 - both break MySQL strict mode.
                     // NOT NULL columns just keep their current value.
                     if ($data[$field] === '') {
-                        if (in_array($field, ['total_marks', 'due_date', 'attempts_allowed'], true)) {
+                        if (in_array($field, ['total_marks', 'attempts_allowed'], true)) {
                             continue;
                         }
-                        if (in_array($field, ['open_at', 'deadline_at', 'duration_minutes', 'pass_mark'], true)) {
+                        if (in_array($field, ['due_date', 'open_at', 'deadline_at', 'duration_minutes', 'pass_mark'], true)) {
                             $data[$field] = null;
                         }
                     }
@@ -1068,6 +1069,12 @@ class AssignmentController extends Controller
                     $updateFields[] = "$field = :$field";
                     $params[$field] = $data[$field];
                 }
+            }
+            // The builder sends only due_date; deadline_at follows it, so a changed or removed
+            // deadline doesn't leave the old one behind for the screens that read deadline_at first
+            if (array_key_exists('due_date', $params) && !array_key_exists('deadline_at', $params)) {
+                $updateFields[] = "deadline_at = :deadline_at";
+                $params['deadline_at'] = $params['due_date'];
             }
 
             if (!empty($updateFields)) {

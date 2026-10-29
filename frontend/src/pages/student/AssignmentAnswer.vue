@@ -177,7 +177,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               <span class="text-xs text-gray-500 dark:text-gray-400">Deadline</span>
-              <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ formatDate(assignment.due_date) }}</span>
+              <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ assignment.due_date ? formatDate(assignment.due_date) : 'None' }}</span>
             </div>
             <div v-if="timeRemaining > 0" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800">
               <svg class="w-4 h-4 text-amber-500 dark:text-amber-400 shrink-0 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">

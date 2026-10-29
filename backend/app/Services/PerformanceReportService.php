@@ -162,7 +162,7 @@ class PerformanceReportService
         $where = ['sub.student_id = :student_id', "sub.status = 'returned'", 'a.deleted_at IS NULL'];
         $params = ['student_id' => $studentId];
         if ($term) {
-            $where[] = 'a.due_date BETWEEN :start_date AND :end_date';
+            $where[] = 'COALESCE(a.due_date, a.published_at, a.created_at) BETWEEN :start_date AND :end_date';
             $params['start_date'] = $term['start_date'];
             $params['end_date'] = $term['end_date'];
         }
@@ -224,7 +224,7 @@ class PerformanceReportService
         $where = ['sub.student_id = :student_id', 'a.subject_id = :subject_id', "sub.status = 'returned'", 'a.deleted_at IS NULL'];
         $params = ['student_id' => $studentId, 'subject_id' => $subjectId];
         if ($term) {
-            $where[] = 'a.due_date BETWEEN :start_date AND :end_date';
+            $where[] = 'COALESCE(a.due_date, a.published_at, a.created_at) BETWEEN :start_date AND :end_date';
             $params['start_date'] = $term['start_date'];
             $params['end_date'] = $term['end_date'];
         }
@@ -289,7 +289,7 @@ class PerformanceReportService
         $assignmentWhere = ['a.class_id = :class_id', 'a.subject_id = :subject_id', 'a.deleted_at IS NULL'];
         $assignmentParams = ['class_id' => $classId, 'subject_id' => $subjectId];
         if ($term) {
-            $assignmentWhere[] = 'a.due_date BETWEEN :start_date AND :end_date';
+            $assignmentWhere[] = 'COALESCE(a.due_date, a.published_at, a.created_at) BETWEEN :start_date AND :end_date';
             $assignmentParams['start_date'] = $term['start_date'];
             $assignmentParams['end_date'] = $term['end_date'];
         }

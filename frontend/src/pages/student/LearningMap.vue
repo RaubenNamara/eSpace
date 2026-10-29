@@ -194,6 +194,7 @@
                       <p class="text-[11px] mt-0.5" :class="statusStyle(o.status).text">
                         {{ o.level ? `${o.level} · ${o.percentage}%` : statusStyle(o.status).label }}
                       </p>
+                      <p v-if="earlierOf(o.assessments)" class="text-[11px] text-gray-500 dark:text-gray-400">Done in {{ earlierOf(o.assessments) }}</p>
                       <!-- Not there yet: go back to the page it's taught on, and practise it -->
                       <div v-if="(o.status === 'needs_support' || o.status === 'developing') && (o.revise || topic.practice.length)" class="flex flex-wrap gap-1.5 mt-1.5">
                         <RouterLink v-if="o.revise" :to="`/student/enotes/${o.revise.topic_id}?resumePage=${o.revise.page_id}`" class="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-violet-50 text-violet-700 border border-violet-200 hover:bg-violet-100 dark:bg-violet-900/30 dark:text-violet-200 dark:border-violet-800">Revise the page it's taught on</RouterLink>
@@ -291,7 +292,7 @@
                   <p v-if="!topic.competency.assessments.length" class="text-xs text-gray-500 dark:text-gray-400">Your teacher hasn't set one for this topic yet.</p>
                   <ul v-else class="space-y-1.5">
                     <li v-for="a in topic.competency.assessments" :key="a.id" class="flex flex-wrap sm:flex-nowrap items-center gap-2">
-                      <span class="text-sm text-gray-800 dark:text-gray-100 flex-1 min-w-0 truncate">{{ a.title }}</span>
+                      <span class="text-sm text-gray-800 dark:text-gray-100 flex-1 min-w-0 truncate">{{ a.title }}<span v-if="a.earlier" class="text-[11px] text-gray-500 dark:text-gray-400"> · done in {{ a.earlier }}</span></span>
                       <span class="text-[11px]" :class="a.percentage !== null ? 'font-semibold text-gray-700 dark:text-gray-200' : 'text-gray-500 dark:text-gray-400'">
                         {{ a.percentage !== null ? `${a.percentage}%` : ASSESSMENT_STATE[a.state] }}
                       </span>
@@ -395,7 +396,7 @@
                   <p v-if="!c.assessments.length" class="text-xs text-gray-500 dark:text-gray-400">Your teacher hasn't set one for this yet.</p>
                   <ul v-else class="space-y-1.5">
                     <li v-for="a in c.assessments" :key="a.id" class="flex flex-wrap sm:flex-nowrap items-center gap-2">
-                      <span class="text-sm text-gray-800 dark:text-gray-100 flex-1 min-w-0 truncate">{{ a.title }}</span>
+                      <span class="text-sm text-gray-800 dark:text-gray-100 flex-1 min-w-0 truncate">{{ a.title }}<span v-if="a.earlier" class="text-[11px] text-gray-500 dark:text-gray-400"> · done in {{ a.earlier }}</span></span>
                       <span class="text-[11px]" :class="a.percentage !== null ? 'font-semibold text-gray-700 dark:text-gray-200' : 'text-gray-500 dark:text-gray-400'">
                         {{ a.percentage !== null ? `${a.percentage}%` : ASSESSMENT_STATE[a.state] }}
                       </span>
@@ -448,7 +449,8 @@ import CountUp from '@/components/common/CountUp.vue'
 import CompetencyReportDialog from '@/components/learningmap/CompetencyReportDialog.vue'
 
 type Status = 'achieved' | 'developing' | 'needs_support' | 'awaiting' | 'available' | 'not_assessed'
-interface Assessment { id: number; title: string; category: string | null; state: 'marked' | 'awaiting' | 'started' | 'available'; percentage: number | null; submission_id: number | null }
+// earlier: done in an earlier year, on that year's copy of the topic - where, e.g. "S.5 · Term 2, 2026"
+interface Assessment { id: number; title: string; category: string | null; state: 'marked' | 'awaiting' | 'started' | 'available'; percentage: number | null; submission_id: number | null; earlier?: string | null }
 interface Standing { status: Status; percentage: number | null; level: string | null; grade: string | null; assessments: Assessment[] }
 interface Outcome extends Standing { id: number; text: string; revise: { topic_id: number; page_id: number } | null }
 interface Totals { outcomes: number; achieved: number; developing: number; needs_support: number; awaiting: number; available: number; not_assessed: number; percent?: number }
@@ -685,6 +687,8 @@ function actionFor(a: Assessment | undefined) {
 // The most useful thing to do next for an outcome: finish/attempt an assessment, else see results
 const outcomeAction = (o: Outcome) =>
   actionFor(o.assessments.find(a => a.state === 'started') ?? o.assessments.find(a => a.state === 'available') ?? o.assessments.find(a => a.state === 'marked'))
+// Where an outcome's result was done, when it is from an earlier year
+const earlierOf = (list: Assessment[]) => list.find(a => a.earlier && (a.state === 'marked' || a.state === 'awaiting'))?.earlier ?? null
 const topicAction = (t: Topic) => (t.aoi ? actionFor(t.aoi.assessments.find(a => a.state === 'started') ?? t.aoi.assessments.find(a => a.state === 'available')) : null)
 
 const toggle = (id: number) => { open.value = { ...open.value, [id]: !open.value[id] } }
