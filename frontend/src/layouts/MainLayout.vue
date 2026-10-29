@@ -382,6 +382,19 @@
                   </svg>
                   <span class="min-w-0"><span class="block">Email support</span><span class="block text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ SUPPORT_EMAIL }}</span></span>
                 </a>
+                <!-- Privacy policy, and Report a concern - goes to the Tusome team at once -->
+                <a
+                  role="menuitem"
+                  href="/privacy#report"
+                  target="_blank"
+                  rel="noopener"
+                  class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2.5 transition-colors"
+                >
+                  <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                  </svg>
+                  <span class="min-w-0"><span class="block">Privacy &amp; report a concern</span><span class="block text-[11px] text-gray-500 dark:text-gray-400 truncate">Goes straight to the Tusome team</span></span>
+                </a>
                 <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
                 <button
                   role="menuitem"
@@ -870,7 +883,7 @@ const openProfileSection = (section: 'photo' | 'password') => {
 }
 
 // gate: shown only to some users of the role (see visible())
-interface NavItem { path: string; label: string; icon: string; children?: NavItem[]; gate?: 'publications' }
+interface NavItem { path: string; label: string; icon: string; children?: NavItem[]; gate?: 'publications' | 'super_admin' }
 interface NavGroup { key: string; name: string; items: NavItem[] }
 
 // The sidebar, by role, in named groups (see the template for how a group folds away)
@@ -1033,6 +1046,7 @@ const MENU: Record<string, NavGroup[]> = {
       { path: '/admin/users', label: 'Admin', icon: 'UsersIcon' },
       { path: '/admin/settings', label: 'Settings', icon: 'CogIcon' },
       { path: '/admin/demo-requests', label: 'Demo requests', icon: 'BriefcaseIcon' },
+      { path: '/admin/privacy-reports', label: 'Privacy reports', icon: 'KeyIcon', gate: 'super_admin' },
       { path: '/admin/logs', label: 'System Logs', icon: 'DocumentIcon' }
     ] }
   ]
@@ -1043,6 +1057,7 @@ const menuRole = computed(() => (authStore.userRole === 'super_admin' ? 'admin' 
 const publications = usePublicationsAccess()
 watch(menuRole, r => publications.check(r), { immediate: true })
 const visible = (item: NavItem) => !item.gate || (item.gate === 'publications' && publications.allowed.value)
+  || (item.gate === 'super_admin' && authStore.userRole === 'super_admin')
 const menuGroups = computed<NavGroup[]>(() => (MENU[menuRole.value] || []).map(g => ({ ...g, items: g.items.filter(visible) })))
 
 // Folded groups, remembered per role in this browser

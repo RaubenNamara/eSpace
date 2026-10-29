@@ -24,6 +24,8 @@ Router::post('/api/auth/reset-password', 'eSpace\App\Controllers\AuthController@
 
 // A school asking for a demo, from the public landing page
 Router::post('/api/demo-requests', 'eSpace\App\Controllers\DemoRequestController@store');
+// A privacy or safety concern, from the public Privacy page (signed in or not)
+Router::post('/api/privacy-reports', 'eSpace\App\Controllers\PrivacyReportController@store');
 // Headline totals for the public website (no personal data)
 Router::get('/api/public/stats', 'eSpace\App\Controllers\PublicStatsController@index');
 // A parent's private weekly view of their child (the token is the key - see ParentLinkController)
@@ -764,6 +766,9 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         // Demo requests from the landing page
         Router::get('/demo-requests', 'eSpace\App\Controllers\DemoRequestController@index');
         Router::put('/demo-requests/{id}', 'eSpace\App\Controllers\DemoRequestController@update');
+        // Privacy reports from the Privacy page (super admins only)
+        Router::get('/privacy-reports', 'eSpace\App\Controllers\PrivacyReportController@index');
+        Router::put('/privacy-reports/{id}', 'eSpace\App\Controllers\PrivacyReportController@update');
         // Parent links and the weekly parent digest
         Router::get('/parent-links', 'eSpace\App\Controllers\Admin\ParentLinkController@index');
         Router::get('/parent-links/students', 'eSpace\App\Controllers\Admin\ParentLinkController@students');
