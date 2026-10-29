@@ -1,12 +1,12 @@
 <template>
-  <!-- One assessment's submissions across the department: who has handed in, how they did, and
-       each script one tap away. -->
+  <!-- One assessment's submissions (HOD: their department, admin: the school): who has handed in,
+       how they did, and each marked script one tap away - view only. -->
   <div class="w-full">
-    <button type="button" class="mb-3 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white" @click="router.push('/hod/assessments')">
+    <button type="button" class="mb-3 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white" @click="router.push(`/${role}/assessments`)">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
       Assessments
     </button>
-    <PageHeader title="Submissions" description="Who has handed in, how they did - and each script one tap away." icon="clipboard" accent="indigo">
+    <PageHeader :title="title ? `Marked scripts · ${title}` : 'Marked scripts'" description="Who has handed in, how they did, and each student's marked script (view only)." icon="clipboard" accent="indigo">
       <StatStrip v-if="!loading && !error" v-model="filter" :items="statItems" />
     </PageHeader>
 
@@ -17,7 +17,7 @@
       :columns="columns"
       :rows="shown"
       :loading="loading"
-      :search-keys="['student_name', 'admission_number']"
+      :search-keys="['student_name', 'admission_number', 'class_label']"
       search-placeholder="Search students"
       :page-size="30"
       :initial-sort="{ key: 'student_name', dir: 'asc' }"
@@ -35,7 +35,7 @@
         <span class="whitespace-nowrap text-gray-600 dark:text-gray-300">{{ row.submitted_at ? timeAgo(row.submitted_at) : 'Not handed in' }}</span>
       </template>
       <template #actions="{ row }">
-        <RouterLink :to="`/hod/assessments/${assignmentId}/submissions/${row.id}`" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700">View</RouterLink>
+        <RouterLink v-if="row.submitted_at" :to="`/${role}/assessments/${assignmentId}/submissions/${row.id}`" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700">{{ ['graded', 'returned'].includes(row.status) ? 'View script' : 'View' }}</RouterLink>
       </template>
     </DataTable>
   </div>
@@ -59,6 +59,7 @@ interface Row {
   submitted_at: string | null
   student_name: string
   admission_number: string | null
+  class_label?: string | null
 }
 interface Stats {
   total_students: number
@@ -73,10 +74,12 @@ interface Stats {
 const route = useRoute()
 const router = useRouter()
 const assignmentId = computed(() => route.params.id as string)
+const role = computed(() => (route.meta.staffRole as string | undefined) || 'hod')
+const title = ref('')
 
 const columns: Column[] = [
   { key: 'student_name', label: 'Student', sortable: true, mobile: 'title' },
-  { key: 'admission_number', label: 'Admission no.', sortable: true, mobile: 'subtitle' },
+  { key: 'class_label', label: 'Class', sortable: true, mobile: 'subtitle' },
   { key: 'status', label: 'Status', sortable: true },
   { key: 'percentage', label: 'Score', sortable: true, align: 'center', value: (r: Row) => (r.percentage === null ? -1 : Number(r.percentage)) },
   { key: 'submitted_at', label: 'Handed in', sortable: true, value: (r: Row) => r.submitted_at || '' }
@@ -111,8 +114,9 @@ const badge = (s: string) => (s === 'graded' || s === 'returned'
 
 onMounted(async () => {
   try {
-    const response = await axios.get(`/api/hod/assignments/${assignmentId.value}/submissions`)
+    const response = await axios.get(`/api/${role.value}/assignments/${assignmentId.value}/submissions`)
     submissions.value = response.data.data.submissions || []
+    title.value = response.data.data.assignment?.title || ''
     stats.value = response.data.data.stats
   } catch (err: any) {
     error.value = err.response?.data?.message || 'Could not load the submissions'

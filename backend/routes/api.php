@@ -779,6 +779,8 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         // Assignments - read-only, school-wide oversight + "Preview as Student"
         Router::get('/assignments', 'eSpace\App\Controllers\Admin\AssignmentController@index');
         Router::get('/assignments/{id}/preview', 'eSpace\App\Controllers\Admin\AssignmentController@preview');
+        Router::get('/assignments/{id}/submissions', 'eSpace\App\Controllers\Admin\AssignmentController@submissions');
+        Router::get('/assignments/{id}/submissions/{submissionId}', 'eSpace\App\Controllers\Admin\AssignmentController@submissionDetail');
         Router::delete('/assignments/{id}', 'eSpace\App\Controllers\Admin\AssignmentController@delete');
 
         // Users

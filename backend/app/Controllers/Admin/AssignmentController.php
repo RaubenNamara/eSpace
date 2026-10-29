@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace eSpace\App\Controllers\Admin;
 
 use eSpace\App\Controllers\Controller;
+use eSpace\App\Services\SubmissionScriptService;
 use eSpace\App\Services\AssignmentPreviewService;
 
 /**
@@ -135,5 +136,51 @@ class AssignmentController extends Controller
 
         $questions = $service->getQuestionsForPreview($assignmentId);
         $this->success($service->buildPreviewPayload($assignment, $questions));
+    }
+
+    /**
+     * An assessment's submissions and stats, for viewing the marked scripts (read-only).
+     * GET /admin/assignments/{id}/submissions
+     */
+    public function submissions($id): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+        $db = $this->getDb();
+        $stmt = $db->prepare(
+            "SELECT a.id, a.title, sub.department_id AS subject_department_id, t.department_id AS teacher_department_id
+             FROM assignments a INNER JOIN teachers t ON t.id = a.teacher_id LEFT JOIN subjects sub ON sub.id = a.subject_id
+             WHERE a.id = ? AND a.deleted_at IS NULL"
+        );
+        $stmt->execute([(int) $id]);
+        $assignment = $stmt->fetch();
+        if (!$assignment) {
+            $this->notFound('Assessment not found');
+            return;
+        }
+        $departmentId = $assignment['subject_department_id'] ?? $assignment['teacher_department_id'];
+        $this->success(SubmissionScriptService::submissions($db, (int) $id, $departmentId !== null ? (int) $departmentId : null)
+            + ['assignment' => ['id' => (int) $assignment['id'], 'title' => $assignment['title']]]);
+    }
+
+    /**
+     * One student's marked script - questions, answers, marks, feedback and the teacher's
+     * marks on the page. Read-only.
+     * GET /admin/assignments/{id}/submissions/{submissionId}
+     */
+    public function submissionDetail($id, $submissionId): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+        $script = SubmissionScriptService::detail($this->getDb(), (int) $id, (int) $submissionId);
+        if (!$script) {
+            $this->notFound('Submission not found');
+            return;
+        }
+        $this->success($script);
     }
 }

@@ -13,8 +13,19 @@
     </div>
 
     <div v-else>
+      <RouterLink
+        v-if="oversightRole"
+        :to="`/${oversightRole}/assessments/${route.params.id}/submissions`"
+        class="mb-3 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+        All marked scripts
+      </RouterLink>
       <div class="mb-4 sm:mb-6">
         <h1 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-1 break-words">{{ submission.assignment_title }}</h1>
+        <p v-if="oversightRole && submission.student_name" class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-0.5">
+          {{ submission.student_name }} <span class="font-normal text-gray-500 dark:text-gray-400">· view only</span>
+        </p>
         <p class="text-gray-600 dark:text-gray-400 text-sm flex items-center flex-wrap gap-2">
           Submitted {{ formatDate(submission.submitted_at) }}
           <span class="px-2 py-0.5 rounded-full text-xs" :class="statusClass">{{ statusLabel }}</span>
@@ -82,7 +93,7 @@
 
           <!-- Objective (MCQ/true-false) questions: raw stored answer only -->
           <div v-if="isObjective(question)" class="ml-3 sm:ml-6 p-3 sm:p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Your answer</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">{{ oversightRole ? "Student's answer" : "Your answer" }}</p>
             <p class="text-gray-900 dark:text-white whitespace-pre-line break-words text-justify">{{ answerFor(question.id) || '(No answer provided)' }}</p>
           </div>
 
@@ -90,7 +101,7 @@
                made directly over it are visible), plus its drawing/PDF layer(s) -->
           <template v-else>
             <div v-if="typedAnswerLayers[question.id]" class="ml-3 sm:ml-6 mb-4">
-              <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Your typed answer</p>
+              <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">{{ oversightRole ? "Student's typed answer" : "Your typed answer" }}</p>
               <AnnotationCanvas
                 :width="800"
                 :height="typedAnswerLayers[question.id].height"
