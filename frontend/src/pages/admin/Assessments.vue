@@ -84,7 +84,7 @@
                 v-for="stream in group.streams"
                 :key="stream.key"
                 @click="toggleStream(group.key, stream.key)"
-                class="group relative flex flex-col items-center justify-center gap-1 w-24 h-20 rounded-xl border-2 transition-all"
+                class="group relative flex flex-col items-center justify-center gap-1 min-w-[6rem] px-3 h-20 rounded-xl border-2 transition-all"
                 :class="selectedStreams[group.key] === stream.key
                   ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 shadow-md'
                   : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-950/40 hover:border-indigo-300 hover:shadow-sm'"
@@ -95,7 +95,7 @@
                 >
                   {{ stream.label }}
                 </span>
-                <span class="text-xs text-gray-500 dark:text-gray-400">{{ stream.assignments.length }} item{{ stream.assignments.length === 1 ? '' : 's' }}</span>
+                <span class="text-xs text-gray-500 dark:text-gray-400">{{ stream.key === ALL ? 'All streams · ' : '' }}{{ stream.assignments.length }} item{{ stream.assignments.length === 1 ? '' : 's' }}</span>
               </button>
             </div>
 
@@ -128,6 +128,9 @@
                     <div class="mt-3 flex flex-wrap gap-1.5">
                       <span v-if="a.department_name" class="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-400">
                         {{ a.department_name }}
+                      </span>
+                      <span class="text-xs px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300 font-semibold" :title="isWholeClass(a) ? 'All streams' : 'Streams'">
+                        {{ audienceLabel(a) }}
                       </span>
                       <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
                         {{ a.due_date ? `Due ${formatDate(a.due_date)}` : 'No deadline' }}
@@ -194,6 +197,9 @@ interface AssignmentRow {
   subject_name: string | null
   class_name: string | null
   class_stream_name: string | null
+  class_group_name: string | null
+  target_streams: string | null
+  class_stream_count: number | string | null
   department_name: string | null
   teacher_name: string
   submissions_count: number
@@ -267,33 +273,50 @@ interface ClassGroup {
   total: number
 }
 
+// Who an assessment is for: the whole class ("all streams", or every stream ticked) or some streams
+const ALL = '__all'
+const classOf = (a: AssignmentRow) => a.class_group_name || a.class_name || ''
+const streamsOf = (a: AssignmentRow): string[] => {
+  const list = (a.target_streams || a.class_stream_name || '').split(',').map(x => x.trim()).filter(Boolean)
+  return [...new Set(list)].sort((x, y) => x.localeCompare(y, undefined, { numeric: true }))
+}
+const isWholeClass = (a: AssignmentRow) => !!a.class_group_name
+  || (Number(a.class_stream_count) > 1 && streamsOf(a).length >= Number(a.class_stream_count))
+/** "S.1" for the whole class, "S.1 A" for one stream, "S.5 B1, B2, B3" for several */
+const audienceLabel = (a: AssignmentRow) => {
+  const cls = classOf(a)
+  if (!cls) return 'No class'
+  if (isWholeClass(a)) return cls
+  const streams = streamsOf(a)
+  return streams.length ? `${cls} ${streams.join(', ')}` : cls
+}
+
 const groupedAssignments = computed<ClassGroup[]>(() => {
-  const classMap = new Map<string, { label: string; streamMap: Map<string, StreamGroup> }>()
+  const classMap = new Map<string, { label: string; streamMap: Map<string, StreamGroup>; ids: Set<number> }>()
 
   for (const a of filteredAssignments.value) {
-    const classKey = a.class_name || '__unassigned'
-    const classLabel = a.class_name || 'Unassigned class'
-
+    const cls = classOf(a)
+    const classKey = cls || '__unassigned'
     if (!classMap.has(classKey)) {
-      classMap.set(classKey, { label: classLabel, streamMap: new Map() })
+      classMap.set(classKey, { label: cls || 'Unassigned class', streamMap: new Map(), ids: new Set() })
     }
     const classEntry = classMap.get(classKey)!
+    classEntry.ids.add(a.id)
 
-    const streamKey = a.class_stream_name || '__none'
-    if (!classEntry.streamMap.has(streamKey)) {
-      classEntry.streamMap.set(streamKey, { key: streamKey, label: a.class_stream_name || 'No stream', assignments: [] })
+    const targets = isWholeClass(a)
+      ? [{ key: ALL, label: cls || 'All' }]
+      : (streamsOf(a).length ? streamsOf(a) : ['']).map(st => ({ key: st || '__none', label: st ? `${cls} ${st}` : 'No stream' }))
+    for (const t of targets) {
+      if (!classEntry.streamMap.has(t.key)) classEntry.streamMap.set(t.key, { key: t.key, label: t.label, assignments: [] })
+      classEntry.streamMap.get(t.key)!.assignments.push(a)
     }
-    classEntry.streamMap.get(streamKey)!.assignments.push(a)
   }
 
   const groups: ClassGroup[] = Array.from(classMap.entries()).map(([key, value]) => {
-    const streams = Array.from(value.streamMap.values()).sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }))
-    return {
-      key,
-      label: value.label,
-      streams,
-      total: streams.reduce((sum, s) => sum + s.assignments.length, 0)
-    }
+    // the whole class first, then its streams in order
+    const streams = Array.from(value.streamMap.values()).sort((a, b) =>
+      a.key === ALL ? -1 : b.key === ALL ? 1 : a.label.localeCompare(b.label, undefined, { numeric: true }))
+    return { key, label: value.label, streams, total: value.ids.size }
   })
 
   groups.sort((a, b) => {

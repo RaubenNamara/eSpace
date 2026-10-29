@@ -56,6 +56,13 @@ class AssignmentController extends Controller
 
         $sql = "SELECT a.id, a.title, a.status, a.due_date, a.total_marks, a.category,
                        s.name as subject_name, c.name as class_name, c.stream_name as class_stream_name,
+                       a.class_group_name,
+                       -- every stream it is set for: its own class plus any extra ticked streams
+                       (SELECT GROUP_CONCAT(DISTINCT x.stream_name ORDER BY x.stream_name SEPARATOR ',') FROM classes x
+                         WHERE x.id = a.class_id OR x.id IN (SELECT ac.class_id FROM assignment_classes ac WHERE ac.assignment_id = a.id)) AS target_streams,
+                       -- how many streams its class has this year, to tell 'all streams ticked' apart
+                       (SELECT COUNT(*) FROM classes y WHERE y.name = COALESCE(a.class_group_name, c.name) AND y.deleted_at IS NULL
+                         AND y.academic_year_id = COALESCE(c.academic_year_id, (SELECT ay.id FROM academic_years ay WHERE ay.is_current = 1 LIMIT 1))) AS class_stream_count,
                        d.name as department_name,
                        CONCAT(t.first_name, ' ', t.last_name) as teacher_name,
                        (SELECT COUNT(*) FROM assignment_submissions WHERE assignment_id = a.id) as submissions_count
