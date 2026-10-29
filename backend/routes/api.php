@@ -803,6 +803,9 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/bulk-enrol/options', 'eSpace\App\Controllers\Admin\BulkEnrolController@options');
         Router::post('/bulk-enrol/match', 'eSpace\App\Controllers\Admin\BulkEnrolController@match');
         Router::post('/bulk-enrol/commit', 'eSpace\App\Controllers\Admin\BulkEnrolController@commit');
+        // Super admin: bring students in line with SMIS (new, moved, left)
+        Router::get('/students/smis-sync', 'eSpace\App\Controllers\Admin\SmisSyncController@status');
+        Router::post('/students/smis-sync', 'eSpace\App\Controllers\Admin\SmisSyncController@run');
         Router::post('/students/enroll-all-departments', 'eSpace\App\Controllers\Admin\StudentController@enrollAllDepartments');
         Router::post('/students/deenroll', 'eSpace\App\Controllers\Admin\StudentController@deenroll');
         Router::post('/students/deenroll-single', 'eSpace\App\Controllers\Admin\StudentController@deenrollSingle');

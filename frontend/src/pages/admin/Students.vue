@@ -15,6 +15,8 @@
       </template>
     </PageHeader>
 
+    <SmisSyncCard v-if="isSuperAdmin" @synced="fetchStudents" />
+
     <!-- Toast Notification -->
     <transition name="toast">
       <div
@@ -343,6 +345,11 @@ import DataTable, { type Column } from '@/components/ui/DataTable.vue'
 import ActionMenu from '@/components/ui/ActionMenu.vue'
 import { niceName, initials } from '@/components/dashboard/teacher/time'
 import StudentPhotoModal from '@/components/students/StudentPhotoModal.vue'
+import SmisSyncCard from '@/components/admin/SmisSyncCard.vue'
+import { useAuthStore } from '@/stores/auth'
+
+// only the super admin runs the SMIS sync
+const isSuperAdmin = computed(() => useAuthStore().userRole === 'super_admin')
 
 const toast = useToastStore()
 const confirmDialog = useConfirmStore()
