@@ -229,6 +229,7 @@
           <h2 class="text-xl font-bold text-gray-900 dark:text-white">Edit Teacher</h2>
         </div>
         <form @submit.prevent="updateTeacher" class="p-6 space-y-4">
+          <ProfilePhotoRemover v-if="selectedTeacher" type="teacher" :id="selectedTeacher.id" :photo="selectedTeacher.profile_photo" :name="niceName(`${selectedTeacher.first_name} ${selectedTeacher.last_name}`)" compact @removed="selectedTeacher.profile_photo = null" />
           <!-- Personal Information -->
           <div class="border-b border-gray-200 dark:border-gray-700 pb-4">
             <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Personal Information</h3>
@@ -473,6 +474,7 @@ import StatStrip, { type StatItem } from '@/components/ui/StatStrip.vue'
 import DataTable, { type Column } from '@/components/ui/DataTable.vue'
 import ActionMenu, { type ActionItem } from '@/components/ui/ActionMenu.vue'
 import { niceName, initials, timeAgo } from '@/components/dashboard/teacher/time'
+import ProfilePhotoRemover from '@/components/admin/ProfilePhotoRemover.vue'
 
 const toast = useToastStore()
 const confirmDialog = useConfirmStore()
@@ -488,6 +490,7 @@ interface TeacherDepartment {
 
 interface Teacher {
   id: number
+  profile_photo?: string | null
   teacher_id: number
   username: string
   email: string

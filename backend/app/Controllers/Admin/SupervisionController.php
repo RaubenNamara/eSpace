@@ -122,6 +122,21 @@ class SupervisionController extends Controller
     }
 
     /**
+     * GET /admin/supervision/assignments/{id}/scripts
+     * The scripts handed in for an assessment, marked or still waiting, with each mark.
+     */
+    public function scripts($id): void
+    {
+        if (!$this->allowed()) return;
+        $result = (new SupervisionService())->scripts((int) $id);
+        if ($result === null) {
+            $this->notFound('Assessment not found');
+            return;
+        }
+        $this->success($result);
+    }
+
+    /**
      * GET /admin/supervision/assignments/{id}/missing
      */
     public function missing($id): void

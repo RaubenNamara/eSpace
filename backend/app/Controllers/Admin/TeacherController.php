@@ -104,7 +104,7 @@ class TeacherController extends Controller
         // Get paginated results
         $offset = ($page - 1) * $limit;
         $sql = "SELECT id, username, email, is_active, created_at, employee_number, first_name, last_name,
-                       gender, phone, department_id, qualification, specialization, last_login_at
+                       gender, phone, department_id, qualification, specialization, last_login_at, profile_photo
                 FROM teachers
                 WHERE {$whereClause}
                 ORDER BY created_at DESC

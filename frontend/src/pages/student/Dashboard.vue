@@ -66,6 +66,27 @@
       </div>
 
       <div class="flex flex-col gap-4 min-w-0">
+        <!-- Publications: A level students' work from GP - A level only -->
+        <section v-if="publicationsAccess.allowed.value && publications.length" class="dash-box">
+          <h2 class="dash-bar">Publications <RouterLink to="/student/publications" class="dash-bar-link">All</RouterLink></h2>
+          <TransitionGroup tag="ul" name="dash-pop" class="p-3 space-y-2">
+            <li v-for="p in shown('publications', publications)" :key="p.id">
+              <RouterLink :to="{ path: '/student/publications', query: { open: String(p.id) } }" class="dash-chip">
+                <span class="dash-chip-badge" :style="{ background: tint(p.title) }">GP</span>
+                <span class="min-w-0 flex-1">
+                  <span class="block text-sm font-bold text-gray-900 dark:text-white truncate">{{ p.title }}</span>
+                  <span class="block text-xs text-gray-500 dark:text-gray-400 truncate">By {{ p.author_name }}<template v-if="p.author_class"> · {{ p.author_class }}</template></span>
+                </span>
+                <span v-if="isFreshPublication(p)" class="flex-shrink-0 px-2 py-0.5 rounded-md text-[10px] font-bold text-white bg-indigo-600">NEW</span>
+              </RouterLink>
+            </li>
+          </TransitionGroup>
+          <button v-if="publications.length > LIMIT.publications" type="button" class="dash-more" :aria-expanded="!!open.publications" @click="toggle('publications')">
+            {{ open.publications ? 'Show less' : `Show ${publications.length - LIMIT.publications} more` }}
+            <svg class="w-4 h-4 transition-transform duration-300" :class="open.publications ? 'rotate-180' : ''" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6" /></svg>
+          </button>
+        </section>
+
         <!-- My classes -->
         <section class="dash-box">
           <h2 class="dash-bar">My classes <RouterLink to="/student/classes" class="dash-bar-link">Open</RouterLink></h2>
@@ -113,12 +134,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import axios from 'axios'
 import AppIcon from '@/components/common/AppIcon.vue'
 import NoticesTicker from '@/components/dashboard/NoticesTicker.vue'
 import { useLiveRefresh } from '@/composables/useLiveRefresh'
+import { usePublicationsAccess } from '@/composables/usePublicationsAccess'
 import { useAuthStore } from '@/stores/auth'
+import type { Publication } from '@/utils/publications'
 
 interface LiveClass { id: number; title: string; status: string; scheduled_start: string; subject_name: string; teacher_name: string }
 interface DashboardData {
@@ -179,7 +202,7 @@ const todo = computed(() => {
 })
 
 // ---- each card shows a few, and opens up to show the rest
-const LIMIT = { pending: 4, jump: 4, classes: 6, notes: 2 } as const
+const LIMIT = { pending: 4, jump: 4, classes: 6, notes: 2, publications: 3 } as const
 type CardKey = keyof typeof LIMIT
 const open = ref<Partial<Record<CardKey, boolean>>>({})
 const toggle = (k: CardKey) => { open.value = { ...open.value, [k]: !open.value[k] } }
@@ -201,6 +224,16 @@ const shortcuts = [
 ]
 const myNotes = ref<MyNote[]>([])
 const notesLoaded = ref(false)
+
+// ---- publications (A level only), newest first
+const publicationsAccess = usePublicationsAccess()
+publicationsAccess.check('student')
+const publications = ref<Publication[]>([])
+const isFreshPublication = (p: Publication) => !!p.published_at && Date.now() - toDate(p.published_at).getTime() < 14 * 86400000
+const loadPublications = () => {
+  axios.get('/api/student/publications').then(r => { publications.value = (r.data.data.publications || []).slice(0, 10) }).catch(() => {})
+}
+watch(publicationsAccess.allowed, ok => { if (ok) loadPublications() }, { immediate: true })
 
 // silent: the live refresh - no loading state, and a failed refresh leaves the page as it was
 const loadDashboard = async (silent = false) => {

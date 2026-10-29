@@ -85,7 +85,7 @@
             <p class="book-title rb-title">{{ title }}</p>
             <div class="rb-ornament" aria-hidden="true"></div>
             <p v-if="author" class="rb-author">{{ author }}</p>
-            <p class="rb-imprint">St. Mark eLibrary</p>
+            <p class="rb-imprint">{{ imprint }}</p>
           </template>
           <div class="rb-groove" aria-hidden="true"></div>
           <div class="rb-sheen" aria-hidden="true"></div>
@@ -133,7 +133,10 @@ const props = withDefaults(defineProps<{
   isNew?: boolean
   // Kept on this device for offline reading - a small green mark on the spine
   saved?: boolean
+  // The line at the foot of a printed cover
+  imprint?: string
 }>(), {
+  imprint: 'St. Mark eLibrary',
   label: '',
   footer: '',
   variant: 'book',

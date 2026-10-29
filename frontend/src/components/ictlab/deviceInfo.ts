@@ -18,9 +18,39 @@ export const DEVICE_GROUPS: { key: DeviceGroup; label: string; keys: DeviceKey[]
   { key: 'input', label: 'Input', keys: ['keyboard', 'mouse', 'scanner', 'webcam', 'microphone'] },
   { key: 'output', label: 'Output', keys: ['monitor', 'printer', 'projector', 'speakers', 'headphones'] },
   { key: 'storage', label: 'Storage', keys: ['flash', 'exthdd', 'sdcard', 'disc'] },
-  { key: 'network', label: 'Networking & power', keys: ['router', 'switch', 'patch', 'ups', 'extension'] },
+  { key: 'network', label: 'Communication & power', keys: ['router', 'switch', 'patch', 'ups', 'extension'] },
   { key: 'computers', label: 'Computers', keys: ['tower', 'laptop', 'tablet'] }
 ]
+
+/**
+ * How Subsidiary ICT (Topic 3, Computer Hardware) classifies hardware: input, output, storage,
+ * communication and processing. For the showroom quiz's "What kind of device is this?" questions.
+ */
+export type DeviceKind = 'Input device' | 'Output device' | 'Storage device' | 'Communication device' | 'Processing device'
+export const DEVICE_KINDS: DeviceKind[] = ['Input device', 'Output device', 'Storage device', 'Communication device', 'Processing device']
+export const KIND_OF: Record<string, { kind: DeviceKind; why: string }> = {
+  keyboard: { kind: 'Input device', why: 'It sends the letters and numbers you type into the computer.' },
+  mouse: { kind: 'Input device', why: 'It sends your movements and clicks into the computer.' },
+  scanner: { kind: 'Input device', why: 'It turns a paper page into a picture and sends it into the computer.' },
+  webcam: { kind: 'Input device', why: 'It sends pictures and video into the computer.' },
+  microphone: { kind: 'Input device', why: 'It sends sound into the computer.' },
+  monitor: { kind: 'Output device', why: 'It shows you what the computer has made - text, pictures, video.' },
+  printer: { kind: 'Output device', why: 'It puts the computer\'s work onto paper.' },
+  projector: { kind: 'Output device', why: 'It shows the computer\'s screen on a wall for everyone.' },
+  speakers: { kind: 'Output device', why: 'They play the computer\'s sound.' },
+  headphones: { kind: 'Output device', why: 'They play the computer\'s sound for one person.' },
+  flash: { kind: 'Storage device', why: 'It keeps files when the power is off, and carries them between computers.' },
+  exthdd: { kind: 'Storage device', why: 'It keeps a lot of files - often backups - when the power is off.' },
+  sdcard: { kind: 'Storage device', why: 'It keeps photos and files for cameras and phones.' },
+  disc: { kind: 'Storage device', why: 'Data is stored on it and read back by a laser.' },
+  hdd: { kind: 'Storage device', why: 'It keeps programs and files permanently, inside the computer.' },
+  ssd: { kind: 'Storage device', why: 'It keeps programs and files permanently, on memory chips.' },
+  router: { kind: 'Communication device', why: 'It passes data between the school\'s computers and the internet.' },
+  switch: { kind: 'Communication device', why: 'It passes data between the computers in a lab.' },
+  patch: { kind: 'Communication device', why: 'It carries network data between devices.' },
+  cpu: { kind: 'Processing device', why: 'It carries out the instructions of every program - it processes the data.' },
+  gpu: { kind: 'Processing device', why: 'It processes the data that becomes the picture on the screen.' }
+}
 
 export const DEVICES: Record<DeviceKey, DeviceInfo> = {
   keyboard: { key: 'keyboard', name: 'Keyboard', looks: 'A flat board of keys - letters in the QWERTY order, numbers along the top, and often a number pad on the right.', does: 'An input device for typing text and numbers, and for shortcuts like Ctrl + C to copy.', connects: 'A USB cable, or wireless through a small USB receiver or Bluetooth.', fact: 'QWERTY is named after the first six letters on the top row of letters.' },

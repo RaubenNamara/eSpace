@@ -30,7 +30,7 @@ export interface IctActivity {
   title: string
   summary: string
   icon: string
-  scene: 'parts' | 'rj45' | 'assembly' | 'cleaning' | 'troubleshoot' | 'connect'
+  scene: 'parts' | 'assembly' | 'cleaning' | 'troubleshoot' | 'connect'
   topic: string
   // `preset`: actions already done when the level starts (e.g. the motherboard already in the case)
   levels: Record<IctLevel, { intro: string; steps: IctStep[]; preset?: string[] }>
@@ -95,7 +95,7 @@ const partsActivity: IctActivity = {
   summary: 'Open the system unit and find each part - what it does, and how it fails.',
   icon: 'kit',
   scene: 'parts',
-  topic: 'Computer hardware',
+  topic: 'S.5 Topic 3 · Computer Hardware',
   levels: {
     simple: {
       intro: 'The side of the computer case is open. Drag to turn it round, and tap each part as you are asked - the one to find glows.',
@@ -140,72 +140,6 @@ const partsActivity: IctActivity = {
     }
   }
 }
-
-// ---- RJ45 termination ----
-
-export type WireKey = 'wo' | 'o' | 'wg' | 'g' | 'b' | 'wb' | 'wbr' | 'br'
-export const WIRES: Record<WireKey, { name: string; color: string; stripe: string | null }> = {
-  wo: { name: 'White-orange', color: '#f8fafc', stripe: '#f97316' },
-  o: { name: 'Orange', color: '#f97316', stripe: null },
-  wg: { name: 'White-green', color: '#f8fafc', stripe: '#16a34a' },
-  g: { name: 'Green', color: '#16a34a', stripe: null },
-  b: { name: 'Blue', color: '#2563eb', stripe: null },
-  wb: { name: 'White-blue', color: '#f8fafc', stripe: '#2563eb' },
-  wbr: { name: 'White-brown', color: '#f8fafc', stripe: '#92400e' },
-  br: { name: 'Brown', color: '#92400e', stripe: null }
-}
-export const STANDARD: Record<'A' | 'B', WireKey[]> = {
-  A: ['wg', 'g', 'wo', 'b', 'wb', 'o', 'wbr', 'br'],
-  B: ['wo', 'o', 'wg', 'b', 'wb', 'g', 'wbr', 'br']
-}
-
-const end = (n: 1 | 2, standard: 'A' | 'B', guided: boolean): IctStep[] => {
-  const sfx = n === 2 ? '-2' : ''
-  const on = n === 2 ? ' on the other end' : ''
-  const order = STANDARD[standard].map(w => WIRES[w].name).join(', ')
-  return [
-    { key: `strip${sfx}`, action: `strip${sfx}`, title: `Strip the outer jacket${on}`, text: 'Use the cable stripper to remove about 2-3 cm of the outer jacket, without cutting the wires inside.', hint: 'Choose the Stripper tool.', data: { end: n, standard } },
-    { key: `untwist${sfx}`, action: `untwist${sfx}`, title: 'Untwist the pairs', text: 'There are four twisted pairs. Tap each pair to untwist it and straighten the wires.', hint: 'Tap each of the four twisted pairs once.', data: { end: n, standard } },
-    { key: `arrange${sfx}`, action: `arrange${sfx}`, title: `Arrange the wires - T568${standard}`, text: guided ? `Put the 8 wires in T568${standard} order, from pin 1 on the left: ${order}. Tap a wire, then a slot.` : `Put the 8 wires in T568${standard} order, from pin 1 on the left. Tap a wire, then a slot, then Check.`, hint: `T568${standard}: ${order}.`, data: { end: n, standard } },
-    { key: `trim${sfx}`, action: `trim${sfx}`, title: 'Trim the wires', text: 'Cut the wires straight across, leaving about 1.3 cm - just long enough to reach the end of the connector.', hint: 'Choose the Cutter tool.', data: { end: n, standard } },
-    { key: `insert${sfx}`, action: `insert${sfx}`, title: 'Push the wires into the connector', text: 'Hold the RJ45 connector with the clip facing down, and push the wires in until every one reaches the end.', hint: 'Clip down - pin 1 is then on the left.', data: { end: n, standard } },
-    { key: `crimp${sfx}`, action: `crimp${sfx}`, title: 'Crimp the connector', text: 'Put the connector in the crimping tool and squeeze firmly - press and hold Crimp.', hint: 'Press and hold the Crimp button until it fills.', data: { end: n, standard } }
-  ]
-}
-
-const rj45Activity: IctActivity = {
-  key: 'rj45',
-  title: 'Terminating an RJ45 cable',
-  summary: 'Strip, untwist, order, trim, insert, crimp and test a network cable.',
-  icon: 'bolt',
-  scene: 'rj45',
-  topic: 'Computer networks',
-  levels: {
-    simple: {
-      intro: 'Make a straight-through network cable end in the T568B standard. The colour order is shown for you.',
-      steps: [
-        ...end(1, 'B', true),
-        { key: 'test', action: 'test', title: 'Test the cable', text: 'Plug both ends into the cable tester. The lights should come on 1 to 8, in the same order on both sides.', hint: 'Choose the Tester tool.', data: { end: 1, standard: 'B' } }
-      ]
-    },
-    intermediate: {
-      intro: 'Make a T568B cable end on your own - no colour guide. A hint costs 3 points, a mistake 5.',
-      steps: [
-        ...end(1, 'B', false),
-        { key: 'test', action: 'test', title: 'Test the cable', text: 'Use the cable tester to check all 8 wires connect in order.', hint: 'Choose the Tester tool.', data: { end: 1, standard: 'B' } }
-      ]
-    },
-    advanced: {
-      intro: 'Make a crossover cable: one end in T568A, the other in T568B - then test it. A hint costs 3 points, a mistake 5.',
-      steps: [
-        ...end(1, 'A', false),
-        ...end(2, 'B', false),
-        { key: 'test-crossover', action: 'test', title: 'Test the crossover cable', text: 'Use the cable tester. On a crossover cable, pins 1 and 2 light up opposite 3 and 6.', hint: 'Choose the Tester tool.', data: { end: 2, standard: 'B', crossover: 1 } }
-      ]
-    }
-  }
-}
-
 
 // ---- Assembling a computer ----
 
@@ -259,7 +193,7 @@ const assemblyActivity: IctActivity = {
   summary: 'Fit the processor, cooler, memory, drives and cables in the right order - then switch on.',
   icon: 'wrench',
   scene: 'assembly',
-  topic: 'Computer hardware',
+  topic: 'S.5 Topic 3 · Computer Hardware',
   levels: {
     simple: {
       intro: 'The motherboard and power supply are already in. Drag each part from the desk into the case (or tap it, then tap where it goes) - what to use glows.',
@@ -314,7 +248,7 @@ const cleaningActivity: IctActivity = {
   summary: 'Blow the dust out of a dirty computer with an air can or an electric blower - unplugged, outside, fans held still.',
   icon: 'leaf',
   scene: 'cleaning',
-  topic: 'Computer maintenance',
+  topic: 'S.5 Topic 3 · Computer Hardware',
   levels: {
     simple: {
       intro: 'This computer is full of dust and running hot. Clean it the safe way - what to use glows.',
@@ -419,7 +353,7 @@ const troubleshootActivity: IctActivity = {
   summary: 'Real faults to find and fix: no power, no picture, beeps, overheating, no boot device, a flat CMOS battery.',
   icon: 'bulb',
   scene: 'troubleshoot',
-  topic: 'Computer maintenance',
+  topic: 'S.5 Topic 3 · Computer Hardware',
   levels: {
     simple: { intro: 'Two computers with a problem. Look first, check the simple things, then fix - what to check glows.', steps: [...caseNoPower, ...caseNoDisplay] },
     intermediate: { intro: 'Two harder faults. Work out the cause before you fix it - a hint costs 3 points, a mistake 5.', steps: [...caseBeeps, ...caseHeat] },
@@ -451,7 +385,7 @@ const connectActivity: IctActivity = {
   summary: 'Plug the monitor, keyboard, mouse, speakers and network into the right ports at the back, connect the power and switch on.',
   icon: 'paperclip',
   scene: 'connect',
-  topic: 'Computer hardware',
+  topic: 'S.5 Topic 3 · Computer Hardware',
   levels: {
     simple: {
       intro: 'A new computer, turned round so you can reach its back. Pick up each cable and put it in the port that matches - the one to use glows and every port has its name.',
@@ -468,7 +402,7 @@ const connectActivity: IctActivity = {
   }
 }
 
-export const ACTIVITIES: IctActivity[] = [partsActivity, connectActivity, assemblyActivity, cleaningActivity, troubleshootActivity, rj45Activity]
+export const ACTIVITIES: IctActivity[] = [partsActivity, connectActivity, assemblyActivity, cleaningActivity, troubleshootActivity]
 
 // Planned next, shown on the lab's front page
 export const COMING: { title: string; summary: string; icon: string }[] = [

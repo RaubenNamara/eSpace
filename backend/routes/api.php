@@ -138,6 +138,9 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         // ICT Lab - best scores, linked notes, finished attempts
         Router::get('/ict-lab', 'eSpace\App\Controllers\IctLabController@studentIndex');
         Router::post('/ict-lab/attempts', 'eSpace\App\Controllers\IctLabController@saveAttempt');
+        // Publications - A level learners' work published by GP (PublicationController)
+        Router::get('/publications/access', 'eSpace\App\Controllers\PublicationController@access');
+        Router::get('/publications', 'eSpace\App\Controllers\PublicationController@studentIndex');
         Router::get('/enotes/topics/{id}', 'eSpace\App\Controllers\Student\ENoteController@show');
         Router::post('/enotes/topics/{id}/progress', 'eSpace\App\Controllers\Student\ENoteController@saveProgress');
         Router::get('/enotes/topics/{topicId}/my-pages', 'eSpace\App\Controllers\Student\PageNoteController@topicPageData');
@@ -393,6 +396,17 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/ict-lab', 'eSpace\App\Controllers\IctLabController@teacherIndex');
         Router::put('/ict-lab/links', 'eSpace\App\Controllers\IctLabController@saveLink');
         Router::delete('/ict-lab/links/{activity}/{step}', 'eSpace\App\Controllers\IctLabController@deleteLink');
+        Router::get('/ict-lab/results', 'eSpace\App\Controllers\IctLabController@results');
+        Router::post('/ict-lab/tasks', 'eSpace\App\Controllers\IctLabController@createTask');
+        Router::delete('/ict-lab/tasks/{id}', 'eSpace\App\Controllers\IctLabController@deleteTask');
+        // Publications - a GP teacher publishes an A level student's work (PublicationController)
+        Router::get('/publications/access', 'eSpace\App\Controllers\PublicationController@access');
+        Router::get('/publications/authors', 'eSpace\App\Controllers\PublicationController@authors');
+        Router::get('/publications', 'eSpace\App\Controllers\PublicationController@teacherIndex');
+        Router::post('/publications', 'eSpace\App\Controllers\PublicationController@create');
+        Router::put('/publications/{id}/status', 'eSpace\App\Controllers\PublicationController@setStatus');
+        Router::post('/publications/{id}', 'eSpace\App\Controllers\PublicationController@update');
+        Router::delete('/publications/{id}', 'eSpace\App\Controllers\PublicationController@delete');
         Router::post('/enotes/topics', 'eSpace\App\Controllers\Teacher\ENoteController@create');
         Router::get('/enotes/preview', 'eSpace\App\Controllers\Teacher\ENoteController@previewIndex');
         Router::get('/enotes/preview/topics/{id}', 'eSpace\App\Controllers\Teacher\ENoteController@previewShow');
@@ -602,6 +616,9 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/ict-lab', 'eSpace\App\Controllers\IctLabController@teacherIndex');
         Router::put('/ict-lab/links', 'eSpace\App\Controllers\IctLabController@saveLink');
         Router::delete('/ict-lab/links/{activity}/{step}', 'eSpace\App\Controllers\IctLabController@deleteLink');
+        Router::get('/ict-lab/results', 'eSpace\App\Controllers\IctLabController@results');
+        Router::post('/ict-lab/tasks', 'eSpace\App\Controllers\IctLabController@createTask');
+        Router::delete('/ict-lab/tasks/{id}', 'eSpace\App\Controllers\IctLabController@deleteTask');
 
         // Teachers
         Router::get('/teachers', 'eSpace\App\Controllers\HOD\TeacherController@index');
@@ -687,6 +704,13 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/assignments/{id}/preview', 'eSpace\App\Controllers\HOD\AssignmentController@preview');
         Router::get('/assignments/{id}/submissions', 'eSpace\App\Controllers\HOD\AssignmentController@submissions');
         Router::get('/assignments/{id}/submissions/{submissionId}', 'eSpace\App\Controllers\HOD\AssignmentController@submissionDetail');
+
+        // Marking: what each of the department's teachers has marked, and what is waiting
+        Router::get('/marking', 'eSpace\App\Controllers\HOD\MarkingController@index');
+        Router::get('/marking/teachers/{id}', 'eSpace\App\Controllers\HOD\MarkingController@teacher');
+        Router::post('/marking/teachers/{id}/remind', 'eSpace\App\Controllers\HOD\MarkingController@remind');
+        Router::get('/marking/assignments/{id}/missing', 'eSpace\App\Controllers\HOD\MarkingController@missing');
+        Router::get('/marking/assignments/{id}/scripts', 'eSpace\App\Controllers\HOD\MarkingController@scripts');
 
         // eNotes - read-only oversight, browsable by teacher
         Router::get('/enotes', 'eSpace\App\Controllers\HOD\ENoteController@index');
@@ -775,6 +799,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/supervision/teachers/{id}', 'eSpace\App\Controllers\Admin\SupervisionController@teacher');
         Router::post('/supervision/teachers/{id}/remind', 'eSpace\App\Controllers\Admin\SupervisionController@remind');
         Router::get('/supervision/assignments/{id}/missing', 'eSpace\App\Controllers\Admin\SupervisionController@missing');
+        Router::get('/supervision/assignments/{id}/scripts', 'eSpace\App\Controllers\Admin\SupervisionController@scripts');
 
         // Assignments - read-only, school-wide oversight + "Preview as Student"
         Router::get('/assignments', 'eSpace\App\Controllers\Admin\AssignmentController@index');
@@ -986,6 +1011,8 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
 
         // Student profile photo (admin can set/change any student's photo)
         Router::post('/students/{id}/photo', 'eSpace\App\Controllers\Admin\StudentController@uploadPhoto');
+        // Removing anyone's profile photo (super admin only - checked in the controller)
+        Router::delete('/profile-photo/{type}/{id}', 'eSpace\App\Controllers\Admin\ProfilePhotoController@remove');
 
         // Competency Reports (LOA/AOI/EOC) - one student, one term, three reports
         Router::get('/reports/students', 'eSpace\App\Controllers\Admin\ReportCardController@listCompetencyStudents');

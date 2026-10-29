@@ -13,6 +13,31 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-10-29', area: 'eLibrary', icon: 'book',
+    title: 'Publications: A level students\' work, published by GP',
+    text: 'A GP teacher picks the A level student who wrote a piece, uploads it as a PDF and publishes it. Every A level student is told, finds it in Publications and on their dashboard, and reads it page by page like a book, with the author\'s name on the cover. O level students never see it. A piece can be kept as a draft first, edited, or taken down.'
+  },
+  {
+    date: '2026-10-29', area: 'Assessments', icon: 'pencil',
+    title: 'Assessments save themselves while you set them',
+    text: 'A draft assessment now saves itself a few seconds after every change - questions, marks, settings - and the line under its title says when. If the internet goes off or the page is closed first, the work is kept on that device and offered back the next time it is opened. A published assessment still waits for Save, so learners never see half-made changes, and Tusome asks before you leave with changes not saved.'
+  },
+  {
+    date: '2026-10-29', area: 'Heads of department', icon: 'check-circle',
+    title: 'Admins and HODs see who has marked what, and how far they have got',
+    text: 'A new Marking page shows every teacher in the department this term: scripts handed in, how many they have marked, and what is still waiting - and for how long. Tap a teacher for each assessment, open its scripts and marks, see who did not hand in, and send a reminder. The Assessments list now shows marked and still to mark for every assessment. The admin\'s Supervision page has the same Marked column for every teacher in the school, with each script\'s mark.'
+  },
+  {
+    date: '2026-10-29', area: 'ICT Lab', icon: 'clipboard',
+    title: 'ICT Lab results for the class, and practicals set like an assessment',
+    text: 'Teachers see every learner in a class against every ICT Lab practical - best score, or parts done. They can set a class a practical with a level and a due date: every learner is told, it shows at the top of their ICT Lab, and the teacher sees who has done it and the average.'
+  },
+  {
+    date: '2026-10-28', area: 'Virtual Lab', icon: 'keyboard',
+    title: 'The ICT Lab follows the Subsidiary ICT syllabus',
+    text: 'The ICT Lab is now laid out by the new A-level Subsidiary ICT syllabus - class, term and topic - and every practical shows the learning outcome it covers. New: shutting down the right way (frozen programs, forced shutdown, power cuts, printers and routers), and the parts showroom now teaches and tests input, output, storage, communication and processing devices. Typing, binary, Build a network and RJ45 cabling, which the syllabus does not cover, have been taken out.'
+  },
+  {
     date: '2026-10-28', area: 'Students', icon: 'pencil',
     title: 'New assessments never go unnoticed',
     text: 'Every learner an assessment is for is told the moment it is published - including those in the other streams it was sent to - with the subject and when to hand it in. It shows under Pending assessments on the dashboard, ahead of old overdue work, and a red number on Assessments in the menu counts the new ones not started yet.'
@@ -49,8 +74,8 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: '2026-10-22', area: 'ICT Lab', icon: 'keyboard',
-    title: 'Lab rules, online safety, Build a network, Binary, a typing tutor and more',
-    text: 'Students learn the computer lab rules and judge real situations to earn a lab pass, then hunt for dangers hidden in a 3D computer lab, fix start-up faults in BIOS Setup, spot scam messages and fake websites, count in binary with light switches, build a classroom network mission by mission - switch, printer, router, Wi-Fi - and fix a broken one, and learn to touch-type in 16 lessons - the key lights up and the hand shows which finger to use - and follow one key press through the computer in 3D: input, process, output and storage. In the showroom every part and device turns in HD 3D, with numbered details to fly in to - the processor socket, the memory slots, a mouse\'s scroll wheel - and a Test yourself quiz.'
+    title: 'Lab rules, online safety, Spot the hazard and more',
+    text: 'Students learn the computer lab rules and judge real situations to earn a lab pass, then hunt for dangers hidden in a 3D computer lab, fix start-up faults in BIOS Setup, spot scam messages and fake websites, and follow one key press through the computer in 3D: input, process, output and storage. In the showroom every part and device turns in HD 3D, with numbered details to fly in to - the processor socket, the memory slots, a mouse\'s scroll wheel - and a Test yourself quiz.'
   },
   {
     date: '2026-10-15', area: 'Everyone', icon: 'sparkles',

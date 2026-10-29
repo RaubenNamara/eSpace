@@ -77,8 +77,23 @@
                 <b class="tabular-nums">{{ a.waiting }}</b> waiting to mark<template v-if="a.waiting_days !== null"> · oldest {{ a.waiting_days }}d</template>
               </span>
               <span v-if="a.not_yet" class="text-gray-400">{{ a.not_yet }} not in yet</span>
+              <span v-if="a.last_marked_at" class="text-gray-400">last marked {{ shortDay(a.last_marked_at) }}</span>
             </div>
 
+            <button
+              v-if="a.handed_in"
+              type="button"
+              class="mt-2 mr-3 inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300 hover:underline"
+              @click="toggleScripts(a.id)"
+            >
+              Marks: {{ a.marked }} of {{ a.handed_in }} marked
+              <svg class="w-3.5 h-3.5 transition-transform" :class="{ 'rotate-180': openScripts === a.id }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+            </button>
+            <RouterLink
+              v-if="scriptsPath && (a.handed_in || a.marked)"
+              :to="`${scriptsPath}/${a.id}/submissions`"
+              class="mt-2 mr-3 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-300 hover:underline"
+            >See the scripts and marks</RouterLink>
             <button
               v-if="a.missing"
               type="button"
@@ -88,6 +103,19 @@
               {{ a.missing }} didn't hand in
               <svg class="w-3.5 h-3.5 transition-transform" :class="{ 'rotate-180': openMissing === a.id }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
             </button>
+            <div v-if="openScripts === a.id" class="mt-2 rounded-lg bg-gray-50 dark:bg-gray-900/40 max-h-80 overflow-y-auto">
+              <p v-if="scriptsLoading" class="p-3 text-xs text-gray-500">Loading…</p>
+              <ul v-else class="divide-y divide-gray-200 dark:divide-gray-700">
+                <li v-for="s in scripts" :key="s.id" class="px-3 py-1.5 flex items-center gap-2 text-xs">
+                  <span class="flex-1 min-w-0 truncate text-gray-900 dark:text-white">{{ niceName(s.name) }}</span>
+                  <template v-if="s.marked">
+                    <span class="font-bold tabular-nums" :class="(s.percentage ?? 0) >= 50 ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'">{{ markText(s, a.id) }}</span>
+                    <span class="text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ s.marked_at ? shortDay(s.marked_at) : '' }}{{ s.returned ? ' · returned' : '' }}</span>
+                  </template>
+                  <span v-else class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-200 whitespace-nowrap">Not marked{{ s.submitted_at ? ` · in ${shortDay(s.submitted_at)}` : '' }}</span>
+                </li>
+              </ul>
+            </div>
             <div v-if="openMissing === a.id" class="mt-2 rounded-lg bg-gray-50 dark:bg-gray-900/40 max-h-72 overflow-y-auto">
               <p v-if="missingLoading" class="p-3 text-xs text-gray-500">Loading…</p>
               <ul v-else class="divide-y divide-gray-200 dark:divide-gray-700">
@@ -112,14 +140,19 @@ import AppIcon from '@/components/common/AppIcon.vue'
 import { niceName } from '@/components/dashboard/teacher/time'
 import { useToastStore } from '@/stores/toast'
 import { useConfirmStore } from '@/stores/confirm'
-import { FLAG, type SupAssessment, type SupLearner, type SupTeacher } from './types'
+import { FLAG, type SupAssessment, type SupLearner, type SupScript, type SupTeacher } from './types'
 
 const props = defineProps<{
   teacher: SupTeacher | null
   teacherId: number
   termId: number
   markingDays: number
+  // where the figures come from: the admin's Supervision, or the HOD's Marking
+  apiBase?: string
+  // the HOD's link to an assessment's scripts, e.g. /hod/assessments
+  scriptsPath?: string
 }>()
+const base = computed(() => props.apiBase || '/api/admin/supervision')
 const emit = defineEmits<{ close: [] }>()
 
 const toast = useToastStore()
@@ -135,7 +168,7 @@ const contact = computed(() => [info.value?.phone, info.value?.email].filter(Boo
 
 onMounted(async () => {
   try {
-    const res = await axios.get(`/api/admin/supervision/teachers/${props.teacherId}`, { params: { term_id: props.termId } })
+    const res = await axios.get(`${base.value}/teachers/${props.teacherId}`, { params: { term_id: props.termId } })
     assessments.value = res.data.data.assessments
     info.value = res.data.data.teacher
   } catch (e: any) {
@@ -153,6 +186,35 @@ const deadlineText = (a: SupAssessment) => {
   return a.closed ? `closed ${d}` : `open until ${d}`
 }
 
+const shortDay = (d: string) => new Date(d.replace(' ', 'T')).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
+
+// The scripts handed in for an assessment, and each one's mark
+const openScripts = ref(0)
+const scripts = ref<SupScript[]>([])
+const scriptsTotal = ref<number | null>(null)
+const scriptsLoading = ref(false)
+const toggleScripts = async (id: number) => {
+  if (openScripts.value === id) { openScripts.value = 0; return }
+  openScripts.value = id
+  scripts.value = []
+  scriptsLoading.value = true
+  try {
+    const res = await axios.get(`${base.value}/assignments/${id}/scripts`)
+    if (openScripts.value === id) {
+      scripts.value = res.data.data.scripts
+      scriptsTotal.value = res.data.data.assignment.total_marks
+    }
+  } catch {
+    toast.error('Could not load the scripts')
+  } finally {
+    scriptsLoading.value = false
+  }
+}
+const markText = (s: SupScript, _id: number) => {
+  if (s.score !== null && scriptsTotal.value) return `${+s.score.toFixed(1)}/${+scriptsTotal.value} · ${Math.round(s.percentage ?? (s.score * 100) / scriptsTotal.value)}%`
+  return s.percentage !== null ? `${Math.round(s.percentage)}%` : 'Marked'
+}
+
 // The learners who didn't hand an assessment in
 const openMissing = ref(0)
 const missing = ref<SupLearner[]>([])
@@ -163,7 +225,7 @@ const toggleMissing = async (id: number) => {
   missing.value = []
   missingLoading.value = true
   try {
-    const res = await axios.get(`/api/admin/supervision/assignments/${id}/missing`)
+    const res = await axios.get(`${base.value}/assignments/${id}/missing`)
     if (openMissing.value === id) missing.value = res.data.data.learners
   } catch {
     toast.error('Could not load the learners')
@@ -193,7 +255,7 @@ const remind = async () => {
   if (!message) return
   sending.value = true
   try {
-    await axios.post(`/api/admin/supervision/teachers/${props.teacherId}/remind`, { message })
+    await axios.post(`${base.value}/teachers/${props.teacherId}/remind`, { message })
     toast.success('Reminder sent')
   } catch (e: any) {
     toast.error(e.response?.data?.message || 'Could not send the reminder')

@@ -3,222 +3,130 @@
     <PageHeader
       title="ICT Lab"
       :description="role === 'teacher'
-        ? 'Hands-on computer activities, step by step. Open one to try it, and link its steps to your eNotes.'
-        : 'Hands-on computer activities, step by step - at a Simple, Intermediate or Advanced level.'"
+        ? 'Hands-on practicals from the Subsidiary ICT syllabus, step by step. Open one to try it, and link its steps to your eNotes.'
+        : 'Hands-on practicals from the Subsidiary ICT syllabus, step by step - at a Simple, Intermediate or Advanced level.'"
       icon="keyboard"
       accent="indigo"
-    />
-
-    <!-- Start here: 1. the lab rules, 2. the parts and devices -->
-    <div class="mb-4 grid grid-cols-1 lg:grid-cols-2 gap-3">
-      <RouterLink
-        :to="`/${role}/ict-lab/rules`"
-        class="flex items-center gap-4 rounded-2xl border p-4 hover:shadow-md transition-shadow"
-        :class="!rulesDue ? 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800' : 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20'"
-      >
-        <span class="w-12 h-12 rounded-2xl text-white flex items-center justify-center flex-shrink-0 shadow-sm" :class="!rulesDue ? 'bg-indigo-600' : 'bg-amber-500'"><AppIcon :name="rulesPassed ? 'check-circle' : 'warning'" class="w-6 h-6" /></span>
-        <div class="min-w-0 flex-1">
-          <p class="text-[11px] font-bold uppercase tracking-wide" :class="!rulesDue ? 'text-indigo-600 dark:text-indigo-300' : 'text-amber-700 dark:text-amber-300'">Step 1 · Start here</p>
-          <p class="text-lg font-bold text-gray-900 dark:text-white leading-snug">Computer lab rules</p>
-          <p class="text-sm text-gray-600 dark:text-gray-300">
-            {{ rulesPassed ? `Lab pass earned - best ${rulesBest}%. Look over the rules any time.` : 'How to stay safe and look after the computers. Learn the 12 rules, then judge real situations to earn your lab pass.' }}
-          </p>
-        </div>
-        <svg class="w-5 h-5 text-indigo-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
-      </RouterLink>
-
-      <!-- The showroom: every major part, and the devices around a computer, in 3D on their own -->
-      <div class="flex items-center gap-4 rounded-2xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/70 dark:bg-indigo-900/20 p-4">
-        <span class="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 shadow-sm"><AppIcon name="photo" class="w-6 h-6" /></span>
-        <div class="min-w-0 flex-1">
-          <p class="text-[11px] font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">Step 2 · Know the computer</p>
-          <p class="text-lg font-bold text-gray-900 dark:text-white leading-snug">Parts and devices showroom</p>
-          <p class="text-sm text-gray-600 dark:text-gray-300">Every part inside a computer and 22 devices around it, in HD 3D. Tap the numbers to look closely at each detail.</p>
-          <div class="mt-2 flex flex-wrap items-center gap-2">
-            <RouterLink :to="`/${role}/ict-lab/showroom`" class="btn-primary !py-1.5 !text-sm">Explore</RouterLink>
-            <RouterLink :to="{ path: `/${role}/ict-lab/showroom`, query: { quiz: 1 } }" class="btn-secondary !py-1.5 !text-sm">Test yourself</RouterLink>
-            <span v-if="quizBest !== null" class="text-xs font-bold" :class="quizBest >= 80 ? 'text-emerald-600 dark:text-emerald-300' : 'text-amber-600 dark:text-amber-300'">Best {{ quizBest }}%</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="mb-4 grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-3">
-    <!-- Spot the hazard: the lab rules put to use in a 3D computer room -->
-    <RouterLink
-      :to="`/${role}/ict-lab/hazards`"
-      class="flex items-center gap-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 hover:shadow-md hover:border-indigo-300 transition"
     >
-      <span class="w-12 h-12 rounded-2xl bg-rose-600 text-white flex items-center justify-center flex-shrink-0 shadow-sm"><AppIcon name="warning" class="w-6 h-6" /></span>
-      <div class="min-w-0 flex-1">
-        <p class="text-[11px] font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">Safety game · 2 minutes</p>
-        <p class="text-lg font-bold text-gray-900 dark:text-white leading-snug">Spot the hazard</p>
-        <p class="text-sm text-gray-600 dark:text-gray-300">A computer lab in 3D with 8 dangers hidden round it - a drink by a keyboard, an overloaded socket, a damaged cable. Find them all before time runs out.</p>
-        <p v-if="hazardsBest !== null" class="mt-1 text-xs font-bold" :class="hazardsBest >= 80 ? 'text-emerald-600 dark:text-emerald-300' : 'text-amber-600 dark:text-amber-300'">Best {{ hazardsBest }}%</p>
-      </div>
-      <svg class="w-5 h-5 text-indigo-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
-    </RouterLink>
+      <template v-if="role === 'teacher' || role === 'hod'" #actions>
+        <RouterLink :to="`/${role}/ict-lab/results`" class="btn-primary">Class results</RouterLink>
+      </template>
+    </PageHeader>
 
-    <!-- Online safety: scams, fake websites, passwords -->
-    <RouterLink
-      :to="`/${role}/ict-lab/online-safety`"
-      class="flex items-center gap-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 hover:shadow-md hover:border-indigo-300 transition"
-    >
-      <span class="w-12 h-12 rounded-2xl bg-slate-800 text-white flex items-center justify-center flex-shrink-0 shadow-sm"><AppIcon name="key" class="w-6 h-6" /></span>
-      <div class="min-w-0 flex-1">
-        <p class="text-[11px] font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">Safety · 3 parts</p>
-        <p class="text-lg font-bold text-gray-900 dark:text-white leading-snug">Is it safe online?</p>
-        <p class="text-sm text-gray-600 dark:text-gray-300">Sort an inbox of real and scam messages, spot fake websites from the address bar, and test how strong a password is.</p>
-        <p v-if="safetyDone" class="mt-1 text-xs font-bold text-emerald-600 dark:text-emerald-300">{{ safetyDone }} of 3 parts done</p>
-      </div>
-      <svg class="w-5 h-5 text-indigo-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
-    </RouterLink>
-
-    <!-- Computer networks: build one, room by room -->
-    <RouterLink
-      :to="`/${role}/ict-lab/network`"
-      class="flex items-center gap-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 hover:shadow-md hover:border-indigo-300 transition"
-    >
-      <span class="w-12 h-12 rounded-2xl bg-sky-600 text-white flex items-center justify-center flex-shrink-0 shadow-sm"><AppIcon name="users" class="w-6 h-6" /></span>
-      <div class="min-w-0 flex-1">
-        <p class="text-[11px] font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">Computer networks · 5 missions</p>
-        <p class="text-lg font-bold text-gray-900 dark:text-white leading-snug">Build a network</p>
-        <p class="text-sm text-gray-600 dark:text-gray-300">Place computers, a switch, a printer, a router and Wi-Fi in a classroom, run the cables, then ping and watch the data travel. Find and fix a broken network.</p>
-        <p v-if="networkDone" class="mt-1 text-xs font-bold text-emerald-600 dark:text-emerald-300">{{ networkDone }} of 5 missions done</p>
-      </div>
-      <svg class="w-5 h-5 text-indigo-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
-    </RouterLink>
-
-    <!-- Boot-up and BIOS: power to desktop, and two start-up faults to fix -->
-    <RouterLink
-      :to="`/${role}/ict-lab/boot`"
-      class="flex items-center gap-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 hover:shadow-md hover:border-indigo-300 transition"
-    >
-      <span class="w-12 h-12 rounded-2xl bg-blue-900 text-white flex items-center justify-center flex-shrink-0 shadow-sm font-mono text-[10px] font-bold leading-tight text-center">BIOS</span>
-      <div class="min-w-0 flex-1">
-        <p class="text-[11px] font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">How a computer works · 4 parts</p>
-        <p class="text-lg font-bold text-gray-900 dark:text-white leading-snug">Boot-up and BIOS</p>
-        <p class="text-sm text-gray-600 dark:text-gray-300">Watch a computer start - power, POST, boot device, operating system - then fix "no boot device" in BIOS Setup and a clock that keeps resetting.</p>
-        <p v-if="bootDone" class="mt-1 text-xs font-bold text-emerald-600 dark:text-emerald-300">{{ bootDone }} of 4 parts done</p>
-      </div>
-      <svg class="w-5 h-5 text-indigo-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
-    </RouterLink>
-
-    <!-- Laptop repair: "No bootable device" - diagnose, toolkit, replace the SSD in 3D, install Windows -->
-    <RouterLink
-      :to="`/${role}/ict-lab/laptop-repair`"
-      class="flex items-center gap-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 hover:shadow-md hover:border-indigo-300 transition"
-    >
-      <span class="w-12 h-12 rounded-2xl bg-gray-800 text-white flex items-center justify-center flex-shrink-0 shadow-sm text-2xl">💻</span>
-      <div class="min-w-0 flex-1">
-        <p class="text-[11px] font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">Computer maintenance · 6 stages</p>
-        <p class="text-lg font-bold text-gray-900 dark:text-white leading-snug">Laptop repair: "No bootable device"</p>
-        <p class="text-sm text-gray-600 dark:text-gray-300">A real repair job: find why the laptop will not start, pack the right toolkit, open it and replace the failed SSD in 3D, make a Windows USB and install Windows step by step.</p>
-        <p v-if="laptopDone" class="mt-1 text-xs font-bold text-emerald-600 dark:text-emerald-300">{{ laptopDone }} of 6 stages done</p>
-      </div>
-      <svg class="w-5 h-5 text-indigo-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
-    </RouterLink>
-
-    <!-- Binary and storage: bits, bytes, letters as numbers, KB to TB -->
-    <RouterLink
-      :to="`/${role}/ict-lab/binary`"
-      class="flex items-center gap-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 hover:shadow-md hover:border-indigo-300 transition"
-    >
-      <span class="w-12 h-12 rounded-2xl bg-violet-600 text-white flex items-center justify-center flex-shrink-0 shadow-sm font-mono text-sm font-bold">101</span>
-      <div class="min-w-0 flex-1">
-        <p class="text-[11px] font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">How a computer works · 3 parts</p>
-        <p class="text-lg font-bold text-gray-900 dark:text-white leading-snug">Binary and storage</p>
-        <p class="text-sm text-gray-600 dark:text-gray-300">Flip 8 light switches to count in binary, spell your name in 1s and 0s, and fill a flash disk to feel KB, MB and GB.</p>
-        <p v-if="binaryDone" class="mt-1 text-xs font-bold text-emerald-600 dark:text-emerald-300">{{ binaryDone }} of 3 parts done</p>
-      </div>
-      <svg class="w-5 h-5 text-indigo-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
-    </RouterLink>
-
-    <!-- How a computer works: one key press followed through the computer -->
-    <RouterLink
-      :to="`/${role}/ict-lab/journey`"
-      class="flex items-center gap-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 hover:shadow-md hover:border-indigo-300 transition"
-    >
-      <span class="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center flex-shrink-0 shadow-sm"><AppIcon name="bolt" class="w-6 h-6" /></span>
-      <div class="min-w-0 flex-1">
-        <p class="text-[11px] font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">How a computer works</p>
-        <p class="text-lg font-bold text-gray-900 dark:text-white leading-snug">Inside a computer: the journey of one key</p>
-        <p class="text-sm text-gray-600 dark:text-gray-300">Press a letter and follow it in 3D - keyboard, cable, motherboard, processor, memory, graphics card, monitor and hard disk. Input, process, output and storage.</p>
-        <p v-if="journeyBest !== null" class="mt-1 text-xs font-bold" :class="journeyBest >= 80 ? 'text-emerald-600 dark:text-emerald-300' : 'text-amber-600 dark:text-amber-300'">Best {{ journeyBest }}%</p>
-      </div>
-      <svg class="w-5 h-5 text-indigo-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
-    </RouterLink>
-
-    <!-- The typing tutor: a skill to practise every lesson -->
-    <RouterLink
-      :to="`/${role}/ict-lab/typing`"
-      class="flex items-center gap-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 hover:shadow-md hover:border-indigo-300 transition"
-    >
-      <span class="w-12 h-12 rounded-2xl bg-slate-800 text-white flex items-center justify-center flex-shrink-0 shadow-sm"><AppIcon name="keyboard" class="w-6 h-6" /></span>
-      <div class="min-w-0 flex-1">
-        <p class="text-[11px] font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">Every lesson · 5 minutes</p>
-        <p class="text-lg font-bold text-gray-900 dark:text-white leading-snug">Typing tutor</p>
-        <p class="text-sm text-gray-600 dark:text-gray-300">Learn to type without looking: 16 lessons from the home row to a one-minute speed test. The key to press lights up, and the hand shows which finger to use.</p>
-      </div>
-      <div v-if="typingDone" class="hidden sm:block text-right flex-shrink-0">
-        <p class="text-xl font-bold text-gray-900 dark:text-white tabular-nums">{{ typingWpm }} <span class="text-xs font-semibold text-gray-500">wpm</span></p>
-        <p class="text-[11px] text-gray-500">{{ typingDone }} of 16 lessons passed</p>
-      </div>
-      <svg class="w-5 h-5 text-indigo-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
-    </RouterLink>
-    </div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <article
-        v-for="a in ACTIVITIES"
-        :key="a.key"
-        class="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 flex flex-col"
-      >
-        <div class="flex items-start gap-3">
-          <span class="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 shadow-sm">
-            <AppIcon :name="a.icon" class="w-6 h-6" />
+    <!-- Practicals the student's teachers have set: the ones still to do first -->
+    <section v-if="role === 'student' && tasks.length" class="mb-6">
+      <h2 class="mb-2 text-sm font-bold text-gray-900 dark:text-white">Set by your teacher</h2>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
+        <RouterLink
+          v-for="t in tasks"
+          :key="t.id"
+          :to="taskLink(t)"
+          class="flex items-center gap-3 rounded-2xl border p-3.5 hover:shadow-md transition-shadow"
+          :class="t.standing.done ? 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800' : overdue(t) ? 'border-rose-300 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/20' : 'border-indigo-300 dark:border-indigo-700 bg-indigo-50/60 dark:bg-indigo-900/20'"
+        >
+          <span class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-white" :class="t.standing.done ? 'bg-emerald-600' : overdue(t) ? 'bg-rose-600' : 'bg-indigo-600'">
+            <AppIcon :name="t.standing.done ? 'check-circle' : 'clipboard'" class="w-5 h-5" />
           </span>
           <div class="min-w-0 flex-1">
-            <p class="text-[11px] font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">{{ a.topic }}</p>
-            <h2 class="text-lg font-bold text-gray-900 dark:text-white leading-snug">{{ a.title }}</h2>
-            <p class="text-sm text-gray-600 dark:text-gray-300 mt-0.5">{{ a.summary }}</p>
+            <p class="font-bold text-gray-900 dark:text-white leading-snug">{{ t.title }}<span v-if="t.has_levels" class="font-semibold text-gray-500 dark:text-gray-400"> · {{ levelLabel(t.level) }}</span></p>
+            <p class="text-xs" :class="t.standing.done ? 'text-emerald-700 dark:text-emerald-300 font-semibold' : overdue(t) ? 'text-rose-700 dark:text-rose-300 font-semibold' : 'text-gray-600 dark:text-gray-300'">{{ taskStatus(t) }}</p>
+            <p v-if="t.note" class="text-xs text-gray-500 dark:text-gray-400 truncate">"{{ t.note }}"<template v-if="t.teacher_name"> - {{ t.teacher_name }}</template></p>
           </div>
-        </div>
-
-        <div class="mt-4 grid grid-cols-3 gap-2">
-          <RouterLink
-            v-for="l in LEVELS"
-            :key="l.key"
-            :to="{ path: `/${role}/ict-lab/${a.key}`, query: { level: l.key } }"
-            class="group rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2.5 hover:border-indigo-400 hover:bg-indigo-50/60 dark:hover:bg-indigo-900/20 transition-colors"
-            :title="l.blurb"
-          >
-            <p class="text-sm font-bold text-gray-900 dark:text-white">{{ l.label }}</p>
-            <p class="text-[11px] text-gray-500 dark:text-gray-400">{{ a.levels[l.key].steps.length }} steps</p>
-            <p v-if="best(a.key, l.key) !== null" class="mt-1 text-[11px] font-bold" :class="(best(a.key, l.key) ?? 0) >= 80 ? 'text-emerald-600 dark:text-emerald-300' : 'text-amber-600 dark:text-amber-300'">
-              Best {{ best(a.key, l.key) }}%
-            </p>
-            <p v-else-if="role === 'student'" class="mt-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-300 group-hover:underline">Start</p>
-            <p v-else class="mt-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-300 group-hover:underline">Try it</p>
-          </RouterLink>
-        </div>
-
-        <p v-if="role === 'teacher' && linkCount(a.key)" class="mt-3 text-xs text-gray-500 dark:text-gray-400">
-          <AppIcon name="document" class="w-3.5 h-3.5 inline -mt-0.5" /> {{ linkCount(a.key) }} step{{ linkCount(a.key) === 1 ? '' : 's' }} linked to your eNotes
-        </p>
-      </article>
-    </div>
-
-    <h2 v-if="COMING.length" class="mt-8 mb-2 text-sm font-bold text-gray-900 dark:text-white">Coming next</h2>
-    <div v-if="COMING.length" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-      <div v-for="c in COMING" :key="c.title" class="rounded-2xl border border-dashed border-gray-300 dark:border-gray-600 p-4">
-        <div class="flex items-center gap-2">
-          <span class="w-8 h-8 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 flex items-center justify-center"><AppIcon :name="c.icon" class="w-4 h-4" /></span>
-          <p class="font-semibold text-gray-800 dark:text-gray-100">{{ c.title }}</p>
-        </div>
-        <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">{{ c.summary }}</p>
+          <svg class="w-5 h-5 text-indigo-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+        </RouterLink>
       </div>
-    </div>
+    </section>
+
+    <!-- Start here: the lab rules -->
+    <RouterLink
+      :to="`/${role}/ict-lab/rules`"
+      class="mb-6 flex items-center gap-4 rounded-2xl border p-4 hover:shadow-md transition-shadow"
+      :class="!rulesDue ? 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800' : 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20'"
+    >
+      <span class="w-12 h-12 rounded-2xl text-white flex items-center justify-center flex-shrink-0 shadow-sm" :class="!rulesDue ? 'bg-indigo-600' : 'bg-amber-500'"><AppIcon :name="rulesPassed ? 'check-circle' : 'warning'" class="w-6 h-6" /></span>
+      <div class="min-w-0 flex-1">
+        <p class="text-[11px] font-bold uppercase tracking-wide" :class="!rulesDue ? 'text-indigo-600 dark:text-indigo-300' : 'text-amber-700 dark:text-amber-300'">Start here · safety first</p>
+        <p class="text-lg font-bold text-gray-900 dark:text-white leading-snug">Computer lab rules</p>
+        <p class="text-sm text-gray-600 dark:text-gray-300">
+          {{ rulesPassed ? `Lab pass earned - best ${rulesBest}%. Look over the rules any time.` : 'How to stay safe and look after the computers. Learn the 12 rules, then judge real situations to earn your lab pass.' }}
+        </p>
+      </div>
+      <svg class="w-5 h-5 text-indigo-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+    </RouterLink>
+
+    <!-- The practicals, in syllabus order: class and term, topic, and the outcome each one covers -->
+    <section v-for="s in SECTIONS" :key="s.title" class="mb-8">
+      <div class="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <p class="text-[11px] font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">{{ s.when }}</p>
+        <h2 class="text-base font-bold text-gray-900 dark:text-white">{{ s.title }}</h2>
+      </div>
+      <p v-if="s.note" class="-mt-2 mb-3 text-sm text-gray-600 dark:text-gray-300">{{ s.note }}</p>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <template v-for="item in s.items" :key="item">
+          <!-- a step-by-step activity, at three levels -->
+          <article
+            v-if="activity(item)"
+            class="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 flex flex-col"
+          >
+            <div class="flex items-start gap-4">
+              <span class="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 shadow-sm">
+                <AppIcon :name="activity(item)!.icon" class="w-6 h-6" />
+              </span>
+              <div class="min-w-0 flex-1">
+                <p class="text-[11px] font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">{{ OUTCOME[item] }}</p>
+                <p class="text-lg font-bold text-gray-900 dark:text-white leading-snug">{{ activity(item)!.title }}</p>
+                <p class="text-sm text-gray-600 dark:text-gray-300">{{ activity(item)!.summary }}</p>
+              </div>
+            </div>
+            <div class="mt-3 grid grid-cols-3 gap-2">
+              <RouterLink
+                v-for="l in LEVELS"
+                :key="l.key"
+                :to="{ path: `/${role}/ict-lab/${item}`, query: { level: l.key } }"
+                class="group rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2 hover:border-indigo-400 hover:bg-indigo-50/60 dark:hover:bg-indigo-900/20 transition-colors"
+                :title="l.blurb"
+              >
+                <p class="text-sm font-bold text-gray-900 dark:text-white">{{ l.label }}</p>
+                <p class="text-[11px] text-gray-500 dark:text-gray-400">{{ activity(item)!.levels[l.key].steps.length }} steps</p>
+                <p v-if="best(item, l.key) !== null" class="mt-1 text-[11px] font-bold" :class="(best(item, l.key) ?? 0) >= 80 ? 'text-emerald-600 dark:text-emerald-300' : 'text-amber-600 dark:text-amber-300'">
+                  Best {{ best(item, l.key) }}%
+                </p>
+                <p v-else class="mt-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-300 group-hover:underline">{{ role === 'student' ? 'Start' : 'Try it' }}</p>
+              </RouterLink>
+            </div>
+            <p v-if="role === 'teacher' && linkCount(item)" class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+              <AppIcon name="document" class="w-3.5 h-3.5 inline -mt-0.5" /> {{ linkCount(item) }} step{{ linkCount(item) === 1 ? '' : 's' }} linked to your eNotes
+            </p>
+          </article>
+
+          <!-- a practical with its own page -->
+          <div
+            v-else-if="CARDS[item]"
+            class="relative flex items-center gap-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 hover:shadow-md hover:border-indigo-300 transition"
+          >
+            <span class="w-12 h-12 rounded-2xl text-white flex items-center justify-center flex-shrink-0 shadow-sm" :class="CARDS[item].badge">
+              <AppIcon v-if="CARDS[item].icon" :name="CARDS[item].icon!" class="w-6 h-6" />
+              <span v-else class="font-mono text-[11px] font-bold leading-tight text-center">{{ CARDS[item].mark }}</span>
+            </span>
+            <div class="min-w-0 flex-1">
+              <p class="text-[11px] font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">{{ OUTCOME[item] }}</p>
+              <p class="text-lg font-bold text-gray-900 dark:text-white leading-snug">
+                <!-- the whole card opens the practical; the showroom's quiz button sits above the link -->
+                <RouterLink :to="`/${role}/ict-lab/${CARDS[item].path}`" class="after:absolute after:inset-0 after:rounded-2xl focus:outline-none">{{ CARDS[item].title }}</RouterLink>
+              </p>
+              <p class="text-sm text-gray-600 dark:text-gray-300">{{ CARDS[item].text }}</p>
+              <div v-if="item === 'showroom'" class="relative z-10 mt-2 flex flex-wrap items-center gap-2">
+                <RouterLink :to="`/${role}/ict-lab/showroom`" class="btn-primary !py-1.5 !text-sm">Explore</RouterLink>
+                <RouterLink :to="{ path: `/${role}/ict-lab/showroom`, query: { quiz: 1 } }" class="btn-secondary !py-1.5 !text-sm">Test yourself</RouterLink>
+              </div>
+              <p v-if="progressOf(item)" class="mt-1 text-xs font-bold" :class="progressOf(item)!.good ? 'text-emerald-600 dark:text-emerald-300' : 'text-amber-600 dark:text-amber-300'">{{ progressOf(item)!.text }}</p>
+            </div>
+            <svg v-if="item !== 'showroom'" class="w-5 h-5 text-indigo-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+          </div>
+        </template>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -228,44 +136,111 @@ import { useRoute } from 'vue-router'
 import axios from 'axios'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import AppIcon from '@/components/common/AppIcon.vue'
-import { ACTIVITIES, COMING, LEVELS, type IctLevel } from '@/components/ictlab/activities'
-import { labRoleOf, type IctLink, type IctProgress } from '@/components/ictlab/types'
+import { LEVELS, activityByKey, type IctLevel } from '@/components/ictlab/activities'
+import { labRoleOf, type IctLink, type IctProgress, type IctTask } from '@/components/ictlab/types'
 import { PASS_MARK, RULES_KEY } from '@/components/ictlab/labRules'
-import { TYPING_PASS } from '@/components/ictlab/typing'
 
 const route = useRoute()
 const role = computed(() => labRoleOf(route.path))
 
+/**
+ * The lab follows the NCDC Subsidiary ICT syllabus (Advanced Secondary, 2025): each practical sits
+ * under the topic it belongs to and shows the learning outcome it covers.
+ */
+const SECTIONS: { when: string; title: string; note?: string; items: string[] }[] = [
+  { when: 'S.5 Term 1 · Topic 1', title: 'Introduction to ICTs', items: ['boot'] },
+  { when: 'S.5 Term 2 · Topic 3', title: 'Computer Hardware', items: ['showroom', 'computer-parts', 'journey', 'connect', 'assembly', 'cleaning', 'troubleshoot', 'hazards'] },
+  { when: 'S.5 Term 2 · Topic 4', title: 'Computer Software', items: ['laptop-repair'] },
+  { when: 'S.6 Term 1 · Topic 7', title: 'The Internet and Digital Communications', items: ['online-safety'] }
+]
+
+// The outcome (or the skill) each practical covers, shown on its card
+const OUTCOME: Record<string, string> = {
+  boot: '1b · start-up, shut-down and their problems',
+  showroom: '3a · classify hardware and its functions',
+  'computer-parts': '3a · the parts inside the system unit',
+  journey: '3a · input, processing, output and storage',
+  connect: '1b, 3b · connect the parts into a working system',
+  assembly: '3b · assemble a computer system',
+  cleaning: '3c · routine maintenance',
+  troubleshoot: '3c · troubleshoot a computer that will not work',
+  hazards: '3c · safe handling in the lab',
+  'laptop-repair': '3c, 4b · replace a drive, install the operating system',
+  'online-safety': '7b, 7d · secure access and cyber threats'
+}
+
+// Practicals with their own page
+const CARDS: Record<string, { path: string; title: string; text: string; badge: string; icon?: string; mark?: string }> = {
+  boot: { path: 'boot', title: 'Start-up, BIOS and shut-down', text: 'Watch a computer start - power, POST, boot device, operating system - fix "no boot device" and a clock that keeps resetting, then shut down right: frozen programs, forced shutdown, power cuts, printers and routers.', badge: 'bg-blue-900', mark: 'BIOS' },
+  showroom: { path: 'showroom', title: 'Parts and devices showroom', text: 'Every part inside a computer and 22 devices around it in 3D - and whether each is an input, output, storage, communication or processing device.', badge: 'bg-indigo-600', icon: 'photo' },
+  journey: { path: 'journey', title: 'Inside a computer: the journey of one key', text: 'Press a letter and follow it in 3D - keyboard, cable, motherboard, processor, memory, graphics card, monitor and hard disk.', badge: 'bg-amber-500', icon: 'bolt' },
+  hazards: { path: 'hazards', title: 'Spot the hazard', text: 'A computer lab in 3D with 8 dangers hidden round it - a drink by a keyboard, an overloaded socket, a damaged cable. Find them before time runs out.', badge: 'bg-rose-600', icon: 'warning' },
+  'laptop-repair': { path: 'laptop-repair', title: 'Laptop repair: "No bootable device"', text: 'Find why the laptop will not start, pack the right toolkit, replace the failed SSD in 3D, make a Windows USB and install Windows step by step.', badge: 'bg-gray-800', icon: 'kit' },
+  'online-safety': { path: 'online-safety', title: 'Is it safe online?', text: 'Sort an inbox of real and scam messages, spot fake websites from the address bar, and test how strong a password is.', badge: 'bg-slate-800', icon: 'key' }
+}
+
+const activity = (key: string) => activityByKey(key)
+
 const progress = ref<IctProgress[]>([])
 const links = ref<IctLink[]>([])
-
+const tasks = ref<IctTask[]>([])
 onMounted(async () => {
   if (role.value !== 'student' && role.value !== 'teacher') return
   try {
     const res = await axios.get(`/api/${role.value}/ict-lab`)
     progress.value = res.data.data.progress || []
     links.value = res.data.data.links || []
+    tasks.value = res.data.data.tasks || []
   } catch {
     // the activities still work without scores and links
   }
 })
 
-const best = (activity: string, level: IctLevel) => progress.value.find(p => p.activity_key === activity && p.level === level)?.best ?? null
+const best = (activityKey: string, level: IctLevel) => progress.value.find(p => p.activity_key === activityKey && p.level === level)?.best ?? null
 const rulesBest = computed(() => best(RULES_KEY, 'simple'))
 const rulesPassed = computed(() => (rulesBest.value ?? 0) >= PASS_MARK)
 // Only a student who has not passed yet sees the rules card in amber
 const rulesDue = computed(() => role.value === 'student' && !rulesPassed.value)
-const quizBest = computed(() => best('parts-quiz', 'simple'))
-const journeyBest = computed(() => best('journey', 'simple'))
-const hazardsBest = computed(() => best('hazards', 'simple'))
-const bootDone = computed(() => progress.value.filter(p => p.activity_key.startsWith('boot-')).length)
-const laptopDone = computed(() => progress.value.filter(p => p.activity_key.startsWith('laptop-')).length)
-const safetyDone = computed(() => progress.value.filter(p => p.activity_key.startsWith('safety-')).length)
-const binaryDone = computed(() => progress.value.filter(p => p.activity_key.startsWith('binary-')).length)
-const networkDone = computed(() => progress.value.filter(p => p.activity_key.startsWith('network-')).length)
-// The typing tutor: lessons passed and the best speed
-const typingRows = computed(() => progress.value.filter(p => p.activity_key.startsWith('typing-')))
-const typingDone = computed(() => typingRows.value.filter(p => p.best >= TYPING_PASS).length)
-const typingWpm = computed(() => Math.max(0, ...typingRows.value.map(p => p.best_wpm ?? 0)))
-const linkCount = (activity: string) => links.value.filter(l => l.activity_key === activity).length
+const startsWith = (prefix: string) => progress.value.filter(p => p.activity_key.startsWith(prefix)).length
+
+
+// The line under a card: the best score, or how many parts are done
+function progressOf(item: string): { text: string; good: boolean } | null {
+  const bestOf = (k: string) => {
+    const b = best(k, 'simple')
+    return b === null ? null : { text: `Best ${b}%`, good: b >= 80 }
+  }
+  const parts = (prefix: string, total: number, word: string) => {
+    const n = startsWith(prefix)
+    return n ? { text: `${n} of ${total} ${word} done`, good: true } : null
+  }
+  switch (item) {
+    case 'showroom': return bestOf('parts-quiz')
+    case 'journey': return bestOf('journey')
+    case 'hazards': return bestOf('hazards')
+    case 'boot': return parts('boot-', 5, 'parts')
+    case 'laptop-repair': return parts('laptop-', 6, 'stages')
+    case 'online-safety': return parts('safety-', 3, 'parts')
+    default: return null
+  }
+}
+
+// A practical set by the teacher: where it opens, and how the student stands on it
+const STEP_BY_STEP = ['computer-parts', 'connect', 'assembly', 'cleaning', 'troubleshoot']
+const taskLink = (t: IctTask) =>
+  STEP_BY_STEP.includes(t.practical) ? { path: `/${role.value}/ict-lab/${t.practical}`, query: { level: t.level } }
+    : t.practical === 'showroom' ? { path: `/${role.value}/ict-lab/showroom`, query: { quiz: 1 } }
+      : { path: `/${role.value}/ict-lab/${t.practical}` }
+const levelLabel = (l: string) => LEVELS.find(x => x.key === l)?.label || l
+const dueDate = (d: string) => new Date(d.replace(' ', 'T'))
+const overdue = (t: IctTask) => !t.standing.done && !!t.due_at && dueDate(t.due_at).getTime() < Date.now()
+function taskStatus(t: IctTask): string {
+  if (t.standing.done) return `Done${t.standing.best !== null ? ` - ${t.standing.best}%` : ''}`
+  const due = t.due_at ? dueDate(t.due_at).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }) : ''
+  const parts = t.standing.parts ? ` · ${t.standing.parts} part${t.standing.parts === 1 ? '' : 's'} done` : ''
+  if (overdue(t)) return `Was due ${due} - do it now${parts}`
+  return (due ? `Due ${due}` : 'To do') + parts
+}
+
+const linkCount = (activityKey: string) => links.value.filter(l => l.activity_key === activityKey).length
 </script>

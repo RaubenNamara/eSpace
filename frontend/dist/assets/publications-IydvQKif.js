@@ -1,0 +1,1 @@
+const t=e=>({id:e.id,title:e.title,description:e.description,subject_id:null,class_id:null,file_path:e.file_path,file_type:"pdf",file_size:e.file_size,total_pages:null,allow_download:!1,status:e.status,published_at:e.published_at,created_at:e.created_at,subject_name:"Publication",teacher_first_name:e.author_name,teacher_last_name:""});export{t as a};

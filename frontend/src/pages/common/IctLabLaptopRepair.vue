@@ -9,7 +9,7 @@
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
       </RouterLink>
       <div class="min-w-0 flex-1">
-        <p class="text-[11px] font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">ICT Lab · Computer maintenance</p>
+        <p class="text-[11px] font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">ICT Lab · S.5 Topics 3-4 · Hardware and Software</p>
         <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-tight">Laptop repair: "No bootable device"</h1>
       </div>
     </div>

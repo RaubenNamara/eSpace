@@ -536,6 +536,7 @@
 
 <script setup lang="ts">
 import { usePersistedRef } from '@/composables/usePersistedRef'
+import { usePublicationsAccess } from '@/composables/usePublicationsAccess'
 import Wordmark from '@/components/brand/Wordmark.vue'
 import { SUPPORT_EMAIL } from '@/data/site'
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
@@ -868,7 +869,8 @@ const openProfileSection = (section: 'photo' | 'password') => {
   showProfileDropdown.value = false
 }
 
-interface NavItem { path: string; label: string; icon: string; children?: NavItem[] }
+// gate: shown only to some users of the role (see visible())
+interface NavItem { path: string; label: string; icon: string; children?: NavItem[]; gate?: 'publications' }
 interface NavGroup { key: string; name: string; items: NavItem[] }
 
 // The sidebar, by role, in named groups (see the template for how a group folds away)
@@ -888,6 +890,7 @@ const MENU: Record<string, NavGroup[]> = {
     ] },
     { key: 'resources', name: 'Resources', items: [
       { path: '/student/library', label: 'eLibrary', icon: 'LibraryIcon' },
+      { path: '/student/publications', label: 'Publications', icon: 'NewspaperIcon', gate: 'publications' },
       { path: '/student/videos', label: 'Videos', icon: 'VideoCameraIcon' },
       { path: '/student/itembank', label: 'Item Bank', icon: 'QuestionMarkCircleIcon' },
       { path: '/student/labs', label: 'Virtual Lab', icon: 'FlaskIcon', children: [
@@ -919,6 +922,7 @@ const MENU: Record<string, NavGroup[]> = {
       { path: '/teacher/library', label: 'eLibrary', icon: 'LibraryIcon' },
       { path: '/teacher/videos', label: 'Videos', icon: 'VideoCameraIcon' },
       { path: '/teacher/itembank', label: 'Item Bank', icon: 'QuestionMarkCircleIcon' },
+      { path: '/teacher/publications', label: 'Publications', icon: 'NewspaperIcon', gate: 'publications' },
       { path: '/teacher/labs', label: 'Virtual Lab', icon: 'FlaskIcon', children: [
         { path: '/teacher/virtual-lab', label: 'Science Lab', icon: 'FlaskIcon' },
         { path: '/teacher/ict-lab', label: 'ICT Lab', icon: 'ComputerIcon' },
@@ -962,6 +966,7 @@ const MENU: Record<string, NavGroup[]> = {
     ] },
     { key: 'assessment', name: 'Assessment', items: [
       { path: '/hod/assessments', label: 'Assessments', icon: 'DocumentTextIcon' },
+      { path: '/hod/marking', label: 'Marking', icon: 'TargetIcon' },
       { path: '/hod/marksheet', label: 'Marksheet', icon: 'TableCellsIcon' },
       { path: '/hod/physical-exams', label: 'Physical Exams', icon: 'DocumentTextIcon' }
     ] },
@@ -1034,7 +1039,11 @@ const MENU: Record<string, NavGroup[]> = {
 }
 
 const menuRole = computed(() => (authStore.userRole === 'super_admin' ? 'admin' : authStore.userRole || ''))
-const menuGroups = computed<NavGroup[]>(() => MENU[menuRole.value] || [])
+// Publications: A level students and GP teachers only
+const publications = usePublicationsAccess()
+watch(menuRole, r => publications.check(r), { immediate: true })
+const visible = (item: NavItem) => !item.gate || (item.gate === 'publications' && publications.allowed.value)
+const menuGroups = computed<NavGroup[]>(() => (MENU[menuRole.value] || []).map(g => ({ ...g, items: g.items.filter(visible) })))
 
 // Folded groups, remembered per role in this browser
 const foldStore = usePersistedRef<Record<string, string[]>>('sidebar-folds', {})
@@ -1247,9 +1256,11 @@ const BulbIcon = icon(['M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 
 
 const BellAlertIcon = icon(['M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9'])
 
+const NewspaperIcon = icon(['M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z'])
+
 const MapIcon = icon(['M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7'])
 
-export { MegaphoneIcon, TargetIcon, ClipboardListIcon, ChatQuestionIcon, BoltIcon, BulbIcon, BellAlertIcon, MapIcon, DashboardIcon, BookOpenIcon, DocumentTextIcon, LibraryIcon, NoteIcon, QuestionMarkCircleIcon, ChatIcon, ChartBarIcon, CogIcon, UsersIcon, VideoCameraIcon, ChartIcon, AcademicCapIcon, BookIcon, CheckCircleIcon, BriefcaseIcon, UserGroupIcon, BuildingOfficeIcon, BuildingLibraryIcon, CalendarIcon, CalendarDaysIcon, KeyIcon, CloudArrowUpIcon, CloudArrowDownIcon, DocumentIcon, TrophyIcon, FlaskIcon, ComputerIcon, TableCellsIcon }
+export { NewspaperIcon, MegaphoneIcon, TargetIcon, ClipboardListIcon, ChatQuestionIcon, BoltIcon, BulbIcon, BellAlertIcon, MapIcon, DashboardIcon, BookOpenIcon, DocumentTextIcon, LibraryIcon, NoteIcon, QuestionMarkCircleIcon, ChatIcon, ChartBarIcon, CogIcon, UsersIcon, VideoCameraIcon, ChartIcon, AcademicCapIcon, BookIcon, CheckCircleIcon, BriefcaseIcon, UserGroupIcon, BuildingOfficeIcon, BuildingLibraryIcon, CalendarIcon, CalendarDaysIcon, KeyIcon, CloudArrowUpIcon, CloudArrowDownIcon, DocumentIcon, TrophyIcon, FlaskIcon, ComputerIcon, TableCellsIcon }
 
 // Sidebar menu items reference icons by name (e.g. icon: 'BookOpenIcon') so the menu arrays stay
 // plain, serialisable data - <component :is="item.icon"> can't resolve a local script-setup
@@ -1260,7 +1271,7 @@ const iconMap: Record<string, any> = {
   ChatIcon, ChartBarIcon, CogIcon, UsersIcon, VideoCameraIcon, ChartIcon, AcademicCapIcon, BookIcon,
   CheckCircleIcon, BriefcaseIcon, UserGroupIcon, BuildingOfficeIcon, BuildingLibraryIcon,
   CalendarIcon, CalendarDaysIcon, KeyIcon, CloudArrowUpIcon, CloudArrowDownIcon, DocumentIcon, TrophyIcon, FlaskIcon, ComputerIcon,
-  TableCellsIcon, MapIcon, BoltIcon, BulbIcon, BellAlertIcon, MegaphoneIcon, TargetIcon, ClipboardListIcon, ChatQuestionIcon
+  TableCellsIcon, MapIcon, BoltIcon, BulbIcon, BellAlertIcon, MegaphoneIcon, TargetIcon, ClipboardListIcon, ChatQuestionIcon, NewspaperIcon
 }
 </script>
 
