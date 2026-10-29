@@ -105,7 +105,6 @@
       <!-- The activity itself -->
       <section class="lg:order-1 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 sm:p-4">
         <Pc3DScene v-if="activity.scene === 'parts'" :key="`p-${level}-${run}`" mode="parts" :step="sceneStep" :guide="level === 'simple' || assist" :done="done" :level="level" @act="onAct" @mistake="onMistake" />
-        <Rj45Scene v-else-if="activity.scene === 'rj45'" :key="`${level}-${run}`" :step="sceneStep" :guide="level === 'simple' || assist" :done="done" :level="level" @act="onAct" @mistake="onMistake" />
         <Pc3DScene v-else-if="activity.scene === 'assembly'" :key="`a-${level}-${run}`" mode="assembly" :step="sceneStep" :guide="level === 'simple' || assist" :done="sceneDone" :level="level" @act="onAct" @mistake="onMistake" />
         <CleaningScene3D v-else-if="activity.scene === 'cleaning'" :key="`c-${level}-${run}`" :step="sceneStep" :guide="level === 'simple' || assist" :done="done" :level="level" @act="onAct" @mistake="onMistake" />
         <ConnectScene3D v-else-if="activity.scene === 'connect'" :key="`k-${level}-${run}`" :step="sceneStep" :guide="level === 'simple' || assist" :done="done" :level="level" @act="onAct" @mistake="onMistake" />
@@ -155,7 +154,6 @@ import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import AppIcon from '@/components/common/AppIcon.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
-import Rj45Scene from '@/components/ictlab/Rj45Scene.vue'
 import Pc3DScene from '@/components/ictlab/Pc3DScene.vue'
 import CleaningScene3D from '@/components/ictlab/CleaningScene3D.vue'
 import TroubleshootScene3D from '@/components/ictlab/TroubleshootScene3D.vue'

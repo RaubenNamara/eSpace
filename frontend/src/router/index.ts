@@ -76,11 +76,8 @@ const IctLab = () => import('../pages/common/IctLab.vue')
 const IctLabActivity = () => import('../pages/common/IctLabActivity.vue')
 const IctLabShowroom = () => import('../pages/common/IctLabShowroom.vue')
 const IctLabRules = () => import('../pages/common/IctLabRules.vue')
-const IctLabTyping = () => import('../pages/common/IctLabTyping.vue')
 const IctLabJourney = () => import('../pages/common/IctLabJourney.vue')
 const IctLabHazards = () => import('../pages/common/IctLabHazards.vue')
-const IctLabNetwork = () => import('../pages/common/IctLabNetwork.vue')
-const IctLabBinary = () => import('../pages/common/IctLabBinary.vue')
 const IctLabOnlineSafety = () => import('../pages/common/IctLabOnlineSafety.vue')
 const IctLabBoot = () => import('../pages/common/IctLabBoot.vue')
 const IctLabLaptopRepair = () => import('../pages/common/IctLabLaptopRepair.vue')
@@ -245,11 +242,8 @@ const routes: RouteRecordRaw[] = [
       { path: 'anatomy/systems/:key', name: 'StudentAnatomySystem', component: AnatomySystem },
       { path: 'ict-lab/showroom', name: 'StudentIctLabShowroom', component: IctLabShowroom },
       { path: 'ict-lab/rules', name: 'StudentIctLabRules', component: IctLabRules },
-      { path: 'ict-lab/typing', name: 'StudentIctLabTyping', component: IctLabTyping },
       { path: 'ict-lab/journey', name: 'StudentIctLabJourney', component: IctLabJourney },
       { path: 'ict-lab/hazards', name: 'StudentIctLabHazards', component: IctLabHazards },
-      { path: 'ict-lab/network', name: 'StudentIctLabNetwork', component: IctLabNetwork },
-      { path: 'ict-lab/binary', name: 'StudentIctLabBinary', component: IctLabBinary },
       { path: 'ict-lab/online-safety', name: 'StudentIctLabOnlineSafety', component: IctLabOnlineSafety },
       { path: 'ict-lab/boot', name: 'StudentIctLabBoot', component: IctLabBoot },
       { path: 'ict-lab/laptop-repair', name: 'StudentIctLabLaptopRepair', component: IctLabLaptopRepair },
@@ -340,14 +334,12 @@ const routes: RouteRecordRaw[] = [
       { path: 'anatomy/systems/:key', name: 'TeacherAnatomySystem', component: AnatomySystem },
       { path: 'ict-lab/showroom', name: 'TeacherIctLabShowroom', component: IctLabShowroom },
       { path: 'ict-lab/rules', name: 'TeacherIctLabRules', component: IctLabRules },
-      { path: 'ict-lab/typing', name: 'TeacherIctLabTyping', component: IctLabTyping },
       { path: 'ict-lab/journey', name: 'TeacherIctLabJourney', component: IctLabJourney },
       { path: 'ict-lab/hazards', name: 'TeacherIctLabHazards', component: IctLabHazards },
-      { path: 'ict-lab/network', name: 'TeacherIctLabNetwork', component: IctLabNetwork },
-      { path: 'ict-lab/binary', name: 'TeacherIctLabBinary', component: IctLabBinary },
       { path: 'ict-lab/online-safety', name: 'TeacherIctLabOnlineSafety', component: IctLabOnlineSafety },
       { path: 'ict-lab/boot', name: 'TeacherIctLabBoot', component: IctLabBoot },
       { path: 'ict-lab/laptop-repair', name: 'TeacherIctLabLaptopRepair', component: IctLabLaptopRepair },
+      { path: 'ict-lab/results', name: 'TeacherIctLabResults', component: () => import('../pages/common/IctLabResults.vue') },
       { path: 'ict-lab/:activity', name: 'TeacherIctLabActivity', component: IctLabActivity },
       { path: 'virtual-lab/playground', name: 'TeacherVirtualLabPlayground', component: StudentVirtualLabPlayground },
       // A teacher doing an experiment exactly like a student (same page; nothing saved, no submit)
@@ -383,17 +375,16 @@ const routes: RouteRecordRaw[] = [
       { path: 'anatomy/systems/:key', name: 'HODAnatomySystem', component: AnatomySystem },
       { path: 'ict-lab/showroom', name: 'HODIctLabShowroom', component: IctLabShowroom },
       { path: 'ict-lab/rules', name: 'HODIctLabRules', component: IctLabRules },
-      { path: 'ict-lab/typing', name: 'HODIctLabTyping', component: IctLabTyping },
       { path: 'ict-lab/journey', name: 'HODIctLabJourney', component: IctLabJourney },
       { path: 'ict-lab/hazards', name: 'HODIctLabHazards', component: IctLabHazards },
-      { path: 'ict-lab/network', name: 'HODIctLabNetwork', component: IctLabNetwork },
-      { path: 'ict-lab/binary', name: 'HODIctLabBinary', component: IctLabBinary },
       { path: 'ict-lab/online-safety', name: 'HODIctLabOnlineSafety', component: IctLabOnlineSafety },
       { path: 'ict-lab/boot', name: 'HODIctLabBoot', component: IctLabBoot },
       { path: 'ict-lab/laptop-repair', name: 'HODIctLabLaptopRepair', component: IctLabLaptopRepair },
+      { path: 'ict-lab/results', name: 'HODIctLabResults', component: () => import('../pages/common/IctLabResults.vue') },
       { path: 'ict-lab/:activity', name: 'HODIctLabActivity', component: IctLabActivity },
       { path: 'virtual-lab/practice/:experimentId', name: 'HODVirtualLabPractice', component: StudentVirtualLabExperiment, meta: { practice: true, practiceRole: 'hod' } },
       { path: 'assessments', name: 'HODAssessments', component: HODAssessments },
+      { path: 'marking', name: 'HODMarking', component: () => import('../pages/hod/Marking.vue') },
       { path: 'assessments/:id/preview', name: 'HODAssignmentPreview', component: StudentAssignmentAnswer, meta: { previewRole: 'hod' } },
       { path: 'assessments/:id/submissions', name: 'HODAssignmentSubmissions', component: HODAssignmentSubmissions },
       { path: 'assessments/:id/submissions/:submissionId', name: 'HODSubmissionDetail', component: StudentAssignmentResult, meta: { previewRole: 'hod' } },
@@ -465,11 +456,8 @@ const routes: RouteRecordRaw[] = [
       { path: 'anatomy/systems/:key', name: 'AdminAnatomySystem', component: AnatomySystem },
       { path: 'ict-lab/showroom', name: 'AdminIctLabShowroom', component: IctLabShowroom },
       { path: 'ict-lab/rules', name: 'AdminIctLabRules', component: IctLabRules },
-      { path: 'ict-lab/typing', name: 'AdminIctLabTyping', component: IctLabTyping },
       { path: 'ict-lab/journey', name: 'AdminIctLabJourney', component: IctLabJourney },
       { path: 'ict-lab/hazards', name: 'AdminIctLabHazards', component: IctLabHazards },
-      { path: 'ict-lab/network', name: 'AdminIctLabNetwork', component: IctLabNetwork },
-      { path: 'ict-lab/binary', name: 'AdminIctLabBinary', component: IctLabBinary },
       { path: 'ict-lab/online-safety', name: 'AdminIctLabOnlineSafety', component: IctLabOnlineSafety },
       { path: 'ict-lab/boot', name: 'AdminIctLabBoot', component: IctLabBoot },
       { path: 'ict-lab/laptop-repair', name: 'AdminIctLabLaptopRepair', component: IctLabLaptopRepair },

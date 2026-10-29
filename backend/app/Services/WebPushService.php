@@ -359,6 +359,7 @@ class WebPushService
             'new_item_bank_resource' => $base . '/itembank',
             'supervision_reminder' => $base . '/assignments',
             'new_virtual_lab' => $base . '/virtual-lab/' . (int) ($data['assignment_id'] ?? 0),
+            'ict_lab_task' => $base . '/ict-lab',
             default => $base . '/dashboard',
         };
     }

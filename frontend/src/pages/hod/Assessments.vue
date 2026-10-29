@@ -2,7 +2,7 @@
   <!-- Every assessment set in the department - by whom, for which class, how many have handed in -
        with each one's submissions and a preview one tap away. -->
   <div class="w-full">
-    <PageHeader title="Assessments" description="Everything your department's teachers have set - who set it, for which class, and how many have handed in." icon="pencil" accent="indigo" :active-filters="teacher ? 1 : 0">
+    <PageHeader title="Assessments" description="Everything your department's teachers have set - who set it, for which class, how many have handed in and how many are marked." icon="pencil" accent="indigo" :active-filters="teacher ? 1 : 0">
       <StatStrip v-if="!loading && assignments.length" v-model="status" :items="statItems" />
       <template #filters>
         <select v-model="teacher" class="w-full sm:w-56 py-2 pl-3 pr-8 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white" aria-label="Teacher">
@@ -38,6 +38,15 @@
       <template #cell-submissions_count="{ row }">
         <span class="font-semibold tabular-nums">{{ row.submissions_count }}</span>
       </template>
+      <template #cell-marked_count="{ row }">
+        <span v-if="!row.marked_count && !row.waiting_count" class="text-gray-400">-</span>
+        <span v-else class="whitespace-nowrap">
+          <span class="font-semibold tabular-nums" :class="row.waiting_count ? 'text-gray-900 dark:text-white' : 'text-emerald-700 dark:text-emerald-300'">{{ row.marked_count }}</span>
+          <span v-if="row.waiting_count" class="text-xs text-amber-600 dark:text-amber-300"> · {{ row.waiting_count }} to mark</span>
+          <span v-else class="text-xs text-emerald-700 dark:text-emerald-300"> · all marked</span>
+          <span v-if="row.last_marked_at" class="block text-[11px] text-gray-500 dark:text-gray-400">last {{ shortDate(row.last_marked_at) }}</span>
+        </span>
+      </template>
       <template #cell-status="{ row }">
         <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold capitalize" :class="STATUS[row.status] || STATUS.archived">{{ row.status }}</span>
       </template>
@@ -70,6 +79,9 @@ interface Row {
   class_name: string | null
   teacher_name: string
   submissions_count: number
+  marked_count: number
+  waiting_count: number
+  last_marked_at: string | null
 }
 
 const STATUS: Record<string, string> = {
@@ -83,6 +95,7 @@ const columns: Column[] = [
   { key: 'subject_class', label: 'Subject · class', value: (r: Row) => `${r.subject_name || ''} ${r.class_name || ''}` },
   { key: 'due_date', label: 'Due', sortable: true },
   { key: 'submissions_count', label: 'Handed in', sortable: true, align: 'center' },
+  { key: 'marked_count', label: 'Marked', sortable: true, mobile: 'field', value: (r: Row) => r.marked_count * 1000 - r.waiting_count },
   { key: 'status', label: 'Status', sortable: true }
 ]
 
@@ -98,15 +111,16 @@ const statItems = computed<StatItem[]>(() => [
   { label: 'Published', value: byTeacher.value.filter(a => a.status === 'published').length, key: 'published', tone: 'emerald' },
   { label: 'Drafts', value: byTeacher.value.filter(a => a.status === 'draft').length, key: 'draft', tone: 'amber' },
   { label: 'Archived', value: byTeacher.value.filter(a => a.status === 'archived').length, key: 'archived', tone: 'gray' },
-  { label: 'Handed in', value: byTeacher.value.reduce((n, a) => n + Number(a.submissions_count || 0), 0), key: 'all', tone: 'indigo', hint: 'submissions in all' }
+  { label: 'Handed in', value: byTeacher.value.reduce((n, a) => n + Number(a.submissions_count || 0), 0), key: 'all', tone: 'indigo', hint: 'submissions in all' },
+  { label: 'To mark', value: byTeacher.value.reduce((n, a) => n + a.waiting_count, 0), key: 'to_mark', tone: 'amber', hint: 'scripts waiting' }
 ])
-const shown = computed(() => byTeacher.value.filter(a => !status.value || status.value === 'all' || a.status === status.value))
+const shown = computed(() => byTeacher.value.filter(a => !status.value || status.value === 'all' || (status.value === 'to_mark' ? a.waiting_count > 0 : a.status === status.value)))
 const shortDate = (d: string) => new Date(d.replace(' ', 'T')).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
 
 onMounted(async () => {
   try {
     const response = await axios.get('/api/hod/assignments')
-    assignments.value = (response.data.data.assignments || []).map((a: Row) => ({ ...a, submissions_count: Number(a.submissions_count) || 0 }))
+    assignments.value = (response.data.data.assignments || []).map((a: Row) => ({ ...a, submissions_count: Number(a.submissions_count) || 0, marked_count: Number(a.marked_count) || 0, waiting_count: Number(a.waiting_count) || 0 }))
   } catch (err: any) {
     toast.error(err.response?.data?.message || 'Could not load the assessments')
   } finally {

@@ -5,7 +5,7 @@
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
       </RouterLink>
       <div class="min-w-0 flex-1">
-        <p class="text-[11px] font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">ICT Lab · Computer hardware</p>
+        <p class="text-[11px] font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">ICT Lab · S.5 Topic 3 · Computer Hardware</p>
         <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-tight">Parts and devices showroom</h1>
       </div>
       <div class="w-full sm:w-auto grid grid-cols-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-0.5" role="tablist" aria-label="Mode">
@@ -164,7 +164,7 @@
             >{{ o }}</button>
           </div>
           <div v-if="quizPicked !== null" class="mt-3 rounded-xl p-3" :class="quizPicked === quizQ.answer ? 'bg-emerald-50 text-emerald-900 dark:bg-emerald-900/30 dark:text-emerald-100' : 'bg-rose-50 text-rose-900 dark:bg-rose-900/30 dark:text-rose-100'">
-            <p class="text-sm font-bold">{{ quizPicked === quizQ.answer ? 'Right!' : `It is the ${quizQ.answer.toLowerCase()}.` }}</p>
+            <p class="text-sm font-bold">{{ quizPicked === quizQ.answer ? 'Right!' : quizQ.type === 'kind' ? `It is: ${quizQ.answer}.` : `It is the ${quizQ.answer.toLowerCase()}.` }}</p>
             <p class="text-sm mt-0.5">{{ quizQ.explain }}</p>
             <div class="mt-2.5 flex justify-end">
               <button type="button" class="btn-primary !py-1.5 !text-sm" @click="nextQuestion">{{ quizI + 1 < quiz.length ? 'Next question' : 'See my result' }}</button>
@@ -206,7 +206,7 @@ import AppIcon from '@/components/common/AppIcon.vue'
 import { createWorkbench, type Workbench } from '@/components/ictlab/three/workbench'
 import { buildPc, setEmissive, fadeExcept, type PcRig, type PcPartKey } from '@/components/ictlab/three/pcModel'
 import { PC_PARTS, PART_DETAILS } from '@/components/ictlab/activities'
-import { DEVICES, DEVICE_GROUPS } from '@/components/ictlab/deviceInfo'
+import { DEVICES, DEVICE_GROUPS, DEVICE_KINDS, KIND_OF } from '@/components/ictlab/deviceInfo'
 import { buildDevice, type DeviceKey } from '@/components/ictlab/three/devices'
 import { CLOSEUPS, STAND_TURN, type Closeup } from '@/components/ictlab/closeups'
 import { labRoleOf } from '@/components/ictlab/types'
@@ -231,12 +231,19 @@ const nameOf = (k: string) => DEVICES[k as DeviceKey]?.name || PC_PARTS[k].name
 const shortName = (k: string) => nameOf(k).replace(/ \(.*\)$/, '')
 const itemName = computed(() => nameOf(key.value))
 const fact = computed(() => device.value?.fact || PART_DETAILS[key.value].fact)
+// Input, output, storage, communication or processing - the syllabus's classification
+const kindRow = computed(() => {
+  if (key.value === 'tablet') return [{ label: 'Kind of device', icon: 'target', text: 'A computer. Its touch screen is both an input device (your taps) and an output device (the picture).' }]
+  const k = KIND_OF[key.value]
+  return k ? [{ label: 'Kind of device', icon: 'target', text: `${k.kind} - ${k.why.charAt(0).toLowerCase()}${k.why.slice(1)}` }] : []
+})
 const rows = computed(() => {
   const d = device.value
   if (d) {
     return [
       { label: 'What it looks like', icon: 'photo', text: d.looks },
       { label: 'What it does', icon: 'bolt', text: d.does },
+      ...kindRow.value,
       { label: 'How it connects', icon: 'paperclip', text: d.connects }
     ]
   }
@@ -245,6 +252,7 @@ const rows = computed(() => {
   return [
     { label: 'What it looks like', icon: 'photo', text: details.looks },
     { label: 'What it does', icon: 'bolt', text: part.does },
+    ...kindRow.value,
     { label: 'Where it goes', icon: 'map', text: details.where },
     { label: 'When it fails', icon: 'warning', text: part.fails }
   ]
@@ -264,9 +272,11 @@ function exploreItem(k: string) {
 }
 
 // ---------------------------------------------------------------- test yourself
-// Ten questions: name the part on the stand, pick the part that does a job, and name a marked
-// detail on the motherboard. Saved for students as an ICT Lab attempt ('parts-quiz').
-interface QuizQ { type: 'name' | 'job' | 'spot'; key: string; spot?: number; prompt: string; clue?: string; options: string[]; answer: string; explain: string }
+// Ten questions: name the part on the stand, pick the part that does a job, name a marked detail
+// on the motherboard, and classify hardware as input, output, storage, communication or
+// processing - including a device that is both input and output (Subsidiary ICT Topic 3a).
+// Saved for students as an ICT Lab attempt ('parts-quiz').
+interface QuizQ { type: 'name' | 'job' | 'spot' | 'kind'; key: string; spot?: number; prompt: string; clue?: string; options: string[]; answer: string; explain: string }
 const quizOn = ref(false)
 const quiz = ref<QuizQ[]>([])
 const quizI = ref(0)
@@ -284,21 +294,35 @@ function makeQuiz(): QuizQ[] {
   const keys = shuffle(ALL)
   const out: QuizQ[] = []
   // name what is on the stand (the other choices from the same group, so it is not a give-away)
-  for (const k of keys.slice(0, 4)) {
+  for (const k of keys.slice(0, 3)) {
     const same = GROUPS.find(g => g.keys.includes(k))!.keys
     const pool = (same.length >= 4 ? same : ALL).map(shortName)
     out.push({ type: 'name', key: k, prompt: 'What is this?', options: optionsFor(shortName(k), pool), answer: shortName(k), explain: DEVICES[k as DeviceKey]?.does || PC_PARTS[k].does })
   }
   // which part does this job?
-  for (const k of keys.slice(4, 7)) {
+  for (const k of keys.slice(3, 5)) {
     const job = DEVICES[k as DeviceKey]?.does || PC_PARTS[k].does
     out.push({ type: 'job', key: k, prompt: 'Which one does this job?', clue: job, options: optionsFor(shortName(k), ALL.map(shortName)), answer: shortName(k), explain: `${nameOf(k)}: ${job}` })
   }
   // name the marked detail on the motherboard
   const mb = CLOSEUPS.motherboard
-  for (const i of shuffle(mb.map((_, n) => n)).slice(0, 3)) {
+  for (const i of shuffle(mb.map((_, n) => n)).slice(0, 2)) {
     out.push({ type: 'spot', key: 'motherboard', spot: i, prompt: 'On the motherboard: what is the part marked "?"', options: optionsFor(mb[i].label, mb.map(c => c.label)), answer: mb[i].label, explain: mb[i].text })
   }
+  // what kind of device is it? (not one already asked about, and two different kinds)
+  const used = keys.slice(0, 5)
+  const kinds = shuffle(Object.keys(KIND_OF).filter(k => !used.includes(k)))
+  const picked: string[] = []
+  for (const k of kinds) {
+    if (picked.length === 2) break
+    if (!picked.some(p => KIND_OF[p].kind === KIND_OF[k].kind)) picked.push(k)
+  }
+  for (const k of picked) {
+    const { kind, why } = KIND_OF[k]
+    out.push({ type: 'kind', key: k, prompt: `What kind of device is the ${shortName(k).toLowerCase()}?`, options: optionsFor(kind, DEVICE_KINDS), answer: kind, explain: `${kind}: ${why}` })
+  }
+  // a device that is both
+  out.push({ type: 'kind', key: 'tablet', prompt: 'You tap the tablet\'s touch screen, and it shows you the result. What kind of device is the touch screen?', options: shuffle(['Both input and output', 'Input device', 'Output device', 'Storage device']), answer: 'Both input and output', explain: 'Touching it sends your taps into the tablet (input); showing the picture is output. Touch screens, and the screens on ATMs and phones, are both.' })
   return shuffle(out)
 }
 function startQuiz() {

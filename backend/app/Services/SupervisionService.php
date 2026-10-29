@@ -96,7 +96,7 @@ class SupervisionService
      * Every published assessment in the term, with its counts.
      * @return array<int, array<string, mixed>>
      */
-    public function assessments(array $term, ?int $teacherId = null): array
+    public function assessments(array $term, ?int $teacherId = null, ?int $departmentId = null): array
     {
         $sql = "SELECT a.id, a.title, a.teacher_id, a.assessment_category, s.department_id,
                        s.name AS subject_name, s.code AS subject_code,
@@ -105,7 +105,7 @@ class SupervisionService
                        COALESCE(a.deadline_at, a.due_date) AS deadline, a.published_at,
                        " . self::expectedSql() . " AS expected,
                        COALESCE(x.handed_in, 0) AS handed_in, COALESCE(x.waiting, 0) AS waiting,
-                       COALESCE(x.marked, 0) AS marked, COALESCE(x.started, 0) AS started, x.oldest_waiting
+                       COALESCE(x.marked, 0) AS marked, COALESCE(x.started, 0) AS started, x.oldest_waiting, x.last_marked
                 FROM assignments a
                 JOIN subjects s ON s.id = a.subject_id
                 LEFT JOIN classes c ON c.id = a.class_id
@@ -115,7 +115,8 @@ class SupervisionService
                            COUNT(DISTINCT CASE WHEN status IN ('submitted','marking') THEN student_id END) AS waiting,
                            COUNT(DISTINCT CASE WHEN status IN ('graded','returned') THEN student_id END) AS marked,
                            COUNT(DISTINCT CASE WHEN status = 'in_progress' THEN student_id END) AS started,
-                           MIN(CASE WHEN status IN ('submitted','marking') THEN submitted_at END) AS oldest_waiting
+                           MIN(CASE WHEN status IN ('submitted','marking') THEN submitted_at END) AS oldest_waiting,
+                           MAX(CASE WHEN status IN ('graded','returned') THEN marked_at END) AS last_marked
                     FROM assignment_submissions WHERE deleted_at IS NULL
                     GROUP BY assignment_id
                 ) x ON x.assignment_id = a.id
@@ -124,6 +125,10 @@ class SupervisionService
         if ($teacherId !== null) {
             $sql .= " AND a.teacher_id = :teacher_id";
             $params['teacher_id'] = $teacherId;
+        }
+        if ($departmentId !== null) {
+            $sql .= " AND s.department_id = :department_id";
+            $params['department_id'] = $departmentId;
         }
         $sql .= " ORDER BY COALESCE(a.deadline_at, a.due_date, a.published_at) DESC";
         $stmt = $this->db()->prepare($sql);
@@ -160,31 +165,39 @@ class SupervisionService
                 'waiting' => (int) $r['waiting'],
                 'marked' => (int) $r['marked'],
                 'waiting_days' => $oldest ? (int) floor(($now - $oldest) / 86400) : null,
+                'last_marked_at' => $r['last_marked'],
             ];
         }
         return $out;
     }
 
     /** Scripts handed in but not yet marked, with how long each has waited - per teacher. */
-    private function overdueScripts(array $term): array
+    private function overdueScripts(array $term, ?int $departmentId = null): array
     {
+        $params = ['t_start' => $term['start_date'], 't_end' => $term['end_date']];
+        if ($departmentId !== null) $params['department_id'] = $departmentId;
         $stmt = $this->db()->prepare(
             "SELECT a.teacher_id, COUNT(*) AS n
              FROM assignment_submissions sub
              JOIN assignments a ON a.id = sub.assignment_id
-             WHERE sub.deleted_at IS NULL AND sub.status IN ('submitted','marking')
+             JOIN subjects s ON s.id = a.subject_id
+             WHERE" . ($departmentId !== null ? " s.department_id = :department_id AND" : "") . " sub.deleted_at IS NULL AND sub.status IN ('submitted','marking')
                AND sub.submitted_at < DATE_SUB(NOW(), INTERVAL " . self::MARKING_DAYS . " DAY)
                AND a.deleted_at IS NULL AND a.status = 'published' AND " . self::termSql() . "
              GROUP BY a.teacher_id"
         );
-        $stmt->execute(['t_start' => $term['start_date'], 't_end' => $term['end_date']]);
+        $stmt->execute($params);
         $out = [];
         foreach ($stmt->fetchAll() as $r) $out[(int) $r['teacher_id']] = (int) $r['n'];
         return $out;
     }
 
-    /** The whole school for a term: departments, and every teacher with their figures and flags. */
-    public function overview(array $term): array
+    /**
+     * The whole school for a term: departments, and every teacher with their figures and flags.
+     * With a department (a HOD's view), only that department's teachers, and only the work they
+     * set for its subjects.
+     */
+    public function overview(array $term, ?int $departmentId = null): array
     {
         $db = $this->db();
         $departments = $db->query("SELECT id, name, code FROM departments WHERE deleted_at IS NULL ORDER BY name")->fetchAll();
@@ -207,11 +220,18 @@ class SupervisionService
                 'last_seen' => $r['last_seen'],
                 'department_ids' => $r['dept_ids'] ? array_map('intval', explode(',', (string) $r['dept_ids'])) : [],
                 'set' => 0, 'expected' => 0, 'handed_in' => 0, 'missing' => 0, 'closed_expected' => 0, 'closed_handed_in' => 0,
-                'waiting' => 0, 'marked' => 0, 'overdue' => 0, 'oldest_days' => null, 'enotes' => 0, 'drafts' => 0,
+                'waiting' => 0, 'marked' => 0, 'overdue' => 0, 'oldest_days' => null, 'enotes' => 0, 'drafts' => 0, 'last_marked_at' => null,
             ];
         }
 
-        $assessments = $this->assessments($term);
+        if ($departmentId !== null) {
+            $teachers = array_filter($teachers, fn ($t) => in_array($departmentId, $t['department_ids'], true));
+            foreach ($teachers as &$t) $t['department_ids'] = [$departmentId];
+            unset($t);
+            $departments = array_values(array_filter($departments, fn ($d) => (int) $d['id'] === $departmentId));
+        }
+
+        $assessments = $this->assessments($term, null, $departmentId);
         foreach ($assessments as $a) {
             $tid = $a['teacher_id'];
             if (!isset($teachers[$tid])) continue;
@@ -227,19 +247,25 @@ class SupervisionService
             }
             $t['waiting'] += $a['waiting'];
             $t['marked'] += $a['marked'];
+            if ($a['last_marked_at'] !== null && ($t['last_marked_at'] === null || $a['last_marked_at'] > $t['last_marked_at'])) $t['last_marked_at'] = $a['last_marked_at'];
             if ($a['waiting_days'] !== null) $t['oldest_days'] = max($t['oldest_days'] ?? 0, $a['waiting_days']);
             unset($t);
         }
-        foreach ($this->overdueScripts($term) as $tid => $n) {
+        foreach ($this->overdueScripts($term, $departmentId) as $tid => $n) {
             if (isset($teachers[$tid])) $teachers[$tid]['overdue'] = $n;
         }
 
         // eNotes published and assessments still in draft, this term
         $range = ['t_start' => $term['start_date'], 't_end' => $term['end_date']];
+        $inDept = '';
+        if ($departmentId !== null) {
+            $range['department_id'] = $departmentId;
+            $inDept = ' AND department_id = :department_id';
+        }
         $stmt = $db->prepare(
             "SELECT teacher_id, COUNT(*) AS n FROM enote_topics
              WHERE deleted_at IS NULL AND status = 'published'
-               AND published_at >= :t_start AND published_at < DATE_ADD(:t_end, INTERVAL 1 DAY)
+               AND published_at >= :t_start AND published_at < DATE_ADD(:t_end, INTERVAL 1 DAY){$inDept}
              GROUP BY teacher_id"
         );
         $stmt->execute($range);
@@ -249,7 +275,8 @@ class SupervisionService
         $stmt = $db->prepare(
             "SELECT teacher_id, COUNT(*) AS n FROM assignments
              WHERE deleted_at IS NULL AND status = 'draft'
-               AND created_at >= :t_start AND created_at < DATE_ADD(:t_end, INTERVAL 1 DAY)
+               AND created_at >= :t_start AND created_at < DATE_ADD(:t_end, INTERVAL 1 DAY)"
+            . ($departmentId !== null ? " AND subject_id IN (SELECT id FROM subjects WHERE department_id = :department_id)" : "") . "
              GROUP BY teacher_id"
         );
         $stmt->execute($range);
@@ -284,6 +311,7 @@ class SupervisionService
                 'overdue' => $t['overdue'],
                 'oldest_days' => $t['oldest_days'],
                 'marked' => $t['marked'],
+                'last_marked_at' => $t['last_marked_at'],
                 'marked_rate' => ($t['marked'] + $t['waiting']) > 0 ? (int) round($t['marked'] * 100 / ($t['marked'] + $t['waiting'])) : null,
                 'enotes' => $t['enotes'],
                 'flags' => $flags,
@@ -497,6 +525,43 @@ class SupervisionService
             'quiet' => $quiet,
             'inactive_classes' => $classes,
             'teachers_total' => count($teachers),
+        ];
+    }
+
+    /**
+     * Every script handed in for an assessment: the learner, whether it is marked, the mark, and
+     * when it was handed in and marked - how far the teacher has got with it.
+     */
+    public function scripts(int $assignmentId): ?array
+    {
+        $db = $this->db();
+        $stmt = $db->prepare("SELECT id, title, total_marks FROM assignments WHERE id = ? AND deleted_at IS NULL");
+        $stmt->execute([$assignmentId]);
+        $a = $stmt->fetch();
+        if (!$a) return null;
+        $stmt = $db->prepare(
+            "SELECT sub.id, sub.status, sub.total_score, sub.percentage, sub.submitted_at, sub.marked_at,
+                    st.id AS student_id, st.first_name, st.last_name, st.admission_number
+             FROM assignment_submissions sub
+             JOIN students st ON st.id = sub.student_id
+             WHERE sub.assignment_id = ? AND sub.deleted_at IS NULL AND sub.status IN ('submitted','marking','graded','returned')
+             ORDER BY (sub.status IN ('graded','returned')), sub.submitted_at"
+        );
+        $stmt->execute([$assignmentId]);
+        return [
+            'assignment' => ['id' => (int) $a['id'], 'title' => $a['title'], 'total_marks' => $a['total_marks'] !== null ? (float) $a['total_marks'] : null],
+            'scripts' => array_map(fn ($r) => [
+                'id' => (int) $r['id'],
+                'student_id' => (int) $r['student_id'],
+                'name' => trim($r['first_name'] . ' ' . $r['last_name']),
+                'admission_number' => $r['admission_number'],
+                'marked' => in_array($r['status'], ['graded', 'returned'], true),
+                'returned' => $r['status'] === 'returned',
+                'score' => $r['total_score'] !== null ? (float) $r['total_score'] : null,
+                'percentage' => $r['percentage'] !== null ? (float) $r['percentage'] : null,
+                'submitted_at' => $r['submitted_at'],
+                'marked_at' => $r['marked_at'],
+            ], $stmt->fetchAll()),
         ];
     }
 

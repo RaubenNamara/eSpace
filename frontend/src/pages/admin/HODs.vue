@@ -340,6 +340,7 @@
         <form @submit.prevent="updateHOD" class="flex-1 flex flex-col min-h-0">
           <!-- Form Content -->
           <div class="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-6 min-h-0">
+            <ProfilePhotoRemover class="md:col-span-2" type="hod" :id="editFormData.id" :photo="editFormData.profile_photo" :name="niceName(`${editFormData.first_name} ${editFormData.last_name}`)" compact @removed="photoRemoved" />
             <!-- Personal Information -->
             <div class="md:col-span-2">
               <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
@@ -489,12 +490,14 @@ import StatStrip, { type StatItem } from '@/components/ui/StatStrip.vue'
 import DataTable, { type Column } from '@/components/ui/DataTable.vue'
 import ActionMenu from '@/components/ui/ActionMenu.vue'
 import { niceName, initials } from '@/components/dashboard/teacher/time'
+import ProfilePhotoRemover from '@/components/admin/ProfilePhotoRemover.vue'
 
 const toast = useToastStore()
 const confirmDialog = useConfirmStore()
 
 interface HOD {
   id: number
+  profile_photo?: string | null
   username: string
   email: string
   first_name: string
@@ -564,7 +567,8 @@ const editFormData = ref({
   phone: '',
   department_id: '',
   appointed_date: '',
-  is_active: 1
+  is_active: 1,
+  profile_photo: null as string | null
 })
 
 // Every HOD at once - search and filters happen in the table
@@ -680,9 +684,17 @@ const editHOD = async (hod: HOD) => {
     phone: hod.phone || '',
     department_id: hod.department_id.toString(),
     appointed_date: hod.appointed_date,
-    is_active: hod.is_active ? 1 : 0
+    is_active: hod.is_active ? 1 : 0,
+    profile_photo: hod.profile_photo || null
   }
   showEditModal.value = true
+}
+
+// The photo is gone from the list too
+const photoRemoved = () => {
+  editFormData.value.profile_photo = null
+  const h = hods.value.find(x => x.id === editFormData.value.id)
+  if (h) h.profile_photo = null
 }
 
 const updateHOD = async () => {

@@ -56,6 +56,9 @@
               <p v-if="!isPreview && form.title" class="text-xs text-indigo-600 dark:text-indigo-400 truncate mt-0.5">
                 Title (auto): {{ form.title }}
               </p>
+              <p v-if="!isPreview && saveState" class="text-xs mt-0.5 flex items-center gap-1.5" :class="saveState.tone">
+                <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" :class="saveState.dot"></span>{{ saveState.text }}
+              </p>
               <p v-else-if="!isPreview" class="text-xs text-gray-400 truncate mt-0.5">
                 Title will be set automatically once you choose a Topic (LOA) or Topic(s) (AOI/EOC) below.
               </p>
@@ -73,6 +76,19 @@
               <span>Edit Assignment</span>
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Work kept on this device that never reached the server: offer it back -->
+    <div v-if="backupOffer && !isPreview" class="w-full max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12 pt-4">
+      <div class="rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-3.5 flex flex-col sm:flex-row sm:items-center gap-3">
+        <p class="flex-1 text-sm text-amber-900 dark:text-amber-100">
+          <b>Unsaved work found.</b> {{ backupOffer.questions }} question{{ backupOffer.questions === 1 ? '' : 's' }} and the settings from {{ backupOffer.when }} did not reach the server - the page was closed, or the internet went off.
+        </p>
+        <div class="flex gap-2 flex-shrink-0">
+          <button type="button" class="px-3 py-1.5 rounded-lg text-sm font-semibold text-amber-900 dark:text-amber-100 hover:bg-amber-100 dark:hover:bg-amber-900/40" @click="discardBackup">Discard</button>
+          <button type="button" class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700" @click="restoreBackup">Restore it</button>
         </div>
       </div>
     </div>
@@ -1298,7 +1314,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter, useRoute, onBeforeRouteLeave } from 'vue-router'
 import axios from 'axios'
 import CKEditor from '@/components/teacher/CKEditor.vue'
 import AoiScenarioSuggest from '@/components/assignment/AoiScenarioSuggest.vue'
@@ -1312,6 +1328,7 @@ import type { ClassTarget } from '@/components/teacher/TeacherClassSelector.vue'
 import type { Construct, ConstructTopicOption } from '@/types/construct'
 import { resolveAssetUrl } from '@/utils/url'
 import { useConfirmStore } from '@/stores/confirm'
+import { useAuthStore } from '@/stores/auth'
 
 interface QuestionOption {
   option_text: string
@@ -1830,7 +1847,8 @@ const loadAssignment = async () => {
     const response = await axios.get(`${API_BASE}/teacher/assignments/${route.params.id}`)
     if (response.data.success) {
       const assignment = response.data.data
-      
+      loadedStatus.value = assignment.status || 'draft'
+
       // Populate form fields
       form.value = {
         title: assignment.title || '',
@@ -2707,6 +2725,7 @@ const syncQuestions = async (assignmentId: number | string) => {
       // New question (temporary ID)
       const response = await axios.post(`${API_BASE}/teacher/assignments/${assignmentId}/questions`, questionPayload)
       realQuestionId = response.data.data.id
+      question.id = realQuestionId
     } else {
       // Existing question - persist any edits made via the Edit Question modal
       await axios.put(`${API_BASE}/teacher/assignments/${assignmentId}/questions/${id}`, questionPayload)
@@ -2714,6 +2733,7 @@ const syncQuestions = async (assignmentId: number | string) => {
 
     if (pdfFile) {
       await uploadQuestionPdf(realQuestionId, pdfFile)
+      ;(question as any).pdfFile = null
     }
   }
 
@@ -2765,21 +2785,24 @@ const persistAssignment = async (): Promise<number | string | null> => {
   // this used to unconditionally send status:'draft', is_published:false on every save,
   // which silently un-published an already-published assignment just from clicking "Save
   // Draft" to persist an unrelated field edit like a typo or mark correction.
-  if (!isEdit.value) {
+  const existingId = isEdit.value ? route.params.id : createdId.value
+  if (!existingId) {
     data.status = 'draft'
     data.is_published = false
   }
 
   let response
-  if (isEdit.value) {
-    response = await axios.put(`${API_BASE}/teacher/assignments/${route.params.id}`, data)
+  if (existingId) {
+    response = await axios.put(`${API_BASE}/teacher/assignments/${existingId}`, data)
   } else {
     response = await axios.post(`${API_BASE}/teacher/assignments`, data)
   }
 
   if (!response.data.success) return null
 
-  const assignmentId = isEdit.value ? route.params.id : response.data.data.id
+  const assignmentId = existingId || response.data.data.id
+  // remembered at once, so a later step failing can't lead to it being created twice
+  if (!existingId) createdId.value = assignmentId
   await syncQuestions(assignmentId)
   await syncCurriculumLinkage(assignmentId)
   await syncAssignmentClasses(assignmentId)
@@ -2807,11 +2830,15 @@ const syncCurriculumLinkage = async (assignmentId: number | string) => {
   }
 }
 
+// A new assessment created during this visit, before the page has moved to its edit address
+const createdId = ref<number | string | null>(null)
+
 const saveDraft = async () => {
   // Title is auto-derived (see derivedTitle) and persistAssignment() falls back to "Untitled
   // Assessment" if nothing's derivable yet - Save Draft must never be blocked by a missing title.
   saving.value = true
   try {
+    await waitForAutosave()
     const assignmentId = await persistAssignment()
     if (assignmentId) {
       showToast('success', 'Assignment saved as draft')
@@ -2821,12 +2848,14 @@ const saveDraft = async () => {
         // await the navigation, then load explicitly so questions get their real ids.
         await router.push(`/teacher/assignments/${assignmentId}/edit`)
         await loadAssignment()
+        await markSaved()
       } else {
         // Newly-added questions above were just created server-side and now have real
         // ids, but questions.value still holds their old temporary (Date.now()) ids -
         // reload so editing one of them right after saving works instead of getting
         // stuck on "save as draft first" forever.
         await loadAssignment()
+        await markSaved()
       }
     }
   } catch (err: any) {
@@ -2851,7 +2880,9 @@ const previewAssignment = async () => {
 
   previewing.value = true
   try {
+    await waitForAutosave()
     const assignmentId = await persistAssignment()
+    if (assignmentId) await markSaved()
     if (assignmentId) {
       if (!isEdit.value) {
         await router.push(`/teacher/assignments/${assignmentId}/edit`)
@@ -2913,6 +2944,7 @@ const publishAssignment = async () => {
   }
 
   publishing.value = true
+  await waitForAutosave()
   try {
     const data = {
       title: form.value.title || 'Untitled Assessment',
@@ -2945,15 +2977,17 @@ const publishAssignment = async () => {
       is_published: true
     }
 
+    const existingId = isEdit.value ? route.params.id : createdId.value
     let response
-    if (isEdit.value) {
-      response = await axios.put(`${API_BASE}/teacher/assignments/${route.params.id}`, data)
+    if (existingId) {
+      response = await axios.put(`${API_BASE}/teacher/assignments/${existingId}`, data)
     } else {
       response = await axios.post(`${API_BASE}/teacher/assignments`, data)
     }
 
     if (response.data.success) {
-      const assignmentId = isEdit.value ? route.params.id : response.data.data.id
+      const assignmentId = existingId || response.data.data.id
+      if (!existingId) createdId.value = assignmentId
 
       await syncQuestions(assignmentId)
       await syncCurriculumLinkage(assignmentId)
@@ -2963,6 +2997,7 @@ const publishAssignment = async () => {
       await axios.post(`${API_BASE}/teacher/assignments/${assignmentId}/publish`)
 
       showToast('success', 'Assignment published successfully')
+      await markSaved()
       router.push('/teacher/assignments')
     }
   } catch (err: any) {
@@ -2975,6 +3010,215 @@ const publishAssignment = async () => {
   }
 }
 
+
+// ---- Autosave ----
+// A draft saves itself a few seconds after each change, so a closed tab, a power cut or a
+// forgotten Save Draft never loses a teacher's work. A published assessment does not - saving it
+// while the teacher is still typing would change what students see - so its changes wait for
+// Save, with a warning before leaving. Either way the questions and settings are also kept on
+// this device until they reach the server, and offered back the next time it is opened.
+const AUTOSAVE_DELAY = 6000
+const loadedStatus = ref<string>('draft')
+const ready = ref(false)
+const autoSaving = ref(false)
+const autosaveFailed = ref(false)
+const lastSavedAt = ref<Date | null>(null)
+const savedSnapshot = ref('')
+const changeTick = ref(0)
+let autosaveTimer: number | undefined
+let backupTimer: number | undefined
+let inFlight: Promise<void> | null = null
+const auth = useAuthStore()
+
+const canAutosave = computed(() => loadedStatus.value === 'draft' && !isPreview.value)
+// A new assessment is only worth creating on the server once something is in it
+// A new assessment can be created once it has what the server asks for (a due date, and
+// marks from at least one question) - the same as Save Draft
+const worthSaving = computed(() => isEdit.value || (!!form.value.due_date && Number(form.value.total_marks) > 0))
+// The server refused the save (not a lost connection): why, in its words
+const autosaveRefused = ref('')
+
+// Everything a save sends - question ids and picked PDFs left out, as a save changes those itself
+const snapshot = () => JSON.stringify({
+  form: form.value,
+  questions: questions.value.map(q => { const { id, pdfFile, ...rest } = q as any; return rest }),
+  classes: selectedClassIds.value,
+  topics: selectedTopicIds.value,
+  outcomes: selectedLearningOutcomeIds.value,
+  construct: selectedConstructId.value,
+  countsIn: countsInTermId.value
+})
+const isDirty = computed(() => {
+  void changeTick.value
+  return ready.value && snapshot() !== savedSnapshot.value
+})
+
+// After a save or a load: wait for the watchers that tidy the form (title, total marks) to settle
+const markSaved = async () => {
+  await nextTick()
+  await new Promise(r => setTimeout(r, 400))
+  savedSnapshot.value = snapshot()
+  lastSavedAt.value = new Date()
+  autosaveFailed.value = false
+  clearBackup()
+}
+
+const waitForAutosave = async () => {
+  if (autosaveTimer) { clearTimeout(autosaveTimer); autosaveTimer = undefined }
+  if (inFlight) await inFlight
+}
+
+const scheduleAutosave = (delay = AUTOSAVE_DELAY) => {
+  if (autosaveTimer) clearTimeout(autosaveTimer)
+  autosaveTimer = window.setTimeout(runAutosave, delay)
+}
+
+const runAutosave = async () => {
+  autosaveTimer = undefined
+  if (!canAutosave.value || !worthSaving.value || !isDirty.value) return
+  if (saving.value || publishing.value || previewing.value || inFlight) { scheduleAutosave(); return }
+  autoSaving.value = true
+  const snap = snapshot()
+  inFlight = (async () => {
+    try {
+      const assignmentId = await persistAssignment()
+      if (!assignmentId) throw new Error('not saved')
+      // A new assessment now has a home - the same page, at its edit address
+      if (!isEdit.value) await router.replace(`/teacher/assignments/${assignmentId}/edit`)
+      savedSnapshot.value = snap
+      lastSavedAt.value = new Date()
+      autosaveFailed.value = false
+      autosaveRefused.value = ''
+      if (snapshot() === snap) clearBackup()
+    } catch (err: any) {
+      if (!isEdit.value && createdId.value) await router.replace(`/teacher/assignments/${createdId.value}/edit`)
+      if (err?.response?.status === 422) {
+        // fixed by the teacher, not by trying again - the next change tries again
+        const errors = err.response.data?.errors
+        autosaveRefused.value = String((errors && Object.values(errors)[0]) || err.response.data?.message || 'Some details are missing')
+        autosaveFailed.value = false
+      } else {
+        autosaveFailed.value = true
+      }
+    }
+  })()
+  await inFlight
+  inFlight = null
+  autoSaving.value = false
+  // try again later after a failure; save again if more was typed meanwhile
+  if (autosaveFailed.value) scheduleAutosave(30000)
+  else if (isDirty.value) scheduleAutosave()
+}
+
+// The copy kept on this device, per teacher and per assessment
+const backupKey = () => `assessment-backup:${auth.user?.id ?? 0}:${route.params.id || 'new'}`
+const saveBackup = () => {
+  try {
+    localStorage.setItem(backupKey(), JSON.stringify({
+      at: Date.now(),
+      form: form.value,
+      questions: questions.value.map(q => { const { pdfFile, ...rest } = q as any; return rest })
+    }))
+  } catch { /* storage full or blocked - the server save still runs */ }
+}
+const clearBackup = () => {
+  try { localStorage.removeItem(backupKey()) } catch { /* ignore */ }
+  try { localStorage.removeItem(`assessment-backup:${auth.user?.id ?? 0}:new`) } catch { /* ignore */ }
+}
+
+watch([form, questions, selectedClassIds, selectedTopicIds, selectedLearningOutcomeIds, selectedConstructId, countsInTermId], () => {
+  if (!ready.value) return
+  changeTick.value++
+  if (!isDirty.value) return
+  if (backupTimer) clearTimeout(backupTimer)
+  backupTimer = window.setTimeout(saveBackup, 1000)
+  if (canAutosave.value) scheduleAutosave()
+}, { deep: true })
+
+// Offering a kept copy back: the questions and the settings typed in (class, topic and outcome
+// choices are quick to pick again, and come back with the server copy)
+const backupOffer = ref<{ questions: number; when: string; data: any } | null>(null)
+const checkBackup = () => {
+  try {
+    const raw = localStorage.getItem(backupKey())
+    if (!raw) return
+    const data = JSON.parse(raw)
+    const sameQuestions = JSON.stringify((data.questions || []).map((q: any) => { const { id, ...r } = q; return r }))
+      === JSON.stringify(questions.value.map(q => { const { id, pdfFile, ...r } = q as any; return r }))
+    if (sameQuestions && JSON.stringify(data.form) === JSON.stringify(form.value)) { clearBackup(); return }
+    backupOffer.value = {
+      questions: (data.questions || []).length,
+      when: new Date(data.at).toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
+      data
+    }
+  } catch { /* a broken copy is ignored */ }
+}
+const KEEP_FROM_SERVER = ['subject_id', 'classTarget', 'assessment_category', 'academic_year', 'academic_year_id', 'term_id'] as const
+const restoreBackup = () => {
+  const data = backupOffer.value?.data
+  if (!data) return
+  const keep: Record<string, unknown> = {}
+  for (const k of KEEP_FROM_SERVER) keep[k] = (form.value as any)[k]
+  form.value = { ...form.value, ...data.form, ...keep }
+  questions.value = data.questions || []
+  // questions saved on the server before but missing from the copy are deleted on the next save
+  backupOffer.value = null
+  showToast('success', 'Your unsaved work is back')
+}
+const discardBackup = () => {
+  clearBackup()
+  backupOffer.value = null
+}
+
+// What the header says about saving
+const saveState = computed<{ text: string; tone: string; dot: string } | null>(() => {
+  const time = (d: Date) => d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+  if (autoSaving.value || saving.value) return { text: 'Saving…', tone: 'text-gray-500 dark:text-gray-400', dot: 'bg-gray-400 animate-pulse' }
+  if (autosaveFailed.value) return { text: 'Not saved - no connection. Kept on this device; trying again.', tone: 'text-rose-600 dark:text-rose-300', dot: 'bg-rose-500' }
+  if (autosaveRefused.value && isDirty.value) return { text: `Not saved yet: ${autosaveRefused.value}. Kept on this device.`, tone: 'text-amber-700 dark:text-amber-300', dot: 'bg-amber-500' }
+  if (isDirty.value) {
+    if (canAutosave.value && worthSaving.value) return { text: 'Unsaved changes - saving in a moment', tone: 'text-gray-500 dark:text-gray-400', dot: 'bg-amber-400' }
+    if (canAutosave.value) return { text: 'Kept on this device - saves by itself once it has a due date and a question with marks', tone: 'text-gray-500 dark:text-gray-400', dot: 'bg-amber-400' }
+    if (!canAutosave.value) return { text: 'Unsaved changes - this assessment is published, so press Save to update it', tone: 'text-amber-700 dark:text-amber-300', dot: 'bg-amber-500' }
+    return null
+  }
+  if (lastSavedAt.value) return { text: `${canAutosave.value ? 'Saved automatically' : 'Saved'} at ${time(lastSavedAt.value)}`, tone: 'text-emerald-700 dark:text-emerald-300', dot: 'bg-emerald-500' }
+  return canAutosave.value && isEdit.value ? { text: 'Changes save automatically', tone: 'text-gray-500 dark:text-gray-400', dot: 'bg-emerald-500' } : null
+})
+
+// Leaving with unsaved changes: save a draft on the way out, or ask first
+const onBeforeUnload = (e: BeforeUnloadEvent) => {
+  if (!isDirty.value) return
+  saveBackup()
+  e.preventDefault()
+  e.returnValue = ''
+}
+window.addEventListener('beforeunload', onBeforeUnload)
+onUnmounted(() => {
+  window.removeEventListener('beforeunload', onBeforeUnload)
+  if (autosaveTimer) clearTimeout(autosaveTimer)
+  if (backupTimer) clearTimeout(backupTimer)
+})
+// Moving within the builder (a new assessment getting its edit address) is not leaving it
+const BUILDER_ROUTES = ['AssignmentBuilder', 'AssignmentView', 'AssignmentEdit']
+onBeforeRouteLeave(async (to) => {
+  if (BUILDER_ROUTES.includes(String(to.name))) return true
+  if (!ready.value || !isDirty.value || publishing.value) return true
+  if (canAutosave.value && worthSaving.value) {
+    await waitForAutosave()
+    await runAutosave()
+    if (!autosaveFailed.value) return true
+  }
+  saveBackup()
+  return await confirmDialog.open({
+    title: 'Leave without saving?',
+    message: canAutosave.value
+      ? 'Your latest changes could not be saved just now. A copy is kept on this device and offered back when you open this assessment again.'
+      : 'This assessment is published, so changes are only saved when you press Save. A copy is kept on this device and offered back when you open it again.',
+    confirmLabel: 'Leave',
+    cancelLabel: 'Stay'
+  })
+})
 
 onMounted(async () => {
   // availableClasses must be loaded before loadAssignment() tries to pre-check the right
@@ -2996,6 +3240,14 @@ onMounted(async () => {
       router.replace({ query: {} })
     }
   }
+
+  // From here on, a change is a change
+  await nextTick()
+  await new Promise(r => setTimeout(r, 600))
+  savedSnapshot.value = snapshot()
+  ready.value = true
+  if (isEdit.value) lastSavedAt.value = null
+  checkBackup()
 })
 </script>
 

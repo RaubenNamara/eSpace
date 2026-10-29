@@ -674,8 +674,8 @@ const modulesText = computed(() => ({
   student: 'Everything you read, watch, attempt and practise - all in one sign-in. Pick one to see it.'
 })[audience.value])
 const labText = computed(() => audience.value === 'student'
-  ? 'Practicals you can\'t always do at school: open a real computer and name its parts, repair a laptop, build a network, run science experiments, explore the human body. Try it - this is the ICT Lab\'s own computer.'
-  : 'Practicals a school can\'t always run for every learner: open a real computer and name its parts, repair a laptop, build a network, run science experiments, explore the human body. Try it - this is the ICT Lab\'s own computer.')
+  ? 'Practicals you can\'t always do at school: open a real computer and name its parts, repair a laptop, run science experiments, explore the human body. Try it - this is the ICT Lab\'s own computer.'
+  : 'Practicals a school can\'t always run for every learner: open a real computer and name its parts, repair a laptop, run science experiments, explore the human body. Try it - this is the ICT Lab\'s own computer.')
 
 // The product tour, full screen
 const tourOpen = ref(false)
@@ -702,8 +702,6 @@ const LAB_ITEMS = [
   { label: 'Parts of a computer, in HD 3D', icon: 'keyboard' },
   { label: 'Assembling a computer', icon: 'wrench' },
   { label: 'Laptop repair, start to finish', icon: 'wrench' },
-  { label: 'Build a network', icon: 'users' },
-  { label: 'Typing tutor', icon: 'keyboard' },
   { label: 'Spot the hazard', icon: 'warning' },
   { label: 'Science practicals', icon: 'beaker' },
   { label: 'Anatomy Explorer', icon: 'beaker' }

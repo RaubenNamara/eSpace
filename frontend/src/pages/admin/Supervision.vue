@@ -2,7 +2,7 @@
   <div>
     <PageHeader
       title="Supervision"
-      description="Every department and teacher this term - work set, scripts waiting to be marked, and who has not handed in."
+      description="Every department and teacher this term - work set, what each teacher has marked and what is still waiting, and who has not handed in."
       icon="target"
       accent="indigo"
       :active-filters="departmentId ? 1 : 0"
@@ -92,6 +92,19 @@
           <span v-else class="tabular-nums font-semibold" :class="row.overdue ? 'text-amber-600 dark:text-amber-300' : 'text-gray-900 dark:text-white'">
             {{ row.waiting }}<span class="text-xs font-normal text-gray-500 dark:text-gray-400"> · oldest {{ row.oldest_days }}d</span>
           </span>
+        </template>
+        <template #cell-marked="{ row }">
+          <div class="min-w-[8rem]">
+            <p class="text-sm">
+              <span class="tabular-nums font-semibold" :class="row.marked ? 'text-emerald-700 dark:text-emerald-300' : 'text-gray-400'">{{ row.marked }}</span>
+              <span class="text-xs text-gray-500 dark:text-gray-400"> of {{ row.marked + row.waiting }}</span>
+              <span v-if="row.marked_rate !== null" class="text-xs font-semibold ml-1" :class="rateTone(row.marked_rate)">{{ row.marked_rate }}%</span>
+            </p>
+            <div v-if="row.marked + row.waiting" class="mt-1 h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+              <div class="h-full bg-emerald-500" :style="{ width: `${row.marked_rate ?? 0}%` }"></div>
+            </div>
+            <p class="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">{{ row.last_marked_at ? `last marked ${ago(row.last_marked_at).replace(/^(Today|Yesterday|\d)/, m => m.toLowerCase())}` : 'nothing marked yet' }}</p>
+          </div>
         </template>
         <template #cell-hand_in_rate="{ row }">
           <span class="tabular-nums font-semibold" :class="rateTone(row.hand_in_rate)">{{ row.hand_in_rate === null ? '–' : `${row.hand_in_rate}%` }}</span>
@@ -203,6 +216,7 @@ const statItems = computed<StatItem[]>(() => {
 const columns: Column[] = [
   { key: 'name', label: 'Teacher', sortable: true, mobile: 'title' },
   { key: 'set', label: 'Assessments set', sortable: true, align: 'center', mobile: 'field' },
+  { key: 'marked', label: 'Marked', sortable: true, mobile: 'field', value: (r: SupTeacher) => r.marked_rate ?? -1 },
   { key: 'waiting', label: 'To mark', sortable: true, mobile: 'field', value: (r: SupTeacher) => r.overdue * 1000 + r.waiting },
   { key: 'hand_in_rate', label: 'Handed in', sortable: true, mobile: 'field', value: (r: SupTeacher) => r.hand_in_rate ?? 101 },
   { key: 'enotes', label: 'eNotes', sortable: true, align: 'center', mobile: 'hidden' },

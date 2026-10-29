@@ -275,6 +275,7 @@
       <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full mx-4">
         <div class="p-6">
           <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4">Edit User</h2>
+          <ProfilePhotoRemover type="admin" :id="editFormData.id" :photo="editFormData.profile_photo" :name="editFormData.username" @removed="photoRemoved" />
           <form @submit.prevent="updateUser">
             <div class="space-y-4">
               <div>
@@ -340,6 +341,7 @@ import { useAuthStore } from '../../stores/auth'
 import { apiService } from '../../services/api'
 import { useToastStore } from '@/stores/toast'
 import { useConfirmStore } from '@/stores/confirm'
+import ProfilePhotoRemover from '@/components/admin/ProfilePhotoRemover.vue'
 
 const toast = useToastStore()
 const confirmDialog = useConfirmStore()
@@ -382,7 +384,8 @@ const editFormData = ref({
   id: 0,
   username: '',
   email: '',
-  role: 'admin' as UserRole
+  role: 'admin' as UserRole,
+  profile_photo: null as string | null
 })
 
 // Get current user's role
@@ -544,9 +547,17 @@ const editUser = (user: AdminUser) => {
     id: user.id,
     username: user.username,
     email: user.email,
-    role: user.role
+    role: user.role,
+    profile_photo: user.profile_photo || null
   }
   showEditModal.value = true
+}
+
+// The photo is gone from the list too
+const photoRemoved = () => {
+  editFormData.value.profile_photo = null
+  const u = users.value.find(x => x.id === editFormData.value.id)
+  if (u) u.profile_photo = null
 }
 
 const updateUser = async () => {

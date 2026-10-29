@@ -3,20 +3,22 @@
        an on-screen key strip (the real keyboard works too). 1. Watch it start: power, POST, the
        boot device, loading the operating system. 2. Fix "no boot device": restart, press DEL in
        time, change the boot order in BIOS Setup, save and exit. 3. Fix a reset clock (CMOS
-       battery). 4. A short check. Each finished part is saved for students (boot-startup,
-       boot-bootfix, boot-cmos, boot-check). -->
+       battery). 4. Shut down right: what to do at the end of the day, when a program or the whole
+       computer freezes, when the power goes, and for printers, routers and phones (Subsidiary ICT
+       Topic 1). 5. A short check. Each finished part is saved for students (boot-startup,
+       boot-bootfix, boot-cmos, boot-shutdown, boot-check). -->
   <div>
     <div class="flex flex-wrap items-center gap-x-3 gap-y-2 mb-4">
       <RouterLink :to="`/${role}/ict-lab`" class="p-2 rounded-xl text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Back to the ICT Lab">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
       </RouterLink>
       <div class="min-w-0 flex-1">
-        <p class="text-[11px] font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">ICT Lab · How a computer works</p>
-        <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-tight">Boot-up and BIOS</h1>
+        <p class="text-[11px] font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">ICT Lab · S.5 Topic 1 · Introduction to ICTs</p>
+        <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-tight">Start-up, BIOS and shut-down</h1>
       </div>
     </div>
 
-    <div class="mb-4 grid grid-cols-2 sm:grid-cols-4 gap-1.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-1" role="tablist">
+    <div class="mb-4 grid grid-cols-2 sm:grid-cols-5 gap-1.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-1" role="tablist">
       <button v-for="(p, i) in PARTS" :key="p.key" type="button" role="tab" :aria-selected="part === p.key" class="rounded-lg px-2 py-2 text-left sm:text-center transition-colors" :class="part === p.key ? 'bg-indigo-600 text-white' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'" @click="setPart(p.key)">
         <p class="text-xs sm:text-sm font-bold">{{ i + 1 }}. {{ p.label }} <span v-if="done.has(p.key)">✓</span></p>
         <p class="hidden sm:block text-[11px] opacity-80">{{ p.hint }}</p>
@@ -25,7 +27,7 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_21rem] gap-4 items-start">
       <!-- ===================== the computer ===================== -->
-      <section v-if="part !== 'check'" class="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 sm:p-4">
+      <section v-if="part !== 'check' && part !== 'shutdown'" class="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 sm:p-4">
         <!-- the monitor -->
         <div class="mx-auto max-w-3xl rounded-2xl bg-gray-900 p-2.5 sm:p-3 shadow-lg">
           <div class="relative aspect-[16/10] rounded-md overflow-hidden bg-black text-[11px] sm:text-sm leading-snug font-mono select-none">
@@ -121,6 +123,38 @@
         </div>
       </section>
 
+      <!-- ===================== shut down right ===================== -->
+      <section v-else-if="part === 'shutdown'" class="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-6">
+        <template v-if="sq">
+          <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-2">
+            <span class="font-semibold">Situation {{ sqi + 1 }} of {{ shuts.length }}</span>
+            <span class="tabular-nums">{{ shutWrong }} wrong</span>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="w-12 h-12 rounded-2xl bg-slate-800 text-white flex items-center justify-center flex-shrink-0 text-2xl" aria-hidden="true">{{ sq.icon }}</span>
+            <div class="min-w-0">
+              <p class="text-[11px] font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">{{ sq.device }}</p>
+              <p class="text-lg font-bold text-gray-900 dark:text-white leading-snug">{{ sq.q }}</p>
+            </div>
+          </div>
+          <p class="mt-3 text-sm font-semibold text-gray-700 dark:text-gray-200">What do you do?</p>
+          <div class="mt-2 space-y-1.5 max-w-xl">
+            <button v-for="o in sq.options" :key="o" type="button" class="w-full text-left rounded-xl border-2 px-3 py-2.5 text-sm font-semibold transition-colors disabled:cursor-default" :class="shutClass(o)" :disabled="sPicked !== null" @click="answerShut(o)">{{ o }}</button>
+          </div>
+          <p v-if="sPicked !== null" class="mt-2 text-sm max-w-xl" :class="sPicked === sq.a ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'">{{ sPicked === sq.a ? 'Right!' : `Best: ${sq.a}.` }} {{ sq.why }}</p>
+          <div class="mt-3"><button type="button" class="btn-primary !py-1.5 !text-sm" :disabled="sPicked === null" @click="nextShut">{{ sqi + 1 < shuts.length ? 'Next situation' : 'Finish' }}</button></div>
+        </template>
+        <div v-else class="text-center py-4">
+          <span class="mx-auto w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center"><AppIcon name="trophy" class="w-6 h-6" /></span>
+          <p class="mt-2 text-xl font-bold text-gray-900 dark:text-white">{{ shutScore }}% - {{ shuts.length - shutWrong }} of {{ shuts.length }} right</p>
+          <p class="mt-1 text-sm text-gray-700 dark:text-gray-200">Save, close, shut down from the menu - and force it off only when nothing else works.</p>
+          <div class="mt-3 flex justify-center gap-2">
+            <button type="button" class="btn-secondary !py-1.5 !text-sm" @click="startShut">Again</button>
+            <button type="button" class="btn-primary !py-1.5 !text-sm" @click="setPart('check')">Next part</button>
+          </div>
+        </div>
+      </section>
+
       <!-- ===================== the check ===================== -->
       <section v-else class="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-6">
         <template v-if="cq">
@@ -181,8 +215,18 @@
           <div v-if="partDone" class="mt-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 p-3 text-sm text-emerald-900 dark:text-emerald-100">
             <b>Fixed!</b> {{ part === 'bootfix' ? 'The BIOS now looks on the SSD first, finds the operating system, and the computer starts.' : 'Setting the clock works for today; a new CR2032 CMOS battery keeps the settings when the power is off.' }}
             <span class="block mt-1 text-xs">{{ mistakes }} wrong move{{ mistakes === 1 ? '' : 's' }} · score {{ Math.max(0, 100 - mistakes * 10) }}%</span>
-            <button type="button" class="mt-2 btn-primary !py-1 !text-xs" @click="setPart(part === 'bootfix' ? 'cmos' : 'check')">Next part</button>
+            <button type="button" class="mt-2 btn-primary !py-1 !text-xs" @click="setPart(part === 'bootfix' ? 'cmos' : 'shutdown')">Next part</button>
           </div>
+        </template>
+
+        <template v-else-if="part === 'shutdown'">
+          <p class="text-sm font-bold text-gray-900 dark:text-white">Ways to switch off</p>
+          <dl class="mt-2 space-y-2 text-sm">
+            <div v-for="w in SWITCH_OFF" :key="w[0]">
+              <dt class="font-bold text-gray-900 dark:text-white">{{ w[0] }}</dt>
+              <dd class="text-gray-600 dark:text-gray-300">{{ w[1] }}</dd>
+            </div>
+          </dl>
         </template>
 
         <template v-else>
@@ -206,11 +250,12 @@ import { labRoleOf } from '@/components/ictlab/types'
 const route = useRoute()
 const role = computed(() => labRoleOf(route.path))
 
-type Part = 'startup' | 'bootfix' | 'cmos' | 'check'
+type Part = 'startup' | 'bootfix' | 'cmos' | 'shutdown' | 'check'
 const PARTS: { key: Part; label: string; hint: string }[] = [
   { key: 'startup', label: 'Watch it start', hint: 'power to desktop' },
   { key: 'bootfix', label: 'No boot device', hint: 'change the boot order' },
   { key: 'cmos', label: 'Wrong clock', hint: 'the CMOS battery' },
+  { key: 'shutdown', label: 'Shut down right', hint: '7 situations' },
   { key: 'check', label: 'Check', hint: '5 questions' }
 ]
 const part = ref<Part>('startup')
@@ -404,6 +449,7 @@ function setPart(p: Part) {
   if (p === 'bootfix') say('Switch it on and see what happens.')
   if (p === 'cmos') say('Switch it on and read the start-up screen.')
   if (p === 'check') startCheck()
+  if (p === 'shutdown') startShut()
 }
 
 const goals = computed(() => {
@@ -562,7 +608,7 @@ function enterSetup() {
   else say('This is BIOS Setup - look around, then Save & Exit or Esc.')
 }
 function onKeydown(e: KeyboardEvent) {
-  if (part.value === 'check') return
+  if (part.value === 'check' || part.value === 'shutdown') return
   const map: Record<string, string> = { Delete: 'Del', Escape: 'Esc', F1: 'F1', F2: 'F2', F10: 'F10', Enter: 'Enter' }
   const k = map[e.key]
   if (screen.value === 'setup' && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
@@ -615,6 +661,62 @@ function nextCheck() {
   cPicked.value = null
   cqi.value++
   if (cqi.value >= checks.value.length) save('check', checks.value.length, checkWrong.value, 4)
+}
+
+// ------------------------------------------------------------ shut down right
+// Proper shutdown, forced shutdown and power loss, on a computer and the other devices in the
+// lab - the start-up and shut-down practical in Subsidiary ICT Topic 1 (S.5 Term 1).
+const SWITCH_OFF = [
+  ['Shut down', 'Start → Power → Shut down. Windows closes every program, saves its settings and switches the computer off. Always the first choice.'],
+  ['Restart', 'Shuts down and starts again - after installing updates or software, or when the computer is slow or acting strangely.'],
+  ['Sleep', 'Keeps your work in RAM on very little power, for a short break. Not for the end of the day.'],
+  ['End task', 'Ctrl + Shift + Esc opens Task Manager. Pick the program that is "Not responding" and choose End task - only that program closes.'],
+  ['Forced shutdown', 'Hold the power button for 5-10 seconds. The last resort when nothing responds - unsaved work is lost and files can be damaged.'],
+  ['UPS', 'A battery box between the wall and the computer. When the power goes it keeps the computer on for a few minutes - time to save and shut down.']
+]
+const SHUT = [
+  { icon: '🖥️', device: 'Desktop computer', q: 'The lesson is over and you have finished for the day.', options: ['Save and close your work, then Start → Shut down, and switch off at the wall once the lights go off', 'Switch off at the wall socket', 'Hold the power button until it goes off', 'Turn off the monitor and leave'], a: 'Save and close your work, then Start → Shut down, and switch off at the wall once the lights go off', why: 'Shut down lets Windows close everything properly. Cutting the power first can lose work and damage files.' },
+  { icon: '📝', device: 'Desktop computer', q: 'Word says "Not responding". The mouse still moves and other windows work.', options: ['Ctrl + Shift + Esc, pick Word in Task Manager, End task', 'Hold the power button for 10 seconds', 'Pull out the plug', 'Keep clicking until it answers'], a: 'Ctrl + Shift + Esc, pick Word in Task Manager, End task', why: 'Only one program is stuck, so close only that program. The rest of the computer - and your other work - is fine.' },
+  { icon: '🧊', device: 'Desktop computer', q: 'The whole computer has frozen. The mouse, keyboard and Ctrl + Alt + Del do nothing for several minutes.', options: ['Hold the power button for 5-10 seconds, wait, then switch on again', 'Pull the plug out of the wall', 'Open the case and take out the RAM', 'Press every key on the keyboard'], a: 'Hold the power button for 5-10 seconds, wait, then switch on again', why: 'This is the time for a forced shutdown - the last resort. Expect to lose unsaved work; Windows may check the disk as it starts.' },
+  { icon: '🔋', device: 'Computer on a UPS', q: 'The power goes off. The computer stays on, and the UPS starts beeping.', options: ['Save your work and shut down properly now', 'Carry on working - the UPS will keep it going', 'Unplug the UPS from the wall', 'Switch off the UPS straight away'], a: 'Save your work and shut down properly now', why: 'A UPS battery only lasts a few minutes. It gives you time to save and shut down before the power runs out.' },
+  { icon: '⚡', device: 'Computer, no UPS', q: 'The power went off and the computer went off with it. Now the power is back.', options: ['Switch on, let Windows check the disk if it asks, then see what was saved', 'Switch it on and off quickly a few times to wake it', 'Reinstall Windows', 'Leave it off for a week'], a: 'Switch on, let Windows check the disk if it asks, then see what was saved', why: 'A sudden power loss is like a forced shutdown - work not saved is lost. Many programs offer recovered files when you open them again.' },
+  { icon: '🖨️', device: 'Printer', q: 'You want to switch the printer off at the end of the day.', options: ['Press the printer\'s own power button and wait for it to finish, then switch off at the wall', 'Pull out the plug while it is still printing', 'Switch it off from the computer', 'Leave it on all the time'], a: 'Press the printer\'s own power button and wait for it to finish, then switch off at the wall', why: 'The printer parks and seals its ink head as it shuts down. Pulling the plug can leave the ink to dry and block it.' },
+  { icon: '📶', device: 'Wi-Fi router', q: 'Nobody in the lab can get on the internet, and the router\'s internet light is red.', options: ['Switch the router off, wait 30 seconds, switch it on and wait for the lights to settle', 'Restart every computer in the lab', 'Hold the reset button to put it back to factory settings', 'Unplug all the network cables'], a: 'Switch the router off, wait 30 seconds, switch it on and wait for the lights to settle', why: 'Restarting a router fixes most connection problems. The reset button wipes its settings - leave that to the technician.' }
+]
+const PHONE = { icon: '📱', device: 'Smartphone', q: 'Your phone has frozen on one screen and does not respond to touch.', options: ['Hold the power and volume-down buttons together for about 10 seconds to force a restart', 'Take out the SIM card', 'Put it in the fridge to cool', 'Wait until the battery runs flat'], a: 'Hold the power and volume-down buttons together for about 10 seconds to force a restart', why: 'Most phones force-restart this way (check the maker\'s guide). Like a computer, it is a last resort when the screen does not respond.' }
+// Seven situations: always the computer ones, the UPS and the router; the printer or the phone in turn
+const pickShuts = () => {
+  const extra = Math.random() < 0.5 ? PHONE : SHUT[5]
+  return [...SHUT.filter((_, i) => i !== 5), extra].map(s => ({ ...s, options: shuffle(s.options) }))
+}
+const shuts = ref(pickShuts())
+const sqi = ref(0)
+const sPicked = ref<string | null>(null)
+const shutWrong = ref(0)
+const sq = computed(() => shuts.value[sqi.value] || null)
+// Saved with 3 mistakes per wrong answer - 15 points each, as the server scores it
+const shutScore = computed(() => Math.max(0, 100 - shutWrong.value * 15))
+function startShut() {
+  shuts.value = pickShuts()
+  sqi.value = 0
+  sPicked.value = null
+  shutWrong.value = 0
+}
+function answerShut(o: string) {
+  if (sPicked.value !== null || !sq.value) return
+  sPicked.value = o
+  if (o !== sq.value.a) shutWrong.value++
+}
+function shutClass(o: string) {
+  if (sPicked.value === null) return 'border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-100 hover:border-indigo-400 hover:bg-indigo-50/60 dark:hover:bg-indigo-900/20'
+  if (o === sq.value?.a) return 'border-emerald-500 bg-emerald-50 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200'
+  if (o === sPicked.value) return 'border-rose-400 bg-rose-50 text-rose-800 dark:bg-rose-900/30 dark:text-rose-200'
+  return 'border-gray-200 dark:border-gray-700 text-gray-400'
+}
+function nextShut() {
+  sPicked.value = null
+  sqi.value++
+  if (sqi.value >= shuts.value.length) save('shutdown', shuts.value.length, shutWrong.value, 3)
 }
 
 onBeforeUnmount(() => {

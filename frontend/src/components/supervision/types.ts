@@ -18,6 +18,7 @@ export interface SupTeacher {
   oldest_days: number | null
   marked: number
   marked_rate: number | null
+  last_marked_at: string | null
   enotes: number
   flags: SupFlag[]
 }
@@ -53,6 +54,21 @@ export interface SupAssessment {
   waiting: number
   marked: number
   waiting_days: number | null
+  last_marked_at: string | null
+}
+
+/** A script handed in for an assessment, marked or still waiting */
+export interface SupScript {
+  id: number
+  student_id: number
+  name: string
+  admission_number: string | null
+  marked: boolean
+  returned: boolean
+  score: number | null
+  percentage: number | null
+  submitted_at: string | null
+  marked_at: string | null
 }
 
 export interface SupLearner {

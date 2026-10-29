@@ -962,6 +962,7 @@ const MENU: Record<string, NavGroup[]> = {
     ] },
     { key: 'assessment', name: 'Assessment', items: [
       { path: '/hod/assessments', label: 'Assessments', icon: 'DocumentTextIcon' },
+      { path: '/hod/marking', label: 'Marking', icon: 'TargetIcon' },
       { path: '/hod/marksheet', label: 'Marksheet', icon: 'TableCellsIcon' },
       { path: '/hod/physical-exams', label: 'Physical Exams', icon: 'DocumentTextIcon' }
     ] },

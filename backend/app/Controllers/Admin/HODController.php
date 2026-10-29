@@ -70,7 +70,7 @@ class HODController extends Controller
         $offset = ($page - 1) * $limit;
         $sql = "SELECT h.id, h.username, h.email, h.phone, h.is_active, h.created_at,
                        h.first_name, h.last_name,
-                       h.teacher_id, h.department_id, h.appointed_date, h.last_login_at,
+                       h.teacher_id, h.department_id, h.appointed_date, h.last_login_at, h.profile_photo,
                        d.name as department_name, d.code as department_code
                 FROM hods h
                 LEFT JOIN departments d ON h.department_id = d.id

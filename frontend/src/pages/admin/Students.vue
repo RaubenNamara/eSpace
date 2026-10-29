@@ -190,6 +190,7 @@
             <button type="button" @click="showPhotoModal = true" class="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
               Change photo
             </button>
+            <ProfilePhotoRemover type="student" :id="editFormData.id" :photo="editFormData.profile_photo" :name="`${editFormData.first_name} ${editFormData.last_name}`" hide-image compact @removed="onPhotoUploaded(null)" />
           </div>
 
           <form @submit.prevent="updateStudent">
@@ -343,6 +344,7 @@ import DataTable, { type Column } from '@/components/ui/DataTable.vue'
 import ActionMenu from '@/components/ui/ActionMenu.vue'
 import { niceName, initials } from '@/components/dashboard/teacher/time'
 import StudentPhotoModal from '@/components/students/StudentPhotoModal.vue'
+import ProfilePhotoRemover from '@/components/admin/ProfilePhotoRemover.vue'
 
 const toast = useToastStore()
 const confirmDialog = useConfirmStore()
@@ -572,7 +574,7 @@ const editStudent = (student: Student) => {
   showEditModal.value = true
 }
 
-const onPhotoUploaded = (newPath: string) => {
+const onPhotoUploaded = (newPath: string | null) => {
   editFormData.value.profile_photo = newPath
   const student = students.value.find(s => s.id === editFormData.value.id)
   if (student) student.profile_photo = newPath
