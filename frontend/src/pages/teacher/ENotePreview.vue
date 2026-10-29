@@ -332,7 +332,7 @@
         </div>
         <div class="p-5 space-y-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Due Date *</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Deadline (optional)</label>
             <input
               v-model="quickAssessmentForm.due_date"
               type="date"
@@ -350,7 +350,7 @@
           </button>
           <button
             @click="createQuickAssessment"
-            :disabled="creatingQuickAssessment || !quickAssessmentForm.due_date"
+            :disabled="creatingQuickAssessment"
             class="flex-1 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {{ creatingQuickAssessment ? 'Creating...' : 'Create & Continue' }}
@@ -1948,7 +1948,7 @@ const creatingQuickAssessment = ref(false)
 const quickAssessmentError = ref('')
 
 const createQuickAssessment = async () => {
-  if (!topic.value || !quickAssessmentForm.value.due_date) return
+  if (!topic.value) return
   creatingQuickAssessment.value = true
   quickAssessmentError.value = ''
   try {

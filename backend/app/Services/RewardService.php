@@ -407,7 +407,7 @@ class RewardService
         $sql = 'SELECT DISTINCT subject_id FROM assignments WHERE class_id = :class_id AND deleted_at IS NULL AND subject_id IS NOT NULL';
         $params = ['class_id' => $classId];
         if ($term) {
-            $sql .= ' AND due_date BETWEEN :start_date AND :end_date';
+            $sql .= ' AND COALESCE(due_date, published_at, created_at) BETWEEN :start_date AND :end_date';
             $params['start_date'] = $term['start_date'];
             $params['end_date'] = $term['end_date'];
         }

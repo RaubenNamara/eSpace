@@ -253,12 +253,53 @@ class ClassMapController extends Controller
             $topicAssessed = array_flip(array_map('intval', array_column($stmt->fetchAll(), 'curriculum_topic_id')));
         }
 
+        // This year's topics done in an earlier year, as that year's copy of the topic (working
+        // ahead - an S.6 topic while in S.5 - or a repeated class): these learners' returned results
+        // on those copies, by the earlier copy's outcome and topic
+        $earlierMatch = \eSpace\App\Services\EarlierTopics::match($db, $topicIds);
+        $earlierOutcomeResults = [];
+        $earlierTopicResults = [];
+        $oldOutcomeIds = array_values(array_unique(array_merge([], ...array_values($earlierMatch['outcomes']))));
+        $oldTopicIds = array_values(array_unique(array_merge([], ...array_values($earlierMatch['topics']))));
+        $returned = "INNER JOIN assignment_submissions sb ON sb.assignment_id = a.id AND sb.deleted_at IS NULL
+                        AND sb.status = 'returned' AND sb.percentage IS NOT NULL
+                        AND sb.student_id IN (" . ($studentIds ? self::in($studentIds) : '0') . ")";
+        if ($studentIds && $oldOutcomeIds) {
+            $stmt = $db->prepare(
+                "SELECT alo.learning_outcome_id AS item, sb.student_id, AVG(sb.percentage) AS pct
+                 FROM assignment_learning_outcomes alo
+                 INNER JOIN assignments a ON a.id = alo.assignment_id AND a.deleted_at IS NULL AND a.status = 'published'
+                 $returned
+                 WHERE alo.learning_outcome_id IN (" . self::in($oldOutcomeIds) . ")
+                 GROUP BY alo.learning_outcome_id, sb.student_id"
+            );
+            $stmt->execute(array_merge($studentIds, $oldOutcomeIds));
+            foreach ($stmt->fetchAll() as $r) {
+                $earlierOutcomeResults[(int) $r['item']][(int) $r['student_id']] = (float) $r['pct'];
+            }
+        }
+        if ($studentIds && $oldTopicIds) {
+            $stmt = $db->prepare(
+                "SELECT act.curriculum_topic_id AS item, sb.student_id, AVG(sb.percentage) AS pct
+                 FROM assignment_curriculum_topics act
+                 INNER JOIN assignments a ON a.id = act.assignment_id AND a.assessment_category = 'AOI'
+                        AND a.deleted_at IS NULL AND a.status = 'published'
+                 $returned
+                 WHERE act.curriculum_topic_id IN (" . self::in($oldTopicIds) . ")
+                 GROUP BY act.curriculum_topic_id, sb.student_id"
+            );
+            $stmt->execute(array_merge($studentIds, $oldTopicIds));
+            foreach ($stmt->fetchAll() as $r) {
+                $earlierTopicResults[(int) $r['item']][(int) $r['student_id']] = (float) $r['pct'];
+            }
+        }
+
         // Summaries
         $perStudent = [];
         foreach ($studentIds as $sid) {
             $perStudent[$sid] = ['achieved' => 0, 'developing' => 0, 'needs_support' => 0, 'results' => 0];
         }
-        $summarise = function (array $results, bool $assessed) use ($studentIds, $names): array {
+        $summarise = function (array $results, bool $assessed, array $fromEarlier = []) use ($studentIds, $names): array {
             $counts = ['achieved' => 0, 'developing' => 0, 'needs_support' => 0, 'not_assessed' => 0];
             $support = [];
             foreach ($studentIds as $sid) {
@@ -270,11 +311,13 @@ class ClassMapController extends Controller
                 $status = $pct >= self::ACHIEVED_FROM ? 'achieved' : ($pct >= self::DEVELOPING_FROM ? 'developing' : 'needs_support');
                 $counts[$status]++;
                 if ($status !== 'achieved') {
-                    $support[] = ['student_id' => $sid, 'name' => $names[$sid] ?? '', 'percentage' => round($pct, 1), 'status' => $status];
+                    $support[] = ['student_id' => $sid, 'name' => $names[$sid] ?? '', 'percentage' => round($pct, 1), 'status' => $status,
+                        'earlier' => isset($fromEarlier[$sid])];
                 }
             }
             usort($support, fn($a, $b) => $a['percentage'] <=> $b['percentage']);
-            return ['assessed' => $assessed, 'counts' => $counts, 'support' => $support];
+            // earlier: how many of these results are from an earlier year (EarlierTopics)
+            return ['assessed' => $assessed || (bool) $fromEarlier, 'counts' => $counts, 'support' => $support, 'earlier' => count($fromEarlier)];
         };
 
         // One entry per topic and per outcome, however many streams it's set for (each stream has
@@ -301,6 +344,24 @@ class ClassMapController extends Controller
             }
             return array_map(fn($sid) => $sum[$sid] / $n[$sid], array_combine(array_keys($sum), array_keys($sum)));
         };
+        // A learner's earlier-year result counts while they have none from this year:
+        // [results, the learners whose result is from an earlier year]
+        $withEarlier = function (array $results, array $currentIds, array $match, array $earlierResults) use ($merge): array {
+            $oldIds = [];
+            foreach ($currentIds as $id) {
+                foreach ($match[$id] ?? [] as $old) {
+                    $oldIds[$old] = $old;
+                }
+            }
+            $fromEarlier = [];
+            foreach ($oldIds ? $merge($earlierResults, array_values($oldIds)) : [] as $sid => $pct) {
+                if (!isset($results[$sid])) {
+                    $results[$sid] = $pct;
+                    $fromEarlier[$sid] = true;
+                }
+            }
+            return [$results, $fromEarlier];
+        };
 
         $topicsOut = [];
         $outcomeGroups = 0;
@@ -309,14 +370,15 @@ class ClassMapController extends Controller
             $outcomesOut = [];
             foreach ($g['outcomes'] as $og) {
                 $outcomeGroups++;
-                $results = $merge($outcomeResults, $og['ids']);
+                [$results, $fromEarlier] = $withEarlier($merge($outcomeResults, $og['ids']), $og['ids'], $earlierMatch['outcomes'], $earlierOutcomeResults);
                 foreach ($results as $sid => $pct) {
                     $perStudent[$sid]['results']++;
                     $perStudent[$sid][$pct >= self::ACHIEVED_FROM ? 'achieved' : ($pct >= self::DEVELOPING_FROM ? 'developing' : 'needs_support')]++;
                 }
                 $assessed = (bool) array_intersect_key($outcomeAssessed, array_flip($og['ids']));
-                $outcomesOut[] = ['id' => $og['ids'][0], 'ids' => $og['ids'], 'text' => $og['text']] + $summarise($results, $assessed);
+                $outcomesOut[] = ['id' => $og['ids'][0], 'ids' => $og['ids'], 'text' => $og['text']] + $summarise($results, $assessed, $fromEarlier);
             }
+            [$topicRes, $topicEarlier] = $withEarlier($merge($topicResults, $g['ids']), $g['ids'], $earlierMatch['topics'], $earlierTopicResults);
             $topicsOut[] = [
                 'id' => $g['ids'][0],
                 // Every stream's copy of the topic (and each outcome's), for support groups
@@ -328,7 +390,7 @@ class ClassMapController extends Controller
                 'from' => $t['from_label'] ?? null,
                 'competence' => $t['competence'],
                 'outcomes' => $outcomesOut,
-                'competency' => $summarise($merge($topicResults, $g['ids']), (bool) array_intersect_key($topicAssessed, array_flip($g['ids']))),
+                'competency' => $summarise($topicRes, (bool) array_intersect_key($topicAssessed, array_flip($g['ids'])), $topicEarlier),
             ];
         }
 

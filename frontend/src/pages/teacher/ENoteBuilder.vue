@@ -721,7 +721,7 @@
             >
           </div>
           <div>
-            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Deadline *</label>
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Deadline (optional)</label>
             <input v-model="loaForm.due_date" type="date" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white">
           </div>
           <p v-if="loaError" class="text-xs text-red-600 dark:text-red-400">{{ loaError }}</p>
@@ -735,7 +735,7 @@
           </button>
           <button
             @click="createLoaAssessment"
-            :disabled="creatingLoa || !loaForm.learning_outcome_id || !loaForm.academic_year || !loaForm.due_date || (loaForm.startMode === 'scheduled' && !loaForm.open_at)"
+            :disabled="creatingLoa || !loaForm.learning_outcome_id || !loaForm.academic_year || (loaForm.startMode === 'scheduled' && !loaForm.open_at)"
             class="flex-1 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {{ creatingLoa ? 'Creating...' : 'Create & Continue' }}
@@ -790,7 +790,7 @@
             >
           </div>
           <div>
-            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Deadline *</label>
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Deadline (optional)</label>
             <input v-model="aoiForm.due_date" type="date" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white">
           </div>
           <!-- Start from a suggested scenario (needs the topic's curriculum link: its competency
@@ -827,7 +827,7 @@
           </button>
           <button
             @click="createAoiAssessment"
-            :disabled="creatingAoi || !aoiForm.academic_year || !aoiForm.due_date || (aoiForm.startMode === 'scheduled' && !aoiForm.open_at)"
+            :disabled="creatingAoi || !aoiForm.academic_year || (aoiForm.startMode === 'scheduled' && !aoiForm.open_at)"
             class="flex-1 py-2.5 text-sm font-semibold text-white bg-violet-600 hover:bg-violet-700 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {{ creatingAoi ? 'Creating...' : 'Create & Continue' }}
@@ -1753,7 +1753,7 @@ const openLoaModal = () => {
 }
 
 const createLoaAssessment = async () => {
-  if (!topic.value || !currentPage.value || !loaForm.value.learning_outcome_id || !loaForm.value.academic_year || !loaForm.value.due_date) return
+  if (!topic.value || !currentPage.value || !loaForm.value.learning_outcome_id || !loaForm.value.academic_year) return
   if (loaForm.value.startMode === 'scheduled' && !loaForm.value.open_at) return
   creatingLoa.value = true
   loaError.value = ''
@@ -1817,7 +1817,7 @@ const openAoiModal = () => {
 }
 
 const createAoiAssessment = async () => {
-  if (!topic.value || !aoiForm.value.academic_year || !aoiForm.value.due_date) return
+  if (!topic.value || !aoiForm.value.academic_year) return
   if (aoiForm.value.startMode === 'scheduled' && !aoiForm.value.open_at) return
   creatingAoi.value = true
   aoiError.value = ''

@@ -364,7 +364,7 @@ class ReportCardService
              INNER JOIN assignments a ON s.assignment_id = a.id
              WHERE s.student_id = :student_id AND s.status IN ('graded', 'returned')
                AND a.status = 'published' AND a.subject_id IS NOT NULL AND a.deleted_at IS NULL
-               AND a.due_date BETWEEN :start_date AND :end_date{$subjectFilter}
+               AND COALESCE(a.due_date, a.published_at, a.created_at) BETWEEN :start_date AND :end_date{$subjectFilter}
              ORDER BY a.subject_id, a.due_date ASC"
         );
         $params = [
@@ -449,7 +449,7 @@ class ReportCardService
              FROM assignment_submissions s
              INNER JOIN assignments a ON s.assignment_id = a.id
              WHERE s.student_id = :student_id AND a.subject_id IS NOT NULL AND a.deleted_at IS NULL
-               AND a.due_date BETWEEN :start_date AND :end_date
+               AND COALESCE(a.due_date, a.published_at, a.created_at) BETWEEN :start_date AND :end_date
              GROUP BY a.subject_id"
         );
         $stmt->execute(['student_id' => $studentId, 'start_date' => $term['start_date'], 'end_date' => $term['end_date']]);

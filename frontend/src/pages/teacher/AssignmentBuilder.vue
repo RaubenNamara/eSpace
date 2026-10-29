@@ -109,7 +109,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
                   </svg>
                 </span>
-                Target Audience
+                1. Who it's for
               </h2>
             </div>
             <div class="p-4 sm:p-6 space-y-4">
@@ -191,26 +191,6 @@
                   </template>
                 </p>
               </div>
-
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Link to an eNote Topic (optional)</label>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1.5">
-                  When a student finishes reading the linked topic, they'll see a quick-link to attempt this assignment right away.
-                </p>
-                <div v-if="!form.subject_id" class="text-sm text-gray-400 dark:text-gray-500">Select a Subject above first.</div>
-                <select
-                  v-else
-                  v-model="form.enote_topic_id"
-                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white transition-colors"
-                  :disabled="loadingEnoteTopics"
-                >
-                  <option :value="null">No topic linked</option>
-                  <option v-for="t in enoteTopics" :key="t.id" :value="t.id">{{ t.title }}</option>
-                </select>
-                <p v-if="form.subject_id && !loadingEnoteTopics && enoteTopics.length === 0" class="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                  No eNote topics found for this subject yet.
-                </p>
-              </div>
             </div>
           </div>
 
@@ -223,7 +203,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                   </svg>
                 </span>
-                Curriculum Alignment *
+                2. What it covers
               </h2>
             </div>
             <div class="p-4 sm:p-6 space-y-4">
@@ -245,8 +225,13 @@
 
                 <!-- When the assessment counts (its term's marks and report cards) is separate from
                      where its topic comes from, so a teacher can catch up on an earlier class's,
-                     term's or year's topic, or work ahead, and the marks still land in this term -->
-                <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+                     term's or year's topic, or work ahead, and the marks still land in this term.
+                     Usually both are this term, filled in already, so they fold to one line. -->
+                <div v-if="!showTopicSource" class="flex flex-wrap items-center justify-between gap-2 text-sm bg-gray-50 dark:bg-gray-950/40 rounded-lg px-3 py-2.5">
+                  <span class="text-gray-600 dark:text-gray-300">{{ topicSourceSummary }}</span>
+                  <button type="button" class="text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:underline" @click="topicSourceOpen = true">Change</button>
+                </div>
+                <div v-else class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
                   <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Counts in</label>
                     <select
@@ -475,43 +460,8 @@
             </div>
           </div>
 
-          <!-- Marks -->
-          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-            <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700">
-              <h2 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white flex items-center">
-                <span class="w-8 h-8 mr-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0">
-                  <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-                  </svg>
-                </span>
-                Marks
-              </h2>
-            </div>
-            <div class="p-4 sm:p-6 space-y-4">
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Total Marks</label>
-                  <div class="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900/40 text-gray-700 dark:text-gray-200">
-                    {{ form.total_marks }}
-                  </div>
-                  <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Automatic - the sum of every question's own marks below.</p>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Pass Mark</label>
-                  <input
-                    v-model.number="form.pass_mark"
-                    type="number"
-                    min="0"
-                    :max="form.total_marks"
-                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white transition-colors"
-                    placeholder="50"
-                  >
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Schedule -->
+          <!-- When it's due: only the deadline (optional) is in view; the rest, which most
+               assessments leave as it is, waits under More options with a one-line summary -->
           <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
             <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700">
               <h2 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white flex items-center">
@@ -520,86 +470,127 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                   </svg>
                 </span>
-                Schedule
+                3. When it's due
               </h2>
             </div>
-            <div class="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Opens</label>
-                <input
-                  v-model="form.open_at"
-                  type="datetime-local"
-                  class="w-full min-w-0 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white transition-colors"
-                >
+            <div class="p-4 sm:p-6 space-y-4">
+              <div class="max-w-md">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Deadline (optional)</label>
+                <div class="flex gap-2">
+                  <input
+                    v-model="form.due_date"
+                    type="datetime-local"
+                    class="flex-1 w-full min-w-0 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white transition-colors"
+                  >
+                  <button v-if="form.due_date" type="button" class="px-3 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700" @click="form.due_date = ''">Clear</button>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ form.due_date ? 'Students can hand in until then.' : 'No deadline - it stays open until you close it.' }}</p>
               </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Deadline *</label>
-                <input
-                  v-model="form.due_date"
-                  type="datetime-local"
-                  class="w-full min-w-0 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white transition-colors"
-                >
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Duration (min)</label>
-                <input
-                  v-model.number="form.duration_minutes"
-                  type="number"
-                  min="1"
-                  class="w-full min-w-0 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white transition-colors"
-                  placeholder="60"
-                >
-              </div>
-            </div>
-          </div>
 
-          <!-- Settings -->
-          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-            <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <h2 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white flex items-center">
-                <span class="w-8 h-8 mr-2.5 rounded-lg bg-slate-100 dark:bg-slate-700/50 flex items-center justify-center flex-shrink-0">
-                  <svg class="w-4 h-4 text-slate-600 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                  </svg>
+              <button
+                type="button"
+                class="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg bg-gray-50 dark:bg-gray-950/40 hover:bg-gray-100 dark:hover:bg-gray-700/60 text-left transition-colors"
+                :aria-expanded="showMoreOptions"
+                @click="showMoreOptions = !showMoreOptions"
+              >
+                <span class="min-w-0">
+                  <span class="block text-sm font-semibold text-gray-800 dark:text-gray-200">More options</span>
+                  <span class="block text-xs text-gray-500 dark:text-gray-400 truncate">{{ optionsSummary }}</span>
                 </span>
-                Settings
-              </h2>
-              <label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                Attempts
-                <input
-                  v-model.number="form.attempts_allowed"
-                  type="number"
-                  min="1"
-                  class="w-16 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white transition-colors"
-                >
-              </label>
-            </div>
-            <div class="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-              <label class="flex items-center gap-2 px-3 py-2.5 sm:px-2.5 sm:py-1.5 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                <input v-model="form.allow_late_submission" type="checkbox" class="w-4 h-4 sm:w-3.5 sm:h-3.5 flex-shrink-0 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-0">
-                <span class="text-sm sm:text-xs text-gray-700 dark:text-gray-300 leading-tight">Late submission</span>
-              </label>
-              <label class="flex items-center gap-2 px-3 py-2.5 sm:px-2.5 sm:py-1.5 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                <input v-model="form.shuffle_questions" type="checkbox" class="w-4 h-4 sm:w-3.5 sm:h-3.5 flex-shrink-0 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-0">
-                <span class="text-sm sm:text-xs text-gray-700 dark:text-gray-300 leading-tight">Shuffle questions</span>
-              </label>
-              <label class="flex items-center gap-2 px-3 py-2.5 sm:px-2.5 sm:py-1.5 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                <input v-model="form.shuffle_options" type="checkbox" class="w-4 h-4 sm:w-3.5 sm:h-3.5 flex-shrink-0 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-0">
-                <span class="text-sm sm:text-xs text-gray-700 dark:text-gray-300 leading-tight">Shuffle options</span>
-              </label>
-              <label class="flex items-center gap-2 px-3 py-2.5 sm:px-2.5 sm:py-1.5 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                <input v-model="form.allow_save_resume" type="checkbox" class="w-4 h-4 sm:w-3.5 sm:h-3.5 flex-shrink-0 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-0">
-                <span class="text-sm sm:text-xs text-gray-700 dark:text-gray-300 leading-tight">Save &amp; continue</span>
-              </label>
-              <label class="flex items-center gap-2 px-3 py-2.5 sm:px-2.5 sm:py-1.5 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                <input v-model="form.show_marks_immediately" type="checkbox" class="w-4 h-4 sm:w-3.5 sm:h-3.5 flex-shrink-0 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-0">
-                <span class="text-sm sm:text-xs text-gray-700 dark:text-gray-300 leading-tight">Show marks instantly</span>
-              </label>
-              <label class="flex items-center gap-2 px-3 py-2.5 sm:px-2.5 sm:py-1.5 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                <input v-model="form.show_answers_after_submission" type="checkbox" class="w-4 h-4 sm:w-3.5 sm:h-3.5 flex-shrink-0 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-0">
-                <span class="text-sm sm:text-xs text-gray-700 dark:text-gray-300 leading-tight">Show answers after</span>
-              </label>
+                <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="{ 'rotate-180': showMoreOptions }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+              </button>
+
+              <div v-if="showMoreOptions" class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Opens</label>
+                    <input
+                      v-model="form.open_at"
+                      type="datetime-local"
+                      class="w-full min-w-0 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white transition-colors"
+                    >
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Empty: as soon as you publish.</p>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Time limit (min)</label>
+                    <input
+                      v-model.number="form.duration_minutes"
+                      type="number"
+                      min="1"
+                      class="w-full min-w-0 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white transition-colors"
+                      placeholder="60"
+                    >
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Pass mark</label>
+                    <input
+                      v-model.number="form.pass_mark"
+                      type="number"
+                      min="0"
+                      :max="form.total_marks"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white transition-colors"
+                      placeholder="50"
+                    >
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Out of {{ form.total_marks || 0 }} - the questions' marks added up.</p>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Attempts</label>
+                    <input
+                      v-model.number="form.attempts_allowed"
+                      type="number"
+                      min="1"
+                      class="w-full min-w-0 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white transition-colors"
+                    >
+                  </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                  <label class="flex items-center gap-2 px-3 py-2.5 sm:px-2.5 sm:py-1.5 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <input v-model="form.allow_late_submission" type="checkbox" class="w-4 h-4 sm:w-3.5 sm:h-3.5 flex-shrink-0 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-0">
+                    <span class="text-sm sm:text-xs text-gray-700 dark:text-gray-300 leading-tight">Late submission</span>
+                  </label>
+                  <label class="flex items-center gap-2 px-3 py-2.5 sm:px-2.5 sm:py-1.5 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <input v-model="form.shuffle_questions" type="checkbox" class="w-4 h-4 sm:w-3.5 sm:h-3.5 flex-shrink-0 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-0">
+                    <span class="text-sm sm:text-xs text-gray-700 dark:text-gray-300 leading-tight">Shuffle questions</span>
+                  </label>
+                  <label class="flex items-center gap-2 px-3 py-2.5 sm:px-2.5 sm:py-1.5 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <input v-model="form.shuffle_options" type="checkbox" class="w-4 h-4 sm:w-3.5 sm:h-3.5 flex-shrink-0 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-0">
+                    <span class="text-sm sm:text-xs text-gray-700 dark:text-gray-300 leading-tight">Shuffle options</span>
+                  </label>
+                  <label class="flex items-center gap-2 px-3 py-2.5 sm:px-2.5 sm:py-1.5 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <input v-model="form.allow_save_resume" type="checkbox" class="w-4 h-4 sm:w-3.5 sm:h-3.5 flex-shrink-0 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-0">
+                    <span class="text-sm sm:text-xs text-gray-700 dark:text-gray-300 leading-tight">Save &amp; continue</span>
+                  </label>
+                  <label class="flex items-center gap-2 px-3 py-2.5 sm:px-2.5 sm:py-1.5 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <input v-model="form.show_marks_immediately" type="checkbox" class="w-4 h-4 sm:w-3.5 sm:h-3.5 flex-shrink-0 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-0">
+                    <span class="text-sm sm:text-xs text-gray-700 dark:text-gray-300 leading-tight">Show marks instantly</span>
+                  </label>
+                  <label class="flex items-center gap-2 px-3 py-2.5 sm:px-2.5 sm:py-1.5 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <input v-model="form.show_answers_after_submission" type="checkbox" class="w-4 h-4 sm:w-3.5 sm:h-3.5 flex-shrink-0 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-0">
+                    <span class="text-sm sm:text-xs text-gray-700 dark:text-gray-300 leading-tight">Show answers after</span>
+                  </label>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Link to an eNote Topic (optional)</label>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mb-1.5">
+                    When a student finishes reading the linked topic, they'll see a quick-link to attempt this assignment right away.
+                  </p>
+                  <div v-if="!form.subject_id" class="text-sm text-gray-400 dark:text-gray-500">Select a Subject above first.</div>
+                  <select
+                    v-else
+                    v-model="form.enote_topic_id"
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white transition-colors"
+                    :disabled="loadingEnoteTopics"
+                  >
+                    <option :value="null">No topic linked</option>
+                    <option v-for="t in enoteTopics" :key="t.id" :value="t.id">{{ t.title }}</option>
+                  </select>
+                  <p v-if="form.subject_id && !loadingEnoteTopics && enoteTopics.length === 0" class="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                    No eNote topics found for this subject yet.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -613,7 +604,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                   </svg>
                 </span>
-                Questions
+                4. Questions
               </h2>
               <button
                 v-if="!isPreview && !form.assessment_category && form.subject_id"
@@ -898,8 +889,8 @@
               <span class="font-semibold text-gray-900 dark:text-white text-right truncate max-w-[65%]">{{ classDropdownLabel }}</span>
             </div>
             <div class="flex items-center justify-between gap-3 py-2">
-              <span class="text-slate-500 dark:text-slate-400 font-medium">Due Date</span>
-              <span class="font-semibold text-gray-900 dark:text-white text-right">{{ form.due_date ? new Date(form.due_date).toLocaleDateString() : 'Not set' }}</span>
+              <span class="text-slate-500 dark:text-slate-400 font-medium">Deadline</span>
+              <span class="font-semibold text-gray-900 dark:text-white text-right">{{ form.due_date ? new Date(form.due_date).toLocaleDateString() : 'None' }}</span>
             </div>
             <div class="flex items-center justify-between gap-3 py-2">
               <span class="text-slate-500 dark:text-slate-400 font-medium">Questions</span>
@@ -909,6 +900,18 @@
               <span class="text-slate-500 dark:text-slate-400 font-medium">Total Marks</span>
               <span class="font-semibold text-emerald-600 dark:text-emerald-400">{{ form.total_marks || 0 }}</span>
             </div>
+          </div>
+          <!-- Ready to publish? What's done and what's left -->
+          <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+            <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">To publish</p>
+            <ul class="space-y-1.5 text-sm">
+              <li v-for="c in publishChecklist" :key="c.label" class="flex items-center gap-2" :class="c.done ? 'text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white font-medium'">
+                <span class="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0" :class="c.done ? 'bg-indigo-600 text-white' : 'border-2 border-gray-300 dark:border-gray-600'">
+                  <svg v-if="c.done" class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                </span>
+                {{ c.label }}
+              </li>
+            </ul>
           </div>
         </div>
       </div>
@@ -1534,6 +1537,10 @@ const loadClasses = async () => {
     const response = await axios.get(`${API_BASE}/teacher/classes`)
     if (response.data.success) {
       availableClasses.value = response.data.data
+      // ...nor a teacher with one class-stream
+      if (!isEdit.value && !selectedClassIds.value.length && availableClasses.value.length === 1) {
+        classChecked.value[availableClasses.value[0].id] = true
+      }
     }
   } catch (err) {
     console.error('Failed to load classes:', err)
@@ -1630,6 +1637,36 @@ const topicSourceNote = computed(() => {
   if (!otherClass && !otherYear && !otherTerm) return ''
   const from = [className, termName, yearName].filter(Boolean).join(', ')
   return `A topic from ${from}${counts ? ` - its marks count in ${counts.name}, ${counts.academic_year}` : ''}. It shows on the class's Learning Map after their own topics.`
+})
+
+// Counts in and Topic from fold to one line while both are the usual (this class, this term)
+const topicSourceOpen = ref(false)
+const showTopicSource = computed(() => topicSourceOpen.value || !countsInTermId.value
+  || !curriculumSelection.value.term_id || !!topicSourceNote.value || curriculumMissingYear.value)
+const topicSourceSummary = computed(() => {
+  const counts = allTerms.value.find(t => t.id === countsInTermId.value)
+  return counts ? `Counts in ${counts.name}, ${counts.academic_year} · a topic from this class and term` : ''
+})
+
+// A new assessment's topic term starts as the term it counts in - the usual case - so the
+// categories show at once instead of waiting for the teacher to pick a term
+const defaultTopicTerm = () => {
+  const terms = curriculumMeta.value?.terms
+  if (isEdit.value || createdId.value || curriculumSelection.value.term_id || !terms?.length) return
+  const counts = allTerms.value.find(t => t.id === countsInTermId.value)
+  const match = counts && terms.find(t => t.name === counts.name)
+  if (!match) return
+  curriculumSelection.value.term_id = match.id
+  onCurriculumStepChange('term_id')
+}
+watch([() => curriculumMeta.value?.terms, countsInTermId], defaultTopicTerm)
+
+// Only one theme/branch to choose from: choose it
+watch(() => [curriculumMeta.value?.themes, form.value.assessment_category], () => {
+  const themes = curriculumMeta.value?.themes
+  if (form.value.assessment_category !== 'LOA' || curriculumSelection.value.theme_branch || themes?.length !== 1) return
+  curriculumSelection.value.theme_branch = themes[0]
+  onCurriculumStepChange('theme_branch')
 })
 
 const clearTopicChoice = () => {
@@ -1834,6 +1871,8 @@ const loadAssignments = async () => {
     const response = await axios.get(`${API_BASE}/teacher/enotes/assignments`)
     if (response.data.success) {
       subjects.value = response.data.data.subjects
+      // A teacher with one subject doesn't need to choose it
+      if (!isEdit.value && !form.value.subject_id && subjects.value.length === 1) form.value.subject_id = subjects.value[0].id
     }
   } catch (err) {
     console.error('Failed to load assignments:', err)
@@ -2833,6 +2872,35 @@ const syncCurriculumLinkage = async (assignmentId: number | string) => {
 // A new assessment created during this visit, before the page has moved to its edit address
 const createdId = ref<number | string | null>(null)
 
+// When it's due: the settings most assessments leave alone, folded under More options
+const showMoreOptions = ref(false)
+const optionsSummary = computed(() => {
+  const f = form.value
+  const parts = [
+    f.open_at ? `opens ${new Date(f.open_at).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}` : 'opens when published',
+    f.duration_minutes ? `${f.duration_minutes} min` : 'no time limit',
+    `${f.attempts_allowed || 1} attempt${Number(f.attempts_allowed) > 1 ? 's' : ''}`
+  ]
+  if (f.pass_mark) parts.push(`pass mark ${f.pass_mark}`)
+  if (f.due_date && !f.allow_late_submission) parts.push('no late work')
+  if (f.shuffle_questions || f.shuffle_options) parts.push('shuffled')
+  if (f.show_marks_immediately) parts.push('marks shown at once')
+  if (f.show_answers_after_submission) parts.push('answers shown after')
+  if (f.enote_topic_id) parts.push('linked to an eNote')
+  const text = parts.join(' · ')
+  return text.charAt(0).toUpperCase() + text.slice(1)
+})
+
+// What publishing still needs, in the teacher's words - the same checks as publishAssignment()
+const publishChecklist = computed(() => {
+  const cat = form.value.assessment_category
+  return [
+    { label: 'Subject and class', done: !!form.value.subject_id && selectedClassIds.value.length > 0 },
+    { label: 'Category and topic', done: !!cat && curriculumQuestionGroups.value.length > 0 && (cat !== 'EOC' || !!selectedConstructId.value) },
+    { label: cat ? 'A question for each topic' : 'Questions', done: questions.value.length > 0 && Number(form.value.total_marks) > 0 && curriculumQuestionGroups.value.every(g => g.count > 0) }
+  ]
+})
+
 const saveDraft = async () => {
   // Title is auto-derived (see derivedTitle) and persistAssignment() falls back to "Untitled
   // Assessment" if nothing's derivable yet - Save Draft must never be blocked by a missing title.
@@ -2916,10 +2984,6 @@ const publishAssignment = async () => {
   }
   if (questions.value.length === 0) {
     showToast('error', 'Please add at least one question before publishing')
-    return
-  }
-  if (!form.value.due_date) {
-    showToast('error', 'Please set a due date before publishing')
     return
   }
   if (!form.value.total_marks || form.value.total_marks <= 0) {
@@ -3032,9 +3096,9 @@ const auth = useAuthStore()
 
 const canAutosave = computed(() => loadedStatus.value === 'draft' && !isPreview.value)
 // A new assessment is only worth creating on the server once something is in it
-// A new assessment can be created once it has what the server asks for (a due date, and
-// marks from at least one question) - the same as Save Draft
-const worthSaving = computed(() => isEdit.value || (!!form.value.due_date && Number(form.value.total_marks) > 0))
+// A new assessment can be created once it has what the server asks for (marks from at least one
+// question) - the same as Save Draft
+const worthSaving = computed(() => isEdit.value || Number(form.value.total_marks) > 0)
 // The server refused the save (not a lost connection): why, in its words
 const autosaveRefused = ref('')
 
@@ -3178,7 +3242,7 @@ const saveState = computed<{ text: string; tone: string; dot: string } | null>((
   if (autosaveRefused.value && isDirty.value) return { text: `Not saved yet: ${autosaveRefused.value}. Kept on this device.`, tone: 'text-amber-700 dark:text-amber-300', dot: 'bg-amber-500' }
   if (isDirty.value) {
     if (canAutosave.value && worthSaving.value) return { text: 'Unsaved changes - saving in a moment', tone: 'text-gray-500 dark:text-gray-400', dot: 'bg-amber-400' }
-    if (canAutosave.value) return { text: 'Kept on this device - saves by itself once it has a due date and a question with marks', tone: 'text-gray-500 dark:text-gray-400', dot: 'bg-amber-400' }
+    if (canAutosave.value) return { text: 'Kept on this device - saves by itself once it has a question with marks', tone: 'text-gray-500 dark:text-gray-400', dot: 'bg-amber-400' }
     if (!canAutosave.value) return { text: 'Unsaved changes - this assessment is published, so press Save to update it', tone: 'text-amber-700 dark:text-amber-300', dot: 'bg-amber-500' }
     return null
   }
