@@ -138,6 +138,9 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         // ICT Lab - best scores, linked notes, finished attempts
         Router::get('/ict-lab', 'eSpace\App\Controllers\IctLabController@studentIndex');
         Router::post('/ict-lab/attempts', 'eSpace\App\Controllers\IctLabController@saveAttempt');
+        // Publications - A level learners' work published by GP (PublicationController)
+        Router::get('/publications/access', 'eSpace\App\Controllers\PublicationController@access');
+        Router::get('/publications', 'eSpace\App\Controllers\PublicationController@studentIndex');
         Router::get('/enotes/topics/{id}', 'eSpace\App\Controllers\Student\ENoteController@show');
         Router::post('/enotes/topics/{id}/progress', 'eSpace\App\Controllers\Student\ENoteController@saveProgress');
         Router::get('/enotes/topics/{topicId}/my-pages', 'eSpace\App\Controllers\Student\PageNoteController@topicPageData');
@@ -396,6 +399,14 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/ict-lab/results', 'eSpace\App\Controllers\IctLabController@results');
         Router::post('/ict-lab/tasks', 'eSpace\App\Controllers\IctLabController@createTask');
         Router::delete('/ict-lab/tasks/{id}', 'eSpace\App\Controllers\IctLabController@deleteTask');
+        // Publications - a GP teacher publishes an A level student's work (PublicationController)
+        Router::get('/publications/access', 'eSpace\App\Controllers\PublicationController@access');
+        Router::get('/publications/authors', 'eSpace\App\Controllers\PublicationController@authors');
+        Router::get('/publications', 'eSpace\App\Controllers\PublicationController@teacherIndex');
+        Router::post('/publications', 'eSpace\App\Controllers\PublicationController@create');
+        Router::put('/publications/{id}/status', 'eSpace\App\Controllers\PublicationController@setStatus');
+        Router::post('/publications/{id}', 'eSpace\App\Controllers\PublicationController@update');
+        Router::delete('/publications/{id}', 'eSpace\App\Controllers\PublicationController@delete');
         Router::post('/enotes/topics', 'eSpace\App\Controllers\Teacher\ENoteController@create');
         Router::get('/enotes/preview', 'eSpace\App\Controllers\Teacher\ENoteController@previewIndex');
         Router::get('/enotes/preview/topics/{id}', 'eSpace\App\Controllers\Teacher\ENoteController@previewShow');

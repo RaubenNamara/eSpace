@@ -13,6 +13,11 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-10-29', area: 'eLibrary', icon: 'book',
+    title: 'Publications: A level students\' work, published by GP',
+    text: 'A GP teacher picks the A level student who wrote a piece, uploads it as a PDF and publishes it. Every A level student is told, finds it in Publications and on their dashboard, and reads it page by page like a book, with the author\'s name on the cover. O level students never see it. A piece can be kept as a draft first, edited, or taken down.'
+  },
+  {
     date: '2026-10-29', area: 'Assessments', icon: 'pencil',
     title: 'Assessments save themselves while you set them',
     text: 'A draft assessment now saves itself a few seconds after every change - questions, marks, settings - and the line under its title says when. If the internet goes off or the page is closed first, the work is kept on that device and offered back the next time it is opened. A published assessment still waits for Save, so learners never see half-made changes, and Tusome asks before you leave with changes not saved.'

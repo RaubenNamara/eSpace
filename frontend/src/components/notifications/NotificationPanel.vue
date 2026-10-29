@@ -103,6 +103,8 @@ function routeForNotification(n: NotificationItem): { path: string; query?: Reco
       return { path: `${base}/virtual-lab/${data.assignment_id}` }
     case 'ict_lab_task':
       return { path: `${base}/ict-lab` }
+    case 'new_publication':
+      return { path: `${base}/publications`, query: { open: String(data.publication_id || '') } }
     case 'new_library_resource':
       return { path: `${base}/library` }
     case 'new_item_bank_resource':

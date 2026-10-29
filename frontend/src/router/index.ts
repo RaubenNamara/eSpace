@@ -216,6 +216,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'assignments/:id/submission/:submissionId', name: 'StudentAssignmentSubmission', component: StudentAssignmentResult, meta: { viewMode: 'submission' } },
       { path: 'assignments/:id/result/:submissionId', name: 'StudentAssignmentResult', component: StudentAssignmentResult, meta: { viewMode: 'result' } },
       { path: 'library', name: 'StudentLibrary', component: StudentLibrary },
+      { path: 'publications', name: 'StudentPublications', component: () => import('../pages/student/Publications.vue') },
       { path: 'videos', name: 'StudentVideos', component: StudentVideos },
       { path: 'notes', name: 'StudentNotes', component: StudentNotes },
       { path: 'enotes', name: 'StudentENotes', component: StudentENotes },
@@ -302,6 +303,7 @@ const routes: RouteRecordRaw[] = [
         ]
       },
       { path: 'library', name: 'TeacherLibrary', component: TeacherLibrary },
+      { path: 'publications', name: 'TeacherPublications', component: () => import('../pages/teacher/Publications.vue') },
       { path: 'videos', name: 'TeacherVideos', component: TeacherVideos },
       { path: 'notes', name: 'TeacherNotes', component: TeacherNotes },
       { path: 'itembank', name: 'TeacherItemBank', component: TeacherItemBank },
