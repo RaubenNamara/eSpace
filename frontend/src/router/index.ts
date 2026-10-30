@@ -128,6 +128,7 @@ const AdminPhysicalExams = () => import('../pages/admin/PhysicalExams.vue')
 const AdminRewards = () => import('../pages/admin/Rewards.vue')
 const AdminVirtualLab = () => import('../pages/admin/VirtualLab.vue')
 const AdminDemoRequests = () => import('../pages/admin/DemoRequests.vue')
+const AdminPrivacyReports = () => import('../pages/admin/PrivacyReports.vue')
 const AdminSettings = () => import('../pages/admin/Settings.vue')
 const AdminLogs = () => import('../pages/admin/Logs.vue')
 const AdminLibrary = () => import('../pages/teacher/Library.vue')
@@ -145,6 +146,12 @@ const routes: RouteRecordRaw[] = [
     path: '/',
     name: 'Landing',
     component: Landing
+  },
+  {
+    // The privacy policy, and Report a concern - open to everyone, signed in or not
+    path: '/privacy',
+    name: 'Privacy',
+    component: () => import('../pages/Privacy.vue')
   },
   {
     // The public user guide - open to everyone, signed in or not
@@ -425,6 +432,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'reports', name: 'AdminReports', component: AdminReports },
       { path: 'audit-logs', redirect: '/admin/logs' },
       { path: 'demo-requests', name: 'AdminDemoRequests', component: AdminDemoRequests },
+      { path: 'privacy-reports', name: 'AdminPrivacyReports', component: AdminPrivacyReports },
       { path: 'parent-links', name: 'AdminParentLinks', component: () => import('../pages/admin/ParentLinks.vue') },
       { path: 'notices', name: 'AdminNotices', component: () => import('../pages/common/Noticeboard.vue') },
       { path: 'exam-dates', name: 'AdminExamDates', component: () => import('../pages/admin/ExamDates.vue') },
@@ -484,7 +492,7 @@ const router = createRouter({
   // moving between the website and the guide starts at the top. Everything else is left alone,
   // so in-app pages that update their own query string keep their place.
   scrollBehavior(to, from, savedPosition) {
-    const isPublic = (path: string) => path === '/' || path === '/guide' || path.startsWith('/for/')
+    const isPublic = (path: string) => path === '/' || path === '/guide' || path === '/privacy' || path.startsWith('/for/')
     if (!isPublic(to.path)) return false
     if (savedPosition) return savedPosition
     if (to.hash) return { el: to.hash, top: 80, behavior: to.path === from.path ? 'smooth' : 'auto' }
@@ -555,9 +563,9 @@ router.beforeEach((to, from, next) => {
     return
   }
 
-  // A signed-in user may still go back to the website from the guide or a /for/* page (its
+  // A signed-in user may still go back to the website from the guide, the privacy page or a /for/* page (its
   // "Tusome home" links); opening the site fresh still takes them to their dashboard.
-  const fromPublicPage = from.matched.length > 0 && (from.path === '/guide' || from.path.startsWith('/for/'))
+  const fromPublicPage = from.matched.length > 0 && (from.path === '/guide' || from.path === '/privacy' || from.path.startsWith('/for/'))
   if (authStore.isAuthenticated && to.path === '/' && fromPublicPage) {
     next()
     return

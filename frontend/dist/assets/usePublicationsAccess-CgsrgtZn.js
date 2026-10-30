@@ -1,1 +1,0 @@
-import{i as r,r as o}from"./index-B_ogJpo-.js";const t=o(!1);let s="";function f(){return{allowed:t,check:e=>{const a=e==="student"||e==="teacher"?e:"";a!==s&&(s=a,t.value=!1,a&&r.get(`/api/${a}/publications/access`).then(n=>{var c,i;s===a&&(t.value=!!((i=(c=n.data)==null?void 0:c.data)!=null&&i.allowed))}).catch(()=>{}))}}}export{f as u};

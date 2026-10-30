@@ -278,8 +278,11 @@
                     </div>
                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Usually this class, year and term. Choose another to catch up on a topic (an S.5 topic in S.6, say) or to work ahead.</p>
                   </div>
+                  <div v-if="topicSourceOpen && countsInTermId && curriculumSelection.term_id" class="lg:col-span-2 flex justify-end">
+                    <button type="button" class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700" @click="topicSourceOpen = false">Done</button>
+                  </div>
                 </div>
-                <p v-if="topicSourceNote" class="flex items-start gap-2 text-sm text-indigo-800 dark:text-indigo-200 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-lg p-3">
+                <p v-if="topicSourceNote && showTopicSource" class="flex items-start gap-2 text-sm text-indigo-800 dark:text-indigo-200 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-lg p-3">
                   <svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                   <span>{{ topicSourceNote }}</span>
                 </p>
@@ -1624,7 +1627,8 @@ const loadTerms = async () => {
 watch([() => form.value.academic_year, allTerms], () => { if (allTerms.value.length) defaultCountsIn() })
 
 // A plain line saying where the topic comes from, when it is not this class's topic for this term
-const topicSourceNote = computed(() => {
+// Where the topic comes from when it is not this class's topic for this term ("S.6, Term 1, 2026")
+const topicFrom = computed(() => {
   const sel = curriculumSelection.value
   if (!sel.term_id || !curriculumMeta.value) return ''
   const yearName = curriculumMeta.value.academic_years.find(y => y.id === Number(sel.academic_year_id))?.name ?? ''
@@ -1635,17 +1639,22 @@ const topicSourceNote = computed(() => {
   const otherYear = !!yearName && String(yearName) !== String(form.value.academic_year)
   const otherTerm = !!counts && Number(sel.term_id) !== counts.id
   if (!otherClass && !otherYear && !otherTerm) return ''
-  const from = [className, termName, yearName].filter(Boolean).join(', ')
-  return `A topic from ${from}${counts ? ` - its marks count in ${counts.name}, ${counts.academic_year}` : ''}. It shows on the class's Learning Map after their own topics.`
+  return [className, termName, yearName].filter(Boolean).join(', ')
+})
+const topicSourceNote = computed(() => {
+  if (!topicFrom.value) return ''
+  const counts = allTerms.value.find(t => t.id === countsInTermId.value)
+  return `A topic from ${topicFrom.value}${counts ? ` - its marks count in ${counts.name}, ${counts.academic_year}` : ''}. It shows on the class's Learning Map after their own topics.`
 })
 
-// Counts in and Topic from fold to one line while both are the usual (this class, this term)
+// Counts in and Topic from fold to one line saying what they are - opened with Change, folded
+// again with Done; open by themselves only while something still has to be chosen
 const topicSourceOpen = ref(false)
 const showTopicSource = computed(() => topicSourceOpen.value || !countsInTermId.value
-  || !curriculumSelection.value.term_id || !!topicSourceNote.value || curriculumMissingYear.value)
+  || !curriculumSelection.value.term_id || curriculumMissingYear.value)
 const topicSourceSummary = computed(() => {
   const counts = allTerms.value.find(t => t.id === countsInTermId.value)
-  return counts ? `Counts in ${counts.name}, ${counts.academic_year} · a topic from this class and term` : ''
+  return counts ? `Counts in ${counts.name}, ${counts.academic_year} · a topic from ${topicFrom.value || 'this class and term'}` : ''
 })
 
 // A new assessment's topic term starts as the term it counts in - the usual case - so the
