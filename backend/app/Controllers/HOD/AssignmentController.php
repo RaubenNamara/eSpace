@@ -68,7 +68,7 @@ class AssignmentController extends Controller
         $sql = "SELECT a.id, a.title, a.status, a.due_date, a.total_marks, a.assessment_category AS category,
                        s.name as subject_name, c.name as class_name,
                        CONCAT(t.first_name, ' ', t.last_name) as teacher_name,
-                       (SELECT COUNT(*) FROM assignment_submissions WHERE assignment_id = a.id) as submissions_count,
+                       (SELECT COUNT(*) FROM assignment_submissions WHERE assignment_id = a.id AND deleted_at IS NULL AND status IN ('submitted','marking','graded','returned')) as submissions_count,
                        (SELECT COUNT(*) FROM assignment_submissions WHERE assignment_id = a.id AND deleted_at IS NULL AND status IN ('graded','returned')) as marked_count,
                        (SELECT COUNT(*) FROM assignment_submissions WHERE assignment_id = a.id AND deleted_at IS NULL AND status IN ('submitted','marking')) as waiting_count,
                        (SELECT MAX(marked_at) FROM assignment_submissions WHERE assignment_id = a.id AND deleted_at IS NULL) as last_marked_at

@@ -582,7 +582,7 @@ class AssignmentController extends Controller
                 c.name as class_name,
                 c.stream_name as stream_name,
                 COUNT(DISTINCT q.id) as question_count,
-                COUNT(DISTINCT sub.id) as submission_count,
+                COUNT(DISTINCT CASE WHEN sub.status IN ('submitted','marking','graded','returned') THEN sub.id END) as submission_count,
                 COUNT(DISTINCT CASE WHEN sub.status = 'submitted' THEN sub.id END) as pending_submission_count,
                 -- Where the class has got: handed in, waiting to be marked (new or part-marked),
                 -- marked, and the students it's aimed at (the subject's department, same class rule
@@ -1243,7 +1243,7 @@ class AssignmentController extends Controller
 
         $sql = "SELECT a.title, a.status, a.category, a.due_date, a.total_marks,
                        s.name as subject_name, c.name as class_name, c.stream_name,
-                       COUNT(DISTINCT sub.id) as submission_count
+                       COUNT(DISTINCT CASE WHEN sub.status IN ('submitted','marking','graded','returned') THEN sub.id END) as submission_count
                 FROM assignments a
                 LEFT JOIN subjects s ON a.subject_id = s.id
                 LEFT JOIN classes c ON a.class_id = c.id

@@ -65,7 +65,7 @@ class AssignmentController extends Controller
                          AND y.academic_year_id = COALESCE(c.academic_year_id, (SELECT ay.id FROM academic_years ay WHERE ay.is_current = 1 LIMIT 1))) AS class_stream_count,
                        d.name as department_name,
                        CONCAT(t.first_name, ' ', t.last_name) as teacher_name,
-                       (SELECT COUNT(*) FROM assignment_submissions WHERE assignment_id = a.id) as submissions_count
+                       (SELECT COUNT(*) FROM assignment_submissions WHERE assignment_id = a.id AND deleted_at IS NULL AND status IN ('submitted','marking','graded','returned')) as submissions_count
                 FROM assignments a
                 INNER JOIN teachers t ON a.teacher_id = t.id
                 LEFT JOIN subjects s ON a.subject_id = s.id
