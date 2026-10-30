@@ -60,12 +60,13 @@ class ClassController extends Controller
                            d.name as department_name,
                            (SELECT COUNT(*) FROM student_department_enrollments se2
                             WHERE se2.class_id = c.id AND se2.department_id = sde.department_id
-                              AND se2.deleted_at IS NULL) as student_count
+                              AND se2.deleted_at IS NULL AND se2.status = 'active') as student_count
                     FROM student_department_enrollments sde
                     INNER JOIN classes c ON sde.class_id = c.id
                     LEFT JOIN departments d ON sde.department_id = d.id
                     WHERE sde.student_id = :student_id
                       AND sde.deleted_at IS NULL
+                      AND sde.status = 'active'
                       AND c.deleted_at IS NULL
                     ORDER BY c.level, c.name";
 
@@ -112,7 +113,7 @@ class ClassController extends Controller
         $stmt = $db->prepare(
             "SELECT id FROM student_department_enrollments
              WHERE student_id = :student_id AND class_id = :class_id AND department_id = :department_id
-               AND deleted_at IS NULL"
+               AND deleted_at IS NULL AND status = 'active'"
         );
         $stmt->execute(['student_id' => $studentId, 'class_id' => $classId, 'department_id' => $departmentId]);
         if (!$stmt->fetch()) {
@@ -133,6 +134,7 @@ class ClassController extends Controller
                     WHERE se.department_id = :department_id
                       AND se.class_id = :class_id
                       AND se.deleted_at IS NULL
+                      AND se.status = 'active'
                       AND s.deleted_at IS NULL
                     ORDER BY s.last_name, s.first_name";
 

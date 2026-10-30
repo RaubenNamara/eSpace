@@ -321,7 +321,7 @@ class SearchService
                 WHERE lc.deleted_at IS NULL
                   AND EXISTS (SELECT 1 FROM student_department_enrollments sde
                               WHERE sde.student_id = {$p} AND sde.department_id = lc.department_id
-                                AND sde.deleted_at IS NULL AND (lc.class_id IS NULL OR sde.class_id = lc.class_id))";
+                                AND sde.deleted_at IS NULL AND sde.status = 'active' AND (lc.class_id IS NULL OR sde.class_id = lc.class_id))";
         }
 
         if ($type === 'all') {
@@ -331,7 +331,7 @@ class SearchService
                 FROM subjects subj
                 WHERE subj.deleted_at IS NULL
                   AND EXISTS (SELECT 1 FROM student_department_enrollments sde
-                              WHERE sde.student_id = {$p} AND sde.department_id = subj.department_id AND sde.deleted_at IS NULL)";
+                              WHERE sde.student_id = {$p} AND sde.department_id = subj.department_id AND sde.deleted_at IS NULL AND sde.status = 'active')";
         }
 
         return $branches;

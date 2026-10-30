@@ -51,7 +51,7 @@ class DashboardController extends Controller
         // Enrollment: distinct (class, department) pairings, and the subjects reachable through them
         $stmt = $db->prepare(
             "SELECT DISTINCT class_id, department_id FROM student_department_enrollments
-             WHERE student_id = :student_id AND deleted_at IS NULL"
+             WHERE student_id = :student_id AND deleted_at IS NULL AND status = 'active'"
         );
         $stmt->execute(['student_id' => $studentId]);
         $enrollments = $stmt->fetchAll();

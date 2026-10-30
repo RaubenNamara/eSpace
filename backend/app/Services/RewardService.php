@@ -394,7 +394,7 @@ class RewardService
     {
         $stmt = $this->getDb()->prepare(
             'SELECT DISTINCT s.id FROM students s
-             INNER JOIN student_department_enrollments sde ON sde.student_id = s.id AND sde.class_id = :class_id AND sde.deleted_at IS NULL
+             INNER JOIN student_department_enrollments sde ON sde.student_id = s.id AND sde.class_id = :class_id AND sde.deleted_at IS NULL AND sde.status = "active"
              WHERE s.deleted_at IS NULL'
         );
         $stmt->execute(['class_id' => $classId]);

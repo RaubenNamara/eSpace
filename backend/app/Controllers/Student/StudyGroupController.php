@@ -52,7 +52,7 @@ class StudyGroupController extends Controller
         $stmt = $this->db()->prepare(
             "SELECT DISTINCT su.id, su.name FROM student_department_enrollments sde
                JOIN subjects su ON su.department_id = sde.department_id AND su.deleted_at IS NULL
-              WHERE sde.student_id = ? AND sde.deleted_at IS NULL ORDER BY su.name"
+              WHERE sde.student_id = ? AND sde.deleted_at IS NULL AND sde.status = 'active' ORDER BY su.name"
         );
         $stmt->execute([$this->studentId()]);
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
@@ -149,7 +149,7 @@ class StudyGroupController extends Controller
         $classId = $db->prepare("SELECT class_id FROM students WHERE id = ?");
         $classId->execute([$me]);
         $classId = $classId->fetchColumn() ?: null;
-        $dept = $db->prepare("SELECT department_id FROM student_department_enrollments WHERE student_id = ? AND deleted_at IS NULL" . ($subjectId ? " AND department_id = (SELECT department_id FROM subjects WHERE id = ?)" : '') . " LIMIT 1");
+        $dept = $db->prepare("SELECT department_id FROM student_department_enrollments WHERE student_id = ? AND deleted_at IS NULL AND status = 'active'" . ($subjectId ? " AND department_id = (SELECT department_id FROM subjects WHERE id = ?)" : '') . " LIMIT 1");
         $dept->execute($subjectId ? [$me, $subjectId] : [$me]);
         $deptId = $dept->fetchColumn() ?: null;
 

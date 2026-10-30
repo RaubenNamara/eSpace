@@ -550,7 +550,7 @@ class ENoteController extends Controller
         $stmt = $db->prepare(
             "SELECT c.level FROM student_department_enrollments sde
              LEFT JOIN classes c ON sde.class_id = c.id
-             WHERE sde.student_id = :student_id AND sde.department_id = :department_id AND sde.deleted_at IS NULL
+             WHERE sde.student_id = :student_id AND sde.department_id = :department_id AND sde.deleted_at IS NULL AND sde.status = 'active'
              LIMIT 1"
         );
         $stmt->execute(['student_id' => $studentId, 'department_id' => $page['department_id']]);
@@ -733,7 +733,7 @@ class ENoteController extends Controller
             "SELECT DISTINCT s.id, s.name, s.code
              FROM subjects s
              INNER JOIN student_department_enrollments sde ON sde.department_id = s.department_id
-             WHERE sde.student_id = :student_id AND sde.deleted_at IS NULL AND s.deleted_at IS NULL
+             WHERE sde.student_id = :student_id AND sde.deleted_at IS NULL AND sde.status = 'active' AND s.deleted_at IS NULL
              ORDER BY s.name"
         );
         $stmt->execute(['student_id' => $studentId]);

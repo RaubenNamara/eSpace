@@ -260,7 +260,7 @@ class ChatService
         // students who since left the class, keeping this simple and idempotent).
         $stmt = $db->prepare(
             "SELECT DISTINCT student_id FROM student_department_enrollments
-             WHERE class_id = :class_id AND department_id = :department_id AND deleted_at IS NULL"
+             WHERE class_id = :class_id AND department_id = :department_id AND deleted_at IS NULL AND status = 'active'"
         );
         $stmt->execute(['class_id' => $classId, 'department_id' => $departmentId]);
         foreach ($stmt->fetchAll() as $row) {
@@ -657,7 +657,7 @@ class ChatService
                 OR EXISTS (
                     SELECT 1 FROM chat_participants cp
                     INNER JOIN student_department_enrollments sde ON cp.user_id = sde.student_id AND cp.user_role = 'student'
-                    WHERE cp.conversation_id = c.id AND sde.department_id = :dept_student AND sde.deleted_at IS NULL
+                    WHERE cp.conversation_id = c.id AND sde.department_id = :dept_student AND sde.deleted_at IS NULL AND sde.status = 'active'
                 )
             )";
             $params['dept_direct'] = $departmentId;

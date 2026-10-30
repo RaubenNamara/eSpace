@@ -208,7 +208,7 @@ class ItemBankController extends Controller
             "SELECT DISTINCT s.id, s.name, s.code
              FROM subjects s
              INNER JOIN student_department_enrollments sde ON sde.department_id = s.department_id
-             WHERE sde.student_id = :student_id AND sde.deleted_at IS NULL AND s.deleted_at IS NULL
+             WHERE sde.student_id = :student_id AND sde.deleted_at IS NULL AND sde.status = 'active' AND s.deleted_at IS NULL
              ORDER BY s.name"
         );
         $stmt->execute(['student_id' => $studentId]);

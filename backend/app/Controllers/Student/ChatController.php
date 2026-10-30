@@ -56,7 +56,7 @@ class ChatController extends Controller
                 ON sde1.class_id = sde2.class_id AND sde1.department_id = sde2.department_id
              INNER JOIN students s ON sde2.student_id = s.id
              WHERE sde1.student_id = :student_id_a AND sde2.student_id != :student_id_b
-               AND sde1.deleted_at IS NULL AND sde2.deleted_at IS NULL AND s.deleted_at IS NULL
+               AND sde1.deleted_at IS NULL AND sde2.deleted_at IS NULL AND sde1.status = 'active' AND sde2.status = 'active' AND s.deleted_at IS NULL
              ORDER BY s.first_name, s.last_name"
         );
         $stmt->execute(['student_id_a' => $studentId, 'student_id_b' => $studentId]);
@@ -67,7 +67,7 @@ class ChatController extends Controller
              FROM teachers t
              WHERE t.department_id IN (
                  SELECT DISTINCT department_id FROM student_department_enrollments
-                 WHERE student_id = :student_id AND deleted_at IS NULL
+                 WHERE student_id = :student_id AND deleted_at IS NULL AND status = 'active'
              ) AND t.deleted_at IS NULL
              ORDER BY t.first_name, t.last_name"
         );
@@ -100,7 +100,7 @@ class ChatController extends Controller
              FROM student_department_enrollments sde
              INNER JOIN classes c ON sde.class_id = c.id
              LEFT JOIN departments d ON sde.department_id = d.id
-             WHERE sde.student_id = :student_id AND sde.deleted_at IS NULL AND c.deleted_at IS NULL
+             WHERE sde.student_id = :student_id AND sde.deleted_at IS NULL AND sde.status = 'active' AND c.deleted_at IS NULL
              ORDER BY c.name"
         );
         $stmt->execute(['student_id' => $studentId]);
@@ -172,7 +172,7 @@ class ChatController extends Controller
 
             $stmt = $db->prepare(
                 "SELECT id FROM student_department_enrollments
-                 WHERE student_id = :student_id AND class_id = :class_id AND department_id = :department_id AND deleted_at IS NULL"
+                 WHERE student_id = :student_id AND class_id = :class_id AND department_id = :department_id AND deleted_at IS NULL AND status = 'active'"
             );
             $stmt->execute(['student_id' => $studentId, 'class_id' => $classId, 'department_id' => $departmentId]);
             if (!$stmt->fetch()) {
@@ -200,12 +200,12 @@ class ChatController extends Controller
                  INNER JOIN student_department_enrollments sde2
                     ON sde1.class_id = sde2.class_id AND sde1.department_id = sde2.department_id
                  WHERE sde1.student_id = :me AND sde2.student_id = :contact_id
-                   AND sde1.deleted_at IS NULL AND sde2.deleted_at IS NULL LIMIT 1"
+                   AND sde1.deleted_at IS NULL AND sde2.deleted_at IS NULL AND sde1.status = 'active' AND sde2.status = 'active' LIMIT 1"
             );
         } else {
             $stmt = $db->prepare(
                 "SELECT 1 FROM teachers t WHERE t.id = :contact_id AND t.deleted_at IS NULL AND t.department_id IN (
-                    SELECT DISTINCT department_id FROM student_department_enrollments WHERE student_id = :me AND deleted_at IS NULL
+                    SELECT DISTINCT department_id FROM student_department_enrollments WHERE student_id = :me AND deleted_at IS NULL AND status = 'active'
                  ) LIMIT 1"
             );
         }

@@ -68,7 +68,7 @@ class NotificationService
         }
 
         $stmt = $this->getDb()->prepare(
-            'SELECT student_id FROM student_department_enrollments WHERE class_id = :class_id AND deleted_at IS NULL'
+            'SELECT student_id FROM student_department_enrollments WHERE class_id = :class_id AND deleted_at IS NULL AND status = \'active\''
         );
         $stmt->execute(['class_id' => $classId]);
 

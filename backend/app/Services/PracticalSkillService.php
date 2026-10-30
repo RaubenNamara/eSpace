@@ -56,7 +56,7 @@ class PracticalSkillService
         $stmt = $this->getDb()->prepare(
             'SELECT 1 FROM student_department_enrollments sde
              INNER JOIN virtual_lab_assignments vla ON vla.class_id = sde.class_id AND vla.deleted_at IS NULL
-             WHERE sde.student_id = :student_id AND sde.deleted_at IS NULL AND vla.teacher_id = :teacher_id
+             WHERE sde.student_id = :student_id AND sde.deleted_at IS NULL AND sde.status = "active" AND vla.teacher_id = :teacher_id
              LIMIT 1'
         );
         $stmt->execute(['student_id' => $studentId, 'teacher_id' => $teacherId]);
