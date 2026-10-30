@@ -164,6 +164,9 @@ class AuthController extends Controller
         $userId = $this->getCurrentUserId();
         $role = $this->getCurrentUserRole();
 
+        // offline straight away, not once their last activity ages out
+        \eSpace\App\Support\SignOut::record($role, $userId);
+
         $this->authService->logout();
 
         if ($role === 'student' && $userId) {

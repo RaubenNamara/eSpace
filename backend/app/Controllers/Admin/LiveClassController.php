@@ -101,6 +101,7 @@ class LiveClassController extends Controller
         $stmt = $db->query(
             "SELECT COUNT(*) AS c FROM students
              WHERE deleted_at IS NULL AND last_active_at IS NOT NULL AND last_active_at >= (NOW() - INTERVAL 5 MINUTE)"
+             . \eSpace\App\Support\SignOut::stillSignedIn('students', 'students')
         );
         $studentsOnline = (int) ($stmt->fetch()['c'] ?? 0);
 

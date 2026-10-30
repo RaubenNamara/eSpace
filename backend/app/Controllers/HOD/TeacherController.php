@@ -91,6 +91,7 @@ class TeacherController extends Controller
         $sql = "SELECT t.id, t.username, t.email, t.employee_number, t.first_name, t.last_name, t.phone, 
                        t.is_active, t.created_at, t.department_id, t.last_active_at, t.last_login_at,
                        TIMESTAMPDIFF(SECOND, t.last_active_at, NOW()) AS seen_seconds_ago,
+                       " . \eSpace\App\Support\SignOut::column('teachers', 't') . " AS signed_out_at,
                        d.name as department_name, d.code as department_code,
                        (SELECT COUNT(*) FROM assignments a INNER JOIN subjects s ON s.id = a.subject_id AND s.department_id = :dept_a
                          WHERE a.teacher_id = t.id AND a.deleted_at IS NULL AND a.status = 'published') AS assessments_count,
@@ -111,7 +112,9 @@ class TeacherController extends Controller
         // online = the app pinged in the last 90 seconds (it pings every 30 while open), as in chat
         $editors = \eSpace\App\Services\DepartmentContent::editorsOf($departmentId);
         foreach ($teachers as &$t) {
-            $t['is_online'] = $t['seen_seconds_ago'] !== null && (int) $t['seen_seconds_ago'] <= 90;
+            $t['is_online'] = $t['seen_seconds_ago'] !== null && (int) $t['seen_seconds_ago'] <= 90
+                && !(!empty($t['signed_out_at']) && $t['signed_out_at'] >= $t['last_active_at']);
+            unset($t['signed_out_at']);
             // may edit their colleagues' eNotes, books, papers and videos (see contentEditor())
             $t['can_edit_colleagues'] = isset($editors[(int) $t['id']]);
         }

@@ -94,15 +94,9 @@ class ChatService
     {
         $db = $this->getDb();
 
-        if ($role === 'student') {
-            $stmt = $db->prepare("SELECT last_active_at, TIMESTAMPDIFF(SECOND, last_active_at, NOW()) AS seen_ago FROM students WHERE id = :id");
-        } elseif ($role === 'teacher') {
-            $stmt = $db->prepare("SELECT last_active_at, TIMESTAMPDIFF(SECOND, last_active_at, NOW()) AS seen_ago FROM teachers WHERE id = :id");
-        } elseif ($role === 'hod') {
-            $stmt = $db->prepare("SELECT last_active_at, TIMESTAMPDIFF(SECOND, last_active_at, NOW()) AS seen_ago FROM hods WHERE id = :id");
-        } else {
-            $stmt = $db->prepare("SELECT last_active_at, TIMESTAMPDIFF(SECOND, last_active_at, NOW()) AS seen_ago FROM users WHERE id = :id");
-        }
+        $table = match ($role) { 'student' => 'students', 'teacher' => 'teachers', 'hod' => 'hods', default => 'users' };
+        $signedOut = \eSpace\App\Support\SignOut::column($table, 'p');
+        $stmt = $db->prepare("SELECT p.last_active_at, TIMESTAMPDIFF(SECOND, p.last_active_at, NOW()) AS seen_ago, {$signedOut} AS signed_out_at FROM {$table} p WHERE p.id = :id");
 
         $stmt->execute(['id' => $id]);
         $row = $stmt->fetch();
@@ -111,7 +105,9 @@ class ChatService
         // Measured against MySQL's own clock - the same one that wrote last_active_at (NOW()). PHP's
         // clock is UTC while MySQL's can be local time, which used to keep people "online" for hours.
         $seenAgo = isset($row['seen_ago']) && $row['seen_ago'] !== null ? max(0, (int) $row['seen_ago']) : null;
-        $isOnline = $seenAgo !== null && $seenAgo <= self::ONLINE_THRESHOLD_SECONDS;
+        $isOnline = $seenAgo !== null && $seenAgo <= self::ONLINE_THRESHOLD_SECONDS
+            // signed out since their last activity: offline at once
+            && !(!empty($row['signed_out_at']) && $row['signed_out_at'] >= $lastActiveAt);
 
         return ['is_online' => $isOnline, 'last_active_at' => $lastActiveAt, 'seen_seconds_ago' => $seenAgo];
     }

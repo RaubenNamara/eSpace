@@ -138,6 +138,7 @@ class LiveClassController extends Controller
              JOIN students s ON s.id = sde.student_id
              WHERE sde.department_id = :department_id AND sde.deleted_at IS NULL AND s.deleted_at IS NULL
                AND s.last_active_at IS NOT NULL AND s.last_active_at >= (NOW() - INTERVAL 5 MINUTE)"
+               . \eSpace\App\Support\SignOut::stillSignedIn('students', 's')
         );
         $stmt->execute(['department_id' => $departmentId]);
         $studentsOnline = (int) ($stmt->fetch()['c'] ?? 0);

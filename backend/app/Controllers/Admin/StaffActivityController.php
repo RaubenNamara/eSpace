@@ -120,7 +120,8 @@ class StaffActivityController extends Controller
             'student' => ['students', "CONCAT(c.name, IF(c.stream_name IS NULL OR c.stream_name = '', '', CONCAT('-', c.stream_name)))", 'LEFT JOIN classes c ON c.id = p.class_id', 'p.admission_number, NULL AS teacher_id'],
             default => ['teachers', 'd.name', 'LEFT JOIN departments d ON d.id = p.department_id', "'' AS admission_number, NULL AS teacher_id"],
         };
-        $sql = "SELECT p.id, p.first_name, p.last_name, p.username, p.profile_photo, p.last_active_at, {$extra},
+        $signedOut = \eSpace\App\Support\SignOut::column($table, 'p');
+        $sql = "SELECT p.id, p.first_name, p.last_name, p.username, p.profile_photo, p.last_active_at, {$signedOut} AS signed_out_at, {$extra},
                        {$groupSelect} AS grp,
                        COUNT(l.id) AS logins,
                        MAX(l.logged_in_at) AS last_login_at,
@@ -129,7 +130,7 @@ class StaffActivityController extends Controller
                 INNER JOIN login_logs l ON l.user_id = p.id AND l.role = ? AND l.logged_in_at >= ?
                 {$groupJoin}
                 WHERE p.deleted_at IS NULL
-                GROUP BY p.id, p.first_name, p.last_name, p.username, p.profile_photo, p.last_active_at, admission_number, teacher_id, grp
+                GROUP BY p.id, p.first_name, p.last_name, p.username, p.profile_photo, p.last_active_at, signed_out_at, admission_number, teacher_id, grp
                 ORDER BY last_login_at DESC
                 LIMIT " . $limit;
         $stmt = $this->db->prepare($sql);
@@ -157,7 +158,9 @@ class StaffActivityController extends Controller
                 'logins' => (int) $r['logins'],
                 'last_login_at' => $r['last_login_at'],
                 'last_active_at' => $seen ?: null,
-                'online' => $active !== null && ($now - $active) <= self::ONLINE_MINUTES * 60,
+                // signed out since they were last seen: offline at once
+                'online' => $active !== null && ($now - $active) <= self::ONLINE_MINUTES * 60
+                    && !(!empty($r['signed_out_at']) && $r['signed_out_at'] >= $seen),
                 'browser' => $dev['browser'],
                 'os' => $dev['os'],
                 'device_type' => $dev['device_type'],
