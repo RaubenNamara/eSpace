@@ -154,7 +154,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span class="text-xs text-gray-500 dark:text-gray-400">Total Marks</span>
-              <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ assignment.total_marks }}</span>
+              <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ fmtMarks(assignment.total_marks) }}</span>
             </div>
             <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-950/40 border border-gray-100 dark:border-gray-700">
               <svg class="w-4 h-4 text-indigo-500 dark:text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -261,7 +261,7 @@
                     <span class="font-medium text-gray-900 dark:text-white">{{ String.fromCharCode(97 + (subIndex as number)) }})</span>
                     <div class="flex-1">
                       <p class="text-gray-900 dark:text-white mb-2">{{ subQ.question_text }}</p>
-                      <span class="text-sm text-gray-600 dark:text-gray-400">{{ subQ.marks }} marks</span>
+                      <span class="text-sm text-gray-600 dark:text-gray-400">{{ fmtMarks(subQ.marks) }} marks</span>
                     </div>
                   </div>
                   <div class="ml-3 sm:ml-6">
@@ -278,6 +278,8 @@
                       @update:additional-files="answerAdditionalFilesByQuestion[subQ.id] = $event"
                   :parts-order="partsOrderByQuestion[subQ.id] || []"
                   @update:parts-order="partsOrderByQuestion[subQ.id] = $event; triggerAutoSave()"
+                  :answer-style="answerStyleByQuestion[subQ.id] || null"
+                  @update:answer-style="answerStyleByQuestion[subQ.id] = $event; triggerAutoSave()"
                       @submission-id="submissionId = $event"
                       @locked="submissionStatus = 'submitted'"
                     />
@@ -300,6 +302,8 @@
                   @update:additional-files="answerAdditionalFilesByQuestion[entry.question.id] = $event"
                   :parts-order="partsOrderByQuestion[entry.question.id] || []"
                   @update:parts-order="partsOrderByQuestion[entry.question.id] = $event; triggerAutoSave()"
+                  :answer-style="answerStyleByQuestion[entry.question.id] || null"
+                  @update:answer-style="answerStyleByQuestion[entry.question.id] = $event; triggerAutoSave()"
                   @submission-id="submissionId = $event"
                   @locked="submissionStatus = 'submitted'"
                 />
@@ -309,7 +313,7 @@
             <!-- Regular Question -->
             <div v-else>
               <div class="flex flex-wrap items-start justify-between gap-2 mb-2">
-                <p class="text-xs font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">{{ Number(entry.question.marks).toFixed(2) }} Marks</p>
+                <p class="text-xs font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">{{ fmtMarks(entry.question.marks) }} Marks</p>
                 <span class="shrink-0 px-2.5 py-1 rounded-full text-xs font-medium border" :class="questionStatusBadgeClass">{{ questionStatusLabel }}</span>
               </div>
               <div class="mb-4">
@@ -401,6 +405,8 @@
                   @update:additional-files="answerAdditionalFilesByQuestion[entry.question.id] = $event"
                   :parts-order="partsOrderByQuestion[entry.question.id] || []"
                   @update:parts-order="partsOrderByQuestion[entry.question.id] = $event; triggerAutoSave()"
+                  :answer-style="answerStyleByQuestion[entry.question.id] || null"
+                  @update:answer-style="answerStyleByQuestion[entry.question.id] = $event; triggerAutoSave()"
                   @submission-id="submissionId = $event"
                   @locked="submissionStatus = 'submitted'"
                 />
@@ -450,6 +456,7 @@
 </template>
 
 <script setup lang="ts">
+import { fmtMarks } from '@/utils/marks'
 import AppIcon from '@/components/common/AppIcon.vue'
 import { ref, computed, onMounted, onUnmounted, defineAsyncComponent } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
@@ -750,6 +757,8 @@ const toggleOffline = async () => {
 
 // The order a student arranged each written answer's parts in (see FreeResponseAnswer)
 const partsOrderByQuestion = ref<Record<number, string[]>>({})
+// 'handwriting' when the learner writes a mark sheet in handwriting (saved with the answer)
+const answerStyleByQuestion = ref<Record<number, string | null>>({})
 
 const loadAssignment = async () => {
   loading.value = true
@@ -782,6 +791,7 @@ const loadAssignment = async () => {
           if (answer.answer_text !== null && answer.answer_text !== undefined) {
             answers.value[answer.question_id] = answer.answer_text
           }
+          if (answer.answer_style) answerStyleByQuestion.value[answer.question_id] = answer.answer_style
           if (answer.parts_order) {
             try {
               const order = JSON.parse(answer.parts_order)
@@ -945,6 +955,14 @@ const prepareAnswers = () => {
     const entry = prepared.find(a => a.question_id === qId)
     if (entry) entry.parts_order = order
     else prepared.push({ question_id: qId, parts_order: order })
+  })
+
+  // print or handwriting, for each mark sheet the learner set it on
+  Object.entries(answerStyleByQuestion.value).forEach(([questionId, style]) => {
+    const qId = Number(questionId)
+    const entry = prepared.find(a => a.question_id === qId)
+    if (entry) entry.answer_style = style || null
+    else prepared.push({ question_id: qId, answer_style: style || null })
   })
 
   return prepared

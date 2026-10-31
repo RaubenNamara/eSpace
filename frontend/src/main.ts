@@ -9,6 +9,8 @@ import { installFriendlyErrors } from './utils/friendlyErrors'
 import api from './services/api'
 import { captureInstallPrompt } from './utils/install'
 import './assets/style.css'
+// the handwriting a learner can choose for their mark sheet (bundled, so it works offline)
+import '@fontsource/patrick-hand/latin-400.css'
 
 // Android/Chrome can fire its install offer before the app mounts - keep it for the Install button
 captureInstallPrompt()

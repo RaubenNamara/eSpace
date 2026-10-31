@@ -23,21 +23,17 @@
          other two modes' data is ever cleared, so switching modes never loses work. -->
     <div>
       <template v-if="answerMode === 'type'">
-        <p class="text-sm font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-1.5">
-          <span aria-hidden="true">⌨️</span> Type your Answer
-        </p>
         <TypedAnswerEditor
           :model-value="modelValue"
           :readonly="readonly"
           :placeholder="placeholder"
+          :handwriting="answerStyle === 'handwriting'"
           @update:model-value="$emit('update:modelValue', $event)"
+          @update:handwriting="$emit('update:answer-style', $event ? 'handwriting' : 'print')"
         />
       </template>
 
       <template v-else-if="answerMode === 'write'">
-        <p class="text-sm font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-1.5">
-          <AppIcon name="pencil" class="w-4 h-4" /> Write
-        </p>
         <p v-if="autoCreating" class="text-sm text-gray-500 dark:text-gray-400">Preparing your workspace…</p>
         <div v-else-if="attachment" class="free-response-answer__panel">
           <AnnotationToolbar
@@ -227,6 +223,8 @@ interface Props {
   placeholder?: string
   // The order the student arranged their answer's parts in ('typed', 'primary', 'af-<id>')
   partsOrder?: string[]
+  /** 'handwriting' when the learner writes their mark sheet in handwriting */
+  answerStyle?: string | null
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -236,7 +234,8 @@ const props = withDefaults(defineProps<Props>(), {
   readonly: false,
   rows: 6,
   placeholder: 'Type your answer here...',
-  partsOrder: () => []
+  partsOrder: () => [],
+  answerStyle: null
 })
 
 const emit = defineEmits<{
@@ -249,6 +248,7 @@ const emit = defineEmits<{
   (e: 'update:attachment', value: { path: string; originalName?: string } | null): void
   (e: 'update:additional-files', value: AdditionalAnswerFile[]): void
   (e: 'update:parts-order', value: string[]): void
+  (e: 'update:answer-style', value: string | null): void
 }>()
 
 const API_BASE = '/api'
@@ -301,7 +301,7 @@ const hasWriting = computed(() => Object.values(pdfLayers.value || {}).some(laye
 const answerParts = computed(() => {
   const parts: { key: string; label: string; detail: string; icon: string }[] = []
   const text = (props.modelValue || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()
-  if (text) parts.push({ key: 'typed', label: 'Typed answer', detail: text.length > 70 ? `${text.slice(0, 70)}…` : text, icon: 'keyboard' })
+  if (text) parts.push({ key: 'typed', label: 'Mark sheet', detail: text.length > 70 ? `${text.slice(0, 70)}…` : text, icon: 'keyboard' })
   if (attachment.value) {
     const uploaded = !!attachment.value.originalName && !isPlaceholderAttachmentName(attachment.value.originalName)
     if (uploaded) parts.push({ key: 'primary', label: attachment.value.originalName!, detail: hasWriting.value ? 'With your writing on it' : 'Uploaded file', icon: isImageAttachment.value ? 'photo' : 'document' })

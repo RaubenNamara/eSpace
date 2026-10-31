@@ -26,7 +26,7 @@
             Q{{ q.number }}
             <svg v-if="q.marked >= data.scripts" class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
           </span>
-          <span class="block text-[10px] text-gray-500 dark:text-gray-400 capitalize truncate">{{ q.type.replace(/_/g, ' ') }} · {{ q.marks }} mk</span>
+          <span class="block text-[10px] text-gray-500 dark:text-gray-400 capitalize truncate">{{ q.type.replace(/_/g, ' ') }} · {{ fmtMarks(q.marks) }} mk</span>
           <span class="mt-1.5 block h-1 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden"><span class="block h-full rounded-full bg-emerald-500" :style="{ width: `${Math.min(100, (q.marked / data.scripts) * 100)}%` }"></span></span>
           <span class="mt-0.5 block text-[10px] text-gray-400 tabular-nums">{{ q.marked }}/{{ data.scripts }} marked</span>
         </button>
@@ -42,7 +42,7 @@
           <div class="flex flex-wrap items-start gap-3">
             <span class="px-2 py-1 rounded-lg text-xs font-bold bg-indigo-600 text-white">Q{{ current?.number }}</span>
             <div class="flex-1 min-w-0 prose prose-sm dark:prose-invert max-w-none" v-html="q.html"></div>
-            <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 whitespace-nowrap">out of {{ q.marks }}</span>
+            <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 whitespace-nowrap">out of {{ fmtMarks(q.marks) }}</span>
           </div>
           <p v-if="q.correct && q.correct.length" class="mt-3 text-xs text-emerald-700 dark:text-emerald-300">
             <b>Correct:</b> {{ q.correct.join(' · ') }}
@@ -102,7 +102,7 @@
                     @change="setMark(r, ($event.target as HTMLInputElement).value)"
                     @keydown.enter.prevent="focusNext(i)"
                   >
-                  <span class="text-xs text-gray-400">/ {{ q.marks }}</span>
+                  <span class="text-xs text-gray-400">/ {{ fmtMarks(q.marks) }}</span>
                   <button v-for="v in quickMarks" :key="v" type="button" class="px-2 py-1 rounded-md text-xs font-semibold border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40" :disabled="r.locked" @click="setMark(r, String(v))">{{ v }}</button>
                   <span class="ml-auto w-4 text-center text-xs" :title="saveState[r.submission_id] === 'error' ? 'Not saved' : ''">
                     <span v-if="saveState[r.submission_id] === 'saving'" class="text-gray-400">…</span>
@@ -138,6 +138,7 @@
 </template>
 
 <script setup lang="ts">
+import { fmtMarks } from '@/utils/marks'
 import { computed, onMounted, reactive, ref, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'

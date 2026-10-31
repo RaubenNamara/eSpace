@@ -423,6 +423,27 @@ class AssignmentController extends Controller
         return $result;
     }
 
+    /** assignment_answers.answer_style (migration 154), added here the first time it is needed */
+    private ?bool $answerStyleColumn = null;
+
+    private function ensureAnswerStyle(): bool
+    {
+        if ($this->answerStyleColumn === null) {
+            try {
+                if (!$this->pdo->query("SHOW COLUMNS FROM assignment_answers LIKE 'answer_style'")->fetch()) {
+                    $this->pdo->exec("ALTER TABLE assignment_answers ADD COLUMN IF NOT EXISTS answer_style VARCHAR(20) NULL DEFAULT NULL");
+                    // the first time: answers no teacher has marked on yet move to the app's font
+                    $this->pdo->exec(\eSpace\App\Support\AnswerStyle::UNMARKED_TO_PRINT_SQL);
+                }
+                $this->answerStyleColumn = true;
+            } catch (\Throwable $e) {
+                error_log('answer_style column unavailable: ' . $e->getMessage());
+                $this->answerStyleColumn = false;
+            }
+        }
+        return $this->answerStyleColumn;
+    }
+
     /** Whether assignment_answers.parts_order exists yet (migration 101) */
     private ?bool $partsOrderColumn = null;
 
@@ -596,6 +617,17 @@ class AssignmentController extends Controller
 
                     // The order the student arranged their answer's parts in (typed text, the page
                     // they wrote on, uploaded files) - only part keys are kept
+                    // print or handwriting for the mark sheet - what every marker and viewer then sees
+                    if (array_key_exists('answer_style', $answer) && $this->ensureAnswerStyle()) {
+                        $style = $answer['answer_style'] === 'handwriting' ? 'handwriting' : 'print';
+                        $this->pdo->prepare("UPDATE assignment_answers SET answer_style = :style WHERE submission_id = :submission_id AND question_id = :question_id")
+                            ->execute(['style' => $style, 'submission_id' => $submissionId, 'question_id' => $questionId]);
+                    } elseif (array_key_exists('answer_text', $answer) && $this->ensureAnswerStyle()) {
+                        // typed text saved without a choice: print, in the app's font
+                        $this->pdo->prepare("UPDATE assignment_answers SET answer_style = 'print' WHERE submission_id = :submission_id AND question_id = :question_id AND answer_style IS NULL")
+                            ->execute(['submission_id' => $submissionId, 'question_id' => $questionId]);
+                    }
+
                     if (array_key_exists('parts_order', $answer) && $this->hasPartsOrder()) {
                         $order = is_array($answer['parts_order']) ? $answer['parts_order'] : [];
                         $order = array_values(array_filter(array_map('strval', $order), fn($k) => preg_match('/^(typed|primary|af-\d+)$/', $k)));

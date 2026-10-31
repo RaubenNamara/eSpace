@@ -1,5 +1,5 @@
 <template>
-  <div class="typed-answer-editor" :class="{ 'typed-answer-editor--readonly': readonly }">
+  <div class="typed-answer-editor" :class="{ 'typed-answer-editor--readonly': readonly, 'typed-answer-editor--handwriting': handwriting }">
     <div v-if="editor && !readonly" class="typed-answer-editor__toolbar">
       <button
         type="button"
@@ -89,6 +89,20 @@
       >
         ↷
       </button>
+
+      <span class="typed-answer-editor__divider"></span>
+
+      <!-- write it in handwriting: the teacher sees it the same way when marking -->
+      <button
+        type="button"
+        class="typed-answer-editor__btn typed-answer-editor__hand"
+        :class="{ 'is-active': handwriting }"
+        :aria-pressed="handwriting"
+        title="Show my answer in handwriting"
+        @click="emit('update:handwriting', !handwriting)"
+      >
+        <span aria-hidden="true">✍</span> Handwriting
+      </button>
     </div>
 
     <div class="typed-answer-editor__content-wrap">
@@ -116,15 +130,19 @@ interface Props {
   modelValue: string
   readonly?: boolean
   placeholder?: string
+  /** written in handwriting instead of print */
+  handwriting?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   readonly: false,
-  placeholder: 'Type your answer here...'
+  placeholder: 'Type your answer here...',
+  handwriting: false
 })
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
+  (e: 'update:handwriting', value: boolean): void
 }>()
 
 const editor = useEditor({
@@ -294,7 +312,7 @@ onBeforeUnmount(() => {
 .typed-answer-editor__placeholder {
   position: absolute;
   top: 16px;
-  left: 16px;
+  left: 46px;
   font-size: 16px;
   color: #9ca3af;
   pointer-events: none;
@@ -320,27 +338,47 @@ onBeforeUnmount(() => {
   color: #6b7280;
 }
 
-.typed-answer-editor--readonly .typed-answer-editor__content {
-  background: #f9fafb;
-}
-
-.dark .typed-answer-editor--readonly .typed-answer-editor__content {
-  background: #1f2937;
+.typed-answer-editor__hand {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
 }
 </style>
 
 <style>
+/* The mark sheet: ruled paper - a pale blue line under every line of writing and a red margin.
+   It stays paper-coloured in dark mode too, like a real sheet. */
 .typed-answer-editor__prosemirror {
-  padding: 16px;
+  padding: 14px 16px 16px 46px;
   min-height: 220px;
   font-size: 16px;
-  line-height: 1.6;
+  line-height: 28px;
   color: #111827;
   outline: none;
+  background-color: #fffef9;
+  background-image:
+    linear-gradient(to right, transparent 34px, #f2b8b8 34px, #f2b8b8 35.5px, transparent 35.5px),
+    repeating-linear-gradient(to bottom, transparent 0, transparent 27px, #b7cdea 27px, #b7cdea 28px);
+  background-position: 0 0, 0 14px;
+  background-attachment: local;
+}
+
+.typed-answer-editor__prosemirror p,
+.typed-answer-editor__prosemirror li {
+  margin: 0;
 }
 
 .dark .typed-answer-editor__prosemirror {
-  color: #f3f4f6;
+  color: #111827;
+}
+
+/* in handwriting: a school hand in blue ink, on the same lines */
+.typed-answer-editor--handwriting .typed-answer-editor__prosemirror {
+  font-family: "Patrick Hand", "Comic Sans MS", cursive;
+  font-size: 21px;
+  color: #1e3a8a;
 }
 
 .typed-answer-editor__prosemirror ul {

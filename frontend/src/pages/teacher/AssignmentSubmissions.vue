@@ -54,7 +54,7 @@
                 <span class="block text-sm font-semibold text-gray-900 dark:text-white truncate">{{ submission.student_name }}</span>
                 <span class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 min-w-0">
                   <span :class="getStatusClasses(submission.status)" class="px-1.5 py-0.5 text-[10px] font-semibold rounded-full flex-shrink-0">{{ capitalizeFirst(submission.status) }}</span>
-                  <span class="truncate">{{ submission.total_score !== null ? submission.total_score : '-' }} / {{ assignment?.total_marks }}</span>
+                  <span class="truncate">{{ fmtMarks(submission.total_score) }} / {{ fmtMarks(assignment?.total_marks) }}</span>
                 </span>
               </span>
               <button
@@ -101,7 +101,7 @@
                 </td>
                 <td class="px-6 py-4">
                   <p class="text-sm text-gray-900 dark:text-white">
-                    {{ submission.total_score !== null ? submission.total_score : '-' }} / {{ assignment?.total_marks }}
+                    {{ fmtMarks(submission.total_score) }} / {{ fmtMarks(assignment?.total_marks) }}
                   </p>
                 </td>
                 <td class="px-6 py-4 text-right">
@@ -160,15 +160,15 @@
           <div
             v-for="(question, index) in markingData.questions"
             :key="question.id"
-            class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6"
+            class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6"
           >
-            <div class="flex items-start gap-2 sm:gap-3 mb-4">
-              <span class="font-medium text-gray-900 dark:text-white flex-shrink-0">Q{{ index + 1 }}.</span>
-              <div class="flex-1 min-w-0 overflow-x-auto">
-                <p v-if="question.question_text" class="text-gray-900 dark:text-white mb-2 break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.question_text"></p>
-                <p v-else-if="question.scenario_text" class="text-gray-700 dark:text-gray-300 mb-2 break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.scenario_text"></p>
-                <span class="text-sm text-gray-600 dark:text-gray-400">{{ question.marks }} marks</span>
+            <div class="flex items-start gap-3 mb-5">
+              <span class="flex-shrink-0 inline-flex h-7 min-w-[2rem] items-center justify-center rounded-lg bg-indigo-50 px-2 text-xs font-bold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">Q{{ index + 1 }}</span>
+              <div class="flex-1 min-w-0 overflow-x-auto pt-0.5">
+                <p v-if="question.question_text" class="text-[15px] font-medium leading-relaxed text-gray-900 dark:text-white mb-1 break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.question_text"></p>
+                <p v-else-if="question.scenario_text" class="text-[15px] leading-relaxed text-gray-700 dark:text-gray-300 mb-1 break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.scenario_text"></p>
               </div>
+              <span class="flex-shrink-0 inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-bold tabular-nums text-gray-700 dark:bg-gray-700 dark:text-gray-200 whitespace-nowrap">{{ fmtMarks(question.marks) }} {{ Number(question.marks) === 1 ? 'mark' : 'marks' }}</span>
             </div>
 
             <!-- Objective (MCQ/true-false) questions: raw stored answer only -->
@@ -231,6 +231,7 @@
 </template>
 
 <script setup lang="ts">
+import { fmtMarks } from '@/utils/marks'
 import { computed, ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'

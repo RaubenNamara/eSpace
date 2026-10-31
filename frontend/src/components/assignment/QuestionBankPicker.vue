@@ -41,14 +41,14 @@
               <div class="flex flex-wrap items-center gap-1.5 mb-2">
                 <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">{{ TYPE_LABEL[q.question_type] || q.question_type }}</span>
                 <span v-if="q.category" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-200">{{ q.category }}</span>
-                <span class="text-[11px] text-gray-500 dark:text-gray-400">{{ q.marks }} mark{{ q.marks === 1 ? '' : 's' }} · {{ q.mine ? 'You' : q.author }}<template v-if="q.class_name"> · {{ q.class_name }}</template></span>
+                <span class="text-[11px] text-gray-500 dark:text-gray-400">{{ fmtMarks(q.marks) }} mark{{ q.marks === 1 ? '' : 's' }} · {{ q.mine ? 'You' : q.author }}<template v-if="q.class_name"> · {{ q.class_name }}</template></span>
               </div>
               <div class="text-sm text-gray-900 dark:text-white break-words line-clamp-4 [&_img]:max-h-24 [&_img]:w-auto [&_p]:mb-1" v-html="q.question_text || q.scenario_text || '<em>Question in an attached PDF</em>'"></div>
               <ul v-if="q.options.length" class="mt-1.5 text-xs text-gray-600 dark:text-gray-300 space-y-0.5">
                 <li v-for="(o, i) in q.options" :key="i" :class="{ 'font-semibold text-emerald-700 dark:text-emerald-300': o.is_correct }">{{ String.fromCharCode(65 + i) }}. <span v-html="o.option_text"></span></li>
               </ul>
               <ol v-if="q.sub_questions.length" class="mt-1.5 list-[lower-alpha] pl-5 text-xs text-gray-600 dark:text-gray-300 space-y-0.5">
-                <li v-for="(s, i) in q.sub_questions" :key="i">{{ s.question_text }} ({{ s.marks }})</li>
+                <li v-for="(s, i) in q.sub_questions" :key="i">{{ s.question_text }} ({{ fmtMarks(s.marks) }})</li>
               </ol>
               <div class="mt-3 flex flex-wrap items-center gap-2">
                 <!-- How it has gone -->
@@ -76,6 +76,7 @@
 </template>
 
 <script setup lang="ts">
+import { fmtMarks } from '@/utils/marks'
 import { onMounted, ref, watch } from 'vue'
 import axios from 'axios'
 

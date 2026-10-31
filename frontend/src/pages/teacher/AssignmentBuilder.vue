@@ -725,7 +725,7 @@
                           {{ formatQuestionType(question.question_type) }}
                         </span>
                         <span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
-                          {{ question.marks }} marks
+                          {{ fmtMarks(question.marks) }} marks
                         </span>
                         <span v-if="question.allow_drawing" class="px-2 py-1 text-xs font-medium rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200">
                           Drawing
@@ -752,7 +752,7 @@
                             <span class="font-medium text-gray-700 dark:text-gray-300">{{ String.fromCharCode(97 + (subIndex as number)) }}</span>
                             <div class="flex-1 min-w-0">
                               <p class="text-gray-900 dark:text-white break-words">{{ subQ.question_text }}</p>
-                              <span class="text-xs text-gray-500 dark:text-gray-400">{{ subQ.marks }} marks</span>
+                              <span class="text-xs text-gray-500 dark:text-gray-400">{{ fmtMarks(subQ.marks) }} marks</span>
                             </div>
                           </div>
                         </div>
@@ -1297,7 +1297,7 @@
                   </div>
                   <div class="mt-3 flex items-center flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
                     <span>Type: {{ question.question_type }}</span>
-                    <span>Marks: {{ question.marks }}</span>
+                    <span>Marks: {{ fmtMarks(question.marks) }}</span>
                   </div>
                 </div>
               </div>
@@ -1319,6 +1319,7 @@
 </template>
 
 <script setup lang="ts">
+import { fmtMarks } from '@/utils/marks'
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter, useRoute, onBeforeRouteLeave } from 'vue-router'
 import axios from 'axios'

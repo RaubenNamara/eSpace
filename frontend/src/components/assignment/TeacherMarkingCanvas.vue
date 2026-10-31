@@ -47,6 +47,7 @@
       </div>
       <template v-if="part.key === 'typed' && typedAnswerLayerInfo">
         <div class="teacher-marking-canvas__workspace teacher-marking-canvas__workspace--typed">
+          <div class="teacher-marking-canvas__paper">
           <AnnotationCanvas
             :ref="(el: any) => { typedRef = el }"
             :width="800"
@@ -59,6 +60,7 @@
             :stroke-width="typedStrokeWidth"
             @update:editable-layer="onTypedAnswerLayerChange"
           />
+          </div>
         </div>
       </template>
       <template v-else-if="part.file && part.key === selectedKey && selectedFile">
@@ -118,7 +120,7 @@ import { TYPED_ANSWER_PAGE } from '@/types'
 import AnnotationToolbar from './AnnotationToolbar.vue'
 import AnnotationCanvas from './AnnotationCanvas.vue'
 import PdfAnnotationViewer from './PdfAnnotationViewer.vue'
-import { createTypedAnswerLayer, htmlToPlainText } from '@/composables/useAnnotationCanvas'
+import { createTypedAnswerLayer, htmlToPlainText, handwritingFontReady, answerLook } from '@/composables/useAnnotationCanvas'
 import { resolveAssetUrl } from '@/utils/url'
 import { isPlaceholderAttachmentName } from '@/utils/answerAttachment'
 
@@ -129,7 +131,7 @@ interface Props {
     question_annotations?: Record<number, AnnotationLayerJSON>
     answer_annotations?: Record<number, AnnotationLayerJSON>
     marking_annotations?: Record<number, AnnotationLayerJSON>
-    answer?: { answer_mode?: 'typed' | 'canvas' | 'pdf_upload' | 'image_upload'; student_attachment_path?: string; student_attachment_original_name?: string; answer_text?: string; parts_order?: string | null } | null
+    answer?: { answer_mode?: 'typed' | 'canvas' | 'pdf_upload' | 'image_upload'; student_attachment_path?: string; student_attachment_original_name?: string; answer_text?: string; parts_order?: string | null; answer_style?: string | null } | null
     answer_attachments?: { id: number; path: string; original_name: string; file_type: 'pdf' | 'image'; marking_annotations?: Record<number, AnnotationLayerJSON> }[]
   }
   assignmentId: number
@@ -155,7 +157,10 @@ const typedAnswerLayerInfo = computed(() => {
   // non-empty string like "<p></p>", so a plain truthy check would show this section for a
   // student who never typed anything. Strip tags before deciding whether there's real content.
   if (!text || !htmlToPlainText(text).trim()) return null
-  return createTypedAnswerLayer(text, 800)
+  // the learner's mark sheet: ruled paper, in handwriting if they chose it
+  const look = answerLook(props.question.answer?.answer_style)
+  if ((look.handwriting || look.modern) && !handwritingFontReady.value) return null
+  return createTypedAnswerLayer(text, 800, look)
 })
 
 // Stable array reference (not a fresh array literal in the template) - AnnotationCanvas re-runs
@@ -280,7 +285,7 @@ const partsOrder = computed<string[]>(() => {
 })
 const orderedParts = computed(() => {
   const parts: { key: string; label: string; file: EvidenceFile | null }[] = []
-  if (typedAnswerLayerInfo.value) parts.push({ key: 'typed', label: 'Typed answer', file: null })
+  if (typedAnswerLayerInfo.value) parts.push({ key: 'typed', label: 'Mark sheet', file: null })
   for (const f of allFiles.value) {
     const written = f.isPrimary && isPlaceholderAttachmentName(props.question.answer?.student_attachment_original_name)
     parts.push({ key: f.key, label: written ? 'Written page' : f.label, file: f })
@@ -361,11 +366,11 @@ function onEvidencePdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
 
 <style scoped>
 .teacher-marking-canvas__section-label {
-  padding: 0 0 4px;
-  font-size: 12px;
+  padding: 0 0 6px;
+  font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.06em;
   color: #6b7280;
   overflow-wrap: anywhere;
 }
@@ -444,7 +449,17 @@ function onEvidencePdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
 .teacher-marking-canvas__workspace--typed {
   height: auto;
   min-height: 0;
-  overflow: visible;
+  /* on a phone the sheet keeps a readable size and scrolls sideways instead of shrinking */
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 802px;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px -12px rgba(15, 23, 42, 0.18);
+}
+
+.teacher-marking-canvas__paper {
+  min-width: 600px;
 }
 
 .teacher-marking-canvas__part-closed {

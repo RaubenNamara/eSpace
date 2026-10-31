@@ -1,3 +1,4 @@
+import { ref } from 'vue'
 import { Canvas, StaticCanvas, PencilBrush, Rect, Circle, Line, Triangle, Path, Textbox, Group, FabricImage } from 'fabric'
 import type { FabricObject } from 'fabric'
 import type { AnnotationCustomProps, AnnotationLayerJSON, AnnotationTool } from '@/types'
@@ -270,23 +271,74 @@ export function htmlToPlainText(html: string): string {
   return (container.textContent || '').replace(/\n{3,}/g, '\n\n').trim()
 }
 
-export function createTypedAnswerLayer(text: string, width: number): { layer: AnnotationLayerJSON; height: number } {
-  const padding = 24
+/** The handwriting a learner can choose for their mark sheet (bundled in main.ts) */
+export const HANDWRITING_FONT = '"Patrick Hand", "Comic Sans MS", cursive'
+/**
+ * True once the handwriting font has loaded - read it inside the computed that builds a
+ * handwritten mark sheet, so the page is laid out again with the real letters (Fabric measures
+ * text when it is created, so a font that arrives later would leave the lines spaced wrongly).
+ */
+export const handwritingFontReady = ref(typeof document === 'undefined' || !document.fonts)
+/** The app's own font, for mark sheets written in print */
+export const PRINT_FONT = 'Inter, "Segoe UI", Roboto, Arial, sans-serif'
+if (typeof document !== 'undefined' && document.fonts) {
+  Promise.allSettled([document.fonts.load(`20px ${HANDWRITING_FONT}`), document.fonts.load(`16px ${PRINT_FONT}`)])
+    .finally(() => { handwritingFontReady.value = true })
+}
+
+export interface TypedAnswerLook {
+  /** draw it as ruled paper (blue lines, red margin) - the mark sheet of an assessment */
+  ruled?: boolean
+  /** the learner chose to write it in handwriting */
+  handwriting?: boolean
+  /**
+   * in the app's font (answers saved with the 'print' style). Answers from before this have no
+   * style and keep the layout they were marked on, so a teacher's marks stay over the right words.
+   */
+  modern?: boolean
+}
+
+/** The look of a saved answer: its answer_style ('handwriting' / 'print' / none = as first marked) */
+export function answerLook(style: string | null | undefined): TypedAnswerLook {
+  return { ruled: true, handwriting: style === 'handwriting', modern: style === 'print' }
+}
+
+export function createTypedAnswerLayer(text: string, width: number, look: TypedAnswerLook = {}): { layer: AnnotationLayerJSON; height: number } {
+  // print/handwriting answers are written larger on the page, so they read at a normal size
+  // when the 800px sheet is shown narrower; unstyled (older) answers keep 24px / 16px exactly
+  const styled = look.modern || look.handwriting
+  const padding = styled ? 30 : 24
   const plainText = htmlToPlainText(text || '')
+  // Printed answers keep exactly the layout they always had (16px, 1.4 line height), so marks a
+  // teacher already made on one stay over the right words - the ruling is drawn behind the text.
   const textbox = new Textbox(plainText, {
     left: padding,
     top: padding,
     originX: 'left',
     originY: 'top',
     width: width - padding * 2,
-    fontSize: 16,
-    lineHeight: 1.4,
-    fill: '#111827',
+    fontSize: look.handwriting ? 27 : look.modern ? 21 : 16,
+    lineHeight: look.handwriting ? 1.3 : look.modern ? 1.5 : 1.4,
+    ...(look.handwriting ? { fontFamily: HANDWRITING_FONT } : look.modern ? { fontFamily: PRINT_FONT } : {}),
+    fill: look.handwriting ? '#1e3a8a' : look.modern ? '#1f2937' : '#111827',
     selectable: false,
     evented: false,
     editable: false
   })
   const height = Math.max(200, Math.ceil(textbox.height) + padding * 2)
+
+  // Ruled paper: a pale blue line under every line of writing, all the way down the page, and a
+  // red margin line - plain shapes behind the text, never selectable
+  const paper: FabricObject[] = []
+  if (look.ruled) {
+    const lineHeight = textbox.getHeightOfLine(0) || 25
+    // under the letters of each line: the line box less the extra spacing Fabric puts below them
+    const firstRule = padding + lineHeight - (lineHeight - textbox.fontSize * 1.13) / 2 + 1
+    for (let y = firstRule; y < height - 4; y += lineHeight) {
+      paper.push(new Line([0, y, width, y], { stroke: '#b7cdea', strokeWidth: 1, selectable: false, evented: false }))
+    }
+    paper.push(new Line([padding - 9, 0, padding - 9, height], { stroke: '#f2b8b8', strokeWidth: 1.5, selectable: false, evented: false }))
+  }
 
   // Fabric's per-object toObject() on a Textbox that was never attached to a canvas serializes
   // without the wrapped-line/style bookkeeping Textbox normally finalizes on first render, which
@@ -295,11 +347,12 @@ export function createTypedAnswerLayer(text: string, width: number): { layer: An
   // other saved annotation in this app) already goes through, which is what actually renders.
   const tempEl = document.createElement('canvas')
   const tempCanvas = new StaticCanvas(tempEl, { width, height, renderOnAddRemove: false })
+  paper.forEach(o => tempCanvas.add(o))
   tempCanvas.add(textbox)
-  const raw = tempCanvas.toObject(ANNOTATION_CUSTOM_PROPS as string[]).objects[0]
+  const raw = tempCanvas.toObject(ANNOTATION_CUSTOM_PROPS as string[]).objects
   tempCanvas.dispose()
 
-  return { layer: normalizeLayer({ objects: [raw] }, width, height), height }
+  return { layer: normalizeLayer({ objects: raw }, width, height), height }
 }
 
 export function createMarkObject(tool: 'tick' | 'cross', point: { x: number; y: number }, color: string, useInkColor = false): Path {

@@ -36,7 +36,7 @@
       <div v-if="(mode === 'result' || oversightRole) && summary" class="grid grid-cols-4 gap-1.5 sm:gap-3 mb-4 sm:mb-6">
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 px-1.5 py-2 sm:p-3 text-center min-w-0">
           <p class="text-[10.5px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400">Marks</p>
-          <p class="text-sm sm:text-xl font-extrabold text-gray-900 dark:text-white truncate">{{ summary.marks_awarded }} / {{ summary.total_marks }}</p>
+          <p class="text-sm sm:text-xl font-extrabold text-gray-900 dark:text-white truncate">{{ fmtMarks(summary.marks_awarded) }} / {{ fmtMarks(summary.total_marks) }}</p>
         </div>
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 px-1.5 py-2 sm:p-3 text-center min-w-0">
           <p class="text-[10.5px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400">Percentage</p>
@@ -72,18 +72,18 @@
         <div
           v-for="(question, index) in questions"
           :key="question.id"
-          class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6"
+          class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6"
         >
-          <div class="flex flex-wrap items-start justify-between gap-2 mb-4">
+          <div class="flex flex-wrap items-start justify-between gap-3 mb-5">
             <div class="flex items-start gap-3 min-w-0">
-              <span class="font-medium text-gray-900 dark:text-white flex-shrink-0">Q{{ index + 1 }}.</span>
-              <div class="min-w-0 overflow-x-auto">
-                <p v-if="question.question_text" class="text-gray-900 dark:text-white mb-1 break-words text-justify [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.question_text"></p>
+              <span class="flex-shrink-0 inline-flex h-7 min-w-[2rem] items-center justify-center rounded-lg bg-indigo-50 px-2 text-xs font-bold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">Q{{ index + 1 }}</span>
+              <div class="min-w-0 overflow-x-auto pt-0.5">
+                <p v-if="question.question_text" class="text-[15px] font-medium leading-relaxed text-gray-900 dark:text-white mb-1 break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.question_text"></p>
                 <p v-else-if="question.scenario_text" class="text-gray-700 dark:text-gray-300 mb-1 break-words text-justify [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.scenario_text"></p>
               </div>
             </div>
-            <span v-if="(mode === 'result' || oversightRole) && question.question_mark" class="text-sm font-bold text-red-600 dark:text-red-400 whitespace-nowrap">
-              {{ question.question_mark.marks_awarded ?? '—' }} / {{ question.marks }}
+            <span v-if="(mode === 'result' || oversightRole) && question.question_mark" class="inline-flex items-center rounded-full bg-rose-50 px-3 py-1 text-sm font-bold tabular-nums text-rose-700 ring-1 ring-rose-100 whitespace-nowrap dark:bg-rose-900/30 dark:text-rose-300 dark:ring-rose-800">
+              {{ fmtMarks(question.question_mark.marks_awarded) }} / {{ fmtMarks(question.marks) }}
             </span>
           </div>
 
@@ -100,8 +100,10 @@
           <!-- Free-response question: typed answer (rendered on a canvas so any teacher marks
                made directly over it are visible), plus its drawing/PDF layer(s) -->
           <template v-else>
-            <div v-if="typedAnswerLayers[question.id]" class="ml-3 sm:ml-6 mb-4">
-              <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">{{ oversightRole ? "Student's typed answer" : "Your typed answer" }}</p>
+            <div v-if="typedAnswerLayers[question.id]" class="mb-4 sm:ml-10">
+              <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ oversightRole ? "Student's mark sheet" : "Your mark sheet" }}<template v-if="question.answer?.answer_style === 'handwriting'"> · handwriting</template></p>
+              <div class="mark-sheet-frame">
+              <div class="mark-sheet-paper">
               <AnnotationCanvas
                 :width="800"
                 :height="typedAnswerLayers[question.id].height"
@@ -109,14 +111,17 @@
                 mode="readonly"
                 readonly
               />
+              </div>
+              </div>
+              <p class="mark-sheet-hint">Swipe sideways to read the whole line</p>
             </div>
             <!-- Uploaded evidence gallery - the first file the student uploaded and every extra
                  file are shown side by side with no distinction, each with any marks the
                  teacher made on it. -->
-            <div v-if="galleryFilesFor(question).length" class="ml-3 sm:ml-6 mt-4">
+            <div v-if="galleryFilesFor(question).length" class="mt-4 sm:ml-10">
               <div class="grid gap-4" :class="galleryFilesFor(question).length === 1 ? 'grid-cols-1 max-w-2xl' : 'grid-cols-1 sm:grid-cols-2'">
                 <div v-for="item in galleryFilesFor(question)" :key="item.key" class="min-w-0">
-                  <p class="text-xs text-gray-500 dark:text-gray-400 mb-1 truncate">{{ item.originalName }}</p>
+                  <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 truncate">{{ item.originalName }}</p>
                   <AnnotationCanvas
                     v-if="item.fileType === 'image'"
                     :background="item.path"
@@ -138,8 +143,8 @@
             </div>
           </template>
 
-          <p v-if="(mode === 'result' || oversightRole) && question.question_mark?.feedback" class="mt-3 text-sm text-gray-600 dark:text-gray-400 italic text-justify">
-            "{{ question.question_mark.feedback }}"
+          <p v-if="(mode === 'result' || oversightRole) && question.question_mark?.feedback" class="mt-4 sm:ml-10 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:bg-amber-900/20 dark:text-amber-200">
+            <span class="font-semibold">Teacher's comment:</span> {{ question.question_mark.feedback }}
           </p>
         </div>
       </div>
@@ -148,6 +153,7 @@
 </template>
 
 <script setup lang="ts">
+import { fmtMarks } from '@/utils/marks'
 import VoiceNote from '@/components/assignment/VoiceNote.vue'
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
@@ -156,7 +162,7 @@ import type { AnnotationLayerJSON } from '@/types'
 import { TYPED_ANSWER_PAGE } from '@/types'
 import AnnotationCanvas from '@/components/assignment/AnnotationCanvas.vue'
 import PdfAnnotationViewer from '@/components/assignment/PdfAnnotationViewer.vue'
-import { createTypedAnswerLayer, htmlToPlainText } from '@/composables/useAnnotationCanvas'
+import { createTypedAnswerLayer, htmlToPlainText, handwritingFontReady, answerLook } from '@/composables/useAnnotationCanvas'
 import { resolveAssetUrl } from '@/utils/url'
 import { isPlaceholderAttachmentName } from '@/utils/answerAttachment'
 
@@ -219,7 +225,10 @@ const typedAnswerLayers = computed(() => {
     const text = answerFor(question.id)
     // Tiptap's "empty" editor still serializes to a non-empty string like "<p></p>" - strip tags
     // before deciding whether there's real content (see TeacherMarkingCanvas.vue for the same fix).
-    if (text && htmlToPlainText(text).trim()) map[question.id] = createTypedAnswerLayer(text, 800)
+    // the mark sheet: ruled paper, in handwriting if the learner chose it
+    const look = answerLook(question.answer?.answer_style)
+    if ((look.handwriting || look.modern) && !handwritingFontReady.value) continue
+    if (text && htmlToPlainText(text).trim()) map[question.id] = createTypedAnswerLayer(text, 800, look)
   }
   return map
 })
@@ -408,3 +417,34 @@ const load = async () => {
 
 onMounted(load)
 </script>
+
+<style>
+/* the mark sheet as a sheet of paper: soft edge, a little lift, the paper's own width */
+.mark-sheet-frame {
+  max-width: 800px;
+  /* on a phone the sheet keeps a readable size and scrolls sideways instead of shrinking */
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px -12px rgba(15, 23, 42, 0.18);
+}
+.mark-sheet-paper {
+  min-width: 600px;
+}
+.mark-sheet-hint {
+  display: none;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #9ca3af;
+}
+@media (max-width: 680px) {
+  .mark-sheet-hint {
+    display: block;
+  }
+}
+html.dark .mark-sheet-frame {
+  border-color: #374151;
+}
+</style>

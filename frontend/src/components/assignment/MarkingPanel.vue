@@ -16,7 +16,7 @@
       <div v-for="(question, index) in questions" :key="question.id" class="marking-panel__question">
         <p v-if="curriculumLabel(question)" class="marking-panel__curriculum-label">{{ curriculumLabel(question) }}</p>
         <div class="marking-panel__question-header">
-          <span>Q{{ index + 1 }} <span class="marking-panel__max">/ {{ questionMax(question) }}</span></span>
+          <span>Q{{ index + 1 }} <span class="marking-panel__max">/ {{ fmtMarks(questionMax(question)) }}</span></span>
           <input
             type="number"
             min="0"
@@ -41,7 +41,7 @@
     </div>
 
     <div class="marking-panel__summary">
-      <div><span>Total</span><strong>{{ summary.marks_awarded }} / {{ summary.total_marks }}</strong></div>
+      <div><span>Total</span><strong>{{ fmtMarks(summary.marks_awarded) }} / {{ fmtMarks(summary.total_marks) }}</strong></div>
       <div><span>Percentage</span><strong>{{ summary.percentage }}%</strong></div>
       <div><span>Grade</span><strong>{{ summary.grade }}</strong></div>
     </div>
@@ -88,6 +88,7 @@
 </template>
 
 <script setup lang="ts">
+import { fmtMarks } from '@/utils/marks'
 import { ref, computed, watch } from 'vue'
 import axios from 'axios'
 import type { AssignmentQuestion } from '@/types'
@@ -138,7 +139,8 @@ const saveStatus = ref('')
 const locked = computed(() => props.status === 'returned')
 
 props.questions.forEach(q => {
-  marksInput.value[q.id] = q.question_mark?.marks_awarded ?? null
+  const awarded = q.question_mark?.marks_awarded
+  marksInput.value[q.id] = awarded === null || awarded === undefined ? null : Number(awarded)
   feedbackInput.value[q.id] = q.question_mark?.feedback || ''
 })
 
