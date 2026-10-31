@@ -46,7 +46,7 @@
         />
       </div>
       <template v-if="part.key === 'typed' && typedAnswerLayerInfo">
-        <div class="teacher-marking-canvas__workspace teacher-marking-canvas__workspace--typed">
+        <div class="teacher-marking-canvas__workspace teacher-marking-canvas__workspace--typed" :style="{ maxWidth: `${sheetMaxWidth(props.question.answer?.answer_style) + 2}px` }">
           <div class="teacher-marking-canvas__paper">
           <AnnotationCanvas
             :ref="(el: any) => { typedRef = el }"
@@ -120,7 +120,7 @@ import { TYPED_ANSWER_PAGE } from '@/types'
 import AnnotationToolbar from './AnnotationToolbar.vue'
 import AnnotationCanvas from './AnnotationCanvas.vue'
 import PdfAnnotationViewer from './PdfAnnotationViewer.vue'
-import { createTypedAnswerLayer, htmlToPlainText, handwritingFontReady, answerLook } from '@/composables/useAnnotationCanvas'
+import { createTypedAnswerLayer, htmlToPlainText, handwritingFontReady, answerLook, sheetMaxWidth } from '@/composables/useAnnotationCanvas'
 import { resolveAssetUrl } from '@/utils/url'
 import { isPlaceholderAttachmentName } from '@/utils/answerAttachment'
 

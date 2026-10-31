@@ -303,6 +303,15 @@ export function answerLook(style: string | null | undefined): TypedAnswerLook {
   return { ruled: true, handwriting: style === 'handwriting', modern: style === 'print' }
 }
 
+/**
+ * How wide a mark sheet is shown at most. Print and handwriting answers are written large on the
+ * 800px page, so they are shown narrower (the whole sheet, marks included, scales evenly - nothing
+ * moves) to read at a normal size; older answers keep the full width.
+ */
+export function sheetMaxWidth(style: string | null | undefined): number {
+  return style === 'print' || style === 'handwriting' ? 640 : 800
+}
+
 export function createTypedAnswerLayer(text: string, width: number, look: TypedAnswerLook = {}): { layer: AnnotationLayerJSON; height: number } {
   // print/handwriting answers are written larger on the page, so they read at a normal size
   // when the 800px sheet is shown narrower; unstyled (older) answers keep 24px / 16px exactly
