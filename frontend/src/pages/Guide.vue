@@ -126,7 +126,7 @@ const search = ref('')
 // Signed in: a way back to your own dashboard; otherwise, sign in
 const auth = useAuthStore()
 const account = computed(() => {
-  if (!auth.isAuthenticated) return { to: '/login', label: 'Sign in' }
+  if (!auth.isAuthenticated) return { to: '/login', label: 'Login' }
   const role = auth.userRole === 'super_admin' ? 'admin' : auth.userRole
   return { to: `/${role}/dashboard`, label: 'My dashboard' }
 })

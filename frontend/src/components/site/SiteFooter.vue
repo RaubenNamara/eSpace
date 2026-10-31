@@ -44,9 +44,10 @@ const COLUMNS = [
     title: 'Get started',
     links: [
       { to: '/guide', label: 'User guide' },
-      { to: '/login', label: 'Sign in' },
+      { to: '/login', label: 'Login' },
       { to: '/#demo', label: 'Request a demo' },
       { to: '/#team', label: 'The team' },
+      { to: '/feedback', label: 'Give feedback' },
       { to: '/privacy', label: 'Privacy' },
       { to: '/privacy#report', label: 'Report a concern' }
     ]

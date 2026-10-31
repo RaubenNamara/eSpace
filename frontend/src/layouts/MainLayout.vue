@@ -382,6 +382,19 @@
                   </svg>
                   <span class="min-w-0"><span class="block">Email support</span><span class="block text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ SUPPORT_EMAIL }}</span></span>
                 </a>
+                <!-- Anonymous feedback about Tusome -->
+                <a
+                  role="menuitem"
+                  href="/feedback"
+                  target="_blank"
+                  rel="noopener"
+                  class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2.5 transition-colors"
+                >
+                  <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
+                  </svg>
+                  <span class="min-w-0"><span class="block">Give feedback</span><span class="block text-[11px] text-gray-500 dark:text-gray-400 truncate">Anonymous - 2 minutes</span></span>
+                </a>
                 <!-- Privacy policy, and Report a concern - goes to the Tusome team at once -->
                 <a
                   role="menuitem"
@@ -1047,6 +1060,7 @@ const MENU: Record<string, NavGroup[]> = {
       { path: '/admin/settings', label: 'Settings', icon: 'CogIcon' },
       { path: '/admin/demo-requests', label: 'Demo requests', icon: 'BriefcaseIcon' },
       { path: '/admin/privacy-reports', label: 'Privacy reports', icon: 'KeyIcon', gate: 'super_admin' },
+      { path: '/admin/feedback', label: 'Feedback', icon: 'ChatQuestionIcon', gate: 'super_admin' },
       { path: '/admin/logs', label: 'System Logs', icon: 'DocumentIcon' }
     ] }
   ]

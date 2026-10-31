@@ -26,6 +26,9 @@ Router::post('/api/auth/reset-password', 'eSpace\App\Controllers\AuthController@
 Router::post('/api/demo-requests', 'eSpace\App\Controllers\DemoRequestController@store');
 // A privacy or safety concern, from the public Privacy page (signed in or not)
 Router::post('/api/privacy-reports', 'eSpace\App\Controllers\PrivacyReportController@store');
+// Anonymous feedback about Tusome, from /feedback (signed in or not)
+Router::get('/api/feedback/form', 'eSpace\App\Controllers\FeedbackController@form');
+Router::post('/api/feedback', 'eSpace\App\Controllers\FeedbackController@store');
 // Headline totals for the public website (no personal data)
 Router::get('/api/public/stats', 'eSpace\App\Controllers\PublicStatsController@index');
 // A parent's private weekly view of their child (the token is the key - see ParentLinkController)
@@ -769,6 +772,8 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         // Privacy reports from the Privacy page (super admins only)
         Router::get('/privacy-reports', 'eSpace\App\Controllers\PrivacyReportController@index');
         Router::put('/privacy-reports/{id}', 'eSpace\App\Controllers\PrivacyReportController@update');
+        // Anonymous feedback, added up (super admins only)
+        Router::get('/feedback', 'eSpace\App\Controllers\FeedbackController@analysis');
         // Parent links and the weekly parent digest
         Router::get('/parent-links', 'eSpace\App\Controllers\Admin\ParentLinkController@index');
         Router::get('/parent-links/students', 'eSpace\App\Controllers\Admin\ParentLinkController@students');

@@ -41,7 +41,7 @@
                 {{ hero.primary.label }}
                 <svg class="w-4 h-4 group-hover:translate-x-0.5 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
               </component>
-              <router-link v-if="audience === 'student'" to="/login" class="inline-flex items-center gap-2.5 px-5 py-3 rounded-2xl text-sm font-bold text-white border border-white/25 hover:bg-white/10 transition">Sign in</router-link>
+              <router-link v-if="audience === 'student'" to="/login" class="inline-flex items-center gap-2.5 px-5 py-3 rounded-2xl text-sm font-bold text-white border border-white/25 hover:bg-white/10 transition">Login</router-link>
               <button v-else type="button" class="inline-flex items-center gap-2.5 px-5 py-3 rounded-2xl text-sm font-bold text-white border border-white/25 hover:bg-white/10 transition" @click="watchTour(0)">
                 <span class="w-6 h-6 rounded-full bg-white text-indigo-900 flex items-center justify-center"><svg class="w-3 h-3 ml-0.5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg></span>
                 Watch the 30-second tour
@@ -337,10 +337,10 @@
           <div class="reveal relative overflow-hidden rounded-3xl bg-indigo-600 text-white p-7 sm:p-9">
             <div class="absolute -right-16 -bottom-16 w-56 h-56 rounded-full bg-white/10" aria-hidden="true"></div>
             <p class="relative text-xs font-bold uppercase tracking-widest text-indigo-100">Your school is on Tusome</p>
-            <h2 class="relative mt-3 font-jakarta text-2xl sm:text-3xl font-extrabold">Sign in and pick up where you stopped.</h2>
+            <h2 class="relative mt-3 font-jakarta text-2xl sm:text-3xl font-extrabold">Log in and pick up where you stopped.</h2>
             <p class="relative mt-2 text-white/85 leading-relaxed">Use the username and password your school gave you - on any phone or computer. Add Tusome to your home screen and it opens like an app.</p>
             <div class="relative mt-6 flex flex-wrap items-center gap-3">
-              <router-link to="/login" class="inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold text-indigo-900 bg-white hover:bg-indigo-50 transition">Sign in</router-link>
+              <router-link to="/login" class="inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold text-indigo-900 bg-white hover:bg-indigo-50 transition">Login</router-link>
               <router-link to="/guide#student" class="inline-flex items-center px-5 py-3 rounded-2xl text-sm font-bold text-white ring-1 ring-white/30 hover:bg-white/10 transition">How to use it</router-link>
             </div>
           </div>
@@ -649,7 +649,7 @@ const WHY: Record<Audience, { eyebrow: string; title: string; stepsTitle: string
     ],
     steps: [
       { title: 'Get your account', text: 'Your school gives you a username and a password.' },
-      { title: 'Sign in on any phone', text: 'In the browser - then add Tusome to your home screen and it opens like an app.' },
+      { title: 'Log in on any phone', text: 'In the browser - then add Tusome to your home screen and it opens like an app.' },
       { title: 'Save for offline', text: 'Save notes and books at school, and read them at home with no data.' },
       { title: 'Watch your map fill', text: 'Every marked assessment turns outcomes green on your Learning Map.' }
     ]
