@@ -20,6 +20,10 @@
           <RouterLink to="/teacher/assignments/create" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700">
             <AppIcon name="clipboard" class="w-4 h-4" /> New assessment
           </RouterLink>
+          <!-- a slip per student with their login and first password, to cut out and hand round -->
+          <a :href="`/slips?class_id=${data.class.id}`" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
+            <AppIcon name="key" class="w-4 h-4" /> <span class="hidden sm:inline">Login slips</span>
+          </a>
           <RouterLink v-if="data.subject_id" :to="`/teacher/class-map?subject=${data.subject_id}&level=${encodeURIComponent(data.class.name)}&stream=${data.class.id}`" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
             <AppIcon name="map" class="w-4 h-4" /> <span class="hidden sm:inline">Learning Map</span>
           </RouterLink>

@@ -308,6 +308,9 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         
         // Students
         Router::get('/students/enrolled', 'eSpace\App\Controllers\Teacher\StudentController@enrolled');
+        // Login slips to print, and resetting a student's forgotten password (their department)
+        Router::get('/login-slips', 'eSpace\App\Controllers\LoginSlipController@index');
+        Router::post('/students/{id}/reset-password', 'eSpace\App\Controllers\LoginSlipController@reset');
         Router::delete('/students/{id}', 'eSpace\App\Controllers\Teacher\StudentController@delete');
         Router::put('/students/{id}/re-enroll', 'eSpace\App\Controllers\Teacher\StudentController@reEnroll');
         
@@ -866,6 +869,8 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::post('/students/bulk-delete', 'eSpace\App\Controllers\Admin\StudentController@bulkDelete');
         Router::post('/students/bulk-export', 'eSpace\App\Controllers\Admin\StudentController@bulkExport');
         Router::post('/students/{id}/regenerate-password', 'eSpace\App\Controllers\Admin\StudentController@regeneratePassword');
+        // Login slips to print, for a class or one student
+        Router::get('/login-slips', 'eSpace\App\Controllers\LoginSlipController@index');
         Router::get('/students/{id}', 'eSpace\App\Controllers\Admin\StudentController@show');
         Router::put('/students/{id}', 'eSpace\App\Controllers\Admin\StudentController@update');
         Router::delete('/students/{id}', 'eSpace\App\Controllers\Admin\StudentController@delete');

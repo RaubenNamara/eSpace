@@ -5,6 +5,8 @@ import { useRegisterSW } from 'virtual:pwa-register/vue'
 import App from './App.vue'
 import router from './router'
 import { installOfflineSupport } from './utils/offline/adapter'
+import { installFriendlyErrors } from './utils/friendlyErrors'
+import api from './services/api'
 import { captureInstallPrompt } from './utils/install'
 import './assets/style.css'
 
@@ -51,6 +53,9 @@ if (baseUrl) {
 
 // Downloaded eNotes keep working without a network (see utils/offline)
 installOfflineSupport()
+// Error messages people can act on: no internet, server trouble - never raw database text
+installFriendlyErrors()
+installFriendlyErrors(api)
 
 // Create Vue app
 const app = createApp(App)

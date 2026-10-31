@@ -12,6 +12,8 @@
           <option value="">All classes</option>
           <option v-for="cls in classes" :key="cls.id" :value="String(cls.id)">{{ classLabel(cls) }}</option>
         </select>
+        <!-- one card per student, with their login and first password, to cut out and hand round -->
+        <a v-if="classFilter" :href="`/slips?class_id=${classFilter}`" target="_blank" rel="noopener" class="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">Print login slips</a>
       </template>
     </PageHeader>
 
@@ -318,6 +320,15 @@
             </div>
           </div>
 
+          <a
+            v-if="regeneratedPassword.studentId"
+            :href="`/slips?student_id=${regeneratedPassword.studentId}&print=1`"
+            target="_blank"
+            rel="noopener"
+            class="mb-2 block w-full px-4 py-2 text-center border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
+            Print their login slip
+          </a>
           <button
             @click="showPasswordModal = false"
             class="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
@@ -394,7 +405,7 @@ const showEditModal = ref(false)
 const showPhotoModal = ref(false)
 const showPasswordModal = ref(false)
 const classFilter = usePersistedRef('admin-students-class-filter', '')
-const regeneratedPassword = ref({
+const regeneratedPassword = ref<{ username: string; password: string; studentId?: number }>({
   username: '',
   password: ''
 })
@@ -667,7 +678,8 @@ const regeneratePassword = async (student: Student) => {
     if (response.data.success) {
       regeneratedPassword.value = {
         username: response.data.data.username,
-        password: response.data.data.new_password
+        password: response.data.data.new_password,
+        studentId: student.id
       }
       showPasswordModal.value = true
     } else {

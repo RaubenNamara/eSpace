@@ -30,6 +30,14 @@
           <RouterLink :to="`/teacher/chat?student=${student.student_id}`" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700">
             <AppIcon name="chat" class="w-5 h-5" /> Message {{ niceName(student.name).split(' ')[0] }}
           </RouterLink>
+          <!-- Forgot their password (most students have no email): back to their admission number -->
+          <div v-if="reset" class="rounded-xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 p-3 text-sm">
+            <p class="text-emerald-900 dark:text-emerald-100">Password reset. Login <b class="font-mono">{{ reset.login }}</b> · password <b class="font-mono">{{ reset.password }}</b></p>
+            <a :href="`/slips?student_id=${student.student_id}&print=1`" target="_blank" rel="noopener" class="mt-2 inline-flex px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700">Print their slip</a>
+          </div>
+          <button v-else type="button" :disabled="resetting" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50" @click="resetPassword">
+            <AppIcon name="key" class="w-5 h-5" /> {{ resetting ? 'Resetting...' : 'Reset forgotten password' }}
+          </button>
           <button type="button" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-rose-600 hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-900/20" @click="$emit('de-enroll')">
             <AppIcon name="trash" class="w-5 h-5" /> De-enroll from your account
           </button>
@@ -40,8 +48,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
+import axios from 'axios'
 import AppIcon from '@/components/common/AppIcon.vue'
+import { useConfirmStore } from '@/stores/confirm'
+import { useToastStore } from '@/stores/toast'
 import { initials, niceName, timeAgo } from '@/components/dashboard/teacher/time'
 
 export interface ClassStudent {
@@ -60,6 +71,25 @@ export interface ClassStudent {
 
 const props = defineProps<{ student: ClassStudent; className: string }>()
 defineEmits<{ close: []; report: []; 'de-enroll': [] }>()
+
+// ---- Reset a forgotten password - back to the admission number (LoginSlipController::reset)
+const confirm = useConfirmStore()
+const toast = useToastStore()
+const reset = ref<{ login: string; password: string } | null>(null)
+const resetting = ref(false)
+watch(() => props.student.student_id, () => { reset.value = null })
+const resetPassword = async () => {
+  const name = niceName(props.student.name)
+  if (!await confirm.open({ title: 'Reset password', message: `Set ${name}'s password back to their admission number (${props.student.admission_number})? They can change it after logging in.`, confirmLabel: 'Reset' })) return
+  resetting.value = true
+  try {
+    reset.value = (await axios.post(`/api/teacher/students/${props.student.student_id}/reset-password`)).data.data
+  } catch (err: any) {
+    toast.error(err.response?.data?.message || 'The password could not be reset')
+  } finally {
+    resetting.value = false
+  }
+}
 
 const facts = computed(() => {
   const s = props.student

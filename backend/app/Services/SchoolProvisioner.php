@@ -20,6 +20,10 @@ final class SchoolProvisioner
     // never people or content. A rule tied to one of the home school's own subjects stays there.
     private const SEED_TABLES = ['reward_rules' => 'subject_id IS NULL'];
 
+    // The developer portal's own tables (database/platform/*.sql). They may live in the home
+    // database (PLATFORM_DB_NAME = DB_NAME) - never copied into a school's.
+    private const PLATFORM_TABLES = ['schools', 'platform_admins', 'platform_audit', 'learner_requests', 'school_migrations'];
+
     /**
      * Create the database when the server allows it. On shared hosting (cPanel) the site's
      * database user usually can't: the database is created in cPanel first, the user given ALL
@@ -52,7 +56,7 @@ final class SchoolProvisioner
         $made = 0;
         try {
             foreach ($tables as [$table]) {
-                if (isset($existing[$table])) {
+                if (isset($existing[$table]) || in_array($table, self::PLATFORM_TABLES, true)) {
                     continue;
                 }
                 $create = $home->query('SHOW CREATE TABLE `' . $table . '`')->fetch(\PDO::FETCH_NUM)[1];

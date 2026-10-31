@@ -197,8 +197,6 @@
                     class="block w-full border-0 bg-white py-3.5 pl-14 pr-4 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-0 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-60 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500 dark:disabled:bg-slate-800"
                   />
                 </div>
-                <!-- Other schools' logins end in @ and the school's code (Tenant::splitLogin) -->
-                <p class="mt-1.5 text-xs text-slate-500 dark:text-slate-400">St Mark's: your login as usual. Other schools: the login you were given, ending in @ - like <span class="font-semibold">amos@kings</span>.</p>
               </div>
 
               <!-- Password -->

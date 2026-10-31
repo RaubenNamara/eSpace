@@ -155,6 +155,13 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../pages/Privacy.vue')
   },
   {
+    // Login slips to print - a class, or one student (teachers and admins; LoginSlipController)
+    path: '/slips',
+    name: 'LoginSlips',
+    component: () => import('../pages/LoginSlips.vue'),
+    meta: { requiresAuth: true, role: ['teacher', 'admin', 'super_admin'] }
+  },
+  {
     // Learners in no school ask to join (the team activates them in the developer portal)
     path: '/join',
     name: 'Join',

@@ -73,6 +73,26 @@ class SetupChecklistController extends Controller
             'This school year ends ' . ($yearEnd ? date('j M', strtotime((string) $yearEnd)) : 'soon') . ' and the next one is not set up yet.',
             'The next school year is in place.', '/admin/academic-years');
 
+        // ---- A new school's first week: the things that must exist at all, in the order they
+        // are set up. Each counts as one thing to do until there is at least one. (The checks
+        // below look for problems among what exists - with nothing there, they'd all look done.)
+        // The "Tusome Library" account that owns shared content is not a real teacher.
+        $realTeachers = "deleted_at IS NULL AND is_active = 1 AND (employee_number IS NULL OR employee_number <> 'TUSOME-LIBRARY')";
+        $have = [
+            'subjects' => $one("SELECT COUNT(*) FROM subjects WHERE deleted_at IS NULL"),
+            'classes' => $one("SELECT COUNT(*) FROM classes WHERE deleted_at IS NULL"),
+            'teachers' => $one("SELECT COUNT(*) FROM teachers WHERE {$realTeachers}"),
+            'students' => $one("SELECT COUNT(*) FROM students WHERE deleted_at IS NULL AND is_active = 1"),
+        ];
+        $add('has_subjects', 'Departments and subjects', $have['subjects'] ? 0 : 1,
+            'No subjects yet - add the departments, then their subjects.', "{$have['subjects']} subjects.", '/admin/departments');
+        $add('has_classes', 'Classes and streams', $have['classes'] ? 0 : 1,
+            'No classes yet - add S.1 to S.6 with their streams.', "{$have['classes']} class streams.", '/admin/classes');
+        $add('has_teachers', 'Teachers', $have['teachers'] ? 0 : 1,
+            'No teachers yet - add them (or import a list), each in their department.', "{$have['teachers']} teachers.", '/admin/teachers');
+        $add('has_students', 'Learners', $have['students'] ? 0 : 1,
+            'No learners yet - add them (or import a list) into their classes.', "{$have['students']} learners.", '/admin/students');
+
         // ---- People and structure ----
         $add('dept_heads', 'Departments with a head',
             $one("SELECT COUNT(*) FROM departments d WHERE d.deleted_at IS NULL AND NOT EXISTS (
@@ -96,6 +116,7 @@ class SetupChecklistController extends Controller
 
         $add('teacher_depts', 'Teachers in a department',
             $one("SELECT COUNT(*) FROM teachers t WHERE t.deleted_at IS NULL AND t.department_id IS NULL
+                    AND (t.employee_number IS NULL OR t.employee_number <> 'TUSOME-LIBRARY')
                     AND NOT EXISTS (SELECT 1 FROM teacher_department_assignments a WHERE a.teacher_id = t.id AND a.deleted_at IS NULL)"),
             'teachers are not in any department, so they cannot see its classes.', 'Every teacher belongs to a department.', '/admin/teachers');
 
@@ -109,9 +130,20 @@ class SetupChecklistController extends Controller
             'No upcoming exams are set - students\' exam countdown and revision planner stay empty.',
             "{$examCount} upcoming exam period" . ($examCount === 1 ? '' : 's') . ' set.', '/admin/exam-dates');
 
-        $neverTeachers = $one("SELECT COUNT(*) FROM teachers WHERE deleted_at IS NULL AND is_active = 1 AND last_login_at IS NULL");
+        $neverTeachers = $one("SELECT COUNT(*) FROM teachers WHERE {$realTeachers} AND last_login_at IS NULL");
         $add('teacher_logins', 'Teachers signed in', $neverTeachers,
             'active teachers have never signed in - they may need their login details.', 'Every active teacher has signed in.', '/admin/teachers');
+
+        // Learners who have never logged in most likely don't have their login yet: print their
+        // class's login slips (Students: choose the class, then Print login slips)
+        $neverStudents = $one("SELECT COUNT(*) FROM students WHERE deleted_at IS NULL AND is_active = 1 AND last_login_at IS NULL");
+        $add('student_logins', 'Learners logged in', $neverStudents,
+            'learners have never logged in - print their class\'s login slips (Students: choose the class, then Print login slips).',
+            'Every learner has logged in at least once.', '/admin/students',
+            $names("SELECT CONCAT(c.name, IF(c.stream_name IS NULL OR c.stream_name = '', '', CONCAT(' ', c.stream_name)), ' (', COUNT(*), ')')
+                    FROM students s JOIN classes c ON c.id = s.class_id
+                    WHERE s.deleted_at IS NULL AND s.is_active = 1 AND s.last_login_at IS NULL
+                    GROUP BY c.id, c.name, c.stream_name ORDER BY COUNT(*) DESC"));
 
         // ---- Headline figures ----
         $week = date('Y-m-d H:i:s', strtotime('-7 days'));

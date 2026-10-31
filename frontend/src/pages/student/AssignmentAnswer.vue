@@ -451,11 +451,14 @@
 
 <script setup lang="ts">
 import AppIcon from '@/components/common/AppIcon.vue'
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, defineAsyncComponent } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
 import type { AssignmentQuestion, AnnotationLayerJSON } from '@/types'
-import FreeResponseAnswer, { type AdditionalAnswerFile } from '@/components/assignment/FreeResponseAnswer.vue'
+import type { AdditionalAnswerFile } from '@/components/assignment/FreeResponseAnswer.vue'
+// Loaded only when a question needs it: it brings the answer editor and the drawing tool (some
+// 260 KB), which a multiple-choice test never uses - the page opens without waiting for them
+const FreeResponseAnswer = defineAsyncComponent(() => import('@/components/assignment/FreeResponseAnswer.vue'))
 import QuestionProgress from '@/components/assignment/QuestionProgress.vue'
 import SubmitConfirmDialog from '@/components/assignment/SubmitConfirmDialog.vue'
 import NeedHelpPanel from '@/components/assignment/NeedHelpPanel.vue'
