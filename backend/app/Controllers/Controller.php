@@ -25,6 +25,8 @@ abstract class Controller
     public function __construct()
     {
         $this->parseRequest();
+        // mark sheets nobody has marked on yet move to the wide page, once after deploy
+        \eSpace\App\Support\AnswerStyle::upgradeOnce();
     }
 
     /**

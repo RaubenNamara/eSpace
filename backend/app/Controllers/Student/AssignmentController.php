@@ -619,12 +619,12 @@ class AssignmentController extends Controller
                     // they wrote on, uploaded files) - only part keys are kept
                     // print or handwriting for the mark sheet - what every marker and viewer then sees
                     if (array_key_exists('answer_style', $answer) && $this->ensureAnswerStyle()) {
-                        $style = $answer['answer_style'] === 'handwriting' ? 'handwriting' : 'print';
+                        $style = str_starts_with((string) $answer['answer_style'], 'handwriting') ? \eSpace\App\Support\AnswerStyle::HANDWRITING : \eSpace\App\Support\AnswerStyle::PRINT;
                         $this->pdo->prepare("UPDATE assignment_answers SET answer_style = :style WHERE submission_id = :submission_id AND question_id = :question_id")
                             ->execute(['style' => $style, 'submission_id' => $submissionId, 'question_id' => $questionId]);
                     } elseif (array_key_exists('answer_text', $answer) && $this->ensureAnswerStyle()) {
                         // typed text saved without a choice: print, in the app's font
-                        $this->pdo->prepare("UPDATE assignment_answers SET answer_style = 'print' WHERE submission_id = :submission_id AND question_id = :question_id AND answer_style IS NULL")
+                        $this->pdo->prepare("UPDATE assignment_answers SET answer_style = 'print_wide' WHERE submission_id = :submission_id AND question_id = :question_id AND answer_style IS NULL")
                             ->execute(['submission_id' => $submissionId, 'question_id' => $questionId]);
                     }
 

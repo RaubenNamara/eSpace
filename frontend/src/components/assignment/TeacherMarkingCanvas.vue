@@ -47,10 +47,10 @@
       </div>
       <template v-if="part.key === 'typed' && typedAnswerLayerInfo">
         <div class="teacher-marking-canvas__workspace teacher-marking-canvas__workspace--typed" :style="{ maxWidth: `${sheetMaxWidth(props.question.answer?.answer_style) + 2}px` }">
-          <div class="teacher-marking-canvas__paper">
+          <div class="teacher-marking-canvas__paper" :class="{ 'teacher-marking-canvas__paper--wide': answerLook(props.question.answer?.answer_style).wide }">
           <AnnotationCanvas
             :ref="(el: any) => { typedRef = el }"
-            :width="800"
+            :width="sheetWidth(props.question.answer?.answer_style)"
             :height="typedAnswerLayerInfo.height"
             :readonly-layers="typedAnswerReadonlyLayers"
             :editable-layer="markingLayer[TYPED_ANSWER_PAGE] || { objects: [] }"
@@ -120,7 +120,7 @@ import { TYPED_ANSWER_PAGE } from '@/types'
 import AnnotationToolbar from './AnnotationToolbar.vue'
 import AnnotationCanvas from './AnnotationCanvas.vue'
 import PdfAnnotationViewer from './PdfAnnotationViewer.vue'
-import { createTypedAnswerLayer, htmlToPlainText, handwritingFontReady, answerLook, sheetMaxWidth } from '@/composables/useAnnotationCanvas'
+import { createTypedAnswerLayer, htmlToPlainText, handwritingFontReady, answerLook, sheetMaxWidth, sheetWidth } from '@/composables/useAnnotationCanvas'
 import { resolveAssetUrl } from '@/utils/url'
 import { isPlaceholderAttachmentName } from '@/utils/answerAttachment'
 
@@ -160,7 +160,7 @@ const typedAnswerLayerInfo = computed(() => {
   // the learner's mark sheet: ruled paper, in handwriting if they chose it
   const look = answerLook(props.question.answer?.answer_style)
   if ((look.handwriting || look.modern) && !handwritingFontReady.value) return null
-  return createTypedAnswerLayer(text, 800, look)
+  return createTypedAnswerLayer(text, sheetWidth(props.question.answer?.answer_style), look)
 })
 
 // Stable array reference (not a fresh array literal in the template) - AnnotationCanvas re-runs
@@ -452,7 +452,7 @@ function onEvidencePdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
   /* on a phone the sheet keeps a readable size and scrolls sideways instead of shrinking */
   overflow-x: auto;
   overflow-y: hidden;
-  max-width: 802px;
+  max-width: 1002px;
   border-radius: 14px;
   background: #fff;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px -12px rgba(15, 23, 42, 0.18);
@@ -460,6 +460,10 @@ function onEvidencePdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
 
 .teacher-marking-canvas__paper {
   min-width: 600px;
+}
+
+.teacher-marking-canvas__paper--wide {
+  min-width: 720px;
 }
 
 .teacher-marking-canvas__part-closed {

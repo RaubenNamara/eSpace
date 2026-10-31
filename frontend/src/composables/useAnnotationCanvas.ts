@@ -296,11 +296,19 @@ export interface TypedAnswerLook {
    * style and keep the layout they were marked on, so a teacher's marks stay over the right words.
    */
   modern?: boolean
+  /** the wide page (1000px): normal-size writing, shown at full width, so lines run longer */
+  wide?: boolean
 }
 
 /** The look of a saved answer: its answer_style ('handwriting' / 'print' / none = as first marked) */
 export function answerLook(style: string | null | undefined): TypedAnswerLook {
-  return { ruled: true, handwriting: style === 'handwriting', modern: style === 'print' }
+  const s = style || ''
+  return { ruled: true, handwriting: s.startsWith('handwriting'), modern: s.startsWith('print'), wide: s.endsWith('_wide') }
+}
+
+/** The page width an answer is laid out on: the wide page now, 800px for answers marked earlier */
+export function sheetWidth(style: string | null | undefined): number {
+  return (style || '').endsWith('_wide') ? 1000 : 800
 }
 
 /**
@@ -309,6 +317,7 @@ export function answerLook(style: string | null | undefined): TypedAnswerLook {
  * moves) to read at a normal size; older answers keep the full width.
  */
 export function sheetMaxWidth(style: string | null | undefined): number {
+  if ((style || '').endsWith('_wide')) return 1000
   return style === 'print' || style === 'handwriting' ? 640 : 800
 }
 
@@ -316,7 +325,7 @@ export function createTypedAnswerLayer(text: string, width: number, look: TypedA
   // print/handwriting answers are written larger on the page, so they read at a normal size
   // when the 800px sheet is shown narrower; unstyled (older) answers keep 24px / 16px exactly
   const styled = look.modern || look.handwriting
-  const padding = styled ? 30 : 24
+  const padding = look.wide ? 28 : styled ? 30 : 24
   const plainText = htmlToPlainText(text || '')
   // Printed answers keep exactly the layout they always had (16px, 1.4 line height), so marks a
   // teacher already made on one stay over the right words - the ruling is drawn behind the text.
@@ -326,7 +335,7 @@ export function createTypedAnswerLayer(text: string, width: number, look: TypedA
     originX: 'left',
     originY: 'top',
     width: width - padding * 2,
-    fontSize: look.handwriting ? 27 : look.modern ? 21 : 16,
+    fontSize: look.wide ? (look.handwriting ? 22 : 17) : look.handwriting ? 27 : look.modern ? 21 : 16,
     lineHeight: look.handwriting ? 1.3 : look.modern ? 1.5 : 1.4,
     ...(look.handwriting ? { fontFamily: HANDWRITING_FONT } : look.modern ? { fontFamily: PRINT_FONT } : {}),
     fill: look.handwriting ? '#1e3a8a' : look.modern ? '#1f2937' : '#111827',

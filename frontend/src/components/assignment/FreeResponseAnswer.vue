@@ -27,9 +27,9 @@
           :model-value="modelValue"
           :readonly="readonly"
           :placeholder="placeholder"
-          :handwriting="answerStyle === 'handwriting'"
+          :handwriting="(answerStyle || '').startsWith('handwriting')"
           @update:model-value="$emit('update:modelValue', $event)"
-          @update:handwriting="$emit('update:answer-style', $event ? 'handwriting' : 'print')"
+          @update:handwriting="$emit('update:answer-style', $event ? 'handwriting_wide' : 'print_wide')"
         />
       </template>
 

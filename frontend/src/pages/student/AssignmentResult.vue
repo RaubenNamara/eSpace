@@ -101,11 +101,11 @@
                made directly over it are visible), plus its drawing/PDF layer(s) -->
           <template v-else>
             <div v-if="typedAnswerLayers[question.id]" class="mb-4 sm:ml-10">
-              <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ oversightRole ? "Student's mark sheet" : "Your mark sheet" }}<template v-if="question.answer?.answer_style === 'handwriting'"> · handwriting</template></p>
+              <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ oversightRole ? "Student's mark sheet" : "Your mark sheet" }}<template v-if="(question.answer?.answer_style || '').startsWith('handwriting')"> · handwriting</template></p>
               <div class="mark-sheet-frame" :style="{ maxWidth: `${sheetMaxWidth(question.answer?.answer_style)}px` }">
-              <div class="mark-sheet-paper">
+              <div class="mark-sheet-paper" :class="{ 'mark-sheet-paper--wide': answerLook(question.answer?.answer_style).wide }">
               <AnnotationCanvas
-                :width="800"
+                :width="sheetWidth(question.answer?.answer_style)"
                 :height="typedAnswerLayers[question.id].height"
                 :readonly-layers="typedAnswerReadonlyLayers[question.id]"
                 mode="readonly"
@@ -162,7 +162,7 @@ import type { AnnotationLayerJSON } from '@/types'
 import { TYPED_ANSWER_PAGE } from '@/types'
 import AnnotationCanvas from '@/components/assignment/AnnotationCanvas.vue'
 import PdfAnnotationViewer from '@/components/assignment/PdfAnnotationViewer.vue'
-import { createTypedAnswerLayer, htmlToPlainText, handwritingFontReady, answerLook, sheetMaxWidth } from '@/composables/useAnnotationCanvas'
+import { createTypedAnswerLayer, htmlToPlainText, handwritingFontReady, answerLook, sheetMaxWidth, sheetWidth } from '@/composables/useAnnotationCanvas'
 import { resolveAssetUrl } from '@/utils/url'
 import { isPlaceholderAttachmentName } from '@/utils/answerAttachment'
 
@@ -228,7 +228,7 @@ const typedAnswerLayers = computed(() => {
     // the mark sheet: ruled paper, in handwriting if the learner chose it
     const look = answerLook(question.answer?.answer_style)
     if ((look.handwriting || look.modern) && !handwritingFontReady.value) continue
-    if (text && htmlToPlainText(text).trim()) map[question.id] = createTypedAnswerLayer(text, 800, look)
+    if (text && htmlToPlainText(text).trim()) map[question.id] = createTypedAnswerLayer(text, sheetWidth(question.answer?.answer_style), look)
   }
   return map
 })
@@ -432,6 +432,10 @@ onMounted(load)
 }
 .mark-sheet-paper {
   min-width: 600px;
+}
+/* the wide page on a phone: wide enough to read, swipe sideways for the rest */
+.mark-sheet-paper--wide {
+  min-width: 720px;
 }
 .mark-sheet-hint {
   display: none;
