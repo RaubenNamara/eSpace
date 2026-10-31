@@ -29,6 +29,24 @@ Router::post('/api/privacy-reports', 'eSpace\App\Controllers\PrivacyReportContro
 // Anonymous feedback about Tusome, from /feedback (signed in or not)
 Router::get('/api/feedback/form', 'eSpace\App\Controllers\FeedbackController@form');
 Router::post('/api/feedback', 'eSpace\App\Controllers\FeedbackController@store');
+// An independent learner (in no school) asking to join, from /join
+Router::post('/api/learner-requests', 'eSpace\App\Controllers\LearnerRequestController@store');
+// The developer portal (tusome.ug/devportal) - the Tusome team only; its own login, checked in
+// the controller, apart from every school's accounts
+Router::post('/api/devportal/login', 'eSpace\App\Controllers\DevPortalController@login');
+Router::post('/api/devportal/logout', 'eSpace\App\Controllers\DevPortalController@logout');
+Router::get('/api/devportal/me', 'eSpace\App\Controllers\DevPortalController@me');
+Router::get('/api/devportal/schools', 'eSpace\App\Controllers\DevPortalController@schools');
+Router::post('/api/devportal/schools', 'eSpace\App\Controllers\DevPortalController@createSchool');
+Router::put('/api/devportal/schools/{id}', 'eSpace\App\Controllers\DevPortalController@updateSchool');
+Router::post('/api/devportal/schools/{id}/content', 'eSpace\App\Controllers\DevPortalController@copyContent');
+Router::get('/api/devportal/learner-requests', 'eSpace\App\Controllers\DevPortalController@learnerRequests');
+Router::put('/api/devportal/learner-requests/{id}', 'eSpace\App\Controllers\DevPortalController@updateLearnerRequest');
+Router::post('/api/devportal/learner-requests/{id}/activate', 'eSpace\App\Controllers\DevPortalController@activateLearner');
+Router::get('/api/devportal/audit', 'eSpace\App\Controllers\DevPortalController@audit_log');
+Router::get('/api/devportal/updates', 'eSpace\App\Controllers\DevPortalController@updates');
+Router::post('/api/devportal/updates/run', 'eSpace\App\Controllers\DevPortalController@runUpdates');
+Router::post('/api/devportal/updates/baseline', 'eSpace\App\Controllers\DevPortalController@baselineUpdates');
 // Headline totals for the public website (no personal data)
 Router::get('/api/public/stats', 'eSpace\App\Controllers\PublicStatsController@index');
 // A parent's private weekly view of their child (the token is the key - see ParentLinkController)

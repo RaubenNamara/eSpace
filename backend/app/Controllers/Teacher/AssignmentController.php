@@ -1395,127 +1395,70 @@ class AssignmentController extends Controller
             Database::beginTransaction();
 
             // Get the original assignment
-            $sql = "SELECT * FROM assignments WHERE id = :assignment_id AND deleted_at IS NULL";
-            $stmt = $db->prepare($sql);
+            $stmt = $db->prepare("SELECT * FROM assignments WHERE id = :assignment_id AND deleted_at IS NULL");
             $stmt->execute(['assignment_id' => $assignmentId]);
             $original = $stmt->fetch();
 
             if (!$original) {
+                Database::rollback();
                 $this->error('Assignment not found', 404);
                 return;
             }
 
-            // Create duplicate with modified title and status
-            $sql = "INSERT INTO assignments (
-                teacher_id, subject_id, class_id, class_group_name, title, description, type,
-                total_marks, due_date, instructions, attachments, rubric,
-                category, open_at, deadline_at, duration_minutes, pass_mark,
-                allow_late_submission, attempts_allowed, shuffle_questions, shuffle_options,
-                show_marks_immediately, show_answers_after_submission, allow_save_resume, status,
-                is_published, academic_year, created_at, updated_at
-            ) VALUES (
-                :teacher_id, :subject_id, :class_id, :class_group_name, :title, :description, :type,
-                :total_marks, :due_date, :instructions, :attachments, :rubric,
-                :category, :open_at, :deadline_at, :duration_minutes, :pass_mark,
-                :allow_late_submission, :attempts_allowed, :shuffle_questions, :shuffle_options,
-                :show_marks_immediately, :show_answers_after_submission, :allow_save_resume, :status,
-                :is_published, :academic_year, NOW(), NOW()
-            )";
-
-            $stmt = $db->prepare($sql);
-            $stmt->execute([
+            // Every column comes across - the category (LOA/AOI/EOC), its construct, eNote link,
+            // marks and settings - so the copy is ready to publish once it has a class and dates.
+            // A copy is a new run of the work: a draft, counting in the current term, with no
+            // dates yet (the teacher sets them, or leaves the deadline empty).
+            $term = $db->query('SELECT id, academic_year_id FROM terms WHERE is_current = 1 AND deleted_at IS NULL ORDER BY id DESC LIMIT 1')->fetch();
+            $copy = array_merge($original, [
                 'teacher_id' => $teacherId,
-                'subject_id' => $original['subject_id'],
-                'class_id' => $original['class_id'],
-                'class_group_name' => $original['class_group_name'],
                 'title' => $original['title'] . ' (Copy)',
-                'description' => $original['description'],
-                'type' => $original['type'],
-                'total_marks' => $original['total_marks'],
-                'due_date' => $original['due_date'],
-                'instructions' => $original['instructions'],
-                'attachments' => $original['attachments'],
-                'rubric' => $original['rubric'],
-                'category' => $original['category'],
-                'open_at' => $original['open_at'],
-                'deadline_at' => $original['deadline_at'],
-                'duration_minutes' => $original['duration_minutes'],
-                'pass_mark' => $original['pass_mark'],
-                'allow_late_submission' => $original['allow_late_submission'],
-                'attempts_allowed' => $original['attempts_allowed'],
-                'shuffle_questions' => $original['shuffle_questions'],
-                'shuffle_options' => $original['shuffle_options'],
-                'show_marks_immediately' => $original['show_marks_immediately'],
-                'show_answers_after_submission' => $original['show_answers_after_submission'],
-                'allow_save_resume' => $original['allow_save_resume'],
                 'status' => 'draft',
                 'is_published' => 0,
-                'academic_year' => $original['academic_year']
+                'published_at' => null,
+                'removed_at' => null,
+                'due_date' => null,
+                'deadline_at' => null,
+                'open_at' => null,
+                'academic_year_id' => $term ? $term['academic_year_id'] : $original['academic_year_id'],
+                'term_id' => $term ? $term['id'] : $original['term_id'],
             ]);
+            $newAssignmentId = (int) $this->copyRow($db, 'assignments', $copy, ['id', 'created_at', 'updated_at', 'deleted_at']);
 
-            $newAssignmentId = Database::lastInsertId();
+            // Which streams see it, and the topics / learning outcomes it assesses
+            foreach (['assignment_classes', 'assignment_curriculum_topics', 'assignment_learning_outcomes'] as $table) {
+                $stmt = $db->prepare("SELECT * FROM {$table} WHERE assignment_id = ?");
+                $stmt->execute([$assignmentId]);
+                foreach ($stmt->fetchAll() as $row) {
+                    $this->copyRow($db, $table, ['assignment_id' => $newAssignmentId] + $row, ['id', 'created_at']);
+                }
+            }
 
-            // Duplicate questions - parents first, so each sub-question of a scenario can point at
-            // its parent's copy (copying parent_question_id as-is left the copy's sub-questions
-            // hanging off the original assessment's scenario)
-            $sql = "SELECT * FROM assignment_questions WHERE assignment_id = :assignment_id AND deleted_at IS NULL ORDER BY parent_question_id IS NOT NULL, display_order";
-            $stmt = $db->prepare($sql);
-            $stmt->execute(['assignment_id' => $assignmentId]);
-            $questions = $stmt->fetchAll();
-
+            // Questions - every column, so each stays in its topic / learning-outcome group;
+            // parents first, so a scenario's sub-questions point at its copy
+            $stmt = $db->prepare('SELECT * FROM assignment_questions WHERE assignment_id = ? AND deleted_at IS NULL ORDER BY parent_question_id IS NOT NULL, display_order');
+            $stmt->execute([$assignmentId]);
             $newIdFor = [];
-            foreach ($questions as $question) {
+            $options = $db->prepare('SELECT * FROM assignment_question_options WHERE question_id = ? ORDER BY display_order');
+            $marks = $db->prepare('SELECT * FROM question_annotations WHERE question_id = ? ORDER BY page_number');
+            foreach ($stmt->fetchAll() as $question) {
                 if ($question['parent_question_id'] !== null && !isset($newIdFor[(int) $question['parent_question_id']])) {
                     continue; // its scenario was deleted
                 }
-                // Carry over the original question's attachment if it had one, otherwise fall
-                // back to the default answer document for free-response types (same rule as
-                // creating a brand-new question).
-                $dupIsObjective = in_array($question['question_type'], self::OBJECTIVE_TYPES, true);
-                $dupAttachmentPath = $question['attachment_path'] ?? (!$dupIsObjective ? self::DEFAULT_ANSWER_DOCUMENT_PATH : null);
-                $dupAttachmentType = $question['attachment_path'] ? ($question['attachment_type'] ?? self::DEFAULT_ANSWER_DOCUMENT_TYPE) : (!$dupIsObjective ? self::DEFAULT_ANSWER_DOCUMENT_TYPE : 'none');
-
-                $sql = "INSERT INTO assignment_questions (
-                    assignment_id, parent_question_id, question_type, question_text, scenario_text,
-                    marks, display_order, allow_drawing, attachment_path, attachment_type, created_at, updated_at
-                ) VALUES (
-                    :assignment_id, :parent_question_id, :question_type, :question_text, :scenario_text,
-                    :marks, :display_order, :allow_drawing, :attachment_path, :attachment_type, NOW(), NOW()
-                )";
-
-                $stmt = $db->prepare($sql);
-                $stmt->execute([
+                $newQuestionId = (int) $this->copyRow($db, 'assignment_questions', array_merge($question, [
                     'assignment_id' => $newAssignmentId,
                     'parent_question_id' => $question['parent_question_id'] !== null ? $newIdFor[(int) $question['parent_question_id']] : null,
-                    'question_type' => $question['question_type'],
-                    'question_text' => $question['question_text'],
-                    'scenario_text' => $question['scenario_text'],
-                    'marks' => $question['marks'],
-                    'display_order' => $question['display_order'],
-                    'allow_drawing' => $question['allow_drawing'],
-                    'attachment_path' => $dupAttachmentPath,
-                    'attachment_type' => $dupAttachmentType
-                ]);
+                ]), ['id', 'created_at', 'updated_at', 'deleted_at']);
+                $newIdFor[(int) $question['id']] = $newQuestionId;
 
-                $newQuestionId = Database::lastInsertId();
-                $newIdFor[(int) $question['id']] = (int) $newQuestionId;
-
-                // Duplicate options for this question
-                $sql = "SELECT * FROM assignment_question_options WHERE question_id = :question_id ORDER BY display_order";
-                $stmt = $db->prepare($sql);
-                $stmt->execute(['question_id' => $question['id']]);
-                $options = $stmt->fetchAll();
-
-                foreach ($options as $option) {
-                    $sql = "INSERT INTO assignment_question_options (question_id, option_text, is_correct, display_order, created_at, updated_at)
-                            VALUES (:question_id, :option_text, :is_correct, :display_order, NOW(), NOW())";
-                    $stmt = $db->prepare($sql);
-                    $stmt->execute([
-                        'question_id' => $newQuestionId,
-                        'option_text' => $option['option_text'],
-                        'is_correct' => $option['is_correct'],
-                        'display_order' => $option['display_order']
-                    ]);
+                $options->execute([$question['id']]);
+                foreach ($options->fetchAll() as $option) {
+                    $this->copyRow($db, 'assignment_question_options', ['question_id' => $newQuestionId] + $option, ['id', 'created_at', 'updated_at']);
+                }
+                // what the teacher drew on the question's page
+                $marks->execute([$question['id']]);
+                foreach ($marks->fetchAll() as $mark) {
+                    $this->copyRow($db, 'question_annotations', ['question_id' => $newQuestionId, 'teacher_id' => $teacherId] + $mark, ['id', 'created_at', 'updated_at']);
                 }
             }
 
@@ -1528,6 +1471,31 @@ class AssignmentController extends Controller
             error_log('Assignment duplication failed: ' . $e->getMessage());
             $this->serverError('Failed to duplicate assignment: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Insert a copy of a row: every column it has, except those listed (ids and timestamps),
+     * with created_at / updated_at set to now where the table has them. Returns the new id.
+     */
+    private function copyRow(\PDO $db, string $table, array $row, array $skip): string
+    {
+        foreach ($skip as $col) {
+            unset($row[$col]);
+        }
+        $cols = array_keys($row);
+        $sets = array_map(fn($c) => "`{$c}`", $cols);
+        $vals = array_fill(0, count($cols), '?');
+        static $stamps = [];
+        $stamps[$table] ??= array_column($db->query("SHOW COLUMNS FROM `{$table}`")->fetchAll(), 'Field');
+        foreach (['created_at', 'updated_at'] as $stamp) {
+            if (in_array($stamp, $stamps[$table], true) && !in_array($stamp, $cols, true)) {
+                $sets[] = "`{$stamp}`";
+                $vals[] = 'NOW()';
+            }
+        }
+        $db->prepare("INSERT INTO `{$table}` (" . implode(', ', $sets) . ') VALUES (' . implode(', ', $vals) . ')')
+            ->execute(array_values($row));
+        return (string) $db->lastInsertId();
     }
 
     /**

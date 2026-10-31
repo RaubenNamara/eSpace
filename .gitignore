@@ -58,6 +58,7 @@ backend/storage/flags/
 *.sql
 !database/schema.sql
 !database/migrations/*.sql
+!database/platform/*.sql
 
 # Session files
 backend/sessions/

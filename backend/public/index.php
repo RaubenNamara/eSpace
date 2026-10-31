@@ -81,6 +81,15 @@ if ($tooBig !== null && empty($_POST) && empty($_FILES)) {
     exit;
 }
 
+// A signed-in session whose school has been paused or removed is signed out before anything runs
+// (see Tenant - each school has its own database, chosen at login)
+$tenantBlocked = \eSpace\App\Support\Tenant::guardSession();
+if ($tenantBlocked !== null) {
+    http_response_code(401);
+    echo json_encode(['success' => false, 'message' => $tenantBlocked]);
+    exit;
+}
+
 // Load routes
 require_once __DIR__ . '/../routes/api.php';
 

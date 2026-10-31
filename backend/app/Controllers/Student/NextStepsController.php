@@ -178,7 +178,8 @@ class NextStepsController extends Controller
         }));
 
         $this->success([
-            'steps' => array_map(fn($s) => array_diff_key($s, ['priority' => 0]), array_slice($steps, 0, self::MAX_STEPS)),
+            // ?limit= - the dashboard's To do list shows up to 12 (a few, then "Show more")
+            'steps' => array_map(fn($s) => array_diff_key($s, ['priority' => 0]), array_slice($steps, 0, max(1, min(12, (int) ($_GET['limit'] ?? self::MAX_STEPS))))),
             'total' => count($steps),
             'assessments_to_do' => count($pendingAssessmentIds),
             // Consecutive days of real learning (reading, answering)

@@ -69,6 +69,12 @@
   <FilesMatch "(\.glb|^manifest\.json)$">
     Header set Cache-Control "public, max-age=86400, stale-while-revalidate=604800"
   </FilesMatch>
+  # The developer portal is for the Tusome team: search engines must never list it. Checked on
+  # the original request line, since the address is rewritten to index.html further up. (Not in
+  # robots.txt - that would stop crawlers from seeing this, and would publish the address.)
+  <If "%{THE_REQUEST} =~ m#\s/(eSpace/)?devportal#">
+    Header always set X-Robots-Tag "noindex, nofollow, noarchive"
+  </If>
 </IfModule>
 <IfModule mod_mime.c>
   AddType model/gltf-binary .glb

@@ -92,17 +92,8 @@
               <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400 break-words">{{ assignment.subject_name }} • {{ assignment.teacher_name }}</p>
             </div>
           </div>
-          <div v-if="!isLocked && autoSaveStatus" class="flex items-center text-sm text-gray-600 dark:text-gray-400">
-            <svg v-if="autoSaveStatus === 'saving'" class="animate-spin w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-            </svg>
-            <svg v-else-if="autoSaveStatus === 'saved'" class="w-4 h-4 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-            </svg>
-            <svg v-else class="w-4 h-4 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
-            {{ autoSaveStatus === 'saving' ? 'Saving...' : autoSaveStatus === 'saved' ? 'Saved' : 'Save failed' }}
+          <div v-if="!isLocked && !isPreview && saveState.short" class="flex items-center gap-1.5 text-sm font-medium" :class="saveState.tone">
+            <span class="w-2 h-2 rounded-full flex-shrink-0" :class="saveState.dot"></span>{{ saveState.short }}
           </div>
         </div>
 
@@ -179,7 +170,10 @@
               <span class="text-xs text-gray-500 dark:text-gray-400">Deadline</span>
               <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ assignment.due_date ? formatDate(assignment.due_date) : 'None' }}</span>
             </div>
-            <div v-if="timeRemaining > 0" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800">
+            <div v-if="timeUp" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+              <span class="text-sm font-semibold text-red-700 dark:text-red-300">Time is up - hand in your work now</span>
+            </div>
+            <div v-else-if="timeRemaining > 0" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800">
               <svg class="w-4 h-4 text-amber-500 dark:text-amber-400 shrink-0 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
@@ -418,10 +412,11 @@
 
       <!-- Sticky bottom action bar -->
       <div v-if="!isLocked" class="sticky bottom-0 -mx-3 sm:-mx-6 px-3 sm:px-6 py-3 mt-6 bg-white/95 dark:bg-gray-800/95 backdrop-blur border-t border-gray-200 dark:border-gray-700 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 z-10">
-        <p v-if="autoSaveStatus === 'saving'" class="text-sm text-gray-500 dark:text-gray-400">Saving...</p>
-        <p v-else-if="autoSaveStatus === 'saved'" class="text-sm text-green-700 dark:text-green-400">✓ {{ loadedOffline || !offline.online ? 'Saved on this device' : 'Saved' }}</p>
-        <p v-else-if="autoSaveStatus === 'failed'" class="text-sm text-red-600 dark:text-red-400">We couldn't save your work. Please try again.</p>
-        <p v-else class="text-sm text-gray-500 dark:text-gray-400">Unsaved changes</p>
+        <p class="flex items-center gap-2 text-sm" :class="saveState.tone" role="status" aria-live="polite">
+          <span class="w-2 h-2 rounded-full flex-shrink-0" :class="saveState.dot"></span>
+          <span>{{ saveState.text }}</span>
+          <button v-if="autoSaveStatus === 'failed'" type="button" class="font-semibold underline" @click="autoSave(0)">Try now</button>
+        </p>
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 shrink-0">
           <button
             @click="saveDraft"
@@ -616,7 +611,34 @@ const error = ref<string | null>(null)
 const saving = ref(false)
 const submitting = ref(false)
 const showSubmitConfirm = ref(false)
-const autoSaveStatus = ref<'saving' | 'saved' | 'failed' | null>(null)
+// null: nothing changed since opening · pending: a change waiting to be sent · then saving, saved, failed
+const autoSaveStatus = ref<'pending' | 'saving' | 'saved' | 'failed' | null>(null)
+const lastSavedAt = ref<number | null>(null)
+const clock = ref(Date.now())
+const ago = (t: number) => {
+  const sec = Math.max(0, Math.round((clock.value - t) / 1000))
+  if (sec < 10) return 'just now'
+  if (sec < 60) return `${sec} seconds ago`
+  const min = Math.round(sec / 60)
+  return min === 1 ? '1 minute ago' : min < 60 ? `${min} minutes ago` : `at ${new Date(t).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`
+}
+// The one line that tells a student whether their work is safe
+const saveState = computed(() => {
+  const here = loadedOffline.value || !offline.online
+  switch (autoSaveStatus.value) {
+    case 'pending': return { text: 'Changes not saved yet...', short: 'Not saved yet', tone: 'text-gray-500 dark:text-gray-400', dot: 'bg-amber-400' }
+    case 'saving': return { text: 'Saving...', short: 'Saving...', tone: 'text-gray-500 dark:text-gray-400', dot: 'bg-amber-400 animate-pulse' }
+    case 'saved': return {
+      text: `${here ? 'Saved on this device' : 'All your work is saved'} - ${lastSavedAt.value ? ago(lastSavedAt.value) : 'just now'}`,
+      short: here ? 'Saved on this device' : 'Saved', tone: 'text-green-700 dark:text-green-400', dot: 'bg-green-500'
+    }
+    case 'failed': return {
+      text: offline.online ? 'Not saved - Tusome could not be reached. Trying again...' : 'Not saved - no internet. It saves when you are back online.',
+      short: 'Not saved', tone: 'text-red-600 dark:text-red-400 font-medium', dot: 'bg-red-500'
+    }
+    default: return { text: Object.keys(answers.value).length ? 'Your saved answers are here - changes save by themselves' : 'Your answers save by themselves as you go', short: '', tone: 'text-gray-500 dark:text-gray-400', dot: 'bg-gray-300 dark:bg-gray-600' }
+  }
+})
 const submissionTiming = ref<'early' | 'on_time' | 'late' | null>(null)
 
 const answers = ref<Record<number, string>>({})
@@ -669,9 +691,9 @@ const canSubmit = computed(() => !isLocked.value && answeredCount.value > 0)
 const formatDate = (dateString: string) => {
   if (!dateString) return 'N/A'
   const date = new Date(dateString)
-  return date.toLocaleDateString('en-US', { 
-    month: 'short', 
-    day: 'numeric', 
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit'
@@ -769,9 +791,10 @@ const loadAssignment = async () => {
         })
       }
 
-      // Start timer if duration is set and the attempt is still editable
+      // Start timer if duration is set and the attempt is still editable - counting from when
+      // they first started, so coming back later doesn't give them the full time again
       if (assignment.value.duration_minutes && !isLocked.value) {
-        startTimer()
+        startTimer(Number(response.data.data.seconds_used) || 0)
       }
     }
   } catch (err: any) {
@@ -781,23 +804,24 @@ const loadAssignment = async () => {
   }
 }
 
-const startTimer = () => {
+const timeUp = ref(false)
+const startTimer = (secondsUsed = 0) => {
   if (!assignment.value.duration_minutes) return
-  
-  const now = new Date()
+  if (timerInterval) clearInterval(timerInterval)
+
   const durationSeconds = assignment.value.duration_minutes * 60
-  const endTime = new Date(now.getTime() + durationSeconds * 1000)
-  
-  timerInterval = window.setInterval(() => {
-    const currentTime = new Date()
-    const remaining = Math.floor((endTime.getTime() - currentTime.getTime()) / 1000)
+  const endTime = Date.now() + (durationSeconds - secondsUsed) * 1000
+  const tick = () => {
+    const remaining = Math.floor((endTime - Date.now()) / 1000)
     timeRemaining.value = remaining > 0 ? remaining : 0
-    
-    if (remaining <= 0) {
-      clearInterval(timerInterval!)
-      // Auto-submit or show timeout warning
+    timeUp.value = remaining <= 0
+    if (remaining <= 0 && timerInterval) {
+      clearInterval(timerInterval)
+      timerInterval = null
     }
-  }, 1000)
+  }
+  tick()
+  if (!timeUp.value) timerInterval = window.setInterval(tick, 1000)
 }
 
 const triggerAutoSave = () => {
@@ -807,22 +831,28 @@ const triggerAutoSave = () => {
 
 let autoSaveTimeout: number | null = null
 
-const autoSave = async () => {
+let retryTimeout: number | null = null
+const autoSave = async (delay = 3000) => {
   if (isLocked.value || isPreview.value) return
   if (autoSaveTimeout) {
     clearTimeout(autoSaveTimeout)
   }
-  
-  autoSaveStatus.value = 'saving'
-  
+  if (retryTimeout) {
+    clearTimeout(retryTimeout)
+    retryTimeout = null
+  }
+
+  autoSaveStatus.value = 'pending'
+
   autoSaveTimeout = window.setTimeout(async () => {
+    autoSaveStatus.value = 'saving'
     try {
       const data = {
         assignment_id: route.params.id,
         answers: prepareAnswers(),
         status: 'in_progress'
       }
-      
+
       let response
       if (submissionId.value) {
         response = await axios.put(`${API_BASE}/student/assignments/submissions/${submissionId.value}`, data)
@@ -830,28 +860,40 @@ const autoSave = async () => {
         response = await axios.post(`${API_BASE}/student/assignments/${route.params.id}/submit`, data)
         submissionId.value = response.data.data.id
       }
-      
+
       if (response.data.success) {
         autoSaveStatus.value = 'saved'
+        lastSavedAt.value = Date.now()
       }
     } catch (err: any) {
       autoSaveStatus.value = 'failed'
       console.error('Auto-save failed:', err)
+      // try again by itself; also as soon as the internet is back (see onOnline)
+      retryTimeout = window.setTimeout(() => autoSave(0), 15000)
     }
-  }, 3000)
+  }, delay)
 }
+const onOnline = () => { if (autoSaveStatus.value === 'failed' || autoSaveStatus.value === 'pending') autoSave(0) }
+// Leaving with work that hasn't reached the server: ask first
+const onBeforeUnload = (e: BeforeUnloadEvent) => {
+  if (autoSaveStatus.value === 'pending' || autoSaveStatus.value === 'saving' || autoSaveStatus.value === 'failed') {
+    e.preventDefault()
+    e.returnValue = ''
+  }
+}
+let clockTimer: number | undefined
 
 const saveDraft = async () => {
   if (isLocked.value || isPreview.value) return
   saving.value = true
-  
+
   try {
     const data = {
       assignment_id: route.params.id,
       answers: prepareAnswers(),
       status: 'in_progress'
     }
-    
+
     let response
     if (submissionId.value) {
       response = await axios.put(`${API_BASE}/student/assignments/submissions/${submissionId.value}`, data)
@@ -859,9 +901,11 @@ const saveDraft = async () => {
       response = await axios.post(`${API_BASE}/student/assignments/${route.params.id}/submit`, data)
       submissionId.value = response.data.data.id
     }
-    
+
     if (response.data.success) {
-      toast.success('Draft saved successfully')
+      autoSaveStatus.value = 'saved'
+      lastSavedAt.value = Date.now()
+      toast.success('Your work is saved')
     }
   } catch (err: any) {
     toast.error(err.response?.data?.message || 'Failed to save draft')
@@ -872,11 +916,11 @@ const saveDraft = async () => {
 
 const prepareAnswers = () => {
   const prepared: any[] = []
-  
+
   Object.entries(answers.value).forEach(([questionId, answer]) => {
     const qId = Number(questionId)
     const question = questions.value.find(q => q.id === qId)
-    
+
     if (question?.question_type === 'multiple_choice_multiple') {
       const selectedOptions = multipleChoiceAnswers.value[qId] || []
       prepared.push({
@@ -890,7 +934,7 @@ const prepareAnswers = () => {
       })
     }
   })
-  
+
   // The arranged order of each written answer - also for questions answered only by writing on
   // the page or uploading (no typed text, so no entry above)
   Object.entries(partsOrderByQuestion.value).forEach(([questionId, order]) => {
@@ -968,11 +1012,18 @@ const backToEnotes = () => {
 
 onMounted(() => {
   loadAssignment()
+  window.addEventListener('online', onOnline)
+  window.addEventListener('beforeunload', onBeforeUnload)
+  clockTimer = window.setInterval(() => { clock.value = Date.now() }, 15000)
 })
 
 onUnmounted(() => {
   if (timerInterval) {
     clearInterval(timerInterval)
   }
+  if (retryTimeout) clearTimeout(retryTimeout)
+  window.clearInterval(clockTimer)
+  window.removeEventListener('online', onOnline)
+  window.removeEventListener('beforeunload', onBeforeUnload)
 })
 </script>

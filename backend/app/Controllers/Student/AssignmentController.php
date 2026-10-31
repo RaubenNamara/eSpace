@@ -327,12 +327,22 @@ class AssignmentController extends Controller
                 }
             }
 
+            // A timed assessment counts from when the student first started, not from each visit -
+            // worked out by the database, whose clock started_at was written with
+            $secondsUsed = null;
+            if ($submission && ($submission['status'] ?? null) === 'in_progress' && !empty($submission['started_at']) && !empty($assignment['duration_minutes'])) {
+                $t = $this->pdo->prepare('SELECT GREATEST(0, TIMESTAMPDIFF(SECOND, started_at, NOW())) FROM assignment_submissions WHERE id = ?');
+                $t->execute([$submission['id']]);
+                $secondsUsed = (int) $t->fetchColumn();
+            }
+
             $this->success([
                 'assignment' => $assignment,
                 'questions' => $questions,
                 'curriculum' => $this->getCurriculumStructure((int) $assignmentId, $assignment['assessment_category'], $assignment['construct_id'] ?? null),
                 'submission_id' => $submissionId,
                 'submission_status' => $submission['status'] ?? null,
+                'seconds_used' => $secondsUsed,
                 'answers' => $existingAnswers,
                 'answer_annotations' => $answerAnnotationsByQuestion,
                 'answer_attachments' => $answerAttachmentsByQuestion

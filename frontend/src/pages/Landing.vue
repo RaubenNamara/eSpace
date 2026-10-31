@@ -346,11 +346,14 @@
           </div>
           <div class="reveal rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.03] p-7 sm:p-9">
             <p class="text-xs font-bold uppercase tracking-widest text-slate-400">Not on Tusome yet?</p>
-            <h2 class="mt-3 font-jakarta text-2xl sm:text-3xl font-extrabold">Tell your school about it.</h2>
-            <p class="mt-2 text-slate-600 dark:text-slate-400 leading-relaxed">Show this page to your teacher or head teacher. They can ask us for a demo, and we set up the whole school - every class and subject.</p>
-            <button type="button" class="mt-6 inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition" @click="shareWithSchool">
-              <AppIcon name="send" class="w-4 h-4" />{{ shared ? 'Link copied' : 'Share with my school' }}
-            </button>
+            <h2 class="mt-3 font-jakarta text-2xl sm:text-3xl font-extrabold">Learn on your own - today.</h2>
+            <p class="mt-2 text-slate-600 dark:text-slate-400 leading-relaxed">Your school isn't on Tusome? Ask to learn on your own: notes, books and practice for your class on any phone. Or show this page to your head teacher, and we set up the whole school.</p>
+            <div class="mt-6 flex flex-wrap items-center gap-3">
+              <router-link to="/join" class="inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition">Ask to learn</router-link>
+              <button type="button" class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-bold text-indigo-700 ring-1 ring-indigo-200 hover:bg-indigo-50 dark:text-indigo-300 dark:ring-indigo-800 dark:hover:bg-indigo-900/20 transition" @click="shareWithSchool">
+                <AppIcon name="send" class="w-4 h-4" />{{ shared ? 'Link copied' : 'Share with my school' }}
+              </button>
+            </div>
           </div>
         </div>
       </section>

@@ -23,9 +23,10 @@
     <!-- Two columns on a wide screen; one on a phone -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
       <div class="lg:col-span-2 flex flex-col gap-4 min-w-0">
-        <!-- Pending assessments -->
+        <!-- To do: today's live classes, then what is most useful next (next-steps: work to
+             finish or start, notes to read first, reading to continue, outcomes to strengthen) -->
         <section class="dash-box">
-          <h2 class="dash-bar">Pending assessments <RouterLink to="/student/assignments" class="dash-bar-link">See all</RouterLink></h2>
+          <h2 class="dash-bar">To do <RouterLink to="/student/assignments" class="dash-bar-link">All assessments</RouterLink></h2>
           <div v-if="loading && !data" class="grid sm:grid-cols-2 gap-2 p-3"><div v-for="i in 4" :key="i" class="h-12 rounded-xl bg-gray-100 dark:bg-gray-700/50 animate-pulse"></div></div>
           <div v-else-if="!todo.length" class="p-4 flex items-center gap-3">
             <span class="w-10 h-10 flex-shrink-0 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 flex items-center justify-center"><AppIcon name="check" class="w-5 h-5" /></span>
@@ -33,7 +34,7 @@
           </div>
           <TransitionGroup v-else tag="ul" name="dash-pop" class="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3">
             <li v-for="item in shown('pending', todo)" :key="item.key" class="min-w-0">
-              <RouterLink :to="item.to" class="dash-chip group" :class="item.alert ? 'dash-chip-alert' : ''">
+              <RouterLink :to="item.to" class="dash-chip group" :class="item.alert ? 'dash-chip-alert' : ''" @click="item.mark && markRevised(item.mark)">
                 <span class="dash-chip-badge" :style="{ background: tint(item.subject) }">{{ code(item.subject) }}</span>
                 <span class="min-w-0 flex-1">
                   <span class="block text-sm font-bold text-gray-900 dark:text-white truncate">{{ item.title }}</span>
@@ -187,17 +188,33 @@ const TINTS = ['#15874a', '#126c3d', '#22a45d', '#0f472b', '#1f2937', '#46bf7b',
 const tint = (name: string) => TINTS[[...name].reduce((h, c) => h + c.charCodeAt(0), 0) % TINTS.length]
 const code = (name: string) => name.replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase() || '?'
 
-// ---- pending work: live classes later today, then assessments - overdue first, then by due date
+// ---- To do: live classes later today, then the next steps (most useful first: work started,
+// work due soon, notes to read before an assessment, revision from a teacher, reading to finish,
+// outcomes to strengthen). If those can't load, the assessments - overdue first, then by due date.
+interface NextStep { kind: string; title: string; detail: string; subject: string; overdue: boolean; action: { label: string; to: string; mark?: string } }
+const steps = ref<NextStep[] | null>(null)
+const loadSteps = () => axios.get('/api/student/next-steps', { params: { limit: 12 } })
+  .then(r => { steps.value = r.data.data.steps || [] })
+  .catch(() => { if (steps.value === null) steps.value = null })
+// Opening revision a teacher sent counts as revising it
+const markRevised = (url: string) => { axios.post(url).catch(() => {}) }
+
 const todo = computed(() => {
   const d = data.value
   if (!d) return []
   const live = d.upcoming_live_classes
     .filter(l => isToday(toDate(l.scheduled_start)))
-    .map(l => ({ key: `live-${l.id}`, title: l.title, subject: l.subject_name, meta: `${l.subject_name} · live at ${toDate(l.scheduled_start).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`, to: '/student/live-classes', action: 'Open', alert: false }))
+    .map(l => ({ key: `live-${l.id}`, title: l.title, subject: l.subject_name, meta: `${l.subject_name} · live at ${toDate(l.scheduled_start).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`, to: '/student/live-classes', action: 'Open', alert: false, mark: '' }))
+  if (steps.value) {
+    return [...live, ...steps.value.map((s, i) => ({
+      key: `step-${i}-${s.action.to}`, title: s.title, subject: s.subject || '', meta: s.overdue ? `Overdue · ${s.detail}` : s.detail,
+      to: s.action.to, action: s.action.label, alert: s.overdue, mark: s.action.mark || ''
+    }))]
+  }
   const work = d.upcoming_assignments
     .slice()
     .sort((a, b) => (a.status === 'overdue' ? 0 : 1) - (b.status === 'overdue' ? 0 : 1) || (a.due_date ? toDate(a.due_date).getTime() : Infinity) - (b.due_date ? toDate(b.due_date).getTime() : Infinity))
-    .map(a => ({ key: `work-${a.id}`, title: a.title, subject: a.subject_name, meta: a.status === 'overdue' ? 'Overdue' : dueText(a.due_date), to: `/student/assignments/${a.id}/answer`, action: a.status === 'in_progress' ? 'Continue' : 'Start', alert: a.status === 'overdue' }))
+    .map(a => ({ key: `work-${a.id}`, title: a.title, subject: a.subject_name, meta: a.status === 'overdue' ? 'Overdue' : dueText(a.due_date), to: `/student/assignments/${a.id}/answer`, action: a.status === 'in_progress' ? 'Continue' : 'Start', alert: a.status === 'overdue', mark: '' }))
   return [...live, ...work].slice(0, 6)
 })
 
@@ -251,9 +268,10 @@ const loadDashboard = async (silent = false) => {
   }
 }
 
-useLiveRefresh(() => loadDashboard(true))
+useLiveRefresh(() => { loadDashboard(true); loadSteps() })
 onMounted(() => {
   loadDashboard()
+  loadSteps()
   axios.get('/api/student/classes').then(r => { classes.value = r.data.data || [] }).catch(() => {}).finally(() => { classesLoaded.value = true })
   axios.get('/api/student/my-notes').then(r => {
     const all: MyNote[] = r.data.data.notes || []

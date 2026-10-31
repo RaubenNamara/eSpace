@@ -367,8 +367,10 @@ const duplicateAssignment = async (id: number) => {
   try {
     const response = await axios.post(`${API_BASE}/teacher/assignments/${id}/duplicate`)
     if (response.data.success) {
-      toast.success('Copied - the copy is a draft')
-      await loadAssignments()
+      // straight into the copy: it keeps the questions, category and topics - only its class
+      // and dates are left to choose
+      toast.success('Copy made - check its class and deadline, then publish')
+      router.push(`/teacher/assignments/${response.data.data.id}/edit`)
     }
   } catch (err: any) {
     toast.error(err.response?.data?.message || 'Failed to duplicate assessment')

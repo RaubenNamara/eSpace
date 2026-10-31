@@ -47,6 +47,7 @@ const COLUMNS = [
       { to: '/login', label: 'Login' },
       { to: '/#demo', label: 'Request a demo' },
       { to: '/#team', label: 'The team' },
+      { to: '/join', label: 'Ask to learn' },
       { to: '/feedback', label: 'Give feedback' },
       { to: '/privacy', label: 'Privacy' },
       { to: '/privacy#report', label: 'Report a concern' }

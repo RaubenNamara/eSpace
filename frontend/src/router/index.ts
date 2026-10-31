@@ -155,6 +155,18 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../pages/Privacy.vue')
   },
   {
+    // Learners in no school ask to join (the team activates them in the developer portal)
+    path: '/join',
+    name: 'Join',
+    component: () => import('../pages/Join.vue')
+  },
+  {
+    // The developer portal - the Tusome team only, with its own login (DevPortalController)
+    path: '/devportal',
+    name: 'DevPortal',
+    component: () => import('../pages/devportal/DevPortal.vue')
+  },
+  {
     // Anonymous feedback about Tusome - open to everyone, signed in or not
     path: '/feedback',
     name: 'Feedback',
@@ -500,7 +512,7 @@ const router = createRouter({
   // moving between the website and the guide starts at the top. Everything else is left alone,
   // so in-app pages that update their own query string keep their place.
   scrollBehavior(to, from, savedPosition) {
-    const isPublic = (path: string) => path === '/' || path === '/guide' || path === '/privacy' || path === '/feedback' || path.startsWith('/for/')
+    const isPublic = (path: string) => path === '/' || path === '/guide' || path === '/privacy' || path === '/feedback' || path === '/join' || path.startsWith('/for/')
     if (!isPublic(to.path)) return false
     if (savedPosition) return savedPosition
     if (to.hash) return { el: to.hash, top: 80, behavior: to.path === from.path ? 'smooth' : 'auto' }

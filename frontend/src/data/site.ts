@@ -29,6 +29,7 @@ export const SITE_NAV: Record<'school' | 'teacher' | 'student', { to: string; la
     { to: '/#try', label: 'Try a lesson' },
     { to: '/#lab', label: 'Virtual Lab' },
     { to: '/#modules', label: 'Modules' },
+    { to: '/join', label: 'Ask to learn' },
     { to: '/guide#student', label: 'User guide' }
   ]
 }

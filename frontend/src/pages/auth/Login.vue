@@ -149,7 +149,7 @@
               </h2>
 
               <p class="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
-                Enter your credentials to access your school's Tusome.
+                Enter your credentials to access your Tusome.
               </p>
             </div>
 
@@ -197,6 +197,8 @@
                     class="block w-full border-0 bg-white py-3.5 pl-14 pr-4 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-0 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-60 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500 dark:disabled:bg-slate-800"
                   />
                 </div>
+                <!-- Other schools' logins end in @ and the school's code (Tenant::splitLogin) -->
+                <p class="mt-1.5 text-xs text-slate-500 dark:text-slate-400">St Mark's: your login as usual. Other schools: the login you were given, ending in @ - like <span class="font-semibold">amos@kings</span>.</p>
               </div>
 
               <!-- Password -->
@@ -409,6 +411,11 @@
                 </span>
               </button>
             </form>
+
+            <!-- No login yet - not at a school on Tusome: ask to learn on your own (/join) -->
+            <router-link to="/join" class="mt-4 flex items-center justify-center gap-2 rounded-xl border border-indigo-200 px-4 py-3 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-300 dark:hover:bg-indigo-900/20">
+              No login yet? Ask to learn
+            </router-link>
 
             <!-- Support message -->
             <div class="mt-7 border-t border-slate-100 pt-6 text-center dark:border-slate-700">

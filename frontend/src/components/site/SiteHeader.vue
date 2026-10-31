@@ -21,6 +21,8 @@
         <InstallAppButton variant="header" :light="light" />
         <!-- A student signs in; a school or a teacher asks for a demo -->
         <template v-if="audience === 'student'">
+          <!-- learners in no school ask to join; the Login button below takes everyone else -->
+          <router-link to="/join" class="hdr-text hidden sm:inline-flex whitespace-nowrap px-4 py-2 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10">Ask to learn</router-link>
           <router-link to="/login" class="inline-flex whitespace-nowrap px-4 py-2 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition">Login</router-link>
         </template>
         <template v-else>

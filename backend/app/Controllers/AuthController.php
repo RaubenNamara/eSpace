@@ -54,9 +54,37 @@ class AuthController extends Controller
         // Sanitize input
         $identifier = $this->sanitize(['identifier' => $identifier])['identifier'];
 
+        // The school: each one has its own database (Tenant). The login says which - "amos@kings"
+        // is amos at the school whose code is kings. Anything else (an admission number, a
+        // username, an email) is the home school (St Mark's), exactly as before.
+        [$identifier, $schoolCode] = \eSpace\App\Support\Tenant::splitLogin($identifier);
+        $entered = \eSpace\App\Support\Tenant::enter($schoolCode);
+        if (isset($entered['error'])) {
+            $this->error($entered['error'], 401);
+            return;
+        }
+        // its models were built with the database before the school was known - build them again
+        $this->authService = new AuthService();
 
         // Attempt login
         $result = $this->authService->login($identifier, $password);
+        // A login with no school that St Mark's doesn't know: an independent learner (in no school)
+        // types just their username too - try the independent learners' space before saying no
+        if (!$result['success'] && $schoolCode === '' && ($ownCode = \eSpace\App\Support\Tenant::independentCode())) {
+            $own = \eSpace\App\Support\Tenant::enter($ownCode);
+            if (!isset($own['error'])) {
+                $this->authService = new AuthService();
+                $ownResult = $this->authService->login($identifier, $password);
+                if ($ownResult['success']) {
+                    $result = $ownResult;
+                    $entered = $own;
+                }
+            }
+        }
+        if (!$result['success']) {
+            // a wrong password must not leave the session pointed at another school
+            \eSpace\App\Support\Tenant::enter('');
+        }
 
         error_log("AuthController: Login result: " . ($result['success'] ? 'SUCCESS' : 'FAILED'));
 
@@ -109,9 +137,12 @@ class AuthController extends Controller
                 )->execute($row);
             }
 
+            $school = $entered['school'];
             $this->success([
                 'user' => $userData,
-                'csrf_token' => $csrfToken
+                'csrf_token' => $csrfToken,
+                // the school signed in to: its code (remembered on the login page) and kind
+                'school' => ['code' => $school['code'], 'name' => $school['name'], 'kind' => $school['kind']],
             ], $result['message']);
         } else {
             $this->error($result['message'], 401);

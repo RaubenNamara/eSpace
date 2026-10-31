@@ -106,14 +106,15 @@ class Config
     /**
      * Get database configuration
      */
-    public static function getDatabaseConfig(): array
+    public static function getDatabaseConfig(bool $forThisSchool = true): array
     {
         self::load();
         
         return [
             'host' => self::get('DB_HOST'),
             'port' => (int) self::get('DB_PORT'),
-            'database' => self::get('DB_NAME'),
+            // the signed-in school's own database (see Tenant); the home DB_NAME otherwise
+            'database' => $forThisSchool ? \eSpace\App\Support\Tenant::databaseName() : self::get('DB_NAME'),
             'username' => self::get('DB_USER'),
             'password' => self::get('DB_PASS'),
             'charset' => 'utf8mb4',

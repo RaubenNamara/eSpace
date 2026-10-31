@@ -134,11 +134,27 @@
       <div v-else class="grid grid-cols-1 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6">
         <!-- Questions -->
         <div class="lg:col-span-3 xl:col-span-4 space-y-4 sm:space-y-6">
-          <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
-            <h3 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-1 break-words">{{ markingData.submission.student_name }}</h3>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-              Submitted {{ formatDate(markingData.submission.submitted_at) }} • {{ markingData.submission.admission_number }}
+          <!-- Marked: straight on to the next script waiting, without going back to the list -->
+          <div v-if="justMarked" class="rounded-lg border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 p-3 sm:p-4 flex flex-wrap items-center gap-3">
+            <p class="flex-1 min-w-0 text-sm text-emerald-900 dark:text-emerald-100">
+              <b>{{ markingData.submission.student_name }}</b> is {{ markingData.submission.status === 'returned' ? 'marked and returned' : 'marked' }}.
+              <template v-if="nextToMark"> {{ waitingCount }} more waiting.</template>
+              <template v-else> That was the last one - everything here is marked.</template>
             </p>
+            <button v-if="nextToMark" type="button" class="px-3.5 py-2 rounded-lg text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700" @click="openNext">Mark next: {{ nextToMark.student_name }} →</button>
+            <button v-else type="button" class="px-3.5 py-2 rounded-lg text-sm font-semibold text-emerald-900 dark:text-emerald-100 hover:bg-emerald-100 dark:hover:bg-emerald-900/40" @click="backToList">Back to the list</button>
+          </div>
+
+          <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 flex flex-wrap items-start gap-3">
+            <div class="min-w-0 flex-1">
+              <h3 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-1 break-words">{{ markingData.submission.student_name }}</h3>
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                Submitted {{ formatDate(markingData.submission.submitted_at) }} • {{ markingData.submission.admission_number }}
+              </p>
+            </div>
+            <button v-if="nextToMark && !justMarked" type="button" class="px-3 py-1.5 rounded-lg text-sm font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700" :title="`Next waiting: ${nextToMark.student_name}`" @click="openNext">
+              Skip to next ({{ waitingCount }} waiting) →
+            </button>
           </div>
 
           <div
@@ -201,7 +217,7 @@
               :assignment-id="assignmentId"
               :submission-id="markingData.submission.id"
               :status="markingData.submission.status"
-              :total-marks="markingData.submission.total_marks"
+              :total-marks="Number(markingData.submission.total_marks)"
               :initial-feedback="markingData.submission.feedback || ''"
               :initial-voice-path="markingData.submission.voice_feedback_path || null"
               :initial-voice-seconds="markingData.submission.voice_feedback_seconds || null"
@@ -282,11 +298,26 @@ const loadSubmissions = async () => {
   }
 }
 
+// ---- Mark next: the scripts still waiting (handed in, not marked yet), oldest first
+const justMarked = ref(false)
+const waiting = computed(() => submissions.value
+  .filter(s => (s.status === 'submitted' || s.status === 'marking') && s.id !== markingData.value?.submission.id)
+  .slice()
+  .sort((a, b) => String(a.submitted_at || '').localeCompare(String(b.submitted_at || ''))))
+const nextToMark = computed(() => waiting.value[0] ?? null)
+const waitingCount = computed(() => waiting.value.length)
+const openNext = async () => {
+  if (!nextToMark.value) return
+  await selectSubmission(nextToMark.value)
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
 const selectSubmission = async (submission: any) => {
   try {
     const response = await axios.get(`${API_BASE}/teacher/assignments/${assignmentId.value}/submissions/${submission.id}/marking`)
     if (response.data.success) {
       markingData.value = response.data.data
+      justMarked.value = false
     }
   } catch (err: any) {
     toast.error(err.response?.data?.message || 'Failed to load submission for marking')
@@ -301,6 +332,13 @@ const backToList = () => {
 const onStatusChanged = (status: string) => {
   if (markingData.value) {
     markingData.value.submission.status = status
+    // keep the list in step, so "waiting" counts this one as done
+    const row = submissions.value.find(s => s.id === markingData.value!.submission.id)
+    if (row) row.status = status
+    if (status === 'graded' || status === 'returned') {
+      justMarked.value = true
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
   }
 }
 
