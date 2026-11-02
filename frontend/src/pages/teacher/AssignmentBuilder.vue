@@ -599,7 +599,7 @@
         </div>
 
         <!-- ICT: support files for students to download (starter files, a zip of resources...) -->
-        <SupportFiles v-if="!isPreview && (supportAllowed || looksIct)" :assignment-id="isEdit ? (route.params.id as string) : createdId" @allowed="supportAllowed = $event" />
+        <SupportFiles v-if="!isPreview" :assignment-id="isEdit ? (route.params.id as string) : createdId" :assume-ict="looksIct" />
 
         <!-- Questions -->
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
@@ -1797,7 +1797,6 @@ const subQuestionsMarksTotal = computed(() => {
 const selectedSubjectName = computed(() => subjects.value.find(s => s.id === form.value.subject_id)?.name || '')
 // Support files are for ICT assessments: the server says so once the assessment exists; before
 // that, an ICT-looking subject shows the card (with "add a question first")
-const supportAllowed = ref(false)
 const looksIct = computed(() => /^ict|computer/i.test(selectedSubjectName.value))
 const selectedConstructName = computed(() => eocConstructs.value.find(c => c.id === selectedConstructId.value)?.name || '')
 const selectedConstructAO = computed(() => eocConstructs.value.find(c => c.id === selectedConstructId.value)?.assessment_objective || '')
@@ -2895,7 +2894,10 @@ const showMoreOptions = ref(false)
 const optionsSummary = computed(() => {
   const f = form.value
   const parts = [
-    f.open_at ? `opens ${new Date(f.open_at).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}` : 'opens when published',
+    // an empty opening time can come back as 0000-00-00 from older assessments
+    f.open_at && !isNaN(new Date(f.open_at).getTime()) && !String(f.open_at).startsWith('0000')
+      ? `opens ${new Date(f.open_at).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}`
+      : 'opens when published',
     f.duration_minutes ? `${f.duration_minutes} min` : 'no time limit',
     `${f.attempts_allowed || 1} attempt${Number(f.attempts_allowed) > 1 ? 's' : ''}`
   ]
