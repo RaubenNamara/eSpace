@@ -12,10 +12,9 @@
 
     <!-- Answer method selector -->
     <div>
-      <p class="text-sm font-semibold text-gray-900 dark:text-white mb-1 flex items-center gap-1.5">
-        <AppIcon name="pencil" class="w-4 h-4" /> Answer the Question
+      <p class="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+        Answer the Question <span class="font-normal text-gray-500 dark:text-gray-400">(Choose how you want to answer:)</span>
       </p>
-      <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Choose how you want to answer:</p>
       <AnswerModeSelector v-model="answerMode" :readonly="readonly" />
     </div>
 
