@@ -64,8 +64,9 @@ class ClassController extends Controller
     }
 
     /**
-     * Get list of classes in teacher's department - narrowed to their explicitly assigned
-     * class streams once they have any (see getAssignedClassIds()).
+     * Every class with students taking the teacher's subject (department) - all of them, not
+     * only the streams the admin assigned, so work can be set for any class. A class's students
+     * are still only the ones taking the subject.
      * GET /teacher/classes
      */
     public function index(): void
@@ -83,7 +84,6 @@ class ClassController extends Controller
         }
 
         $academicYear = $this->query('academic_year');
-        $assignedClassIds = $this->getAssignedClassIds();
 
         try {
             $sql = "SELECT DISTINCT c.id, c.name, c.level, c.stream_name, COUNT(se.id) as student_count
@@ -98,16 +98,6 @@ class ClassController extends Controller
             if ($academicYear) {
                 $sql .= " AND se.academic_year = :academic_year";
                 $params['academic_year'] = $academicYear;
-            }
-
-            if (!empty($assignedClassIds)) {
-                $placeholders = [];
-                foreach ($assignedClassIds as $i => $classId) {
-                    $key = "assigned_class_{$i}";
-                    $placeholders[] = ":{$key}";
-                    $params[$key] = $classId;
-                }
-                $sql .= " AND c.id IN (" . implode(',', $placeholders) . ")";
             }
 
             $sql .= " GROUP BY c.id, c.name, c.level, c.stream_name ORDER BY c.level, c.name";
@@ -181,15 +171,6 @@ class ClassController extends Controller
 
         if (!$classId) {
             $this->error('Class ID is required', 400);
-            return;
-        }
-
-        // Once a teacher has explicit class-stream assignments, they may only view students
-        // of a class in that set - otherwise (not assigned to any yet) keep the old
-        // department-wide access.
-        $assignedClassIds = $this->getAssignedClassIds();
-        if (!empty($assignedClassIds) && !in_array((int) $classId, $assignedClassIds, true)) {
-            $this->forbidden('You are not assigned to this class');
             return;
         }
 
