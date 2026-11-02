@@ -65,6 +65,21 @@
             {{ open.marking ? 'Show less' : `Show ${markingRows.length - LIMIT.marking} more` }}
             <svg class="w-4 h-4 transition-transform duration-300" :class="open.marking ? 'rotate-180' : ''" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6" /></svg>
           </button>
+          <!-- Questions colleagues gave this teacher to mark on their assessments (shared marking) -->
+          <div v-if="sharedMarking.length" class="border-t border-gray-200 dark:border-gray-700 p-3">
+            <p class="px-1 mb-2 text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">Shared with you to mark</p>
+            <ul class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <li v-for="m in sharedMarking" :key="m.assignment_id" class="min-w-0">
+                <RouterLink :to="`/teacher/assignments/${m.assignment_id}/mark-by-question`" class="dash-chip group">
+                  <span class="min-w-0 flex-1">
+                    <span class="block text-sm font-bold text-gray-900 dark:text-white truncate">{{ m.title }}</span>
+                    <span class="block text-xs text-gray-500 dark:text-gray-400 truncate">{{ niceName(m.owner) }} · {{ m.questions === 1 ? '1 question' : `${m.questions} questions` }} · {{ m.to_mark ? `${m.to_mark} answers to mark` : 'all marked' }}</span>
+                  </span>
+                  <span class="flex-shrink-0 px-2.5 py-1 rounded-lg text-xs font-bold text-white bg-indigo-600 group-hover:bg-indigo-700 transition">Mark</span>
+                </RouterLink>
+              </li>
+            </ul>
+          </div>
         </section>
 
         <!-- Shortcuts to the main modules -->
@@ -413,6 +428,16 @@ const warning = ref<WarningRow[]>([])
 const warningLoaded = ref(false)
 const needing = computed(() => warning.value.filter(r => r.needs_teacher))
 const reason = (r: WarningRow) => r.signals.filter(g => g.key !== 'never').map(g => g.text).join(' · ')
+interface SharedMarking { assignment_id: number; title: string; owner: string; questions: number; to_mark: number }
+const sharedMarking = ref<SharedMarking[]>([])
+const loadSharedMarking = async () => {
+  try {
+    sharedMarking.value = (await apiService.get('/teacher/shared-marking')).data.data || []
+  } catch {
+    sharedMarking.value = []
+  }
+}
+
 const loadWarning = async () => {
   try {
     const res = await apiService.get('/teacher/early-warning')
@@ -584,5 +609,6 @@ onMounted(() => {
   loadAnalytics()
   loadMyDepartments()
   loadWarning()
+  loadSharedMarking()
 })
 </script>

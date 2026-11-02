@@ -149,8 +149,8 @@ export const GUIDE: GuidePart[] = [
         tips: ['Tap the students figure beside your department\'s name to see everyone enrolled.']
       },
       {
-        id: 't-classes', title: 'My Classes and Student View', icon: 'users',
-        steps: ['My Classes shows every stream with its students, results and work to mark - "Yours" marks the ones you teach.', 'Open a stream for its students, assessments, eNotes reading and progress.', 'Tap a student to see their report, message them or de-enrol them from your account.', 'Student View shows any of your classes exactly as its students see it.'],
+        id: 't-classes', title: 'Classes and Student View', icon: 'users',
+        steps: ['When you set an assessment, eNote or live class, every class is there to choose from.', 'In each class you only see, and reach, the learners who take your subject.', 'Student View shows any of your classes exactly as its students see it.'],
       },
       {
         id: 't-enotes', title: 'Writing eNotes', icon: 'document',
@@ -231,7 +231,7 @@ export const GUIDE: GuidePart[] = [
       },
       {
         id: 't-results', title: 'Marksheets and physical exams', icon: 'chart',
-        steps: ['Marksheets: every mark for a class and subject, with averages and grades - Download CSV for a spreadsheet.', 'Physical Exams: record a test sat on paper, type in the marks (Enter moves to the next learner) and choose if it counts on report cards.', 'Report cards are made by the school\'s admin.'],
+        steps: ['Marksheets: open an assessment for every learner\'s marks, question by question - filter by class and Download Excel.', 'Physical Exams: record a test sat on paper, type in the marks (Enter moves to the next learner) and choose if it counts on report cards.', 'Report cards are made by the school\'s admin.'],
       }
     ]
   },

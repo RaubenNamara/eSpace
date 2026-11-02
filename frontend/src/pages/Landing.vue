@@ -7,12 +7,18 @@
     <SiteHeader on-dark />
 
     <main id="top">
-      <!-- ===== Hero: deep green, students at work, the app around them, live numbers ===== -->
+      <!-- ===== Hero: students at work behind a green wash, the app around them, live numbers ===== -->
       <section class="relative overflow-hidden bg-indigo-950 pt-28 sm:pt-36 pb-12 sm:pb-16 text-white">
+        <!-- Students at their laptops in class, filling the whole hero (as on the login page), under
+             a deep green wash: darkest behind the words, lightest where the pictures of Tusome float -->
         <div class="absolute inset-0" aria-hidden="true">
-          <div class="absolute -top-48 -right-40 w-[42rem] h-[42rem] rounded-full bg-indigo-600/30 blur-3xl"></div>
-          <div class="absolute -bottom-48 -left-40 w-[34rem] h-[34rem] rounded-full bg-emerald-400/10 blur-3xl"></div>
-          <div class="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.07)_1px,transparent_0)] [background-size:28px_28px] [mask-image:linear-gradient(to_bottom,black,transparent_85%)]"></div>
+          <picture class="absolute inset-0">
+            <source srcset="/images/login-students.webp" type="image/webp">
+            <img src="/images/login-students.jpg" alt="" width="1536" height="1024" fetchpriority="high" class="h-full w-full object-cover object-[60%_center] lg:object-[70%_center]">
+          </picture>
+          <div class="absolute inset-0 bg-gradient-to-b from-indigo-950/95 via-indigo-950/70 to-indigo-950/95 lg:bg-gradient-to-r lg:from-indigo-950/95 lg:via-indigo-950/70 lg:to-indigo-950/20"></div>
+          <div class="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-indigo-950/90 to-transparent"></div>
+          <div class="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-indigo-950/90 to-transparent"></div>
         </div>
 
         <div class="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 grid lg:grid-cols-[1.05fr_1fr] gap-14 lg:gap-10 items-center">
@@ -58,13 +64,8 @@
 
           <!-- Students at work, with pieces of Tusome floating around them (they drift with the pointer) -->
           <div class="reveal relative mx-auto w-full max-w-xl lg:max-w-none" @mousemove="onHeroPointer" @mouseleave="heroPointer = { x: 0, y: 0 }">
-            <div class="relative rounded-[2rem] overflow-hidden ring-1 ring-white/15 shadow-2xl shadow-black/40 transition-transform duration-300 ease-out" :style="drift(0.4)">
-              <picture>
-                <source srcset="/images/login-students.webp" type="image/webp">
-                <img src="/images/login-students.jpg" alt="Students learning on Tusome in their classroom" width="1536" height="1024" fetchpriority="high" class="w-full aspect-[4/3] object-cover object-[30%_center]">
-              </picture>
-              <div class="absolute inset-0 bg-gradient-to-t from-indigo-950/60 via-transparent to-transparent"></div>
-            </div>
+            <!-- room for the floating cards over the photo behind -->
+            <div class="w-full aspect-[4/3]"></div>
             <Transition name="fade" mode="out-in">
             <div :key="audience">
             <div class="hidden sm:block absolute -left-6 lg:-left-10 top-6 w-60 transition-transform duration-300 ease-out" :style="drift(1.2)" aria-hidden="true">

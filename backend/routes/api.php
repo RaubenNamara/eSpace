@@ -358,6 +358,10 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
 
         // Marking workspace (canvas/PDF marking layer, per-question marks, status workflow)
         Router::get('/assignments/{id}/marking-by-question', 'eSpace\App\Controllers\Teacher\MarkingController@markingByQuestion');
+        Router::get('/assignments/{id}/markers', 'eSpace\App\Controllers\Teacher\MarkingController@markers');
+        Router::put('/assignments/{id}/markers', 'eSpace\App\Controllers\Teacher\MarkingController@saveMarker');
+        Router::post('/assignments/{id}/finish-marked', 'eSpace\App\Controllers\Teacher\MarkingController@finishMarked');
+        Router::get('/shared-marking', 'eSpace\App\Controllers\Teacher\MarkingController@sharedWithMe');
         Router::get('/assignments/{id}/submissions/{submissionId}/marking', 'eSpace\App\Controllers\Teacher\MarkingController@getSubmissionForMarking');
         Router::put('/assignments/{id}/submissions/{submissionId}/marking-annotations', 'eSpace\App\Controllers\Teacher\MarkingController@saveMarkingAnnotations');
         Router::put('/assignments/{id}/submissions/{submissionId}/marks', 'eSpace\App\Controllers\Teacher\MarkingController@saveQuestionMarks');

@@ -39,7 +39,6 @@ const StudentConstructs = () => import('../pages/student/Constructs.vue')
 // Teacher Pages
 const TeacherDashboard = () => import('../pages/teacher/Dashboard.vue')
 const TeacherChangePassword = () => import('../pages/teacher/ChangePassword.vue')
-const TeacherClasses = () => import('../pages/teacher/Classes.vue')
 const TeacherLiveClasses = () => import('../pages/teacher/LiveClasses.vue')
 const TeacherAssignments = () => import('../pages/teacher/Assignments.vue')
 const AssignmentBuilder = () => import('../pages/teacher/AssignmentBuilder.vue')
@@ -304,8 +303,8 @@ const routes: RouteRecordRaw[] = [
     children: [
       { path: '', redirect: '/teacher/dashboard' },
       { path: 'dashboard', name: 'TeacherDashboard', component: TeacherDashboard },
-      { path: 'classes', name: 'TeacherClasses', component: TeacherClasses },
-      { path: 'classes/:id', name: 'TeacherClassDetail', component: () => import('../pages/teacher/ClassDetail.vue') },
+      // My Classes was removed - old links land on the dashboard
+      { path: 'classes/:id?', redirect: '/teacher/dashboard' },
       { path: 'live-classes', name: 'TeacherLiveClasses', component: TeacherLiveClasses },
       { path: 'assignments', name: 'TeacherAssignments', component: TeacherAssignments },
       { path: 'assignments/create', name: 'AssignmentBuilder', component: AssignmentBuilder },
