@@ -74,17 +74,19 @@
           :key="question.id"
           class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6"
         >
-          <div class="flex flex-wrap items-start justify-between gap-3 mb-5">
-            <div class="flex items-start gap-3 min-w-0">
-              <span class="flex-shrink-0 inline-flex h-7 min-w-[2rem] items-center justify-center rounded-lg bg-indigo-50 px-2 text-xs font-bold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">Q{{ index + 1 }}</span>
-              <div class="min-w-0 overflow-x-auto pt-0.5">
+          <div class="mb-5">
+            <div class="mb-2 flex items-center justify-between gap-3">
+              <span class="inline-flex h-7 min-w-[2rem] items-center justify-center rounded-lg bg-indigo-50 px-2 text-xs font-bold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">Q{{ index + 1 }}</span>
+              <span v-if="(mode === 'result' || oversightRole) && question.question_mark" class="inline-flex items-center rounded-full bg-rose-50 px-3 py-1 text-sm font-bold tabular-nums text-rose-700 ring-1 ring-rose-100 whitespace-nowrap dark:bg-rose-900/30 dark:text-rose-300 dark:ring-rose-800">
+                {{ fmtMarks(question.question_mark.marks_awarded) }} / {{ fmtMarks(question.marks) }}
+              </span>
+            </div>
+            <div class="min-w-0">
+              <div class="min-w-0 overflow-x-auto">
                 <p v-if="question.question_text" class="text-[15px] font-medium leading-relaxed text-gray-900 dark:text-white mb-1 break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.question_text"></p>
                 <p v-else-if="question.scenario_text" class="text-gray-700 dark:text-gray-300 mb-1 break-words text-justify [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.scenario_text"></p>
               </div>
             </div>
-            <span v-if="(mode === 'result' || oversightRole) && question.question_mark" class="inline-flex items-center rounded-full bg-rose-50 px-3 py-1 text-sm font-bold tabular-nums text-rose-700 ring-1 ring-rose-100 whitespace-nowrap dark:bg-rose-900/30 dark:text-rose-300 dark:ring-rose-800">
-              {{ fmtMarks(question.question_mark.marks_awarded) }} / {{ fmtMarks(question.marks) }}
-            </span>
           </div>
 
           <div v-if="question.scenario_text" class="bg-gray-50 dark:bg-gray-700/50 p-3 sm:p-4 rounded-lg mb-4 overflow-x-auto">
@@ -101,8 +103,7 @@
                made directly over it are visible), plus its drawing/PDF layer(s) -->
           <template v-else>
             <div v-if="typedAnswerLayers[question.id]" class="mb-4 sm:ml-10">
-              <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ oversightRole ? "Student's mark sheet" : "Your mark sheet" }}<template v-if="(question.answer?.answer_style || '').startsWith('handwriting')"> · handwriting</template></p>
-              <div class="mark-sheet-frame" :style="{ maxWidth: `${typedAnswerLayers[question.id].phone ? typedAnswerLayers[question.id].width : sheetMaxWidth(question.answer?.answer_style)}px` }">
+              <div class="mark-sheet-frame" :style="typedAnswerLayers[question.id].phone ? { maxWidth: `${typedAnswerLayers[question.id].width}px` } : undefined">
               <AnnotationCanvas
                 :width="typedAnswerLayers[question.id].width"
                 :height="typedAnswerLayers[question.id].height"
@@ -117,9 +118,8 @@
                  file are shown side by side with no distinction, each with any marks the
                  teacher made on it. -->
             <div v-if="galleryFilesFor(question).length" class="mt-4 sm:ml-10">
-              <div class="grid grid-cols-1 gap-4 max-w-[1016px]">
+              <div class="grid grid-cols-1 gap-4">
                 <div v-for="item in galleryFilesFor(question)" :key="item.key" class="min-w-0">
-                  <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 truncate">{{ item.originalName }}</p>
                   <AnnotationCanvas
                     v-if="item.fileType === 'image'"
                     :background="item.path"
@@ -160,7 +160,7 @@ import type { AnnotationLayerJSON } from '@/types'
 import { TYPED_ANSWER_PAGE } from '@/types'
 import AnnotationCanvas from '@/components/assignment/AnnotationCanvas.vue'
 import PdfAnnotationViewer from '@/components/assignment/PdfAnnotationViewer.vue'
-import { createTypedAnswerLayer, htmlToPlainText, handwritingFontReady, answerLook, sheetMaxWidth, sheetWidth } from '@/composables/useAnnotationCanvas'
+import { createTypedAnswerLayer, htmlToPlainText, handwritingFontReady, answerLook, sheetWidth } from '@/composables/useAnnotationCanvas'
 import { resolveAssetUrl } from '@/utils/url'
 import { isPlaceholderAttachmentName } from '@/utils/answerAttachment'
 
@@ -433,7 +433,8 @@ onMounted(load)
 <style>
 /* the mark sheet as a sheet of paper: soft edge, a little lift, the paper's own width */
 .mark-sheet-frame {
-  max-width: 800px;
+  /* as wide as the PDF pages beside it: their 1200px page + 8px border each side */
+  max-width: 1216px;
   overflow: hidden;
   border-radius: 14px;
   border: 1px solid #e5e7eb;

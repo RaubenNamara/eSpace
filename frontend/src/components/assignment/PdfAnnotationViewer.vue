@@ -80,8 +80,9 @@ const emit = defineEmits<{
   (e: 'loaded', totalPages: number): void
 }>()
 
-/** widest a page is drawn (a page any wider is just bigger, not easier to read) */
-const MAX_PAGE_WIDTH = 1000
+/** pages fill the width they are given up to 1200px (any wider only makes the writing huge);
+ *  the mark sheet beside them uses the same limit, so the two line up */
+const MAX_PAGE_WIDTH = 1200
 const NO_LAYERS: AnnotationLayerJSON[] = []
 
 interface PageInfo { num: number; w: number; h: number; seen: boolean }
@@ -260,6 +261,8 @@ onBeforeUnmount(() => {
 <style scoped>
 .pdf-viewer {
   width: 100%;
+  /* the 1200px page + its 8px border each side: lines up with the mark sheet above it */
+  max-width: 1216px;
 }
 
 .pdf-viewer__pages {

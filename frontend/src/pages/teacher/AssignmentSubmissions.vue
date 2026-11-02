@@ -180,13 +180,15 @@
             :key="question.id"
             class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6"
           >
-            <div class="flex items-start gap-3 mb-5">
-              <span class="flex-shrink-0 inline-flex h-7 min-w-[2rem] items-center justify-center rounded-lg bg-indigo-50 px-2 text-xs font-bold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">Q{{ index + 1 }}</span>
-              <div class="flex-1 min-w-0 overflow-x-auto pt-0.5">
+            <div class="mb-5">
+              <div class="mb-2 flex items-center justify-between gap-3">
+                <span class="inline-flex h-7 min-w-[2rem] items-center justify-center rounded-lg bg-indigo-50 px-2 text-xs font-bold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">Q{{ index + 1 }}</span>
+                <span class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-bold tabular-nums text-gray-700 dark:bg-gray-700 dark:text-gray-200 whitespace-nowrap">{{ fmtMarks(question.marks) }} {{ Number(question.marks) === 1 ? 'mark' : 'marks' }}</span>
+              </div>
+              <div class="min-w-0 overflow-x-auto">
                 <p v-if="question.question_text" class="text-[15px] font-medium leading-relaxed text-gray-900 dark:text-white mb-1 break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.question_text"></p>
                 <p v-else-if="question.scenario_text" class="text-[15px] leading-relaxed text-gray-700 dark:text-gray-300 mb-1 break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.scenario_text"></p>
               </div>
-              <span class="flex-shrink-0 inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-bold tabular-nums text-gray-700 dark:bg-gray-700 dark:text-gray-200 whitespace-nowrap">{{ fmtMarks(question.marks) }} {{ Number(question.marks) === 1 ? 'mark' : 'marks' }}</span>
             </div>
 
             <!-- Objective (MCQ/true-false) questions: raw stored answer only -->

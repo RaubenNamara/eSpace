@@ -458,6 +458,14 @@ const activeToolLabel = computed(() => {
   font-size: 14px;
 }
 
+/* a phone: the groups (tools, undo/clear, colours) wrap onto a second line instead of running off the screen */
+@media (max-width: 640px) {
+  .annotation-toolbar--marking {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+}
+
 .color-btn--small,
 .annotation-toolbar .color-btn--small {
   width: 16px;

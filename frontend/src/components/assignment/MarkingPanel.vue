@@ -68,18 +68,14 @@
     <div class="marking-panel__actions">
       <span class="marking-panel__status-badge" :class="`marking-panel__status-badge--${status}`">{{ formatStatus(status) }}</span>
 
-      <template v-if="status !== 'returned'">
-        <button class="marking-panel__btn marking-panel__btn--primary" @click="completeMarking">
-          Complete Marking
-        </button>
-        <button
-          class="marking-panel__btn marking-panel__btn--success"
-          :disabled="status !== 'graded'"
-          @click="returnToStudent"
-        >
-          Return to Student
-        </button>
-      </template>
+      <button
+        v-if="status !== 'returned'"
+        class="marking-panel__btn marking-panel__btn--success"
+        :disabled="finishing"
+        @click="finishAndReturn"
+      >
+        {{ finishing ? 'Saving…' : 'Finish & return to student' }}
+      </button>
       <button v-else class="marking-panel__btn marking-panel__btn--secondary" @click="reopen">
         Reopen Submission
       </button>
@@ -197,57 +193,92 @@ function addGeneralComment(text: string) {
   onGeneralFeedbackInput()
 }
 
-function scheduleMarksSave(questionId: number) {
-  saveStatus.value = 'Unsaved changes'
-  if (marksTimeout) clearTimeout(marksTimeout)
-  marksTimeout = window.setTimeout(async () => {
-    saveStatus.value = 'Saving…'
-    try {
+const pendingMarks = new Set<number>()
+
+/** save every question with unsaved marks or feedback */
+async function saveMarksNow(): Promise<boolean> {
+  if (marksTimeout) { clearTimeout(marksTimeout); marksTimeout = null }
+  const ids = [...pendingMarks]
+  pendingMarks.clear()
+  if (!ids.length) return true
+  saveStatus.value = 'Saving…'
+  try {
+    for (const questionId of ids) {
       await axios.put(`${API_BASE}/teacher/assignments/${props.assignmentId}/submissions/${props.submissionId}/marks`, {
         question_id: questionId,
         marks_awarded: marksInput.value[questionId],
         feedback: feedbackInput.value[questionId]
       })
-      saveStatus.value = 'Saved'
-    } catch {
-      saveStatus.value = 'Save failed'
     }
-  }, 1500)
+    saveStatus.value = 'Saved'
+    return true
+  } catch {
+    ids.forEach(id => pendingMarks.add(id))
+    saveStatus.value = 'Save failed'
+    return false
+  }
+}
+
+function scheduleMarksSave(questionId: number) {
+  saveStatus.value = 'Unsaved changes'
+  pendingMarks.add(questionId)
+  if (marksTimeout) clearTimeout(marksTimeout)
+  marksTimeout = window.setTimeout(() => { saveMarksNow() }, 1500)
 }
 
 let feedbackTimeout: number | null = null
 
-function onGeneralFeedbackInput() {
-  saveStatus.value = 'Unsaved changes'
-  if (feedbackTimeout) clearTimeout(feedbackTimeout)
-  feedbackTimeout = window.setTimeout(async () => {
-    saveStatus.value = 'Saving…'
-    try {
-      await axios.put(`${API_BASE}/teacher/assignments/${props.assignmentId}/submissions/${props.submissionId}/general-feedback`, {
-        feedback: generalFeedback.value
-      })
-      saveStatus.value = 'Saved'
-    } catch {
-      saveStatus.value = 'Save failed'
-    }
-  }, 1500)
-}
+let feedbackPending = false
 
-async function completeMarking() {
+async function saveGeneralFeedbackNow(): Promise<boolean> {
+  if (feedbackTimeout) { clearTimeout(feedbackTimeout); feedbackTimeout = null }
+  if (!feedbackPending) return true
+  feedbackPending = false
+  saveStatus.value = 'Saving…'
   try {
-    await axios.post(`${API_BASE}/teacher/assignments/${props.assignmentId}/submissions/${props.submissionId}/complete-marking`)
-    emit('status-changed', 'graded')
-  } catch (err: any) {
-    toast.error(err.response?.data?.message || 'Failed to complete marking')
+    await axios.put(`${API_BASE}/teacher/assignments/${props.assignmentId}/submissions/${props.submissionId}/general-feedback`, {
+      feedback: generalFeedback.value
+    })
+    saveStatus.value = 'Saved'
+    return true
+  } catch {
+    feedbackPending = true
+    saveStatus.value = 'Save failed'
+    return false
   }
 }
 
-async function returnToStudent() {
+function onGeneralFeedbackInput() {
+  saveStatus.value = 'Unsaved changes'
+  feedbackPending = true
+  if (feedbackTimeout) clearTimeout(feedbackTimeout)
+  feedbackTimeout = window.setTimeout(() => { saveGeneralFeedbackNow() }, 1500)
+}
+
+/**
+ * The one button: save anything still waiting, complete the marking, and give the script back
+ * to the learner (what "Complete Marking" then "Return to Student" used to do).
+ */
+const finishing = ref(false)
+async function finishAndReturn() {
+  if (finishing.value) return
+  finishing.value = true
   try {
+    if (!(await saveMarksNow()) || !(await saveGeneralFeedbackNow())) {
+      toast.error('Some marks could not be saved. Check your connection and try again.')
+      return
+    }
+    if (props.status !== 'graded') {
+      await axios.post(`${API_BASE}/teacher/assignments/${props.assignmentId}/submissions/${props.submissionId}/complete-marking`)
+      emit('status-changed', 'graded')
+    }
     await axios.post(`${API_BASE}/teacher/assignments/${props.assignmentId}/submissions/${props.submissionId}/return`)
     emit('status-changed', 'returned')
+    toast.success('Marking finished - the learner can now see their script')
   } catch (err: any) {
-    toast.error(err.response?.data?.message || 'Failed to return submission')
+    toast.error(err.response?.data?.message || 'Could not finish the marking')
+  } finally {
+    finishing.value = false
   }
 }
 
