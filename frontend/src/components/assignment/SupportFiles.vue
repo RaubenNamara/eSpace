@@ -1,7 +1,7 @@
 <template>
   <!-- Support files on an ICT assessment (AssignmentResourceController): starter documents,
        spreadsheets, databases, zip archives... students download them from the assessment. -->
-  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+  <div v-if="assignmentId ? allowed : assumeIct" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
     <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700">
       <h2 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white flex items-center">
         <span class="w-8 h-8 mr-2.5 rounded-lg bg-sky-50 dark:bg-sky-900/30 flex items-center justify-center flex-shrink-0">
@@ -40,9 +40,12 @@ import { resolveAssetUrl } from '@/utils/url'
 
 interface SupportFile { id: number; file_path: string; original_name: string; file_size: number | null }
 
-const props = defineProps<{ assignmentId: number | string | null }>()
-// Whether the assessment may have support files (ICT) - the builder shows this card only then
-const emit = defineEmits<{ allowed: [ok: boolean] }>()
+// assumeIct: before the assessment is saved there is no id to ask the server with - the
+// builder's guess from the subject's name decides whether the card shows until then
+const props = defineProps<{ assignmentId: number | string | null; assumeIct?: boolean }>()
+// Whether the assessment may have support files (ICT) - asked of the server, from the
+// assessment's own subject; the card shows only then
+const allowed = ref(false)
 
 const ACCEPT = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.pub,.mdb,.accdb,.odt,.ods,.odp,.rtf,.txt,.csv,.zip,.rar,.7z,.jpg,.jpeg,.png,.gif,.webp'
 const files = ref<SupportFile[]>([])
@@ -57,7 +60,7 @@ const load = async () => {
   try {
     const d = (await axios.get(`/api/teacher/assignments/${props.assignmentId}/resources`)).data.data
     files.value = d.files
-    emit('allowed', !!d.allowed)
+    allowed.value = !!d.allowed
   } catch { /* the card stays as it was */ }
 }
 watch(() => props.assignmentId, load, { immediate: true })
