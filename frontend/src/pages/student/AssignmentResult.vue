@@ -106,6 +106,7 @@
               <AnnotationCanvas
                 :width="typedAnswerLayers[question.id].width"
                 :height="typedAnswerLayers[question.id].height"
+                stretch
                 :readonly-layers="typedAnswerReadonlyLayers[question.id]"
                 mode="readonly"
                 readonly

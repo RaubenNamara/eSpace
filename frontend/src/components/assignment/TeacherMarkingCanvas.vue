@@ -46,11 +46,12 @@
         />
       </div>
       <template v-if="part.key === 'typed' && typedAnswerLayerInfo">
-        <div class="teacher-marking-canvas__workspace teacher-marking-canvas__workspace--typed" :style="{ maxWidth: `${sheetMaxWidth(props.question.answer?.answer_style) + 2}px` }">
+        <div class="teacher-marking-canvas__workspace teacher-marking-canvas__workspace--typed" :style="{ maxWidth: `${sheetMaxWidth(props.question.answer?.answer_style)}px` }">
           <div class="teacher-marking-canvas__paper" :class="{ 'teacher-marking-canvas__paper--wide': answerLook(props.question.answer?.answer_style).wide }">
           <AnnotationCanvas
             :ref="(el: any) => { typedRef = el }"
             :width="sheetWidth(props.question.answer?.answer_style)"
+            stretch
             :height="typedAnswerLayerInfo.height"
             :readonly-layers="typedAnswerReadonlyLayers"
             :editable-layer="markingLayer[TYPED_ANSWER_PAGE] || { objects: [] }"
@@ -450,7 +451,7 @@ function onEvidencePdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
   height: auto;
   min-height: 0;
   overflow: hidden;
-  max-width: 1002px;
+  max-width: 1016px;
   border-radius: 14px;
   background: #fff;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px -12px rgba(15, 23, 42, 0.18);

@@ -1,7 +1,7 @@
 <template>
   <div
     class="annotation-canvas"
-    :style="{ maxWidth: width + 'px', aspectRatio: `${width} / ${height}` }"
+    :style="{ maxWidth: stretch ? undefined : width + 'px', aspectRatio: `${width} / ${height}` }"
     @pointerenter="isHovered = true"
     @pointerleave="isHovered = false"
   >
@@ -107,6 +107,8 @@ interface Props {
   background?: string | null
   width: number
   height: number
+  /** fill the space it is given even beyond its own width (scales up evenly, marks included) */
+  stretch?: boolean
   readonlyLayers?: AnnotationLayerJSON[]
   editableLayer?: AnnotationLayerJSON
   mode?: AnnotationLayerMode

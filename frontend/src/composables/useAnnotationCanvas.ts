@@ -316,9 +316,10 @@ export function sheetWidth(style: string | null | undefined): number {
  * 800px page, so they are shown narrower (the whole sheet, marks included, scales evenly - nothing
  * moves) to read at a normal size; older answers keep the full width.
  */
-export function sheetMaxWidth(style: string | null | undefined): number {
-  if ((style || '').endsWith('_wide')) return 1000
-  return style === 'print' || style === 'handwriting' ? 640 : 800
+export function sheetMaxWidth(_style?: string | null): number {
+  // every sheet as wide as a PDF page beside it (1000px page + its 8px border each side), so the
+  // two line up; the whole sheet scales evenly, so a teacher's marks stay where they were made
+  return 1016
 }
 
 export function createTypedAnswerLayer(text: string, width: number, look: TypedAnswerLook = {}): { layer: AnnotationLayerJSON; height: number } {
