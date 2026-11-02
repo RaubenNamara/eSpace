@@ -62,6 +62,12 @@
           </button>
           <RouterLink to="/teacher/marksheet" class="flex-shrink-0 ml-auto inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20">Marksheet</RouterLink>
         </nav>
+        <!-- find a learner by name or admission number in the tab that's open -->
+        <label class="mb-3 relative block sm:max-w-sm">
+          <span class="sr-only">Search students</span>
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" /></svg>
+          <input v-model="listSearch" type="search" :placeholder="listTab === 'marked' ? 'Search marked students' : 'Search students'" class="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white">
+        </label>
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
           <!-- Phone: one compact row per learner -->
           <ul class="md:hidden divide-y divide-gray-100 dark:divide-gray-700">
@@ -284,8 +290,19 @@ const listTabs = computed(() => [
   { key: 'marked' as const, label: 'Marked', count: listGroups.value.marked.length, dot: 'bg-emerald-500', on: 'bg-emerald-600 border-emerald-600 text-white' },
   { key: 'out' as const, label: 'Not handed in', count: listGroups.value.out.length, dot: 'bg-gray-400', on: 'bg-gray-700 border-gray-700 text-white dark:bg-gray-600 dark:border-gray-600' }
 ])
-const shownSubmissions = computed(() => listGroups.value[listTab.value])
-const emptyText = computed(() => listTab.value === 'tomark'
+// Marked scripts A-Z by name; any tab narrowed by the search
+const listSearch = ref('')
+const byName = (a: any, b: any) => String(a.student_name || '').localeCompare(String(b.student_name || ''), undefined, { sensitivity: 'base' })
+const shownSubmissions = computed(() => {
+  let rows = listGroups.value[listTab.value]
+  if (listTab.value === 'marked') rows = rows.slice().sort(byName)
+  const term = listSearch.value.trim().toLowerCase()
+  if (!term) return rows
+  return rows.filter(sub => [sub.student_name, sub.admission_number, sub.student_email].some(v => String(v || '').toLowerCase().includes(term)))
+})
+const emptyText = computed(() => listSearch.value.trim()
+  ? { title: 'No one by that name', message: `No student in this list matches "${listSearch.value.trim()}".` }
+  : listTab.value === 'tomark'
   ? { title: 'Nothing to mark', message: submissions.value.length ? 'Every script handed in has been marked.' : "Students haven't handed this in yet." }
   : listTab.value === 'marked'
     ? { title: 'No marked scripts yet', message: 'Scripts move here once you mark them.' }

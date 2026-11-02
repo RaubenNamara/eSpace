@@ -10,7 +10,7 @@
         class="teacher-marking-canvas__part-head"
         :class="{
           'teacher-marking-canvas__section-label--spaced': index > 0,
-          'teacher-marking-canvas__part-head--tools': (part.key === 'typed' && typedAnswerLayerInfo) || (part.file && part.key === selectedKey && selectedFile),
+          'teacher-marking-canvas__part-head--tools': (part.key === 'typed' && typedAnswerLayerInfo) || (part.file && part.file.fileType !== 'document' && part.key === selectedKey && selectedFile),
         }"
       >
         <p class="teacher-marking-canvas__section-label">
@@ -31,7 +31,7 @@
           @clear-selected="typedRef?.clearSelected()"
         />
         <AnnotationToolbar
-          v-else-if="part.file && part.key === selectedKey && selectedFile"
+          v-else-if="part.file && part.file.fileType !== 'document' && part.key === selectedKey && selectedFile"
           variant="marking"
           :tool="evidenceTool"
           :color="evidenceColor"
@@ -64,16 +64,10 @@
           </div>
         </div>
       </template>
-      <a
-        v-else-if="part.file && part.file.fileType === 'document'"
-        :href="part.file.url"
-        :download="part.label"
-        class="teacher-marking-canvas__part-closed"
-      >
-        <span class="teacher-marking-canvas__gallery-thumb-icon" aria-hidden="true"><AppIcon name="document" class="w-6 h-6" /></span>
-        <span class="teacher-marking-canvas__part-closed-label">{{ part.label }}</span>
-        <span class="teacher-marking-canvas__part-closed-action">Download to mark</span>
-      </a>
+      <!-- ICT: a Word, Excel or PowerPoint file opens here, as Office shows it -->
+      <div v-else-if="part.file && part.file.fileType === 'document' && part.key === selectedKey" class="teacher-marking-canvas__workspace">
+        <OfficeViewer :url="part.file.url" :name="part.label" />
+      </div>
       <template v-else-if="part.file && part.key === selectedKey && selectedFile">
         <div class="teacher-marking-canvas__workspace">
           <AnnotationCanvas
@@ -131,6 +125,7 @@ import { TYPED_ANSWER_PAGE } from '@/types'
 import AnnotationToolbar from './AnnotationToolbar.vue'
 import AnnotationCanvas from './AnnotationCanvas.vue'
 import PdfAnnotationViewer from './PdfAnnotationViewer.vue'
+import OfficeViewer from './OfficeViewer.vue'
 import { createTypedAnswerLayer, htmlToPlainText, handwritingFontReady, answerLook, sheetWidth } from '@/composables/useAnnotationCanvas'
 import { resolveAssetUrl } from '@/utils/url'
 import { isPlaceholderAttachmentName } from '@/utils/answerAttachment'

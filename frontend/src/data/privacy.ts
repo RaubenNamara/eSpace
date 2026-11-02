@@ -87,6 +87,7 @@ export const PRIVACY_SECTIONS: PrivacySection[] = [
     items: [
       { label: 'Google Gemini', text: 'explains a page of notes aloud (AI Tutor), drafts Activity of Integration scenarios from the curriculum for teachers, and drafts report-card comments. For a report-card comment it is sent the learner\'s first name, subjects and grades - never the full name or admission number.' },
       { label: 'ElevenLabs', text: 'reads the text of eNotes aloud.' },
+      { label: 'Microsoft Office viewer', text: 'shows a Word, Excel or PowerPoint file an ICT learner handed in to their teacher for marking. Microsoft is given the file\'s address to display it, only while the teacher has it open.' },
       { label: 'BigBlueButton', text: 'carries the sound and video of live classes, and the recording when a teacher records one.' },
       { label: 'The school\'s own student information system (SMIS)', text: 'when the school turns it on, keeps Tusome\'s list of learners and classes up to date.' },
       { label: 'Browser notifications', text: 'when you turn them on, a short alert travels through your browser\'s notification service.' },
