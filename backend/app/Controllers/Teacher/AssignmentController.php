@@ -1425,8 +1425,13 @@ class AssignmentController extends Controller
             ]);
             $newAssignmentId = (int) $this->copyRow($db, 'assignments', $copy, ['id', 'created_at', 'updated_at', 'deleted_at']);
 
-            // Which streams see it, and the topics / learning outcomes it assesses
-            foreach (['assignment_classes', 'assignment_curriculum_topics', 'assignment_learning_outcomes'] as $table) {
+            // Which streams see it, the topics / learning outcomes it assesses, and its support files
+            // (the copy points at the same stored files)
+            $tables = ['assignment_classes', 'assignment_curriculum_topics', 'assignment_learning_outcomes'];
+            if ($db->query("SHOW TABLES LIKE 'assignment_resources'")->fetch()) {
+                $tables[] = 'assignment_resources';
+            }
+            foreach ($tables as $table) {
                 $stmt = $db->prepare("SELECT * FROM {$table} WHERE assignment_id = ?");
                 $stmt->execute([$assignmentId]);
                 foreach ($stmt->fetchAll() as $row) {

@@ -598,6 +598,9 @@
           </div>
         </div>
 
+        <!-- ICT: support files for students to download (starter files, a zip of resources...) -->
+        <SupportFiles v-if="!isPreview && (supportAllowed || looksIct)" :assignment-id="isEdit ? (route.params.id as string) : createdId" @allowed="supportAllowed = $event" />
+
         <!-- Questions -->
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
             <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-2">
@@ -1330,6 +1333,7 @@ import QuestionBankPicker, { type BankQuestion } from '@/components/assignment/Q
 import ItemPickerModal from '@/components/enotes/ItemPickerModal.vue'
 import { fetchPaper, toAssessmentQuestion } from '@/utils/itemBankQuestions'
 import PdfAnnotationViewer from '@/components/assignment/PdfAnnotationViewer.vue'
+import SupportFiles from '@/components/assignment/SupportFiles.vue'
 import type { AssignmentQuestion, QuestionType, Subject, ResponseType, AttachmentType } from '@/types'
 import type { ClassTarget } from '@/components/teacher/TeacherClassSelector.vue'
 import type { Construct, ConstructTopicOption } from '@/types/construct'
@@ -1791,6 +1795,10 @@ const subQuestionsMarksTotal = computed(() => {
 // Read-only fields for the "Assessment Snapshot" sidebar - reuses state/computeds already
 // defined above, no new data fetching.
 const selectedSubjectName = computed(() => subjects.value.find(s => s.id === form.value.subject_id)?.name || '')
+// Support files are for ICT assessments: the server says so once the assessment exists; before
+// that, an ICT-looking subject shows the card (with "add a question first")
+const supportAllowed = ref(false)
+const looksIct = computed(() => /^ict|computer/i.test(selectedSubjectName.value))
 const selectedConstructName = computed(() => eocConstructs.value.find(c => c.id === selectedConstructId.value)?.name || '')
 const selectedConstructAO = computed(() => eocConstructs.value.find(c => c.id === selectedConstructId.value)?.assessment_objective || '')
 const ASSESSMENT_CATEGORY_LABELS: Record<string, string> = {

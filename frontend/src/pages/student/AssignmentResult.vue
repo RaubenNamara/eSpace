@@ -120,8 +120,15 @@
             <div v-if="galleryFilesFor(question).length" class="mt-4 sm:ml-10">
               <div class="grid grid-cols-1 gap-4">
                 <div v-for="item in galleryFilesFor(question)" :key="item.key" class="min-w-0">
+                  <!-- a Word/Excel/... file handed in (ICT): no preview, open it -->
+                  <a
+                    v-if="item.fileType === 'document'"
+                    :href="item.path"
+                    :download="item.originalName"
+                    class="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-semibold text-indigo-700 dark:text-indigo-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                  >Download {{ item.originalName }}</a>
                   <AnnotationCanvas
-                    v-if="item.fileType === 'image'"
+                    v-else-if="item.fileType === 'image'"
                     :background="item.path"
                     :width="(item.isPrimary ? evidenceImageDims[question.id] : additionalFileImageDims[item.file.id])?.width || 800"
                     :height="(item.isPrimary ? evidenceImageDims[question.id] : additionalFileImageDims[item.file.id])?.height || 1000"
@@ -338,7 +345,7 @@ interface ResultGalleryItem {
   key: string
   path: string
   originalName: string
-  fileType: 'image' | 'pdf'
+  fileType: 'image' | 'pdf' | 'document'
   isPrimary: boolean
   file?: any
 }
