@@ -1103,7 +1103,7 @@
                   </button>
                 </div>
               </div>
-              <div v-if="questionPdfPreviewUrl" class="h-72 border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden">
+              <div v-if="questionPdfPreviewUrl" class="max-h-[70vh] overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg">
                 <PdfAnnotationViewer
                   :key="questionPdfPreviewUrl"
                   :pdf-url="questionPdfPreviewUrl"

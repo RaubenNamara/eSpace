@@ -286,8 +286,17 @@ class PerformanceReportService
         $db = $this->getDb();
         $term = $termId ? $this->getTermRange($termId) : null;
 
-        $assignmentWhere = ['a.class_id = :class_id', 'a.subject_id = :subject_id', 'a.deleted_at IS NULL'];
-        $assignmentParams = ['class_id' => $classId, 'subject_id' => $subjectId];
+        // every assessment this stream sat: set for it alone, for its whole class ("all streams"),
+        // or for several streams including it - drafts have no marks yet
+        $stmt = $db->prepare('SELECT name FROM classes WHERE id = ?');
+        $stmt->execute([$classId]);
+        $className = (string) $stmt->fetchColumn();
+        $assignmentWhere = [
+            '(a.class_id = :class_id OR a.class_group_name = :class_name
+              OR EXISTS (SELECT 1 FROM assignment_classes ac WHERE ac.assignment_id = a.id AND ac.class_id = :class_id_ac))',
+            'a.subject_id = :subject_id', 'a.deleted_at IS NULL', "a.status <> 'draft'",
+        ];
+        $assignmentParams = ['class_id' => $classId, 'class_name' => $className, 'class_id_ac' => $classId, 'subject_id' => $subjectId];
         if ($term) {
             $assignmentWhere[] = 'COALESCE(a.due_date, a.published_at, a.created_at) BETWEEN :start_date AND :end_date';
             $assignmentParams['start_date'] = $term['start_date'];
@@ -295,19 +304,24 @@ class PerformanceReportService
         }
         $stmt = $db->prepare(
             'SELECT id, title, total_marks, due_date FROM assignments a
-             WHERE ' . implode(' AND ', $assignmentWhere) . ' ORDER BY a.due_date ASC'
+             WHERE ' . implode(' AND ', $assignmentWhere) . ' ORDER BY COALESCE(a.due_date, a.published_at, a.created_at) ASC'
         );
         $stmt->execute($assignmentParams);
         $assignments = $stmt->fetchAll();
 
+        // the learners actively taking this subject in this stream (its department's enrolment)
+        $stmt = $db->prepare('SELECT department_id FROM subjects WHERE id = ?');
+        $stmt->execute([$subjectId]);
+        $departmentId = $stmt->fetchColumn();
         $stmt = $db->prepare(
-            'SELECT DISTINCT s.id, s.first_name, s.last_name, s.admission_number
+            "SELECT DISTINCT s.id, s.first_name, s.last_name, s.admission_number
              FROM students s
-             INNER JOIN student_department_enrollments sde ON sde.student_id = s.id AND sde.class_id = :class_id AND sde.deleted_at IS NULL
+             INNER JOIN student_department_enrollments sde ON sde.student_id = s.id AND sde.class_id = :class_id
+                    AND sde.deleted_at IS NULL AND sde.status = 'active'" . ($departmentId ? ' AND sde.department_id = :department_id' : '') . "
              WHERE s.deleted_at IS NULL
-             ORDER BY s.first_name ASC, s.last_name ASC'
+             ORDER BY s.first_name ASC, s.last_name ASC"
         );
-        $stmt->execute(['class_id' => $classId]);
+        $stmt->execute(['class_id' => $classId] + ($departmentId ? ['department_id' => (int) $departmentId] : []));
         $students = $stmt->fetchAll();
 
         $scoresByStudent = [];
@@ -315,15 +329,18 @@ class PerformanceReportService
             $assignmentIds = array_column($assignments, 'id');
             $placeholders = implode(',', array_fill(0, count($assignmentIds), '?'));
             $stmt = $db->prepare(
-                "SELECT student_id, assignment_id, total_score, percentage
+                // marked work counts as soon as it is marked; 'returned' says the learner has it back
+                "SELECT student_id, assignment_id, total_score, percentage, status
                  FROM assignment_submissions
-                 WHERE status = 'returned' AND assignment_id IN ({$placeholders})"
+                 WHERE status IN ('graded', 'returned') AND deleted_at IS NULL AND total_score IS NOT NULL
+                   AND assignment_id IN ({$placeholders})"
             );
             $stmt->execute($assignmentIds);
             foreach ($stmt->fetchAll() as $row) {
                 $scoresByStudent[(int) $row['student_id']][(int) $row['assignment_id']] = [
                     'score' => (float) $row['total_score'],
                     'percentage' => (float) $row['percentage'],
+                    'returned' => $row['status'] === 'returned',
                 ];
             }
         }
@@ -339,6 +356,7 @@ class PerformanceReportService
                     'assignment_id' => (int) $assignment['id'],
                     'score' => $entry ? $entry['score'] : null,
                     'percentage' => $entry ? round($entry['percentage'], 1) : null,
+                    'returned' => $entry ? $entry['returned'] : null,
                 ];
             }, $assignments);
 

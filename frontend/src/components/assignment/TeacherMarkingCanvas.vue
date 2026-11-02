@@ -449,9 +449,7 @@ function onEvidencePdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
 .teacher-marking-canvas__workspace--typed {
   height: auto;
   min-height: 0;
-  /* on a phone the sheet keeps a readable size and scrolls sideways instead of shrinking */
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow: hidden;
   max-width: 1002px;
   border-radius: 14px;
   background: #fff;
@@ -459,11 +457,7 @@ function onEvidencePdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
 }
 
 .teacher-marking-canvas__paper {
-  min-width: 600px;
-}
-
-.teacher-marking-canvas__paper--wide {
-  min-width: 720px;
+  min-width: 0;
 }
 
 .teacher-marking-canvas__part-closed {
@@ -573,5 +567,12 @@ function onEvidencePdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
 
 .dark .teacher-marking-canvas__gallery-thumb-name {
   color: #9ca3af;
+}
+
+/* a PDF shows every page one under the other: the box grows with it instead of scrolling inside */
+.teacher-marking-canvas__workspace:has(.pdf-viewer) {
+  height: auto;
+  min-height: 0;
+  overflow: visible;
 }
 </style>

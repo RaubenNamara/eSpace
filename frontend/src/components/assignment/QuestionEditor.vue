@@ -266,4 +266,11 @@ onMounted(() => {
     min-height: 260px;
   }
 }
+
+/* a PDF shows every page one under the other: the box grows with it instead of scrolling inside */
+.question-editor__workspace:has(.pdf-viewer) {
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+}
 </style>

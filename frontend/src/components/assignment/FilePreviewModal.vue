@@ -11,7 +11,7 @@
       </div>
       <div class="flex-1 overflow-y-auto bg-gray-100 dark:bg-gray-900 flex items-center justify-center p-4">
         <img v-if="fileType === 'image'" :src="url" :alt="title || 'Preview'" class="max-w-full max-h-full rounded-lg object-contain">
-        <div v-else class="w-full h-[70vh]">
+        <div v-else class="w-full self-start">
           <PdfAnnotationViewer :pdf-url="url" mode="readonly" readonly />
         </div>
       </div>

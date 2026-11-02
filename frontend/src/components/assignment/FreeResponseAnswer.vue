@@ -5,7 +5,7 @@
          from their own answer/drawing workspace further down. -->
     <div v-if="questionPdfUrl">
       <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Question (PDF)</label>
-      <div class="w-full aspect-[210/297] border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+      <div class="w-full">
         <PdfAnnotationViewer :pdf-url="questionPdfUrl" mode="readonly" readonly />
       </div>
     </div>
@@ -776,5 +776,12 @@ function onPdfLayersChange(pages: Record<number, AnnotationLayerJSON>) {
   font-size: 11px;
   font-weight: 500;
   padding: 0 4px;
+}
+
+/* a PDF shows every page one under the other: the box grows with it instead of scrolling inside */
+.free-response-answer__workspace:has(.pdf-viewer) {
+  height: auto;
+  min-height: 0;
+  overflow: visible;
 }
 </style>

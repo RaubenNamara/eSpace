@@ -45,10 +45,27 @@
 
       <!-- Submissions List -->
       <div v-else-if="!markingData">
+        <!-- the scripts by where they are: to mark, marked, not handed in - never mixed -->
+        <nav class="mb-3 flex gap-1.5 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 pb-1 [scrollbar-width:none]" aria-label="Scripts">
+          <button
+            v-for="t in listTabs"
+            :key="t.key"
+            type="button"
+            class="flex-shrink-0 inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold border transition-colors"
+            :class="listTab === t.key ? t.on : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'"
+            :aria-pressed="listTab === t.key"
+            @click="listTab = t.key"
+          >
+            <span class="w-2 h-2 rounded-full" :class="t.dot" aria-hidden="true"></span>
+            {{ t.label }}
+            <span class="px-1.5 rounded-md text-[11px] font-bold tabular-nums" :class="listTab === t.key ? 'bg-white/25' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300'">{{ t.count }}</span>
+          </button>
+          <RouterLink to="/teacher/marksheet" class="flex-shrink-0 ml-auto inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20">Marksheet</RouterLink>
+        </nav>
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
           <!-- Phone: one compact row per learner -->
           <ul class="md:hidden divide-y divide-gray-100 dark:divide-gray-700">
-            <li v-for="submission in submissions" :key="`m-${submission.id}`" class="flex items-center gap-2.5 px-3 py-2.5">
+            <li v-for="submission in shownSubmissions" :key="`m-${submission.id}`" class="flex items-center gap-2.5 px-3 py-2.5">
               <span class="h-9 w-9 flex-shrink-0 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-sm font-bold text-indigo-700 dark:text-indigo-300">{{ submission.student_name?.charAt(0) || '?' }}</span>
               <span class="min-w-0 flex-1">
                 <span class="block text-sm font-semibold text-gray-900 dark:text-white truncate">{{ submission.student_name }}</span>
@@ -61,7 +78,7 @@
                 v-if="submission.status !== 'in_progress' && submission.status !== 'draft'"
                 class="flex-shrink-0 px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-xs font-bold"
                 @click="selectSubmission(submission)"
-              >Mark</button>
+              >{{ isMarked(submission) ? 'View' : 'Mark' }}</button>
               <span v-else class="flex-shrink-0 text-[11px] text-gray-400">Not handed in</span>
             </li>
           </ul>
@@ -77,7 +94,7 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-              <tr v-for="submission in submissions" :key="submission.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+              <tr v-for="submission in shownSubmissions" :key="submission.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                 <td class="px-6 py-4">
                   <div class="flex items-center">
                     <div class="h-10 w-10 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center">
@@ -108,9 +125,10 @@
                   <button
                     v-if="submission.status !== 'in_progress' && submission.status !== 'draft'"
                     @click="selectSubmission(submission)"
-                    class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm"
+                    class="px-4 py-2 rounded-lg transition-colors text-sm"
+                    :class="isMarked(submission) ? 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700' : 'bg-indigo-600 text-white hover:bg-indigo-700'"
                   >
-                    Mark
+                    {{ isMarked(submission) ? 'View / change' : 'Mark' }}
                   </button>
                   <span v-else class="text-xs text-gray-400">Not submitted yet</span>
                 </td>
@@ -120,12 +138,12 @@
           </div>
 
           <!-- Empty State -->
-          <div v-if="submissions.length === 0" class="p-6 sm:p-12 text-center">
+          <div v-if="shownSubmissions.length === 0" class="p-6 sm:p-12 text-center">
             <svg class="w-12 h-12 sm:w-16 sm:h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
             </svg>
-            <h3 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-2">No submissions yet</h3>
-            <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">Students haven't submitted this assignment yet.</p>
+            <h3 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-2">{{ emptyText.title }}</h3>
+            <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">{{ emptyText.message }}</p>
           </div>
         </div>
       </div>
@@ -249,6 +267,27 @@ const API_BASE = '/api'
 const assignmentId = ref<number>(parseInt(route.params.id as string))
 const assignment = ref<any>(null)
 const submissions = ref<any[]>([])
+// the list's tabs: scripts waiting to be marked, marked ones, and not handed in
+type ListTab = 'tomark' | 'marked' | 'out'
+const listTab = ref<ListTab>('tomark')
+const isMarked = (sub: any) => sub.status === 'graded' || sub.status === 'returned'
+const isOut = (sub: any) => sub.status === 'in_progress' || sub.status === 'draft' || !sub.submitted_at
+const listGroups = computed(() => ({
+  tomark: submissions.value.filter(sub => !isMarked(sub) && !isOut(sub)),
+  marked: submissions.value.filter(isMarked),
+  out: submissions.value.filter(sub => !isMarked(sub) && isOut(sub))
+}))
+const listTabs = computed(() => [
+  { key: 'tomark' as const, label: 'To mark', count: listGroups.value.tomark.length, dot: 'bg-amber-500', on: 'bg-amber-500 border-amber-500 text-white' },
+  { key: 'marked' as const, label: 'Marked', count: listGroups.value.marked.length, dot: 'bg-emerald-500', on: 'bg-emerald-600 border-emerald-600 text-white' },
+  { key: 'out' as const, label: 'Not handed in', count: listGroups.value.out.length, dot: 'bg-gray-400', on: 'bg-gray-700 border-gray-700 text-white dark:bg-gray-600 dark:border-gray-600' }
+])
+const shownSubmissions = computed(() => listGroups.value[listTab.value])
+const emptyText = computed(() => listTab.value === 'tomark'
+  ? { title: 'Nothing to mark', message: submissions.value.length ? 'Every script handed in has been marked.' : "Students haven't handed this in yet." }
+  : listTab.value === 'marked'
+    ? { title: 'No marked scripts yet', message: 'Scripts move here once you mark them.' }
+    : { title: 'Everyone who started has handed in', message: 'Students who have not opened it are not listed.' })
 const markingData = ref<{ submission: any; questions: any[] } | null>(null)
 
 const loading = ref(false)
@@ -291,6 +330,8 @@ const loadSubmissions = async () => {
     const response = await axios.get(`${API_BASE}/teacher/assignments/${assignmentId.value}/submissions`)
     if (response.data.success) {
       submissions.value = response.data.data
+      // open on what needs marking; once all are marked, on the marked ones
+      if (!listGroups.value.tomark.length && listGroups.value.marked.length) listTab.value = 'marked'
     }
   } catch (err: any) {
     error.value = err.response?.data?.message || 'Failed to load submissions'

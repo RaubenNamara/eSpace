@@ -63,7 +63,7 @@
                   <th class="sticky left-0 z-10 bg-gray-50 dark:bg-gray-700 px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700 min-w-[11rem]">Learner</th>
                   <th v-for="a in marksheet.assignments" :key="a.id" class="px-2 py-2.5 text-center text-[11px] font-semibold text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700 min-w-[6.5rem] max-w-[9rem]" :title="a.title">
                     <span class="block truncate">{{ a.title }}</span>
-                    <span class="block font-normal text-gray-400">/ {{ Number(a.total_marks) }}</span>
+                    <span class="block font-normal text-gray-400">/ {{ fmtMarks(a.total_marks) }}</span>
                   </th>
                   <th class="px-3 py-2.5 text-center text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">Average</th>
                   <th class="px-3 py-2.5 text-center text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">Grade</th>
@@ -78,8 +78,9 @@
                     </button>
                   </td>
                   <td v-for="cell in row.cells" :key="cell.assignment_id" class="px-1.5 py-1.5 text-center border-b border-gray-100 dark:border-gray-700">
-                    <span v-if="cell.score !== null" class="inline-flex flex-col items-center justify-center min-w-[3.5rem] px-2 py-1 rounded-lg" :class="heat(cell.percentage)">
-                      <span class="text-sm font-semibold tabular-nums">{{ Number(cell.score) }}</span>
+                    <span v-if="cell.score !== null" class="relative inline-flex flex-col items-center justify-center min-w-[3.5rem] px-2 py-1 rounded-lg" :class="heat(cell.percentage)" :title="cell.returned === false ? 'Marked - not yet returned to the learner' : undefined">
+                      <span v-if="cell.returned === false" class="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-sky-500 ring-2 ring-white dark:ring-gray-800" aria-label="Not yet returned"></span>
+                      <span class="text-sm font-semibold tabular-nums">{{ fmtMarks(cell.score) }}</span>
                       <span class="text-[10px] opacity-75 tabular-nums">{{ cell.percentage }}%</span>
                     </span>
                     <span v-else class="text-gray-300 dark:text-gray-600">–</span>
@@ -104,7 +105,7 @@
         <button v-if="shownRows.length > visibleRows.length" type="button" class="mt-3 w-full py-2 rounded-xl text-sm font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30" @click="limit = Infinity">
           Show all {{ shownRows.length }} learners
         </button>
-        <p class="mt-2 text-[11px] text-gray-400">Tap a learner's name for their full performance.</p>
+        <p class="mt-2 text-[11px] text-gray-400">Tap a learner's name for their full performance. <span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-sky-500"></span> marked, not yet returned to the learner.</span></p>
       </template>
     </template>
 
@@ -130,6 +131,7 @@ import Skeleton from '@/components/ui/Skeleton.vue'
 import PickerDropdown, { type PickerOption } from '@/components/common/PickerDropdown.vue'
 import AppIcon from '@/components/common/AppIcon.vue'
 import { niceName } from '@/components/dashboard/teacher/time'
+import { fmtMarks } from '@/utils/marks'
 import type { Marksheet, MarksheetRow } from '@/types/performance'
 
 // Term / Class / Subject - shared with Physical Exams, remembered per page and role

@@ -102,18 +102,15 @@
           <template v-else>
             <div v-if="typedAnswerLayers[question.id]" class="mb-4 sm:ml-10">
               <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ oversightRole ? "Student's mark sheet" : "Your mark sheet" }}<template v-if="(question.answer?.answer_style || '').startsWith('handwriting')"> · handwriting</template></p>
-              <div class="mark-sheet-frame" :style="{ maxWidth: `${sheetMaxWidth(question.answer?.answer_style)}px` }">
-              <div class="mark-sheet-paper" :class="{ 'mark-sheet-paper--wide': answerLook(question.answer?.answer_style).wide }">
+              <div class="mark-sheet-frame" :style="{ maxWidth: `${typedAnswerLayers[question.id].phone ? typedAnswerLayers[question.id].width : sheetMaxWidth(question.answer?.answer_style)}px` }">
               <AnnotationCanvas
-                :width="sheetWidth(question.answer?.answer_style)"
+                :width="typedAnswerLayers[question.id].width"
                 :height="typedAnswerLayers[question.id].height"
                 :readonly-layers="typedAnswerReadonlyLayers[question.id]"
                 mode="readonly"
                 readonly
               />
               </div>
-              </div>
-              <p class="mark-sheet-hint">Swipe sideways to read the whole line</p>
             </div>
             <!-- Uploaded evidence gallery - the first file the student uploaded and every extra
                  file are shown side by side with no distinction, each with any marks the
@@ -155,7 +152,7 @@
 <script setup lang="ts">
 import { fmtMarks } from '@/utils/marks'
 import VoiceNote from '@/components/assignment/VoiceNote.vue'
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
 import type { AnnotationLayerJSON } from '@/types'
@@ -218,8 +215,18 @@ function answerFor(questionId: number): string | undefined {
 // Rendered as a read-only Fabric layer (not plain HTML) so any marks the teacher drew directly
 // over the typed answer are visible here, stacked on top of it - matching how the teacher's
 // marking view renders it (see TeacherMarkingCanvas.vue).
+// a phone lays out unmarked answers to its own width (readable, nothing to scroll sideways);
+// an answer with marks keeps the page it was marked on, fitted to the screen
+const viewportWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1280)
+const onViewportResize = () => { viewportWidth.value = window.innerWidth }
+onMounted(() => window.addEventListener('resize', onViewportResize))
+onBeforeUnmount(() => window.removeEventListener('resize', onViewportResize))
+const phoneSheetWidth = computed(() => (viewportWidth.value < 700 ? Math.max(260, viewportWidth.value - 64) : 0))
+const hasTypedMarks = (question: any) => (combinedLayersByPage(question)[TYPED_ANSWER_PAGE] || [])
+  .some((l: AnnotationLayerJSON) => (l?.objects?.length || 0) > 0)
+
 const typedAnswerLayers = computed(() => {
-  const map: Record<number, { layer: AnnotationLayerJSON; height: number }> = {}
+  const map: Record<number, { layer: AnnotationLayerJSON; height: number; width: number; phone: boolean }> = {}
   for (const question of questions.value) {
     if (isObjective(question)) continue
     const text = answerFor(question.id)
@@ -228,7 +235,11 @@ const typedAnswerLayers = computed(() => {
     // the mark sheet: ruled paper, in handwriting if the learner chose it
     const look = answerLook(question.answer?.answer_style)
     if ((look.handwriting || look.modern) && !handwritingFontReady.value) continue
-    if (text && htmlToPlainText(text).trim()) map[question.id] = createTypedAnswerLayer(text, sheetWidth(question.answer?.answer_style), look)
+    if (!text || !htmlToPlainText(text).trim()) continue
+    const phone = phoneSheetWidth.value > 0 && !hasTypedMarks(question)
+    const width = phone ? phoneSheetWidth.value : sheetWidth(question.answer?.answer_style)
+    // the phone layout is the wide page's look (normal-size writing) at the phone's width
+    map[question.id] = { ...createTypedAnswerLayer(text, width, phone ? { ...look, wide: true, modern: look.modern || !look.handwriting } : look), width, phone }
   }
   return map
 })
@@ -422,31 +433,11 @@ onMounted(load)
 /* the mark sheet as a sheet of paper: soft edge, a little lift, the paper's own width */
 .mark-sheet-frame {
   max-width: 800px;
-  /* on a phone the sheet keeps a readable size and scrolls sideways instead of shrinking */
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow: hidden;
   border-radius: 14px;
   border: 1px solid #e5e7eb;
   background: #fff;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px -12px rgba(15, 23, 42, 0.18);
-}
-.mark-sheet-paper {
-  min-width: 600px;
-}
-/* the wide page on a phone: wide enough to read, swipe sideways for the rest */
-.mark-sheet-paper--wide {
-  min-width: 720px;
-}
-.mark-sheet-hint {
-  display: none;
-  margin-top: 4px;
-  font-size: 11px;
-  color: #9ca3af;
-}
-@media (max-width: 680px) {
-  .mark-sheet-hint {
-    display: block;
-  }
 }
 html.dark .mark-sheet-frame {
   border-color: #374151;

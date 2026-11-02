@@ -41,6 +41,8 @@ export interface MarksheetCell {
   assignment_id: number
   score: number | null
   percentage: number | null
+  /** false: marked but not yet returned to the learner */
+  returned?: boolean | null
 }
 
 export interface MarksheetRow {
