@@ -2,6 +2,29 @@
   <!-- Marksheets by assessment: a teacher's own assessments, a HOD's department, or (admin) every
        department. Open one for every learner's marks, question by question, and download it as Excel. -->
   <div class="w-full">
+    <PageHeader title="Marksheets" :description="description" icon="clipboard" accent="emerald" filters-right :active-filters="(search.trim() ? 1 : 0) + (classFilter ? 1 : 0) + (departmentFilter ? 1 : 0) + (onlyMarked ? 1 : 0)">
+      <template v-if="!openId" #filters>
+        <div class="relative">
+          <svg class="w-4 h-4 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"></path></svg>
+          <input v-model="search" type="search" placeholder="Search assessments" class="w-full md:w-64 pl-8 pr-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+        </div>
+        <PickerDropdown v-if="listClassOptions.length > 2" v-model="classFilter" :options="listClassOptions" align="right" />
+        <PickerDropdown v-if="role !== 'teacher' && departmentOptions.length > 2" v-model="departmentFilter" :options="departmentOptions" align="right" />
+        <button
+          type="button"
+          class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold transition"
+          :class="onlyMarked ? 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200' : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
+          :aria-pressed="onlyMarked"
+          @click="onlyMarked = !onlyMarked"
+        >
+          <span class="w-3.5 h-3.5 rounded flex items-center justify-center border" :class="onlyMarked ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-gray-400'">
+            <svg v-if="onlyMarked" class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="3.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+          </span>
+          With marks only
+          </button>
+      </template>
+    </PageHeader>
+
     <!-- one assessment's sheet -->
     <template v-if="openId">
       <button type="button" class="mb-3 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white" @click="close">
@@ -94,42 +117,86 @@
         </div>
       </div>
 
-      <!-- Search, filters, and the whole lot as one Excel file -->
-      <div class="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-gray-200/80 dark:border-gray-700 bg-white dark:bg-gray-800 p-2.5 shadow-sm">
-        <div class="relative flex-1 min-w-[12rem] sm:max-w-sm">
-          <svg class="w-4 h-4 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"></path></svg>
-          <input v-model="search" type="search" placeholder="Search assessment, subject, class or teacher" class="w-full pl-8 pr-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-        </div>
-        <PickerDropdown v-if="listClassOptions.length > 2" v-model="classFilter" :options="listClassOptions" align="right" />
-        <PickerDropdown v-if="role !== 'teacher' && departmentOptions.length > 2" v-model="departmentFilter" :options="departmentOptions" align="right" />
+      <!-- Each assessment on its own line, or every learner's marks on all of them in one table -->
+      <nav class="mb-3 inline-flex gap-1 p-1 rounded-xl bg-gray-100 dark:bg-gray-800" aria-label="Marksheet view">
         <button
+          v-for="v in LIST_VIEWS"
+          :key="v.key"
           type="button"
-          class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold transition"
-          :class="onlyMarked ? 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200' : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
-          :aria-pressed="onlyMarked"
-          @click="onlyMarked = !onlyMarked"
-        >
-          <span class="w-3.5 h-3.5 rounded flex items-center justify-center border" :class="onlyMarked ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-gray-400'">
-            <svg v-if="onlyMarked" class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="3.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
-          </span>
-          With marks only
-        </button>
-        <button
-          type="button"
-          class="sm:ml-auto inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm disabled:opacity-60 disabled:cursor-wait"
-          :disabled="!!exporting || !shownAssessments.length"
-          :title="`Every assessment listed below in one Excel file: a summary, every learner's marks side by side, and a sheet for each assessment`"
-          @click="downloadAll"
-        >
-          <AppIcon name="download" class="w-4 h-4" />
-          <template v-if="exporting">Preparing {{ exporting.done }} of {{ exporting.total }}...</template>
-          <template v-else>Download all ({{ shownAssessments.length }})</template>
-        </button>
-      </div>
+          class="px-3.5 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap"
+          :class="listView === v.key ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400'"
+          :aria-pressed="listView === v.key"
+          @click="setListView(v.key)"
+        >{{ v.label }}</button>
+      </nav>
 
       <Skeleton v-if="loading" variant="table" :count="6" />
       <div v-else-if="error" class="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-800 dark:bg-rose-900/20 dark:text-rose-200">{{ error }}</div>
       <EmptyState v-else-if="!shownAssessments.length" compact icon="clipboard" tone="gray" :title="assessments.length ? 'No assessments match' : 'No assessments yet'" :message="assessments.length ? 'Try another search.' : 'Once assessments are set and marked, their marksheets appear here.'" />
+
+      <!-- All marks: a row per learner, a column per assessment -->
+      <div v-else-if="listView === 'all'">
+        <div v-if="allLoading" class="rounded-2xl border border-gray-200/80 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 text-center text-sm text-gray-500 dark:text-gray-400">
+          Loading marks... {{ allProgress.done }} of {{ allProgress.total }} assessments
+          <span class="mt-3 mx-auto block max-w-xs h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden"><span class="block h-full bg-emerald-500 transition-all" :style="{ width: `${allProgress.total ? (allProgress.done / allProgress.total) * 100 : 0}%` }"></span></span>
+        </div>
+        <template v-else-if="allMarks">
+          <div class="mb-3 flex flex-wrap items-center gap-2">
+            <PickerDropdown v-if="peopleClassOptions.length > 2" v-model="peopleClass" label="Class" :options="peopleClassOptions" />
+            <input v-model="learnerSearch" type="search" placeholder="Search learner or student number" class="flex-1 min-w-[12rem] sm:max-w-xs px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+            <label class="inline-flex items-center gap-2 text-xs font-semibold text-gray-600 dark:text-gray-300 cursor-pointer select-none">
+              <input v-model="peopleWithMarks" type="checkbox" class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"> Learners with marks only
+            </label>
+            <span class="text-xs text-gray-500 dark:text-gray-400">{{ shownPeople.length }} learners · {{ allMarks.columns.length }} assessments</span>
+            <button
+              type="button"
+              class="sm:ml-auto inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm disabled:opacity-60"
+              :disabled="!shownPeople.length"
+              @click="downloadAllMarks"
+            >
+              <AppIcon name="download" class="w-4 h-4" /> Download Excel{{ peopleClass ? ` - ${peopleClass}` : '' }}
+            </button>
+          </div>
+          <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/80 dark:border-gray-700 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm border-separate border-spacing-0">
+                <thead>
+                  <tr class="bg-gray-50 dark:bg-gray-700/60 text-[11px] text-gray-500 dark:text-gray-400">
+                    <th class="sticky left-0 z-10 bg-gray-50 dark:bg-gray-700 px-3 py-2.5 text-left font-bold uppercase tracking-wider border-b border-gray-200 dark:border-gray-700 min-w-[12rem]">Learner</th>
+                    <th class="px-2 py-2.5 text-left font-bold uppercase tracking-wider border-b border-gray-200 dark:border-gray-700">Class</th>
+                    <th v-for="c in allMarks.columns" :key="c.id" class="px-2 py-2 text-center font-semibold border-b border-gray-200 dark:border-gray-700 align-bottom min-w-[6.5rem]">
+                      <button type="button" class="w-full hover:text-emerald-700 dark:hover:text-emerald-300" :title="`Open ${c.title}`" @click="open(c.id)">
+                        <span class="block text-gray-800 dark:text-gray-100 leading-tight line-clamp-2 normal-case">{{ c.title }}</span>
+                        <span v-if="c.date" class="block font-normal whitespace-nowrap">{{ c.date }}</span>
+                        <span class="block font-semibold text-gray-600 dark:text-gray-300 whitespace-nowrap">out of {{ fmtMarks(c.total) }}</span>
+                      </button>
+                    </th>
+                    <th class="px-3 py-2.5 text-center font-bold uppercase tracking-wider border-b border-gray-200 dark:border-gray-700">Average</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="l in visiblePeople" :key="l.id" class="group">
+                    <td class="sticky left-0 z-10 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-gray-700/60 px-3 py-2 border-b border-gray-100 dark:border-gray-700">
+                      <span class="block font-semibold text-gray-900 dark:text-white whitespace-nowrap">{{ l.name }}</span>
+                      <span class="block text-[11px] text-gray-400">{{ l.adm }}</span>
+                    </td>
+                    <td class="px-2 py-2 border-b border-gray-100 dark:border-gray-700 text-gray-600 dark:text-gray-300 whitespace-nowrap">{{ l.cls || '-' }}</td>
+                    <td v-for="(m, i) in l.marks" :key="i" class="px-2 py-2 text-center tabular-nums border-b border-gray-100 dark:border-gray-700 group-hover:bg-gray-50 dark:group-hover:bg-gray-700/40" :class="m === null ? 'text-gray-300 dark:text-gray-600' : pctTone((m / (allMarks.columns[i].total || 1)) * 100)">{{ m === null ? '-' : fmtMarks(m) }}</td>
+                    <td class="px-3 py-2 text-center font-bold tabular-nums border-b border-gray-100 dark:border-gray-700" :class="pctTone(l.avg)">{{ l.avg === null ? '-' : `${fmtMarks(l.avg)}%` }}</td>
+                  </tr>
+                  <tr v-if="!shownPeople.length">
+                    <td :colspan="allMarks.columns.length + 3" class="px-3 py-10 text-center text-sm text-gray-400">No learners match.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <button v-if="shownPeople.length > peopleLimit" type="button" class="w-full py-3 border-t border-gray-100 dark:border-gray-700 text-sm font-semibold text-emerald-700 dark:text-emerald-300 hover:bg-gray-50 dark:hover:bg-gray-700/40" @click="peopleLimit += 100">
+              Show more ({{ shownPeople.length - peopleLimit }} left)
+            </button>
+          </div>
+        </template>
+      </div>
+
       <div v-else class="space-y-5">
         <section v-for="group in groups" :key="group.name">
           <h3 v-if="role !== 'teacher'" class="mb-2 flex items-center gap-2 text-sm font-bold text-indigo-800 dark:text-indigo-300">
@@ -181,6 +248,7 @@ import axios from 'axios'
 import * as XLSX from 'xlsx'
 import AppIcon from '@/components/common/AppIcon.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
 import Skeleton from '@/components/ui/Skeleton.vue'
 import PickerDropdown, { type PickerOption } from '@/components/common/PickerDropdown.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -207,6 +275,11 @@ interface Sheet {
 const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
+const description = computed(() => role.value === 'teacher'
+  ? 'The marks of every learner on each of your assessments.'
+  : role.value === 'hod'
+    ? "Every assessment in your department, with each learner's marks."
+    : "Every department's assessments, with each learner's marks.")
 const role = computed(() => (auth.userRole === 'teacher' ? 'teacher' : auth.userRole === 'hod' ? 'hod' : 'admin'))
 const api = (path = '') => `/api/${role.value}/marksheets${path}`
 
@@ -395,86 +468,125 @@ function downloadExcel() {
   XLSX.writeFile(wb, `Marksheet - ${safeName(`${s.assessment.title} ${classFilter.value || s.assessment.class_label}`)}.xlsx`)
 }
 
-// ---- Download all: every assessment in the list, in one workbook ----
-const exporting = ref<{ done: number; total: number } | null>(null)
-async function downloadAll() {
-  const list = [...shownAssessments.value]
-  if (!list.length || exporting.value) return
-  exporting.value = { done: 0, total: list.length }
-  const sheets: (Sheet | null)[] = new Array(list.length).fill(null)
-  // a few at a time, so a big school doesn't send hundreds of requests at once
+// ---- Every assessment's sheet, fetched a few at a time and kept for this visit ----
+type Got = { sh: Sheet; item: AssessmentItem }
+const sheetCache = new Map<number, Sheet>()
+async function fetchSheets(list: AssessmentItem[], progress: { done: number; total: number }): Promise<Got[]> {
+  const sheets: (Sheet | null)[] = list.map(a => sheetCache.get(a.id) ?? null)
+  progress.total = list.length
+  progress.done = sheets.filter(Boolean).length
+  const todo = list.map((_, i) => i).filter(i => !sheets[i])
   let next = 0
   const worker = async () => {
-    while (next < list.length) {
-      const i = next++
+    while (next < todo.length) {
+      const i = todo[next++]
       try {
-        sheets[i] = (await axios.get(api(`/${list[i].id}`))).data.data
+        const sh: Sheet = (await axios.get(api(`/${list[i].id}`))).data.data
+        sheetCache.set(list[i].id, sh)
+        sheets[i] = sh
       } catch {
         sheets[i] = null
       }
-      if (exporting.value) exporting.value.done++
+      progress.done++
     }
   }
-  try {
-    await Promise.all(Array.from({ length: Math.min(4, list.length) }, worker))
-    const got = sheets.map((sh, i) => ({ sh, item: list[i] })).filter((x): x is { sh: Sheet; item: AssessmentItem } => !!x.sh)
-    if (!got.length) throw new Error('none')
-    const wb = XLSX.utils.book_new()
-    const label = (x: { sh: Sheet; item: AssessmentItem }) => `${x.sh.assessment.title}${x.item.set_at ? ` (${fmtDate(x.item.set_at)})` : ''}`
+  await Promise.all(Array.from({ length: Math.min(4, todo.length) }, worker))
+  return sheets.map((sh, i) => ({ sh, item: list[i] })).filter((x): x is Got => !!x.sh)
+}
 
-    // 1. Summary: one row per assessment
-    const summary = [
-      ['Marksheets', '', '', '', '', '', '', '', '', '', '', ''],
-      [`${got.length} assessments · downloaded ${new Date().toLocaleString()}`],
-      [],
-      ['No.', 'Assessment', 'Subject', 'Class', 'Teacher', 'Department', 'Date set', 'Out of', 'Learners', 'Handed in', 'Marked', 'Average %'],
-      ...got.map((x, i) => [
-        i + 1, x.sh.assessment.title, x.sh.assessment.subject_name || '', x.sh.assessment.class_label, x.sh.assessment.teacher_name,
-        x.sh.assessment.department_name || '', x.item.set_at ? fmtDate(x.item.set_at) : '', Number(x.sh.assessment.total_marks),
-        x.sh.stats.learners, x.sh.stats.handed_in, x.sh.stats.marked, x.sh.stats.average === null ? '' : x.sh.stats.average
-      ])
-    ]
-    const ws1 = XLSX.utils.aoa_to_sheet(summary)
-    ws1['!cols'] = [6, 36, 14, 16, 22, 18, 14, 8, 9, 10, 8, 10].map(wch => ({ wch }))
-    XLSX.utils.book_append_sheet(wb, ws1, 'Summary')
-
-    // 2. All marks: every learner, their mark on each assessment side by side, and their average
-    const learners = new Map<number, { name: string; adm: string; cls: string; marks: (number | '')[]; pcts: number[] }>()
-    got.forEach((x, col) => {
-      for (const r of x.sh.rows) {
-        if (!inClass(r.class_label, classFilter.value)) continue
-        if (!learners.has(r.student_id)) learners.set(r.student_id, { name: niceName(r.name), adm: r.admission_number || '', cls: r.class_label || '', marks: new Array(got.length).fill(''), pcts: [] })
-        const l = learners.get(r.student_id)!
-        if (!l.cls && r.class_label) l.cls = r.class_label
-        if (r.score !== null) l.marks[col] = r.score
-        if (r.percentage !== null) l.pcts.push(Number(r.percentage))
-      }
-    })
-    const people = [...learners.values()].sort((a, b) => a.cls.localeCompare(b.cls) || a.name.localeCompare(b.name))
-    const allHeader = ['No.', 'Learner', 'Student number', 'Class', ...got.map(x => `${label(x)} (/${fmtMarks(x.sh.assessment.total_marks)})`), 'Average %']
-    const ws2 = XLSX.utils.aoa_to_sheet([
-      allHeader,
-      ...people.map((l, i) => [i + 1, l.name, l.adm, l.cls, ...l.marks, l.pcts.length ? Math.round((l.pcts.reduce((n, p) => n + p, 0) / l.pcts.length) * 10) / 10 : ''])
-    ])
-    ws2['!cols'] = allHeader.map((h, i) => ({ wch: i === 1 ? 28 : i === 2 ? 16 : i === 3 ? 10 : i === 0 ? 6 : Math.min(30, Math.max(10, String(h).length / 2)) }))
-    XLSX.utils.book_append_sheet(wb, ws2, 'All marks')
-
-    // 3. One sheet per assessment, question by question
-    const used = new Set(['Summary', 'All marks'])
-    got.forEach((x, i) => {
-      let name = `${i + 1}. ${x.sh.assessment.title}`.replace(/[\\/:*?[\]]+/g, ' ').slice(0, 31).trim()
-      while (used.has(name)) name = `${name.slice(0, 28)}~${i}`
-      used.add(name)
-      XLSX.utils.book_append_sheet(wb, sheetToRows(x.sh), name)
-    })
-
-    const scope = [role.value === 'teacher' ? 'My assessments' : departmentFilter.value || 'All departments', classFilter.value].filter(Boolean).join(' ')
-    XLSX.writeFile(wb, `Marksheets - ${safeName(scope)} - ${new Date().toISOString().slice(0, 10)}.xlsx`)
-  } catch {
-    error.value = 'Could not prepare the marksheets. Please try again.'
-  } finally {
-    exporting.value = null
+/** A row per learner (in the chosen class), their mark on each assessment, and their average */
+function buildAllMarks(got: Got[]) {
+  const learners = new Map<number, { id: number; name: string; adm: string; cls: string; marks: (number | null)[]; pcts: number[] }>()
+  got.forEach((x, col) => {
+    for (const r of x.sh.rows) {
+      if (!inClass(r.class_label, classFilter.value)) continue
+      if (!learners.has(r.student_id)) learners.set(r.student_id, { id: r.student_id, name: niceName(r.name), adm: r.admission_number || '', cls: r.class_label || '', marks: new Array(got.length).fill(null), pcts: [] })
+      const l = learners.get(r.student_id)!
+      if (!l.cls && r.class_label) l.cls = r.class_label
+      if (r.score !== null) l.marks[col] = Number(r.score)
+      if (r.percentage !== null) l.pcts.push(Number(r.percentage))
+    }
+  })
+  return {
+    columns: got.map(x => ({ id: x.sh.assessment.id, title: x.sh.assessment.title, date: x.item.set_at ? new Date(x.item.set_at.replace(' ', 'T')).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : '', total: Number(x.sh.assessment.total_marks) })),
+    people: [...learners.values()]
+      .sort((a, b) => a.cls.localeCompare(b.cls, undefined, { numeric: true }) || a.name.localeCompare(b.name))
+      .map(l => ({ ...l, avg: l.pcts.length ? Math.round((l.pcts.reduce((n, p) => n + p, 0) / l.pcts.length) * 10) / 10 : null }))
   }
+}
+
+// ---- The all-marks view (?view=all) ----
+const LIST_VIEWS = [
+  { key: 'list' as const, label: 'Assessments' },
+  { key: 'all' as const, label: 'All marks' }
+]
+const listView = computed(() => (route.query.view === 'all' ? 'all' : 'list'))
+const setListView = (v: 'list' | 'all') => {
+  const { view: _v, ...rest } = route.query
+  router.push({ query: v === 'all' ? { ...rest, view: 'all' } : rest })
+}
+const allMarks = ref<ReturnType<typeof buildAllMarks> | null>(null)
+const allLoading = ref(false)
+const allProgress = ref({ done: 0, total: 0 })
+const learnerSearch = ref('')
+const peopleWithMarks = ref(false)
+const peopleLimit = ref(100)
+let allRun = 0
+async function loadAllMarks() {
+  if (listView.value !== 'all' || openId.value || loading.value) return
+  const run = ++allRun
+  const list = [...shownAssessments.value]
+  allLoading.value = true
+  try {
+    const got = await fetchSheets(list, allProgress.value)
+    if (run === allRun) allMarks.value = buildAllMarks(got)
+  } finally {
+    if (run === allRun) allLoading.value = false
+  }
+}
+// the filters above (search, class, department, with marks) choose the columns
+watch([listView, () => shownAssessments.value.map(a => a.id).join(','), classFilter, loading], () => {
+  peopleLimit.value = 100
+  loadAllMarks()
+})
+// Class: a whole level ("S.1 - all streams") or one stream ("S.1-A")
+const peopleClass = ref('')
+const peopleClassOptions = computed<PickerOption<string>[]>(() => {
+  const streams = [...new Set((allMarks.value?.people ?? []).map(l => l.cls).filter(Boolean))].sort(byLabel)
+  const opts: PickerOption<string>[] = [{ value: '', label: 'All classes' }]
+  for (const level of [...new Set(streams.map(levelOf))]) {
+    const mine = streams.filter(st => levelOf(st) === level)
+    if (mine.length > 1) opts.push({ value: level, label: `${level} - all streams` })
+    opts.push(...mine.filter(st => mine.length === 1 || st !== level).map(st => ({ value: st, label: st })))
+  }
+  return opts
+})
+watch([peopleClass, peopleWithMarks, learnerSearch], () => { peopleLimit.value = 100 })
+const shownPeople = computed(() => {
+  const q = learnerSearch.value.trim().toLowerCase()
+  return (allMarks.value?.people ?? []).filter(l =>
+    inClass(l.cls, peopleClass.value) &&
+    (!peopleWithMarks.value || l.marks.some(m => m !== null)) &&
+    (!q || `${l.name} ${l.adm}`.toLowerCase().includes(q)))
+})
+const visiblePeople = computed(() => shownPeople.value.slice(0, peopleLimit.value))
+
+/** The table as it is shown (class, search and "with marks" applied) as an Excel file */
+function downloadAllMarks() {
+  const t = allMarks.value
+  if (!t || !shownPeople.value.length) return
+  const header = ['No.', 'Learner', 'Student number', 'Class', ...t.columns.map(c => `${c.title}${c.date ? ` (${c.date})` : ''} (/${fmtMarks(c.total)})`), 'Average %']
+  const ws = XLSX.utils.aoa_to_sheet([
+    ['Marksheet - all marks'],
+    [[peopleClass.value || 'All classes', `${shownPeople.value.length} learners`, `${t.columns.length} assessments`].join(' · ')],
+    [],
+    header,
+    ...shownPeople.value.map((l, i) => [i + 1, l.name, l.adm, l.cls, ...l.marks.map(m => (m === null ? '' : m)), l.avg === null ? '' : l.avg])
+  ])
+  ws['!cols'] = header.map((h, i) => ({ wch: i === 1 ? 28 : i === 2 ? 16 : i === 3 ? 10 : i === 0 ? 6 : Math.min(30, Math.max(10, String(h).length / 2)) }))
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'All marks')
+  XLSX.writeFile(wb, `All marks - ${safeName(peopleClass.value || 'All classes')} - ${new Date().toISOString().slice(0, 10)}.xlsx`)
 }
 
 watch(openId, id => { if (id) loadSheet(id) }, { immediate: true })

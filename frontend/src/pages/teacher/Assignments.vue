@@ -62,24 +62,24 @@
           <div class="flex items-center gap-2 mb-2">
             <span class="w-2 h-2 rounded-full" :class="group.dot"></span>
             <h2 class="text-sm font-bold text-gray-900 dark:text-white">{{ group.title }}</h2>
-            <span class="text-xs font-medium text-gray-400">{{ group.items.length }}</span>
+            <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold tabular-nums bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ group.items.length }}</span>
             <span v-if="group.hint" class="hidden sm:inline text-xs text-gray-400">· {{ group.hint }}</span>
           </div>
-          <ul class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700">
-            <li v-for="a in group.items" :key="a.id" class="p-3 sm:p-4 flex items-start gap-3" :class="bulk.isSelected(a.id) ? 'bg-violet-50/60 dark:bg-violet-900/10' : ''">
+          <ul class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/80 dark:border-gray-700 shadow-sm overflow-hidden divide-y divide-gray-100 dark:divide-gray-700">
+            <li v-for="a in group.items" :key="a.id" class="px-3 py-3 sm:px-4 sm:py-3.5 flex items-start lg:items-center gap-3 transition-colors" :class="bulk.isSelected(a.id) ? 'bg-violet-50/60 dark:bg-violet-900/10' : 'hover:bg-gray-50/80 dark:hover:bg-gray-700/30'">
               <input
                 type="checkbox"
                 :checked="bulk.isSelected(a.id)"
-                class="mt-1 w-4 h-4 flex-shrink-0 rounded border-gray-300 dark:border-gray-600 text-violet-600 focus:ring-violet-500"
+                class="mt-1 lg:mt-0 w-4 h-4 flex-shrink-0 rounded border-gray-300 dark:border-gray-600 text-violet-600 focus:ring-violet-500"
                 :aria-label="`Select ${a.title}`"
                 @change="bulk.toggle(a.id)"
               >
-              <div class="min-w-0 flex-1 flex flex-col lg:flex-row lg:items-center gap-2 lg:gap-4">
+              <div class="min-w-0 flex-1 flex flex-col gap-2 lg:grid lg:grid-cols-[minmax(0,1fr)_14rem_9.5rem] lg:items-center lg:gap-6">
                 <!-- What it is -->
                 <button type="button" class="min-w-0 flex-1 text-left" @click="viewAssignment(a.id)">
                   <span class="flex items-center gap-2 min-w-0">
                     <span v-if="categoryOf(a)" class="flex-shrink-0 px-1.5 py-0.5 rounded-md text-[10px] font-bold tracking-wide" :class="categoryChip(categoryOf(a))">{{ categoryOf(a) }}</span>
-                    <span class="text-sm font-semibold text-gray-900 dark:text-white truncate hover:text-violet-700 dark:hover:text-violet-300">{{ a.title }}</span>
+                    <span class="text-[15px] font-semibold text-gray-900 dark:text-white truncate hover:text-violet-700 dark:hover:text-violet-300">{{ a.title }}</span>
                   </span>
                   <span class="block mt-0.5 text-[11px] text-gray-500 dark:text-gray-400 truncate">
                     {{ a.subject_name || 'No subject' }} · {{ classLabel(a) }} · {{ formatType(a.type) }} · {{ a.question_count || 0 }} {{ Number(a.question_count) === 1 ? 'question' : 'questions' }} · {{ Number(a.total_marks) }} {{ Number(a.total_marks) === 1 ? 'mark' : 'marks' }}
@@ -87,7 +87,7 @@
                 </button>
 
                 <!-- How the class is getting on -->
-                <div v-if="a.status !== 'draft'" class="lg:w-56 flex-shrink-0">
+                <div v-if="a.status !== 'draft'" class="min-w-0">
                   <div class="flex items-center gap-2">
                     <span class="flex-1 h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden flex">
                       <span class="h-full bg-emerald-500" :style="{ width: share(a, a.marked_count) + '%' }" :title="`${a.marked_count || 0} marked`"></span>
@@ -101,7 +101,7 @@
                 </div>
 
                 <!-- When (and, on a phone, the main action beside it) -->
-                <div class="lg:w-36 flex-shrink-0 flex items-center justify-between gap-2 text-[11px]">
+                <div class="lg:col-start-3 min-w-0 flex items-center justify-between gap-2 text-[11px]">
                   <p>
                     <span class="font-semibold" :class="due(a).tone">{{ due(a).label }}</span>
                     <span v-if="due(a).sub" class="text-gray-400"><span class="lg:hidden"> · </span><span class="lg:block">{{ due(a).sub }}</span></span>

@@ -81,7 +81,7 @@ import AppIcon from '@/components/common/AppIcon.vue'
 
 export type Accent = 'indigo' | 'emerald' | 'violet' | 'amber' | 'rose' | 'sky'
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   title: string
   description?: string
   // An AppIcon name
@@ -89,6 +89,8 @@ withDefaults(defineProps<{
   accent?: Accent
   // How many filters differ from their default - shown on the phone's Filters button
   activeFilters?: number
+  // Put the filters top right, beside the title, on any page (student pages always do)
+  filtersRight?: boolean
 }>(), { accent: 'indigo', activeFilters: 0 })
 
 // Every page header uses the brand green, whatever accent a page asks for - one look across Tusome
@@ -98,7 +100,7 @@ const ACCENT: Record<Accent, { icon: string; badge: string; text: string }> = { 
 const sheetOpen = ref(false)
 // A student's page keeps its search and pickers top right, beside the title
 const route = useRoute()
-const filtersTop = computed(() => route.path.startsWith('/student'))
+const filtersTop = computed(() => props.filtersRight || route.path.startsWith('/student'))
 // The sheet never stays open behind a wider layout
 const onResize = () => { if (window.innerWidth >= 768) sheetOpen.value = false }
 watch(sheetOpen, (open) => {
