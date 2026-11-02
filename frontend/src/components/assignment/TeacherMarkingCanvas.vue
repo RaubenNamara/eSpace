@@ -64,6 +64,16 @@
           </div>
         </div>
       </template>
+      <a
+        v-else-if="part.file && part.file.fileType === 'document'"
+        :href="part.file.url"
+        :download="part.label"
+        class="teacher-marking-canvas__part-closed"
+      >
+        <span class="teacher-marking-canvas__gallery-thumb-icon" aria-hidden="true"><AppIcon name="document" class="w-6 h-6" /></span>
+        <span class="teacher-marking-canvas__part-closed-label">{{ part.label }}</span>
+        <span class="teacher-marking-canvas__part-closed-action">Download to mark</span>
+      </a>
       <template v-else-if="part.file && part.key === selectedKey && selectedFile">
         <div class="teacher-marking-canvas__workspace">
           <AnnotationCanvas
@@ -133,7 +143,7 @@ interface Props {
     answer_annotations?: Record<number, AnnotationLayerJSON>
     marking_annotations?: Record<number, AnnotationLayerJSON>
     answer?: { answer_mode?: 'typed' | 'canvas' | 'pdf_upload' | 'image_upload'; student_attachment_path?: string; student_attachment_original_name?: string; answer_text?: string; parts_order?: string | null; answer_style?: string | null } | null
-    answer_attachments?: { id: number; path: string; original_name: string; file_type: 'pdf' | 'image'; marking_annotations?: Record<number, AnnotationLayerJSON> }[]
+    answer_attachments?: { id: number; path: string; original_name: string; file_type: 'pdf' | 'image' | 'document'; marking_annotations?: Record<number, AnnotationLayerJSON> }[]
   }
   assignmentId: number
   submissionId: number
@@ -227,7 +237,7 @@ interface EvidenceFile {
   key: string
   attachmentId: number | null
   url: string
-  fileType: 'pdf' | 'image'
+  fileType: 'pdf' | 'image' | 'document'
   label: string
   isPrimary: boolean
 }

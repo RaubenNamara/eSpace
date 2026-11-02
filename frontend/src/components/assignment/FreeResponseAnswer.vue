@@ -105,9 +105,10 @@
               type="button"
               class="free-response-answer__thumb free-response-answer__thumb--tile"
               :title="`Preview ${file.originalName}`"
-              @click="openPreview(file)"
+              @click="file.fileType === 'document' ? downloadFile(file) : openPreview(file)"
             >
-              <img v-if="file.fileType === 'image'" :src="resolveAssetUrl(file.path)" alt="" class="free-response-answer__thumb-img">
+              <span v-if="file.fileType === 'document'" class="free-response-answer__thumb-icon flex-col gap-0.5" aria-hidden="true"><AppIcon name="document" class="w-6 h-6" /><span class="text-[10px] font-bold uppercase">{{ extOf(file.originalName) }}</span></span>
+              <img v-else-if="file.fileType === 'image'" :src="resolveAssetUrl(file.path)" alt="" class="free-response-answer__thumb-img">
               <span v-else class="free-response-answer__thumb-icon" aria-hidden="true"><AppIcon name="document" class="w-6 h-6" /></span>
             </button>
             <p class="mt-1 text-xs text-gray-600 dark:text-gray-400 truncate" :title="file.originalName">{{ file.originalName }}</p>
@@ -126,7 +127,7 @@
           <label v-if="!readonly" class="free-response-answer__add-tile">
             <span class="free-response-answer__add-tile-icon" aria-hidden="true">＋</span>
             <span class="free-response-answer__add-tile-label">Add files</span>
-            <input type="file" multiple accept="application/pdf,image/jpeg,image/png,image/webp" class="hidden" :disabled="uploading" @change="onFilesSelected">
+            <input type="file" multiple :accept="acceptTypes" class="hidden" :disabled="uploading" @change="onFilesSelected">
           </label>
         </div>
 
@@ -139,10 +140,10 @@
           @dragleave.prevent="isDragging = false"
           @drop.prevent="onDrop"
         >
-          <input ref="fileInputRef" type="file" multiple accept="application/pdf,image/jpeg,image/png,image/webp" class="hidden" :disabled="uploading" @change="onFilesSelected">
+          <input ref="fileInputRef" type="file" multiple :accept="acceptTypes" class="hidden" :disabled="uploading" @change="onFilesSelected">
           <span class="free-response-answer__dropzone-icon"><AppIcon name="upload" class="w-6 h-6" /></span>
           <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Choose Files</span>
-          <span class="text-xs text-gray-500 dark:text-gray-400">PDF, JPG, PNG, or WEBP files are supported.</span>
+          <span class="text-xs text-gray-500 dark:text-gray-400">{{ officeUploads ? 'PDF, pictures, or Word, PowerPoint, Excel, Publisher and Access files.' : 'PDF, JPG, PNG, or WEBP files are supported.' }}</span>
         </div>
         <p v-else class="text-sm text-gray-500 dark:text-gray-400 mb-2">No file uploaded yet.</p>
       </template>
@@ -207,7 +208,7 @@ export interface AdditionalAnswerFile {
   id: number
   path: string
   originalName: string
-  fileType: 'pdf' | 'image'
+  fileType: 'pdf' | 'image' | 'document'
 }
 
 interface Props {
@@ -218,6 +219,8 @@ interface Props {
   initialAttachment?: { path: string; originalName?: string } | null
   initialAdditionalFiles?: AdditionalAnswerFile[]
   readonly?: boolean
+  // ICT assessments: Word, PowerPoint, Excel, Publisher and Access files may be handed in too
+  officeUploads?: boolean
   rows?: number
   placeholder?: string
   // The order the student arranged their answer's parts in ('typed', 'primary', 'af-<id>')
@@ -231,6 +234,7 @@ const props = withDefaults(defineProps<Props>(), {
   initialAttachment: null,
   initialAdditionalFiles: () => [],
   readonly: false,
+  officeUploads: false,
   rows: 6,
   placeholder: 'Type your answer here...',
   partsOrder: () => [],
@@ -270,8 +274,21 @@ interface GalleryFile {
   key: string
   path: string
   originalName: string
-  fileType: 'pdf' | 'image'
+  fileType: 'pdf' | 'image' | 'document'
   isPrimary: boolean
+}
+
+// What the file pickers offer - Office files only on ICT assessments
+const OFFICE = ['.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.pub', '.mdb', '.accdb']
+const acceptTypes = computed(() => ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', ...(props.officeUploads ? OFFICE : [])].join(','))
+const isOfficeFile = (name: string) => OFFICE.some(ext => name.toLowerCase().endsWith(ext))
+const extOf = (name: string) => (name.split('.').pop() || '').slice(0, 5)
+// A handed-in document can't be previewed here: open it (the browser downloads it)
+function downloadFile(file: { path: string; originalName: string }) {
+  const a = document.createElement('a')
+  a.href = resolveAssetUrl(file.path)
+  a.download = file.originalName
+  a.click()
 }
 
 // The primary file (if a real one has been chosen, not the silent auto-created placeholder)
@@ -326,8 +343,10 @@ function movePart(index: number, step: number) {
   emit('update:parts-order', keys)
 }
 
-function openPreview(file: { path: string; originalName: string; fileType: 'pdf' | 'image' }) {
-  previewFile.value = file
+function openPreview(file: { path: string; originalName: string; fileType: 'pdf' | 'image' | 'document' }) {
+  // documents are downloaded instead (downloadFile) - only a PDF or a picture is previewed
+  if (file.fileType === 'document') return downloadFile(file)
+  previewFile.value = { path: file.path, originalName: file.originalName, fileType: file.fileType }
 }
 
 const pdfTool = ref<AnnotationTool>('pen')
@@ -526,7 +545,7 @@ async function addFiles(files: File[]) {
       const hasRealPrimary = attachment.value?.originalName && !isPlaceholderAttachmentName(attachment.value.originalName)
       // A page the student has already written on stays - the upload is added alongside it, so
       // one answer can combine writing and uploaded work
-      if (!hasRealPrimary && !hasWriting.value) {
+      if (!hasRealPrimary && !hasWriting.value && !isOfficeFile(file.name)) {
         await uploadFile(file)
       } else {
         await uploadAdditionalFile(file)

@@ -191,6 +191,20 @@
             </h3>
             <p class="text-gray-600 dark:text-gray-400 text-sm break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="assignment.instructions"></p>
           </div>
+
+          <!-- Files the teacher attached to work with (ICT: starter files, a zip of resources...) -->
+          <div v-if="supportFiles.length" class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <h3 class="font-medium text-gray-900 dark:text-white mb-2">Support files <span class="text-xs font-normal text-gray-500 dark:text-gray-400">- download, then work on them</span></h3>
+            <ul class="grid sm:grid-cols-2 gap-2">
+              <li v-for="f in supportFiles" :key="f.id">
+                <a :href="resolveAssetUrl(f.file_path)" :download="f.original_name" class="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                  <span class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200">{{ (f.original_name.split('.').pop() || '').slice(0, 5) }}</span>
+                  <span class="flex-1 min-w-0 truncate text-sm text-gray-800 dark:text-gray-100">{{ f.original_name }}</span>
+                  <span class="text-xs font-semibold text-indigo-700 dark:text-indigo-300">Download</span>
+                </a>
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
 
@@ -268,6 +282,7 @@
                     <FreeResponseAnswer
                       :question="subQ"
                       :assignment-id="Number(route.params.id)"
+                      :office-uploads="officeUploads"
                       :model-value="answers[subQ.id] || ''"
                       :initial-annotations="answerAnnotationsByQuestion[subQ.id] || {}"
                       :initial-attachment="answerAttachmentByQuestion[subQ.id] || null"
@@ -292,6 +307,7 @@
                 <FreeResponseAnswer
                   :question="entry.question"
                   :assignment-id="Number(route.params.id)"
+                  :office-uploads="officeUploads"
                   :model-value="answers[entry.question.id] || ''"
                   :initial-annotations="answerAnnotationsByQuestion[entry.question.id] || {}"
                   :initial-attachment="answerAttachmentByQuestion[entry.question.id] || null"
@@ -394,6 +410,7 @@
                 <FreeResponseAnswer
                   :question="entry.question"
                   :assignment-id="Number(route.params.id)"
+                  :office-uploads="officeUploads"
                   :model-value="answers[entry.question.id] || ''"
                   :initial-annotations="answerAnnotationsByQuestion[entry.question.id] || {}"
                   :initial-attachment="answerAttachmentByQuestion[entry.question.id] || null"
@@ -462,6 +479,7 @@ import { ref, computed, onMounted, onUnmounted, defineAsyncComponent } from 'vue
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
 import type { AssignmentQuestion, AnnotationLayerJSON } from '@/types'
+import { resolveAssetUrl } from '@/utils/url'
 import type { AdditionalAnswerFile } from '@/components/assignment/FreeResponseAnswer.vue'
 // Loaded only when a question needs it: it brings the answer editor and the drawing tool (some
 // 260 KB), which a multiple-choice test never uses - the page opens without waiting for them
@@ -735,6 +753,9 @@ const getPlaceholder = (type: string) => {
 const loadedOffline = ref(false)
 const submittedOffline = ref(false)
 const lastLoad = ref<any>(null)
+// ICT: support files to download, and Office files may be handed in (Student\AssignmentController show())
+const supportFiles = computed<{ id: number; file_path: string; original_name: string }[]>(() => lastLoad.value?.resources ?? [])
+const officeUploads = computed(() => !!lastLoad.value?.office_uploads)
 const savingOffline = ref(false)
 const savedOffline = computed(() => offline.assessments[Number(route.params.id)] ?? null)
 const offlineBlockReason = computed(() => (lastLoad.value ? offlineBlocker(lastLoad.value) : 'Not loaded'))

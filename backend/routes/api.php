@@ -370,6 +370,10 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/subjects', 'eSpace\App\Controllers\Teacher\AssignmentController@subjects');
         Router::get('/streams/{classId}', 'eSpace\App\Controllers\Teacher\AssignmentController@streams');
 
+        // Support files on an ICT assessment, for students to download
+        Router::get('/assignments/{id}/resources', 'eSpace\App\Controllers\Teacher\AssignmentResourceController@index');
+        Router::post('/assignments/{id}/resources', 'eSpace\App\Controllers\Teacher\AssignmentResourceController@store');
+        Router::delete('/assignments/{id}/resources/{resourceId}', 'eSpace\App\Controllers\Teacher\AssignmentResourceController@destroy');
         // Question attachments (canvas/pdf_annotation questions) and teacher authoring annotations
         Router::post('/assignments/questions/{questionId}/attachment', 'eSpace\App\Controllers\Teacher\AssignmentController@uploadQuestionAttachment');
         Router::get('/assignments/questions/{questionId}/annotations', 'eSpace\App\Controllers\Teacher\AssignmentController@getQuestionAnnotations');

@@ -336,6 +336,17 @@ class AssignmentController extends Controller
                 $secondsUsed = (int) $t->fetchColumn();
             }
 
+            // Support files the teacher attached (ICT: starter files, archives...) to download, and
+            // whether Office files may be handed in
+            $resources = [];
+            try {
+                $r = $this->pdo->prepare('SELECT id, file_path, original_name, file_size FROM assignment_resources WHERE assignment_id = ? ORDER BY id');
+                $r->execute([$assignmentId]);
+                $resources = $r->fetchAll();
+            } catch (\PDOException $e) {
+                // migration 154 not run yet
+            }
+
             $this->success([
                 'assignment' => $assignment,
                 'questions' => $questions,
@@ -343,6 +354,8 @@ class AssignmentController extends Controller
                 'submission_id' => $submissionId,
                 'submission_status' => $submission['status'] ?? null,
                 'seconds_used' => $secondsUsed,
+                'resources' => $resources,
+                'office_uploads' => \eSpace\App\Utils\FileKinds::assignmentIsIct($this->pdo, (int) $assignmentId),
                 'answers' => $existingAnswers,
                 'answer_annotations' => $answerAnnotationsByQuestion,
                 'answer_attachments' => $answerAttachmentsByQuestion
@@ -1104,7 +1117,7 @@ class AssignmentController extends Controller
      * just `if (!$ctx) return;`. On success the transaction is left open for the caller to do its
      * own table-specific write (upsert vs insert) before committing.
      */
-    private function prepareAnswerFileUpload(int $questionId, int $assignmentId, int $studentId): ?array
+    private function prepareAnswerFileUpload(int $questionId, int $assignmentId, int $studentId, bool $allowDocuments = false): ?array
     {
         if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
             $this->error('No file uploaded or upload error occurred', 400);
@@ -1125,8 +1138,17 @@ class AssignmentController extends Controller
         $isPdf = $mimeType === 'application/pdf';
         $isImage = isset($imageExtensions[$mimeType]);
 
-        if (!$isPdf && !$isImage) {
-            $this->error('Only PDF, JPG, PNG, or WEBP files are allowed', 400);
+        // ICT: Word, PowerPoint, Excel, Publisher and Access files too, as extra answer files
+        // ('document' - checked by name and content, see FileKinds)
+        $documentExt = null;
+        if (!$isPdf && !$isImage && $allowDocuments && \eSpace\App\Utils\FileKinds::assignmentIsIct($this->pdo, $assignmentId)) {
+            $documentExt = \eSpace\App\Utils\FileKinds::check($file['tmp_name'], (string) ($file['name'] ?? ''), \eSpace\App\Utils\FileKinds::STUDENT_OFFICE);
+        }
+
+        if (!$isPdf && !$isImage && !$documentExt) {
+            $this->error($allowDocuments && \eSpace\App\Utils\FileKinds::assignmentIsIct($this->pdo, $assignmentId)
+                ? 'Only PDF, pictures, or Word, PowerPoint, Excel, Publisher and Access files can be handed in'
+                : 'Only PDF, JPG, PNG, or WEBP files are allowed', 400);
             return null;
         }
 
@@ -1207,7 +1229,7 @@ class AssignmentController extends Controller
         }
 
         // Never trust the original filename; generate a unique one from random bytes.
-        $extension = $isPdf ? 'pdf' : $imageExtensions[$mimeType];
+        $extension = $documentExt ?? ($isPdf ? 'pdf' : $imageExtensions[$mimeType]);
         $filename = 'answer_' . $questionId . '_' . $studentId . '_' . bin2hex(random_bytes(8)) . '_' . time() . '.' . $extension;
         $filepath = $uploadDir . $filename;
 
@@ -1218,7 +1240,9 @@ class AssignmentController extends Controller
         }
 
         // Re-validate actual file content after the move (MIME sniffing can be spoofed pre-upload).
-        if ($isPdf) {
+        if ($documentExt) {
+            $isValid = \eSpace\App\Utils\FileKinds::check($filepath, 'x.' . $documentExt, [$documentExt]) !== null;
+        } elseif ($isPdf) {
             $isValid = substr((string) file_get_contents($filepath, false, null, 0, 5), 0, 5) === '%PDF-';
         } else {
             $isValid = @getimagesize($filepath) !== false;
@@ -1236,6 +1260,7 @@ class AssignmentController extends Controller
             'url' => '/uploads/assignment_submissions/' . $filename,
             'original_name' => basename((string) $file['name']),
             'is_pdf' => $isPdf,
+            'kind' => $documentExt ? 'document' : ($isPdf ? 'pdf' : 'image'),
         ];
     }
 
@@ -1324,7 +1349,8 @@ class AssignmentController extends Controller
         try {
             $this->pdo->beginTransaction();
 
-            $ctx = $this->prepareAnswerFileUpload($questionId, $assignmentId, $studentId);
+            // extra answer files may also be Office documents on an ICT assessment
+            $ctx = $this->prepareAnswerFileUpload($questionId, $assignmentId, $studentId, true);
             if (!$ctx) {
                 return;
             }
@@ -1338,7 +1364,7 @@ class AssignmentController extends Controller
                 'question_id' => $questionId,
                 'path' => $ctx['url'],
                 'name' => $ctx['original_name'],
-                'file_type' => $ctx['is_pdf'] ? 'pdf' : 'image',
+                'file_type' => $ctx['kind'],
             ]);
             $attachmentId = (int) $this->pdo->lastInsertId();
 
@@ -1349,7 +1375,7 @@ class AssignmentController extends Controller
                 'submission_id' => $ctx['submission_id'],
                 'path' => $ctx['url'],
                 'original_name' => $ctx['original_name'],
-                'kind' => $ctx['is_pdf'] ? 'pdf' : 'image',
+                'kind' => $ctx['kind'],
             ], 'File uploaded successfully');
         } catch (\Exception $e) {
             if ($this->pdo->inTransaction()) {
