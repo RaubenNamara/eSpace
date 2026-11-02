@@ -107,12 +107,19 @@
           </div>
         </section>
 
-        <p v-if="!toMarkRows.length" class="mb-1 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 px-4 py-3 text-sm font-medium text-emerald-800 dark:text-emerald-200">Every answer to this question is marked.</p>
-        <!-- Every answer to it: the ones still to mark on top; a marked answer moves down to the
-             marked ones (A-Z, searchable) once the teacher goes on to the next -->
+        <div v-if="!toMarkRows.length" class="mb-1 flex flex-wrap items-center gap-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 px-4 py-3">
+          <p class="flex-1 text-sm font-medium text-emerald-800 dark:text-emerald-200">Every answer to this question is marked.</p>
+          <button v-if="nextQ" type="button" class="btn-primary" @click="openQuestion(nextQ.id)">Mark Q{{ nextQ.number }} →</button>
+        </div>
+        <!-- One student at a time: mark, comment, then Next brings the next answer still to mark.
+             Marked answers leave the queue for the marked list below (A-Z, searchable). -->
+        <p v-else class="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+          <span><b class="text-gray-900 dark:text-white tabular-nums">{{ toMarkRows.length }}</b> left to mark</span>
+          <span v-if="upNext">Up next: <span class="font-semibold text-gray-700 dark:text-gray-200">{{ niceName(upNext.student) }}</span></span>
+        </p>
         <ul class="space-y-2.5">
           <template v-for="(r, i) in shownRows" :key="r.submission_id">
-          <li v-if="i === toMarkRows.length" class="pt-3 flex flex-wrap items-center gap-2">
+          <li v-if="i === toMarkShown.length" class="pt-3 flex flex-wrap items-center gap-2">
             <h3 class="text-sm font-bold text-gray-900 dark:text-white">Marked <span class="font-semibold text-gray-400 tabular-nums">{{ markedRows.length }}</span></h3>
             <label class="relative ml-auto w-full sm:w-64">
               <span class="sr-only">Search marked students</span>
@@ -123,7 +130,7 @@
           <li
             :data-unmarked="settled.has(r.submission_id) ? null : '1'"
             class="rounded-2xl border bg-white dark:bg-gray-800 p-3 sm:p-4 transition-colors"
-            :class="r.marks_awarded !== null ? 'border-gray-200 dark:border-gray-700' : 'border-amber-200 dark:border-amber-800/70'"
+            :class="r === currentRow ? 'border-indigo-300 dark:border-indigo-700 ring-2 ring-indigo-100 dark:ring-indigo-900/40' : r.marks_awarded !== null ? 'border-gray-200 dark:border-gray-700' : 'border-amber-200 dark:border-amber-800/70'"
             @focusin="onRowFocus(r)"
           >
             <div class="flex flex-col md:flex-row gap-3">
@@ -163,7 +170,7 @@
               <div class="md:w-80 flex-shrink-0">
                 <div class="flex items-center gap-1.5">
                   <input
-                    :ref="el => setInput(i, el)"
+                    :ref="el => { if (r === currentRow) currentInput = el as HTMLInputElement | null }"
                     type="number"
                     inputmode="decimal"
                     min="0"
@@ -175,7 +182,7 @@
                     :disabled="r.locked"
                     :aria-label="`Mark for ${r.student}`"
                     @change="setMark(r, ($event.target as HTMLInputElement).value)"
-                    @keydown.enter.prevent="setMark(r, ($event.target as HTMLInputElement).value); focusNext(i)"
+                    @keydown.enter.prevent="setMark(r, ($event.target as HTMLInputElement).value); if (r === currentRow) goNext()"
                   >
                   <span class="text-xs text-gray-400">/ {{ fmtMarks(q.marks) }}</span>
                   <button v-for="v in quickMarks" :key="v" type="button" class="px-2 py-1 rounded-md text-xs font-semibold border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40" :disabled="r.locked" @click="setMark(r, String(v))">{{ v }}</button>
@@ -194,6 +201,16 @@
                   @blur="save(r)"
                 ></textarea>
                 <CommentChips v-if="!r.locked" class="mt-1" :current="r.feedback || ''" :show="3" @insert="t => { r.feedback = r.feedback ? `${r.feedback} ${t}` : t; save(r) }" />
+                <div v-if="r === currentRow" class="mt-3 flex items-center gap-2">
+                  <button v-if="toMarkRows.length > 1" type="button" class="px-3 py-2 rounded-lg text-sm font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700" @click="skip">Skip for now</button>
+                  <button
+                    type="button"
+                    class="ml-auto btn-primary"
+                    :disabled="r.marks_awarded === null && !r.locked"
+                    :title="r.marks_awarded === null && !r.locked ? 'Give a mark first' : ''"
+                    @click="goNext"
+                  >{{ toMarkRows.length > 1 ? 'Save and next →' : 'Save and finish' }}</button>
+                </div>
               </div>
             </div>
             <!-- the answer with the marking tools: pen, ticks, crosses, highlighter, text -->
@@ -331,8 +348,7 @@ const settlePending = () => {
     const r = markable.value.find(x => x.submission_id === pendingId.value)
     if (r && r.marks_awarded !== null) {
       settled.add(r.submission_id)
-      // the marking tools move on with the teacher, to the next answer still to mark
-      if (openSheet.value === r.submission_id) openSheet.value = firstToWriteOn()
+      if (r === currentRow.value) moveOn()
     }
     pendingId.value = null
   }
@@ -342,16 +358,26 @@ const settlePending = () => {
 // drawn or uploaded answer can be written on; a multiple-choice or true/false one can't.
 const openSheet = ref<number | null>(null)
 const canWriteOn = (r: Row) => !r.locked && !isObjective.value && r.chosen === null && (!!r.answer_text || r.has_file || r.has_drawing)
-const firstToWriteOn = () => markable.value.find(x => !settled.has(x.submission_id) && canWriteOn(x))?.submission_id ?? null
 const onRowFocus = (r: Row) => { if (pendingId.value !== null && pendingId.value !== r.submission_id) settlePending() }
 const byName = (a: Row, b: Row) => a.student.localeCompare(b.student, undefined, { sensitivity: 'base' })
-const toMarkRows = computed(() => markable.value.filter(r => !settled.has(r.submission_id)))
+// The answers still to mark, in order - skipped ones go to the back of the queue
+const skipped = ref<number[]>([])
+const toMarkRows = computed(() => {
+  const rows = markable.value.filter(r => !settled.has(r.submission_id))
+  const back = (r: Row) => skipped.value.indexOf(r.submission_id)
+  return [...rows.filter(r => back(r) < 0), ...rows.filter(r => back(r) >= 0).sort((a, b) => back(a) - back(b))]
+})
+// One student at a time: the answer being marked now, and who comes after
+const currentId = ref<number | null>(null)
+const currentRow = computed(() => toMarkRows.value.find(r => r.submission_id === currentId.value) ?? toMarkRows.value[0] ?? null)
+const upNext = computed(() => toMarkRows.value.find(r => r !== currentRow.value) ?? null)
+const toMarkShown = computed(() => (currentRow.value ? [currentRow.value] : []))
 const markedRows = computed(() => markable.value.filter(r => settled.has(r.submission_id)).sort(byName))
 const markedShown = computed(() => {
   const term = markedSearch.value.trim().toLowerCase()
   return term ? markedRows.value.filter(r => r.student.toLowerCase().includes(term) || (r.admission_number || '').toLowerCase().includes(term)) : markedRows.value
 })
-const shownRows = computed(() => [...toMarkRows.value, ...(hideMarked.value ? [] : markedShown.value)])
+const shownRows = computed(() => [...toMarkShown.value, ...(hideMarked.value ? [] : markedShown.value)])
 const quickMarks = computed(() => {
   const m = q.value?.marks || 0
   return m <= 1 ? [0, m] : [0, Math.round((m / 2) * 2) / 2, m]
@@ -373,13 +399,52 @@ const load = async (qid?: number) => {
   savedMark.clear()
   settled.clear()
   pendingId.value = null
+  skipped.value = []
+  currentId.value = null
   for (const r of q.value?.rows || []) {
     if (r.marks_awarded !== null) settled.add(r.submission_id)
     savedFeedback.set(r.submission_id, r.feedback || '')
     savedMark.set(r.submission_id, r.marks_awarded)
   }
-  // open the first answer still to mark with the marking tools, ready to write on
-  openSheet.value = firstToWriteOn()
+  moveOn(false)
+}
+
+// Shows the answer now at the front of the queue, open with the marking tools, its mark box ready
+const currentInput = ref<HTMLInputElement | null>(null)
+const moveOn = async (focus = true) => {
+  const r = currentRow.value
+  currentId.value = r?.submission_id ?? null
+  openSheet.value = r && canWriteOn(r) ? r.submission_id : null
+  if (!focus) return
+  await nextTick()
+  currentInput.value?.closest('li')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  currentInput.value?.focus({ preventScroll: true })
+}
+
+// Save and next: the mark and comment are saved, the answer joins the marked ones
+const goNext = async () => {
+  const r = currentRow.value
+  if (!r) return
+  if (!r.locked) {
+    if (r.marks_awarded === null) { toast.error('Give a mark first'); return }
+    await save(r)
+    if (saveState[r.submission_id] === 'error') return
+  }
+  pendingId.value = null
+  settled.add(r.submission_id)
+  skipped.value = skipped.value.filter(id => id !== r.submission_id)
+  currentId.value = null
+  moveOn()
+}
+
+// Skip for now: this answer goes to the back of the queue
+const skip = () => {
+  const r = currentRow.value
+  if (!r) return
+  save(r)
+  skipped.value = [...skipped.value.filter(id => id !== r.submission_id), r.submission_id]
+  currentId.value = null
+  moveOn()
 }
 
 const openQuestion = async (id: number) => {
@@ -404,7 +469,8 @@ const bumpProgress = () => {
 const save = async (r: Row) => {
   if (r.locked || !q.value) return
   const feedback = r.feedback || ''
-  if (r.marks_awarded === null && feedback === (savedFeedback.get(r.submission_id) || '')) return
+  // nothing new since the last save
+  if (feedback === (savedFeedback.get(r.submission_id) || '') && (r.marks_awarded === null || r.marks_awarded === (savedMark.get(r.submission_id) ?? null))) return
   saveState[r.submission_id] = 'saving'
   try {
     await axios.put(`/api/teacher/assignments/${assignmentId.value}/submissions/${r.submission_id}/marks`, {
@@ -423,7 +489,8 @@ const save = async (r: Row) => {
       p.complete = p.marked >= (data.value?.questions.length || 0)
     }
     savedMark.set(r.submission_id, r.marks_awarded)
-    if (r.marks_awarded !== null && !settled.has(r.submission_id)) {
+    // the answer being marked now stays until Next; any other moves down once the teacher moves on
+    if (r.marks_awarded !== null && !settled.has(r.submission_id) && r !== currentRow.value) {
       if (pendingId.value !== r.submission_id) settlePending()
       pendingId.value = r.submission_id
     }
@@ -457,6 +524,8 @@ const markObjective = async () => {
   }
   settlePending()
   for (const r of markable.value) if (r.marks_awarded !== null) settled.add(r.submission_id)
+  currentId.value = null
+  moveOn(false)
   bulkSaving.value = false
 }
 
@@ -520,25 +589,6 @@ const finish = async (andReturn: boolean) => {
   } finally {
     finishing.value = false
   }
-}
-
-// Enter in a mark box moves to the next answer's
-const inputs: (HTMLInputElement | null)[] = []
-const setInput = (i: number, el: unknown) => { inputs[i] = (el as HTMLInputElement) || null }
-// (the marked answer then moves down, and the next one still to mark is focused)
-const focusNext = async (i: number) => {
-  const row = shownRows.value[i]
-  if (row && row.marks_awarded !== null && !settled.has(row.submission_id)) {
-    pendingId.value = row.submission_id
-    settlePending()
-    await nextTick()
-    const next = document.querySelector<HTMLInputElement>('[data-unmarked="1"] input[type="number"]:not(:disabled)')
-    if (next) { next.focus(); next.select() }
-    return
-  }
-  await nextTick()
-  const next = inputs.slice(i + 1).find(el => el && !el.disabled)
-  if (next) { next.focus(); next.select() }
 }
 
 onMounted(async () => {

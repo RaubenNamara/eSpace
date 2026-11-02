@@ -231,7 +231,7 @@ export const GUIDE: GuidePart[] = [
       },
       {
         id: 't-results', title: 'Marksheets and physical exams', icon: 'chart',
-        steps: ['Marksheets: every mark for a class and subject, with averages and grades - Download CSV for a spreadsheet.', 'Physical Exams: record a test sat on paper, type in the marks (Enter moves to the next learner) and choose if it counts on report cards.', 'Report cards are made by the school\'s admin.'],
+        steps: ['Marksheets: open an assessment for every learner\'s marks, question by question - filter by class and Download Excel.', 'Physical Exams: record a test sat on paper, type in the marks (Enter moves to the next learner) and choose if it counts on report cards.', 'Report cards are made by the school\'s admin.'],
       }
     ]
   },

@@ -20,7 +20,7 @@
             </p>
           </div>
           <button type="button" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm" @click="downloadExcel">
-            <AppIcon name="download" class="w-4 h-4" /> Download Excel
+            <AppIcon name="download" class="w-4 h-4" /> Download Excel{{ classFilter ? ` - ${classFilter}` : '' }}
           </button>
         </div>
 
@@ -33,6 +33,7 @@
 
         <div class="mb-3 flex flex-wrap items-center gap-2">
           <input v-model="rowSearch" type="search" placeholder="Search learner or student number" class="flex-1 min-w-[12rem] sm:max-w-xs px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+          <PickerDropdown v-if="sheetClassOptions.length > 2" v-model="classFilter" label="Class" :options="sheetClassOptions" />
           <div class="flex gap-1 p-1 rounded-xl bg-gray-100 dark:bg-gray-800">
             <button v-for="f in ROW_FILTERS" :key="f.key" type="button" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap" :class="rowFilter === f.key ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400'" @click="rowFilter = f.key">{{ f.label }}</button>
           </div>
@@ -84,6 +85,7 @@
     <template v-else>
       <div class="mb-3 flex flex-wrap items-center gap-2">
         <input v-model="search" type="search" placeholder="Search assessment, subject, class or teacher" class="flex-1 min-w-[12rem] sm:max-w-sm px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+        <PickerDropdown v-if="listClassOptions.length > 2" v-model="classFilter" label="Class" :options="listClassOptions" align="right" />
         <PickerDropdown v-if="role !== 'teacher' && departmentOptions.length > 2" v-model="departmentFilter" label="Department" :options="departmentOptions" align="right" />
         <label class="inline-flex items-center gap-2 text-xs font-semibold text-gray-600 dark:text-gray-300 cursor-pointer select-none">
           <input v-model="onlyMarked" type="checkbox" class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"> With marks only
@@ -172,6 +174,15 @@ const loading = ref(true)
 const error = ref('')
 const search = ref('')
 const departmentFilter = ref('')
+// Class: a level ("S.2") or one stream ("S.2-East"); kept when a sheet is opened from the list
+const classFilter = ref('')
+const levelOf = (label: string) => (label === 'Whole department' ? label : label.split(/[\s-]/)[0])
+const inClass = (label: string | null, f: string) => !f || label === f || (!!label && levelOf(label) === f)
+const byLabel = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true })
+const listClassOptions = computed<PickerOption<string>[]>(() => {
+  const levels = [...new Set(assessments.value.map(a => levelOf(a.class_label || '')).filter(l => l && l !== 'Whole department'))].sort(byLabel)
+  return [{ value: '', label: 'All classes' }, ...levels.map(l => ({ value: l, label: l }))]
+})
 const onlyMarked = ref(false)
 
 const departmentOptions = computed<PickerOption<string>[]>(() => {
@@ -182,6 +193,7 @@ const shownAssessments = computed(() => {
   const q = search.value.trim().toLowerCase()
   return assessments.value.filter(a =>
     (!departmentFilter.value || (a.department_name || 'No department') === departmentFilter.value) &&
+    (!classFilter.value || a.class_label === 'Whole department' || levelOf(a.class_label || '') === levelOf(classFilter.value)) &&
     (!onlyMarked.value || a.marked > 0) &&
     (!q || [a.title, a.subject_name, a.class_label, a.teacher_name].some(t => (t || '').toLowerCase().includes(q))))
 })
@@ -239,9 +251,22 @@ const sheetStats = computed(() => {
     { label: 'Average', value: pct(s.average) }
   ]
 })
+const sheetClassOptions = computed<PickerOption<string>[]>(() => {
+  const streams = [...new Set((sheet.value?.rows ?? []).map(r => r.class_label).filter((l): l is string => !!l))].sort(byLabel)
+  const opts: PickerOption<string>[] = [{ value: '', label: 'All classes' }]
+  for (const level of [...new Set(streams.map(levelOf))]) {
+    const mine = streams.filter(st => levelOf(st) === level)
+    if (mine.length > 1) opts.push({ value: level, label: `${level} - all streams` })
+    opts.push(...mine.filter(st => mine.length === 1 || st !== level).map(st => ({ value: st, label: st })))
+  }
+  // a class chosen on the list that this sheet doesn't have
+  if (classFilter.value && !opts.some(o => o.value === classFilter.value)) opts.push({ value: classFilter.value, label: classFilter.value })
+  return opts
+})
+const classRows = computed(() => (sheet.value?.rows ?? []).filter(r => inClass(r.class_label, classFilter.value)))
 const shownRows = computed(() => {
   const q = rowSearch.value.trim().toLowerCase()
-  return (sheet.value?.rows ?? []).filter(r =>
+  return classRows.value.filter(r =>
     (rowFilter.value === 'all' ||
       (rowFilter.value === 'marked' && (r.status === 'marked' || r.status === 'returned')) ||
       (rowFilter.value === 'tomark' && r.status === 'handed_in') ||
@@ -272,14 +297,14 @@ function downloadExcel() {
   if (!s) return
   const a = s.assessment
   const header = ['No.', 'Learner', 'Student number', 'Class', ...s.questions.map(q => `${q.label} (/${fmtMarks(q.marks)})`), `Total (/${fmtMarks(a.total_marks)})`, '%', 'Grade', 'Status']
-  const rows = s.rows.map((r, i) => [
+  const rows = classRows.value.map((r, i) => [
     i + 1, niceName(r.name), r.admission_number || '', r.class_label || '',
     ...r.questions.map(m => (m === null ? '' : m)),
     r.score === null ? '' : r.score, r.percentage === null ? '' : r.percentage, r.grade || '', STATUS[r.status].label
   ])
   const sheetRows = [
     [a.title],
-    [[a.subject_name, a.class_label, a.teacher_name, a.department_name].filter(Boolean).join(' · ')],
+    [[a.subject_name, classFilter.value || a.class_label, a.teacher_name, a.department_name].filter(Boolean).join(' · ')],
     [`Learners: ${s.stats.learners}   Handed in: ${s.stats.handed_in}   Marked: ${s.stats.marked}   Average: ${s.stats.average === null ? '-' : s.stats.average + '%'}`],
     [],
     header,
@@ -289,7 +314,7 @@ function downloadExcel() {
   ws['!cols'] = header.map((h, i) => ({ wch: i === 1 ? 28 : i === 2 ? 16 : i === 3 ? 10 : Math.max(8, String(h).length + 2) }))
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, 'Marksheet')
-  const safe = `${a.title} ${a.class_label}`.replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80)
+  const safe = `${a.title} ${classFilter.value || a.class_label}`.replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80)
   XLSX.writeFile(wb, `Marksheet - ${safe}.xlsx`)
 }
 
