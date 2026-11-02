@@ -54,15 +54,11 @@
         <section class="dash-box">
           <h2 class="dash-bar">Jump in</h2>
           <TransitionGroup tag="nav" name="dash-pop" class="grid grid-cols-4 gap-1 sm:gap-2 p-2 sm:p-3" aria-label="Shortcuts">
-            <RouterLink v-for="s in shown('jump', shortcuts)" :key="s.to" :to="s.to" class="group flex flex-col items-center gap-1.5 rounded-xl py-2.5 px-1 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition min-w-0">
+            <RouterLink v-for="s in shortcuts" :key="s.to" :to="s.to" class="group flex flex-col items-center gap-1.5 rounded-xl py-2.5 px-1 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition min-w-0">
               <span class="w-11 h-11 rounded-2xl flex items-center justify-center bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100 dark:bg-indigo-950/50 dark:text-indigo-300 dark:ring-indigo-900 group-hover:bg-indigo-600 group-hover:text-white transition"><AppIcon :name="s.icon" class="w-5 h-5" /></span>
               <span class="text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-100 text-center leading-tight">{{ s.label }}</span>
             </RouterLink>
           </TransitionGroup>
-          <button type="button" class="dash-more" :aria-expanded="!!open.jump" @click="toggle('jump')">
-            {{ open.jump ? 'Show less' : `Show ${shortcuts.length - LIMIT.jump} more` }}
-            <svg class="w-4 h-4 transition-transform duration-300" :class="open.jump ? 'rotate-180' : ''" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6" /></svg>
-          </button>
         </section>
       </div>
 
@@ -94,7 +90,7 @@
           <div v-if="!classesLoaded" class="grid grid-cols-2 gap-2 p-3"><div v-for="i in 6" :key="i" class="h-12 rounded-xl bg-gray-100 dark:bg-gray-700/50 animate-pulse"></div></div>
           <p v-else-if="!classes.length" class="p-4 text-[0.95rem] text-gray-500 dark:text-gray-400">You are not in any class yet.</p>
           <TransitionGroup v-else tag="div" name="dash-pop" class="grid grid-cols-2 gap-2 p-3">
-            <RouterLink v-for="c in shown('classes', sortedClasses)" :key="c.id" to="/student/enotes" class="dash-chip">
+            <RouterLink v-for="c in sortedClasses" :key="c.id" to="/student/enotes" class="dash-chip">
               <span class="dash-chip-badge" :style="{ background: tint(subjectOf(c)) }">{{ code(subjectOf(c)) }}</span>
               <span class="min-w-0">
                 <span class="block text-sm font-bold text-gray-900 dark:text-white truncate">{{ subjectOf(c) }}</span>
@@ -102,10 +98,6 @@
               </span>
             </RouterLink>
           </TransitionGroup>
-          <button v-if="sortedClasses.length > LIMIT.classes" type="button" class="dash-more" :aria-expanded="!!open.classes" @click="toggle('classes')">
-            {{ open.classes ? 'Show less' : `Show ${sortedClasses.length - LIMIT.classes} more` }}
-            <svg class="w-4 h-4 transition-transform duration-300" :class="open.classes ? 'rotate-180' : ''" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6" /></svg>
-          </button>
         </section>
 
         <!-- My notes -->
@@ -219,7 +211,7 @@ const todo = computed(() => {
 })
 
 // ---- each card shows a few, and opens up to show the rest
-const LIMIT = { pending: 4, jump: 4, classes: 6, notes: 2, publications: 3 } as const
+const LIMIT = { pending: 4, notes: 2, publications: 3 } as const
 type CardKey = keyof typeof LIMIT
 const open = ref<Partial<Record<CardKey, boolean>>>({})
 const toggle = (k: CardKey) => { open.value = { ...open.value, [k]: !open.value[k] } }

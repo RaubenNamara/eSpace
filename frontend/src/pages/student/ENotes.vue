@@ -98,27 +98,10 @@
       </Bookshelf>
     </div>
 
-    <!-- The same topics as a list: how far you've read each, and straight in -->
+    <!-- Your reading: how far and how long, by subject; what needs reading; then every topic -->
     <section v-if="!loading && !error && listTopics.length" class="mt-8">
-      <h2 class="text-sm font-bold text-gray-900 dark:text-white mb-2">Your topics</h2>
-      <ul class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700">
-        <li v-for="topic in listTopics" :key="topic.id" class="p-3 sm:p-4 flex items-center gap-3">
-          <span class="w-10 h-10 flex-shrink-0 rounded-xl flex items-center justify-center" :class="stateOf(topic) === 'done' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200' : stateOf(topic) === 'reading' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-200' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300'">
-            <AppIcon :name="stateOf(topic) === 'done' ? 'check-circle' : 'book'" class="w-5 h-5" />
-          </span>
-          <div class="min-w-0 flex-1">
-            <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ topic.title }}</p>
-            <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ topic.subject_name }} · {{ topic.active_pages || topic.total_pages }} pages<template v-if="topic.teacher_first_name"> · {{ topic.teacher_first_name }} {{ topic.teacher_last_name }}</template></p>
-            <div v-if="stateOf(topic) !== 'new'" class="mt-1 flex items-center gap-2 max-w-xs">
-              <span class="flex-1 h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden"><span class="block h-full rounded-full" :class="stateOf(topic) === 'done' ? 'bg-emerald-500' : 'bg-indigo-500'" :style="{ width: `${progressOf(topic)}%` }"></span></span>
-              <span class="text-[11px] tabular-nums text-gray-500 dark:text-gray-400">{{ stateOf(topic) === 'done' ? 'Finished' : `${progressOf(topic)}%` }}</span>
-            </div>
-          </div>
-          <button type="button" class="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold" :class="stateOf(topic) === 'reading' ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'" @click="openReader(topic, stateOf(topic) === 'reading' ? 'resume' : 'fresh')">
-            {{ stateOf(topic) === 'reading' ? 'Continue' : stateOf(topic) === 'done' ? 'Read again' : 'Start' }}
-          </button>
-        </li>
-      </ul>
+      <h2 class="text-base font-bold text-gray-900 dark:text-white mb-3">Your reading</h2>
+      <ReadingInsights :items="readingItems" noun="topic" @open="openFromInsights" />
     </section>
 
     <!-- Empty State -->
@@ -182,6 +165,7 @@ import { subjectTag } from '@/utils/subjectTag'
 import { orderShelves, isRecent } from '@/utils/shelfOrder'
 import SaveOfflineButton from '@/components/offline/SaveOfflineButton.vue'
 import { offline } from '@/utils/offline/enotes'
+import ReadingInsights, { type ReadingItem } from '@/components/reading/ReadingInsights.vue'
 
 interface SubjectGroup {
   id: number
@@ -231,7 +215,7 @@ const filteredSubjectGroups = computed(() => {
 })
 
 // ---- The student's own reading ----
-type Progress = ENoteTopic & { progress_percent?: number | string | null; progress_completed_at?: string | null; progress_last_read_at?: string | null }
+type Progress = ENoteTopic & { progress_percent?: number | string | null; progress_completed_at?: string | null; progress_last_read_at?: string | null; reading_seconds?: number | string | null; first_read_at?: string | null }
 const progressOf = (t: Progress) => {
   if (t.progress_completed_at) return 100
   const pct = Number(t.progress_percent || 0)
@@ -260,6 +244,24 @@ const listTopics = computed(() => {
   const rank = { reading: 0, new: 1, done: 2 }
   return filteredSubjectGroups.value.flatMap(g => g.topics as Progress[]).sort((a, b) => rank[stateOf(a)] - rank[stateOf(b)])
 })
+
+// The same topics for the reading stats
+const readingItems = computed<ReadingItem[]>(() => listTopics.value.map(t => ({
+  id: t.id,
+  title: t.title,
+  subject: t.subject_name || 'General',
+  detail: `${t.active_pages || t.total_pages} ${(t.active_pages || t.total_pages) === 1 ? 'page' : 'pages'}`,
+  percent: progressOf(t),
+  state: stateOf(t),
+  minutes: Number(t.reading_seconds || 0) / 60,
+  firstAt: t.first_read_at || null,
+  lastAt: t.progress_last_read_at || null,
+  sharedAt: t.published_at || null
+})))
+const openFromInsights = (item: ReadingItem) => {
+  const topic = listTopics.value.find(t => t.id === item.id)
+  if (topic) openReader(topic, stateOf(topic) === 'reading' ? 'resume' : 'fresh')
+}
 
 // The book being opened (BookOpenTransition plays, then the reader loads)
 const opening = ref<{ topic: ENoteTopic; el: HTMLElement | null } | null>(null)

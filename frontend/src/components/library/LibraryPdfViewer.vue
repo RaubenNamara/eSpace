@@ -370,6 +370,7 @@ import UnfoldingNote from '@/components/common/UnfoldingNote.vue'
 import { useSummaryColor, isSummaryColor, type SummaryColor } from '@/composables/useSummaryColor'
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { usePdfRenderer } from '@/composables/usePdfRenderer'
+import { useLibraryReadingTracker } from '@/composables/useLibraryReadingTracker'
 import type { LibraryBook } from '@/types/library'
 import { resolveAssetUrl } from '@/utils/url'
 import { usePersistedRef } from '@/composables/usePersistedRef'
@@ -409,6 +410,14 @@ const {
   // flipbook image (see prepareBook below), so the composable never needs a persistent canvas.
   getCanvasEl: () => null,
   getWrapperEl: () => null
+})
+
+// A student's own eLibrary book (not a publication or an Item Bank paper): how far, and how long
+useLibraryReadingTracker({
+  bookId: () => Number(props.book.id),
+  enabled: () => isStudentRole.value && props.withNotes && !props.notesBase,
+  page: currentPage,
+  totalPages
 })
 
 const teacherName = computed(() => {

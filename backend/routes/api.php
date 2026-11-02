@@ -570,6 +570,9 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/performance/subjects', 'eSpace\App\Controllers\Teacher\PerformanceController@listSubjects');
         Router::get('/performance/marksheet/download', 'eSpace\App\Controllers\Teacher\PerformanceController@downloadMarksheet');
         Router::get('/performance/marksheet', 'eSpace\App\Controllers\Teacher\PerformanceController@marksheet');
+        // Marksheets by assessment: marks of every learner, one sheet per assessment
+        Router::get('/marksheets', 'eSpace\App\Controllers\AssessmentMarksheetController@teacherIndex');
+        Router::get('/marksheets/{id}', 'eSpace\App\Controllers\AssessmentMarksheetController@teacherShow');
         Router::get('/performance/students/{studentId}/subjects/{subjectId}', 'eSpace\App\Controllers\Teacher\PerformanceController@studentSubject');
         Router::get('/performance/students/{studentId}', 'eSpace\App\Controllers\Teacher\PerformanceController@studentGeneral');
 
@@ -765,6 +768,9 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/performance/subjects', 'eSpace\App\Controllers\HOD\PerformanceController@listSubjects');
         Router::get('/performance/marksheet/download', 'eSpace\App\Controllers\HOD\PerformanceController@downloadMarksheet');
         Router::get('/performance/marksheet', 'eSpace\App\Controllers\HOD\PerformanceController@marksheet');
+        // Marksheets by assessment: marks of every learner, one sheet per assessment
+        Router::get('/marksheets', 'eSpace\App\Controllers\AssessmentMarksheetController@hodIndex');
+        Router::get('/marksheets/{id}', 'eSpace\App\Controllers\AssessmentMarksheetController@hodShow');
         Router::get('/performance/students/{studentId}/subjects/{subjectId}', 'eSpace\App\Controllers\HOD\PerformanceController@studentSubject');
         Router::get('/performance/students/{studentId}', 'eSpace\App\Controllers\HOD\PerformanceController@studentGeneral');
 
@@ -1059,6 +1065,9 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         // Performance reports & marksheets (unrestricted - admin can see every subject/class)
         Router::get('/performance/marksheet/download', 'eSpace\App\Controllers\Admin\PerformanceController@downloadMarksheet');
         Router::get('/performance/marksheet', 'eSpace\App\Controllers\Admin\PerformanceController@marksheet');
+        // Marksheets by assessment: marks of every learner, one sheet per assessment
+        Router::get('/marksheets', 'eSpace\App\Controllers\AssessmentMarksheetController@adminIndex');
+        Router::get('/marksheets/{id}', 'eSpace\App\Controllers\AssessmentMarksheetController@adminShow');
         Router::get('/performance/students/{studentId}/subjects/{subjectId}', 'eSpace\App\Controllers\Admin\PerformanceController@studentSubject');
         Router::get('/performance/students/{studentId}', 'eSpace\App\Controllers\Admin\PerformanceController@studentGeneral');
 

@@ -241,6 +241,7 @@
       <div class="space-y-6 sm:space-y-8">
         <div
           v-for="(entry, entryIndex) in displayQuestions"
+          v-show="!stepMode || entryIndex === step"
           :key="entry.question.id"
           :id="`question-${entry.question.id}`"
           class="space-y-3 scroll-mt-24"
@@ -433,8 +434,35 @@
         </div>
       </div>
 
+      <!-- Objective questions, one at a time: Next opens once this one is answered; the last one finishes -->
+      <div v-if="stepMode && !isLocked" class="mt-4 flex items-center gap-2">
+        <button
+          type="button"
+          class="px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40"
+          :disabled="step === 0"
+          @click="goStep(step - 1)"
+        >← Back</button>
+        <span class="flex-1 text-center text-xs text-gray-500 dark:text-gray-400">
+          {{ answeredFlags[step] ? '' : 'Choose an answer to go on' }}
+        </span>
+        <button
+          v-if="step < totalCount - 1"
+          type="button"
+          class="px-5 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-40"
+          :disabled="!answeredFlags[step]"
+          @click="goStep(step + 1)"
+        >Next →</button>
+        <button
+          v-else
+          type="button"
+          class="px-5 py-2.5 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-40"
+          :disabled="!answeredFlags[step] || submitting"
+          @click="submitAssignment"
+        >{{ submitting ? 'Marking…' : 'Finish & see my mark' }}</button>
+      </div>
+
       <!-- Sticky bottom action bar -->
-      <div v-if="!isLocked" class="sticky bottom-0 -mx-3 sm:-mx-6 px-3 sm:px-6 py-3 mt-6 bg-white/95 dark:bg-gray-800/95 backdrop-blur border-t border-gray-200 dark:border-gray-700 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 z-10">
+      <div v-if="!isLocked && !stepMode" class="sticky bottom-0 -mx-3 sm:-mx-6 px-3 sm:px-6 py-3 mt-6 bg-white/95 dark:bg-gray-800/95 backdrop-blur border-t border-gray-200 dark:border-gray-700 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 z-10">
         <p class="flex items-center gap-2 text-sm" :class="saveState.tone" role="status" aria-live="polite">
           <span class="w-2 h-2 rounded-full flex-shrink-0" :class="saveState.dot"></span>
           <span>{{ saveState.text }}</span>
@@ -475,7 +503,7 @@
 <script setup lang="ts">
 import { fmtMarks } from '@/utils/marks'
 import AppIcon from '@/components/common/AppIcon.vue'
-import { ref, computed, onMounted, onUnmounted, defineAsyncComponent } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, defineAsyncComponent } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
 import type { AssignmentQuestion, AnnotationLayerJSON } from '@/types'
@@ -580,7 +608,25 @@ const displayQuestions = computed(() => {
 const currentQuestionIndex = ref(0)
 const totalCount = computed(() => displayQuestions.value.length)
 
+// Only objective questions (multiple choice / true-false): one at a time, each opening once the
+// one before it is answered, and the mark comes straight back on finishing
+const stepMode = computed(() => displayQuestions.value.length > 0 &&
+  displayQuestions.value.every(({ question }) => ['multiple_choice_single', 'multiple_choice_multiple', 'true_false'].includes(question.question_type)))
+const step = ref(0)
+/** the furthest question open: the first one not answered yet */
+const furthestOpen = computed(() => {
+  const i = answeredFlags.value.findIndex(a => !a)
+  return i === -1 ? totalCount.value - 1 : i
+})
+function goStep(index: number) {
+  if (index < 0 || index >= totalCount.value || index > furthestOpen.value) return
+  step.value = index
+  currentQuestionIndex.value = index
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
 function goToQuestion(index: number) {
+  if (stepMode.value) return goStep(index)
   if (index < 0 || index >= displayQuestions.value.length) return
   currentQuestionIndex.value = index
   const entry = displayQuestions.value[index]
@@ -627,6 +673,10 @@ function isQuestionAnswered(question: any): boolean {
 
 const answeredFlags = computed(() => displayQuestions.value.map(({ question }) => isQuestionAnswered(question)))
 const answeredCount = computed(() => answeredFlags.value.filter(Boolean).length)
+// coming back to a half-done objective assessment: open where they stopped
+watch(() => [stepMode.value, totalCount.value], () => {
+  if (stepMode.value) step.value = furthestOpen.value
+})
 
 function reviewAnswers() {
   showSubmitConfirm.value = false
@@ -1019,6 +1069,12 @@ const submitAssignment = async () => {
       if (timerInterval) clearInterval(timerInterval)
       const timingLabel = submissionTiming.value === 'late' ? ' (late)' : submissionTiming.value === 'early' ? ' (early)' : ''
       submittedOffline.value = !!response.data.offline
+      const auto = response.data.data?.auto_marked
+      if (auto && response.data.data?.id) {
+        toast.success(`You scored ${fmtMarks(auto.marks_awarded)} / ${fmtMarks(auto.total_marks)} (${fmtMarks(auto.percentage)}%)`)
+        router.replace(`/student/assignments/${route.params.id}/result/${response.data.data.id}`)
+        return
+      }
       toast.success(submittedOffline.value ? 'Submitted on this device - it will be sent when you\'re online' : `Assignment submitted successfully${timingLabel}`)
       showCompletionScreen.value = true
     }

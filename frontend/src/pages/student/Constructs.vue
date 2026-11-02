@@ -1,32 +1,30 @@
 <template>
   <div class="p-4 sm:p-6">
-    <div class="mb-6 flex items-center gap-3">
+    <div class="mb-6 flex flex-wrap items-center gap-3">
       <div class="hidden sm:flex w-11 h-11 rounded-xl bg-indigo-600 items-center justify-center shadow-lg shadow-indigo-500/30 flex-shrink-0">
         <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
         </svg>
       </div>
-      <div>
+      <div class="min-w-[14rem] flex-1">
         <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Constructs</h1>
         <p class="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
           EOC building blocks defined by your school - browse and view what's been set for your subjects.
         </p>
       </div>
-    </div>
 
-    <!-- Filters -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <select v-model="filterLevel" class="filter-select">
+      <!-- Filters, top right -->
+      <div class="w-full lg:w-auto lg:ml-auto grid grid-cols-1 sm:grid-cols-3 lg:flex lg:items-center gap-2">
+        <input v-model="search" type="text" placeholder="Search name or description..." class="filter-select lg:w-60" />
+        <select v-model="filterSubjectId" class="filter-select lg:w-44">
+          <option value="">All Subjects</option>
+          <option v-for="s in subjectOptions" :key="s.id" :value="s.id">{{ s.name }}</option>
+        </select>
+        <select v-model="filterLevel" class="filter-select lg:w-36">
           <option value="">All Levels</option>
           <option value="O Level">O Level</option>
           <option value="A Level">A Level</option>
         </select>
-        <select v-model="filterSubjectId" class="filter-select">
-          <option value="">All Subjects</option>
-          <option v-for="s in subjectOptions" :key="s.id" :value="s.id">{{ s.name }}</option>
-        </select>
-        <input v-model="search" type="text" placeholder="Search name or description..." class="filter-select" />
       </div>
     </div>
 

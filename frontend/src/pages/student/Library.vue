@@ -75,9 +75,15 @@
         {{ subjectGroups.length === 0 ? (showingOffline ? 'When you\'re online, open a book on the shelf and choose Save for offline.' : 'Your teachers haven\'t shared any PDFs with your department yet.') : 'Try a different search.' }}
       </p>
     </div>
+    <!-- Your reading: how far and how long, by subject; what needs reading; then every book -->
+    <section v-if="!loading && !error && readingItems.length" class="mt-8">
+      <h2 class="text-base font-bold text-gray-900 dark:text-white mb-3">Your reading</h2>
+      <ReadingInsights :items="readingItems" noun="book" @open="openFromInsights" />
+    </section>
+
     <!-- Document Preview -->
-    <LibraryPdfViewer v-if="previewBook && previewBook.file_type === 'pdf'" :book="previewBook" :start-in-read-mode="readFromShelf" @close="previewBook = null; readFromShelf = false" />
-    <LibraryDocumentViewer v-else-if="previewBook" :book="previewBook" @close="previewBook = null; readFromShelf = false" />
+    <LibraryPdfViewer v-if="previewBook && previewBook.file_type === 'pdf'" :book="previewBook" :start-in-read-mode="readFromShelf" @close="closeReader" />
+    <LibraryDocumentViewer v-else-if="previewBook" :book="previewBook" @close="closeReader" />
 
     <!-- Opening a book: it comes off the shelf, waits with Start reading / Cancel, then opens into
          the reader (or goes back to its place) -->
@@ -115,6 +121,7 @@ import SaveOfflineButton from '@/components/offline/SaveOfflineButton.vue'
 import { offline } from '@/utils/offline/enotes'
 import { docKey } from '@/utils/offline/docs'
 import { useRoute } from 'vue-router'
+import ReadingInsights, { type ReadingItem } from '@/components/reading/ReadingInsights.vue'
 
 interface SubjectGroup {
   id: number
@@ -185,6 +192,35 @@ const filteredSubjectGroups = computed(() => {
     .filter(group => group.books.length > 0)
 })
 
+// ---- The student's own reading of each book (from the reader's reports)
+type BookProgress = LibraryBook & { progress_page?: number | string | null; progress_percent?: number | string | null; reading_minutes?: number | string | null; first_read_at?: string | null; progress_last_read_at?: string | null }
+const readingItems = computed<ReadingItem[]>(() => filteredSubjectGroups.value.flatMap(g => (g.books as BookProgress[]).map(b => {
+  const opened = !!b.progress_last_read_at
+  // An open before pages were followed only says it was opened, not how far
+  const percent = opened && Number(b.progress_page || 0) > 0 ? Math.min(100, Math.round(Number(b.progress_percent || 0))) : null
+  return {
+    id: Number(b.id),
+    title: b.title,
+    subject: g.name,
+    detail: b.total_pages ? `${b.total_pages} pages` : undefined,
+    percent: opened ? percent : 0,
+    state: !opened ? 'new' : percent !== null && percent >= 98 ? 'done' : 'reading',
+    minutes: Number(b.reading_minutes || 0),
+    firstAt: b.first_read_at || null,
+    lastAt: b.progress_last_read_at || null,
+    sharedAt: b.published_at || null
+  }
+})))
+const openFromInsights = (item: ReadingItem) => {
+  const book = books.value.find(b => Number(b.id) === item.id)
+  if (book) openItem(book, null)
+}
+// Back from the reader: the stats catch up with what was just read, quietly
+const closeReader = () => {
+  previewBook.value = null
+  readFromShelf.value = false
+  axios.get(`${API_BASE}/student/library`).then(r => { if (r.data.success && !r.data.offline) books.value = r.data.data.books || [] }).catch(() => {})
+}
 
 const formatFileSize = (bytes: number | null) => {
   if (!bytes) return ''

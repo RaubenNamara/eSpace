@@ -3,41 +3,19 @@
     <div>
       <!-- Header - a plain title/subtitle row, matching the compact style used on the teacher
            dashboard, instead of a hero card. -->
-      <div class="mb-4">
-        <div class="flex items-center gap-2 mb-1">
-          <div class="hidden sm:flex w-7 h-7 rounded-lg bg-indigo-600 items-center justify-center flex-shrink-0">
-            <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v6.5L4.5 18A2 2 0 006.3 21h11.4a2 2 0 001.8-3L15 9.5V3M8 3h8M7 15h10" /></svg>
-          </div>
-          <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight">Virtual Lab</h1>
-        </div>
-        <p class="text-xs text-gray-500 dark:text-gray-400">Step into a 3D laboratory and run real science experiments in Physics, Chemistry, Biology and Agriculture, right from your browser.</p>
-      </div>
-      <!-- Tabs -->
-      <div class="inline-flex flex-wrap gap-1 mb-5 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-1 shadow-sm">
-        <button @click="activeTab = 'experiments'" class="px-3.5 sm:px-4 py-2 text-sm font-semibold rounded-lg transition-colors" :class="activeTab === 'experiments' ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'">Experiments</button>
-        <button @click="activeTab = 'skills'" class="px-3.5 sm:px-4 py-2 text-sm font-semibold rounded-lg transition-colors" :class="activeTab === 'skills' ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'">My Practical Skills</button>
-      </div>
-
-      <!-- ===================== EXPERIMENTS TAB ===================== -->
-      <div v-if="activeTab === 'experiments'">
-        <!-- Apparatus Playground CTA -->
-        <router-link
-          to="/student/virtual-lab/playground"
-          class="group flex items-center justify-between gap-3 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-5 mb-6 hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-700 transition-all"
-        >
-          <div class="flex items-center gap-3 min-w-0">
-            <span class="w-10 h-10 flex-shrink-0 rounded-xl bg-indigo-600 flex items-center justify-center text-lg print-color-exact text-white"><AppIcon name="kit" class="w-5 h-5" /></span>
-            <div class="min-w-0">
-              <p class="font-bold text-gray-900 dark:text-white text-sm">Apparatus Playground</p>
-              <p class="text-xs text-gray-500 dark:text-gray-400 truncate">Not graded. Pick any equipment and get familiar with it before your next practical.</p>
+      <div class="mb-4 flex flex-wrap items-start gap-x-4 gap-y-3">
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-2 mb-1">
+            <div class="hidden sm:flex w-7 h-7 rounded-lg bg-indigo-600 items-center justify-center flex-shrink-0">
+              <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v6.5L4.5 18A2 2 0 006.3 21h11.4a2 2 0 001.8-3L15 9.5V3M8 3h8M7 15h10" /></svg>
             </div>
+            <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight">Virtual Lab</h1>
           </div>
-          <span class="flex-shrink-0 text-indigo-600 dark:text-indigo-400 text-sm font-semibold transition-transform group-hover:translate-x-0.5">Explore &rarr;</span>
-        </router-link>
-
+          <p class="text-xs text-gray-500 dark:text-gray-400">Step into a 3D laboratory and run real science experiments in Physics, Chemistry, Biology and Agriculture, right from your browser.</p>
+        </div>
         <!-- Search + filters (client-side only - the assignment list is already fully loaded) -->
-        <div class="flex flex-wrap items-center gap-2 mb-4">
-          <input v-model="search" type="text" placeholder="Search experiments..." class="input-field flex-1 min-w-[10rem] text-sm">
+        <div v-if="activeTab === 'experiments'" class="w-full xl:w-auto xl:ml-auto flex flex-wrap items-center xl:justify-end gap-2">
+          <input v-model="search" type="text" placeholder="Search experiments..." class="input-field flex-1 xl:flex-none xl:w-56 min-w-[10rem] text-sm">
           <select v-model="subjectFilter" class="input-field text-sm w-auto">
             <option value="">All Subjects</option>
             <option v-for="s in subjectOptions" :key="s" :value="s">{{ s }}</option>
@@ -61,6 +39,29 @@
             <option value="overdue">Overdue</option>
           </select>
         </div>
+      </div>
+      <!-- Tabs -->
+      <div class="inline-flex flex-wrap gap-1 mb-5 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-1 shadow-sm">
+        <button @click="activeTab = 'experiments'" class="px-3.5 sm:px-4 py-2 text-sm font-semibold rounded-lg transition-colors" :class="activeTab === 'experiments' ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'">Experiments</button>
+        <button @click="activeTab = 'skills'" class="px-3.5 sm:px-4 py-2 text-sm font-semibold rounded-lg transition-colors" :class="activeTab === 'skills' ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'">My Practical Skills</button>
+      </div>
+
+      <!-- ===================== EXPERIMENTS TAB ===================== -->
+      <div v-if="activeTab === 'experiments'">
+        <!-- Apparatus Playground CTA -->
+        <router-link
+          to="/student/virtual-lab/playground"
+          class="group flex items-center justify-between gap-3 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-5 mb-6 hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-700 transition-all"
+        >
+          <div class="flex items-center gap-3 min-w-0">
+            <span class="w-10 h-10 flex-shrink-0 rounded-xl bg-indigo-600 flex items-center justify-center text-lg print-color-exact text-white"><AppIcon name="kit" class="w-5 h-5" /></span>
+            <div class="min-w-0">
+              <p class="font-bold text-gray-900 dark:text-white text-sm">Apparatus Playground</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400 truncate">Not graded. Pick any equipment and get familiar with it before your next practical.</p>
+            </div>
+          </div>
+          <span class="flex-shrink-0 text-indigo-600 dark:text-indigo-400 text-sm font-semibold transition-transform group-hover:translate-x-0.5">Explore &rarr;</span>
+        </router-link>
 
         <div class="flex flex-wrap gap-2 mb-6">
           <button

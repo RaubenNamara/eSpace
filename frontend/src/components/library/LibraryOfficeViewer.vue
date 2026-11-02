@@ -76,8 +76,14 @@
 import { computed } from 'vue'
 import type { LibraryBook } from '@/types/library'
 import { resolveAssetUrl } from '@/utils/url'
+import { useAuthStore } from '@/stores/auth'
+import { useLibraryReadingTracker } from '@/composables/useLibraryReadingTracker'
 
 const props = defineProps<{ book: LibraryBook }>()
+
+// A student reading it: the minutes count towards their reading (no pages to follow in here)
+const authStore = useAuthStore()
+useLibraryReadingTracker({ bookId: () => Number(props.book.id), enabled: () => authStore.userRole === 'student' })
 defineEmits(['close'])
 
 const allowDownload = computed(() => !!props.book.allow_download)

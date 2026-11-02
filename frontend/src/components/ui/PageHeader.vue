@@ -13,7 +13,25 @@
         <p v-if="description" class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">{{ description }}</p>
       </div>
 
-      <div class="flex items-center gap-2 flex-shrink-0 ml-auto">
+      <div class="flex flex-wrap items-center justify-end gap-2 ml-auto" :class="filtersTop ? 'min-w-0' : 'flex-shrink-0'">
+        <!-- Student pages: the filters sit top right, beside the title -->
+        <div v-if="$slots.filters && filtersTop" class="min-w-0">
+          <div v-if="sheetOpen" class="md:hidden fixed inset-0 z-40 bg-black/40" @click="sheetOpen = false"></div>
+          <div
+            class="ph-filters"
+            :class="{ 'ph-filters--open': sheetOpen }"
+            role="group"
+            aria-label="Filters"
+          >
+            <div class="md:hidden flex items-center justify-between mb-3">
+              <p class="text-sm font-bold text-gray-900 dark:text-white">Filters</p>
+              <button type="button" class="text-sm font-semibold" :class="ACCENT[accent].text" @click="sheetOpen = false">Done</button>
+            </div>
+            <div class="flex flex-col md:flex-row md:flex-wrap md:items-center md:justify-end gap-2 [&>*]:w-full md:[&>*]:w-auto">
+              <slot name="filters" />
+            </div>
+          </div>
+        </div>
         <!-- Phone: one button for all the filters -->
         <button
           v-if="$slots.filters"
@@ -31,7 +49,7 @@
     </div>
 
     <!-- Filters: inline on tablet and up; a bottom sheet on a phone -->
-    <div v-if="$slots.filters" class="md:mt-3">
+    <div v-if="$slots.filters && !filtersTop" class="md:mt-3">
       <div v-if="sheetOpen" class="md:hidden fixed inset-0 z-40 bg-black/40" @click="sheetOpen = false"></div>
       <div
         class="ph-filters"
@@ -57,7 +75,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import AppIcon from '@/components/common/AppIcon.vue'
 
 export type Accent = 'indigo' | 'emerald' | 'violet' | 'amber' | 'rose' | 'sky'
@@ -77,6 +96,9 @@ const GREEN = { icon: 'bg-indigo-600 text-white', badge: 'bg-indigo-600', text: 
 const ACCENT: Record<Accent, { icon: string; badge: string; text: string }> = { indigo: GREEN, emerald: GREEN, violet: GREEN, amber: GREEN, rose: GREEN, sky: GREEN }
 
 const sheetOpen = ref(false)
+// A student's page keeps its search and pickers top right, beside the title
+const route = useRoute()
+const filtersTop = computed(() => route.path.startsWith('/student'))
 // The sheet never stays open behind a wider layout
 const onResize = () => { if (window.innerWidth >= 768) sheetOpen.value = false }
 watch(sheetOpen, (open) => {

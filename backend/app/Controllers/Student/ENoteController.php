@@ -163,7 +163,7 @@ class ENoteController extends Controller
         ENoteAssessmentReach::backfillOnce($db);
 
         $where = [$this->visibilityClause()];
-        $params = ['student_id' => $studentId, 'student_id_te' => $studentId, 'student_id_prog' => $studentId];
+        $params = ['student_id' => $studentId, 'student_id_te' => $studentId, 'student_id_prog' => $studentId, 'student_id_pv1' => $studentId, 'student_id_pv2' => $studentId];
 
         if (!empty($search)) {
             // Non-emulated PDO prepares (this app's ATTR_EMULATE_PREPARES => false) can't reuse
@@ -189,6 +189,8 @@ class ENoteController extends Controller
                        prog.current_page_id AS resume_page_id,
                        prog.percentage_completed AS progress_percent, prog.completed_at AS progress_completed_at,
                        prog.last_read_at AS progress_last_read_at,
+                       (SELECT COALESCE(SUM(pv.seconds), 0) FROM enote_page_views pv WHERE pv.topic_id = et.id AND pv.student_id = :student_id_pv1) AS reading_seconds,
+                       (SELECT MIN(pv.first_viewed_at) FROM enote_page_views pv WHERE pv.topic_id = et.id AND pv.student_id = :student_id_pv2) AS first_read_at,
                        (SELECT COUNT(*) FROM enote_pages rp
                          INNER JOIN enote_pages cp ON cp.id = prog.current_page_id
                          WHERE rp.topic_id = et.id AND rp.is_active = 1 AND rp.deleted_at IS NULL

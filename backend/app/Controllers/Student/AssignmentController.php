@@ -46,6 +46,7 @@ class AssignmentController extends Controller
                 a.attempts_allowed,
                 a.status as assignment_status,
                 a.assessment_category,
+                a.category,
                 a.subject_id,
                 s.name as subject_name,
                 CONCAT(t.first_name, ' ', t.last_name) as teacher_name,
@@ -677,14 +678,25 @@ class AssignmentController extends Controller
                 }
             }
 
+            // Only objective questions: marked now, and the learner sees their mark straight away
+            $autoMarked = null;
+            if ($status === 'submitted') {
+                try {
+                    $autoMarked = \eSpace\App\Services\ObjectiveAutoMark::markAndRelease($this->pdo, (int) $submissionId, (int) $assignmentId);
+                } catch (\Throwable $e) {
+                    error_log('Objective auto-marking failed: ' . $e->getMessage());
+                }
+            }
+
             // Answering counts towards the student's learning streak
             \eSpace\App\Services\RewardService::recordLearningDay((int) $studentId);
             $this->success([
                 'id' => $submissionId,
-                'status' => $status,
+                'status' => $autoMarked ? 'returned' : $status,
                 'attempt_number' => $attemptNumber,
-                'submission_timing' => $submissionTiming
-            ], 'Assignment saved successfully');
+                'submission_timing' => $submissionTiming,
+                'auto_marked' => $autoMarked
+            ], $autoMarked ? 'Marked - see your result' : 'Assignment saved successfully');
         } catch (\Exception $e) {
             if ($this->pdo->inTransaction()) {
                 $this->pdo->rollBack();

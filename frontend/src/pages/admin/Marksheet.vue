@@ -1,7 +1,7 @@
 <template>
-  <MarksheetPage />
+  <MarksheetsHub />
 </template>
 
 <script setup lang="ts">
-import MarksheetPage from '@/components/performance/MarksheetPage.vue'
+import MarksheetsHub from '@/components/performance/MarksheetsHub.vue'
 </script>
