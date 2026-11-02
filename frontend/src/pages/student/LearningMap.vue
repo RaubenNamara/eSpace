@@ -24,7 +24,7 @@
 
     <!-- Loading -->
     <div v-if="loading" class="space-y-4 animate-pulse">
-      <div class="h-28 rounded-2xl bg-gray-200 dark:bg-gray-700"></div>
+      <div class="h-16 rounded-xl bg-gray-200 dark:bg-gray-700"></div>
       <div class="flex gap-3">
         <div v-for="i in 4" :key="i" class="h-24 w-40 rounded-xl bg-gray-200 dark:bg-gray-700"></div>
       </div>
@@ -42,23 +42,22 @@
       <!-- Three views of the same map, each built on the one before: the learning outcomes, the
            competency at the end of each topic (its Activity of Integration), and the Elements of
            Construct that group topics (End of Chapter). Picking one switches everything below. -->
-      <div class="grid grid-cols-3 gap-2 sm:gap-3 mb-3">
+      <div class="grid grid-cols-3 gap-2 sm:gap-2.5 mb-3">
         <button
           v-for="card in viewCards"
           :key="card.key"
           type="button"
-          class="text-center sm:text-left bg-white dark:bg-gray-800 rounded-2xl border p-2.5 sm:p-4 flex flex-col sm:flex-row items-center gap-1.5 sm:gap-4 transition-all hover:-translate-y-0.5 min-w-0"
+          class="text-center sm:text-left bg-white dark:bg-gray-800 rounded-xl border shadow-sm px-2 py-2 sm:px-3 sm:py-2.5 flex flex-col sm:flex-row items-center gap-1 sm:gap-2.5 transition-all hover:-translate-y-0.5 min-w-0"
           :class="view === card.key ? card.selected : 'border-gray-200 dark:border-gray-700 opacity-40 blur-[1px] hover:opacity-100 hover:blur-0'"
           :aria-pressed="view === card.key"
           @click="setView(card.key)"
         >
-          <ProgressRing :percent="card.percent" :size="narrow ? 54 : 76" :stroke="narrow ? 6 : 8" :color="card.color">
-            <span class="text-sm sm:text-base font-bold text-gray-900 dark:text-white"><CountUp :value="`${card.percent}%`" /></span>
+          <ProgressRing :percent="card.percent" :size="narrow ? 40 : 44" :stroke="narrow ? 4 : 5" :color="card.color">
+            <span class="text-[10px] sm:text-[11px] font-bold text-gray-900 dark:text-white"><CountUp :value="`${card.percent}%`" /></span>
           </ProgressRing>
           <div class="min-w-0 flex-1">
-            <p class="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white leading-tight">{{ narrow ? card.title.replace(' achieved', '') : card.title }}</p>
-            <p class="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400"><CountUp :value="card.achieved" /> of {{ card.total }}<span class="hidden sm:inline"> {{ card.noun }}</span></p>
-            <p class="hidden sm:block text-[11px] mt-1" :class="view === card.key ? card.accent : 'text-gray-400 dark:text-gray-500'">{{ view === card.key ? 'Showing below' : 'Tap to see them' }}</p>
+            <p class="text-[11px] sm:text-xs font-semibold text-gray-900 dark:text-white leading-tight truncate">{{ narrow ? card.title.replace(' achieved', '') : card.title }}</p>
+            <p class="text-[10px] sm:text-[11px] text-gray-500 dark:text-gray-400 truncate"><CountUp :value="card.achieved" /> of {{ card.total }}<span class="hidden sm:inline">&nbsp;{{ card.noun }}</span><span class="hidden sm:inline" :class="view === card.key ? card.accent : 'text-gray-400 dark:text-gray-500'"> · {{ view === card.key ? 'showing' : 'tap to see' }}</span></p>
           </div>
         </button>
       </div>

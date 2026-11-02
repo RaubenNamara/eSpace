@@ -207,9 +207,10 @@ class StaffActivityController extends Controller
     /**
      * What each teacher did since $since, as [teacher_id => [{type, label, title, count, at}]].
      * Repetitive work (marking, page edits, questions) is grouped per day and per piece of work,
-     * so one marking session reads "Marked 24 scripts - Topic test" rather than 24 lines.
+     * so one marking session reads "Marked 24 scripts - Topic test" rather than 24 lines. Also read
+     * by a teacher's own usage chart (Teacher\UsageController).
      */
-    private function teacherActivities(array $teacherIds, string $since): array
+    public function teacherActivities(array $teacherIds, string $since): array
     {
         if (!$teacherIds) {
             return [];

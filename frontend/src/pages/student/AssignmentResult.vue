@@ -21,7 +21,8 @@
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
         All marked scripts
       </RouterLink>
-      <div class="mb-4 sm:mb-6">
+      <div class="mb-4 sm:mb-6 flex items-start gap-3">
+        <div class="min-w-0 flex-1">
         <h1 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-1 break-words">{{ submission.assignment_title }}</h1>
         <p v-if="oversightRole && submission.student_name" class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-0.5">
           {{ submission.student_name }} <span class="font-normal text-gray-500 dark:text-gray-400">· view only</span>
@@ -30,6 +31,16 @@
           Submitted {{ formatDate(submission.submitted_at) }}
           <span class="px-2 py-0.5 rounded-full text-xs" :class="statusClass">{{ statusLabel }}</span>
         </p>
+        </div>
+        <!-- Back to the student's assessments, top right -->
+        <RouterLink
+          v-if="!oversightRole"
+          to="/student/assignments"
+          class="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-sm"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+          Go back
+        </RouterLink>
       </div>
 
       <!-- Marks / Grade summary (result mode only) -->
@@ -89,7 +100,7 @@
             </div>
           </div>
 
-          <div v-if="question.scenario_text" class="bg-gray-50 dark:bg-gray-700/50 p-3 sm:p-4 rounded-lg mb-4 overflow-x-auto">
+          <div v-if="question.scenario_text && question.question_text" class="bg-gray-50 dark:bg-gray-700/50 p-3 sm:p-4 rounded-lg mb-4 overflow-x-auto">
             <p class="text-gray-700 dark:text-gray-300 whitespace-pre-line break-words text-justify [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.scenario_text"></p>
           </div>
 

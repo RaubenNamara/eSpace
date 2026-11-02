@@ -40,10 +40,13 @@ class AssessmentMarksheetService
             $params['department_id'] = $scope['department_id'];
         }
         $stmt = $this->db->prepare(
-            "SELECT a.id, a.title, a.status, a.total_marks, a.due_date, COALESCE(a.published_at, a.created_at) AS set_at,
+            "SELECT a.id, a.title, a.status, a.total_marks, a.due_date, COALESCE(a.published_at, a.created_at) AS set_at, a.subject_id,
                     a.class_id, a.class_group_name, c.name AS class_name, c.stream_name,
                     (SELECT GROUP_CONCAT(DISTINCT x.stream_name ORDER BY x.stream_name SEPARATOR ',') FROM classes x
                       WHERE x.id = a.class_id OR x.id IN (SELECT ac.class_id FROM assignment_classes ac WHERE ac.assignment_id = a.id)) AS streams,
+                    (SELECT GROUP_CONCAT(DISTINCT x.id) FROM classes x
+                      WHERE x.id = a.class_id OR x.id IN (SELECT ac.class_id FROM assignment_classes ac WHERE ac.assignment_id = a.id)
+                         OR (a.class_group_name IS NOT NULL AND x.name = a.class_group_name)) AS class_ids,
                     s.name AS subject_name, d.id AS department_id, d.name AS department_name,
                     TRIM(CONCAT(t.first_name, ' ', t.last_name)) AS teacher_name,
                     (SELECT COUNT(DISTINCT sb.student_id) FROM assignment_submissions sb
@@ -69,6 +72,9 @@ class AssessmentMarksheetService
             'due_date' => $r['due_date'],
             'set_at' => $r['set_at'],
             'class_label' => $this->classLabel($r),
+            // every class it was set for, and its subject - the class marksheet's "with marks" shortcuts
+            'class_ids' => array_values(array_filter(array_map('intval', explode(',', (string) $r['class_ids'])))),
+            'subject_id' => $r['subject_id'] !== null ? (int) $r['subject_id'] : null,
             'subject_name' => $r['subject_name'],
             'department_id' => $r['department_id'] !== null ? (int) $r['department_id'] : null,
             'department_name' => $r['department_name'],

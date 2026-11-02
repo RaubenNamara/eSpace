@@ -293,6 +293,8 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         // Dashboard
         Router::get('/dashboard', 'eSpace\App\Controllers\Teacher\DashboardController@index');
         Router::get('/dashboard/overview', 'eSpace\App\Controllers\Teacher\DashboardOverviewController@index');
+        // The teacher's own use of Tusome, for the chart on their dashboard
+        Router::get('/usage', 'eSpace\App\Controllers\Teacher\UsageController@index');
 
         // Departments (a teacher in more than one department can switch their active one)
         Router::get('/departments', 'eSpace\App\Controllers\Teacher\DepartmentController@index');

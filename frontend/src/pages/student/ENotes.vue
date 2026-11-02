@@ -7,7 +7,6 @@
           <input v-model="searchQuery" type="search" placeholder="Search topics" class="w-full md:w-56 pl-8 pr-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
         </div>
       </template>
-      <StatStrip v-if="!loading && topics.length" :items="statItems" />
     </PageHeader>
 
     <!-- Pick up where you stopped -->
@@ -150,7 +149,6 @@
 <script setup lang="ts">
 import AppIcon from '@/components/common/AppIcon.vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
-import StatStrip, { type StatItem } from '@/components/ui/StatStrip.vue'
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import Bookshelf from '@/components/library/Bookshelf.vue'
@@ -230,15 +228,6 @@ const stateOf = (t: Progress): 'done' | 'reading' | 'new' =>
 const continueTopic = computed(() => (topics.value as Progress[])
   .filter(t => stateOf(t) === 'reading' && t.resume_page_id && Number(t.resume_page_number || 0) > 1)
   .sort((a, b) => String(b.progress_last_read_at || '').localeCompare(String(a.progress_last_read_at || '')))[0] ?? null)
-const statItems = computed<StatItem[]>(() => {
-  const all = topics.value as Progress[]
-  return [
-    { label: 'Topics', value: all.length, tone: 'indigo' },
-    { label: 'Reading', value: all.filter(t => stateOf(t) === 'reading').length, tone: 'sky' },
-    { label: 'Finished', value: all.filter(t => stateOf(t) === 'done').length, tone: 'emerald' },
-    { label: 'Not started', value: all.filter(t => stateOf(t) === 'new').length, tone: 'gray' }
-  ]
-})
 // Reading first, then not started, then finished
 const listTopics = computed(() => {
   const rank = { reading: 0, new: 1, done: 2 }

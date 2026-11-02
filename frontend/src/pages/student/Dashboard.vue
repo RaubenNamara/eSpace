@@ -100,9 +100,9 @@
           </TransitionGroup>
         </section>
 
-        <!-- My notes -->
+        <!-- My summaries -->
         <section class="dash-box">
-          <h2 class="dash-bar">My notes <RouterLink to="/student/my-notes" class="dash-bar-link">All</RouterLink></h2>
+          <h2 class="dash-bar">My summaries <RouterLink to="/student/my-notes" class="dash-bar-link">All</RouterLink></h2>
           <div v-if="!notesLoaded" class="space-y-2 p-3"><div v-for="i in 2" :key="i" class="h-14 rounded-xl bg-gray-100 dark:bg-gray-700/50 animate-pulse"></div></div>
           <div v-else-if="!myNotes.length" class="m-3 rounded-xl bg-gradient-to-r from-lime-100 to-indigo-50 dark:from-indigo-950/50 dark:to-indigo-900/30 p-3.5">
             <p class="text-[0.95rem] font-medium text-indigo-900 dark:text-indigo-100">Write notes while you read eNotes and books - they all collect here.</p>
@@ -227,6 +227,7 @@ const shortcuts = [
   { label: 'Live classes', to: '/student/live-classes', icon: 'camera' },
   { label: 'eLibrary', to: '/student/library', icon: 'document' },
   { label: 'Item Bank', to: '/student/itembank', icon: 'target' },
+  { label: 'Achievements', to: '/student/achievements', icon: 'trophy' },
   { label: 'Videos', to: '/student/videos', icon: 'video' },
   { label: 'Virtual Lab', to: '/student/virtual-lab', icon: 'beaker' },
   { label: 'Learning Map', to: '/student/learning-map', icon: 'map' }

@@ -71,16 +71,15 @@
         <section class="dash-box">
           <h2 class="dash-bar">Jump in</h2>
           <TransitionGroup tag="nav" name="dash-pop" class="grid grid-cols-4 gap-1 sm:gap-2 p-2 sm:p-3" aria-label="Shortcuts">
-            <RouterLink v-for="s in shown('jump', shortcuts)" :key="s.to" :to="s.to" class="group flex flex-col items-center gap-1.5 rounded-xl py-2.5 px-1 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition min-w-0">
+            <RouterLink v-for="s in shortcuts" :key="s.to" :to="s.to" class="group flex flex-col items-center gap-1.5 rounded-xl py-2.5 px-1 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition min-w-0">
               <span class="w-11 h-11 rounded-2xl flex items-center justify-center bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100 dark:bg-indigo-950/50 dark:text-indigo-300 dark:ring-indigo-900 group-hover:bg-indigo-600 group-hover:text-white transition"><AppIcon :name="s.icon" class="w-5 h-5" /></span>
               <span class="text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-100 text-center leading-tight">{{ s.label }}</span>
             </RouterLink>
           </TransitionGroup>
-          <button v-if="shortcuts.length > LIMIT.jump" type="button" class="dash-more" :aria-expanded="!!open.jump" @click="toggle('jump')">
-            {{ open.jump ? 'Show less' : `Show ${shortcuts.length - LIMIT.jump} more` }}
-            <svg class="w-4 h-4 transition-transform duration-300" :class="open.jump ? 'rotate-180' : ''" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6" /></svg>
-          </button>
         </section>
+
+        <!-- The teacher's own use of Tusome -->
+        <MyUsage />
       </div>
 
       <div class="flex flex-col gap-4 min-w-0">
@@ -306,6 +305,7 @@
 import { ref, onMounted, computed } from 'vue'
 import NoticesTicker from '@/components/dashboard/NoticesTicker.vue'
 import AppIcon from '@/components/common/AppIcon.vue'
+import MyUsage from '@/components/dashboard/teacher/MyUsage.vue'
 import { niceName } from '@/components/dashboard/teacher/time'
 import { useLiveRefresh } from '@/composables/useLiveRefresh'
 import apiService from '@/services/api'
@@ -375,7 +375,7 @@ const firstName = computed(() => {
 const todayLabel = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
 
 // ---- each card shows a few, and opens up to show the rest
-const LIMIT = { marking: 4, jump: 4, today: 3, word: 3, classes: 4 } as const
+const LIMIT = { marking: 4, today: 3, word: 3, classes: 4 } as const
 type CardKey = keyof typeof LIMIT
 const open = ref<Partial<Record<CardKey, boolean>>>({})
 const toggle = (k: CardKey) => { open.value = { ...open.value, [k]: !open.value[k] } }
@@ -388,6 +388,7 @@ const shortcuts = [
   { label: 'My week', to: '/teacher/planner', icon: 'clock' },
   { label: 'Marksheet', to: '/teacher/marksheet', icon: 'chart' },
   { label: 'Item Bank', to: '/teacher/itembank', icon: 'target' },
+  { label: 'eLibrary', to: '/teacher/library', icon: 'document' },
   { label: 'Learning Map', to: '/teacher/class-map', icon: 'map' }
 ]
 const toDate = (v: string) => new Date(v.replace(' ', 'T'))

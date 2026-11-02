@@ -38,6 +38,7 @@ class AssignmentController extends Controller
                 a.title,
                 a.instructions,
                 a.open_at,
+                COALESCE(a.published_at, a.created_at) AS set_at,
                 a.due_date,
                 a.total_marks,
                 a.pass_mark,
@@ -53,7 +54,9 @@ class AssignmentController extends Controller
                 sub.id as submission_id,
                 COALESCE(sub.status, 'new') as submission_status,
                 sub.total_score,
-                sub.percentage
+                sub.percentage,
+                sub.submitted_at,
+                sub.released_at
                 FROM assignments a
                 INNER JOIN subjects s ON a.subject_id = s.id
                 INNER JOIN teachers t ON a.teacher_id = t.id
@@ -126,9 +129,12 @@ class AssignmentController extends Controller
                     'id' => (int) $row['submission_id'],
                     'total_score' => ($released && $row['total_score'] !== null) ? (float) $row['total_score'] : null,
                     'percentage' => ($released && $row['percentage'] !== null) ? (float) $row['percentage'] : null,
+                    'submitted_at' => $row['submitted_at'],
+                    // when it came back marked - the "Finished work" list is newest first
+                    'released_at' => $released ? $row['released_at'] : null,
                 ] : null;
 
-                unset($row['submission_id'], $row['submission_status'], $row['total_score'], $row['percentage']);
+                unset($row['submission_id'], $row['submission_status'], $row['total_score'], $row['percentage'], $row['submitted_at'], $row['released_at']);
 
                 return $row;
             }, $rows);

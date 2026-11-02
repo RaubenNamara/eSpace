@@ -49,6 +49,18 @@ defineProps<{
   min-width: 0;
 }
 
+/* Phones: every shelf the full width of the screen, so they line up one under another, the same
+   length whatever number of books is on them */
+@media (max-width: 639px) {
+  .bookshelf {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+  .bookshelf .shelf-track {
+    min-width: 100%;
+  }
+}
+
 .bookshelf {
   /* Must match ShelfBook.vue's --book-h at each breakpoint */
   --shelf-book-h: 140px;

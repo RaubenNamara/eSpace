@@ -2,7 +2,7 @@
   <!-- My notes: every note the student wrote while reading - eNotes, eLibrary books, Item Bank
        papers - in one place, by subject and topic, and downloadable as a PDF to keep for good. -->
   <div class="w-full max-w-4xl">
-    <PageHeader title="My notes" description="Everything you wrote while reading - by subject and topic. Download them as a PDF to keep, even after you finish school." icon="pencil" accent="indigo">
+    <PageHeader title="My summaries" description="Your summaries from reading, by subject." icon="pencil" accent="indigo">
       <template #actions>
         <div class="inline-flex rounded-xl border border-gray-300 dark:border-gray-600 overflow-hidden text-sm font-semibold" role="group" aria-label="How your notes look">
           <button type="button" class="px-3 py-2" :class="notesStyle === 'plain' ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300'" @click="notesStyle = 'plain'">Plain</button>
@@ -16,16 +16,16 @@
       <template #filters>
         <div class="relative w-full sm:w-72">
           <svg class="w-4 h-4 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"></path></svg>
-          <input v-model="search" type="search" placeholder="Search your notes" class="w-full pl-8 pr-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500">
+          <input v-model="search" type="search" placeholder="Search summaries" class="w-full pl-8 pr-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500">
         </div>
       </template>
     </PageHeader>
 
     <Skeleton v-if="loading" variant="list" :count="3" />
-    <EmptyState v-else-if="!notes.length" icon="pencil" tone="indigo" title="No notes yet" message="While you read an eNote or a book, tap the note button on a page and write your own summary. Every note shows up here - and you can download them all." >
+    <EmptyState v-else-if="!notes.length" icon="pencil" tone="indigo" title="No summaries yet" message="Write one while reading an eNote or book." >
       <router-link to="/student/enotes" class="inline-flex px-4 py-2 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700">Open eNotes</router-link>
     </EmptyState>
-    <EmptyState v-else-if="!shown.length" compact icon="pencil" title="No note matches" message="Try another word." />
+    <EmptyState v-else-if="!shown.length" compact icon="pencil" title="No match" message="Try another word." />
 
     <template v-else>
       <!-- Subjects: all, or one -->

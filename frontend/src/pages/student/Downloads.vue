@@ -1,6 +1,6 @@
 <template>
   <div class="w-full">
-    <PageHeader title="Downloads" :description="`eNotes and books saved on this device read without internet - kept ${DAYS_KEPT} days and renewed whenever you're online.`" icon="download" accent="indigo" />
+    <PageHeader title="Downloads" description="Read saved eNotes and books offline." icon="download" accent="indigo" />
 
     <!-- Space on this device -->
     <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 mb-4">
@@ -18,7 +18,7 @@
 
     <div v-if="!offline.ready" class="h-24 rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse"></div>
 
-    <EmptyState v-else-if="items.length === 0" icon="download" tone="indigo" title="Nothing saved yet" message="Open a book on a shelf and choose Save for offline - it then opens here even with no internet. Notes and highlights you make offline are sent when you reconnect.">
+    <EmptyState v-else-if="items.length === 0" icon="download" tone="indigo" title="Nothing saved yet" message="Save an eNote or book for offline to see it here.">
       <div class="flex flex-wrap justify-center gap-2">
         <router-link v-for="shelf in SHELVES" :key="shelf.to" :to="shelf.to" class="inline-flex px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700">{{ shelf.label }}</router-link>
       </div>
@@ -56,7 +56,7 @@
 import PageHeader from '@/components/ui/PageHeader.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import { computed, onMounted, ref, watch } from 'vue'
-import { offline, removeTopic, DAYS_KEPT, type DownloadMeta } from '@/utils/offline/enotes'
+import { offline, removeTopic, type DownloadMeta } from '@/utils/offline/enotes'
 import { removeDoc, type DocMeta } from '@/utils/offline/docs'
 import { removeAssessment, type SavedAssessmentMeta } from '@/utils/offline/assessments'
 import { formatBytes, daysLeft } from '@/utils/offline/format'

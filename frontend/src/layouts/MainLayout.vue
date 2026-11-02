@@ -908,7 +908,7 @@ const MENU: Record<string, NavGroup[]> = {
     { key: 'learning', name: 'Learning', items: [
       { path: '/student/live-classes', label: 'Live Classes', icon: 'VideoCameraIcon' },
       { path: '/student/enotes', label: 'eNotes', icon: 'NoteIcon' },
-      { path: '/student/my-notes', label: 'My notes', icon: 'NoteIcon' },
+      { path: '/student/my-notes', label: 'My summaries', icon: 'NoteIcon' },
       { path: '/student/downloads', label: 'Downloads', icon: 'CloudArrowDownIcon' }
     ] },
     { key: 'revision', name: 'Revision', items: [
@@ -1099,7 +1099,7 @@ const paletteActions = computed<PaletteAction[]>(() => {
   const byRole: Record<string, PaletteAction[]> = {
     student: [
       { label: 'Start a study group', hint: 'Study groups', run: go('/student/study-groups') },
-      { label: 'Download my notes as PDF', hint: 'My notes', run: go('/student/my-notes') }
+      { label: 'Download my summaries as PDF', hint: 'My summaries', run: go('/student/my-notes') }
     ],
     teacher: [
       { label: 'New assessment', hint: 'Assessments', run: go('/teacher/assignments/create') },
