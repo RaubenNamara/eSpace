@@ -81,7 +81,7 @@ const emit = defineEmits<{
 }>()
 
 /** widest a page is drawn (a page any wider is just bigger, not easier to read) */
-const MAX_PAGE_WIDTH = 900
+const MAX_PAGE_WIDTH = 1000
 const NO_LAYERS: AnnotationLayerJSON[] = []
 
 interface PageInfo { num: number; w: number; h: number; seen: boolean }
