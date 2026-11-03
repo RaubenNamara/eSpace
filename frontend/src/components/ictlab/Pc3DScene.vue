@@ -24,6 +24,12 @@
           {{ hoverName }}
         </div>
 
+        <!-- The guide's pointer: an arrow and words over exactly what to use next -->
+        <div v-if="pointer && !spot && !dragging" class="absolute pointer-events-none z-[5] -translate-x-1/2 -translate-y-full flex flex-col items-center" :style="{ left: `${pointer.x}px`, top: `${pointer.y}px` }" aria-hidden="true">
+          <span class="px-2.5 py-1 rounded-lg bg-amber-400 text-gray-900 text-xs font-bold shadow-lg whitespace-nowrap">{{ pointerLabel }}</span>
+          <svg class="ict-point-arrow w-6 h-6 -mt-0.5 text-amber-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22 4 11h5V3h6v8h5z" /></svg>
+        </div>
+
         <!-- One part on its own, with what it does (Parts of a computer) -->
         <Transition name="spot">
           <div v-if="spot" class="absolute inset-x-2 bottom-2 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[26rem] rounded-2xl bg-white/95 dark:bg-gray-900/95 shadow-xl p-3.5 z-10">
@@ -63,9 +69,22 @@
             :key="p.key"
             type="button"
             class="px-2.5 py-1 rounded-lg border text-xs font-semibold"
-            :class="selected === p.key ? 'border-indigo-500 ring-2 ring-indigo-500/30 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-100' : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200'"
+            :class="[selected === p.key ? 'border-indigo-500 ring-2 ring-indigo-500/30 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-100' : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200', guide && !selected && step?.action === 'place:' + p.key ? 'ict-glow-btn' : '']"
             @click="select(selected === p.key ? null : p.key)"
           >{{ p.name }}</button>
+        </div>
+        <!-- The cables still to connect, once the parts at both ends are in: one tap connects one
+             (the small connectors are hard to hit in the picture). Out of order is still a mistake. -->
+        <div v-if="looseCables.length" class="mt-2 flex flex-wrap items-center gap-1.5">
+          <span class="text-xs font-semibold text-gray-600 dark:text-gray-300 mr-1">Cables:</span>
+          <button
+            v-for="c in looseCables"
+            :key="c.key"
+            type="button"
+            class="px-2.5 py-1 rounded-lg border border-gray-300 dark:border-gray-600 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:border-indigo-400"
+            :class="guide && step?.action === 'connect:' + c.key ? 'ict-glow-btn' : ''"
+            @click="emit('act', 'connect:' + c.key)"
+          >{{ c.label }}</button>
         </div>
         <p v-if="note" class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">{{ note }}</p>
 
@@ -91,6 +110,7 @@
           >
             <svg class="w-6 h-6 text-indigo-600 dark:text-indigo-300" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path :d="t.icon" /></svg>
             <span class="text-center leading-tight">{{ t.label }}</span>
+            <span v-if="glowTool === t.key" class="-mb-0.5 px-1.5 rounded bg-amber-400 text-gray-900 text-[10px] font-bold">Use this</span>
           </button>
         </div>
       </template>
@@ -419,6 +439,8 @@ const hoverName = computed(() => {
   if (k.startsWith('ghost:')) return `Place for the ${nameOf(k.slice(6)).toLowerCase()}`
   if (k.startsWith('connect:')) return ({ cpu_fan: 'CPU_FAN connector', atx24: '24-pin power connector', sata: 'SATA port', fpanel: 'Front panel pins' } as Record<string, string>)[k.slice(8)]
   if (k.startsWith('tool:')) return ({ wall: 'Wall socket switch', mains: 'Mains plug (drag it)', power: 'Power button', panel: 'Side panel', strap: 'Anti-static wrist strap', paste: 'Thermal paste' } as Record<string, string>)[k.slice(5)]
+  const loose = looseCables.value.find(c => c.part === k)
+  if (loose) return `${nameOf(k)} - tap to connect its cable`
   // Parts mode at Advanced: no names until found
   if (props.mode === 'parts' && props.level !== 'simple' && !has('tap:' + k)) return ''
   return nameOf(k)
@@ -435,6 +457,46 @@ const glowKey = computed(() => {
   return ({ 'socket-off': 'tool:wall', 'socket-on': 'tool:wall', unplug: 'tool:mains', plug: 'tool:mains', strap: 'tool:strap', paste: 'tool:paste', close: 'tool:panel', power: 'tool:power' } as Record<string, string>)[a] || null
 })
 const glowTool = computed(() => (glowKey.value?.startsWith('tool:') ? glowKey.value.slice(5) : null))
+
+// The arrow over what to use, with what to do with it - follows the object as the view turns
+const pointer = ref<{ x: number; y: number } | null>(null)
+const pointerLabel = computed(() => {
+  const k = glowKey.value
+  if (!k) return ''
+  if (k.startsWith('ghost:')) return `Put the ${shortName(k.slice(6))} here`
+  if (k === 'connect:cpu_fan') return 'Plug the fan cable in here - or tap the cooler'
+  if (k === 'connect:atx24') return 'Plug the 24-pin cable in here - or tap the power supply'
+  if (k === 'connect:sata') return 'Plug the SATA cable in here - or tap the hard disk'
+  if (k.startsWith('connect:')) return 'Tap this connector'
+  if (k.startsWith('tool:')) {
+    const a = props.step?.action
+    if (a === 'unplug') return 'Drag the plug out'
+    if (a === 'plug') return 'Drag the plug into the socket'
+    return ({ wall: 'Tap the wall switch', power: 'Press the power button', panel: 'Tap the side panel', strap: 'Tap the wrist strap', paste: 'Tap the thermal paste' } as Record<string, string>)[k.slice(5)] || 'Use this'
+  }
+  if (props.step?.action.startsWith('place:')) return `Pick up the ${shortName(k)}`
+  return 'Tap this'
+})
+// "processor", "memory" - the name without its (CPU)-style initials
+const shortName = (k: string) => nameOf(k).replace(/ \(.*\)$/, '').toLowerCase()
+const pointBox = new THREE.Box3()
+function placePointer() {
+  const w = wb.value
+  const k = glowKey.value
+  const obj = k ? (k.startsWith('ghost:') ? ghosts.get(k.slice(6)) : pickables.find(o => keyOf.get(o) === k)) : null
+  if (!w || !obj || !obj.visible) { pointer.value = null; return }
+  pointBox.setFromObject(obj)
+  if (pointBox.isEmpty()) { pointer.value = null; return }
+  const top = pointBox.getCenter(new THREE.Vector3())
+  top.y = pointBox.max.y
+  const s = w.toScreen(top)
+  const r = w.canvas.getBoundingClientRect()
+  // kept inside the view, so the words can always be read
+  const x = Math.min(Math.max(s.x, 80), r.width - 80)
+  const y = Math.min(Math.max(s.y - 4, 44), r.height - 8)
+  const p = pointer.value
+  if (!p || Math.abs(p.x - x) > 0.5 || Math.abs(p.y - y) > 0.5) pointer.value = { x, y }
+}
 
 let t = 0
 let lit: THREE.Object3D[] = []
@@ -458,6 +520,7 @@ function pulse(dt: number) {
     setEmissive(sel, 0x818cf8, 0.35)
     lit.push(sel)
   }
+  placePointer()
   // a breathing ghost for the place the step wants
   for (const [k, g] of ghosts) {
     const m = g.material as THREE.MeshBasicMaterial
@@ -474,6 +537,16 @@ let downAt: { x: number; y: number; key: string | null } | null = null
 const dragPlane = new THREE.Plane()
 const tmp = new THREE.Vector3()
 
+// Each cable, the part it comes from, and what must be fitted before it can be connected
+const CABLES: { key: ConnectorKey; part: string; label: string; needs: string[]; advancedOnly?: boolean }[] = [
+  { key: 'cpu_fan', part: 'cooler', label: 'Cooler fan → CPU_FAN', needs: ['motherboard', 'cooler'] },
+  { key: 'atx24', part: 'psu', label: 'Power supply → 24-pin', needs: ['motherboard', 'psu'] },
+  { key: 'sata', part: 'hdd', label: 'Hard disk → SATA', needs: ['motherboard', 'hdd'] },
+  { key: 'fpanel', part: '', label: 'Case buttons → F_PANEL', needs: ['motherboard'], advancedOnly: true }
+]
+const looseCables = computed(() => (props.mode !== 'assembly' || has('close')
+  ? []
+  : CABLES.filter(c => !has('connect:' + c.key) && c.needs.every(placed) && (!c.advancedOnly || props.level === 'advanced'))))
 const deskParts = computed(() => (props.mode === 'assembly' ? ASSEMBLY_PARTS.filter(p => !placed(p.key)) : []))
 
 // What is under the pointer. The wall switch is small and the see-through outlines can lie in
@@ -584,6 +657,11 @@ function tap(key: string | null) {
   else if (key.startsWith('tool:')) useTool(key.slice(5))
   else if (ASM_KEYS.includes(key as PcPartKey)) {
     if (!placed(key)) select(selected.value === key ? null : key)
+    // a fitted part with its cable still loose (cooler, power supply, hard disk): a tap connects it
+    else {
+      const c = looseCables.value.find(x => x.part === key)
+      if (c) emit('act', 'connect:' + c.key)
+    }
   }
 }
 
@@ -766,8 +844,12 @@ function switchOn() {
 @keyframes ict-glow-btn {
   50% { box-shadow: 0 0 0 5px rgba(250, 204, 21, 0.25); }
 }
+.ict-point-arrow { animation: ict-point 0.9s ease-in-out infinite; }
+@keyframes ict-point {
+  50% { transform: translateY(5px); }
+}
 @media (prefers-reduced-motion: reduce) {
-  .ict-glow-btn { animation: none; }
+  .ict-glow-btn, .ict-point-arrow { animation: none; }
 }
 .spot-enter-active, .spot-leave-active { transition: opacity 0.25s ease, transform 0.25s ease; }
 .spot-enter-from, .spot-leave-to { opacity: 0; transform: translateY(8px); }

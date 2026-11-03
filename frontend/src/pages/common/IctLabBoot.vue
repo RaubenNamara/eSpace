@@ -200,7 +200,11 @@
           <ul class="mt-3 space-y-1.5">
             <li v-for="(g, i) in goals" :key="i" class="flex items-start gap-2 text-sm" :class="g.done ? 'text-gray-500 dark:text-gray-400' : i === goals.findIndex(x => !x.done) ? 'text-gray-900 dark:text-white font-semibold' : 'text-gray-600 dark:text-gray-300'">
               <span class="mt-0.5 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 text-[11px] font-bold" :class="g.done ? 'bg-emerald-600 text-white' : 'border-2 border-gray-300 dark:border-gray-600'">{{ g.done ? '✓' : '' }}</span>
-              <span :class="g.done ? 'line-through' : ''">{{ g.text }}</span>
+              <span class="min-w-0">
+                <span :class="g.done ? 'line-through' : ''">{{ g.text }}</span>
+                <!-- two wrong moves: the exact clicks and keys for the goal being worked on -->
+                <span v-if="mistakes >= 2 && i === goals.findIndex(x => !x.done)" class="mt-1 block rounded-lg px-2.5 py-1.5 text-xs font-normal bg-amber-50 text-amber-900 dark:bg-amber-900/30 dark:text-amber-100 ring-2 ring-amber-300 dark:ring-amber-700"><b>How:</b> {{ g.how }}</span>
+              </span>
             </li>
           </ul>
           <p v-if="tip" class="mt-3 text-sm rounded-xl px-3 py-2" :class="tip.bad ? 'bg-rose-50 text-rose-800 dark:bg-rose-900/30 dark:text-rose-200' : 'bg-indigo-50 text-indigo-900 dark:bg-indigo-900/30 dark:text-indigo-100'">{{ tip.text }}</p>
@@ -454,18 +458,18 @@ function setPart(p: Part) {
 
 const goals = computed(() => {
   if (part.value === 'bootfix') return [
-    { text: 'Switch on and see the error', done: flags.value.error },
-    { text: 'Restart, and press DEL while the logo shows to open BIOS Setup', done: flags.value.entered },
-    { text: 'On the Boot tab, make the SSD Boot Option #1', done: saved.value.b1 === SSD },
-    { text: 'Save changes and reset (F10, then Yes)', done: flags.value.saved && saved.value.b1 === SSD },
-    { text: 'The computer starts', done: flags.value.booted }
+    { text: 'Switch on and see the error', done: flags.value.error, how: 'Press the round power button under the screen, then wait and read what the screen says.' },
+    { text: 'Restart, and press DEL while the logo shows to open BIOS Setup', done: flags.value.entered, how: 'Click Restart. As soon as "Press DEL to enter Setup" shows, click the Del key (or press Delete on your keyboard) - straight away, before it disappears.' },
+    { text: 'On the Boot tab, make the SSD Boot Option #1', done: saved.value.b1 === SSD, how: 'Click the Boot tab at the top of the blue screen, click Boot Option #1, then click the SSD in the list.' },
+    { text: 'Save changes and reset (F10, then Yes)', done: flags.value.saved && saved.value.b1 === SSD, how: 'Click the F10 key, then click Yes.' },
+    { text: 'The computer starts', done: flags.value.booted, how: 'Wait - with the SSD first, it starts Windows.' }
   ]
   return [
-    { text: 'Switch on and read the warning', done: flags.value.error },
-    { text: 'Press F1 to open Setup', done: flags.value.entered },
-    { text: 'On the Main tab, set today\'s date and the time', done: saved.value.date === TODAY && saved.value.time === NOW },
-    { text: 'Save and reset - the computer starts', done: flags.value.booted },
-    { text: 'Decide what fixes it for good', done: cmosAnswered.value }
+    { text: 'Switch on and read the warning', done: flags.value.error, how: 'Press the round power button under the screen, then read the warning.' },
+    { text: 'Press F1 to open Setup', done: flags.value.entered, how: 'While the warning is on the screen, click the F1 key.' },
+    { text: 'On the Main tab, set today\'s date and the time', done: saved.value.date === TODAY && saved.value.time === NOW, how: 'On the Main tab click System Date and choose today\'s date, then click System Time and choose the time now.' },
+    { text: 'Save and reset - the computer starts', done: flags.value.booted, how: 'Click the F10 key, then click Yes.' },
+    { text: 'Decide what fixes it for good', done: cmosAnswered.value, how: 'Answer the question below: what keeps the clock when the power is off?' }
   ]
 })
 const partDone = computed(() => (part.value === 'bootfix' || part.value === 'cmos') && goals.value.every(g => g.done))

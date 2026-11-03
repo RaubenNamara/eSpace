@@ -43,7 +43,15 @@
                 <h2 class="text-base font-bold text-gray-900 dark:text-white">{{ current.title }}</h2>
                 <p class="text-sm text-gray-700 dark:text-gray-200 mt-1">{{ current.text }}</p>
 
-                <p v-if="current.hint && (level === 'simple' || hintShown || assist)" class="mt-2 text-xs rounded-lg px-2.5 py-1.5 bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200" :class="assist && level !== 'simple' ? 'ring-2 ring-amber-300 dark:ring-amber-700' : ''">
+                <!-- Three wrong tries on a step: the right thing, plainly, and it can be shown -->
+                <div v-if="showMe && current.hint" class="mt-3 rounded-xl border-2 border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 p-3">
+                  <p class="text-xs font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300">Here is the right thing to do</p>
+                  <p class="mt-1 text-sm font-semibold text-gray-900 dark:text-white">{{ current.hint }}</p>
+                  <p v-if="pointsAt" class="mt-1 text-xs text-gray-600 dark:text-gray-300">The yellow arrow in the picture points at it.</p>
+                  <button type="button" class="mt-2.5 w-full btn-primary !py-2 !text-sm" @click="doForMe">Show me (-3 points)</button>
+                </div>
+
+                <p v-else-if="current.hint && (level === 'simple' || hintShown || assist)" class="mt-2 text-xs rounded-lg px-2.5 py-1.5 bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200" :class="assist && level !== 'simple' ? 'ring-2 ring-amber-300 dark:ring-amber-700' : ''">
                   <AppIcon name="bulb" class="w-3.5 h-3.5 inline -mt-0.5" />
                   <span v-if="assist && !hintShown && level !== 'simple'" class="font-semibold mr-1">{{ assistReason }}</span>{{ current.hint }}
                 </p>
@@ -57,6 +65,7 @@
                     <AppIcon name="document" class="w-3.5 h-3.5" />Read about this: {{ l.topic_title }}<template v-if="l.page_number"> · page {{ l.page_number }}</template>
                   </a>
                 </div>
+                <p v-if="upNext" class="mt-2 text-[11px] text-gray-500 dark:text-gray-400 lg:hidden">Then: {{ upNext.title }}</p>
               </div>
             </Transition>
           </template>
@@ -248,14 +257,32 @@ const onMistake = (message: string) => {
   if (finished.value) return
   mistakes.value++
   stepMistakes.value++
+  if (stepMistakes.value >= 3 && current.value?.hint) {
+    assist.value = true
+    say('bad', `${message} Do it like this: ${current.value.hint}`)
+    return
+  }
   if (stepMistakes.value >= 2 && !assist.value && current.value?.hint) {
     assist.value = true
     assistReason.value = 'Two tries - here is a hint:'
-    say('bad', `${message} Look at the hint - what to use is now glowing.`)
+    say('bad', `${message} Look at the hint${pointsAt.value ? ' - the yellow arrow shows what to use.' : ' - what to use is now glowing.'}`)
     return
   }
   say('bad', message)
 }
+// After three wrong tries the step's right move is spelled out, with a button that does it while
+// the learner watches (it costs what a hint costs)
+const showMe = computed(() => stepMistakes.value >= 3 && !finished.value)
+const pointsAt = computed(() => activity.value?.scene === 'assembly' || (activity.value?.scene === 'parts' && level.value === 'simple'))
+const doForMe = () => {
+  const step = current.value
+  if (!step || finished.value) return
+  hints.value++
+  onAct(step.action)
+  say('info', `Shown: ${step.title.charAt(0).toLowerCase()}${step.title.slice(1)}. Look at what changed in the picture, then carry on.`)
+}
+// The step after this one (on a phone, where the list of steps is not shown)
+const upNext = computed(() => (level.value === 'simple' ? steps.value[stepIndex.value + 1] || null : null))
 const showHint = () => {
   hints.value++
   hintShown.value = true

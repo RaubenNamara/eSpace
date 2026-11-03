@@ -54,7 +54,7 @@
             <span class="hidden sm:inline px-2 py-1 rounded-lg bg-black/45 text-white text-[11px]">Tap a danger · drag to look round · pinch or scroll to zoom</span>
             <div class="flex gap-1.5 pointer-events-auto ml-auto">
               <button type="button" class="px-2.5 py-1 rounded-lg bg-white/90 text-gray-800 text-xs font-semibold shadow-sm hover:bg-white" @click="wholeView">Whole room</button>
-              <button v-if="phase === 'play'" type="button" class="px-2.5 py-1 rounded-lg bg-amber-400 text-gray-900 text-xs font-semibold shadow-sm hover:bg-amber-300" @click="hint">Hint</button>
+              <button v-if="phase === 'play'" type="button" class="px-2.5 py-1 rounded-lg bg-amber-400 text-gray-900 text-xs font-semibold shadow-sm hover:bg-amber-300" @click="hint()">Hint</button>
             </div>
           </div>
         </div>
@@ -278,6 +278,7 @@ function onUp(e: PointerEvent) {
     if (isFound(hk)) return
     const h = round.value.find(x => x.key === hk)!
     found.value = [...found.value, hk]
+    missStreak = 0
     current.value = h
     const m = marker(tickTex(), h.at)
     marks.set(hk, m)
@@ -289,20 +290,30 @@ function onUp(e: PointerEvent) {
   const d = DECOYS.find(x => x.key === hit.userData.decoy)
   if (d) {
     wrongTaps.value++
+    missStreak++
+    // three wrong taps in a row: a free ring round one still to find, and the view turns to it
+    if (missStreak >= 3) {
+      missStreak = 0
+      hint(true)
+      say(`Not a hazard. ${d.why} Here is one to find - look inside the yellow ring.`)
+      return
+    }
     say(`Not a hazard. ${d.why}`)
   }
 }
+let missStreak = 0
 
-function hint() {
+function hint(free = false) {
   const left = round.value.filter(h => !isFound(h.key))
   if (!left.length || !wb.value) return
-  hints.value++
+  if (!free) hints.value++
   const h = left[Math.floor(Math.random() * left.length)]
   if (hintRing) wb.value.scene.remove(hintRing)
   hintRing = marker(ringTex(), [h.at[0], h.at[1] - 0.12, h.at[2]], 0.3)
   wb.value.scene.add(hintRing)
-  hintUntil = performance.now() + 3500
-  say('Look inside the yellow ring')
+  hintUntil = performance.now() + (free ? 6000 : 3500)
+  if (free) lookAt(h.at)
+  else say('Look inside the yellow ring')
 }
 
 onMounted(async () => {

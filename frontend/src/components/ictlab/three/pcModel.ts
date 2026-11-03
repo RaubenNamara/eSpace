@@ -364,7 +364,7 @@ export function buildPc(): PcRig {
   const connectors: PcRig['connectors'] = { cpu_fan: cpuFanHeader, atx24, sata, fpanel }
   // A connector is a few millimetres across - far too small to tap. Each gets a generous invisible
   // touch area in front of it (it stays clear of the parts around it).
-  const touchSize: Record<ConnectorKey, THREE.Vector3Tuple> = { cpu_fan: [0.028, 0.022, 0.03], atx24: [0.024, 0.06, 0.03], sata: [0.028, 0.03, 0.03], fpanel: [0.04, 0.02, 0.03] }
+  const touchSize: Record<ConnectorKey, THREE.Vector3Tuple> = { cpu_fan: [0.04, 0.034, 0.034], atx24: [0.024, 0.06, 0.03], sata: [0.028, 0.03, 0.03], fpanel: [0.04, 0.02, 0.03] }
   for (const k of Object.keys(connectors) as ConnectorKey[]) {
     const pad = new THREE.Mesh(new THREE.BoxGeometry(...touchSize[k]), new THREE.MeshBasicMaterial({ visible: false }))
     pad.position.z = 0.012

@@ -48,6 +48,21 @@
       </div>
     </div>
 
+    <!-- The dusty parts as buttons too: hold a fan still, or blow the dust off (the same as pressing
+         and holding on the part in the picture - it still has to be the right one, done safely) -->
+    <div v-if="partButtons.length" class="mt-3 flex flex-wrap items-center gap-1.5">
+      <span class="text-xs font-semibold text-gray-600 dark:text-gray-300 mr-1">{{ tool === 'hand' ? 'Hold still:' : 'Blow the dust off:' }}</span>
+      <button
+        v-for="b in partButtons"
+        :key="b.key"
+        type="button"
+        class="px-2.5 py-1 rounded-lg border border-gray-300 dark:border-gray-600 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:border-indigo-400 disabled:opacity-50"
+        :class="guide && step?.action === b.action ? 'ict-glow-btn' : ''"
+        :disabled="blowingKey !== null"
+        @click="partButton(b)"
+      >{{ b.label }}{{ blowingKey === b.key ? '…' : '' }}</button>
+    </div>
+
     <div class="mt-3 grid grid-cols-4 sm:grid-cols-6 gap-1.5">
       <button
         v-for="t in tools"
@@ -433,6 +448,9 @@ function answer(ok: boolean, why?: string) {
 const hoverName = ref('')
 const hoverAt = ref({ x: 0, y: 0 })
 let blowing: Dust | null = null
+// blowing from a button: aimed at the middle of the part, no pointer needed
+let autoBlow = false
+const blowingKey = ref<string | null>(null)
 let blowFor = 0
 let warnedLong = false
 const aim = new THREE.Vector3()
@@ -465,6 +483,12 @@ function onDown(ev: PointerEvent) {
   const d = hit ? dustOf(hit) : null
   if (!d) return
   w.controls.enabled = false
+  startBlow(d)
+}
+// Blowing one part: only the one the step wants, with the panel off and the blower working
+function startBlow(d: Dust, fromButton = false) {
+  const w = wb.value
+  if (!w) return
   if (props.step?.action !== 'clean:' + d.key) {
     // the runner says why not now (e.g. "hold the fan still first")
     emit('act', 'clean:' + d.key)
@@ -482,6 +506,26 @@ function onDown(ev: PointerEvent) {
   blowing = d
   blowFor = 0
   warnedLong = false
+  autoBlow = fromButton
+  blowingKey.value = fromButton ? d.key : null
+}
+
+// The parts as buttons: the fans to hold with the hand, the dusty parts to blow with a blower
+const DUST_NAMES: Record<string, string> = { cooler: 'CPU cooler', gpu: 'Graphics card', casefan: 'Case fan', psu: 'Power supply grille', ram: 'Memory slots', floor: 'Bottom of the case' }
+const partButtons = computed(() => {
+  void dustLeft.value
+  void props.done.length
+  if (tool.value === 'hand') {
+    return [...dust.values()].filter(d => d.fan && d.level > 0 && !has('hold:' + d.key)).map(d => ({ key: d.key, action: 'hold:' + d.key, label: `${DUST_NAMES[d.key]} fan` }))
+  }
+  if (!isBlower(tool.value)) return []
+  return [...dust.values()].filter(d => d.level > 0).map(d => ({ key: d.key, action: 'clean:' + d.key, label: DUST_NAMES[d.key] || d.name }))
+})
+function partButton(b: { key: string; action: string }) {
+  const d = dust.get(b.key)
+  if (!d) return
+  if (b.action.startsWith('hold:')) emit('act', b.action)
+  else startBlow(d, true)
 }
 function onMove(ev: PointerEvent) {
   const w = wb.value
@@ -510,6 +554,8 @@ function onMove(ev: PointerEvent) {
 function onUp(ev?: PointerEvent) {
   if (wb.value) wb.value.controls.enabled = true
   blowing = null
+  autoBlow = false
+  blowingKey.value = null
   const d = downAt
   downAt = null
   if (d && ev?.type === 'pointerup' && Math.hypot(ev.clientX - d.x, ev.clientY - d.y) < 6) flipSwitch(d.rocker)
@@ -528,12 +574,12 @@ function frame(dt: number) {
     if (spinFans() || blown) s.obj.rotation[s.axis] += dt * s.speed * (blown ? 3 : 1)
   }
   // blowing: the can follows the pointer, dust comes off in puffs
-  if (blowing && pointer) {
-    const hit = w.pick(pointer, [blowing.zone])
+  if (blowing && (pointer || autoBlow)) {
+    const hit = !autoBlow && pointer ? w.pick(pointer, [blowing.zone]) : null
     const ray = new THREE.Vector3()
     w.camera.getWorldDirection(ray)
     aim.copy(hit ? hit.position : blowing.zone.position)
-    if (hit) {
+    if (hit && pointer) {
       const rc = new THREE.Raycaster()
       const rect = w.canvas.getBoundingClientRect()
       rc.setFromCamera(new THREE.Vector2(((pointer.clientX - rect.left) / rect.width) * 2 - 1, -((pointer.clientY - rect.top) / rect.height) * 2 + 1), w.camera)

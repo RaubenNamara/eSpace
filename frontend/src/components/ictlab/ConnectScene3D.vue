@@ -33,6 +33,21 @@
       Connecting a computer needs 3D, which this device cannot show. Try it on another phone or a computer.
     </p>
 
+    <!-- A cable in hand: the ports as buttons too - the right one still has to be chosen -->
+    <div v-if="selected && portButtons.length" class="mt-3 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/30 p-2.5">
+      <p class="text-xs font-semibold text-indigo-900 dark:text-indigo-100 mb-2">Plug the {{ cableOf(selected)?.short }} into:</p>
+      <div class="flex flex-wrap gap-1.5">
+        <button
+          v-for="p in portButtons"
+          :key="p.key"
+          type="button"
+          class="px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:border-indigo-400"
+          :class="guide && portFits(p) ? 'ict-glow-btn' : ''"
+          @click="tryPort(p)"
+        >{{ p.label }}</button>
+      </div>
+    </div>
+
     <!-- The cables and switches as buttons too (easier on a small screen) -->
     <div class="mt-3 grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-10 gap-1.5">
       <button
@@ -242,6 +257,7 @@ onMounted(async () => {
   backLight.position.set(-0.08, 0.32, 0.62)
   w.scene.add(backLight)
   for (const p of tower.ports) addPick(p.hit, `port:${p.key}`)
+  portsReady.value++
   addPick(tower.psuSwitch, 'psu')
   addPick(tower.powerButton, 'powerbtn')
 
@@ -352,6 +368,21 @@ onBeforeUnmount(() => {
 })
 
 // ---------------------------------------------------------------- drawing what was accepted
+// The ports as buttons: one per kind of port that is still free (two free USB ports show once)
+const portsReady = ref(0)
+const portButtons = computed(() => {
+  void portsReady.value
+  void props.done.length
+  if (!tower) return []
+  const seen = new Set<string>()
+  return tower.ports.filter(p => {
+    if (portIsUsed(p) || seen.has(p.label)) return false
+    seen.add(p.label)
+    return true
+  })
+})
+const portFits = (p: Port) => !!cableOf(selected.value)?.fits.includes(p.kind)
+
 function freePortFor(c: Cable) {
   return tower.ports.find(p => c.fits.includes(p.kind) && ![...portOf.values()].includes(p)) || null
 }

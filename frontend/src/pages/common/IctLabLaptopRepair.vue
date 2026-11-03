@@ -152,7 +152,17 @@
           <p class="mt-1 text-sm text-gray-700 dark:text-gray-200">{{ rStep.text }}</p>
           <p v-if="rStep.key === 'screws'" class="mt-1 text-xs font-semibold text-indigo-700 dark:text-indigo-300">{{ screwsOut }} of 9 screws out</p>
           <p v-if="rStep.why" class="mt-2 text-xs rounded-lg px-2.5 py-1.5 bg-amber-50 text-amber-900 dark:bg-amber-900/30 dark:text-amber-100">{{ rStep.why }}</p>
-          <button type="button" class="mt-3 btn-secondary !py-1.5 !text-sm" @click="hint">Show me</button>
+          <!-- three wrong taps on a step: it can be done for them, while they watch -->
+          <div v-if="stepWrong >= 3" class="mt-3 rounded-xl border-2 border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 p-3">
+            <p class="text-xs font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300">Here is the right thing to do</p>
+            <p class="mt-1 text-sm font-semibold text-gray-900 dark:text-white">{{ rStep.hint || rStep.title }}</p>
+            <p class="mt-0.5 text-xs text-gray-600 dark:text-gray-300">What to tap is glowing in the picture.</p>
+            <button type="button" class="mt-2.5 w-full btn-primary !py-2 !text-sm" @click="doStepForMe">Do this step for me</button>
+          </div>
+          <template v-else>
+            <p v-if="glow && rStep.hint" class="mt-2 text-xs rounded-lg px-2.5 py-1.5 bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200 ring-2 ring-amber-300 dark:ring-amber-700">{{ rStep.hint }}</p>
+            <button v-else type="button" class="mt-3 btn-secondary !py-1.5 !text-sm" @click="hint">Show me</button>
+          </template>
         </template>
         <p v-if="repairMsg" class="mt-3 text-sm rounded-lg px-2.5 py-2" :class="repairMsg.bad ? 'bg-rose-50 text-rose-800 dark:bg-rose-900/30 dark:text-rose-200' : 'bg-emerald-50 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200'">{{ repairMsg.text }}</p>
         <div v-if="!rStep" class="mt-2 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 p-3 text-sm text-emerald-900 dark:text-emerald-100">
@@ -170,7 +180,7 @@
     <div v-else-if="stage === 'usb' || stage === 'install'" class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_22rem] gap-4 items-start">
       <section class="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-2 sm:p-3">
         <p class="px-1 pb-2 text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ stage === 'usb' ? 'On another working PC' : 'On the repaired laptop' }}</p>
-        <WindowsScreen :screen="fScreen || flow[flow.length - 1]" :picked="fPicked" :progress="fProgress" :show-right="fRight" @choose="choose" />
+        <WindowsScreen :screen="fScreen || flow[flow.length - 1]" :picked="fPicked" :progress="fProgress" :show-right="fRight || screenWrong >= 2" @choose="choose" />
       </section>
       <aside class="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 lg:sticky lg:top-20">
         <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-2">
@@ -338,7 +348,10 @@ function resetRepair() {
   glow.value = false
   footUp.value = false
 }
+// Wrong taps on the step being done now: at two what to tap glows (free), at three it can be done for them
+const stepWrong = ref(0)
 function advance(msg?: string) {
+  stepWrong.value = 0
   const s = rStep.value!
   repairDone.value = [...repairDone.value, s.key]
   repairMsg.value = msg ? { text: msg } : null
@@ -377,7 +390,27 @@ function onTap(key: string) {
     return advance(notes[s.key])
   }
   repairWrong.value++
-  repairMsg.value = { text: REPAIR_WRONG[base] || `Not that - ${s.title.toLowerCase()}.`, bad: true }
+  stepWrong.value++
+  const why = REPAIR_WRONG[base] || `Not that - ${s.title.toLowerCase()}.`
+  if (stepWrong.value >= 2 && !glow.value) {
+    glow.value = true
+    if (VIEW[s.key]) scene.value?.look(VIEW[s.key])
+    repairMsg.value = { text: `${why} Look - what to tap is now glowing.`, bad: true }
+    return
+  }
+  repairMsg.value = { text: why, bad: true }
+}
+// Does the step the way a tap would (every screw, the foot then the screw under it) - counts as a hint
+function doStepForMe() {
+  const s = rStep.value
+  if (!s) return
+  hints.value++
+  if (s.key === 'screws') {
+    while (rStep.value?.key === 'screws') onTap('screw:auto')
+  } else if (s.key === 'foot') {
+    if (!footUp.value) onTap('foot')
+    onTap('hidden')
+  } else if (s.target) onTap(s.target)
 }
 function hint() {
   hints.value++
@@ -400,7 +433,10 @@ function startFlow(_s: Stage) {
   flowWrong.value = 0
   enterScreen()
 }
+// Wrong picks on this screen: at two the right choice is outlined in green
+const screenWrong = ref(0)
 function enterScreen() {
+  screenWrong.value = 0
   fPicked.value = null
   fRight.value = false
   fWhy.value = ''
@@ -428,7 +464,8 @@ function choose(i: number) {
     fWhy.value = ''
   } else {
     flowWrong.value++
-    fWhy.value = c.why || 'Not that one.'
+    screenWrong.value++
+    fWhy.value = (c.why || 'Not that one.') + (screenWrong.value >= 2 ? ' The right choice is now outlined in green.' : '')
   }
 }
 function nextScreen() {
