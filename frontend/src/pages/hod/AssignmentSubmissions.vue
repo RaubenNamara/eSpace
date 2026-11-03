@@ -44,11 +44,24 @@
       :empty-title="emptyText.title"
       :empty-message="emptyText.message"
     >
+      <template #cell-student_name="{ row }">
+        <span class="flex items-center gap-2.5 min-w-0">
+          <span class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-indigo-50 text-[11px] font-bold text-indigo-700 ring-1 ring-indigo-100 dark:bg-indigo-900/40 dark:text-indigo-300 dark:ring-indigo-800">{{ initials(row.student_name) }}</span>
+          <span class="truncate font-semibold text-gray-900 dark:text-white">{{ row.student_name }}</span>
+        </span>
+      </template>
+      <template #cell-admission_number="{ row }">
+        <span v-if="row.admission_number" class="rounded-md bg-gray-100 px-1.5 py-0.5 font-mono text-xs text-gray-700 dark:bg-gray-700 dark:text-gray-200">{{ row.admission_number }}</span>
+        <span v-else class="text-gray-400">-</span>
+      </template>
       <template #cell-status="{ row }">
         <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold" :class="badge(row.status)">{{ statusText(row.status) }}</span>
       </template>
       <template #cell-percentage="{ row }">
-        <span v-if="row.percentage !== null" class="font-semibold tabular-nums" :class="Number(row.percentage) >= 60 ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'">{{ Math.round(Number(row.percentage)) }}%</span>
+        <span v-if="row.percentage !== null" class="inline-flex items-center gap-2">
+          <span class="hidden h-1.5 w-16 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700 sm:block"><span class="block h-full rounded-full" :class="Number(row.percentage) >= 60 ? 'bg-emerald-500' : 'bg-amber-500'" :style="{ width: `${Math.min(100, Math.max(0, Number(row.percentage)))}%` }"></span></span>
+          <span class="w-10 text-right font-semibold tabular-nums" :class="Number(row.percentage) >= 60 ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'">{{ Math.round(Number(row.percentage)) }}%</span>
+        </span>
         <span v-else class="text-gray-400">-</span>
       </template>
       <template #cell-submitted_at="{ row }">
@@ -99,6 +112,7 @@ const title = ref('')
 
 const columns: Column[] = [
   { key: 'student_name', label: 'Student', sortable: true, mobile: 'title' },
+  { key: 'admission_number', label: 'Reg. no', sortable: true, mobile: 'field', value: (r: Row) => r.admission_number || '' },
   { key: 'class_label', label: 'Class', sortable: true, mobile: 'subtitle' },
   { key: 'status', label: 'Status', sortable: true },
   { key: 'percentage', label: 'Score', sortable: true, align: 'center', value: (r: Row) => (r.percentage === null ? -1 : Number(r.percentage)) },
@@ -131,6 +145,7 @@ const emptyText = computed(() => category.value === 'marked'
     : { title: 'Everyone who started has handed in', message: 'Students who have not opened the assessment are not listed.' })
 const statusText = (s: string) => ({ returned: 'Marked & returned', graded: 'Marked, not returned', submitted: 'Handed in', marking: 'Being marked', in_progress: 'Started, not handed in' } as Record<string, string>)[s] || s.replace('_', ' ')
 
+const initials = (name: string) => String(name || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase()
 const pct = (v: number | null | undefined) => (v === null || v === undefined ? '-' : `${Math.round(Number(v))}%`)
 const statItems = computed<StatItem[]>(() => {
   const s = stats.value

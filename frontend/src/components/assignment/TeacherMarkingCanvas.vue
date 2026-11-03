@@ -118,7 +118,7 @@
 <script setup lang="ts">
 import { useToastStore } from '@/stores/toast'
 import AppIcon from '@/components/common/AppIcon.vue'
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import axios from 'axios'
 import type { AnnotationLayerJSON, AnnotationTool, AssignmentQuestion } from '@/types'
 import { TYPED_ANSWER_PAGE } from '@/types'
@@ -206,11 +206,14 @@ const pdfReadonlyLayersByPage = computed(() => {
 })
 
 let typedSaveTimeout: number | null = null
+// the save the timer is waiting to send, kept so closing the sheet can send it at once
+let pendingTypedSave: (() => Promise<void>) | null = null
 
 function onTypedAnswerLayerChange(layer: AnnotationLayerJSON) {
   markingLayer.value = { ...markingLayer.value, [TYPED_ANSWER_PAGE]: layer }
   if (typedSaveTimeout) clearTimeout(typedSaveTimeout)
-  typedSaveTimeout = window.setTimeout(async () => {
+  pendingTypedSave = async () => {
+    pendingTypedSave = null
     try {
       await axios.put(`${API_BASE}/teacher/assignments/${props.assignmentId}/submissions/${props.submissionId}/marking-annotations`, {
         question_id: props.question.id,
@@ -221,7 +224,8 @@ function onTypedAnswerLayerChange(layer: AnnotationLayerJSON) {
     } catch {
       toast.error('Your marks could not be saved. Check your connection and mark again.')
     }
-  }, 1500)
+  }
+  typedSaveTimeout = window.setTimeout(() => { pendingTypedSave?.() }, 1500)
 }
 
 // Submitted evidence: every file the student provided - the single primary upload (the one Write
@@ -332,10 +336,12 @@ function measureEvidenceImage() {
 watch(() => selectedFile.value?.url, measureEvidenceImage, { immediate: true })
 
 let evidenceSaveTimeout: number | null = null
+let pendingEvidenceSave: (() => Promise<void>) | null = null
 
 function persistEvidence(attachmentId: number | null, pageNumber: number, layer: AnnotationLayerJSON) {
   if (evidenceSaveTimeout) clearTimeout(evidenceSaveTimeout)
-  evidenceSaveTimeout = window.setTimeout(async () => {
+  pendingEvidenceSave = async () => {
+    pendingEvidenceSave = null
     try {
       await axios.put(`${API_BASE}/teacher/assignments/${props.assignmentId}/submissions/${props.submissionId}/marking-annotations`, {
         question_id: props.question.id,
@@ -347,8 +353,18 @@ function persistEvidence(attachmentId: number | null, pageNumber: number, layer:
     } catch {
       toast.error('Your marks could not be saved. Check your connection and mark again.')
     }
-  }, 1500)
+  }
+  evidenceSaveTimeout = window.setTimeout(() => { pendingEvidenceSave?.() }, 1500)
 }
+
+// Moving on (the next student, another question) closes this sheet: whatever was drawn in the last
+// moment is saved now rather than after the timer, so going back finds it there
+onBeforeUnmount(() => {
+  if (typedSaveTimeout) clearTimeout(typedSaveTimeout)
+  if (evidenceSaveTimeout) clearTimeout(evidenceSaveTimeout)
+  pendingTypedSave?.()
+  pendingEvidenceSave?.()
+})
 
 function onEvidenceImageLayerChange(layer: AnnotationLayerJSON) {
   const file = selectedFile.value

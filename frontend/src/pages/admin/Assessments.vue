@@ -6,6 +6,7 @@
           {{ filteredAssignments.length }} of {{ assignments.length }} shown
         </span>
       </template>
+      <StatStrip v-if="!loading && assignments.length" :items="summaryItems" />
       <template #filters>
         <div class="relative w-full sm:w-72">
           <svg class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -115,32 +116,35 @@
                   <div
                     v-for="a in subject.assignments"
                     :key="a.id"
-                    class="bg-gray-50 dark:bg-gray-950/40 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4"
+                    class="group flex flex-col rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-gray-700 dark:bg-gray-900/60"
                   >
                     <div class="flex items-start justify-between gap-3">
-                      <div class="min-w-0">
-                        <p class="text-sm font-semibold text-gray-900 dark:text-white truncate" :title="a.title">{{ a.title }}</p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ a.teacher_name }}</p>
+                      <p class="min-w-0 text-[15px] font-semibold leading-snug text-gray-900 dark:text-white line-clamp-2" :title="a.title">{{ a.title }}</p>
+                      <span class="flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap" :class="statusBadge(a.status)">
+                        <span class="h-1.5 w-1.5 rounded-full bg-current opacity-70"></span>{{ capitalize(a.status) }}
+                      </span>
+                    </div>
+                    <div class="mt-2 flex items-center gap-2 min-w-0">
+                      <span class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-indigo-50 text-[10px] font-bold text-indigo-700 ring-1 ring-indigo-100 dark:bg-indigo-900/40 dark:text-indigo-300 dark:ring-indigo-800">{{ initials(a.teacher_name) }}</span>
+                      <span class="truncate text-xs text-gray-600 dark:text-gray-300">{{ a.teacher_name }}<template v-if="a.department_name"> · {{ a.department_name }}</template></span>
+                    </div>
+
+                    <dl class="mt-3 grid grid-cols-3 gap-2 rounded-lg bg-gray-50 px-3 py-2 text-xs dark:bg-gray-800/70">
+                      <div class="min-w-0" :title="isWholeClass(a) ? 'All streams' : 'Streams'">
+                        <dt class="text-[10px] font-medium uppercase tracking-wide text-gray-400">For</dt>
+                        <dd class="truncate font-semibold text-gray-800 dark:text-gray-100">{{ audienceLabel(a) }}</dd>
                       </div>
-                      <span class="flex-shrink-0 px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap" :class="statusBadge(a.status)">{{ capitalize(a.status) }}</span>
-                    </div>
+                      <div class="min-w-0">
+                        <dt class="text-[10px] font-medium uppercase tracking-wide text-gray-400">Due</dt>
+                        <dd class="truncate font-semibold" :class="isOverdue(a) ? 'text-rose-600 dark:text-rose-400' : 'text-gray-800 dark:text-gray-100'" :title="a.due_date ? (isOverdue(a) ? 'Past the due date' : formatDate(a.due_date)) : ''">{{ a.due_date ? shortDate(a.due_date) : 'None' }}</dd>
+                      </div>
+                      <div class="min-w-0 text-right">
+                        <dt class="text-[10px] font-medium uppercase tracking-wide text-gray-400">Handed in</dt>
+                        <dd class="font-semibold tabular-nums text-gray-800 dark:text-gray-100">{{ a.submissions_count }}</dd>
+                      </div>
+                    </dl>
 
-                    <div class="mt-3 flex flex-wrap gap-1.5">
-                      <span v-if="a.department_name" class="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-400">
-                        {{ a.department_name }}
-                      </span>
-                      <span class="text-xs px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300 font-semibold" :title="isWholeClass(a) ? 'All streams' : 'Streams'">
-                        {{ audienceLabel(a) }}
-                      </span>
-                      <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
-                        {{ a.due_date ? `Due ${formatDate(a.due_date)}` : 'No deadline' }}
-                      </span>
-                      <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
-                        {{ a.submissions_count }} handed in
-                      </span>
-                    </div>
-
-                    <div class="mt-3 flex items-center gap-1.5">
+                    <div class="mt-auto pt-3 flex items-center gap-1.5">
                       <RouterLink
                         :to="`/admin/assessments/${a.id}/preview`"
                         class="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 transition-colors whitespace-nowrap"
@@ -182,6 +186,7 @@
 <script setup lang="ts">
 import EmptyState from '@/components/ui/EmptyState.vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
+import StatStrip, { type StatItem } from '@/components/ui/StatStrip.vue'
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import { useConfirmStore } from '@/stores/confirm'
@@ -373,6 +378,22 @@ const subjectsForStream = (streamAssignments: AssignmentRow[]): SubjectGroup[] =
 }
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+const initials = (name: string) => String(name || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase()
+// '30 Aug', with the year only when it is not this year
+const shortDate = (d: string) => { const x = new Date(d); return x.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', ...(x.getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}) }) }
+const isOverdue = (a: AssignmentRow) => a.status === 'published' && !!a.due_date && new Date(a.due_date).getTime() < Date.now()
+
+// School-wide summary of what is listed (follows the search and filters)
+const summaryItems = computed<StatItem[]>(() => {
+  const list = filteredAssignments.value
+  return [
+    { label: 'Assessments', value: list.length, tone: 'indigo' },
+    { label: 'Published', value: list.filter(a => a.status === 'published').length, tone: 'emerald' },
+    { label: 'Drafts', value: list.filter(a => a.status === 'draft').length, tone: 'amber' },
+    { label: 'Scripts handed in', value: list.reduce((t, a) => t + (Number(a.submissions_count) || 0), 0).toLocaleString(), tone: 'sky' },
+    { label: 'Teachers', value: new Set(list.map(a => a.teacher_name)).size, tone: 'gray' }
+  ]
+})
 
 const statusBadge = (status: string) => {
   if (status === 'published') return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'

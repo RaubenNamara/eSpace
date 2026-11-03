@@ -361,7 +361,11 @@ watch([() => row.value?.submission_id, () => q.value?.id], loadSheet)
 
 const markInput = ref<HTMLInputElement | null>(null)
 const goTo = async (i: number) => {
-  if (row.value) save(row.value)
+  if (row.value) {
+    save(row.value)
+    // their script is read again next time, with the ticks and notes just drawn on it
+    sheetCache.delete(row.value.submission_id)
+  }
   pos.value = Math.max(0, Math.min(ordered.value.length - 1, i))
   window.scrollTo({ top: 0, behavior: 'smooth' })
   await nextTick()
