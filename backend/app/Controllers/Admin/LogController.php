@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace eSpace\App\Controllers\Admin;
 
 use eSpace\App\Controllers\Controller;
+use eSpace\App\Services\DeviceInfo;
 
 /**
  * Admin System Logs Controller
@@ -129,21 +130,40 @@ class LogController extends Controller
             return;
         }
 
-        $stmt = $this->db->prepare(
-            "SELECT id, logged_in_at, ip_address, browser, os, device_type, device_model
-             FROM login_logs
-             WHERE user_id = :user_id AND role = :role
-               AND logged_in_at >= :day_start AND logged_in_at < :day_end
-             ORDER BY logged_in_at ASC"
-        );
-        $stmt->execute([
+        $params = [
             'user_id' => $userId,
             'role' => $role,
             'day_start' => $date . ' 00:00:00',
             'day_end' => date('Y-m-d', strtotime($date . ' +1 day')) . ' 00:00:00',
-        ]);
+        ];
+        $where = 'WHERE user_id = :user_id AND role = :role AND logged_in_at >= :day_start AND logged_in_at < :day_end ORDER BY logged_in_at ASC';
+        try {
+            $stmt = $this->db->prepare("SELECT id, logged_in_at, ip_address, user_agent, browser, os, device_type, device_model FROM login_logs {$where}");
+            $stmt->execute($params);
+        } catch (\PDOException $e) {
+            // a database without the device columns yet (migration 139)
+            $stmt = $this->db->prepare("SELECT id, logged_in_at, ip_address, user_agent FROM login_logs {$where}");
+            $stmt->execute($params);
+        }
 
-        $this->success(['times' => $stmt->fetchAll(\PDO::FETCH_ASSOC)]);
+        $times = [];
+        foreach ($stmt->fetchAll(\PDO::FETCH_ASSOC) as $r) {
+            // older sign-ins only have the User-Agent string - read the device from it
+            $dev = !empty($r['browser']) || !empty($r['os'])
+                ? ['browser' => $r['browser'], 'os' => $r['os'], 'device_type' => $r['device_type'], 'device_model' => $r['device_model']]
+                : DeviceInfo::fromUserAgent((string) ($r['user_agent'] ?? ''));
+            $times[] = [
+                'id' => (int) $r['id'],
+                'logged_in_at' => $r['logged_in_at'],
+                'ip_address' => $r['ip_address'],
+                'browser' => $dev['browser'] ?? null,
+                'os' => $dev['os'] ?? null,
+                'device_type' => $dev['device_type'] ?? null,
+                'device_model' => $dev['device_model'] ?? null,
+            ];
+        }
+
+        $this->success(['times' => $times]);
     }
 
     private function isAdmin(): bool
