@@ -22,8 +22,9 @@ class LogController extends Controller
     }
 
     /**
-     * List login events, most recent first
-     * GET /admin/logs
+     * Logins per person per day, the latest day first - one row with how many times they signed
+     * in, the first and last time and the last IP, instead of a row for every sign-in.
+     * GET /admin/logs?search=&role=&date=YYYY-MM-DD
      */
     public function index(): void
     {
@@ -34,8 +35,10 @@ class LogController extends Controller
 
         $search = $this->query('search', '');
         $role = $this->query('role', '');
-        $page = (int) $this->query('page', 1);
-        $limit = (int) $this->query('limit', 25);
+        $date = (string) $this->query('date', '');
+        $page = max(1, (int) $this->query('page', 1));
+        $limit = max(1, min(100, (int) $this->query('limit', 25)));
+        $offset = ($page - 1) * $limit;
 
         $where = [];
         $params = [];
@@ -55,27 +58,49 @@ class LogController extends Controller
             $params['role'] = $role;
         }
 
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            $where[] = 'logged_in_at >= :day_start AND logged_in_at < :day_end';
+            $params['day_start'] = $date . ' 00:00:00';
+            $params['day_end'] = date('Y-m-d', strtotime($date . ' +1 day')) . ' 00:00:00';
+        }
+
         $whereClause = empty($where) ? '1=1' : implode(' AND ', $where);
 
-        $countStmt = $this->db->prepare("SELECT COUNT(*) as total FROM login_logs WHERE {$whereClause}");
+        $countStmt = $this->db->prepare(
+            "SELECT COUNT(*) AS total, COALESCE(SUM(n), 0) AS logins FROM (
+                SELECT COUNT(*) AS n FROM login_logs WHERE {$whereClause}
+                GROUP BY user_id, role, DATE(logged_in_at)
+            ) g"
+        );
         $countStmt->execute($params);
-        $total = (int) $countStmt->fetch()['total'];
+        $counts = $countStmt->fetch();
+        $total = (int) $counts['total'];
 
-        $page = max(1, $page);
-        $limit = max(1, min(100, $limit));
-        $offset = ($page - 1) * $limit;
-
-        $sql = "SELECT id, user_id, role, username, full_name, ip_address, user_agent, logged_in_at
-                FROM login_logs
-                WHERE {$whereClause}
-                ORDER BY logged_in_at DESC
-                LIMIT {$limit} OFFSET {$offset}";
-        $stmt = $this->db->prepare($sql);
+        $stmt = $this->db->prepare(
+            "SELECT user_id, role, DATE(logged_in_at) AS day,
+                    MAX(username) AS username, MAX(full_name) AS full_name,
+                    COUNT(*) AS logins, MIN(logged_in_at) AS first_at, MAX(logged_in_at) AS last_at,
+                    SUBSTRING_INDEX(GROUP_CONCAT(COALESCE(ip_address, '') ORDER BY logged_in_at DESC SEPARATOR ','), ',', 1) AS last_ip,
+                    COUNT(DISTINCT ip_address) AS ips
+             FROM login_logs
+             WHERE {$whereClause}
+             GROUP BY user_id, role, DATE(logged_in_at)
+             ORDER BY last_at DESC
+             LIMIT {$limit} OFFSET {$offset}"
+        );
         $stmt->execute($params);
-        $logs = $stmt->fetchAll();
+        $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        foreach ($rows as &$r) {
+            $r['user_id'] = (int) $r['user_id'];
+            $r['logins'] = (int) $r['logins'];
+            $r['ips'] = (int) $r['ips'];
+            $r['last_ip'] = $r['last_ip'] !== '' ? $r['last_ip'] : null;
+        }
+        unset($r);
 
         $this->success([
-            'logs' => $logs,
+            'days' => $rows,
+            'total_logins' => (int) $counts['logins'],
             'pagination' => [
                 'page' => $page,
                 'limit' => $limit,
@@ -83,6 +108,42 @@ class LogController extends Controller
                 'pages' => (int) ceil($total / $limit)
             ]
         ]);
+    }
+
+    /**
+     * Every sign-in of one person on one day, in order - the times, and the device and IP of each.
+     * GET /admin/logs/times?user_id=&role=&date=YYYY-MM-DD
+     */
+    public function times(): void
+    {
+        if (!$this->isAdmin()) {
+            $this->forbidden();
+            return;
+        }
+
+        $userId = (int) $this->query('user_id', 0);
+        $role = (string) $this->query('role', '');
+        $date = (string) $this->query('date', '');
+        if (!$userId || $role === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            $this->error('user_id, role and date are required', 422);
+            return;
+        }
+
+        $stmt = $this->db->prepare(
+            "SELECT id, logged_in_at, ip_address, browser, os, device_type, device_model
+             FROM login_logs
+             WHERE user_id = :user_id AND role = :role
+               AND logged_in_at >= :day_start AND logged_in_at < :day_end
+             ORDER BY logged_in_at ASC"
+        );
+        $stmt->execute([
+            'user_id' => $userId,
+            'role' => $role,
+            'day_start' => $date . ' 00:00:00',
+            'day_end' => date('Y-m-d', strtotime($date . ' +1 day')) . ' 00:00:00',
+        ]);
+
+        $this->success(['times' => $stmt->fetchAll(\PDO::FETCH_ASSOC)]);
     }
 
     private function isAdmin(): bool

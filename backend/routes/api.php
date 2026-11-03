@@ -1114,6 +1114,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
 
         // System Logs
         Router::get('/logs', 'eSpace\App\Controllers\Admin\LogController@index');
+        Router::get('/logs/times', 'eSpace\App\Controllers\Admin\LogController@times');
 
         // Global search (shared eSpace\App\Controllers\SearchController - see notes there)
         Router::get('/search', 'eSpace\App\Controllers\SearchController@index');
