@@ -8,10 +8,24 @@
       {{ data?.role === 'marker' ? 'Dashboard' : 'Scripts' }}
     </button>
     <PageHeader title="Mark by question" :description="headerText" icon="clipboard" accent="indigo">
-      <template v-if="data?.role === 'owner'" #actions>
-        <button type="button" class="px-3 py-2 rounded-lg text-sm font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700" :aria-expanded="shareOpen" @click="toggleShare">
-          {{ shareOpen ? 'Close sharing' : 'Share the marking' }}
-        </button>
+      <template v-if="data?.role === 'owner' || (row && q)" #actions>
+        <div class="flex flex-col items-end gap-2">
+          <button v-if="data?.role === 'owner'" type="button" class="px-3 py-2 rounded-lg text-sm font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700" :aria-expanded="shareOpen" @click="toggleShare">
+            {{ shareOpen ? 'Close sharing' : 'Share the marking' }}
+          </button>
+          <!-- moving through the class: the mark saves on its own as it is typed -->
+          <div v-if="row && q" class="flex items-center gap-1.5">
+            <button type="button" class="px-2.5 py-2 rounded-lg text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40" :disabled="pos === 0" @click="goTo(pos - 1)">← Previous</button>
+            <button v-if="pos < ordered.length - 1" type="button" class="px-2.5 py-2 rounded-lg text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700" @click="goTo(pos + 1)">Skip →</button>
+            <button
+              type="button"
+              class="btn-primary"
+              :disabled="row.marks_awarded === null && !row.locked"
+              :title="row.marks_awarded === null && !row.locked ? 'Give a mark first' : ''"
+              @click="nextStudent"
+            >{{ pos < ordered.length - 1 ? 'Next student →' : 'Save and finish' }}</button>
+          </div>
+        </div>
       </template>
     </PageHeader>
 
@@ -86,146 +100,131 @@
       </div>
 
       <template v-else-if="q">
-        <!-- The question -->
-        <section class="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5 mb-4">
-          <div class="flex flex-wrap items-start gap-3">
-            <span class="px-2 py-1 rounded-lg text-xs font-bold bg-indigo-600 text-white">Q{{ current?.number }}</span>
-            <div class="flex-1 min-w-0 prose prose-sm dark:prose-invert max-w-none" v-html="q.html"></div>
-            <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 whitespace-nowrap">out of {{ fmtMarks(q.marks) }}</span>
-          </div>
-          <p v-if="q.correct && q.correct.length" class="mt-3 text-xs text-emerald-700 dark:text-emerald-300">
-            <b>Correct:</b> {{ q.correct.join(' · ') }}
+        <!-- Every student's answer to this question is marked: straight on to the next question -->
+        <div v-if="allMarkedHere" class="mb-4 rounded-lg border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 p-3 sm:p-4 flex flex-wrap items-center gap-3">
+          <p class="flex-1 min-w-0 text-sm text-emerald-900 dark:text-emerald-100">
+            <b>Q{{ current?.number }}</b> is marked for every student.<template v-if="!nextQ"> That was the last question.</template>
           </p>
-          <div class="mt-3 flex flex-wrap items-center gap-2 text-xs">
-            <span class="text-gray-500 dark:text-gray-400">{{ markedHere }}/{{ markable.length }} marked</span>
-            <button v-if="isObjective && unmarkedObjective.length" type="button" class="px-2.5 py-1.5 rounded-lg font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 hover:bg-emerald-100" :disabled="bulkSaving" @click="markObjective">
-              {{ bulkSaving ? 'Marking…' : `Mark the ${unmarkedObjective.length} unmarked: right ${q.marks}, wrong 0` }}
-            </button>
-            <label class="ml-auto inline-flex items-center gap-1.5 text-gray-500 dark:text-gray-400 cursor-pointer select-none">
-              <input v-model="hideMarked" type="checkbox" class="w-3.5 h-3.5 rounded border-gray-300 text-indigo-600"> Hide marked
-            </label>
-          </div>
-        </section>
-
-        <div v-if="!toMarkRows.length" class="mb-1 flex flex-wrap items-center gap-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 px-4 py-3">
-          <p class="flex-1 text-sm font-medium text-emerald-800 dark:text-emerald-200">Every answer to this question is marked.</p>
-          <button v-if="nextQ" type="button" class="btn-primary" @click="openQuestion(nextQ.id)">Mark Q{{ nextQ.number }} →</button>
+          <button v-if="nextQ" type="button" class="px-3.5 py-2 rounded-lg text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700" @click="openQuestion(nextQ.id)">Mark Q{{ nextQ.number }} →</button>
         </div>
-        <!-- One student at a time: mark, comment, then Next brings the next answer still to mark.
-             Marked answers leave the queue for the marked list below (A-Z, searchable). -->
-        <p v-else class="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
-          <span><b class="text-gray-900 dark:text-white tabular-nums">{{ toMarkRows.length }}</b> left to mark</span>
-          <span v-if="upNext">Up next: <span class="font-semibold text-gray-700 dark:text-gray-200">{{ niceName(upNext.student) }}</span></span>
-        </p>
-        <ul class="space-y-2.5">
-          <template v-for="(r, i) in shownRows" :key="r.submission_id">
-          <li v-if="i === toMarkShown.length" class="pt-3 flex flex-wrap items-center gap-2">
-            <h3 class="text-sm font-bold text-gray-900 dark:text-white">Marked <span class="font-semibold text-gray-400 tabular-nums">{{ markedRows.length }}</span></h3>
-            <label class="relative ml-auto w-full sm:w-64">
-              <span class="sr-only">Search marked students</span>
-              <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" /></svg>
-              <input v-model="markedSearch" type="search" placeholder="Search marked students" class="w-full pl-8 pr-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white">
-            </label>
-          </li>
-          <li
-            :data-unmarked="settled.has(r.submission_id) ? null : '1'"
-            class="rounded-2xl border bg-white dark:bg-gray-800 p-3 sm:p-4 transition-colors"
-            :class="r === currentRow ? 'border-indigo-300 dark:border-indigo-700 ring-2 ring-indigo-100 dark:ring-indigo-900/40' : r.marks_awarded !== null ? 'border-gray-200 dark:border-gray-700' : 'border-amber-200 dark:border-amber-800/70'"
-            @focusin="onRowFocus(r)"
-          >
-            <div class="flex flex-col md:flex-row gap-3">
-              <!-- Answer -->
-              <div class="flex-1 min-w-0">
-                <p class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                  <span class="font-semibold text-gray-900 dark:text-white">{{ niceName(r.student) }}</span>
-                  <span>{{ r.admission_number }}</span>
-                  <span v-if="r.locked" class="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-[10px] font-semibold">{{ r.status }} - reopen the script to change</span>
+
+        <!-- One student at a time, A-Z: the same layout as marking a script, for this question only -->
+        <div v-if="row" class="grid grid-cols-1 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6">
+          <div class="lg:col-span-3 xl:col-span-4 space-y-4 sm:space-y-6">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 flex flex-wrap items-start gap-3">
+              <div class="min-w-0 flex-1">
+                <h3 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-1 break-words">{{ niceName(row.student) }}</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                  Student {{ pos + 1 }} of {{ ordered.length }}<template v-if="row.admission_number"> • {{ row.admission_number }}</template>
                 </p>
-                <p v-if="r.chosen !== null" class="mt-1.5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-medium" :class="isRight(r) ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200' : 'bg-rose-50 text-rose-800 dark:bg-rose-900/30 dark:text-rose-200'">
-                  {{ isRight(r) ? '✓' : '✗' }} {{ r.chosen }}
-                </p>
-                <p v-else-if="r.answer_text && openSheet !== r.submission_id" class="mt-1.5 text-sm text-gray-800 dark:text-gray-100 whitespace-pre-line break-words line-clamp-[12]">{{ r.answer_text }}</p>
-                <p v-else-if="!r.has_file && !r.has_drawing" class="mt-1.5 text-sm italic text-gray-400">No answer</p>
-                <div v-if="r.files?.length || r.drawing" class="mt-1.5 flex flex-wrap gap-1.5">
-                  <a v-for="f in r.files" :key="f.path" :href="fileHref(f)" target="_blank" rel="noopener" class="inline-flex items-center gap-1 max-w-[16rem] px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-600 text-xs font-semibold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20">
-                    <span class="px-1 rounded bg-gray-100 dark:bg-gray-700 text-[9px] font-bold uppercase text-gray-600 dark:text-gray-300">{{ extOf(f.name) }}</span>
-                    <span class="truncate">{{ f.name }}</span>
-                  </a>
-                  <a v-if="r.drawing" :href="resolveAssetUrl(r.drawing)" target="_blank" rel="noopener" class="inline-flex items-center px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-600 text-xs font-semibold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20">Drawing</a>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-xs font-semibold" :class="row.locked ? 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' : row.marks_awarded !== null ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'">
+                {{ row.locked ? `${row.status} - reopen the script to change` : row.status === 'returned' ? 'Returned - a changed mark updates the total' : row.status === 'graded' ? 'Totalled - a changed mark updates the total' : row.marks_awarded !== null ? 'Marked' : 'To mark' }}
+              </span>
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+              <div class="mb-5">
+                <div class="mb-2 flex items-center justify-between gap-3">
+                  <span class="inline-flex h-7 min-w-[2rem] items-center justify-center rounded-lg bg-indigo-50 px-2 text-xs font-bold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">Q{{ current?.number }}</span>
+                  <span class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-bold tabular-nums text-gray-700 dark:bg-gray-700 dark:text-gray-200 whitespace-nowrap">{{ fmtMarks(q.marks) }} {{ Number(q.marks) === 1 ? 'mark' : 'marks' }}</span>
                 </div>
-                <button
-                  v-if="canWriteOn(r)"
-                  type="button"
-                  class="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
-                  :class="openSheet === r.submission_id ? 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700' : 'bg-indigo-600 text-white hover:bg-indigo-700'"
-                  :aria-expanded="openSheet === r.submission_id"
-                  @click="openSheet = openSheet === r.submission_id ? null : r.submission_id"
-                >
-                  <AppIcon name="pencil" class="w-3.5 h-3.5" />
-                  {{ openSheet === r.submission_id ? 'Close the marking tools' : 'Mark on the answer' }}
-                </button>
+                <div class="min-w-0 overflow-x-auto text-[15px] font-medium leading-relaxed text-gray-900 dark:text-white break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="q.html"></div>
+                <p v-if="q.correct && q.correct.length" class="mt-2 text-xs text-emerald-700 dark:text-emerald-300"><b>Correct:</b> {{ q.correct.join(' · ') }}</p>
               </div>
 
-              <!-- Mark and comment -->
-              <div class="md:w-80 flex-shrink-0">
-                <div class="flex items-center gap-1.5">
+              <!-- Objective: the option chosen, right or wrong -->
+              <div v-if="isObjective || row.chosen !== null" class="ml-3 sm:ml-6 p-3 sm:p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Student's answer</p>
+                <p v-if="row.chosen !== null" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-medium" :class="isRight(row) ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200' : 'bg-rose-50 text-rose-800 dark:bg-rose-900/30 dark:text-rose-200'">
+                  {{ isRight(row) ? '✓' : '✗' }} {{ row.chosen }}
+                </p>
+                <p v-else class="text-gray-900 dark:text-white">(No answer provided)</p>
+              </div>
+              <!-- Written, drawn or uploaded: the answer with the marking tools, as on a script -->
+              <template v-else>
+                <div v-if="sheetLoading" class="h-64 rounded-xl bg-gray-100 dark:bg-gray-700/50 animate-pulse"></div>
+                <TeacherMarkingCanvas
+                  v-else-if="sheetQuestion"
+                  :key="`${q.id}-${row.submission_id}`"
+                  :question="sheetQuestion"
+                  :assignment-id="assignmentId"
+                  :submission-id="row.submission_id"
+                />
+                <p v-else-if="row.answer_text" class="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-line break-words">{{ row.answer_text }}</p>
+                <p v-else class="text-sm italic text-gray-400">No answer</p>
+              </template>
+            </div>
+          </div>
+
+          <!-- Mark, comment, and the next student -->
+          <div class="lg:col-span-1 xl:col-span-1">
+            <div class="lg:sticky lg:top-6 space-y-4">
+              <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+                <p class="text-sm font-bold text-gray-900 dark:text-white">Mark for Q{{ current?.number }}</p>
+                <div class="mt-2 flex items-center gap-1.5">
                   <input
-                    :ref="el => { if (r === currentRow) currentInput = el as HTMLInputElement | null }"
+                    ref="markInput"
                     type="number"
                     inputmode="decimal"
                     min="0"
                     :max="q.marks"
                     step="0.5"
                     class="w-20 px-2.5 py-1.5 rounded-lg border text-sm font-semibold tabular-nums bg-white dark:bg-gray-900 dark:text-white"
-                    :class="r.marks_awarded !== null ? 'border-gray-300 dark:border-gray-600' : 'border-amber-300 dark:border-amber-700'"
-                    :value="r.marks_awarded ?? ''"
-                    :disabled="r.locked"
-                    :aria-label="`Mark for ${r.student}`"
-                    @change="setMark(r, ($event.target as HTMLInputElement).value)"
-                    @keydown.enter.prevent="setMark(r, ($event.target as HTMLInputElement).value); if (r === currentRow) goNext()"
+                    :class="row.marks_awarded !== null ? 'border-gray-300 dark:border-gray-600' : 'border-amber-300 dark:border-amber-700'"
+                    :value="row.marks_awarded ?? ''"
+                    :disabled="row.locked"
+                    :aria-label="`Mark for ${row.student}`"
+                    @input="autoMark(row, ($event.target as HTMLInputElement).value)"
+                    @change="setMark(row, ($event.target as HTMLInputElement).value)"
+                    @keydown.enter.prevent="setMark(row, ($event.target as HTMLInputElement).value); nextStudent()"
                   >
                   <span class="text-xs text-gray-400">/ {{ fmtMarks(q.marks) }}</span>
-                  <button v-for="v in quickMarks" :key="v" type="button" class="px-2 py-1 rounded-md text-xs font-semibold border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40" :disabled="r.locked" @click="setMark(r, String(v))">{{ v }}</button>
-                  <span class="ml-auto w-4 text-center text-xs" :title="saveState[r.submission_id] === 'error' ? 'Not saved' : ''">
-                    <span v-if="saveState[r.submission_id] === 'saving'" class="text-gray-400">…</span>
-                    <span v-else-if="saveState[r.submission_id] === 'saved'" class="text-emerald-500">✓</span>
-                    <span v-else-if="saveState[r.submission_id] === 'error'" class="text-rose-500">!</span>
+                  <span class="ml-auto w-4 text-center text-xs" :title="saveState[row.submission_id] === 'error' ? 'Not saved' : ''">
+                    <span v-if="saveState[row.submission_id] === 'saving'" class="text-gray-400">…</span>
+                    <span v-else-if="saveState[row.submission_id] === 'saved'" class="text-emerald-500">✓</span>
+                    <span v-else-if="saveState[row.submission_id] === 'error'" class="text-rose-500">!</span>
                   </span>
                 </div>
-                <textarea
-                  v-model="r.feedback"
-                  rows="2"
-                  placeholder="Comment (optional)"
-                  class="mt-1.5 w-full px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 dark:text-white text-xs resize-y"
-                  :disabled="r.locked"
-                  @blur="save(r)"
-                ></textarea>
-                <CommentChips v-if="!r.locked" class="mt-1" :current="r.feedback || ''" :show="3" @insert="t => { r.feedback = r.feedback ? `${r.feedback} ${t}` : t; save(r) }" />
-                <div v-if="r === currentRow" class="mt-3 flex items-center gap-2">
-                  <button v-if="toMarkRows.length > 1" type="button" class="px-3 py-2 rounded-lg text-sm font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700" @click="skip">Skip for now</button>
-                  <button
-                    type="button"
-                    class="ml-auto btn-primary"
-                    :disabled="r.marks_awarded === null && !r.locked"
-                    :title="r.marks_awarded === null && !r.locked ? 'Give a mark first' : ''"
-                    @click="goNext"
-                  >{{ toMarkRows.length > 1 ? 'Save and next →' : 'Save and finish' }}</button>
+                <div class="mt-1.5 flex flex-wrap gap-1">
+                  <button v-for="v in quickMarks" :key="v" type="button" class="px-2 py-1 rounded-md text-xs font-semibold border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40" :disabled="row.locked" @click="setMark(row, String(v))">{{ v }}</button>
                 </div>
+                <textarea
+                  v-model="row.feedback"
+                  rows="3"
+                  placeholder="Comment (optional)"
+                  class="mt-2 w-full px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 dark:text-white text-xs resize-y"
+                  :disabled="row.locked"
+                  @input="autoComment(row)"
+                  @blur="save(row)"
+                ></textarea>
+                <CommentChips v-if="!row.locked" class="mt-1" :current="row.feedback || ''" :show="3" @insert="t => { row!.feedback = row!.feedback ? `${row!.feedback} ${t}` : t; save(row!) }" />
+
+                <button v-if="isObjective && unmarkedObjective.length" type="button" class="mt-3 w-full px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 hover:bg-emerald-100" :disabled="bulkSaving" @click="markObjective">
+                  {{ bulkSaving ? 'Marking…' : `Mark all ${unmarkedObjective.length} unmarked: right ${q.marks}, wrong 0` }}
+                </button>
+              </div>
+
+              <!-- The class, A-Z: who is marked on this question; any name opens that student -->
+              <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+                <div class="flex items-center justify-between text-xs">
+                  <span class="font-bold text-gray-900 dark:text-white">Students</span>
+                  <span class="text-gray-500 dark:text-gray-400 tabular-nums">{{ markedHere }}/{{ ordered.length }} marked</span>
+                </div>
+                <span class="mt-1.5 block h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden"><span class="block h-full rounded-full bg-emerald-500" :style="{ width: `${ordered.length ? (markedHere / ordered.length) * 100 : 0}%` }"></span></span>
+                <ul class="mt-2 max-h-80 overflow-y-auto -mx-1 [scrollbar-width:thin]">
+                  <li v-for="(r, i) in ordered" :key="r.submission_id">
+                    <button type="button" class="w-full flex items-center gap-2 px-1.5 py-1 rounded-md text-left text-xs" :class="i === pos ? 'bg-indigo-50 dark:bg-indigo-900/30 font-semibold text-indigo-800 dark:text-indigo-200' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50'" @click="goTo(i)">
+                      <span class="w-3.5 text-center" :class="r.marks_awarded !== null ? 'text-emerald-500' : 'text-gray-300 dark:text-gray-600'">{{ r.marks_awarded !== null ? '✓' : '•' }}</span>
+                      <span class="flex-1 min-w-0 truncate">{{ niceName(r.student) }}</span>
+                      <span v-if="r.marks_awarded !== null" class="tabular-nums text-gray-500 dark:text-gray-400">{{ fmtMarks(r.marks_awarded) }}</span>
+                    </button>
+                  </li>
+                </ul>
               </div>
             </div>
-            <!-- the answer with the marking tools: pen, ticks, crosses, highlighter, text -->
-            <AnswerMarkingSheet
-              v-if="openSheet === r.submission_id && q"
-              :key="`${q.id}-${r.submission_id}`"
-              class="mt-3"
-              :assignment-id="assignmentId"
-              :submission-id="r.submission_id"
-              :question-id="q.id"
-            />
-          </li>
-          </template>
-          <li v-if="markedSearch.trim() && !markedShown.length && !hideMarked" class="py-3 text-center text-sm text-gray-500 dark:text-gray-400">No marked student matches "{{ markedSearch.trim() }}".</li>
-        </ul>
+          </div>
+        </div>
 
         <div class="mt-5 flex items-center justify-between gap-3">
           <button v-if="prevQ" type="button" class="btn-secondary" @click="openQuestion(prevQ.id)">← Q{{ prevQ.number }}</button>
@@ -265,17 +264,15 @@
 
 <script setup lang="ts">
 import { fmtMarks } from '@/utils/marks'
-import { computed, onMounted, reactive, ref, nextTick } from 'vue'
+import { computed, onMounted, reactive, ref, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import CommentChips from '@/components/assignment/CommentChips.vue'
-import AnswerMarkingSheet from '@/components/assignment/AnswerMarkingSheet.vue'
-import AppIcon from '@/components/common/AppIcon.vue'
+import TeacherMarkingCanvas from '@/components/assignment/TeacherMarkingCanvas.vue'
 import { niceName } from '@/components/dashboard/teacher/time'
 import { useToastStore } from '@/stores/toast'
-import { resolveAssetUrl } from '@/utils/url'
 
 interface QuestionItem { id: number; number: number; type: string; objective: boolean; text: string; marks: number; marked: number; answered: number; markers?: string[] }
 interface Row {
@@ -304,7 +301,6 @@ const q = ref<QuestionDetail | null>(null)
 const questionId = ref<number>(Number(route.query.q) || 0)
 const loading = ref(true)
 const loadingQuestion = ref(false)
-const hideMarked = ref(false)
 const bulkSaving = ref(false)
 const saveState = reactive<Record<number, 'saving' | 'saved' | 'error'>>({})
 const savedFeedback = new Map<number, string>()
@@ -322,15 +318,6 @@ const headerText = computed(() => {
 })
 const numberOf = (qid: number) => data.value?.questions.find(x => x.id === qid)?.number ?? '?'
 
-// A file opens in a new tab - Word, Excel and PowerPoint through Microsoft's Office viewer on the live site
-const OFFICE = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx']
-const extOf = (name: string) => (name.split('.').pop() || '').toLowerCase().slice(0, 5)
-const fileHref = (f: { path: string; name: string }) => {
-  const url = new URL(resolveAssetUrl(f.path), window.location.origin)
-  const local = /^(localhost|127\.|10\.|192\.168\.)/.test(url.hostname)
-  return OFFICE.includes(extOf(f.name)) && !local ? `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(url.href)}` : url.href
-}
-
 const current = computed(() => data.value?.questions.find(x => x.id === questionId.value) || null)
 const idx = computed(() => data.value?.questions.findIndex(x => x.id === questionId.value) ?? -1)
 const prevQ = computed(() => (idx.value > 0 ? data.value!.questions[idx.value - 1] : null))
@@ -338,46 +325,67 @@ const nextQ = computed(() => (data.value && idx.value >= 0 && idx.value < data.v
 const isObjective = computed(() => !!current.value?.objective)
 const markable = computed(() => q.value?.rows || [])
 const markedHere = computed(() => markable.value.filter(r => r.marks_awarded !== null).length)
-// Answers already marked sit below the ones to mark. A newly marked answer stays where it is
-// (so its comment can still be written) until the teacher moves on to another answer.
-const settled = reactive(new Set<number>())
-const pendingId = ref<number | null>(null)
-const markedSearch = ref('')
-const settlePending = () => {
-  if (pendingId.value !== null) {
-    const r = markable.value.find(x => x.submission_id === pendingId.value)
-    if (r && r.marks_awarded !== null) {
-      settled.add(r.submission_id)
-      if (r === currentRow.value) moveOn()
-    }
-    pendingId.value = null
+// Every handed-in answer, A-Z; the teacher goes through them one student at a time
+const byName = (a: Row, b: Row) => a.student.localeCompare(b.student, undefined, { sensitivity: 'base' })
+const ordered = computed(() => [...markable.value].sort(byName))
+const pos = ref(0)
+const row = computed(() => ordered.value[pos.value] ?? null)
+const allMarkedHere = computed(() => !!ordered.value.length && ordered.value.every(r => r.marks_awarded !== null || r.locked))
+
+// The student's script as the marking page shows it, for this question: the answer with the
+// marking tools (pen, ticks, crosses, highlighter, text) - fetched once per script
+const sheetQuestion = ref<any | null>(null)
+const sheetLoading = ref(false)
+const sheetCache = new Map<number, any[]>()
+let sheetRun = 0
+async function loadSheet() {
+  const r = row.value
+  sheetQuestion.value = null
+  if (!r || !q.value || isObjective.value || r.chosen !== null) return
+  const run = ++sheetRun
+  const pick = (qs: any[]) => qs.find(x => Number(x.id) === q.value!.id) ?? null
+  if (sheetCache.has(r.submission_id)) { sheetQuestion.value = pick(sheetCache.get(r.submission_id)!); return }
+  sheetLoading.value = true
+  try {
+    const res = await axios.get(`/api/teacher/assignments/${assignmentId.value}/submissions/${r.submission_id}/marking`)
+    const qs = res.data.data?.questions || []
+    sheetCache.set(r.submission_id, qs)
+    if (run === sheetRun) sheetQuestion.value = pick(qs)
+  } catch {
+    if (run === sheetRun) sheetQuestion.value = null
+  } finally {
+    if (run === sheetRun) sheetLoading.value = false
   }
 }
+watch([() => row.value?.submission_id, () => q.value?.id], loadSheet)
 
-// The answer open with the marking tools - one at a time (each is a full drawing canvas). A typed,
-// drawn or uploaded answer can be written on; a multiple-choice or true/false one can't.
-const openSheet = ref<number | null>(null)
-const canWriteOn = (r: Row) => !r.locked && !isObjective.value && r.chosen === null && (!!r.answer_text || r.has_file || r.has_drawing)
-const onRowFocus = (r: Row) => { if (pendingId.value !== null && pendingId.value !== r.submission_id) settlePending() }
-const byName = (a: Row, b: Row) => a.student.localeCompare(b.student, undefined, { sensitivity: 'base' })
-// The answers still to mark, in order - skipped ones go to the back of the queue
-const skipped = ref<number[]>([])
-const toMarkRows = computed(() => {
-  const rows = markable.value.filter(r => !settled.has(r.submission_id))
-  const back = (r: Row) => skipped.value.indexOf(r.submission_id)
-  return [...rows.filter(r => back(r) < 0), ...rows.filter(r => back(r) >= 0).sort((a, b) => back(a) - back(b))]
-})
-// One student at a time: the answer being marked now, and who comes after
-const currentId = ref<number | null>(null)
-const currentRow = computed(() => toMarkRows.value.find(r => r.submission_id === currentId.value) ?? toMarkRows.value[0] ?? null)
-const upNext = computed(() => toMarkRows.value.find(r => r !== currentRow.value) ?? null)
-const toMarkShown = computed(() => (currentRow.value ? [currentRow.value] : []))
-const markedRows = computed(() => markable.value.filter(r => settled.has(r.submission_id)).sort(byName))
-const markedShown = computed(() => {
-  const term = markedSearch.value.trim().toLowerCase()
-  return term ? markedRows.value.filter(r => r.student.toLowerCase().includes(term) || (r.admission_number || '').toLowerCase().includes(term)) : markedRows.value
-})
-const shownRows = computed(() => [...toMarkShown.value, ...(hideMarked.value ? [] : markedShown.value)])
+const markInput = ref<HTMLInputElement | null>(null)
+const goTo = async (i: number) => {
+  if (row.value) save(row.value)
+  pos.value = Math.max(0, Math.min(ordered.value.length - 1, i))
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+  await nextTick()
+  markInput.value?.focus({ preventScroll: true })
+}
+// Next student: the mark is saved, then the next name A-Z; after the last, any still to mark
+const nextStudent = async () => {
+  const r = row.value
+  if (!r) return
+  if (!r.locked) {
+    if (r.marks_awarded === null) { toast.error('Give a mark first'); return }
+    await save(r)
+    if (saveState[r.submission_id] === 'error') return
+  }
+  if (pos.value < ordered.value.length - 1) return goTo(pos.value + 1)
+  const left = ordered.value.findIndex(x => x.marks_awarded === null && !x.locked)
+  if (left >= 0) goTo(left)
+}
+// Opening a question starts at the first student (A-Z) still to mark
+const startAt = () => {
+  const i = ordered.value.findIndex(x => x.marks_awarded === null && !x.locked)
+  pos.value = i >= 0 ? i : 0
+}
+
 const quickMarks = computed(() => {
   const m = q.value?.marks || 0
   return m <= 1 ? [0, m] : [0, Math.round((m / 2) * 2) / 2, m]
@@ -397,54 +405,13 @@ const load = async (qid?: number) => {
   questionId.value = q.value?.id || 0
   savedFeedback.clear()
   savedMark.clear()
-  settled.clear()
-  pendingId.value = null
-  skipped.value = []
-  currentId.value = null
+  sheetCache.clear()
   for (const r of q.value?.rows || []) {
-    if (r.marks_awarded !== null) settled.add(r.submission_id)
     savedFeedback.set(r.submission_id, r.feedback || '')
     savedMark.set(r.submission_id, r.marks_awarded)
   }
-  moveOn(false)
-}
-
-// Shows the answer now at the front of the queue, open with the marking tools, its mark box ready
-const currentInput = ref<HTMLInputElement | null>(null)
-const moveOn = async (focus = true) => {
-  const r = currentRow.value
-  currentId.value = r?.submission_id ?? null
-  openSheet.value = r && canWriteOn(r) ? r.submission_id : null
-  if (!focus) return
-  await nextTick()
-  currentInput.value?.closest('li')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  currentInput.value?.focus({ preventScroll: true })
-}
-
-// Save and next: the mark and comment are saved, the answer joins the marked ones
-const goNext = async () => {
-  const r = currentRow.value
-  if (!r) return
-  if (!r.locked) {
-    if (r.marks_awarded === null) { toast.error('Give a mark first'); return }
-    await save(r)
-    if (saveState[r.submission_id] === 'error') return
-  }
-  pendingId.value = null
-  settled.add(r.submission_id)
-  skipped.value = skipped.value.filter(id => id !== r.submission_id)
-  currentId.value = null
-  moveOn()
-}
-
-// Skip for now: this answer goes to the back of the queue
-const skip = () => {
-  const r = currentRow.value
-  if (!r) return
-  save(r)
-  skipped.value = [...skipped.value.filter(id => id !== r.submission_id), r.submission_id]
-  currentId.value = null
-  moveOn()
+  startAt()
+  loadSheet()
 }
 
 const openQuestion = async (id: number) => {
@@ -489,11 +456,6 @@ const save = async (r: Row) => {
       p.complete = p.marked >= (data.value?.questions.length || 0)
     }
     savedMark.set(r.submission_id, r.marks_awarded)
-    // the answer being marked now stays until Next; any other moves down once the teacher moves on
-    if (r.marks_awarded !== null && !settled.has(r.submission_id) && r !== currentRow.value) {
-      if (pendingId.value !== r.submission_id) settlePending()
-      pendingId.value = r.submission_id
-    }
     saveState[r.submission_id] = 'saved'
     bumpProgress()
   } catch (err: any) {
@@ -515,6 +477,19 @@ const setMark = (r: Row, raw: string) => {
   save(r)
 }
 
+// Saving as the teacher types: a moment after the last key, the mark (or comment) is saved
+let typingTimer: ReturnType<typeof setTimeout> | null = null
+const later = (fn: () => void, ms: number) => {
+  if (typingTimer) clearTimeout(typingTimer)
+  typingTimer = setTimeout(fn, ms)
+}
+const autoMark = (r: Row, raw: string) => {
+  // a half-typed mark ("1." or empty) waits for more
+  if (raw.trim() === '' || raw.endsWith('.')) return
+  later(() => setMark(r, raw), 500)
+}
+const autoComment = (r: Row) => later(() => save(r), 900)
+
 const markObjective = async () => {
   if (!q.value) return
   bulkSaving.value = true
@@ -522,10 +497,7 @@ const markObjective = async () => {
     r.marks_awarded = isRight(r) ? q.value.marks : 0
     await save(r)
   }
-  settlePending()
-  for (const r of markable.value) if (r.marks_awarded !== null) settled.add(r.submission_id)
-  currentId.value = null
-  moveOn(false)
+  startAt()
   bulkSaving.value = false
 }
 

@@ -390,6 +390,7 @@ class MarkingController extends Controller
 
             $stmt = $db->prepare("UPDATE assignment_submissions SET status = 'marking', updated_at = NOW() WHERE id = :id AND status = 'submitted'");
             $stmt->execute(['id' => $submissionId]);
+            $this->retotalIfFinished($submissionId);
 
             $this->success([], 'Marks saved successfully');
         } catch (Exception $e) {
@@ -491,6 +492,26 @@ class MarkingController extends Controller
     }
 
     /** Adds up a script's question marks and finishes it (status 'graded'); returns the summary */
+    /**
+     * A finished (totalled or returned) script whose teacher changes a question's mark: its total
+     * and percentage follow at once, and it stays finished - the student sees the new mark.
+     */
+    private function retotalIfFinished(int $submissionId): void
+    {
+        $db = $this->getDb();
+        $stmt = $db->prepare("SELECT s.status, a.total_marks FROM assignment_submissions s INNER JOIN assignments a ON a.id = s.assignment_id WHERE s.id = ?");
+        $stmt->execute([$submissionId]);
+        $row = $stmt->fetch();
+        if (!$row || !in_array($row['status'], ['graded', 'returned'], true)) {
+            return;
+        }
+        $stmt = $db->prepare("SELECT COALESCE(SUM(marks_awarded), 0) FROM question_marks WHERE submission_id = ?");
+        $stmt->execute([$submissionId]);
+        $summary = Grading::computeSummary((float) $stmt->fetchColumn(), (float) $row['total_marks']);
+        $db->prepare("UPDATE assignment_submissions SET manual_score = ?, total_score = ?, percentage = ?, updated_at = NOW() WHERE id = ?")
+            ->execute([$summary['marks_awarded'], $summary['marks_awarded'], $summary['percentage'], $submissionId]);
+    }
+
     private function totalScript(array $submission, int $teacherId): array
     {
         $db = $this->getDb();
@@ -1014,7 +1035,7 @@ class MarkingController extends Controller
                     'auto_mark' => $a && $a['auto_mark'] !== null ? (float) $a['auto_mark'] : null,
                     'marks_awarded' => $m && $m['marks_awarded'] !== null ? (float) $m['marks_awarded'] : null,
                     'feedback' => $m['feedback'] ?? null,
-                    'locked' => in_array($s['status'], ['graded', 'returned'], true),
+                    'locked' => !$isOwner && in_array($s['status'], ['graded', 'returned'], true),
                 ];
             }
 
