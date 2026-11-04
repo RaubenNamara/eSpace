@@ -940,6 +940,7 @@ const MENU: Record<string, NavGroup[]> = {
       { path: '/teacher/dashboard', label: 'Dashboard', icon: 'DashboardIcon' }
     ] },
     { key: 'teaching', name: 'Teaching', items: [
+      { path: '/teacher/classes', label: 'My Classes', icon: 'BookOpenIcon' },
       { path: '/teacher/live-classes', label: 'Live Classes', icon: 'VideoCameraIcon' }
     ] },
     { key: 'content', name: 'Content', items: [

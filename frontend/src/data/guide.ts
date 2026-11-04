@@ -149,8 +149,8 @@ export const GUIDE: GuidePart[] = [
         tips: ['Tap the students figure beside your department\'s name to see everyone enrolled.']
       },
       {
-        id: 't-classes', title: 'Classes and Student View', icon: 'users',
-        steps: ['When you set an assessment, eNote or live class, every class is there to choose from.', 'In each class you only see, and reach, the learners who take your subject.', 'Student View shows any of your classes exactly as its students see it.'],
+        id: 't-classes', title: 'My Classes and Student View', icon: 'users',
+        steps: ['My Classes finds any class: tap a level (O Level or A Level), then a class, then a stream - its learners show below, with a search.', 'When you set an assessment, eNote or live class, every class is there to choose from.', 'In each class you only see, and reach, the learners who take your subject.', 'Student View shows any of your classes exactly as its students see it.'],
       },
       {
         id: 't-enotes', title: 'Writing eNotes', icon: 'document',

@@ -303,8 +303,9 @@ const routes: RouteRecordRaw[] = [
     children: [
       { path: '', redirect: '/teacher/dashboard' },
       { path: 'dashboard', name: 'TeacherDashboard', component: TeacherDashboard },
-      // My Classes was removed - old links land on the dashboard
-      { path: 'classes/:id?', redirect: '/teacher/dashboard' },
+      { path: 'classes', name: 'TeacherClasses', component: () => import('../pages/teacher/Classes.vue') },
+      // the old page of one stream: its learners are on My Classes now
+      { path: 'classes/:id', redirect: '/teacher/classes' },
       { path: 'live-classes', name: 'TeacherLiveClasses', component: TeacherLiveClasses },
       { path: 'assignments', name: 'TeacherAssignments', component: TeacherAssignments },
       { path: 'assignments/create', name: 'AssignmentBuilder', component: AssignmentBuilder },

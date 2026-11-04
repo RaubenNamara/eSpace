@@ -195,6 +195,11 @@ class ClassController extends Controller
                 $params['academic_year'] = $academicYear;
             }
 
+            // ?active=1 (My Classes): only learners in the class now - not withdrawn, not removed
+            if ($this->query('active')) {
+                $sql .= " AND se.status = 'active' AND s.deleted_at IS NULL";
+            }
+
             $sql .= " ORDER BY s.last_name, s.first_name";
             
             $stmt = $this->getDb()->prepare($sql);
