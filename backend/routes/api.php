@@ -860,6 +860,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/assignments/{id}/preview', 'eSpace\App\Controllers\Admin\AssignmentController@preview');
         Router::get('/assignments/{id}/submissions', 'eSpace\App\Controllers\Admin\AssignmentController@submissions');
         Router::get('/assignments/{id}/submissions/{submissionId}', 'eSpace\App\Controllers\Admin\AssignmentController@submissionDetail');
+        Router::post('/assignments/{id}/submissions/{submissionId}/return', 'eSpace\App\Controllers\Admin\AssignmentController@returnScript');
         Router::delete('/assignments/{id}', 'eSpace\App\Controllers\Admin\AssignmentController@delete');
 
         // Users

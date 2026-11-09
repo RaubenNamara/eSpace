@@ -173,6 +173,41 @@ class AssignmentController extends Controller
     }
 
     /**
+     * Super admin only: return a marked script to its student, as its teacher would.
+     * POST /admin/assignments/{id}/submissions/{submissionId}/return
+     */
+    public function returnScript($id, $submissionId): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+        if ($this->getCurrentUserRole() !== 'super_admin') {
+            $this->forbidden('Only a super admin can return a script');
+            return;
+        }
+        $db = $this->getDb();
+        $stmt = $db->prepare('SELECT * FROM assignment_submissions WHERE id = ? AND assignment_id = ? AND deleted_at IS NULL');
+        $stmt->execute([(int) $submissionId, (int) $id]);
+        $submission = $stmt->fetch();
+        if (!$submission) {
+            $this->notFound('Submission not found');
+            return;
+        }
+        if ($submission['status'] !== 'graded') {
+            $this->error('Only a marked script that has not been returned can be returned', 400);
+            return;
+        }
+        try {
+            SubmissionScriptService::release($db, $submission);
+            $this->success([], 'Script returned to the student');
+        } catch (\Exception $e) {
+            error_log('Admin returnScript failed: ' . $e->getMessage());
+            $this->serverError('Failed to return the script');
+        }
+    }
+
+    /**
      * One student's marked script - questions, answers, marks, feedback and the teacher's
      * marks on the page. Read-only.
      * GET /admin/assignments/{id}/submissions/{submissionId}

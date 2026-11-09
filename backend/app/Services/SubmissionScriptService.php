@@ -92,6 +92,41 @@ class SubmissionScriptService
         ];
     }
 
+    /** Hands a finished script back to its student, with the notification and badges */
+    public static function release(\PDO $db, array $submission): void
+    {
+        $submissionId = (int) $submission['id'];
+        $stmt = $db->prepare("UPDATE assignment_submissions SET status = 'returned', released_at = NOW(), updated_at = NOW() WHERE id = :id");
+        $stmt->execute(['id' => $submissionId]);
+
+        $stmt = $db->prepare('SELECT title, due_date FROM assignments WHERE id = :id');
+        $stmt->execute(['id' => $submission['assignment_id']]);
+        $assignment = $stmt->fetch();
+        $assignmentTitle = $assignment['title'] ?? 'your assignment';
+
+        (new \eSpace\App\Services\NotificationService())->notify(
+            (int) $submission['student_id'],
+            'student',
+            'assignment_graded',
+            'Assignment graded',
+            "\"{$assignmentTitle}\" has been graded and is ready to view.",
+            ['assignment_id' => (int) $submission['assignment_id'], 'submission_id' => $submissionId]
+        );
+
+        // Automatic badges: recalculate whenever a mark actually becomes visible to a
+        // student, the same moment the notification above fires from.
+        if (!empty($assignment['due_date'])) {
+            $stmt = $db->prepare(
+                'SELECT id FROM terms WHERE :due_date BETWEEN start_date AND end_date AND deleted_at IS NULL LIMIT 1'
+            );
+            $stmt->execute(['due_date' => $assignment['due_date']]);
+            $term = $stmt->fetch();
+            if ($term) {
+                (new \eSpace\App\Services\RewardService())->evaluateAfterMarksChange((int) $submission['student_id'], (int) $term['id']);
+            }
+        }
+    }
+
     /** One student's script, or null when it isn't a submission of this assessment. */
     public static function detail(\PDO $db, int $assignmentId, int $submissionId): ?array
     {

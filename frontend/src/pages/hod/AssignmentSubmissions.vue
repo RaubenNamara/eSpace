@@ -6,7 +6,7 @@
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
       Assessments
     </button>
-    <PageHeader :title="title ? `Scripts · ${title}` : 'Scripts'" description="Marked and returned scripts, scripts waiting to be marked, and who has not handed in (view only)." icon="clipboard" accent="indigo">
+    <PageHeader :title="title ? `Scripts · ${title}` : 'Scripts'" :description="`Marked and returned scripts, scripts waiting to be marked, and who has not handed in${canReturn ? '' : ' (view only)'}.`" icon="clipboard" accent="indigo">
       <StatStrip v-if="!loading && !error" :items="statItems" />
     </PageHeader>
 
@@ -68,6 +68,7 @@
         <span class="whitespace-nowrap text-gray-600 dark:text-gray-300">{{ row.submitted_at ? timeAgo(row.submitted_at) : 'Not handed in' }}</span>
       </template>
       <template #actions="{ row }">
+        <button v-if="canReturn && row.status === 'graded'" type="button" class="mr-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-emerald-600 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 disabled:opacity-50" :disabled="returning === row.id" @click="returnScript(row)">{{ returning === row.id ? 'Returning…' : 'Return' }}</button>
         <RouterLink v-if="row.submitted_at" :to="`/${role}/assessments/${assignmentId}/submissions/${row.id}`" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700">{{ isMarked(row) ? 'View script' : 'View answers' }}</RouterLink>
       </template>
     </DataTable>
@@ -82,6 +83,9 @@ import PageHeader from '@/components/ui/PageHeader.vue'
 import StatStrip, { type StatItem } from '@/components/ui/StatStrip.vue'
 import DataTable, { type Column } from '@/components/ui/DataTable.vue'
 import { timeAgo } from '@/components/dashboard/teacher/time'
+import { useAuthStore } from '@/stores/auth'
+import { useConfirmStore } from '@/stores/confirm'
+import { useToastStore } from '@/stores/toast'
 
 interface Row {
   id: number
@@ -120,6 +124,26 @@ const columns: Column[] = [
 ]
 
 const loading = ref(true)
+
+// A super admin can hand a marked script back to its student (the server checks this too)
+const authStore = useAuthStore()
+const confirmDialog = useConfirmStore()
+const toast = useToastStore()
+const canReturn = computed(() => role.value === 'admin' && authStore.user?.role === 'super_admin')
+const returning = ref<number | null>(null)
+const returnScript = async (row: any) => {
+  if (!await confirmDialog.open({ title: 'Return this script?', message: `${row.student_name} will be able to see the marks and feedback, and will be notified.`, confirmLabel: 'Return to student' })) return
+  returning.value = row.id
+  try {
+    await axios.post(`/api/admin/assignments/${assignmentId.value}/submissions/${row.id}/return`)
+    row.status = 'returned'
+    toast.success('Script returned to the student')
+  } catch (err: any) {
+    toast.error(err.response?.data?.message || 'The script could not be returned')
+  } finally {
+    returning.value = null
+  }
+}
 const error = ref('')
 const submissions = ref<Row[]>([])
 const stats = ref<Stats | null>(null)

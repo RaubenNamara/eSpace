@@ -6,7 +6,6 @@ namespace eSpace\App\Controllers\Teacher;
 
 use eSpace\App\Controllers\Controller;
 use eSpace\App\Services\NotificationService;
-use eSpace\App\Services\RewardService;
 use eSpace\Config\Database;
 use eSpace\App\Utils\Grading;
 use Exception;
@@ -543,40 +542,9 @@ class MarkingController extends Controller
         return $summary;
     }
 
-    /** Hands a finished script back to its student, with the notification and badges */
     private function releaseScript(array $submission): void
     {
-        $db = $this->getDb();
-        $submissionId = (int) $submission['id'];
-        $stmt = $db->prepare("UPDATE assignment_submissions SET status = 'returned', released_at = NOW(), updated_at = NOW() WHERE id = :id");
-        $stmt->execute(['id' => $submissionId]);
-
-        $stmt = $db->prepare('SELECT title, due_date FROM assignments WHERE id = :id');
-        $stmt->execute(['id' => $submission['assignment_id']]);
-        $assignment = $stmt->fetch();
-        $assignmentTitle = $assignment['title'] ?? 'your assignment';
-
-        (new NotificationService())->notify(
-            (int) $submission['student_id'],
-            'student',
-            'assignment_graded',
-            'Assignment graded',
-            "\"{$assignmentTitle}\" has been graded and is ready to view.",
-            ['assignment_id' => (int) $submission['assignment_id'], 'submission_id' => $submissionId]
-        );
-
-        // Automatic badges: recalculate whenever a mark actually becomes visible to a
-        // student, the same moment the notification above fires from.
-        if (!empty($assignment['due_date'])) {
-            $stmt = $db->prepare(
-                'SELECT id FROM terms WHERE :due_date BETWEEN start_date AND end_date AND deleted_at IS NULL LIMIT 1'
-            );
-            $stmt->execute(['due_date' => $assignment['due_date']]);
-            $term = $stmt->fetch();
-            if ($term) {
-                (new RewardService())->evaluateAfterMarksChange((int) $submission['student_id'], (int) $term['id']);
-            }
-        }
+        \eSpace\App\Services\SubmissionScriptService::release($this->getDb(), $submission);
     }
 
     /**
