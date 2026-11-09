@@ -4,6 +4,7 @@
   <div class="w-full">
     <PageHeader title="Study groups" description="Revise with up to four classmates - agree what you're working on and by when, then talk it through in Chats." icon="users" accent="indigo">
       <template #actions>
+        <RouterLink to="/student/chat" class="btn-secondary">Back to Chats</RouterLink>
         <button type="button" class="btn-primary" @click="openNew">Start a group</button>
       </template>
     </PageHeader>

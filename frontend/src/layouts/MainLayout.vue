@@ -907,9 +907,7 @@ const MENU: Record<string, NavGroup[]> = {
     ] },
     { key: 'learning', name: 'Learning', items: [
       { path: '/student/live-classes', label: 'Live Classes', icon: 'VideoCameraIcon' },
-      { path: '/student/enotes', label: 'eNotes', icon: 'NoteIcon' },
-      { path: '/student/my-notes', label: 'My summaries', icon: 'NoteIcon' },
-      { path: '/student/downloads', label: 'Downloads', icon: 'CloudArrowDownIcon' }
+      { path: '/student/enotes', label: 'eNotes', icon: 'NoteIcon' }
     ] },
     { key: 'revision', name: 'Revision', items: [
       { path: '/student/assignments', label: 'Assessments', icon: 'DocumentTextIcon' }
@@ -931,8 +929,7 @@ const MENU: Record<string, NavGroup[]> = {
       { path: '/student/learning-map', label: 'Learning Map', icon: 'MapIcon' }
     ] },
     { key: 'community', name: 'Community', items: [
-      { path: '/student/chat', label: 'Chats', icon: 'ChatIcon' },
-      { path: '/student/study-groups', label: 'Study groups', icon: 'UserGroupIcon' }
+      { path: '/student/chat', label: 'Chats', icon: 'ChatIcon' }
     ] }
   ],
   teacher: [
@@ -1098,7 +1095,7 @@ const paletteActions = computed<PaletteAction[]>(() => {
   const common: PaletteAction[] = [{ label: themeStore.isDarkMode ? 'Switch to light mode' : 'Switch to dark mode', hint: 'Appearance', run: () => themeStore.toggleTheme() }]
   const byRole: Record<string, PaletteAction[]> = {
     student: [
-      { label: 'Start a study group', hint: 'Study groups', run: go('/student/study-groups') },
+      { label: 'Create a study group', hint: 'Chats', run: go('/student/chat?group=new') },
       { label: 'Download my summaries as PDF', hint: 'My summaries', run: go('/student/my-notes') }
     ],
     teacher: [
@@ -1154,6 +1151,8 @@ const rowsOf = (group: NavGroup) => {
 const paletteGroups = computed(() => menuGroups.value.map(g => ({ ...g, items: leavesOf(g) })))
 
 function isActive(path: string): boolean {
+  // Study groups are opened from inside Chats, so Chats stays lit there
+  if (path === '/student/chat' && route.path === '/student/study-groups') return true
   return route.path === path || route.path.startsWith(path + '/')
 }
 

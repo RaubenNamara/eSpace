@@ -54,6 +54,20 @@
       </div>
 
       <div class="wa-scroll flex-1 overflow-y-auto px-2 pb-2">
+        <!-- Creating a study group happens here in Chats -->
+        <button v-if="!conversationSearch" type="button" class="w-full flex items-center gap-3 pl-3 pr-0 text-left transition-colors rounded-lg hover:bg-[var(--wa-hover)]" @click="showNewGroup = true">
+          <div class="flex-shrink-0 py-2.5">
+            <div class="w-[49px] h-[49px] rounded-full flex items-center justify-center text-white bg-[var(--wa-green)]">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-4-4" /></svg>
+            </div>
+          </div>
+          <div class="min-w-0 flex-1 self-stretch flex items-center gap-2 pr-3 border-b border-[var(--wa-border)]">
+            <div class="min-w-0 flex-1">
+              <h3 class="text-[16px] leading-[21px] text-[var(--wa-text)] truncate">Create study group</h3>
+              <p class="text-[14px] leading-5 text-[var(--wa-muted)] truncate">Revise with up to four classmates</p>
+            </div>
+          </div>
+        </button>
         <div v-if="loadingConversations" class="text-center py-12 text-[var(--wa-muted)] text-sm">Loading…</div>
         <div v-else-if="conversations.length === 0" class="text-center py-16 px-6">
           <p class="text-sm text-[var(--wa-muted)]">No chats yet. Tap the new chat button to message a classmate, a teacher or your class group.</p>
@@ -100,6 +114,10 @@
               <div v-if="showThreadMenu" class="absolute right-0 top-full mt-1 w-52 rounded-lg shadow-xl bg-[var(--wa-panel)] py-2 z-20 border border-[var(--wa-border)]">
                 <button @click="showThreadMenu = false; toggleThreadSearch()" class="w-full text-left px-5 py-2.5 text-[14.5px] text-[var(--wa-text)] hover:bg-[var(--wa-hover)]">Search</button>
                 <button @click="clearActiveChat" class="w-full text-left px-5 py-2.5 text-[14.5px] text-[var(--wa-text)] hover:bg-[var(--wa-hover)]">Clear chat</button>
+                <template v-if="activeConversation.type === 'group'">
+                  <button @click="openGroupDate" class="w-full text-left px-5 py-2.5 text-[14.5px] text-[var(--wa-text)] hover:bg-[var(--wa-hover)]">Change the date</button>
+                  <button @click="leaveGroup" class="w-full text-left px-5 py-2.5 text-[14.5px] text-red-600 dark:text-red-400 hover:bg-[var(--wa-hover)]">Leave group</button>
+                </template>
                 <button @click="showThreadMenu = false; activeConversation = null" class="w-full text-left px-5 py-2.5 text-[14.5px] text-[var(--wa-text)] hover:bg-[var(--wa-hover)]">Close chat</button>
               </div>
             </div>
@@ -172,6 +190,22 @@
       @select-class="startClassChat"
     />
 
+    <NewStudyGroupModal v-if="showNewGroup" @close="closeNewGroup" @created="onGroupCreated" />
+
+    <!-- Change a study group's date -->
+    <div v-if="groupDateFor" class="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4" @click.self="groupDateFor = null">
+      <form class="w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl bg-white dark:bg-gray-800 p-5" @submit.prevent="saveGroupDate()">
+        <h2 class="text-base font-bold text-gray-900 dark:text-white">When are you revising this by?</h2>
+        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400 truncate">{{ groupDateFor.name }}</p>
+        <input v-model="groupDate" type="date" :min="todayDate" class="mt-4 w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white">
+        <div class="mt-5 flex items-center gap-2">
+          <button v-if="groupDateWasSet" type="button" class="text-xs font-semibold text-gray-500 hover:underline" @click="groupDate = ''; saveGroupDate()">No date</button>
+          <button type="button" class="ml-auto btn-secondary" @click="groupDateFor = null">Cancel</button>
+          <button type="submit" class="btn-primary" :disabled="!groupDate">Save</button>
+        </div>
+      </form>
+    </div>
+
     <!-- Image lightbox -->
     <div v-if="previewImage" @click="previewImage = null" class="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4 cursor-zoom-out">
       <img :src="previewImage" class="max-w-full max-h-full rounded-lg">
@@ -182,13 +216,14 @@
 <script setup lang="ts">
 import { niceName } from '@/components/dashboard/teacher/time'
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import ConversationListItem from '@/components/chat/ConversationListItem.vue'
 import MessageBubble from '@/components/chat/MessageBubble.vue'
 import AppMenuButton from '@/components/chat/AppMenuButton.vue'
 import MessageComposer from '@/components/chat/MessageComposer.vue'
 import NewChatModal from '@/components/chat/NewChatModal.vue'
+import NewStudyGroupModal from '@/components/chat/NewStudyGroupModal.vue'
 import { useChatBadgeStore } from '@/stores/chatBadge'
 import { useChatLive } from '@/composables/useChatLive'
 import { useAuthStore } from '@/stores/auth'
@@ -200,6 +235,7 @@ import { useToastStore } from '@/stores/toast'
 import { useConfirmStore } from '@/stores/confirm'
 
 const route = useRoute()
+const router = useRouter()
 const toast = useToastStore()
 const confirmDialog = useConfirmStore()
 
@@ -221,6 +257,7 @@ const previewImage = ref<string | null>(null)
 const messagesContainer = ref<HTMLElement | null>(null)
 
 const showNewChat = ref(false)
+const showNewGroup = ref(false)
 const classmates = ref<ChatContact[]>([])
 const teachers = ref<ChatContact[]>([])
 const classGroups = ref<ChatClassGroup[]>([])
@@ -331,6 +368,63 @@ const openConversation = async (conv: Conversation) => {
   // read-status write had actually landed.
   await loadMessages(conv.id)
   chatBadge.refresh()
+}
+
+// ---- Study groups: created and looked after here in Chats ----
+// ?group=new (from the Ctrl+K menu) opens the create dialog
+watch(() => route.query.group, v => { if (v === 'new') showNewGroup.value = true }, { immediate: true })
+const closeNewGroup = () => {
+  showNewGroup.value = false
+  if (route.query.group) router.replace({ query: {} })
+}
+const onGroupCreated = async (id: number) => {
+  closeNewGroup()
+  await loadConversations()
+  const conv = conversations.value.find(c => c.id === id)
+  if (conv) openConversation(conv)
+}
+
+const todayDate = new Date().toISOString().slice(0, 10)
+const groupDateFor = ref<Conversation | null>(null)
+const groupDate = ref('')
+const groupDateWasSet = ref(false)
+const openGroupDate = async () => {
+  showThreadMenu.value = false
+  const conv = activeConversation.value
+  if (!conv) return
+  try {
+    const res = await axios.get('/api/student/study-groups')
+    const current = (res.data.data.groups || []).find((g: any) => g.id === conv.id)?.target_date || ''
+    groupDate.value = current
+    groupDateWasSet.value = !!current
+    groupDateFor.value = conv
+  } catch (err: any) {
+    toast.error(err.response?.data?.message || 'Could not open the date')
+  }
+}
+const saveGroupDate = async () => {
+  const conv = groupDateFor.value
+  if (!conv) return
+  try {
+    await axios.put(`/api/student/study-groups/${conv.id}`, { target_date: groupDate.value })
+    groupDateFor.value = null
+    toast.success('Date saved')
+  } catch (err: any) {
+    toast.error(err.response?.data?.message || 'Could not change the date')
+  }
+}
+const leaveGroup = async () => {
+  showThreadMenu.value = false
+  const conv = activeConversation.value
+  if (!conv) return
+  if (!await confirmDialog.open({ title: 'Leave group', message: `Leave "${conv.name}"? You can be added to a new group any time.`, confirmLabel: 'Leave', danger: true })) return
+  try {
+    await axios.post(`/api/student/study-groups/${conv.id}/leave`)
+    activeConversation.value = null
+    await loadConversations()
+  } catch (err: any) {
+    toast.error(err.response?.data?.message || 'Could not leave the group')
+  }
 }
 
 const clearActiveChat = async () => {

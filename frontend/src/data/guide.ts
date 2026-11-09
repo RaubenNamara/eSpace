@@ -48,7 +48,7 @@ export const GUIDE: GuidePart[] = [
       {
         id: 'offline', title: 'Working offline', icon: 'download',
         intro: 'Notes and books can be saved to your device and read with no internet at all.',
-        steps: ['On an eNote or book, choose Save for offline.', 'Open Downloads to see everything saved on this device and how much space it uses.', 'Read, highlight and write notes as usual when offline.', 'When you\'re back online, your notes and highlights are sent automatically.'],
+        steps: ['On an eNote or book, choose Save for offline.', 'On your dashboard, tap Downloads under Jump in to see everything saved on this device and how much space it uses.', 'Read, highlight and write notes as usual when offline.', 'When you\'re back online, your notes and highlights are sent automatically.'],
         tips: ['Saved copies are kept for 30 days and renewed whenever you\'re online.']
       },
       {
