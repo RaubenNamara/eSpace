@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-950">
+  <div class="ab-glass min-h-screen bg-gray-50 dark:bg-gray-950">
     <!-- Toast Notification -->
     <transition name="toast">
       <div
@@ -33,8 +33,8 @@
       </div>
     </transition>
 
-    <!-- Header -->
-    <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+    <!-- Header (preview only: when building, the heading sits in the snapshot row below) -->
+    <div v-if="isPreview" class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
       <div class="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-16 py-3 sm:py-4">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
           <div class="flex items-center space-x-4 min-w-0">
@@ -47,26 +47,12 @@
               </svg>
             </button>
             <div class="min-w-0">
-              <h1 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">
-                {{ isPreview ? 'Preview Assignment' : (isEdit ? 'Edit Assignment' : 'Create Assignment') }}
-              </h1>
-              <p class="text-sm text-gray-600 dark:text-gray-400 truncate">
-                {{ isPreview ? 'View assignment details and questions' : (isEdit ? 'Modify your assignment and questions' : 'Build a new assignment with questions') }}
-              </p>
-              <p v-if="!isPreview && form.title" class="text-xs text-indigo-600 dark:text-indigo-400 truncate mt-0.5">
-                Title (auto): {{ form.title }}
-              </p>
-              <p v-if="!isPreview && saveState" class="text-xs mt-0.5 flex items-center gap-1.5" :class="saveState.tone">
-                <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" :class="saveState.dot"></span>{{ saveState.text }}
-              </p>
-              <p v-else-if="!isPreview" class="text-xs text-gray-400 truncate mt-0.5">
-                Title will be set automatically once you choose a Topic (LOA) or Topic(s) (AOI/EOC) below.
-              </p>
+              <h1 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">Preview Assignment</h1>
+              <p class="text-sm text-gray-600 dark:text-gray-400 truncate">View assignment details and questions</p>
             </div>
           </div>
           <div class="flex items-center flex-wrap gap-2 sm:gap-3">
             <button
-              v-if="isPreview"
               @click="router.push(`/teacher/assignments/${route.params.id}/edit`)"
               class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center space-x-2"
             >
@@ -94,14 +80,89 @@
     </div>
 
     <!-- Main Content -->
-    <div class="w-full max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12 py-4 sm:py-6 xl:grid xl:grid-cols-[1fr_300px] xl:gap-6 xl:items-start">
+    <div class="w-full max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12 py-4 sm:py-6">
+      <!-- Assessment snapshot: what has been set so far and what is left before publishing, across
+           the top of the form and pinned there on a wide screen while the teacher scrolls -->
+      <section class="ab-glass-strip lg:sticky lg:top-2 z-20 mb-4 sm:mb-6 overflow-hidden">
+        <div class="flex flex-col xl:flex-row xl:items-stretch">
+          <div v-if="!isPreview" class="flex items-start gap-2 px-3 py-3 xl:w-60 2xl:w-80 flex-shrink-0 border-b xl:border-b-0 xl:border-r border-white/70 dark:border-white/10">
+            <button type="button" aria-label="Back to assessments" class="p-1.5 -ml-0.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex-shrink-0" @click="router.push('/teacher/assignments')">
+              <svg class="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+              </svg>
+            </button>
+            <div class="min-w-0">
+              <h1 class="text-lg font-bold leading-snug text-gray-900 dark:text-white truncate">{{ isEdit ? 'Edit Assignment' : 'Create Assignment' }}</h1>
+              <p v-if="form.title" class="text-xs text-indigo-600 dark:text-indigo-400 truncate" :title="form.title">Title (auto): {{ form.title }}</p>
+              <p v-else class="text-[11px] leading-snug text-gray-500 dark:text-gray-400">Choose a Topic (LOA) or Topic(s) (AOI/EOC) below.</p>
+              <p v-if="saveState" class="text-xs mt-0.5 flex items-center gap-1.5" :class="saveState.tone">
+                <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" :class="saveState.dot"></span>{{ saveState.text }}
+              </p>
+            </div>
+          </div>
+          <div class="flex-1 min-w-0 flex flex-col lg:flex-row lg:items-stretch">
+          <dl class="flex-1 min-w-0 grid grid-cols-2 sm:grid-cols-3 lg:grid-flow-col lg:auto-cols-fr gap-1.5 p-2.5 items-stretch">
+            <div class="ab-glass-tile min-w-0">
+              <dt class="truncate text-[11px] font-medium text-gray-500 dark:text-gray-400">Category</dt>
+              <dd class="mt-0.5">
+                <span v-if="form.assessment_category" class="inline-block px-2 py-0.5 rounded-md text-xs font-bold"
+                  :class="{
+                    'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300': form.assessment_category === 'LOA',
+                    'bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300': form.assessment_category === 'AOI',
+                    'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300': form.assessment_category === 'EOC'
+                  }"
+                  :title="ASSESSMENT_CATEGORY_LABELS[form.assessment_category]"
+                >{{ form.assessment_category }}</span>
+                <span v-else class="text-sm font-semibold text-gray-400">Not set</span>
+              </dd>
+            </div>
+            <div v-if="form.assessment_category === 'EOC' && selectedConstructName" class="ab-glass-tile min-w-0">
+              <dt class="truncate text-[11px] font-medium text-gray-500 dark:text-gray-400">Construct</dt>
+              <dd class="mt-0.5 text-sm font-bold text-gray-900 dark:text-white truncate" :title="selectedConstructName">{{ selectedConstructName }}</dd>
+            </div>
+            <div class="ab-glass-tile min-w-0">
+              <dt class="truncate text-[11px] font-medium text-gray-500 dark:text-gray-400">Subject</dt>
+              <dd class="mt-0.5 text-sm font-bold text-gray-900 dark:text-white truncate" :title="selectedSubjectName || ''">{{ selectedSubjectName || 'Not set' }}</dd>
+            </div>
+            <div class="ab-glass-tile min-w-0">
+              <dt class="truncate text-[11px] font-medium text-gray-500 dark:text-gray-400">Class</dt>
+              <dd class="mt-0.5 text-sm font-bold text-gray-900 dark:text-white truncate" :title="classDropdownLabel">{{ selectedClassIds.length ? classDropdownLabel : 'Not set' }}</dd>
+            </div>
+            <div class="ab-glass-tile min-w-0">
+              <dt class="truncate text-[11px] font-medium text-gray-500 dark:text-gray-400">Deadline</dt>
+              <dd class="mt-0.5 text-sm font-bold text-gray-900 dark:text-white truncate">{{ form.due_date ? new Date(form.due_date).toLocaleDateString() : 'None' }}</dd>
+            </div>
+            <div class="ab-glass-tile min-w-0">
+              <dt class="truncate text-[11px] font-medium text-gray-500 dark:text-gray-400">Questions</dt>
+              <dd class="mt-0.5 text-sm font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{{ questions.length }}</dd>
+            </div>
+            <div class="ab-glass-tile min-w-0">
+              <dt class="truncate text-[11px] font-medium text-gray-500 dark:text-gray-400">Marks</dt>
+              <dd class="mt-0.5 text-sm font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{{ form.total_marks || 0 }}</dd>
+            </div>
+          </dl>
+          <!-- Ready to publish? -->
+          <div class="lg:w-52 flex-shrink-0 px-3 py-3 border-t lg:border-t-0 lg:border-l border-white/70 dark:border-white/10 flex flex-col justify-center">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">To publish</span>
+              <span class="text-xs font-bold tabular-nums" :class="publishLeft.length ? 'text-gray-600 dark:text-gray-300' : 'text-emerald-600 dark:text-emerald-400'">{{ publishChecklist.length - publishLeft.length }} of {{ publishChecklist.length }}</span>
+            </div>
+            <div class="mt-1.5 flex gap-1" aria-hidden="true">
+              <span v-for="c in publishChecklist" :key="c.label" class="h-1.5 flex-1 rounded-full transition-colors" :class="c.done ? 'bg-emerald-500' : 'bg-gray-200 dark:bg-gray-700'" :title="c.label"></span>
+            </div>
+            <p class="mt-1.5 text-xs font-medium truncate" :class="publishLeft.length ? 'text-gray-700 dark:text-gray-200' : 'text-emerald-700 dark:text-emerald-300'">{{ publishLeft.length ? `Next: ${publishLeft[0].label}` : 'Ready to publish' }}</p>
+          </div>
+          </div>
+        </div>
+      </section>
+
       <div class="space-y-4 sm:space-y-6 min-w-0">
 
         <!-- Assessment Details (hidden in preview mode) -->
         <div v-if="!isPreview" class="space-y-4 sm:space-y-6">
 
           <!-- Target Audience -->
-          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+          <div class="ab-glass-card">
             <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700">
               <h2 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white flex items-center">
                 <span class="w-8 h-8 mr-2.5 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center flex-shrink-0">
@@ -195,7 +256,7 @@
           </div>
 
           <!-- Curriculum Alignment (LOA/AOI/EOC) -->
-          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+          <div class="ab-glass-card">
             <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700">
               <h2 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white flex items-center">
                 <span class="w-8 h-8 mr-2.5 rounded-lg bg-violet-50 dark:bg-violet-900/30 flex items-center justify-center flex-shrink-0">
@@ -465,7 +526,7 @@
 
           <!-- When it's due: only the deadline (optional) is in view; the rest, which most
                assessments leave as it is, waits under More options with a one-line summary -->
-          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+          <div class="ab-glass-card">
             <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700">
               <h2 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white flex items-center">
                 <span class="w-8 h-8 mr-2.5 rounded-lg bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
@@ -599,10 +660,10 @@
         </div>
 
         <!-- ICT: support files for students to download (starter files, a zip of resources...) -->
-        <SupportFiles v-if="!isPreview" :assignment-id="isEdit ? (route.params.id as string) : createdId" :assume-ict="looksIct" />
+        <SupportFiles v-if="!isPreview" class="ab-glass-card" :assignment-id="isEdit ? (route.params.id as string) : createdId" :assume-ict="looksIct" />
 
         <!-- Questions -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+        <div class="ab-glass-card">
             <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-2">
               <h2 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white flex items-center">
                 <span class="w-8 h-8 mr-2.5 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center flex-shrink-0">
@@ -652,15 +713,6 @@
                   </p>
                 </div>
                 <div class="flex flex-col sm:flex-row gap-1.5 flex-shrink-0">
-                  <!-- Reuse a question already set for this outcome / topic -->
-                  <button
-                    v-if="form.subject_id"
-                    type="button"
-                    @click="bankGroup = group"
-                    class="px-3 py-1.5 border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 text-sm rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
-                  >
-                    From bank
-                  </button>
                   <button
                     v-if="form.subject_id"
                     type="button"
@@ -686,16 +738,6 @@
                 @close="itemBankGroup = null"
                 @pick="p => addFromItemBank(p.item_id, [p.item_page])"
                 @pick-all="p => addFromItemBank(p.item_id, p.pages)"
-              />
-              <QuestionBankPicker
-                v-if="bankGroup && form.subject_id"
-                :subject-id="form.subject_id"
-                :outcome-id="bankGroup.learning_outcome_id"
-                :topic-id="bankGroup.curriculum_topic_id"
-                :label="bankGroup.label"
-                :exclude-assignment-id="isEdit ? Number(route.params.id) : null"
-                @close="bankGroup = null"
-                @add="addFromBank"
               />
               <p v-if="curriculumQuestionGroups.length === 0" class="text-sm text-gray-500 dark:text-gray-400 py-2">
                 Select {{ form.assessment_category === 'LOA' ? 'a Topic and Learning Outcome(s)' : 'at least one Topic' }} above to start adding questions.
@@ -729,9 +771,6 @@
                         </span>
                         <span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
                           {{ fmtMarks(question.marks) }} marks
-                        </span>
-                        <span v-if="question.allow_drawing" class="px-2 py-1 text-xs font-medium rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200">
-                          Drawing
                         </span>
                         <span
                           v-if="questionCurriculumLabel(question)"
@@ -829,106 +868,6 @@
               </div>
             </div>
           </div>
-
-          <!-- Bottom Action Bar -->
-          <div v-if="!isPreview" class="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2.5 sm:gap-3 pt-2">
-            <button
-              @click="saveDraft"
-              :disabled="saving"
-              class="w-full sm:w-auto px-4 sm:px-5 py-3 sm:py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2 text-sm sm:text-base"
-            >
-              <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
-              </svg>
-              <span>{{ saving ? 'Saving...' : 'Save Draft' }}</span>
-            </button>
-            <button
-              @click="previewAssignment"
-              :disabled="previewing"
-              class="w-full sm:w-auto px-4 sm:px-5 py-3 sm:py-2.5 border border-indigo-600 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2 text-sm sm:text-base"
-            >
-              <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-              </svg>
-              <span>{{ previewing ? 'Preparing...' : 'Preview' }}</span>
-            </button>
-            <button
-              @click="publishAssignment"
-              :disabled="publishing"
-              class="w-full sm:w-auto px-4 sm:px-5 py-3 sm:py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2 text-sm sm:text-base font-medium shadow-sm"
-            >
-              <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
-              <span>{{ publishing ? 'Publishing...' : 'Publish' }}</span>
-            </button>
-          </div>
-      </div>
-
-      <!-- Assessment Snapshot sidebar - sticky at xl+, purely a read-only recap of what's below
-           so a teacher scrolling a long form never loses track of what they've set. -->
-      <div class="mt-4 sm:mt-6 xl:mt-0">
-        <div class="xl:sticky xl:top-6 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-indigo-50 dark:bg-gray-800 flex items-center gap-2.5">
-            <span class="w-7 h-7 rounded-md bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center flex-shrink-0">
-              <svg class="w-4 h-4 text-indigo-600 dark:text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
-              </svg>
-            </span>
-            <h2 class="text-base font-semibold text-indigo-900 dark:text-white">Assessment Snapshot</h2>
-          </div>
-          <div class="px-4 py-2.5 divide-y divide-gray-100 dark:divide-gray-700 text-sm">
-            <div class="flex items-center justify-between gap-3 py-2">
-              <span class="text-slate-500 dark:text-slate-400 font-medium">Category</span>
-              <span v-if="form.assessment_category" class="px-2 py-0.5 rounded text-xs font-bold"
-                :class="{
-                  'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300': form.assessment_category === 'LOA',
-                  'bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300': form.assessment_category === 'AOI',
-                  'bg-slate-50 text-slate-700 dark:bg-slate-900/30 dark:text-slate-300': form.assessment_category === 'EOC'
-                }"
-                :title="ASSESSMENT_CATEGORY_LABELS[form.assessment_category]"
-              >{{ form.assessment_category }}</span>
-              <span v-else class="text-gray-400">Not set</span>
-            </div>
-            <div v-if="form.assessment_category === 'EOC' && selectedConstructName" class="flex items-center justify-between gap-3 py-2">
-              <span class="text-slate-500 dark:text-slate-400 font-medium">Construct</span>
-              <span class="font-semibold text-slate-700 dark:text-slate-300 text-right truncate max-w-[65%]">{{ selectedConstructName }}</span>
-            </div>
-            <div class="flex items-center justify-between gap-3 py-2">
-              <span class="text-slate-500 dark:text-slate-400 font-medium">Subject</span>
-              <span class="font-semibold text-gray-900 dark:text-white text-right truncate max-w-[65%]">{{ selectedSubjectName || 'Not set' }}</span>
-            </div>
-            <div class="flex items-center justify-between gap-3 py-2">
-              <span class="text-slate-500 dark:text-slate-400 font-medium">Class-Stream</span>
-              <span class="font-semibold text-gray-900 dark:text-white text-right truncate max-w-[65%]">{{ classDropdownLabel }}</span>
-            </div>
-            <div class="flex items-center justify-between gap-3 py-2">
-              <span class="text-slate-500 dark:text-slate-400 font-medium">Deadline</span>
-              <span class="font-semibold text-gray-900 dark:text-white text-right">{{ form.due_date ? new Date(form.due_date).toLocaleDateString() : 'None' }}</span>
-            </div>
-            <div class="flex items-center justify-between gap-3 py-2">
-              <span class="text-slate-500 dark:text-slate-400 font-medium">Questions</span>
-              <span class="font-semibold text-emerald-600 dark:text-emerald-400">{{ questions.length }}</span>
-            </div>
-            <div class="flex items-center justify-between gap-3 py-2">
-              <span class="text-slate-500 dark:text-slate-400 font-medium">Total Marks</span>
-              <span class="font-semibold text-emerald-600 dark:text-emerald-400">{{ form.total_marks || 0 }}</span>
-            </div>
-          </div>
-          <!-- Ready to publish? What's done and what's left -->
-          <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
-            <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">To publish</p>
-            <ul class="space-y-1.5 text-sm">
-              <li v-for="c in publishChecklist" :key="c.label" class="flex items-center gap-2" :class="c.done ? 'text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white font-medium'">
-                <span class="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0" :class="c.done ? 'bg-indigo-600 text-white' : 'border-2 border-gray-300 dark:border-gray-600'">
-                  <svg v-if="c.done" class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
-                </span>
-                {{ c.label }}
-              </li>
-            </ul>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -1138,16 +1077,6 @@
               >
               <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ remainingMarksBudget }} of 100 marks available across this assessment.</p>
             </div>
-            <div>
-              <label class="flex items-center mt-2 sm:mt-6">
-                <input
-                  v-model="questionForm.allow_drawing"
-                  type="checkbox"
-                  class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                >
-                <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Allow drawing workspace</span>
-              </label>
-            </div>
           </div>
 
           <!-- Upload a PDF instead of typing the question out -->
@@ -1211,16 +1140,6 @@
               >
               <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ remainingMarksBudget }} of 100 marks available across this assessment.</p>
             </div>
-            <div v-if="!questionForm.practical_app">
-              <label class="flex items-center mt-2 sm:mt-6">
-                <input
-                  v-model="questionForm.allow_drawing"
-                  type="checkbox"
-                  class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                >
-                <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Allow drawing workspace</span>
-              </label>
-            </div>
           </div>
 
           <!-- Options for Objective Questions -->
@@ -1272,51 +1191,26 @@
           </div>
         </div>
 
-        <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-4 px-[max(1rem,calc((100%-1400px)/2+2rem))] py-3 sm:py-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
-          <button
-            @click="closeQuestionModal"
-            class="w-full sm:w-auto px-4 py-2.5 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-          >
-            Cancel
-          </button>
-          <span v-if="!editingQuestion && addedInRow > 0" class="self-center text-sm font-medium text-emerald-700 dark:text-emerald-300 sm:mr-auto" role="status">
+        <!-- Cancel on its own; every other button keeps the question first, then does what it says -->
+        <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-2.5 px-[max(1rem,calc((100%-1400px)/2+2rem))] py-3 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+          <button type="button" class="order-last sm:order-first h-11 px-4 rounded-xl text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700/60 transition-colors" @click="closeQuestionModal">Cancel</button>
+          <span v-if="!editingQuestion && addedInRow > 0" class="self-center text-sm font-medium text-emerald-700 dark:text-emerald-300" role="status">
             ✓ {{ addedInRow }} {{ addedInRow === 1 ? 'question' : 'questions' }} added - keep going
           </span>
-          <div class="grid grid-cols-2 sm:flex gap-2 sm:gap-4">
-            <button
-              type="button"
-              :disabled="finishing || previewing || publishing"
-              @click="saveAndFinish('preview')"
-              class="px-3 sm:px-4 py-2.5 sm:py-2 border border-gray-300 dark:border-gray-600 font-semibold rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
-              title="Keep this question and see the assessment as a learner will"
-            >
-              {{ previewing ? 'Opening…' : 'Save & preview' }}
+          <div class="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-2.5 sm:ml-auto">
+            <button type="button" :disabled="footerBusy" class="q-foot-btn q-foot-plain" title="Keep this question and see the assessment as a learner will" @click="saveAndFinish('preview')">
+              <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.5 12C3.7 8 7.5 5 12 5s8.3 3 9.5 7c-1.2 4-5 7-9.5 7s-8.3-3-9.5-7z" /></svg>{{ previewing ? 'Opening…' : 'Save & preview' }}
             </button>
-            <button
-              type="button"
-              :disabled="finishing || previewing || publishing"
-              @click="saveAndFinish('publish')"
-              class="px-3 sm:px-4 py-2.5 sm:py-2 border border-emerald-600 text-emerald-700 dark:text-emerald-300 font-semibold rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors disabled:opacity-50"
-              title="Keep this question and publish the assessment to learners"
-            >
-              {{ publishing ? 'Publishing…' : 'Save & publish' }}
+            <button type="button" :disabled="footerBusy" class="q-foot-btn q-foot-plain" title="Keep this question and save the assessment" @click="saveAndFinish('draft')">
+              <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 3h11l3 3v13a2 2 0 01-2 2H7a2 2 0 01-2-2V3zM8 3v5h7V3M8 21v-7h8v7" /></svg>{{ saving ? 'Saving…' : 'Save & draft' }}
+            </button>
+            <button v-if="!editingQuestion" type="button" :disabled="footerBusy" class="q-foot-btn q-foot-soft" title="Keep this question and start the next one of the same type" @click="saveAndFinish('another')">
+              <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14" /></svg>Save &amp; add another
+            </button>
+            <button type="button" :disabled="footerBusy" class="q-foot-btn q-foot-main" :class="{ 'col-span-2': editingQuestion }" title="Keep this question and publish the assessment to learners" @click="saveAndFinish('publish')">
+              <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12l14-7-5 14-3-6-6-1z" /></svg>{{ publishing ? 'Publishing…' : 'Save & publish' }}
             </button>
           </div>
-          <button
-            v-if="!editingQuestion"
-            type="button"
-            @click="saveQuestion(true)"
-            class="w-full sm:w-auto px-4 py-2.5 sm:py-2 border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 font-semibold rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
-            title="Save this question and start the next one of the same type"
-          >
-            Save &amp; add another
-          </button>
-          <button
-            @click="saveQuestion()"
-            class="w-full sm:w-auto px-4 py-2.5 sm:py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-          >
-            {{ editingQuestion ? 'Update' : 'Add' }} Question
-          </button>
         </div>
       </div>
     </div>
@@ -1436,7 +1330,6 @@ import PracticalWorkspace from '@/components/practical/PracticalWorkspace.vue'
 import { PRACTICAL_APPS, practicalInfo } from '@/components/practical/apps'
 import AoiScenarioSuggest from '@/components/assignment/AoiScenarioSuggest.vue'
 import { scenarioHtml, markingGuideJson, type AoiSuggestion } from '@/utils/aoiDraft'
-import QuestionBankPicker, { type BankQuestion } from '@/components/assignment/QuestionBankPicker.vue'
 import ItemPickerModal from '@/components/enotes/ItemPickerModal.vue'
 import { fetchPaper, toAssessmentQuestion } from '@/utils/itemBankQuestions'
 import PdfAnnotationViewer from '@/components/assignment/PdfAnnotationViewer.vue'
@@ -2616,45 +2509,6 @@ const closeQuestionModal = () => {
   }
 }
 
-// ---- Question bank: copy a question already set for this outcome / topic ----
-const bankGroup = ref<{ label: string; curriculum_topic_id: number | null; learning_outcome_id: number | null } | null>(null)
-const addFromBank = (q: BankQuestion, done: (ok: boolean) => void) => {
-  const group = bankGroup.value
-  if (!group) return done(false)
-  const marks = q.sub_questions.length ? q.sub_questions.reduce((n, s) => n + Number(s.marks), 0) : Number(q.marks)
-  if (marks > remainingMarksBudget.value) {
-    showToast('error', `This question is ${marks} marks, but only ${remainingMarksBudget.value} are left out of the 100-mark assessment total.`)
-    return done(false)
-  }
-  const now = new Date().toISOString()
-  const base = Date.now()
-  questions.value.push({
-    id: base,
-    assignment_id: 0,
-    parent_question_id: undefined,
-    question_type: q.question_type,
-    question_text: q.question_text,
-    scenario_text: q.scenario_text || '',
-    marks,
-    display_order: questions.value.length,
-    allow_drawing: q.allow_drawing,
-    response_type: q.response_type,
-    attachment_type: q.attachment_type,
-    attachment_path: q.attachment_path || undefined,
-    options: q.options.map((o, idx) => ({ id: 0, question_id: 0, option_text: o.option_text, is_correct: o.is_correct, display_order: idx, created_at: now, updated_at: now })),
-    sub_questions: q.sub_questions.map((s, i) => ({ id: base + i + 1, question_text: s.question_text, marks: Number(s.marks), display_order: i })),
-    curriculum_topic_id: group.curriculum_topic_id ?? undefined,
-    learning_outcome_id: group.learning_outcome_id ?? undefined,
-    created_at: now,
-    updated_at: now,
-    deleted_at: undefined
-  } as any)
-  // An AOI scenario brings its marking guide, unless this assessment already has one
-  if (q.marking_guide && !form.value.rubric) form.value.rubric = q.marking_guide
-  showToast('success', 'Question added from the bank - save to keep it')
-  done(true)
-}
-
 // ---- Questions from papers written in the Item Bank ----
 // Written once in the Item Bank, used here: each comes in as an ordinary question of this
 // assessment (tagged with the outcome / topic group it was added under), saved with the rest.
@@ -2907,15 +2761,20 @@ const questionFormIsBlank = () => {
     (f.question_type === 'true_false' || (f.options || []).every((o: any) => empty(o.option_text))) &&
     (f.sub_questions || []).every((q: any) => empty(q.question_text))
 }
-const saveAndFinish = async (then: 'preview' | 'publish') => {
+const footerBusy = computed(() => finishing.value || previewing.value || publishing.value || saving.value)
+const saveAndFinish = async (then: 'preview' | 'publish' | 'draft' | 'another') => {
   if (finishing.value) return
   finishing.value = true
   try {
-    // the editor hands over its text 0.3 s after the last key; publishing must not cut it off
+    // the editor hands over its text 0.3 s after the last key; a save must not cut it off
     await new Promise(r => setTimeout(r, 350))
+    if (then === 'another') {
+      await saveQuestion(true)
+      return
+    }
     if (!editingQuestion.value && questionFormIsBlank()) closeQuestionModal()
     else if (!(await saveQuestion())) return
-    await (then === 'preview' ? previewAssignment() : publishAssignment())
+    await (then === 'preview' ? previewAssignment() : then === 'draft' ? saveDraft() : publishAssignment())
   } finally {
     finishing.value = false
   }
@@ -3181,6 +3040,8 @@ const publishChecklist = computed(() => {
     { label: cat ? 'A question for each topic' : 'Questions', done: questions.value.length > 0 && Number(form.value.total_marks) > 0 && curriculumQuestionGroups.value.every(g => g.count > 0) }
   ]
 })
+
+const publishLeft = computed(() => publishChecklist.value.filter(c => !c.done))
 
 const saveDraft = async () => {
   // Title is auto-derived (see derivedTitle) and persistAssignment() falls back to "Untitled
@@ -3620,5 +3481,101 @@ onMounted(async () => {
 .toast-leave-to {
   opacity: 0;
   transform: translateX(100%) scale(0.8);
+}
+</style>
+
+<style scoped>
+/* The question window's buttons */
+.q-foot-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; height: 2.75rem; padding: 0 1rem; border-radius: 0.75rem; font-size: 0.875rem; font-weight: 600; white-space: nowrap; transition: background-color .15s, box-shadow .15s, transform .15s, color .15s; }
+.q-foot-btn:hover:not(:disabled) { transform: translateY(-1px); }
+.q-foot-btn:active:not(:disabled) { transform: translateY(0); }
+.q-foot-btn:focus-visible { outline: 2px solid #16a34a; outline-offset: 2px; }
+.q-foot-btn:disabled { opacity: .55; cursor: default; }
+.q-foot-plain { background: #fff; color: #374151; box-shadow: inset 0 0 0 1px #d1d5db, 0 1px 2px rgba(0,0,0,.05); }
+.q-foot-plain:hover:not(:disabled) { background: #f9fafb; box-shadow: inset 0 0 0 1px #9ca3af, 0 2px 6px rgba(0,0,0,.08); }
+.q-foot-soft { background: #ecfdf3; color: #15803d; box-shadow: inset 0 0 0 1px #bbf7d0; }
+.q-foot-soft:hover:not(:disabled) { background: #dcfce7; box-shadow: inset 0 0 0 1px #86efac, 0 2px 6px rgba(22,163,74,.15); }
+.q-foot-main { background: #15803d; color: #fff; box-shadow: 0 4px 12px rgba(21,128,61,.3); }
+.q-foot-main:hover:not(:disabled) { background: #166534; box-shadow: 0 6px 16px rgba(21,128,61,.38); }
+</style>
+
+<style>
+html.dark .q-foot-plain { background: #1f2937; color: #e5e7eb; box-shadow: inset 0 0 0 1px #4b5563; }
+html.dark .q-foot-plain:hover:not(:disabled) { background: #374151; box-shadow: inset 0 0 0 1px #6b7280; }
+html.dark .q-foot-soft { background: #14271c; color: #86efac; box-shadow: inset 0 0 0 1px #166534; }
+html.dark .q-foot-soft:hover:not(:disabled) { background: #1a3325; box-shadow: inset 0 0 0 1px #22c55e; }
+</style>
+
+<style>
+/* Frosted glass for this page. The blur sits on a layer behind each card, never on the card itself:
+   a blur on the card would trap its dropdowns underneath the next card. */
+div.ab-glass {
+  background-image:
+    radial-gradient(closest-side at 76% 22rem, rgba(34, 197, 94, .20), transparent),
+    radial-gradient(closest-side at 22% 50%, rgba(20, 184, 166, .15), transparent),
+    radial-gradient(closest-side at 72% 82%, rgba(132, 204, 22, .13), transparent);
+}
+.ab-glass .ab-glass-card {
+  position: relative;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, .9);
+  border-radius: 1.125rem;
+  box-shadow: 0 0 0 1px rgba(21, 128, 61, .10), 0 12px 28px -18px rgba(15, 60, 35, .32);
+}
+.ab-glass .ab-glass-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(140deg, rgba(255, 255, 255, .82), rgba(255, 255, 255, .58));
+  -webkit-backdrop-filter: blur(16px) saturate(165%);
+  backdrop-filter: blur(16px) saturate(165%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .95);
+}
+.ab-glass .ab-glass-card > * { position: relative; }
+.ab-glass .ab-glass-card > .border-b { border-color: rgba(21, 128, 61, .12); }
+
+.ab-glass .ab-glass-strip {
+  background: linear-gradient(140deg, rgba(255, 255, 255, .86), rgba(255, 255, 255, .66));
+  -webkit-backdrop-filter: blur(18px) saturate(170%);
+  backdrop-filter: blur(18px) saturate(170%);
+  border: 1px solid rgba(255, 255, 255, .9);
+  border-radius: 1.125rem;
+  box-shadow: 0 0 0 1px rgba(21, 128, 61, .12), 0 14px 30px -18px rgba(15, 60, 35, .38), inset 0 1px 0 rgba(255, 255, 255, .95);
+}
+.ab-glass .ab-glass-tile {
+  padding: .3rem .55rem;
+  border-radius: .7rem;
+  background: rgba(255, 255, 255, .55);
+  border: 1px solid rgba(255, 255, 255, .95);
+  box-shadow: 0 0 0 1px rgba(21, 128, 61, .09), 0 2px 6px -3px rgba(15, 60, 35, .18);
+}
+
+html.dark div.ab-glass {
+  background-image:
+    radial-gradient(closest-side at 76% 22rem, rgba(34, 197, 94, .15), transparent),
+    radial-gradient(closest-side at 22% 50%, rgba(20, 184, 166, .11), transparent),
+    radial-gradient(closest-side at 72% 82%, rgba(16, 185, 129, .09), transparent);
+}
+html.dark .ab-glass .ab-glass-card {
+  background: transparent;
+  border-color: rgba(255, 255, 255, .11);
+  box-shadow: 0 14px 30px -18px rgba(0, 0, 0, .8);
+}
+html.dark .ab-glass .ab-glass-card::before {
+  background: linear-gradient(140deg, rgba(31, 41, 55, .78), rgba(17, 24, 39, .58));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06);
+}
+html.dark .ab-glass .ab-glass-card > .border-b { border-color: rgba(255, 255, 255, .09); }
+html.dark .ab-glass .ab-glass-strip {
+  background: linear-gradient(140deg, rgba(31, 41, 55, .86), rgba(17, 24, 39, .70));
+  border-color: rgba(255, 255, 255, .12);
+  box-shadow: 0 14px 30px -18px rgba(0, 0, 0, .85), inset 0 1px 0 rgba(255, 255, 255, .06);
+}
+html.dark .ab-glass .ab-glass-tile {
+  background: rgba(255, 255, 255, .045);
+  border-color: rgba(255, 255, 255, .09);
+  box-shadow: none;
 }
 </style>
