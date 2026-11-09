@@ -40,6 +40,10 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: SAMEORIGIN');
+header('Referrer-Policy: strict-origin-when-cross-origin');
+
 // Set CORS headers
 header('Access-Control-Allow-Origin: ' . Config::get('FRONTEND_URL', 'http://localhost:3000'));
 header('Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS');

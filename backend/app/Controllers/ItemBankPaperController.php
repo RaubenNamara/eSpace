@@ -23,6 +23,7 @@ use eSpace\App\Utils\HtmlSanitizer;
  *   GET    /teacher/itembank/linkable?subject_id=   papers and PDFs that can be placed on eNote pages
  *   GET    /teacher/enotes/pages/{pageId}/items     what's placed on an eNote page
  *   PUT    /teacher/enotes/pages/{pageId}/items     {items: [{item_id, item_page}]}
+ *   GET    /teacher/itembank/{id}/paper             a colleague's published paper as students get it (read only)
  * Student
  *   GET    /student/itembank/{id}/paper             the questions, without answers
  *   POST   /student/itembank/{id}/pages/{n}/answer  {answer, enote_page_id?}  -> right/wrong and the answer
@@ -492,6 +493,40 @@ class ItemBankPaperController extends Controller
         $this->success([
             'paper' => ['id' => (int) $paper['id'], 'title' => html_entity_decode((string) $paper['title'], ENT_QUOTES, 'UTF-8'), 'subject' => $paper['subject_name'], 'description' => $paper['explanation']],
             'pages' => array_map(fn ($p) => $this->pageOut($p, false) + ['tried' => array_key_exists((int) $p['page_number'], $tried), 'was_right' => $tried[(int) $p['page_number']] ?? null], $stmt->fetchAll(\PDO::FETCH_ASSOC)),
+        ]);
+    }
+
+    /**
+     * A paper the way students get it, for a teacher reading it: their own, or a published one from
+     * their department (Services/DepartmentContent). Answers included - the reader checks them on
+     * the page and records nothing.
+     */
+    public function teacherPaper($id): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+        $teacherId = $this->teacherId();
+        $db = $this->db();
+        $stmt = $db->prepare(
+            "SELECT q.id, q.question_text AS title, q.explanation, s.name AS subject_name
+               FROM item_bank_questions q LEFT JOIN subjects s ON s.id = q.subject_id
+              WHERE q.id = ? AND q.question_type = 'paper' AND q.deleted_at IS NULL
+                AND (" . \eSpace\App\Services\DepartmentContent::editable('q.', 'created_by', '?', $teacherId) . "
+                     OR (q.status = 'published' AND " . \eSpace\App\Services\DepartmentContent::viewable('q.', 'created_by', '?', $teacherId, $this->getActiveDepartmentId()) . "))"
+        );
+        $stmt->execute([(int) $id, $teacherId, $teacherId]);
+        $paper = $stmt->fetch(\PDO::FETCH_ASSOC);
+        if (!$paper) {
+            $this->notFound('Paper not found');
+            return;
+        }
+        $stmt = $db->prepare("SELECT * FROM item_bank_pages WHERE item_id = ? AND deleted_at IS NULL ORDER BY page_number");
+        $stmt->execute([(int) $id]);
+        $this->success([
+            'paper' => ['id' => (int) $paper['id'], 'title' => html_entity_decode((string) $paper['title'], ENT_QUOTES, 'UTF-8'), 'subject' => $paper['subject_name'], 'description' => $paper['explanation']],
+            'pages' => array_map(fn ($p) => $this->pageOut($p, true) + ['tried' => false, 'was_right' => null], $stmt->fetchAll(\PDO::FETCH_ASSOC)),
         ]);
     }
 

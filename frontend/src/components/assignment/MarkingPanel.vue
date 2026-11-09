@@ -10,11 +10,21 @@
       </span>
     </div>
 
-    <h3 class="marking-panel__title">Score and comment</h3>
+    <h3 class="marking-panel__title">{{ allPractical ? 'Scores' : 'Score and comment' }}</h3>
 
     <div class="marking-panel__questions">
       <div v-for="(question, index) in questions" :key="question.id" class="marking-panel__question">
         <p v-if="curriculumLabel(question)" class="marking-panel__curriculum-label">{{ curriculumLabel(question) }}</p>
+        <!-- An ICT practical is scored beside the work (Open and mark); here it only shows -->
+        <template v-if="isPractical(question)">
+          <div class="marking-panel__question-header">
+            <span>Q{{ index + 1 }} <span class="marking-panel__max">/ {{ fmtMarks(questionMax(question)) }}</span></span>
+            <strong class="marking-panel__practical-score">{{ practicalScore(question) === null ? '-' : fmtMarks(practicalScore(question)!) }}</strong>
+          </div>
+          <p v-if="feedbackInput[question.id]" class="marking-panel__practical-comment">{{ feedbackInput[question.id] }}</p>
+          <p class="marking-panel__practical-note">{{ practicalScore(question) === null ? 'Not scored yet - use Open and mark on the work.' : 'Scored in Open and mark.' }}</p>
+        </template>
+        <template v-else>
         <div class="marking-panel__question-header">
           <span>Q{{ index + 1 }} <span class="marking-panel__max">/ {{ fmtMarks(questionMax(question)) }}</span></span>
           <input
@@ -37,6 +47,7 @@
           @input="onQuestionFeedbackInput(question.id)"
         ></textarea>
         <CommentChips v-if="!locked" :current="feedbackInput[question.id] || ''" @insert="t => addComment(question.id, t)" />
+        </template>
       </div>
     </div>
 
@@ -51,18 +62,11 @@
       v-model="generalFeedback"
       :disabled="locked"
       class="marking-panel__general-feedback"
-      rows="4"
+      rows="2"
       placeholder="Overall feedback for the student..."
       @input="onGeneralFeedbackInput"
     ></textarea>
-    <CommentChips v-if="!locked" :current="generalFeedback" :show="6" @insert="addGeneralComment" />
-    <VoiceNote
-      class="mt-3"
-      :path="initialVoicePath"
-      :seconds="initialVoiceSeconds"
-      :disabled="locked"
-      :endpoint="`/api/teacher/assignments/${assignmentId}/submissions/${submissionId}/voice-feedback`"
-    />
+    <CommentChips v-if="!locked" :current="generalFeedback" :show="2" @insert="addGeneralComment" />
     <div v-if="saveStatus" class="marking-panel__status">{{ saveStatus }}</div>
 
     <div class="marking-panel__actions">
@@ -90,10 +94,19 @@ import axios from 'axios'
 import type { AssignmentQuestion } from '@/types'
 import { computeGradeSummary } from '@/utils/grading'
 import { useToastStore } from '@/stores/toast'
-import VoiceNote from '@/components/assignment/VoiceNote.vue'
 import CommentChips from './CommentChips.vue'
+import { QUESTION_MARKED, type QuestionMarked } from '@/components/practical/apps'
+import { onBeforeUnmount } from 'vue'
 
 const toast = useToastStore()
+
+// ICT practicals (Word, Excel, PowerPoint, Access) are scored in their viewer, not here
+const isPractical = (q: any) => !!q?.practical_app
+const practicalScore = (q: any): number | null => {
+  const v = marksInput.value[q.id]
+  return v === null || v === undefined || Number.isNaN(Number(v)) ? null : Number(v)
+}
+const allPractical = computed(() => props.questions.length > 0 && props.questions.every(isPractical))
 
 interface MarkableQuestion extends AssignmentQuestion {
   question_mark?: { marks_awarded: number | null; feedback?: string } | null
@@ -111,14 +124,10 @@ interface Props {
   status: string
   totalMarks: number
   initialFeedback?: string
-  initialVoicePath?: string | null
-  initialVoiceSeconds?: number | null
 }
 
 const props = withDefaults(defineProps<Props>(), {
   initialFeedback: '',
-  initialVoicePath: null,
-  initialVoiceSeconds: null
 })
 
 const emit = defineEmits<{
@@ -139,6 +148,16 @@ props.questions.forEach(q => {
   marksInput.value[q.id] = awarded === null || awarded === undefined ? null : Number(awarded)
   feedbackInput.value[q.id] = q.question_mark?.feedback || ''
 })
+
+// a practical marked in its viewer (TeacherMarkingCanvas)
+const onPracticalMarked = (e: Event) => {
+  const d = (e as CustomEvent<QuestionMarked>).detail
+  if (d.submissionId !== Number(props.submissionId)) return
+  marksInput.value[d.questionId] = d.marks
+  feedbackInput.value[d.questionId] = d.feedback
+}
+window.addEventListener(QUESTION_MARKED, onPracticalMarked)
+onBeforeUnmount(() => window.removeEventListener(QUESTION_MARKED, onPracticalMarked))
 
 // Purely informational, never read by the grading/marking logic itself (section 24: labels only).
 function curriculumLabel(question: MarkableQuestion): string {
@@ -420,6 +439,33 @@ watch(() => props.initialFeedback, (val) => {
 
 .marking-panel__max {
   color: #9ca3af;
+}
+
+/* an ICT practical: its score shown, given in Open and mark */
+.marking-panel__practical-score {
+  min-width: 64px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+}
+.dark .marking-panel__practical-score {
+  color: #f9fafb;
+}
+.marking-panel__practical-comment {
+  margin-top: 4px;
+  font-size: 13px;
+  color: #374151;
+  white-space: pre-line;
+  word-break: break-word;
+}
+.dark .marking-panel__practical-comment {
+  color: #d1d5db;
+}
+.marking-panel__practical-note {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #6b7280;
 }
 
 .marking-panel__marks-input {

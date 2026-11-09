@@ -246,7 +246,8 @@ class AssignmentController extends Controller
             // Get options for objective questions, and sub-questions for scenario questions
             foreach ($questions as &$question) {
                 if (in_array($question['question_type'], ['multiple_choice_single', 'multiple_choice_multiple', 'true_false'])) {
-                    $optionsSql = "SELECT * FROM assignment_question_options
+                    // Never is_correct: this goes to the learner's browser, where anyone can read it
+                    $optionsSql = "SELECT id, question_id, option_text, display_order FROM assignment_question_options
                                   WHERE question_id = :question_id
                                   ORDER BY display_order ASC";
                     $stmt = $this->pdo->prepare($optionsSql);
@@ -295,6 +296,7 @@ class AssignmentController extends Controller
             $existingAnswers = [];
             $answerAnnotationsByQuestion = [];
             $answerAttachmentsByQuestion = [];
+            $practicalFilesByQuestion = [];
 
             if ($submission) {
                 $answersSql = "SELECT * FROM assignment_answers
@@ -302,6 +304,14 @@ class AssignmentController extends Controller
                 $stmt = $this->pdo->prepare($answersSql);
                 $stmt->execute(['submission_id' => $submission['id']]);
                 $existingAnswers = $stmt->fetchAll();
+
+                // ICT practicals: the learner's file in each app they used
+                $answerByQuestion = array_column($existingAnswers, null, 'question_id');
+                foreach ($questions as $pq) {
+                    if (!empty($pq['practical_app'])) {
+                        $practicalFilesByQuestion[(int) $pq['id']] = \eSpace\App\Utils\Practical::files($this->pdo, (int) $submission['id'], $pq, $answerByQuestion[$pq['id']] ?? null);
+                    }
+                }
 
                 $aaStmt = $this->pdo->prepare("SELECT question_id, page_number, annotation_data FROM student_answer_annotations WHERE submission_id = :submission_id");
                 $aaStmt->execute(['submission_id' => $submission['id']]);
@@ -365,7 +375,8 @@ class AssignmentController extends Controller
                 'office_uploads' => \eSpace\App\Utils\FileKinds::assignmentIsIct($this->pdo, (int) $assignmentId),
                 'answers' => $existingAnswers,
                 'answer_annotations' => $answerAnnotationsByQuestion,
-                'answer_attachments' => $answerAttachmentsByQuestion
+                'answer_attachments' => $answerAttachmentsByQuestion,
+                'practical_files' => $practicalFilesByQuestion
             ]);
         } catch (\Exception $e) {
             $this->serverError('Failed to load assignment: ' . $e->getMessage());
@@ -553,13 +564,20 @@ class AssignmentController extends Controller
             // assignment_submissions.unique_assignment_student means there is only ever
             // one row per student per assignment - so a stale client belief that no
             // submission exists yet must not lead to a duplicate INSERT.
-            $status = $data['status'] ?? 'in_progress';
+            $status = ($data['status'] ?? '') === 'submitted' ? 'submitted' : 'in_progress';
 
             $existingStmt = $this->pdo->prepare(
                 "SELECT id, attempt_number, status FROM assignment_submissions WHERE assignment_id = :assignment_id AND student_id = :student_id"
             );
             $existingStmt->execute(['assignment_id' => $assignmentId, 'student_id' => $studentId]);
             $existingSubmission = $existingStmt->fetch();
+
+            // The time limit is kept here, not just by the page's clock: after it, nothing more is
+            // accepted and what was saved is handed in
+            if ($existingSubmission && $existingSubmission['status'] === 'in_progress' && $this->attemptTimeIsUp((int) $existingSubmission['id'])) {
+                $status = 'submitted';
+                unset($data['answers']);
+            }
 
             // Guard against resubmitting a locked attempt even via the "create" (POST) route,
             // e.g. if the client's local state is stale and still thinks no submission exists.
@@ -618,8 +636,15 @@ class AssignmentController extends Controller
                      VALUES (:submission_id, :question_id, :answer_text, 'typed', NOW(), NOW())"
                 );
 
+                $ownQuestions = $this->pdo->prepare('SELECT id FROM assignment_questions WHERE assignment_id = ? AND deleted_at IS NULL');
+                $ownQuestions->execute([$assignmentId]);
+                $ownQuestionIds = array_map('intval', $ownQuestions->fetchAll(\PDO::FETCH_COLUMN));
+
                 foreach ($data['answers'] as $answer) {
-                    $questionId = (int) $answer['question_id'];
+                    $questionId = (int) ($answer['question_id'] ?? 0);
+                    if (!in_array($questionId, $ownQuestionIds, true)) {
+                        continue;
+                    }
                     $existingStmt->execute(['submission_id' => $submissionId, 'question_id' => $questionId]);
                     $existingAnswer = $existingStmt->fetch();
 
@@ -731,7 +756,7 @@ class AssignmentController extends Controller
             $questionId = (int) $question['id'];
 
             if (in_array($question['question_type'], ['multiple_choice_single', 'multiple_choice_multiple', 'true_false'], true)) {
-                $optStmt = $this->pdo->prepare("SELECT * FROM assignment_question_options WHERE question_id = :question_id ORDER BY display_order ASC");
+                $optStmt = $this->pdo->prepare("SELECT id, question_id, option_text, display_order FROM assignment_question_options WHERE question_id = :question_id ORDER BY display_order ASC");
                 $optStmt->execute(['question_id' => $questionId]);
                 $question['options'] = $optStmt->fetchAll();
             }
@@ -750,6 +775,7 @@ class AssignmentController extends Controller
             $ansStmt->execute(['submission_id' => $submissionId, 'question_id' => $questionId]);
             $questionAnswer = $ansStmt->fetch();
             $question['answer'] = $questionAnswer ?: null;
+            $question['practical_files'] = \eSpace\App\Utils\Practical::files($this->pdo, $submissionId, $question, $question['answer']);
 
             if (!in_array($question['question_type'], ['multiple_choice_single', 'multiple_choice_multiple', 'true_false'], true)) {
                 $qaStmt = $this->pdo->prepare("SELECT page_number, annotation_data FROM question_annotations WHERE question_id = :question_id ORDER BY page_number ASC");
@@ -1015,6 +1041,13 @@ class AssignmentController extends Controller
                 return;
             }
 
+            $closed = $this->attemptClosedMessage($assignmentId, $submission ? (int) $submission['id'] : null);
+            if ($closed !== null) {
+                $this->pdo->rollBack();
+                $this->error($closed, 403);
+                return;
+            }
+
             if ($submission) {
                 $submissionId = $submission['id'];
             } else {
@@ -1126,50 +1159,37 @@ class AssignmentController extends Controller
         }
     }
 
+
     /**
-     * Shared validation, enrollment/submission lookup, and on-disk file save for a student's
-     * free-response file upload - used by both the single "primary" upload slot
-     * (uploadAnswerAttachment) and the multi-file "additional files" gallery
-     * (uploadAnswerAttachmentFile). Must be called inside an already-open transaction; on any
-     * failure this sends the error response itself, rolls back, and returns null so callers can
-     * just `if (!$ctx) return;`. On success the transaction is left open for the caller to do its
-     * own table-specific write (upsert vs insert) before committing.
+     * The learner's in-progress attempt at an assignment they can see, for an answer to one of its
+     * questions - created on the first save. Must be called inside an open transaction; on failure
+     * it sends the error, rolls back and returns null.
      */
-    private function prepareAnswerFileUpload(int $questionId, int $assignmentId, int $studentId, bool $allowDocuments = false): ?array
+    private function attemptTimeIsUp(int $submissionId): bool
     {
-        if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
-            $this->error('No file uploaded or upload error occurred', 400);
-            return null;
+        // a minute and a half's grace: the page's own hand-in at time-up has to arrive
+        $stmt = $this->pdo->prepare(
+            'SELECT a.duration_minutes * 60 + 90 < TIMESTAMPDIFF(SECOND, s.started_at, NOW())
+             FROM assignment_submissions s JOIN assignments a ON a.id = s.assignment_id
+             WHERE s.id = ? AND a.duration_minutes > 0 AND s.started_at IS NOT NULL'
+        );
+        $stmt->execute([$submissionId]);
+        return (bool) $stmt->fetchColumn();
+    }
+
+    /** Why no more work can be saved on this attempt (the deadline, or its time limit), or null */
+    private function attemptClosedMessage(int $assignmentId, ?int $submissionId): ?string
+    {
+        $stmt = $this->pdo->prepare('SELECT due_date IS NOT NULL AND due_date < NOW() AND NOT allow_late_submission FROM assignments WHERE id = ?');
+        $stmt->execute([$assignmentId]);
+        if ((bool) $stmt->fetchColumn()) {
+            return 'The deadline has passed and late work is not allowed.';
         }
+        return $submissionId !== null && $this->attemptTimeIsUp($submissionId) ? 'Time is up for this assessment.' : null;
+    }
 
-        $file = $_FILES['file'];
-        $maxSize = 20 * 1024 * 1024; // 20MB
-
-        if ($file['size'] > $maxSize) {
-            $this->error('File exceeds maximum size of 20MB', 400);
-            return null;
-        }
-
-        $mimeType = MimeType::detect($file['tmp_name'], $file['name'] ?? null);
-
-        $imageExtensions = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
-        $isPdf = $mimeType === 'application/pdf';
-        $isImage = isset($imageExtensions[$mimeType]);
-
-        // ICT: Word, PowerPoint, Excel, Publisher and Access files too, as extra answer files
-        // ('document' - checked by name and content, see FileKinds)
-        $documentExt = null;
-        if (!$isPdf && !$isImage && $allowDocuments && \eSpace\App\Utils\FileKinds::assignmentIsIct($this->pdo, $assignmentId)) {
-            $documentExt = \eSpace\App\Utils\FileKinds::check($file['tmp_name'], (string) ($file['name'] ?? ''), \eSpace\App\Utils\FileKinds::STUDENT_OFFICE);
-        }
-
-        if (!$isPdf && !$isImage && !$documentExt) {
-            $this->error($allowDocuments && \eSpace\App\Utils\FileKinds::assignmentIsIct($this->pdo, $assignmentId)
-                ? 'Only PDF, pictures, or Word, PowerPoint, Excel, Publisher and Access files can be handed in'
-                : 'Only PDF, JPG, PNG, or WEBP files are allowed', 400);
-            return null;
-        }
-
+    private function openSubmission(int $questionId, int $assignmentId, int $studentId): ?int
+    {
         // Verify the assignment is published and the student is enrolled in its class
         $stmt = $this->pdo->prepare(
             "SELECT id FROM assignments a WHERE a.id = :assignment_id AND a.status = 'published'" . AssignmentRemoval::openOrSubmitted((string) (int) $studentId) . "
@@ -1224,6 +1244,13 @@ class AssignmentController extends Controller
             return null;
         }
 
+        $closed = $this->attemptClosedMessage($assignmentId, $submission ? (int) $submission['id'] : null);
+        if ($closed !== null) {
+            $this->pdo->rollBack();
+            $this->error($closed, 403);
+            return null;
+        }
+
         if ($submission) {
             $submissionId = $submission['id'];
         } else {
@@ -1239,6 +1266,205 @@ class AssignmentController extends Controller
             );
             $stmt->execute(['assignment_id' => $assignmentId, 'student_id' => $studentId, 'attempt_number' => $attemptNumber]);
             $submissionId = $this->pdo->lastInsertId();
+        }
+
+        return (int) $submissionId;
+    }
+
+    /**
+     * Save a learner's ICT practical (their document, workbook, slides or database, worked on in
+     * Tusome). A learner may answer in any of the apps, one file per app (Utils/Practical); each is
+     * saved again on every autosave until it, or the whole assessment, is handed in.
+     * POST /student/assignments/questions/{questionId}/practical   multipart: file, assignment_id, app
+     */
+    public function savePractical(): void
+    {
+        $this->requireAuth();
+        $this->requireRole('student');
+        \eSpace\App\Utils\Practical::ensureSchema($this->pdo);
+
+        $studentId = (int) $this->getCurrentUserId();
+        $questionId = (int) $this->routeParam('questionId');
+        $assignmentId = (int) $this->input('assignment_id', 0);
+
+        $stmt = $this->pdo->prepare('SELECT practical_app FROM assignment_questions WHERE id = ? AND assignment_id = ? AND deleted_at IS NULL');
+        $stmt->execute([$questionId, $assignmentId]);
+        $main = \eSpace\App\Utils\Practical::app($stmt->fetchColumn());
+        if (!$main) {
+            $this->notFound('Practical not found');
+            return;
+        }
+        // the teacher's app unless the learner chose another
+        $app = \eSpace\App\Utils\Practical::app($this->input('app', $main));
+        if (!$app) {
+            $this->error('Unknown app', 400);
+            return;
+        }
+        if (!isset($_FILES['file'])) {
+            $this->error('No work was sent', 400);
+            return;
+        }
+
+        try {
+            $this->pdo->beginTransaction();
+            $submissionId = $this->openSubmission($questionId, $assignmentId, $studentId);
+            if ($submissionId === null) {
+                return;
+            }
+
+            $stmt = $this->pdo->prepare('SELECT id, path, handed_in_at FROM assignment_practical_files WHERE submission_id = ? AND question_id = ? AND app = ? FOR UPDATE');
+            $stmt->execute([$submissionId, $questionId, $app]);
+            $fileRow = $stmt->fetch();
+            if ($fileRow && $fileRow['handed_in_at']) {
+                $this->pdo->rollBack();
+                $this->error('This file is already handed in', 409);
+                return;
+            }
+
+            $error = null;
+            $path = \eSpace\App\Utils\Practical::store($_FILES['file'], $app, 'work_' . $questionId . '_' . $studentId, $error);
+            if (!$path) {
+                $this->pdo->rollBack();
+                $this->error($error ?? 'The work could not be saved', 400);
+                return;
+            }
+            $name = mb_substr(trim((string) $this->input('name', '')), 0, 200) ?: null;
+
+            if ($fileRow) {
+                $this->pdo->prepare('UPDATE assignment_practical_files SET path = ?, original_name = ?, updated_at = NOW() WHERE id = ?')
+                    ->execute([$path, $name, $fileRow['id']]);
+            } else {
+                $this->pdo->prepare('INSERT INTO assignment_practical_files (submission_id, question_id, app, path, original_name, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())')
+                    ->execute([$submissionId, $questionId, $app, $path, $name]);
+            }
+
+            // The answer row: what marks are given against, and (for the teacher's app) the file
+            $stmt = $this->pdo->prepare('SELECT id, student_attachment_path FROM assignment_answers WHERE submission_id = ? AND question_id = ?');
+            $stmt->execute([$submissionId, $questionId]);
+            $existing = $stmt->fetch();
+            if ($app === $main) {
+                if ($existing) {
+                    $this->pdo->prepare("UPDATE assignment_answers SET answer_mode = 'practical', student_attachment_path = ?, student_attachment_original_name = ?, updated_at = NOW() WHERE id = ?")
+                        ->execute([$path, $name, $existing['id']]);
+                } else {
+                    $this->pdo->prepare("INSERT INTO assignment_answers (submission_id, question_id, answer_mode, student_attachment_path, student_attachment_original_name, created_at, updated_at)
+                                         VALUES (?, ?, 'practical', ?, ?, NOW(), NOW())")
+                        ->execute([$submissionId, $questionId, $path, $name]);
+                }
+            } elseif ($existing) {
+                $this->pdo->prepare("UPDATE assignment_answers SET answer_mode = 'practical', updated_at = NOW() WHERE id = ?")->execute([$existing['id']]);
+            } else {
+                $this->pdo->prepare("INSERT INTO assignment_answers (submission_id, question_id, answer_mode, created_at, updated_at) VALUES (?, ?, 'practical', NOW(), NOW())")
+                    ->execute([$submissionId, $questionId]);
+            }
+            $this->pdo->commit();
+
+            // the previous save of this app is replaced by this one
+            $previous = $fileRow['path'] ?? ($app === $main ? ($existing['student_attachment_path'] ?? null) : null);
+            if ($previous && $previous !== $path) {
+                \eSpace\App\Utils\Practical::discard($previous);
+            }
+            $this->success(['submission_id' => $submissionId, 'path' => $path, 'app' => $app], 'Saved');
+        } catch (\Exception $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            $this->serverError('Could not save the work: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Hand in one app's file of a practical on its own, before the rest of the assessment. It can
+     * no longer be changed; the teacher marks it with the rest once the assessment is handed in.
+     * POST /student/assignments/questions/{questionId}/practical/hand-in   assignment_id, app
+     */
+    public function handInPractical(): void
+    {
+        $this->requireAuth();
+        $this->requireRole('student');
+        \eSpace\App\Utils\Practical::ensureSchema($this->pdo);
+
+        $studentId = (int) $this->getCurrentUserId();
+        $questionId = (int) $this->routeParam('questionId');
+        $assignmentId = (int) $this->input('assignment_id', 0);
+        $app = \eSpace\App\Utils\Practical::app($this->input('app', ''));
+        if (!$app) {
+            $this->error('Unknown app', 400);
+            return;
+        }
+
+        try {
+            $this->pdo->beginTransaction();
+            $submissionId = $this->openSubmission($questionId, $assignmentId, $studentId);
+            if ($submissionId === null) {
+                return;
+            }
+            $stmt = $this->pdo->prepare('UPDATE assignment_practical_files SET handed_in_at = NOW() WHERE submission_id = ? AND question_id = ? AND app = ? AND handed_in_at IS NULL');
+            $stmt->execute([$submissionId, $questionId, $app]);
+            if (!$stmt->rowCount()) {
+                $this->pdo->rollBack();
+                $this->error('There is no saved work in this app to hand in', 404);
+                return;
+            }
+            $this->pdo->commit();
+            $at = $this->pdo->prepare('SELECT handed_in_at FROM assignment_practical_files WHERE submission_id = ? AND question_id = ? AND app = ?');
+            $at->execute([$submissionId, $questionId, $app]);
+            $this->success(['app' => $app, 'handed_in_at' => $at->fetchColumn()], 'Handed in');
+        } catch (\Exception $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            $this->serverError('Could not hand in the work: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Shared validation, enrollment/submission lookup, and on-disk file save for a student's
+     * free-response file upload - used by both the single "primary" upload slot
+     * (uploadAnswerAttachment) and the multi-file "additional files" gallery
+     * (uploadAnswerAttachmentFile). Must be called inside an already-open transaction; on any
+     * failure this sends the error response itself, rolls back, and returns null so callers can
+     * just `if (!$ctx) return;`. On success the transaction is left open for the caller to do its
+     * own table-specific write (upsert vs insert) before committing.
+     */
+    private function prepareAnswerFileUpload(int $questionId, int $assignmentId, int $studentId, bool $allowDocuments = false): ?array
+    {
+        if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+            $this->error('No file uploaded or upload error occurred', 400);
+            return null;
+        }
+
+        $file = $_FILES['file'];
+        $maxSize = 20 * 1024 * 1024; // 20MB
+
+        if ($file['size'] > $maxSize) {
+            $this->error('File exceeds maximum size of 20MB', 400);
+            return null;
+        }
+
+        $mimeType = MimeType::detect($file['tmp_name'], $file['name'] ?? null);
+
+        $imageExtensions = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
+        $isPdf = $mimeType === 'application/pdf';
+        $isImage = isset($imageExtensions[$mimeType]);
+
+        // ICT: Word, PowerPoint, Excel, Publisher and Access files too, as extra answer files
+        // ('document' - checked by name and content, see FileKinds)
+        $documentExt = null;
+        if (!$isPdf && !$isImage && $allowDocuments && \eSpace\App\Utils\FileKinds::assignmentIsIct($this->pdo, $assignmentId)) {
+            $documentExt = \eSpace\App\Utils\FileKinds::check($file['tmp_name'], (string) ($file['name'] ?? ''), \eSpace\App\Utils\FileKinds::STUDENT_OFFICE);
+        }
+
+        if (!$isPdf && !$isImage && !$documentExt) {
+            $this->error($allowDocuments && \eSpace\App\Utils\FileKinds::assignmentIsIct($this->pdo, $assignmentId)
+                ? 'Only PDF, pictures, or Word, PowerPoint, Excel, Publisher and Access files can be handed in'
+                : 'Only PDF, JPG, PNG, or WEBP files are allowed', 400);
+            return null;
+        }
+
+        $submissionId = $this->openSubmission($questionId, $assignmentId, $studentId);
+        if ($submissionId === null) {
+            return null;
         }
 
         $uploadDir = __DIR__ . '/../../../public/uploads/assignment_submissions/';

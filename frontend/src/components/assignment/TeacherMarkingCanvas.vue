@@ -1,5 +1,17 @@
 <template>
   <div class="teacher-marking-canvas">
+    <!-- An ICT practical: the learner's work opens in the app it was made in, view only -->
+    <PracticalWorkView
+      v-if="(props.question as any).practical_app"
+      :app="(props.question as any).practical_app"
+      :path="props.question.answer?.student_attachment_path || null"
+      :files="(props.question as any).practical_files || null"
+      :student-name="props.studentName || null"
+      :title="(props.question as any).practical_title || 'Practical'"
+      :instructions="(props.question as any).question_text || null"
+      :marking="practicalMarking"
+    />
+    <template v-else>
     <!-- The student's answer as one document, in the order they arranged it (typed answer, the
          page they wrote on, each uploaded file). Every part keeps its own marking surface; a file
          part opens for marking where it sits (one open at a time, so only one heavy canvas is
@@ -112,6 +124,7 @@
         <span class="teacher-marking-canvas__part-closed-action">Open to mark</span>
       </button>
     </template>
+    </template>
   </div>
 </template>
 
@@ -119,6 +132,8 @@
 import { useToastStore } from '@/stores/toast'
 import AppIcon from '@/components/common/AppIcon.vue'
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
+import PracticalWorkView from '@/components/practical/PracticalWorkView.vue'
+import { announceQuestionMarked } from '@/components/practical/apps'
 import axios from 'axios'
 import type { AnnotationLayerJSON, AnnotationTool, AssignmentQuestion } from '@/types'
 import { TYPED_ANSWER_PAGE } from '@/types'
@@ -142,6 +157,8 @@ interface Props {
   }
   assignmentId: number
   submissionId: number
+  /** whose script it is, to head an ICT practical's files */
+  studentName?: string | null
 }
 
 const props = defineProps<Props>()
@@ -203,6 +220,23 @@ const pdfReadonlyLayersByPage = computed(() => {
     ]
   }
   return result
+})
+
+// An ICT practical is marked beside the work, in its viewer; the mark saves like any other and the
+// page around (MarkingPanel, Mark by question) hears about it (announceQuestionMarked)
+const practicalMarking = computed(() => {
+  const q = props.question as any
+  if (!q.practical_app) return null
+  return {
+    max: Number(q.marks) || 0,
+    mark: q.question_mark?.marks_awarded ?? null,
+    comment: q.question_mark?.feedback || '',
+    save: async (mark: number | null, comment: string) => {
+      await axios.put(`${API_BASE}/teacher/assignments/${props.assignmentId}/submissions/${props.submissionId}/marks`, { question_id: q.id, marks_awarded: mark, feedback: comment || null })
+      q.question_mark = { ...(q.question_mark || {}), marks_awarded: mark, feedback: comment }
+      announceQuestionMarked({ submissionId: Number(props.submissionId), questionId: Number(q.id), marks: mark, feedback: comment })
+    }
+  }
 })
 
 let typedSaveTimeout: number | null = null

@@ -223,6 +223,7 @@ class MarkingController extends Controller
                 }
 
                 $question['answer'] = $answersByQuestion[$questionId] ?? null;
+                $question['practical_files'] = \eSpace\App\Utils\Practical::files($db, (int) $submissionId, $question, $question['answer']);
                 $question['question_mark'] = $marksByQuestion[$questionId] ?? null;
 
                 // Read-only curriculum context (section 24: informational labels only, never
@@ -606,23 +607,44 @@ class MarkingController extends Controller
             'question_ids' => array_map('intval', json_decode((string) $m['question_ids'], true) ?: []),
         ], $stmt->fetchAll(PDO::FETCH_ASSOC));
 
-        // Colleagues, those in the assessment's department first
-        $stmt = $db->prepare(
-            'SELECT t.id, t.first_name, t.last_name, (t.department_id = s.department_id) AS same_dept
-               FROM teachers t
-               JOIN assignments a ON a.id = ?
-               LEFT JOIN subjects s ON s.id = a.subject_id
-              WHERE t.deleted_at IS NULL AND t.id <> ?
-              ORDER BY same_dept DESC, t.first_name, t.last_name'
-        );
-        $stmt->execute([$assignmentId, $teacherId]);
-        $teachers = array_map(static fn ($t) => [
-            'id' => (int) $t['id'],
-            'name' => trim($t['first_name'] . ' ' . $t['last_name']),
-            'same_department' => (bool) $t['same_dept'],
-        ], $stmt->fetchAll(PDO::FETCH_ASSOC));
+        // Colleagues in the assessment's department only
+        $teachers = [];
+        $departmentId = $this->assignmentDepartmentId($assignmentId);
+        if ($departmentId) {
+            $stmt = $db->prepare(
+                'SELECT t.id, t.first_name, t.last_name
+                   FROM teachers t
+                  WHERE t.deleted_at IS NULL AND t.id <> ? AND ' . self::IN_DEPARTMENT . '
+                  ORDER BY t.first_name, t.last_name'
+            );
+            $stmt->execute([$teacherId, $departmentId, $departmentId]);
+            $teachers = array_map(static fn ($t) => [
+                'id' => (int) $t['id'],
+                'name' => trim($t['first_name'] . ' ' . $t['last_name']),
+                'same_department' => true,
+            ], $stmt->fetchAll(PDO::FETCH_ASSOC));
+        }
 
         $this->success(['markers' => $markers, 'teachers' => $teachers]);
+    }
+
+    /** Teacher t is in department ? (primary, or a member through teacher_department_assignments); binds the id twice */
+    private const IN_DEPARTMENT = '(t.department_id = ? OR EXISTS (SELECT 1 FROM teacher_department_assignments tda
+                                   WHERE tda.teacher_id = t.id AND tda.department_id = ? AND tda.deleted_at IS NULL))';
+
+    /** The assessment's department: its subject's, else the department of the teacher who set it */
+    private function assignmentDepartmentId(int $assignmentId): ?int
+    {
+        $stmt = $this->getDb()->prepare(
+            'SELECT COALESCE(s.department_id, t.department_id)
+               FROM assignments a
+               LEFT JOIN subjects s ON s.id = a.subject_id
+               LEFT JOIN teachers t ON t.id = a.teacher_id
+              WHERE a.id = ?'
+        );
+        $stmt->execute([$assignmentId]);
+        $id = $stmt->fetchColumn();
+        return $id ? (int) $id : null;
     }
 
     /**
@@ -649,6 +671,16 @@ class MarkingController extends Controller
         if (!$colleague || $colleagueId === $teacherId) {
             $this->error('Choose a colleague to share the marking with', 422);
             return;
+        }
+        $departmentId = $this->assignmentDepartmentId($assignmentId);
+        $stmt = $db->prepare('SELECT 1 FROM teachers t WHERE t.id = ? AND ' . self::IN_DEPARTMENT);
+        $stmt->execute([$colleagueId, $departmentId, $departmentId]);
+        if (!$departmentId || !$stmt->fetchColumn()) {
+            // taking questions back off someone is always allowed
+            if (!empty($data['question_ids'])) {
+                $this->error('Marking can only be shared with teachers in this department', 422);
+                return;
+            }
         }
 
         // only this assessment's own (top-level) questions
@@ -894,8 +926,9 @@ class MarkingController extends Controller
         $scripts = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $scriptIds = array_map(static fn ($r) => (int) $r['id'], $scripts);
 
+        \eSpace\App\Utils\Practical::ensureSchema($db);
         $stmt = $db->prepare(
-            "SELECT id, question_type, question_text, marks FROM assignment_questions
+            "SELECT id, question_type, question_text, marks, practical_app FROM assignment_questions
               WHERE assignment_id = ? AND parent_question_id IS NULL AND deleted_at IS NULL ORDER BY display_order, id"
         );
         $stmt->execute([$assignmentId]);
@@ -933,7 +966,7 @@ class MarkingController extends Controller
             foreach ($db->query(
                 "SELECT question_id, COUNT(*) n FROM assignment_answers
                   WHERE submission_id IN ({$in})
-                    AND (COALESCE(answer_text, '') <> '' OR student_attachment_path IS NOT NULL OR drawing_path IS NOT NULL)
+                    AND (COALESCE(answer_text, '') <> '' OR student_attachment_path IS NOT NULL OR drawing_path IS NOT NULL OR answer_mode = 'practical')
                   GROUP BY question_id"
             )->fetchAll(PDO::FETCH_ASSOC) as $r) {
                 $answered[(int) $r['question_id']] = (int) $r['n'];
@@ -948,7 +981,8 @@ class MarkingController extends Controller
                 'id' => $qid,
                 'number' => $numberOf[$qid],
                 'markers' => $markerNames[$qid] ?? [],
-                'type' => $q['question_type'],
+                // an ICT practical is named by its app (Utils/Practical)
+                'type' => $q['practical_app'] ? $q['practical_app'] . ' practical' : $q['question_type'],
                 'objective' => in_array($q['question_type'], $objective, true),
                 'text' => mb_strimwidth(trim(html_entity_decode(strip_tags((string) $q['question_text']), ENT_QUOTES, 'UTF-8')), 0, 140, '…'),
                 'marks' => (float) $q['marks'],
@@ -1028,7 +1062,7 @@ class MarkingController extends Controller
                     'status' => $s['status'],
                     'answer_text' => $options || $question['question_type'] === 'true_false' ? null : html_entity_decode(strip_tags(str_replace(['</p>', '<br>', '<br/>', '<br />'], "\n", $text)), ENT_QUOTES, 'UTF-8'),
                     'chosen' => $chosen,
-                    'has_file' => $a && !empty($a['student_attachment_path']),
+                    'has_file' => $a && (!empty($a['student_attachment_path']) || ($a['answer_mode'] ?? '') === 'practical'),
                     'has_drawing' => $a && !empty($a['drawing_path']),
                     'files' => $files[$sid] ?? [],
                     'drawing' => $a && !empty($a['drawing_path']) ? $a['drawing_path'] : null,

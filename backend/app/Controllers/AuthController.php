@@ -94,9 +94,6 @@ class AuthController extends Controller
             
             // Ensure user data includes role
             $userData = $result['user'];
-            if (!isset($userData['role'])) {
-                $userData['role'] = 'admin'; // Default to admin for testing
-            }
 
             // Recorded so report cards can show a student's actual login count for the term
             // (replaces manually-entered attendance days - see ReportCardService). A dedicated

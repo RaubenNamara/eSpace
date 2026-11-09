@@ -288,7 +288,7 @@
     </template>
 
     </div>
-    <DepartmentWork v-if="view === 'department'" :items="deptItems" :loading="deptLoading" noun="eNotes" open-label="Read" @open="router.push(`/teacher/enotes/preview/${($event as ENoteTopic).id}`)" @edit="openBuilder(($event as ENoteTopic).id)" @remove="deleteBook([$event as ENoteTopic])" />
+    <DepartmentShelves v-if="view === 'department'" kind="enotes" :items="deptItems" :loading="deptLoading" noun="eNotes" @open="router.push(`/teacher/enotes/preview/${($event as ENoteTopic).id}`)" @edit="openBuilder(($event as ENoteTopic).id)" @remove="deleteBook([$event as ENoteTopic])" />
 
     <AudiencePanel
       v-if="readersFor"
@@ -793,7 +793,8 @@ import { ref, computed, watch, onMounted } from 'vue'
 import ClassStreamMultiSelect from '@/components/enotes/ClassStreamMultiSelect.vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import WorkScopeSwitch from '@/components/teacher/WorkScopeSwitch.vue'
-import DepartmentWork, { type DeptItem } from '@/components/teacher/DepartmentWork.vue'
+import type { DeptItem } from '@/components/teacher/DepartmentWork.vue'
+import DepartmentShelves from '@/components/teacher/DepartmentShelves.vue'
 import StatStrip, { type StatItem } from '@/components/ui/StatStrip.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import Skeleton from '@/components/ui/Skeleton.vue'

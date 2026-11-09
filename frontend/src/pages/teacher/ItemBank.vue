@@ -207,7 +207,7 @@
     </template>
 
     </div>
-    <DepartmentWork v-if="view === 'department'" :items="deptItems" :loading="deptLoading" noun="papers" open-label="Open" @open="openResource($event as ItemBankResource)" @edit="editResource($event as ItemBankResource)" @remove="deleteResource(($event as ItemBankResource).id)" />
+    <DepartmentShelves v-if="view === 'department'" kind="itembank" :items="deptItems" :loading="deptLoading" noun="papers" @open="openColleagueResource($event as ItemBankResource)" @edit="editResource($event as ItemBankResource)" @remove="deleteResource(($event as ItemBankResource).id)" />
 
     <!-- Upload/Edit Modal -->
     <div v-if="showResourceModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -401,6 +401,7 @@
 
     <!-- PDF Preview -->
     <ItemBankPdfViewer v-if="previewResource" :resource="previewResource" @close="previewResource = null" />
+    <ItemBankPdfViewer v-if="deptResource" :resource="deptResource" start-in-read-mode student-view @close="deptResource = null" />
     <AudiencePanel
       v-if="readersFor"
       :title="readersFor.title"
@@ -419,7 +420,8 @@ import { ref, computed, watch, onMounted } from 'vue'
 import axios from 'axios'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import WorkScopeSwitch from '@/components/teacher/WorkScopeSwitch.vue'
-import DepartmentWork, { type DeptItem } from '@/components/teacher/DepartmentWork.vue'
+import type { DeptItem } from '@/components/teacher/DepartmentWork.vue'
+import DepartmentShelves from '@/components/teacher/DepartmentShelves.vue'
 import StatStrip, { type StatItem } from '@/components/ui/StatStrip.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import Skeleton from '@/components/ui/Skeleton.vue'
@@ -798,6 +800,13 @@ const openResource = (resource: ItemBankResource) => {
     if (contentRole === 'teacher') router.push(`/teacher/itembank/papers/${resource.id}`)
     else toast.info('This paper is written in Tusome - its teacher edits it in their Item Bank')
   } else previewResource.value = resource
+}
+
+// A colleague's paper opens as students get it, never in the paper builder
+const deptResource = ref<ItemBankResource | null>(null)
+const openColleagueResource = (resource: ItemBankResource) => {
+  if (resource.question_type === 'paper') router.push(`/teacher/itembank/${resource.id}/paper`)
+  else deptResource.value = resource
 }
 
 const openCreateModal = (kind: 'pdf' | 'paper' = 'pdf') => {

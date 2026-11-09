@@ -1,7 +1,7 @@
 <template>
   <!-- The student's home, in Tusome's green, white and black on cream. The school's notices slide
        past at the top; then the work waiting, shortcuts, classes and notes - each showing a few,
-       opening up for the rest. How it is all going lives in Reports (My activity). -->
+       opening up for the rest; how the marks are going (General performance). -->
   <div class="w-full">
     <!-- A live class running now comes first -->
     <RouterLink v-if="data && data.stats.live_now > 0" to="/student/live-classes" class="mb-3 flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-red-600 text-white shadow-md shadow-red-500/20 hover:bg-red-700">
@@ -50,16 +50,31 @@
           </button>
         </section>
 
-        <!-- Shortcuts to the main modules -->
-        <section class="dash-box">
-          <h2 class="dash-bar">Jump in</h2>
-          <TransitionGroup tag="nav" name="dash-pop" class="grid grid-cols-4 gap-1 sm:gap-2 p-2 sm:p-3" aria-label="Shortcuts">
-            <RouterLink v-for="s in shortcuts" :key="s.to" :to="s.to" class="group flex flex-col items-center gap-1.5 rounded-xl py-2.5 px-1 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition min-w-0">
-              <span class="w-11 h-11 rounded-2xl flex items-center justify-center bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100 dark:bg-indigo-950/50 dark:text-indigo-300 dark:ring-indigo-900 group-hover:bg-indigo-600 group-hover:text-white transition"><AppIcon :name="s.icon" class="w-5 h-5" /></span>
-              <span class="text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-100 text-center leading-tight">{{ s.label }}</span>
-            </RouterLink>
+        <!-- How the marks are going: each score and the trend -->
+        <GeneralPerformance />
+
+        <!-- My summaries (the last card in each column takes up what is left, so the two end level) -->
+        <section class="dash-box lg:flex-1">
+          <h2 class="dash-bar">My summaries <RouterLink to="/student/my-notes" class="dash-bar-link">All</RouterLink></h2>
+          <div v-if="!notesLoaded" class="space-y-2 p-3"><div v-for="i in 2" :key="i" class="h-14 rounded-xl bg-gray-100 dark:bg-gray-700/50 animate-pulse"></div></div>
+          <div v-else-if="!myNotes.length" class="m-3 rounded-xl bg-gradient-to-r from-lime-100 to-indigo-50 dark:from-indigo-950/50 dark:to-indigo-900/30 p-3.5">
+            <p class="text-[0.95rem] font-medium text-indigo-900 dark:text-indigo-100">Write notes while you read eNotes and books - they all collect here.</p>
+            <RouterLink to="/student/enotes" class="mt-2 inline-block px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold">Start reading</RouterLink>
+          </div>
+          <TransitionGroup v-else tag="ul" name="dash-pop" class="p-3 space-y-2">
+            <li v-for="n in shown('notes', myNotes)" :key="n.id">
+              <RouterLink to="/student/my-notes" class="block rounded-xl bg-gradient-to-r from-lime-50 to-indigo-50 dark:from-indigo-950/40 dark:to-indigo-900/20 px-3 py-2 hover:-translate-y-0.5 transition">
+                <span class="block text-xs font-semibold text-indigo-700 dark:text-indigo-300 truncate">{{ n.subject }} · {{ n.source }}{{ n.page ? ` · p. ${n.page}` : '' }}</span>
+                <span class="block text-sm text-gray-900 dark:text-white line-clamp-2">{{ n.text }}</span>
+              </RouterLink>
+            </li>
           </TransitionGroup>
+          <button v-if="myNotes.length > LIMIT.notes" type="button" class="dash-more" :aria-expanded="!!open.notes" @click="toggle('notes')">
+            {{ open.notes ? 'Show less' : `Show ${myNotes.length - LIMIT.notes} more` }}
+            <svg class="w-4 h-4 transition-transform duration-300" :class="open.notes ? 'rotate-180' : ''" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6" /></svg>
+          </button>
         </section>
+
       </div>
 
       <div class="flex flex-col gap-4 min-w-0">
@@ -100,26 +115,16 @@
           </TransitionGroup>
         </section>
 
-        <!-- My summaries -->
-        <section class="dash-box">
-          <h2 class="dash-bar">My summaries <RouterLink to="/student/my-notes" class="dash-bar-link">All</RouterLink></h2>
-          <div v-if="!notesLoaded" class="space-y-2 p-3"><div v-for="i in 2" :key="i" class="h-14 rounded-xl bg-gray-100 dark:bg-gray-700/50 animate-pulse"></div></div>
-          <div v-else-if="!myNotes.length" class="m-3 rounded-xl bg-gradient-to-r from-lime-100 to-indigo-50 dark:from-indigo-950/50 dark:to-indigo-900/30 p-3.5">
-            <p class="text-[0.95rem] font-medium text-indigo-900 dark:text-indigo-100">Write notes while you read eNotes and books - they all collect here.</p>
-            <RouterLink to="/student/enotes" class="mt-2 inline-block px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold">Start reading</RouterLink>
-          </div>
-          <TransitionGroup v-else tag="ul" name="dash-pop" class="p-3 space-y-2">
-            <li v-for="n in shown('notes', myNotes)" :key="n.id">
-              <RouterLink to="/student/my-notes" class="block rounded-xl bg-gradient-to-r from-lime-50 to-indigo-50 dark:from-indigo-950/40 dark:to-indigo-900/20 px-3 py-2 hover:-translate-y-0.5 transition">
-                <span class="block text-xs font-semibold text-indigo-700 dark:text-indigo-300 truncate">{{ n.subject }} · {{ n.source }}{{ n.page ? ` · p. ${n.page}` : '' }}</span>
-                <span class="block text-sm text-gray-900 dark:text-white line-clamp-2">{{ n.text }}</span>
-              </RouterLink>
-            </li>
+
+        <!-- Shortcuts to the main modules -->
+        <section class="dash-box flex flex-col lg:flex-1">
+          <h2 class="dash-bar">Jump in</h2>
+          <TransitionGroup tag="nav" name="dash-pop" class="grid grid-cols-4 gap-1 sm:gap-2 p-2 sm:p-3 lg:flex-1 content-center" aria-label="Shortcuts">
+            <RouterLink v-for="s in shortcuts" :key="s.to" :to="s.to" class="group flex flex-col items-center gap-1.5 rounded-xl py-2.5 px-1 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition min-w-0">
+              <span class="w-11 h-11 rounded-2xl flex items-center justify-center bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100 dark:bg-indigo-950/50 dark:text-indigo-300 dark:ring-indigo-900 group-hover:bg-indigo-600 group-hover:text-white transition"><AppIcon :name="s.icon" class="w-5 h-5" /></span>
+              <span class="text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-100 text-center leading-tight">{{ s.label }}</span>
+            </RouterLink>
           </TransitionGroup>
-          <button v-if="myNotes.length > LIMIT.notes" type="button" class="dash-more" :aria-expanded="!!open.notes" @click="toggle('notes')">
-            {{ open.notes ? 'Show less' : `Show ${myNotes.length - LIMIT.notes} more` }}
-            <svg class="w-4 h-4 transition-transform duration-300" :class="open.notes ? 'rotate-180' : ''" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6" /></svg>
-          </button>
         </section>
       </div>
     </div>
@@ -131,6 +136,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import axios from 'axios'
 import AppIcon from '@/components/common/AppIcon.vue'
 import NoticesTicker from '@/components/dashboard/NoticesTicker.vue'
+import GeneralPerformance from '@/components/dashboard/GeneralPerformance.vue'
 import { useLiveRefresh } from '@/composables/useLiveRefresh'
 import { usePublicationsAccess } from '@/composables/usePublicationsAccess'
 import { useAuthStore } from '@/stores/auth'

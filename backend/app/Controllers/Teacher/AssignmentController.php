@@ -77,6 +77,54 @@ class AssignmentController extends Controller
     }
 
     /**
+     * The file a practical opens with for every learner (a letter to format, data to chart...),
+     * made in the same Tusome editor the learners use. An empty request (or DELETE) removes it.
+     * POST   /teacher/assignments/questions/{questionId}/practical-starter   multipart: file
+     * DELETE /teacher/assignments/questions/{questionId}/practical-starter
+     */
+    public function savePracticalStarter(): void
+    {
+        $this->requireAuth();
+        $teacherId = (int) $this->getTeacherId();
+        $questionId = (int) $this->routeParam('questionId');
+        if (!$teacherId || !$this->verifyQuestionOwnership($questionId, $teacherId)) {
+            $this->notFound('Question not found');
+            return;
+        }
+        $db = $this->getDb();
+        \eSpace\App\Utils\Practical::ensureSchema($db);
+        $stmt = $db->prepare('SELECT practical_app, practical_starter_path FROM assignment_questions WHERE id = ?');
+        $stmt->execute([$questionId]);
+        $q = $stmt->fetch();
+        $app = \eSpace\App\Utils\Practical::app($q['practical_app'] ?? null);
+        if (!$app) {
+            $this->error('This question is not a practical', 422);
+            return;
+        }
+
+        $path = null;
+        if (($_SERVER['REQUEST_METHOD'] ?? 'POST') !== 'DELETE' && isset($_FILES['file'])) {
+            $error = null;
+            $path = \eSpace\App\Utils\Practical::store($_FILES['file'], $app, 'starter_' . $questionId, $error);
+            if (!$path) {
+                $this->error($error ?? 'The starting file could not be saved', 400);
+                return;
+            }
+        }
+        $db->prepare('UPDATE assignment_questions SET practical_starter_path = ?, updated_at = NOW() WHERE id = ?')->execute([$path, $questionId]);
+        // a copied assessment may still use the old file, so it is only removed when nothing does
+        $old = $q['practical_starter_path'] ?? null;
+        if ($old && $old !== $path) {
+            $stmt = $db->prepare('SELECT COUNT(*) FROM assignment_questions WHERE practical_starter_path = ?');
+            $stmt->execute([$old]);
+            if (!(int) $stmt->fetchColumn()) {
+                \eSpace\App\Utils\Practical::discard($old);
+            }
+        }
+        $this->success(['practical_starter_path' => $path], $path ? 'Starting file saved' : 'Starting file removed');
+    }
+
+    /**
      * Verify teacher owns the assignment a question belongs to.
      * Returns the owning assignment_id, or null if not owned/not found.
      */
@@ -589,6 +637,7 @@ class AssignmentController extends Controller
                 -- students see it by)
                 COUNT(DISTINCT CASE WHEN sub.status IN ('submitted','marking','graded','returned') THEN sub.id END) as handed_in_count,
                 COUNT(DISTINCT CASE WHEN sub.status IN ('submitted','marking') THEN sub.id END) as to_mark_count,
+                COUNT(DISTINCT CASE WHEN sub.status IN ('in_progress','') THEN sub.id END) as started_count,
                 COUNT(DISTINCT CASE WHEN sub.status IN ('graded','returned') THEN sub.id END) as marked_count,
                 (SELECT COUNT(DISTINCT sde.student_id) FROM student_department_enrollments sde
                  LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
@@ -1573,14 +1622,24 @@ class AssignmentController extends Controller
             $attachmentPath = $data['attachment_path'] ?? (!$isObjective ? self::DEFAULT_ANSWER_DOCUMENT_PATH : null);
             $attachmentType = $data['attachment_type'] ?? (!$isObjective && $attachmentPath ? self::DEFAULT_ANSWER_DOCUMENT_TYPE : 'none');
 
+            // An ICT practical (Utils/Practical): worked in Tusome's Word, Excel, PowerPoint or
+            // Access, so it is an essay-type question with no answer document
+            \eSpace\App\Utils\Practical::ensureSchema($db);
+            $practicalApp = \eSpace\App\Utils\Practical::app($data['practical_app'] ?? null);
+            if ($practicalApp) {
+                $data['question_type'] = 'essay';
+                $attachmentPath = null;
+                $attachmentType = 'none';
+            }
+
             $sql = "INSERT INTO assignment_questions (
                 assignment_id, parent_question_id, curriculum_topic_id, learning_outcome_id,
                 question_type, question_text, scenario_text,
-                marks, display_order, allow_drawing, response_type, attachment_path, attachment_type, created_at, updated_at
+                marks, display_order, allow_drawing, response_type, practical_app, attachment_path, attachment_type, created_at, updated_at
             ) VALUES (
                 :assignment_id, :parent_question_id, :curriculum_topic_id, :learning_outcome_id,
                 :question_type, :question_text, :scenario_text,
-                :marks, :display_order, :allow_drawing, :response_type, :attachment_path, :attachment_type, NOW(), NOW()
+                :marks, :display_order, :allow_drawing, :response_type, :practical_app, :attachment_path, :attachment_type, NOW(), NOW()
             )";
 
             $stmt = $db->prepare($sql);
@@ -1596,6 +1655,7 @@ class AssignmentController extends Controller
                 'marks' => $data['marks'],
                 'display_order' => $data['display_order'] ?? $nextOrder,
                 'allow_drawing' => $data['allow_drawing'] ?? 0,
+                'practical_app' => $practicalApp,
                 'attachment_path' => $attachmentPath,
                 'attachment_type' => $attachmentType
             ]);
@@ -1686,6 +1746,13 @@ class AssignmentController extends Controller
 
             $updateFields = [];
             $params = ['question_id' => $questionId];
+
+            if (array_key_exists('practical_app', $data)) {
+                \eSpace\App\Utils\Practical::ensureSchema($db);
+                $updateFields[] = 'practical_app = :practical_app';
+                $params['practical_app'] = \eSpace\App\Utils\Practical::app($data['practical_app']);
+                unset($data['practical_app']);
+            }
 
             $allowedFields = ['question_text', 'scenario_text', 'marks', 'display_order', 'allow_drawing', 'response_type', 'attachment_path', 'attachment_type', 'curriculum_topic_id', 'learning_outcome_id'];
             foreach ($allowedFields as $field) {
@@ -1841,11 +1908,20 @@ class AssignmentController extends Controller
 
         $db = $this->getDb();
         
+        // has_work: something was saved, so a script not handed in can still be collected and marked.
+        // can_still_work: the learner's time and deadline allow them to carry on.
         $sql = "SELECT sub.*,
                 CONCAT(s.first_name, ' ', s.last_name) as student_name,
-                s.email as student_email
+                s.email as student_email,
+                (EXISTS (SELECT 1 FROM assignment_answers x WHERE x.submission_id = sub.id
+                         AND (COALESCE(x.answer_text, '') <> '' OR x.student_attachment_path IS NOT NULL OR x.drawing_path IS NOT NULL OR x.answer_mode = 'practical'))
+                 OR EXISTS (SELECT 1 FROM assignment_answer_attachments y WHERE y.submission_id = sub.id)
+                 OR EXISTS (SELECT 1 FROM student_answer_annotations z WHERE z.submission_id = sub.id)) as has_work,
+                NOT ((a.duration_minutes > 0 AND sub.started_at IS NOT NULL AND TIMESTAMPDIFF(SECOND, sub.started_at, NOW()) > a.duration_minutes * 60 + 90)
+                     OR (a.due_date IS NOT NULL AND a.due_date < NOW() AND NOT a.allow_late_submission)) as can_still_work
                 FROM assignment_submissions sub
                 JOIN students s ON sub.student_id = s.id
+                JOIN assignments a ON a.id = sub.assignment_id
                 WHERE sub.assignment_id = :assignment_id AND sub.deleted_at IS NULL
                 ORDER BY sub.submitted_at DESC";
         
@@ -1854,6 +1930,44 @@ class AssignmentController extends Controller
         $submissions = $stmt->fetchAll();
 
         $this->success($submissions);
+    }
+
+    /**
+     * Hand in, on the learner's behalf, a script they saved work on but never submitted, so it can
+     * be marked. Dated when they last worked on it, not when the teacher collected it.
+     * POST /teacher/assignments/{id}/submissions/{submissionId}/collect
+     */
+    public function collectSubmission(): void
+    {
+        $teacherId = $this->getTeacherId();
+        $assignmentId = (int) $this->routeParam('id');
+        $submissionId = (int) $this->routeParam('submissionId');
+        if (!$teacherId || !$this->verifyAssignmentOwnership($assignmentId, $teacherId)) {
+            $this->forbidden('You do not have permission to collect this script');
+            return;
+        }
+
+        $db = $this->getDb();
+        $stmt = $db->prepare(
+            "UPDATE assignment_submissions SET status = 'submitted', submitted_at = updated_at, updated_at = NOW()
+             WHERE id = :id AND assignment_id = :assignment_id AND status IN ('in_progress', '') AND deleted_at IS NULL"
+        );
+        $stmt->execute(['id' => $submissionId, 'assignment_id' => $assignmentId]);
+        if (!$stmt->rowCount()) {
+            $this->error('This script has already been handed in', 409);
+            return;
+        }
+
+        // Only objective questions: marked now, as when a learner hands in
+        $autoMarked = null;
+        try {
+            $autoMarked = \eSpace\App\Services\ObjectiveAutoMark::markAndRelease($db, $submissionId, $assignmentId);
+        } catch (\Throwable $e) {
+            error_log('Objective auto-marking failed: ' . $e->getMessage());
+        }
+        $at = $db->prepare('SELECT submitted_at FROM assignment_submissions WHERE id = ?');
+        $at->execute([$submissionId]);
+        $this->success(['status' => $autoMarked ? 'returned' : 'submitted', 'submitted_at' => $at->fetchColumn()], 'Script collected');
     }
 
     /**

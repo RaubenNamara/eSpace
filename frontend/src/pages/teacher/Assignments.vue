@@ -15,9 +15,9 @@
           <svg class="w-4 h-4 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"></path></svg>
           <input v-model="searchQuery" type="search" placeholder="Search assessments" class="w-full md:w-48 pl-8 pr-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-violet-500">
         </div>
-        <PickerDropdown v-model="classFilter" label="Class" :options="classOptions" align="right" />
-        <PickerDropdown v-model="subjectFilter" label="Subject" :options="subjectOptions" align="right" />
-        <PickerDropdown v-model="typeFilter" label="Type" :options="typeOptions" align="right" />
+        <PickerDropdown v-model="classFilter" :options="classOptions" align="right" />
+        <PickerDropdown v-model="subjectFilter" :options="subjectOptions" align="right" />
+        <PickerDropdown v-model="typeFilter" :options="typeOptions" align="right" />
       </template>
       <StatStrip v-model="viewFilter" :items="statItems" hide-when-empty />
     </PageHeader>
@@ -96,7 +96,7 @@
                     <span class="text-[11px] font-semibold tabular-nums text-gray-500 dark:text-gray-400">{{ a.handed_in_count || 0 }}/{{ a.audience || 0 }}</span>
                   </div>
                   <p class="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
-                    handed in<template v-if="Number(a.to_mark_count)"> · <span class="font-semibold text-rose-600 dark:text-rose-300">{{ a.to_mark_count }} to mark</span></template><template v-if="Number(a.marked_count)"> · {{ a.marked_count }} marked</template>
+                    handed in<template v-if="Number(a.to_mark_count)"> · <span class="font-semibold text-rose-600 dark:text-rose-300">{{ a.to_mark_count }} to mark</span></template><template v-if="Number(a.marked_count)"> · {{ a.marked_count }} marked</template><template v-if="Number(a.started_count)"> · {{ a.started_count }} not handed in</template>
                   </p>
                 </div>
 
@@ -165,6 +165,7 @@ type Row = Assignment & {
   assessment_category?: string | null
   audience?: number | string
   handed_in_count?: number | string
+  started_count?: number | string
   to_mark_count?: number | string
   marked_count?: number | string
 }

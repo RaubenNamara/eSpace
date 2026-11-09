@@ -2,7 +2,7 @@
   <!-- A paper written in Tusome, one question at a time: answer, check, see the right answer or
        the model, and move on. The dots along the top show where you are and how you did. -->
   <div class="w-full max-w-3xl mx-auto">
-    <button type="button" class="mb-3 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white" @click="router.push('/student/itembank')">
+    <button type="button" class="mb-3 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white" @click="router.push(backTo)">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
       Item Bank
     </button>
@@ -34,7 +34,7 @@
 
       <article class="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-6">
         <p class="mb-2 text-xs font-semibold text-gray-400">Question {{ index + 1 }} of {{ data.pages.length }}</p>
-        <PracticeQuestion :key="page.id" :question="page" :item-id="data.paper.id" @answered="onAnswered" />
+        <PracticeQuestion :key="page.id" :question="page" :item-id="data.paper.id" :preview="asTeacher" @answered="onAnswered" />
       </article>
 
       <div class="mt-4 flex items-center justify-between">
@@ -58,6 +58,10 @@ interface Payload { paper: { id: number; title: string; subject: string | null }
 
 const route = useRoute()
 const router = useRouter()
+// A teacher reading a colleague's paper as students get it: checked against the answer key here,
+// nothing recorded
+const asTeacher = computed(() => route.meta.previewRole === 'teacher')
+const backTo = computed(() => (asTeacher.value ? '/teacher/itembank' : '/student/itembank'))
 const data = ref<Payload | null>(null)
 const loading = ref(true)
 const index = ref(0)
@@ -84,7 +88,7 @@ const onAnswered = (right: boolean | null) => {
 
 onMounted(async () => {
   try {
-    const res = await axios.get(`/api/student/itembank/${route.params.id}/paper`)
+    const res = await axios.get(`/api/${asTeacher.value ? 'teacher' : 'student'}/itembank/${route.params.id}/paper`)
     data.value = res.data.data
   } catch {
     data.value = null

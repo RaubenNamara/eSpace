@@ -33,7 +33,7 @@
          every student, and the marks add up on each script -->
     <section v-if="shareOpen && data" class="mb-4 rounded-2xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-900/10 p-4 sm:p-5">
       <h2 class="text-sm font-bold text-gray-900 dark:text-white">Share the marking</h2>
-      <p class="mt-0.5 text-xs text-gray-600 dark:text-gray-300">Give a colleague one or more questions. They mark those questions for every student from their dashboard; you can still mark any question. Each script's marks add up, and you total and return them below.</p>
+      <p class="mt-0.5 text-xs text-gray-600 dark:text-gray-300">Give a colleague one or more questions. They mark those questions for every student from their dashboard; you can still mark any question. Each script's marks add up, and you total and return them from the student list.</p>
 
       <ul v-if="markers.length" class="mt-3 space-y-1.5">
         <li v-for="m in markers" :key="m.teacher_id" class="flex flex-wrap items-center gap-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2">
@@ -53,7 +53,7 @@
           <span class="text-xs font-semibold text-gray-700 dark:text-gray-200">Colleague</span>
           <select v-model.number="shareForm.teacher_id" class="mt-1 w-full sm:w-80 px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 dark:text-white text-sm">
             <option :value="0" disabled>Choose a teacher…</option>
-            <option v-for="t in colleagues" :key="t.id" :value="t.id">{{ niceName(t.name) }}{{ t.same_department ? '' : ' (other department)' }}</option>
+            <option v-for="t in colleagues" :key="t.id" :value="t.id">{{ niceName(t.name) }}</option>
           </select>
         </label>
         <div>
@@ -88,7 +88,7 @@
             Q{{ q.number }}
             <svg v-if="q.marked >= data.scripts" class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
           </span>
-          <span class="block text-[10px] text-gray-500 dark:text-gray-400 capitalize truncate">{{ q.type.replace(/_/g, ' ') }} · {{ fmtMarks(q.marks) }} mk</span>
+          <span class="block text-[10px] text-gray-500 dark:text-gray-400 capitalize truncate">{{ q.type.replace(/_/g, ' ').replace(/^(word|excel|powerpoint|access) practical$/, (_m: string, a: string) => `${({ word: 'Word', excel: 'Excel', powerpoint: 'PowerPoint', access: 'Access' } as Record<string, string>)[a]} practical`) }} · {{ fmtMarks(q.marks) }} mk</span>
           <span class="mt-1.5 block h-1 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden"><span class="block h-full rounded-full bg-emerald-500" :style="{ width: `${Math.min(100, (q.marked / data.scripts) * 100)}%` }"></span></span>
           <span class="mt-0.5 block text-[10px] text-gray-400 tabular-nums">{{ q.marked }}/{{ data.scripts }} marked</span>
           <span v-if="data.role === 'owner' && q.markers?.length" class="mt-0.5 block text-[10px] font-semibold text-indigo-600 dark:text-indigo-300 truncate">{{ q.markers.join(', ') }}</span>
@@ -150,6 +150,7 @@
                   :question="sheetQuestion"
                   :assignment-id="assignmentId"
                   :submission-id="row.submission_id"
+                  :student-name="row.student"
                 />
                 <p v-else-if="row.answer_text" class="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-line break-words">{{ row.answer_text }}</p>
                 <p v-else class="text-sm italic text-gray-400">No answer</p>
@@ -213,7 +214,7 @@
                 </div>
                 <span class="mt-1.5 block h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden"><span class="block h-full rounded-full bg-emerald-500" :style="{ width: `${ordered.length ? (markedHere / ordered.length) * 100 : 0}%` }"></span></span>
                 <ul class="mt-2 max-h-80 overflow-y-auto -mx-1 [scrollbar-width:thin]">
-                  <li v-for="(r, i) in ordered" :key="r.submission_id">
+                  <li v-for="(r, i) in shownStudents" :key="r.submission_id">
                     <button type="button" class="w-full flex items-center gap-2 px-1.5 py-1 rounded-md text-left text-xs" :class="i === pos ? 'bg-indigo-50 dark:bg-indigo-900/30 font-semibold text-indigo-800 dark:text-indigo-200' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50'" @click="goTo(i)">
                       <span class="w-3.5 text-center" :class="r.marks_awarded !== null ? 'text-emerald-500' : 'text-gray-300 dark:text-gray-600'">{{ r.marks_awarded !== null ? '✓' : '•' }}</span>
                       <span class="flex-1 min-w-0 truncate">{{ niceName(r.student) }}</span>
@@ -221,6 +222,13 @@
                     </button>
                   </li>
                 </ul>
+                <button v-if="ordered.length > STUDENTS_SHOWN && pos < STUDENTS_SHOWN" type="button" class="mt-1 text-xs font-semibold text-indigo-600 dark:text-indigo-300 hover:underline" :aria-expanded="showAllStudents" @click="showAllStudents = !showAllStudents">
+                  {{ showAllStudents ? 'Show less' : `Show ${ordered.length - STUDENTS_SHOWN} more` }}
+                </button>
+                <!-- Totals every fully marked script and returns it; kept here so it is in view while marking -->
+                <button v-if="data.role === 'owner' && data.progress?.length" type="button" class="btn-primary mt-3 w-full" :disabled="finishing || !toReturn" :title="toReturn ? '' : 'No fully marked scripts are waiting to be returned'" @click="finish">
+                  {{ finishing ? 'Working…' : `Total and return ${toReturn || ''}` }}
+                </button>
               </div>
             </div>
           </div>
@@ -229,34 +237,12 @@
         <div class="mt-5 flex items-center justify-between gap-3">
           <button v-if="prevQ" type="button" class="btn-secondary" @click="openQuestion(prevQ.id)">← Q{{ prevQ.number }}</button>
           <span v-else></span>
-          <p v-if="data.role === 'owner'" class="text-xs text-gray-500 dark:text-gray-400 text-center">Each question's marks add up on the script - total and return them below.</p>
+          <p v-if="data.role === 'owner'" class="text-xs text-gray-500 dark:text-gray-400 text-center">Each question's marks add up on the script - total and return them from the student list.</p>
           <p v-else class="text-xs text-gray-500 dark:text-gray-400 text-center">Your marks add to each student's total. {{ data.owner ? niceName(data.owner) : 'The teacher who set it' }} totals and returns the scripts.</p>
           <button v-if="nextQ" type="button" class="btn-primary" @click="openQuestion(nextQ.id)">Q{{ nextQ.number }} →</button>
           <span v-else></span>
         </div>
 
-        <!-- Totals: every script's marks added up across all the questions (and everyone marking) -->
-        <section v-if="data.role === 'owner' && data.progress?.length" class="mt-6 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5">
-          <div class="flex flex-wrap items-center gap-3">
-            <div class="flex-1 min-w-[14rem]">
-              <h2 class="text-sm font-bold text-gray-900 dark:text-white">Totals</h2>
-              <p class="text-xs text-gray-500 dark:text-gray-400">{{ readyCount }} of {{ data.progress.length }} scripts have every question marked{{ returnedCount ? ` · ${returnedCount} already returned` : '' }}.</p>
-            </div>
-            <button type="button" class="px-3 py-2 rounded-lg text-sm font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50" :disabled="finishing || !toTotal" @click="finish(false)">Total {{ toTotal || '' }} only</button>
-            <button type="button" class="btn-primary" :disabled="finishing || !toReturn" @click="finish(true)">{{ finishing ? 'Working…' : `Total and return ${toReturn || ''}` }}</button>
-          </div>
-          <button type="button" class="mt-3 text-xs font-semibold text-indigo-600 dark:text-indigo-300 hover:underline" :aria-expanded="showTotals" @click="showTotals = !showTotals">{{ showTotals ? 'Hide each student' : 'Show each student' }}</button>
-          <ul v-if="showTotals" class="mt-2 divide-y divide-gray-100 dark:divide-gray-700 text-sm">
-            <li v-for="p in data.progress" :key="p.submission_id" class="flex items-center gap-3 py-1.5">
-              <span class="flex-1 min-w-0 truncate text-gray-800 dark:text-gray-100">{{ niceName(p.student) }}</span>
-              <span class="text-xs text-gray-500 dark:text-gray-400 tabular-nums">{{ p.marked }}/{{ data.questions.length }} questions</span>
-              <span class="w-20 text-right font-semibold tabular-nums text-gray-900 dark:text-white">{{ fmtMarks(p.total) }} / {{ fmtMarks(data.assignment.total_marks) }}</span>
-              <span class="w-20 text-right text-xs font-semibold" :class="p.status === 'returned' ? 'text-emerald-600' : p.status === 'graded' ? 'text-indigo-600 dark:text-indigo-300' : p.complete ? 'text-emerald-600' : 'text-amber-600'">
-                {{ p.status === 'returned' ? 'Returned' : p.status === 'graded' ? 'Totalled' : p.complete ? 'Ready' : 'Marking' }}
-              </span>
-            </li>
-          </ul>
-        </section>
       </template>
     </template>
   </div>
@@ -264,7 +250,8 @@
 
 <script setup lang="ts">
 import { fmtMarks } from '@/utils/marks'
-import { computed, onMounted, reactive, ref, nextTick, watch } from 'vue'
+import { computed, onMounted, onBeforeUnmount, reactive, ref, nextTick, watch } from 'vue'
+import { QUESTION_MARKED, type QuestionMarked } from '@/components/practical/apps'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import PageHeader from '@/components/ui/PageHeader.vue'
@@ -329,6 +316,9 @@ const markedHere = computed(() => markable.value.filter(r => r.marks_awarded !==
 const byName = (a: Row, b: Row) => a.student.localeCompare(b.student, undefined, { sensitivity: 'base' })
 const ordered = computed(() => [...markable.value].sort(byName))
 const pos = ref(0)
+const STUDENTS_SHOWN = 5
+const showAllStudents = ref(false)
+const shownStudents = computed(() => (showAllStudents.value || pos.value >= STUDENTS_SHOWN ? ordered.value : ordered.value.slice(0, STUDENTS_SHOWN)))
 const row = computed(() => ordered.value[pos.value] ?? null)
 const allMarkedHere = computed(() => !!ordered.value.length && ordered.value.every(r => r.marks_awarded !== null || r.locked))
 
@@ -437,6 +427,33 @@ const bumpProgress = () => {
   if (item) item.marked = markedHere.value
 }
 
+// a mark is saved: the script's running total and count of marked questions follow
+const afterSaved = (r: Row, feedback: string) => {
+  savedFeedback.set(r.submission_id, feedback)
+  const before = savedMark.get(r.submission_id) ?? null
+  const p = data.value?.progress?.find(x => x.submission_id === r.submission_id)
+  if (p) {
+    p.total += (r.marks_awarded ?? 0) - (before ?? 0)
+    if (before === null && r.marks_awarded !== null) p.marked++
+    if (before !== null && r.marks_awarded === null) p.marked--
+    p.complete = p.marked >= (data.value?.questions.length || 0)
+  }
+  savedMark.set(r.submission_id, r.marks_awarded)
+  saveState[r.submission_id] = 'saved'
+  bumpProgress()
+}
+// a practical marked in its viewer (TeacherMarkingCanvas)
+const onPracticalMarked = (e: Event) => {
+  const d = (e as CustomEvent<QuestionMarked>).detail
+  const r = q.value?.id === d.questionId ? q.value.rows.find(x => x.submission_id === d.submissionId) : null
+  if (!r) return
+  r.marks_awarded = d.marks
+  r.feedback = d.feedback || null
+  afterSaved(r, d.feedback)
+}
+window.addEventListener(QUESTION_MARKED, onPracticalMarked)
+onBeforeUnmount(() => window.removeEventListener(QUESTION_MARKED, onPracticalMarked))
+
 const save = async (r: Row) => {
   if (r.locked || !q.value) return
   const feedback = r.feedback || ''
@@ -449,19 +466,7 @@ const save = async (r: Row) => {
       marks_awarded: r.marks_awarded,
       feedback: feedback || null
     })
-    savedFeedback.set(r.submission_id, feedback)
-    // the script's running total and count of marked questions
-    const before = savedMark.get(r.submission_id) ?? null
-    const p = data.value?.progress?.find(x => x.submission_id === r.submission_id)
-    if (p) {
-      p.total += (r.marks_awarded ?? 0) - (before ?? 0)
-      if (before === null && r.marks_awarded !== null) p.marked++
-      if (before !== null && r.marks_awarded === null) p.marked--
-      p.complete = p.marked >= (data.value?.questions.length || 0)
-    }
-    savedMark.set(r.submission_id, r.marks_awarded)
-    saveState[r.submission_id] = 'saved'
-    bumpProgress()
+    afterSaved(r, feedback)
   } catch (err: any) {
     saveState[r.submission_id] = 'error'
     toast.error(err.response?.data?.message || `Could not save ${r.student}'s mark`)
@@ -546,18 +551,14 @@ const saveMarker = () => putMarker(shareForm.teacher_id, shareForm.question_ids)
 const removeMarker = (m: Marker) => putMarker(m.teacher_id, [])
 
 // Totalling and returning the scripts every question of which is marked
-const showTotals = ref(false)
 const finishing = ref(false)
-const readyCount = computed(() => (data.value?.progress || []).filter(p => p.complete).length)
-const returnedCount = computed(() => (data.value?.progress || []).filter(p => p.status === 'returned').length)
-const toTotal = computed(() => (data.value?.progress || []).filter(p => p.complete && p.status !== 'graded' && p.status !== 'returned').length)
 const toReturn = computed(() => (data.value?.progress || []).filter(p => p.complete && p.status !== 'returned').length)
-const finish = async (andReturn: boolean) => {
-  const n = andReturn ? toReturn.value : toTotal.value
-  if (andReturn && !window.confirm(`Total and return ${n} script${n === 1 ? '' : 's'} to the students? They will see their marks.`)) return
+const finish = async () => {
+  const n = toReturn.value
+  if (!window.confirm(`Total and return ${n} script${n === 1 ? '' : 's'} to the students? They will see their marks.`)) return
   finishing.value = true
   try {
-    const res = await axios.post(`/api/teacher/assignments/${assignmentId.value}/finish-marked`, { return: andReturn })
+    const res = await axios.post(`/api/teacher/assignments/${assignmentId.value}/finish-marked`, { return: true })
     toast.success(res.data.message || 'Done')
     await load(questionId.value || undefined)
   } catch (err: any) {

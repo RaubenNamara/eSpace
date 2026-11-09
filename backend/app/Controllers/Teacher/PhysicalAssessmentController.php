@@ -247,4 +247,37 @@ class PhysicalAssessmentController extends Controller
 
         $this->success([], 'Marks saved');
     }
+
+    /**
+     * Physical and online marks of one class in a subject for a term (combined / average mark sheets)
+     * GET /teacher/physical-exams/combined?class_id=&subject_id=&term_id=
+     */
+    public function combined(): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+        $teacherId = $this->getTeacherId();
+        if (!$teacherId) {
+            $this->error('Teacher not found', 403);
+            return;
+        }
+        $classId = (int) $this->query('class_id', 0);
+        $subjectId = (int) $this->query('subject_id', 0);
+        $termId = (int) $this->query('term_id', 0);
+        if (!$classId || !$subjectId || !$termId) {
+            $this->validationError(['class_id' => 'class_id, subject_id and term_id are required']);
+            return;
+        }
+        if (!$this->canAccess($teacherId, $classId, $subjectId)) {
+            $this->forbidden('You do not teach this subject for this class');
+            return;
+        }
+        try {
+            $this->success((new PhysicalAssessmentService())->combined($classId, $subjectId, $termId));
+        } catch (RuntimeException $e) {
+            $this->notFound($e->getMessage());
+        }
+    }
 }

@@ -725,7 +725,7 @@
                       <div class="flex items-center flex-wrap gap-2">
                         <span class="text-sm font-medium text-indigo-600 dark:text-indigo-400">Q{{ index + 1 }}</span>
                         <span class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300">
-                          {{ formatQuestionType(question.question_type) }}
+                          {{ (question as any).practical_app ? `ICT practical · ${practicalInfo((question as any).practical_app)?.label}` : formatQuestionType(question.question_type) }}
                         </span>
                         <span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
                           {{ fmtMarks(question.marks) }} marks
@@ -739,6 +739,14 @@
                         >
                           {{ questionCurriculumLabel(question) }}
                         </span>
+                        <!-- set before the outcome/topic was chosen: link it to one, or it doesn't count -->
+                        <label v-if="!isPreview && isUnlinked(question)" class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 ring-1 ring-amber-200 dark:ring-amber-800">
+                          Not linked ·
+                          <select class="bg-transparent text-xs font-semibold focus:outline-none cursor-pointer" :aria-label="`Link question ${index + 1} to a ${form.assessment_category === 'LOA' ? 'learning outcome' : 'topic'}`" value="" @change="linkQuestion(question, ($event.target as HTMLSelectElement).value)">
+                            <option value="" disabled>Link to…</option>
+                            <option v-for="g in curriculumQuestionGroups" :key="g.key" :value="g.key">{{ g.label }}</option>
+                          </select>
+                        </label>
                       </div>
 
                       <!-- Scenario display with sub-questions -->
@@ -766,8 +774,9 @@
                         <p class="text-gray-900 dark:text-white mb-2 break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.question_text"></p>
                         <div v-if="question.options && question.options.length > 0" class="mt-2">
                           <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Options:</p>
-                          <ul class="list-disc list-inside text-sm text-gray-600 dark:text-gray-400">
+                          <ul class="text-sm text-gray-600 dark:text-gray-400">
                             <li v-for="(option, optIndex) in question.options" :key="optIndex" class="flex items-center gap-2 flex-wrap">
+                              <span class="font-semibold text-gray-500 dark:text-gray-400">{{ String.fromCharCode(65 + Number(optIndex)) }}.</span>
                               <span class="break-words">{{ option.option_text }}</span>
                               <span v-if="option.is_correct" class="text-green-600 dark:text-green-400">✓</span>
                             </li>
@@ -924,14 +933,20 @@
     </div>
 
     <!-- Add/Edit Question Modal -->
-    <div v-if="showAddQuestionModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-0 sm:p-4">
-      <div
-        class="bg-white dark:bg-gray-800 rounded-none sm:rounded-2xl shadow-2xl w-full h-full sm:h-auto max-w-full sm:max-w-3xl max-h-full sm:max-h-[90vh] flex flex-col transition-all"
-      >
-        <h2 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white px-4 sm:px-6 pt-4 sm:pt-6 pb-2 flex-shrink-0">
-          {{ editingQuestion ? 'Edit Question' : 'Add Question' }}
-        </h2>
-        <div v-if="questionModalContextLabel || selectedConstructAO" class="flex flex-wrap items-center gap-2 px-4 sm:px-6 pb-2 flex-shrink-0">
+    <!-- Add/Edit Question: the whole screen on every device, the form centred at a readable width -->
+    <div v-if="showAddQuestionModal" class="fixed inset-0 z-50 bg-white dark:bg-gray-800">
+      <div class="w-full h-full flex flex-col">
+        <div class="flex-shrink-0 border-b border-gray-200 dark:border-gray-700">
+          <div class="mx-auto w-full max-w-[1400px] flex items-center gap-3 px-4 sm:px-8 py-3">
+            <h2 class="flex-1 text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
+              {{ editingQuestion ? 'Edit Question' : 'Add Question' }}
+            </h2>
+            <button type="button" class="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700" aria-label="Close" @click="closeQuestionModal">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+        </div>
+        <div v-if="questionModalContextLabel || selectedConstructAO" class="flex flex-wrap items-center gap-2 px-[max(1rem,calc((100%-1400px)/2+2rem))] pt-3 pb-1 flex-shrink-0">
           <p v-if="questionModalContextLabel" class="text-sm text-indigo-600 dark:text-indigo-400">
             {{ questionModalContextLabel }}
           </p>
@@ -940,11 +955,11 @@
           </span>
         </div>
 
-        <div class="space-y-4 px-4 sm:px-6 pb-4 sm:pb-6 overflow-y-auto flex-1">
+        <div ref="questionModalBody" class="space-y-4 px-[max(1rem,calc((100%-1400px)/2+2rem))] pt-3 pb-6 overflow-y-auto flex-1">
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Question Type *</label>
             <select
-              v-model="questionForm.question_type"
+              v-model="questionKind"
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
               :disabled="!!editingQuestion"
             >
@@ -955,8 +970,65 @@
               >{{ formatQuestionType(questionForm.question_type) }} (legacy)</option>
               <option value="essay">Essay</option>
               <option value="scenario">Scenario-based Question</option>
+              <option v-if="isIct || questionForm.practical_app" value="practical">ICT practical (Word, Excel, PowerPoint, Access)</option>
             </select>
           </div>
+
+          <!-- Multiple choice: a time limit for the whole assessment. The clock starts when a learner
+               opens it and their answers are handed in by themselves when it runs out. -->
+          <div v-if="isObjectiveQuestion" class="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/70 dark:bg-amber-900/15 p-3 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-semibold text-amber-900 dark:text-amber-100">Time for the assessment</p>
+              <p class="text-xs text-amber-800/80 dark:text-amber-200/80">The clock starts when a learner opens it. When the time is over, what they have answered is handed in by itself.</p>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <input v-model.number="form.duration_minutes" type="number" min="1" step="1" placeholder="No limit" class="w-28 px-3 py-2 border border-amber-300 dark:border-amber-700 rounded-lg dark:bg-gray-700 dark:text-white text-center">
+              <span class="text-sm text-amber-900 dark:text-amber-100">minutes</span>
+              <button v-if="form.duration_minutes" type="button" class="text-xs text-amber-800 dark:text-amber-200 underline" @click="form.duration_minutes = null">No limit</button>
+            </div>
+          </div>
+
+          <!-- ICT practical: which app learners work in, and the file it opens with -->
+          <div v-if="questionForm.practical_app" class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-950/40 p-3 space-y-3">
+            <div>
+              <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Learners work in</p>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <button
+                  v-for="a in PRACTICAL_APP_LIST"
+                  :key="a.app"
+                  type="button"
+                  class="flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition-colors"
+                  :class="questionForm.practical_app === a.app ? 'border-gray-900 dark:border-white ring-1 ring-gray-900 dark:ring-white bg-white dark:bg-gray-800' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-400'"
+                  :disabled="!!editingQuestion && !!questionForm.practical_starter_path && questionForm.practical_app !== a.app"
+                  @click="setPracticalApp(a.app)"
+                >
+                  <span class="w-7 h-7 rounded flex items-center justify-center text-sm font-black flex-shrink-0" :class="a.badge">{{ a.letter }}</span>
+                  <span class="min-w-0">
+                    <span class="block text-xs font-semibold text-gray-900 dark:text-white truncate">{{ a.label }}</span>
+                    <span class="block text-[10px] text-gray-500 dark:text-gray-400">{{ a.short }}</span>
+                  </span>
+                </button>
+              </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <button type="button" class="px-3 py-1.5 rounded-lg text-sm font-semibold text-white" :class="practicalAppInfo?.bar" @click="starterOpen = true">
+                Preview as a learner
+              </button>
+              <button v-if="hasPracticalStarter" type="button" class="px-3 py-1.5 rounded-lg text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20" @click="removePracticalStarter">Remove</button>
+            </div>
+          </div>
+          <Teleport to="body">
+            <PracticalWorkspace
+              v-if="starterOpen && questionForm.practical_app"
+              :app="(questionForm.practical_app as any)"
+              title="Starting file"
+              subtitle="every learner opens a copy"
+              :src="starterSrc"
+              can-import
+              :saver="keepPracticalStarter"
+              @close="starterOpen = false"
+            />
+          </Teleport>
 
           <!-- AOI: start from a suggested scenario (drafted from the topic's competency and outcomes) -->
           <div v-if="questionForm.question_type === 'scenario' && form.assessment_category === 'AOI' && aoiScenarioTopicIds.length" class="rounded-lg border border-violet-200 dark:border-violet-800 bg-violet-50/60 dark:bg-violet-900/15 p-3 flex flex-col sm:flex-row sm:items-center gap-2">
@@ -1079,7 +1151,7 @@
           </div>
 
           <!-- Upload a PDF instead of typing the question out -->
-          <div v-if="questionForm.question_type !== 'scenario'" class="border-2 border-dashed border-indigo-300 dark:border-indigo-700 rounded-lg p-4 bg-indigo-50/50 dark:bg-indigo-900/10">
+          <div v-if="questionForm.question_type !== 'scenario' && !questionForm.practical_app" class="border-2 border-dashed border-indigo-300 dark:border-indigo-700 rounded-lg p-4 bg-indigo-50/50 dark:bg-indigo-900/10">
             <label class="block text-sm font-semibold text-indigo-900 dark:text-indigo-300 mb-2">
               Upload a PDF question paper instead
             </label>
@@ -1119,11 +1191,11 @@
 
           <div v-if="questionForm.question_type !== 'scenario'">
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {{ hasQuestionPdf ? 'Question Text (optional - PDF attached above)' : 'Question Text *' }}
+              {{ questionForm.practical_app ? 'The task: what learners must do *' : hasQuestionPdf ? 'Question Text (optional - PDF attached above)' : 'Question Text *' }}
             </label>
             <CKEditor
               v-model="questionForm.question_text"
-              :height="150"
+              :height="questionEditorHeight"
             />
           </div>
 
@@ -1139,7 +1211,7 @@
               >
               <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ remainingMarksBudget }} of 100 marks available across this assessment.</p>
             </div>
-            <div>
+            <div v-if="!questionForm.practical_app">
               <label class="flex items-center mt-2 sm:mt-6">
                 <input
                   v-model="questionForm.allow_drawing"
@@ -1171,13 +1243,14 @@
                 :key="index"
                 class="flex flex-wrap sm:flex-nowrap items-center gap-2"
               >
+                <span class="order-1 w-8 h-8 flex-shrink-0 rounded-lg bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200 text-sm font-bold flex items-center justify-center" aria-hidden="true">{{ String.fromCharCode(65 + index) }}</span>
                 <input
                   v-model="option.option_text"
                   type="text"
-                  class="w-full sm:flex-1 order-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
-                  :placeholder="`Option ${index + 1}`"
+                  class="w-[calc(100%-2.5rem)] sm:w-auto sm:flex-1 order-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+                  :placeholder="`Option ${String.fromCharCode(65 + index)}`"
                 >
-                <label class="flex items-center order-2">
+                <label class="flex items-center order-3">
                   <input
                     v-model="option.is_correct"
                     type="checkbox"
@@ -1187,7 +1260,7 @@
                 </label>
                 <button
                   @click="removeOption(index)"
-                  class="order-3 p-2 min-w-[40px] min-h-[40px] flex items-center justify-center text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                  class="order-4 p-2 min-w-[40px] min-h-[40px] flex items-center justify-center text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                 >
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -1199,15 +1272,47 @@
           </div>
         </div>
 
-        <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-4 px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+        <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-4 px-[max(1rem,calc((100%-1400px)/2+2rem))] py-3 sm:py-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
           <button
             @click="closeQuestionModal"
             class="w-full sm:w-auto px-4 py-2.5 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
             Cancel
           </button>
+          <span v-if="!editingQuestion && addedInRow > 0" class="self-center text-sm font-medium text-emerald-700 dark:text-emerald-300 sm:mr-auto" role="status">
+            ✓ {{ addedInRow }} {{ addedInRow === 1 ? 'question' : 'questions' }} added - keep going
+          </span>
+          <div class="grid grid-cols-2 sm:flex gap-2 sm:gap-4">
+            <button
+              type="button"
+              :disabled="finishing || previewing || publishing"
+              @click="saveAndFinish('preview')"
+              class="px-3 sm:px-4 py-2.5 sm:py-2 border border-gray-300 dark:border-gray-600 font-semibold rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+              title="Keep this question and see the assessment as a learner will"
+            >
+              {{ previewing ? 'Opening…' : 'Save & preview' }}
+            </button>
+            <button
+              type="button"
+              :disabled="finishing || previewing || publishing"
+              @click="saveAndFinish('publish')"
+              class="px-3 sm:px-4 py-2.5 sm:py-2 border border-emerald-600 text-emerald-700 dark:text-emerald-300 font-semibold rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors disabled:opacity-50"
+              title="Keep this question and publish the assessment to learners"
+            >
+              {{ publishing ? 'Publishing…' : 'Save & publish' }}
+            </button>
+          </div>
           <button
-            @click="saveQuestion"
+            v-if="!editingQuestion"
+            type="button"
+            @click="saveQuestion(true)"
+            class="w-full sm:w-auto px-4 py-2.5 sm:py-2 border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 font-semibold rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
+            title="Save this question and start the next one of the same type"
+          >
+            Save &amp; add another
+          </button>
+          <button
+            @click="saveQuestion()"
             class="w-full sm:w-auto px-4 py-2.5 sm:py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
           >
             {{ editingQuestion ? 'Update' : 'Add' }} Question
@@ -1292,7 +1397,7 @@
                         :key="optIndex"
                         class="flex items-center gap-2 flex-wrap"
                       >
-                        <span class="text-gray-500 dark:text-gray-400">{{ String.fromCharCode(97 + optIndex) }})</span>
+                        <span class="text-gray-500 dark:text-gray-400">{{ String.fromCharCode(65 + Number(optIndex)) }}.</span>
                         <span class="text-gray-700 dark:text-gray-300 break-words">{{ option.option_text }}</span>
                         <span v-if="option.is_correct" class="text-xs bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400 px-2 py-1 rounded">Correct</span>
                       </div>
@@ -1327,6 +1432,8 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter, useRoute, onBeforeRouteLeave } from 'vue-router'
 import axios from 'axios'
 import CKEditor from '@/components/teacher/CKEditor.vue'
+import PracticalWorkspace from '@/components/practical/PracticalWorkspace.vue'
+import { PRACTICAL_APPS, practicalInfo } from '@/components/practical/apps'
 import AoiScenarioSuggest from '@/components/assignment/AoiScenarioSuggest.vue'
 import { scenarioHtml, markingGuideJson, type AoiSuggestion } from '@/utils/aoiDraft'
 import QuestionBankPicker, { type BankQuestion } from '@/components/assignment/QuestionBankPicker.vue'
@@ -1377,6 +1484,12 @@ interface QuestionForm {
   // real id yet). Uploaded via uploadQuestionPdf() once the question is persisted in
   // syncQuestions(), then cleared - never sent as part of the JSON question payload itself.
   pdfFile?: File | null
+  // An ICT practical (components/practical): the app, its saved starting file, and - transient,
+  // uploaded in syncQuestions() like pdfFile - a starting file made here, or its removal
+  practical_app?: string | null
+  practical_starter_path?: string | null
+  practicalStarter?: Blob | null
+  removeStarter?: boolean
 }
 
 const router = useRouter()
@@ -1716,6 +1829,52 @@ const pendingQuestionContext = ref<{ curriculum_topic_id: number | null; learnin
 
 const showAddQuestionModal = ref(false)
 const editingQuestion = ref<AssignmentQuestion | null>(null)
+// the question's text box: taller on taller screens
+const viewportHeight = ref(typeof window !== 'undefined' ? window.innerHeight : 800)
+const onViewportResize = () => { viewportHeight.value = window.innerHeight }
+if (typeof window !== 'undefined') window.addEventListener('resize', onViewportResize)
+onUnmounted(() => window.removeEventListener('resize', onViewportResize))
+const questionEditorHeight = computed(() => Math.round(Math.min(560, Math.max(160, viewportHeight.value * 0.32))))
+
+// ---- ICT practicals (components/practical) ----
+const isIct = ref(false)
+const PRACTICAL_APP_LIST = Object.values(PRACTICAL_APPS)
+const questionKind = computed({
+  get: () => (questionForm.value.practical_app ? 'practical' : questionForm.value.question_type),
+  set: (v: string) => {
+    if (v === 'practical') {
+      questionForm.value.question_type = 'essay'
+      questionForm.value.practical_app ||= 'word'
+    } else {
+      questionForm.value.question_type = v as QuestionType
+      questionForm.value.practical_app = null
+    }
+  }
+})
+const practicalAppInfo = computed(() => practicalInfo(questionForm.value.practical_app))
+const hasPracticalStarter = computed(() => !!questionForm.value.practicalStarter || (!!questionForm.value.practical_starter_path && !questionForm.value.removeStarter))
+const starterOpen = ref(false)
+const starterUrl = ref<string | null>(null)
+const starterSrc = computed(() => {
+  if (starterUrl.value) URL.revokeObjectURL(starterUrl.value)
+  starterUrl.value = questionForm.value.practicalStarter ? URL.createObjectURL(questionForm.value.practicalStarter) : null
+  return starterUrl.value || (questionForm.value.removeStarter ? null : questionForm.value.practical_starter_path || null)
+})
+const setPracticalApp = (app: string) => {
+  if (app === questionForm.value.practical_app) return
+  // a starting file belongs to one app
+  questionForm.value.practical_app = app
+  questionForm.value.practicalStarter = null
+  if (questionForm.value.practical_starter_path) questionForm.value.removeStarter = true
+}
+const keepPracticalStarter = async (blob: Blob) => {
+  questionForm.value.practicalStarter = blob
+  questionForm.value.removeStarter = false
+}
+const removePracticalStarter = () => {
+  questionForm.value.practicalStarter = null
+  questionForm.value.removeStarter = true
+}
 const questionForm = ref<QuestionForm>({
   id: 0,
   question_type: 'essay',
@@ -1888,6 +2047,7 @@ const loadAssignments = async () => {
     const response = await axios.get(`${API_BASE}/teacher/enotes/assignments`)
     if (response.data.success) {
       subjects.value = response.data.data.subjects
+      isIct.value = !!response.data.data.is_ict
       // A teacher with one subject doesn't need to choose it
       if (!isEdit.value && !form.value.subject_id && subjects.value.length === 1) form.value.subject_id = subjects.value[0].id
     }
@@ -2390,6 +2550,25 @@ const questionCurriculumLabel = (question: AssignmentQuestion): string => {
   return ''
 }
 
+// A question added before the Learning Outcome / Topic was chosen has no link, so it counts
+// towards none of them. With just one to link to, it is linked by itself; with several, the
+// teacher picks from the question card.
+const isUnlinked = (question: AssignmentQuestion): boolean => {
+  const q = question as any
+  const groups = curriculumQuestionGroups.value
+  if (!form.value.assessment_category || !groups.length || q.parent_question_id) return false
+  if (form.value.assessment_category === 'LOA') return !groups.some((g: any) => g.learning_outcome_id && g.learning_outcome_id === q.learning_outcome_id)
+  if (form.value.assessment_category === 'EOC') return !questionCurriculumLabel(question)
+  return !groups.some((g: any) => g.curriculum_topic_id === q.curriculum_topic_id)
+}
+const linkQuestion = (question: AssignmentQuestion, groupKey: string) => {
+  const g: any = curriculumQuestionGroups.value.find((x: any) => String(x.key) === String(groupKey))
+  if (!g) return
+  const q = question as any
+  q.curriculum_topic_id = g.curriculum_topic_id ?? undefined
+  q.learning_outcome_id = g.learning_outcome_id ?? undefined
+}
+
 const formatQuestionType = (type: QuestionType) => {
   const typeMap: Record<QuestionType, string> = {
     multiple_choice_single: 'MCQ Single',
@@ -2414,6 +2593,7 @@ const removeOption = (index: number) => {
 
 const closeQuestionModal = () => {
   showAddQuestionModal.value = false
+  addedInRow.value = 0
   editingQuestion.value = null
   pendingQuestionContext.value = null
   questionForm.value = {
@@ -2579,7 +2759,10 @@ const moveSubQuestionDown = (index: number) => {
   }
 }
 
-const saveQuestion = () => {
+// "Save & add another": how many were added without closing, and the body to scroll back up
+const addedInRow = ref(0)
+const questionModalBody = ref<HTMLElement | null>(null)
+const saveQuestion = async (addAnother = false) => {
   // For scenario questions, validate sub-questions if they exist
   if (questionForm.value.question_type === 'scenario') {
     if (!questionForm.value.scenario_description) {
@@ -2599,6 +2782,14 @@ const saveQuestion = () => {
         return
       }
     }
+  } else if (questionForm.value.practical_app) {
+    if (!questionForm.value.question_text || questionForm.value.marks < 1) {
+      showToast('error', 'Write the task learners must do, and set marks')
+      return
+    }
+    questionForm.value.attachment_path = ''
+    questionForm.value.attachment_type = 'none'
+    questionForm.value.allow_drawing = false
   } else {
     if ((!questionForm.value.question_text && !hasQuestionPdf.value) || questionForm.value.marks < 1) {
       showToast('error', 'Please fill in the question text, or upload a PDF, and set marks')
@@ -2675,7 +2866,59 @@ const saveQuestion = () => {
     })
   }
 
+  if (addAnother && !editingQuestion.value) {
+    // The next one: same type, marks and outcome/topic, an empty question and empty answer boxes
+    const prev = questionForm.value as any
+    const isTrueFalse = prev.question_type === 'true_false'
+    questionForm.value = {
+      ...prev,
+      id: 0,
+      question_text: '',
+      scenario_title: '',
+      scenario_description: '',
+      scenario_image: '',
+      scenario_text: '',
+      options: (prev.options || []).map((o: any) => ({ ...o, id: 0, option_text: isTrueFalse ? o.option_text : '', is_correct: false })),
+      sub_questions: (prev.sub_questions || []).map((sq: any) => ({ ...sq, id: 0, question_text: '' })),
+      attachment_path: undefined,
+      attachment_type: 'none',
+      pdfFile: null,
+      practicalStarter: undefined,
+      removeStarter: undefined,
+      practical_starter_path: undefined
+    } as any
+    addedInRow.value++
+    await nextTick()
+    questionModalBody.value?.scrollTo({ top: 0, behavior: 'smooth' })
+    return true
+  }
+
   closeQuestionModal()
+  return true
+}
+
+// Save & preview / Save & publish, from inside the question window. After "Save & add another"
+// the form is usually still empty: that blank question is left out, not refused.
+const finishing = ref(false)
+const questionFormIsBlank = () => {
+  const f = questionForm.value as any
+  const empty = (v: unknown) => !String(v ?? '').replace(/<[^>]*>|&nbsp;/g, '').trim()
+  return empty(f.question_text) && empty(f.scenario_description) && empty(f.scenario_title) && !hasQuestionPdf.value &&
+    (f.question_type === 'true_false' || (f.options || []).every((o: any) => empty(o.option_text))) &&
+    (f.sub_questions || []).every((q: any) => empty(q.question_text))
+}
+const saveAndFinish = async (then: 'preview' | 'publish') => {
+  if (finishing.value) return
+  finishing.value = true
+  try {
+    // the editor hands over its text 0.3 s after the last key; publishing must not cut it off
+    await new Promise(r => setTimeout(r, 350))
+    if (!editingQuestion.value && questionFormIsBlank()) closeQuestionModal()
+    else if (!(await saveQuestion())) return
+    await (then === 'preview' ? previewAssignment() : publishAssignment())
+  } finally {
+    finishing.value = false
+  }
 }
 
 const editQuestion = (question: AssignmentQuestion) => {
@@ -2712,7 +2955,11 @@ const editQuestion = (question: AssignmentQuestion) => {
     attachment_type: question.attachment_type || 'none',
     curriculum_topic_id: qWithSubs.curriculum_topic_id ?? undefined,
     learning_outcome_id: qWithSubs.learning_outcome_id ?? undefined,
-    pdfFile: null
+    pdfFile: null,
+    practical_app: qWithSubs.practical_app ?? null,
+    practical_starter_path: qWithSubs.practical_starter_path ?? null,
+    practicalStarter: qWithSubs.practicalStarter ?? null,
+    removeStarter: qWithSubs.removeStarter ?? false
   }
   showAddQuestionModal.value = true
 }
@@ -2765,7 +3012,7 @@ const uploadQuestionPdf = async (questionId: number, file: File) => {
 
 const syncQuestions = async (assignmentId: number | string) => {
   for (const question of questions.value) {
-    const { id, assignment_id, created_at, updated_at, deleted_at, sub_questions, pdfFile, ...questionData } = question as any
+    const { id, assignment_id, created_at, updated_at, deleted_at, sub_questions, pdfFile, practicalStarter, removeStarter, practical_starter_path, ...questionData } = question as any
     const questionPayload = {
       assignment_id: assignmentId,
       ...questionData,
@@ -2790,6 +3037,20 @@ const syncQuestions = async (assignmentId: number | string) => {
     if (pdfFile) {
       await uploadQuestionPdf(realQuestionId, pdfFile)
       ;(question as any).pdfFile = null
+    }
+    if (questionData.practical_app && (practicalStarter || removeStarter)) {
+      const url = `${API_BASE}/teacher/assignments/questions/${realQuestionId}/practical-starter`
+      if (practicalStarter) {
+        const fd = new FormData()
+        fd.append('file', practicalStarter as Blob, 'starter')
+        const res = await axios.post(url, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+        ;(question as any).practical_starter_path = res.data.data.practical_starter_path
+      } else {
+        await axios.delete(url)
+        ;(question as any).practical_starter_path = null
+      }
+      ;(question as any).practicalStarter = null
+      ;(question as any).removeStarter = false
     }
   }
 
@@ -3104,6 +3365,16 @@ const publishAssignment = async () => {
 const AUTOSAVE_DELAY = 6000
 const loadedStatus = ref<string>('draft')
 const ready = ref(false)
+// With a single Learning Outcome / Topic, unlinked questions are linked to it - once the builder
+// is ready, so the link counts as a change and autosave keeps it (see isUnlinked)
+watch(
+  () => [ready.value, curriculumQuestionGroups.value.length, questions.value.length, curriculumQuestionGroups.value[0]?.key],
+  () => {
+    if (!ready.value || isPreview.value || curriculumQuestionGroups.value.length !== 1) return
+    const only = curriculumQuestionGroups.value[0]
+    questions.value.filter(isUnlinked).forEach(q => linkQuestion(q, String(only.key)))
+  }
+)
 const autoSaving = ref(false)
 const autosaveFailed = ref(false)
 const lastSavedAt = ref<Date | null>(null)

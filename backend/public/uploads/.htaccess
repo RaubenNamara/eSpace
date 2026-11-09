@@ -30,6 +30,11 @@
 </IfModule>
 
 <IfModule mod_headers.c>
+    # Opened directly, an uploaded page or SVG can't run anything on this site
+    <FilesMatch "\.(html?|svg)$">
+        Header set Content-Security-Policy "sandbox"
+    </FilesMatch>
+    Header set X-Content-Type-Options "nosniff"
     <FilesMatch "\.(pdf|ppt|pptx|jpg|jpeg|png|webp|gif|mp4|webm|ogv)$">
         Header set Cache-Control "public, max-age=31536000, immutable"
     </FilesMatch>

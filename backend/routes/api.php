@@ -18,9 +18,8 @@ require_once __DIR__ . '/Router.php';
 
 // Public routes (no authentication required)
 Router::post('/api/auth/login', 'eSpace\App\Controllers\AuthController@login');
-Router::post('/api/auth/register', 'eSpace\App\Controllers\AuthController@register');
-Router::post('/api/auth/forgot-password', 'eSpace\App\Controllers\AuthController@forgotPassword');
-Router::post('/api/auth/reset-password', 'eSpace\App\Controllers\AuthController@resetPassword');
+// No public /auth/register (it took the role from the request) and no emailed password reset (it
+// handed the token back to whoever asked): admins create accounts and reset passwords.
 
 // A school asking for a demo, from the public landing page
 Router::post('/api/demo-requests', 'eSpace\App\Controllers\DemoRequestController@store');
@@ -257,6 +256,8 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/assignments/questions/{questionId}/answer-annotations/{submissionId}', 'eSpace\App\Controllers\Student\AssignmentController@getAnswerAnnotations');
         Router::post('/assignments/questions/{questionId}/upload-answer-pdf', 'eSpace\App\Controllers\Student\AssignmentController@uploadAnswerAttachment');
         Router::post('/assignments/questions/{questionId}/answer-attachments', 'eSpace\App\Controllers\Student\AssignmentController@uploadAnswerAttachmentFile');
+        Router::post('/assignments/questions/{questionId}/practical', 'eSpace\App\Controllers\Student\AssignmentController@savePractical');
+        Router::post('/assignments/questions/{questionId}/practical/hand-in', 'eSpace\App\Controllers\Student\AssignmentController@handInPractical');
         Router::get('/assignments/questions/{questionId}/answer-attachments/{submissionId}', 'eSpace\App\Controllers\Student\AssignmentController@listAnswerAttachments');
         Router::delete('/assignments/questions/{questionId}/answer-attachments/{attachmentId}', 'eSpace\App\Controllers\Student\AssignmentController@deleteAnswerAttachment');
 
@@ -365,6 +366,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/assignments/{id}/submissions/{submissionId}/marking', 'eSpace\App\Controllers\Teacher\MarkingController@getSubmissionForMarking');
         Router::put('/assignments/{id}/submissions/{submissionId}/marking-annotations', 'eSpace\App\Controllers\Teacher\MarkingController@saveMarkingAnnotations');
         Router::put('/assignments/{id}/submissions/{submissionId}/marks', 'eSpace\App\Controllers\Teacher\MarkingController@saveQuestionMarks');
+        Router::post('/assignments/{id}/submissions/{submissionId}/collect', 'eSpace\App\Controllers\Teacher\AssignmentController@collectSubmission');
         Router::put('/assignments/{id}/submissions/{submissionId}/general-feedback', 'eSpace\App\Controllers\Teacher\MarkingController@saveGeneralFeedback');
         Router::post('/assignments/{id}/submissions/{submissionId}/voice-feedback', 'eSpace\App\Controllers\Teacher\MarkingController@saveVoiceFeedback');
         Router::delete('/assignments/{id}/submissions/{submissionId}/voice-feedback', 'eSpace\App\Controllers\Teacher\MarkingController@deleteVoiceFeedback');
@@ -382,6 +384,8 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::delete('/assignments/{id}/resources/{resourceId}', 'eSpace\App\Controllers\Teacher\AssignmentResourceController@destroy');
         // Question attachments (canvas/pdf_annotation questions) and teacher authoring annotations
         Router::post('/assignments/questions/{questionId}/attachment', 'eSpace\App\Controllers\Teacher\AssignmentController@uploadQuestionAttachment');
+        Router::post('/assignments/questions/{questionId}/practical-starter', 'eSpace\App\Controllers\Teacher\AssignmentController@savePracticalStarter');
+        Router::delete('/assignments/questions/{questionId}/practical-starter', 'eSpace\App\Controllers\Teacher\AssignmentController@savePracticalStarter');
         Router::get('/assignments/questions/{questionId}/annotations', 'eSpace\App\Controllers\Teacher\AssignmentController@getQuestionAnnotations');
         Router::put('/assignments/questions/{questionId}/annotations', 'eSpace\App\Controllers\Teacher\AssignmentController@saveQuestionAnnotations');
 
@@ -493,6 +497,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::post('/itembank/bulk-export', 'eSpace\App\Controllers\Teacher\ItemBankController@bulkExport');
         Router::get('/itembank/linkable', 'eSpace\App\Controllers\ItemBankPaperController@linkable');
         Router::get('/itembank/{id}/pages', 'eSpace\App\Controllers\ItemBankPaperController@pages');
+        Router::get('/itembank/{id}/paper', 'eSpace\App\Controllers\ItemBankPaperController@teacherPaper');
         Router::post('/itembank/{id}/pages/reorder', 'eSpace\App\Controllers\ItemBankPaperController@reorder');
         Router::post('/itembank/{id}/pages', 'eSpace\App\Controllers\ItemBankPaperController@addPage');
         Router::put('/itembank/pages/{pageId}', 'eSpace\App\Controllers\ItemBankPaperController@updatePage');
@@ -566,6 +571,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
 
         // Physical (offline) exams
         Router::get('/physical-exams', 'eSpace\App\Controllers\Teacher\PhysicalAssessmentController@index');
+        Router::get('/physical-exams/combined', 'eSpace\App\Controllers\Teacher\PhysicalAssessmentController@combined');
         Router::post('/physical-exams', 'eSpace\App\Controllers\Teacher\PhysicalAssessmentController@create');
         Router::put('/physical-exams/{id}', 'eSpace\App\Controllers\Teacher\PhysicalAssessmentController@update');
         Router::delete('/physical-exams/{id}', 'eSpace\App\Controllers\Teacher\PhysicalAssessmentController@delete');
@@ -763,6 +769,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
 
         // Physical (offline) exams (department-scoped)
         Router::get('/physical-exams', 'eSpace\App\Controllers\HOD\PhysicalAssessmentController@index');
+        Router::get('/physical-exams/combined', 'eSpace\App\Controllers\HOD\PhysicalAssessmentController@combined');
         Router::post('/physical-exams', 'eSpace\App\Controllers\HOD\PhysicalAssessmentController@create');
         Router::put('/physical-exams/{id}', 'eSpace\App\Controllers\HOD\PhysicalAssessmentController@update');
         Router::delete('/physical-exams/{id}', 'eSpace\App\Controllers\HOD\PhysicalAssessmentController@delete');
@@ -1052,6 +1059,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
 
         // Physical (offline) exams
         Router::get('/physical-exams', 'eSpace\App\Controllers\Admin\PhysicalAssessmentController@index');
+        Router::get('/physical-exams/combined', 'eSpace\App\Controllers\Admin\PhysicalAssessmentController@combined');
         Router::post('/physical-exams', 'eSpace\App\Controllers\Admin\PhysicalAssessmentController@create');
         Router::put('/physical-exams/{id}', 'eSpace\App\Controllers\Admin\PhysicalAssessmentController@update');
         Router::delete('/physical-exams/{id}', 'eSpace\App\Controllers\Admin\PhysicalAssessmentController@delete');

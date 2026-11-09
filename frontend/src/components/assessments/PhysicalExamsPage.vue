@@ -6,6 +6,10 @@
     <template v-if="!activeExam">
       <PageHeader title="Physical Exams" description="Tests sat on paper - type in the marks and choose whether each one counts on report cards." icon="pencil" accent="amber">
         <template #actions>
+          <button v-if="canQuery" type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700" title="Physical and online marks together, or each learner's average" @click="openSheets">
+            <AppIcon name="chart" class="w-4 h-4" />
+            <span class="hidden sm:inline">Mark sheets</span><span class="sm:hidden">Sheets</span>
+          </button>
           <button v-if="canQuery" type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-500/20" @click="openCreate">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
             <span class="hidden sm:inline">New exam</span><span class="sm:hidden">New</span>
@@ -85,7 +89,19 @@
 
       <template v-else>
         <StatStrip :items="markStats" class="mb-3" />
-        <input v-model="markSearch" type="search" placeholder="Find a learner" class="w-full sm:max-w-xs mb-3 px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+        <div class="mb-3 flex flex-wrap items-center gap-2">
+          <input v-model="markSearch" type="search" placeholder="Find a learner" class="w-full sm:max-w-xs px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+          <span class="flex-1"></span>
+          <!-- Marks typed offline: the class list as an Excel file, filled in and brought back -->
+          <button type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700" :disabled="!marksheetStudents.length" @click="downloadTemplate">
+            <AppIcon name="download" class="w-4 h-4" /> Excel template
+          </button>
+          <button type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700" :disabled="!marksheetStudents.length" @click="importInput?.click()">
+            <AppIcon name="upload" class="w-4 h-4" /> Import marks
+          </button>
+          <input ref="importInput" type="file" accept=".xlsx,.xls,.csv" class="hidden" @change="importMarks">
+        </div>
+        <p v-if="importNote" class="mb-3 rounded-xl border border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-900/20 px-3 py-2 text-xs text-sky-800 dark:text-sky-200">{{ importNote }}</p>
 
         <EmptyState v-if="!marksheetStudents.length" compact icon="users" tone="gray" title="No students in this class" />
         <ul v-else class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700 mb-24">
@@ -96,7 +112,8 @@
             </div>
             <span v-if="scoreState(student.score) === 'over'" class="text-[11px] font-semibold text-rose-600 dark:text-rose-300">over {{ Number(activeExam.max_score) }}</span>
             <span v-else-if="student.score !== null && student.score !== undefined && (student.score as any) !== ''" class="text-[11px] tabular-nums w-10 text-right" :class="pctTone(student.score)">{{ Math.round(Number(student.score) / activeExam.max_score * 100) }}%</span>
-            <!-- Enter moves to the next learner, so a whole class can be typed in one go -->
+            <!-- Enter or the down arrow moves to the next learner, the up arrow back, so a whole
+                 class can be typed in one go -->
             <input
               :ref="(el) => setInputRef(student.student_id, el)"
               v-model.number="student.score"
@@ -110,6 +127,8 @@
               :class="scoreState(student.score) === 'over' ? 'border-rose-400' : 'border-gray-300 dark:border-gray-600'"
               @input="dirty = true"
               @keydown.enter.prevent="focusNext(student.student_id)"
+              @keydown.down.prevent="focusNext(student.student_id)"
+              @keydown.up.prevent="focusPrev(student.student_id)"
             >
           </li>
         </ul>
@@ -127,6 +146,45 @@
         </div>
       </template>
     </template>
+
+    <!-- Mark sheets: this class's physical exams and online assessments in the subject this term -->
+    <div v-if="sheetsOpen" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4" @click.self="sheetsOpen = false">
+      <div class="w-full sm:max-w-xl max-h-[90vh] flex flex-col bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-2xl shadow-2xl">
+        <div class="px-5 pt-5 pb-3 border-b border-gray-100 dark:border-gray-700">
+          <h2 class="text-base font-bold text-gray-900 dark:text-white">Mark sheets</h2>
+          <p class="text-xs text-gray-500 dark:text-gray-400">{{ classLabel }} · {{ subjectLabel }} · {{ termLabel }} · tick what goes on the sheet</p>
+        </div>
+        <div class="flex-1 overflow-y-auto px-5 py-3">
+          <Skeleton v-if="sheetsLoading" variant="list" :count="4" />
+          <EmptyState v-else-if="!combined?.columns.length" compact icon="chart" tone="gray" title="No marks to put on a sheet yet" message="Physical exams and online assessments of this class in this subject and term show here." />
+          <template v-else>
+            <div class="mb-2 flex items-center gap-3 text-xs">
+              <button type="button" class="font-semibold text-indigo-600 dark:text-indigo-300 hover:underline" @click="pickAll(true)">Tick all</button>
+              <button type="button" class="font-semibold text-gray-500 dark:text-gray-400 hover:underline" @click="pickAll(false)">Clear</button>
+              <span class="flex-1"></span>
+              <button type="button" class="font-semibold text-gray-600 dark:text-gray-300 hover:underline" @click="pickKind('physical')">Physical only</button>
+              <button type="button" class="font-semibold text-gray-600 dark:text-gray-300 hover:underline" @click="pickKind('online')">Online only</button>
+            </div>
+            <ul class="divide-y divide-gray-100 dark:divide-gray-700 rounded-xl border border-gray-200 dark:border-gray-700">
+              <li v-for="c in combined.columns" :key="c.key">
+                <label class="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40">
+                  <input v-model="picked" type="checkbox" :value="c.key" class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600">
+                  <span class="px-1.5 py-0.5 rounded text-[10px] font-bold" :class="c.kind === 'physical' ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' : 'bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300'">{{ c.kind === 'physical' ? 'Paper' : 'Online' }}</span>
+                  <span class="flex-1 min-w-0 truncate text-sm text-gray-900 dark:text-white">{{ c.title }}</span>
+                  <span class="text-[11px] text-gray-500 dark:text-gray-400 whitespace-nowrap tabular-nums">{{ shortDate(c.date) }} · /{{ fmtMarks(c.max) }} · {{ markedIn(c.key) }} marked</span>
+                </label>
+              </li>
+            </ul>
+            <p class="mt-2 text-[11px] text-gray-500 dark:text-gray-400">A learner's average is taken over the ticked assessments they have a mark in, each as a percentage, so a test out of 30 and one out of 100 weigh the same. Online marks count once the script is marked.</p>
+          </template>
+        </div>
+        <div class="px-5 py-3 border-t border-gray-100 dark:border-gray-700 flex flex-wrap justify-end gap-2">
+          <button type="button" class="px-4 py-2 rounded-xl text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700" @click="sheetsOpen = false">Close</button>
+          <button type="button" class="px-4 py-2 rounded-xl text-sm font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50" :disabled="!picked.length" @click="downloadSheet('average')">Average mark sheet</button>
+          <button type="button" class="px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50" :disabled="!picked.length" @click="downloadSheet('combined')">Combined mark sheet</button>
+        </div>
+      </div>
+    </div>
 
     <!-- New exam -->
     <div v-if="showCreateForm" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4" @click.self="showCreateForm = false">
@@ -176,6 +234,8 @@ import ActionMenu from '@/components/ui/ActionMenu.vue'
 import PickerDropdown from '@/components/common/PickerDropdown.vue'
 import AppIcon from '@/components/common/AppIcon.vue'
 import { niceName } from '@/components/dashboard/teacher/time'
+import { fmtMarks } from '@/utils/marks'
+import * as XLSX from 'xlsx'
 import { useClassSubjectPicker } from '@/composables/useClassSubjectPicker'
 import type { PhysicalExam, PhysicalExamMarksheetStudent } from '@/types/physicalExam'
 
@@ -302,6 +362,15 @@ const shownMarkRows = computed(() => {
   const q = markSearch.value.trim().toLowerCase()
   return marksheetStudents.value.filter(s => !q || `${s.first_name} ${s.last_name} ${s.admission_number}`.toLowerCase().includes(q))
 })
+const focusPrev = (id: number) => {
+  const rows = shownMarkRows.value
+  const prev = rows[rows.findIndex(r => r.student_id === id) - 1]
+  if (prev) {
+    const el = inputRefs.get(prev.student_id)
+    el?.focus()
+    el?.select()
+  }
+}
 const focusNext = (id: number) => {
   const rows = shownMarkRows.value
   const i = rows.findIndex(r => r.student_id === id)
@@ -334,6 +403,7 @@ const markStats = computed<StatItem[]>(() => {
 const openMarksheet = async (exam: ExamRow) => {
   activeExam.value = exam
   markSearch.value = ''
+  importNote.value = ''
   dirty.value = false
   marksheetLoading.value = true
   try {
@@ -373,6 +443,149 @@ const saveMarksheet = async () => {
   } finally {
     savingMarks.value = false
   }
+}
+
+// ---- Marks in Excel: a template of the class, filled in offline and imported back ----
+const safeName = (t: string) => t.replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80)
+const importInput = ref<HTMLInputElement | null>(null)
+const importNote = ref('')
+const TEMPLATE_HEADER = ['No.', 'Student number', 'Learner', 'Mark', 'Ref']
+
+const downloadTemplate = () => {
+  const exam = activeExam.value
+  if (!exam) return
+  const max = Number(exam.max_score)
+  const header = [...TEMPLATE_HEADER]
+  header[3] = `Mark (/${fmtMarks(max)})`
+  const ws = XLSX.utils.aoa_to_sheet([
+    [exam.title],
+    [`${exam.subject_name} · ${exam.class_name}${exam.stream_name ? ` ${exam.stream_name}` : ''} · out of ${fmtMarks(max)}`],
+    ['Type each mark in the Mark column, leave it empty for a learner who did not sit, then import this file back. Do not change the Student number or Ref columns.'],
+    [],
+    header,
+    ...marksheetStudents.value.map((st, i) => [i + 1, st.admission_number || '', niceName(`${st.first_name} ${st.last_name}`), hasScore(st.score) ? Number(st.score) : '', st.student_id])
+  ])
+  ws['!cols'] = [{ wch: 6 }, { wch: 16 }, { wch: 30 }, { wch: 12 }, { wch: 8 }]
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'Marks')
+  XLSX.writeFile(wb, `Marks template - ${safeName(`${exam.title} ${exam.class_name}${exam.stream_name ? ` ${exam.stream_name}` : ''}`)}.xlsx`)
+}
+
+const norm = (v: unknown) => String(v ?? '').trim().toLowerCase().replace(/\s+/g, ' ')
+const importMarks = async (e: Event) => {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file || !activeExam.value) return
+  try {
+    const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' })
+    const rows = XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' })
+    // the header row: the one with a "Mark" column
+    const h = rows.findIndex(r => r.some(c => /^mark/i.test(String(c).trim())))
+    if (h < 0) {
+      toast.error('No "Mark" column in that file. Download the Excel template, fill it in and import it.')
+      return
+    }
+    const head = rows[h].map(c => norm(c))
+    const col = (test: (c: string) => boolean) => head.findIndex(test)
+    const markCol = col(c => c.startsWith('mark'))
+    const refCol = col(c => c === 'ref')
+    const numCol = col(c => c.includes('student number') || c.includes('admission') || c === 'reg no' || c === 'reg. no')
+    const nameCol = col(c => c === 'learner' || c === 'name' || c.includes('student name'))
+
+    const byId = new Map(marksheetStudents.value.map(st => [st.student_id, st]))
+    const byNumber = new Map(marksheetStudents.value.filter(st => st.admission_number).map(st => [norm(st.admission_number), st]))
+    const byName = new Map(marksheetStudents.value.map(st => [norm(niceName(`${st.first_name} ${st.last_name}`)), st]))
+    let filled = 0, cleared = 0, unmatched = 0, bad = 0
+    const max = Number(activeExam.value.max_score)
+    for (const r of rows.slice(h + 1)) {
+      if (!r.some(c => String(c).trim() !== '')) continue
+      const st = (refCol >= 0 && byId.get(Number(r[refCol]))) || (numCol >= 0 && byNumber.get(norm(r[numCol]))) || (nameCol >= 0 && byName.get(norm(r[nameCol]))) || null
+      if (!st) { unmatched++; continue }
+      const raw = String(r[markCol] ?? '').trim()
+      if (raw === '') {
+        if (hasScore(st.score)) { st.score = null; cleared++ }
+        continue
+      }
+      const v = Number(raw)
+      if (!Number.isFinite(v) || v < 0) { bad++; continue }
+      st.score = v
+      filled++
+      if (v > max) bad++
+    }
+    dirty.value = filled + cleared > 0
+    importNote.value = [
+      `${filled} mark${filled === 1 ? '' : 's'} brought in from ${file.name}`,
+      cleared ? `${cleared} cleared` : '',
+      unmatched ? `${unmatched} row${unmatched === 1 ? '' : 's'} matched no learner in this class` : '',
+      bad ? `${bad} need a look (not a number or over ${fmtMarks(max)})` : ''
+    ].filter(Boolean).join(' · ') + (filled + cleared ? '. Check them, then Save marks.' : '.')
+  } catch {
+    toast.error('That file could not be read. Use the Excel template.')
+  }
+}
+
+// ---- Mark sheets: physical and online together, or each learner's average ----
+interface CombinedColumn { key: string; kind: 'physical' | 'online'; title: string; date: string; max: number }
+interface Combined { class_label: string; subject_name: string; columns: CombinedColumn[]; students: { student_id: number; name: string; admission_number: string | null; marks: Record<string, number> }[] }
+const sheetsOpen = ref(false)
+const sheetsLoading = ref(false)
+const combined = ref<Combined | null>(null)
+const picked = ref<string[]>([])
+const shortDate = (d: string) => (d ? new Date(d).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : '')
+const markedIn = (key: string) => (combined.value?.students || []).filter(st => st.marks[key] !== undefined).length
+const pickAll = (on: boolean) => { picked.value = on ? (combined.value?.columns || []).map(c => c.key) : [] }
+const pickKind = (kind: CombinedColumn['kind']) => { picked.value = (combined.value?.columns || []).filter(c => c.kind === kind).map(c => c.key) }
+
+const openSheets = async () => {
+  sheetsOpen.value = true
+  sheetsLoading.value = true
+  try {
+    const res = await axios.get(`/api/${roleBase()}/physical-exams/combined`, { params: { class_id: classId.value, subject_id: subjectId.value, term_id: termId.value } })
+    combined.value = res.data.data
+    pickAll(true)
+  } catch (err: any) {
+    combined.value = null
+    toast.error(err.response?.data?.message || 'Could not load the marks')
+  } finally {
+    sheetsLoading.value = false
+  }
+}
+
+const downloadSheet = (kind: 'combined' | 'average') => {
+  const data = combined.value
+  if (!data) return
+  const cols = data.columns.filter(c => picked.value.includes(c.key))
+  const people = data.students.map(st => {
+    const pcts = cols.filter(c => st.marks[c.key] !== undefined && c.max > 0).map(c => (st.marks[c.key] / c.max) * 100)
+    return { ...st, name: niceName(st.name), counted: pcts.length, avg: pcts.length ? Math.round((pcts.reduce((a, b) => a + b, 0) / pcts.length) * 10) / 10 : null }
+  })
+  // Position by average (ties share a place); learners with no marks have none
+  const ranked = people.filter(x => x.avg !== null).sort((a, b) => b.avg! - a.avg!)
+  const position = new Map<number, number>()
+  ranked.forEach((x, i) => position.set(x.student_id, i > 0 && ranked[i - 1].avg === x.avg ? position.get(ranked[i - 1].student_id)! : i + 1))
+  const avgs = ranked.map(x => x.avg!)
+  const classAvg = avgs.length ? Math.round((avgs.reduce((a, b) => a + b, 0) / avgs.length) * 10) / 10 : null
+  const title = kind === 'combined' ? 'Combined mark sheet' : 'Average mark sheet'
+  const meta = [
+    [`${title} - ${data.subject_name} · ${data.class_label} · ${termLabel.value}`],
+    [`${cols.length} assessment${cols.length === 1 ? '' : 's'} (${cols.filter(c => c.kind === 'physical').length} on paper, ${cols.filter(c => c.kind === 'online').length} online) · ${people.length} learners · class average ${classAvg === null ? '-' : `${classAvg}%`}`],
+    []
+  ]
+  let header: string[]
+  let body: (string | number)[][]
+  if (kind === 'combined') {
+    header = ['No.', 'Learner', 'Student number', ...cols.map(c => `${c.title} (${c.kind === 'physical' ? 'paper' : 'online'}, ${shortDate(c.date)}) /${fmtMarks(c.max)}`), 'Average %', 'Position']
+    body = people.map((x, i) => [i + 1, x.name, x.admission_number || '', ...cols.map(c => (x.marks[c.key] === undefined ? '' : x.marks[c.key])), x.avg === null ? '' : x.avg, position.get(x.student_id) ?? ''])
+  } else {
+    header = ['No.', 'Learner', 'Student number', 'Assessments with a mark', 'Average %', 'Position']
+    body = people.map((x, i) => [i + 1, x.name, x.admission_number || '', `${x.counted} of ${cols.length}`, x.avg === null ? '' : x.avg, position.get(x.student_id) ?? ''])
+  }
+  const ws = XLSX.utils.aoa_to_sheet([...meta, header, ...body])
+  ws['!cols'] = header.map((h, i) => ({ wch: i === 0 ? 6 : i === 1 ? 30 : i === 2 ? 16 : Math.min(28, Math.max(10, Math.ceil(h.length / 2))) }))
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, kind === 'combined' ? 'Combined' : 'Average')
+  XLSX.writeFile(wb, `${title} - ${safeName(`${data.subject_name} ${data.class_label} ${termLabel.value}`)}.xlsx`)
 }
 
 watch([classId, subjectId, termId], loadExams)

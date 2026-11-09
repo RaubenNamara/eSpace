@@ -33,14 +33,12 @@ class AuthService extends Service
      */
     public function login(string $identifier, string $password): array
     {
-        // Check rate limiting - TEMPORARILY DISABLED FOR DEBUGGING
-        // if ($this->isLockedOut($identifier)) {
-        //     return [
-        //         'success' => false,
-        //         'message' => 'Too many failed attempts. Please try again later.',
-        //         'lockout_remaining' => $this->getLockoutRemaining($identifier)
-        //     ];
-        // }
+        if ($this->isLockedOut($identifier)) {
+            return [
+                'success' => false,
+                'message' => 'Too many failed attempts. Please try again in 15 minutes.'
+            ];
+        }
 
         // Find user
         $user = $this->userRepository->findByUsernameOrEmail($identifier);
@@ -288,12 +286,10 @@ class AuthService extends Service
         $_SESSION['password_reset_email'] = $email;
         $_SESSION['password_reset_expires'] = $expiresAt;
 
-        // In production, send email with reset link
-        // For now, return the token for testing
+        // The token is never returned to the caller: that would let anyone take over an account
         return [
             'success' => true,
-            'message' => 'Password reset link sent',
-            'token' => $token // Remove in production
+            'message' => 'If the email exists, a reset link has been sent'
         ];
     }
 
@@ -364,6 +360,9 @@ class AuthService extends Service
             session_start();
         }
 
+        // a new session id at login, so one planted beforehand is worthless
+        session_regenerate_id(true);
+
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['username'] = $user['username'];
         $_SESSION['email'] = $user['email'];
@@ -421,72 +420,78 @@ class AuthService extends Service
         return $userData;
     }
 
-    /**
-     * Check if user is locked out
-     */
+    // Failed logins, counted in the database per account and per address: a count kept in the
+    // visitor's own session is gone the moment they drop their cookie. [limit, key]
+    private function throttleKeys(string $identifier): array
+    {
+        $who = mb_strtolower(trim($identifier));
+        // REMOTE_ADDR, not a forwarded header: a caller writes those themselves
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+        return [
+            [$this->maxLoginAttempts, hash('sha256', "user-ip|{$who}|{$ip}")],
+            [20, hash('sha256', "user|{$who}")],
+            // high: a whole school shares one address
+            [500, hash('sha256', "ip|{$ip}")],
+        ];
+    }
+
+    private function throttleDb(): \PDO
+    {
+        $db = \eSpace\Config\Database::getInstance();
+        $db->exec(
+            'CREATE TABLE IF NOT EXISTS login_throttle (
+                throttle_key CHAR(64) NOT NULL PRIMARY KEY,
+                attempts INT UNSIGNED NOT NULL DEFAULT 0,
+                last_at DATETIME NOT NULL
+            ) ENGINE=InnoDB'
+        );
+        return $db;
+    }
+
     private function isLockedOut(string $identifier): bool
     {
-        $key = "login_attempts_{$identifier}";
-        
-        if (!isset($_SESSION[$key])) {
-            return false;
-        }
-
-        $attempts = $_SESSION[$key];
-        
-        if ($attempts['count'] >= $this->maxLoginAttempts) {
-            $lockoutUntil = $attempts['last_attempt'] + $this->lockoutTime;
-            if (time() < $lockoutUntil) {
-                return true;
+        try {
+            $db = $this->throttleDb();
+            $stmt = $db->prepare('SELECT attempts FROM login_throttle WHERE throttle_key = ? AND last_at > NOW() - INTERVAL ' . $this->lockoutTime . ' SECOND');
+            foreach ($this->throttleKeys($identifier) as [$limit, $key]) {
+                $stmt->execute([$key]);
+                if ((int) $stmt->fetchColumn() >= $limit) {
+                    return true;
+                }
             }
+        } catch (\Throwable $e) {
+            // a problem counting must not stop people signing in
+            error_log('Login throttle: ' . $e->getMessage());
         }
-
         return false;
     }
 
-    /**
-     * Get remaining lockout time
-     */
-    private function getLockoutRemaining(string $identifier): int
-    {
-        $key = "login_attempts_{$identifier}";
-        
-        if (!isset($_SESSION[$key])) {
-            return 0;
-        }
-
-        $attempts = $_SESSION[$key];
-        $lockoutUntil = $attempts['last_attempt'] + $this->lockoutTime;
-        $remaining = $lockoutUntil - time();
-
-        return max(0, $remaining);
-    }
-
-    /**
-     * Record failed login attempt
-     */
     private function recordFailedAttempt(string $identifier): void
     {
-        $key = "login_attempts_{$identifier}";
-        
-        if (!isset($_SESSION[$key])) {
-            $_SESSION[$key] = [
-                'count' => 0,
-                'last_attempt' => 0
-            ];
+        try {
+            $stmt = $this->throttleDb()->prepare(
+                'INSERT INTO login_throttle (throttle_key, attempts, last_at) VALUES (?, 1, NOW())
+                 ON DUPLICATE KEY UPDATE attempts = IF(last_at < NOW() - INTERVAL ' . $this->lockoutTime . ' SECOND, 1, attempts + 1), last_at = NOW()'
+            );
+            foreach ($this->throttleKeys($identifier) as [, $key]) {
+                $stmt->execute([$key]);
+            }
+        } catch (\Throwable $e) {
+            error_log('Login throttle: ' . $e->getMessage());
         }
-
-        $_SESSION[$key]['count']++;
-        $_SESSION[$key]['last_attempt'] = time();
     }
 
-    /**
-     * Clear failed login attempts
-     */
+    // A right password clears the account's counts; the address's stays
     private function clearFailedAttempts(string $identifier): void
     {
-        $key = "login_attempts_{$identifier}";
-        unset($_SESSION[$key]);
+        try {
+            $stmt = $this->throttleDb()->prepare('DELETE FROM login_throttle WHERE throttle_key = ?');
+            foreach (array_slice($this->throttleKeys($identifier), 0, 2) as [, $key]) {
+                $stmt->execute([$key]);
+            }
+        } catch (\Throwable $e) {
+            error_log('Login throttle: ' . $e->getMessage());
+        }
     }
 
     /**

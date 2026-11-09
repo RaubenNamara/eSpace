@@ -315,6 +315,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'assignments/:id/mark-by-question', name: 'MarkByQuestion', component: MarkByQuestion },
       { path: 'planner', name: 'TeacherPlanner', component: TeacherPlanner },
       { path: 'itembank/papers/:id', name: 'PaperBuilder', component: () => import('../pages/teacher/PaperBuilder.vue') },
+      { path: 'itembank/:id/paper', name: 'TeacherPaperReader', component: () => import('../pages/student/PaperReader.vue'), meta: { previewRole: 'teacher' } },
       { path: 'term-copy', name: 'TermCopy', component: TermCopy },
       { path: 'assignments/:id/preview', name: 'TeacherAssignmentPreview', component: StudentAssignmentAnswer, meta: { previewRole: 'teacher' } },
       {

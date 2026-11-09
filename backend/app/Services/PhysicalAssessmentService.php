@@ -185,6 +185,112 @@ class PhysicalAssessmentService
         }
     }
 
+    /**
+     * One class's marks in a subject for a term, physical and online together - the combined and
+     * average mark sheets. Columns are the term's physical exams and the online assessments set
+     * for this class (its stream, or the whole class level) that are due or were set in the term,
+     * oldest first; a learner's online mark counts once the teacher has marked the script.
+     */
+    public function combined(int $classId, int $subjectId, int $termId): array
+    {
+        $db = $this->getDb();
+
+        $stmt = $db->prepare('SELECT start_date, end_date FROM terms WHERE id = ?');
+        $stmt->execute([$termId]);
+        $term = $stmt->fetch(\PDO::FETCH_ASSOC);
+        if (!$term) {
+            throw new RuntimeException('Term not found.');
+        }
+
+        $stmt = $db->prepare("SELECT c.name, c.stream_name, sub.name AS subject_name FROM classes c, subjects sub WHERE c.id = ? AND sub.id = ?");
+        $stmt->execute([$classId, $subjectId]);
+        $meta = $stmt->fetch(\PDO::FETCH_ASSOC) ?: ['name' => '', 'stream_name' => null, 'subject_name' => ''];
+
+        // the class: same roster the physical marksheet uses
+        $stmt = $db->prepare(
+            "SELECT id, first_name, last_name, admission_number FROM students
+             WHERE class_id = ? AND deleted_at IS NULL ORDER BY first_name, last_name"
+        );
+        $stmt->execute([$classId]);
+        $students = [];
+        foreach ($stmt->fetchAll(\PDO::FETCH_ASSOC) as $r) {
+            $students[(int) $r['id']] = [
+                'student_id' => (int) $r['id'],
+                'name' => trim($r['first_name'] . ' ' . $r['last_name']),
+                'admission_number' => $r['admission_number'],
+                'marks' => [],
+            ];
+        }
+
+        $columns = [];
+
+        // physical exams of the term
+        $stmt = $db->prepare(
+            "SELECT id, title, max_score, exam_date FROM physical_assessments
+             WHERE class_id = ? AND subject_id = ? AND term_id = ? AND deleted_at IS NULL ORDER BY exam_date, id"
+        );
+        $stmt->execute([$classId, $subjectId, $termId]);
+        $physical = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        foreach ($physical as $p) {
+            $columns[] = ['key' => 'p' . $p['id'], 'kind' => 'physical', 'title' => $p['title'], 'date' => $p['exam_date'], 'max' => (float) $p['max_score']];
+        }
+        if ($physical) {
+            $ids = array_map(fn ($p) => (int) $p['id'], $physical);
+            $stmt = $db->prepare('SELECT physical_assessment_id, student_id, score FROM physical_assessment_scores WHERE score IS NOT NULL AND physical_assessment_id IN (' . implode(',', $ids) . ')');
+            $stmt->execute();
+            foreach ($stmt->fetchAll(\PDO::FETCH_ASSOC) as $r) {
+                if (isset($students[(int) $r['student_id']])) {
+                    $students[(int) $r['student_id']]['marks']['p' . $r['physical_assessment_id']] = (float) $r['score'];
+                }
+            }
+        }
+
+        // online assessments set for this class in the subject, due (or set) within the term
+        $stmt = $db->prepare(
+            "SELECT a.id, a.title, a.total_marks, DATE(COALESCE(a.due_date, a.published_at, a.created_at)) AS on_date
+             FROM assignments a
+             LEFT JOIN classes c ON c.id = ?
+             WHERE a.subject_id = ? AND a.deleted_at IS NULL AND a.status <> 'draft'
+               AND (a.class_id = ? OR a.id IN (SELECT ac.assignment_id FROM assignment_classes ac WHERE ac.class_id = ?)
+                    OR (a.class_group_name IS NOT NULL AND a.class_group_name = c.name))
+               AND DATE(COALESCE(a.due_date, a.published_at, a.created_at)) BETWEEN ? AND ?
+             ORDER BY on_date, a.id"
+        );
+        $stmt->execute([$classId, $subjectId, $classId, $classId, $term['start_date'], $term['end_date']]);
+        $online = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        foreach ($online as $a) {
+            $columns[] = ['key' => 'o' . $a['id'], 'kind' => 'online', 'title' => $a['title'], 'date' => $a['on_date'], 'max' => (float) $a['total_marks']];
+        }
+        if ($online) {
+            $ids = array_map(fn ($a) => (int) $a['id'], $online);
+            // the latest marked attempt wins
+            $stmt = $db->prepare(
+                "SELECT assignment_id, student_id, total_score FROM assignment_submissions
+                 WHERE deleted_at IS NULL AND status IN ('graded', 'returned') AND total_score IS NOT NULL
+                   AND assignment_id IN (" . implode(',', $ids) . ") ORDER BY id"
+            );
+            $stmt->execute();
+            foreach ($stmt->fetchAll(\PDO::FETCH_ASSOC) as $r) {
+                if (isset($students[(int) $r['student_id']])) {
+                    $students[(int) $r['student_id']]['marks']['o' . $r['assignment_id']] = (float) $r['total_score'];
+                }
+            }
+        }
+
+        usort($columns, fn ($x, $y) => [$x['date'], $x['key']] <=> [$y['date'], $y['key']]);
+        foreach ($students as &$st) {
+            $st['marks'] = (object) $st['marks'];
+        }
+        unset($st);
+
+        return [
+            'class_label' => trim($meta['name'] . ($meta['stream_name'] ? ' ' . $meta['stream_name'] : '')),
+            'subject_name' => $meta['subject_name'],
+            'columns' => $columns,
+            'students' => array_values($students),
+        ];
+    }
+
     /** A paper Activity of Integration or project work counts towards UNEB continuous assessment */
     private static function category(mixed $value): ?string
     {

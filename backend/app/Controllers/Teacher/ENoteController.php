@@ -2474,7 +2474,9 @@ class ENoteController extends Controller
             $this->success([
                 'subjects' => $subjects,
                 'classes' => $classes,
-                'department_id' => $departmentId
+                'department_id' => $departmentId,
+                // ICT can set practicals worked in Tusome's Word, Excel, PowerPoint and Access
+                'is_ict' => \eSpace\App\Utils\FileKinds::isIct($db, (int) $departmentId),
             ]);
         } catch (\PDOException $e) {
             error_log("ENote assignments error: " . $e->getMessage());

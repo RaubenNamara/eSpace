@@ -65,38 +65,48 @@
           </svg>
           Back to Assignments
         </router-link>
-        <QuestionProgress
-          :total="totalCount"
-          :current="currentQuestionIndex"
-          :answered="answeredFlags"
-          @select="goToQuestion"
-        />
-      </div>
-
-      <!-- Header -->
-      <div class="mb-4 sm:mb-6">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-          <div class="flex items-start gap-3 min-w-0">
-            <div class="hidden sm:flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm">
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
+        <div class="flex flex-wrap items-center justify-end gap-3 ml-auto">
+          <!-- Answering: the clock, and whether it is saved (the bottom bar says so when there is one) -->
+          <template v-if="opened">
+            <div v-if="stepMode && !isLocked && !isPreview && saveState.short" class="flex items-center gap-1.5 text-sm font-medium" :class="saveState.tone">
+              <span class="w-2 h-2 rounded-full flex-shrink-0" :class="saveState.dot"></span>{{ saveState.short }}
             </div>
-            <div class="min-w-0">
-              <div class="flex items-center flex-wrap gap-2 mb-1">
-                <h1 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white break-words">{{ assignment.title }}</h1>
-                <span v-if="isPreview" class="px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
-                  Preview
-                </span>
-              </div>
-              <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400 break-words">{{ assignment.subject_name }} • {{ assignment.teacher_name }}</p>
+            <div v-if="timeUp" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+              <span class="text-sm font-semibold text-red-700 dark:text-red-300">{{ isLocked ? 'Time is up - your answers were handed in' : 'Time is up - handing in your answers…' }}</span>
             </div>
-          </div>
-          <div v-if="!isLocked && !isPreview && saveState.short" class="flex items-center gap-1.5 text-sm font-medium" :class="saveState.tone">
-            <span class="w-2 h-2 rounded-full flex-shrink-0" :class="saveState.dot"></span>{{ saveState.short }}
+            <div v-else-if="timeRemaining > 0" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800">
+              <svg class="w-4 h-4 text-amber-500 dark:text-amber-400 shrink-0 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              <span class="text-xs text-amber-700 dark:text-amber-400">Time left</span>
+              <span class="text-sm font-bold tabular-nums text-amber-700 dark:text-amber-400">{{ formatTime(timeRemaining) }}</span>
+            </div>
+          </template>
+          <QuestionProgress
+            v-if="opened"
+            :total="totalCount"
+            :current="currentQuestionIndex"
+            :answered="answeredFlags"
+            @select="goToQuestion"
+          />
+          <!-- Answering offline: keep it on this device -->
+          <div v-if="!isPreview && !isLocked && offline.online && savedOffline?.state !== 'failed' && !loadedOffline" class="flex flex-wrap items-center gap-2 text-xs">
+            <template v-if="savedOffline">
+              <span class="inline-flex items-center gap-1 font-semibold text-emerald-700 dark:text-emerald-300">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+                Saved to answer offline
+              </span>
+              <button type="button" class="text-gray-500 hover:text-red-600 dark:text-gray-400" @click="toggleOffline">Remove</button>
+            </template>
+            <button v-else-if="!offlineBlockReason" type="button" :disabled="savingOffline" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-200 disabled:opacity-50" @click="toggleOffline">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+              {{ savingOffline ? 'Saving…' : 'Save to answer offline' }}
+            </button>
+            <span v-else class="text-gray-400 dark:text-gray-500">{{ offlineBlockReason }} - can't be answered offline</span>
           </div>
         </div>
+      </div>
 
+      <!-- Notices: preview, handed in, answering offline -->
+      <div class="mb-2">
         <!-- Preview banner: staff viewing exactly what a student sees -->
         <div v-if="isPreview" class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg p-4 mb-4 flex items-start gap-3">
           <svg class="w-5 h-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -131,114 +141,120 @@
             <template v-if="savedOffline?.uploads"> Answers with photos or drawings need a connection.</template>
           </p>
         </div>
-        <div v-else-if="!isPreview && !isLocked && offline.online" class="flex flex-wrap items-center gap-2 mb-4 text-xs">
-          <template v-if="savedOffline">
-            <span class="inline-flex items-center gap-1 font-semibold text-emerald-700 dark:text-emerald-300">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
-              Saved to answer offline
+
+      </div>
+
+      <!-- Before it is opened: one card with everything about the assessment, and Open
+           (the same look as the cards on the assessments list) -->
+      <section v-if="!opened" class="mb-6 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/80 dark:border-gray-700 shadow-sm overflow-hidden">
+        <!-- The title on the left, the kind (LOA / AOI / EOC) in the middle, subject and teacher on the right -->
+        <header class="relative flex flex-wrap sm:flex-nowrap items-center gap-x-4 gap-y-2 px-4 sm:px-6 py-3.5 sm:py-4 bg-gradient-to-r to-white dark:to-gray-800" :class="introLook.band">
+          <span class="absolute inset-y-0 left-0 w-1" :class="introLook.solid"></span>
+          <div class="w-full sm:w-auto sm:flex-1 sm:basis-0 min-w-0 flex items-center gap-3">
+            <span class="w-10 h-10 flex-shrink-0 rounded-xl flex items-center justify-center text-white shadow-md" :class="[introLook.solid, introLook.glow]">
+              <AppIcon :name="introLook.icon" class="w-5 h-5" />
             </span>
-            <button type="button" class="text-gray-500 hover:text-red-600 dark:text-gray-400" @click="toggleOffline">Remove</button>
-          </template>
-          <button v-else-if="!offlineBlockReason" type="button" :disabled="savingOffline" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-200 disabled:opacity-50" @click="toggleOffline">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-            {{ savingOffline ? 'Saving…' : 'Save to answer offline' }}
+            <h1 class="min-w-0 text-base sm:text-lg font-bold leading-snug text-indigo-800 dark:text-indigo-300 break-words">{{ assignment.title }}</h1>
+          </div>
+          <div v-if="curriculum || isPreview" class="flex-shrink-0 flex items-center gap-1.5 pl-[3.25rem] sm:pl-0">
+            <span v-if="curriculum" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/80 dark:bg-gray-900/50 ring-1 ring-black/5 dark:ring-white/10 text-[11px] font-bold" :class="introLook.text">
+              {{ curriculum.category }}<span class="font-medium text-gray-500 dark:text-gray-400">· {{ ASSESSMENT_CATEGORY_LABELS[curriculum.category] }}</span>
+            </span>
+            <span v-if="isPreview" class="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-[10px] font-bold text-amber-800 dark:text-amber-200">Preview</span>
+          </div>
+          <p class="sm:flex-1 sm:basis-0 min-w-0 ml-auto text-xs sm:text-sm text-gray-500 dark:text-gray-400 text-right break-words">
+            <span class="font-semibold text-gray-700 dark:text-gray-200">{{ assignment.subject_name }}</span><template v-if="assignment.teacher_name"> · By {{ assignment.teacher_name }}</template>
+          </p>
+        </header>
+
+        <div class="px-4 sm:px-6 py-5 space-y-5">
+          <!-- The numbers -->
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+            <div v-for="t in introTiles" :key="t.label" class="flex items-center gap-3 p-3 rounded-xl bg-gray-50/80 dark:bg-gray-900/40 ring-1 ring-gray-100 dark:ring-gray-700/60 min-w-0">
+              <span class="w-9 h-9 flex-shrink-0 rounded-lg flex items-center justify-center" :class="introLook.soft">
+                <AppIcon :name="t.icon" class="w-4 h-4" />
+              </span>
+              <div class="min-w-0">
+                <p class="text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ t.label }}</p>
+                <p class="text-sm font-bold text-gray-900 dark:text-white leading-snug break-words">{{ t.value }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- What it assesses -->
+          <div v-if="curriculum && (curriculum.topic || curriculum.topics?.length)" class="rounded-xl border border-gray-200/80 dark:border-gray-700 overflow-hidden">
+            <template v-if="curriculum.category === 'LOA' && curriculum.topic">
+              <div class="flex items-center gap-2.5 px-4 py-3 bg-gray-50/80 dark:bg-gray-900/40">
+                <AppIcon name="book" class="w-4 h-4 flex-shrink-0" :class="introLook.text" />
+                <p class="min-w-0 text-sm"><span class="text-gray-500 dark:text-gray-400">Topic:</span> <span class="font-semibold text-gray-900 dark:text-white">{{ curriculum.topic.topic }}</span></p>
+              </div>
+              <div v-if="curriculum.learning_outcomes?.length" class="px-4 py-3 border-t border-gray-100 dark:border-gray-700">
+                <p class="text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Learning outcomes being assessed</p>
+                <ul class="space-y-2">
+                  <li v-for="lo in curriculum.learning_outcomes" :key="lo.id" class="flex gap-2.5 text-sm text-gray-700 dark:text-gray-200">
+                    <span class="mt-px w-5 h-5 flex-shrink-0 rounded-md flex items-center justify-center text-[10px] font-bold" :class="introLook.soft">{{ lo.order_number || '•' }}</span>
+                    <span class="min-w-0">{{ lo.learning_outcome }}</span>
+                  </li>
+                </ul>
+              </div>
+            </template>
+            <div v-else class="px-4 py-3">
+              <p class="text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">{{ curriculum.category === 'EOC' ? 'Topics covered' : 'Activity focus' }}</p>
+              <ul class="space-y-1.5">
+                <li v-for="topic in curriculum.topics" :key="topic.id" class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+                  <span class="w-1.5 h-1.5 flex-shrink-0 rounded-full" :class="introLook.solid"></span>{{ topic.topic }}
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div v-if="assignment.instructions || supportFiles.length" class="space-y-4">
+            <div v-if="assignment.instructions" class="overflow-x-auto">
+              <h3 class="font-medium text-gray-900 dark:text-white mb-2 flex items-center gap-1.5">
+                <svg class="w-4 h-4 text-indigo-500 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Instructions
+              </h3>
+              <p class="text-gray-600 dark:text-gray-400 text-sm break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="assignment.instructions"></p>
+            </div>
+
+            <!-- Files the teacher attached to work with (ICT: starter files, a zip of resources...) -->
+            <div v-if="supportFiles.length" class="">
+              <h3 class="font-medium text-gray-900 dark:text-white mb-2">Support files <span class="text-xs font-normal text-gray-500 dark:text-gray-400">- download, then work on them</span></h3>
+              <ul class="grid sm:grid-cols-2 gap-2">
+                <li v-for="f in supportFiles" :key="f.id">
+                  <a :href="resolveAssetUrl(f.file_path)" :download="f.original_name" class="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                    <span class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200">{{ (f.original_name.split('.').pop() || '').slice(0, 5) }}</span>
+                    <span class="flex-1 min-w-0 truncate text-sm text-gray-800 dark:text-gray-100">{{ f.original_name }}</span>
+                    <span class="text-xs font-semibold text-indigo-700 dark:text-indigo-300">Download</span>
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Open -->
+        <footer class="flex flex-col sm:flex-row sm:items-center gap-3 px-4 sm:px-6 py-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-900/30">
+          <p class="flex-1 flex items-start gap-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+            <AppIcon :name="isLocked ? 'check-circle' : assignment.duration_minutes ? 'clock' : 'check'" class="w-4 h-4 mt-0.5 flex-shrink-0" :class="assignment.duration_minutes && !isLocked ? 'text-amber-500' : 'text-emerald-500'" />
+            <span>
+              <template v-if="isLocked">You have handed this in. Open it to see your answers.</template>
+              <template v-else-if="assignment.duration_minutes">You have {{ assignment.duration_minutes }} minutes. The clock starts when you open it, and your answers are handed in by themselves when the time is over.</template>
+              <template v-else>Your answers save by themselves as you go.</template>
+            </span>
+          </p>
+          <button type="button" class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-500/30 transition-colors" @click="openAssessment">
+            {{ isLocked ? 'View my answers' : answeredCount > 0 ? 'Continue assessment' : 'Open assessment' }}
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
           </button>
-          <span v-else class="text-gray-400 dark:text-gray-500">{{ offlineBlockReason }} - can't be answered offline</span>
-        </div>
-
-        <!-- Assignment Info -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-4 mb-4 sm:mb-6">
-          <div class="flex flex-wrap gap-2 sm:gap-3">
-            <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-950/40 border border-gray-100 dark:border-gray-700">
-              <svg class="w-4 h-4 text-indigo-500 dark:text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span class="text-xs text-gray-500 dark:text-gray-400">Total Marks</span>
-              <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ fmtMarks(assignment.total_marks) }}</span>
-            </div>
-            <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-950/40 border border-gray-100 dark:border-gray-700">
-              <svg class="w-4 h-4 text-indigo-500 dark:text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span class="text-xs text-gray-500 dark:text-gray-400">Duration</span>
-              <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ assignment.duration_minutes ? `${assignment.duration_minutes} min` : 'No limit' }}</span>
-            </div>
-            <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-950/40 border border-gray-100 dark:border-gray-700">
-              <svg class="w-4 h-4 text-indigo-500 dark:text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <span class="text-xs text-gray-500 dark:text-gray-400">Deadline</span>
-              <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ assignment.due_date ? formatDate(assignment.due_date) : 'None' }}</span>
-            </div>
-            <div v-if="timeUp" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
-              <span class="text-sm font-semibold text-red-700 dark:text-red-300">Time is up - hand in your work now</span>
-            </div>
-            <div v-else-if="timeRemaining > 0" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800">
-              <svg class="w-4 h-4 text-amber-500 dark:text-amber-400 shrink-0 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-              <span class="text-xs text-amber-700 dark:text-amber-400">Time Remaining</span>
-              <span class="text-sm font-semibold text-amber-700 dark:text-amber-400">{{ formatTime(timeRemaining) }}</span>
-            </div>
-          </div>
-
-          <div v-if="assignment.instructions" class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 overflow-x-auto">
-            <h3 class="font-medium text-gray-900 dark:text-white mb-2 flex items-center gap-1.5">
-              <svg class="w-4 h-4 text-indigo-500 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Instructions
-            </h3>
-            <p class="text-gray-600 dark:text-gray-400 text-sm break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="assignment.instructions"></p>
-          </div>
-
-          <!-- Files the teacher attached to work with (ICT: starter files, a zip of resources...) -->
-          <div v-if="supportFiles.length" class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <h3 class="font-medium text-gray-900 dark:text-white mb-2">Support files <span class="text-xs font-normal text-gray-500 dark:text-gray-400">- download, then work on them</span></h3>
-            <ul class="grid sm:grid-cols-2 gap-2">
-              <li v-for="f in supportFiles" :key="f.id">
-                <a :href="resolveAssetUrl(f.file_path)" :download="f.original_name" class="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                  <span class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200">{{ (f.original_name.split('.').pop() || '').slice(0, 5) }}</span>
-                  <span class="flex-1 min-w-0 truncate text-sm text-gray-800 dark:text-gray-100">{{ f.original_name }}</span>
-                  <span class="text-xs font-semibold text-indigo-700 dark:text-indigo-300">Download</span>
-                </a>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <!-- Curriculum context (LOA/AOI/EOC) - which Topic/Learning Outcomes this assessment
-           covers, read-only, shown once above the questions. Absent entirely for any assignment
-           without an assessment_category (every assignment created before this feature). -->
-      <div v-if="curriculum" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-5 mb-4 sm:mb-6">
-        <div class="flex items-center gap-2 mb-1">
-          <svg class="w-4 h-4 text-slate-500 dark:text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-          </svg>
-          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-900/30 text-slate-700 dark:text-slate-300">
-            {{ curriculum.category }} &ndash; {{ ASSESSMENT_CATEGORY_LABELS[curriculum.category] }}
-          </span>
-        </div>
-        <template v-if="curriculum.category === 'LOA' && curriculum.topic">
-          <p class="text-sm text-gray-500 dark:text-gray-400 mt-3">Topic</p>
-          <p class="font-semibold text-gray-900 dark:text-white mb-3">{{ curriculum.topic.topic }}</p>
-          <p v-if="curriculum.learning_outcomes?.length" class="text-sm text-gray-500 dark:text-gray-400 mb-1">Learning Outcomes Being Assessed</p>
-          <ol v-if="curriculum.learning_outcomes?.length" class="list-decimal list-inside space-y-1 text-sm text-gray-700 dark:text-gray-300">
-            <li v-for="lo in curriculum.learning_outcomes" :key="lo.id">{{ lo.learning_outcome }}</li>
-          </ol>
-        </template>
-        <template v-else-if="curriculum.topics?.length">
-          <p class="text-sm text-gray-500 dark:text-gray-400 mb-1 mt-3">{{ curriculum.category === 'EOC' ? 'Topics Covered' : 'Activity Focus' }}</p>
-          <ul class="list-disc list-inside space-y-1 text-sm text-gray-700 dark:text-gray-300">
-            <li v-for="topic in curriculum.topics" :key="topic.id">{{ topic.topic }}</li>
-          </ul>
-        </template>
-      </div>
+        </footer>
+      </section>
 
       <!-- All questions, one page - no Prev/Next paging (a "Next" click was confusing students
            into thinking each question was a separate step/page). -->
-      <div class="space-y-6 sm:space-y-8">
+      <div v-if="opened" class="space-y-6 sm:space-y-8">
         <div
           v-for="(entry, entryIndex) in displayQuestions"
           v-show="!stepMode || entryIndex === step"
@@ -246,12 +262,19 @@
           :id="`question-${entry.question.id}`"
           class="space-y-3 scroll-mt-24"
         >
-          <div v-if="entry.groupHeader" class="pt-2">
-            <p v-if="entry.groupHeader.theme" class="text-xs font-semibold text-indigo-500 dark:text-indigo-400 uppercase tracking-wide">{{ entry.groupHeader.theme }}</p>
-            <h2 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white">{{ entry.groupHeader.label }}</h2>
-          </div>
-          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
-            <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 mb-2">Question {{ entryIndex + 1 }} of {{ totalCount }}</p>
+
+          <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm ring-1 ring-gray-200/80 dark:ring-gray-700 overflow-hidden">
+            <!-- one at a time: how far through -->
+            <div v-if="stepMode" class="h-1 bg-gray-100 dark:bg-gray-700" aria-hidden="true">
+              <div class="h-full bg-emerald-500 transition-all duration-500" :style="{ width: `${((entryIndex + 1) / totalCount) * 100}%` }"></div>
+            </div>
+            <div class="p-4 sm:p-6">
+            <div class="flex items-center gap-3 mb-4">
+              <span class="w-9 h-9 flex-shrink-0 rounded-xl bg-emerald-600 text-white text-sm font-bold flex items-center justify-center shadow-sm shadow-emerald-600/30">{{ entryIndex + 1 }}</span>
+              <p class="flex-1 min-w-0 text-sm font-semibold text-gray-500 dark:text-gray-400">Question {{ entryIndex + 1 }} <span class="font-normal">of {{ totalCount }}</span></p>
+              <span class="flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-300 dark:ring-emerald-800">{{ fmtMarks(entry.question.marks) }} {{ Number(entry.question.marks) === 1 ? 'mark' : 'marks' }}</span>
+              <span v-if="isLocked" class="shrink-0 px-2.5 py-1 rounded-full text-xs font-medium border" :class="questionStatusBadgeClass">{{ questionStatusLabel }}</span>
+            </div>
             <!-- Scenario Question -->
             <div v-if="entry.question.question_type === 'scenario'">
               <div class="mb-4">
@@ -262,8 +285,6 @@
                   <p class="text-gray-700 dark:text-gray-300 whitespace-pre-line break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="entry.question.scenario_text"></p>
                 </div>
               </div>
-
-              <NeedHelpPanel class="mb-4" />
 
               <!-- Sub-questions -->
               <div v-if="(entry.question as any).sub_questions && (entry.question as any).sub_questions.length > 0" class="space-y-4">
@@ -329,82 +350,98 @@
 
             <!-- Regular Question -->
             <div v-else>
-              <div class="flex flex-wrap items-start justify-between gap-2 mb-2">
-                <p class="text-xs font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">{{ fmtMarks(entry.question.marks) }} Marks</p>
-                <span class="shrink-0 px-2.5 py-1 rounded-full text-xs font-medium border" :class="questionStatusBadgeClass">{{ questionStatusLabel }}</span>
+              <div class="mb-5">
+                <p v-if="!isObjectiveQuestion(entry.question)" class="text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 mb-1.5 flex items-center gap-1.5">
+                  <AppIcon name="target" class="w-3.5 h-3.5" /> Your task
+                </p>
+                <div class="text-lg sm:text-xl font-semibold leading-snug text-gray-900 dark:text-white break-words [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_table]:max-w-full" v-html="entry.question.question_text"></div>
+                <p v-if="entry.question.question_type === 'multiple_choice_multiple'" class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">Choose all that are correct.</p>
               </div>
-              <div class="mb-4">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                  <AppIcon name="target" class="w-4 h-4" /> Your Task
-                </h3>
-                <p class="text-gray-900 dark:text-white break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="entry.question.question_text"></p>
-              </div>
-
-              <NeedHelpPanel v-if="!isObjectiveQuestion(entry.question)" class="mb-4" />
 
               <!-- Multiple Choice Single -->
-              <div v-if="entry.question.question_type === 'multiple_choice_single'" class="space-y-2">
+              <div v-if="entry.question.question_type === 'multiple_choice_single'" class="grid gap-2.5" role="radiogroup">
                 <label
                   v-for="(option, optIndex) in entry.question.options"
                   :key="optIndex"
-                  class="flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
+                  class="ans-opt"
+                  :class="{ 'ans-opt-on': String(answers[entry.question.id]) === String(option.id), 'ans-opt-locked': isLocked }"
                 >
                   <input
                     v-model="answers[entry.question.id]"
                     type="radio"
                     :value="option.id"
                     :disabled="isLocked"
-                    class="mr-3"
+                    class="sr-only"
                     @change="triggerAutoSave"
                   >
-                  <span class="text-gray-700 dark:text-gray-300">{{ option.option_text }}</span>
+                  <span class="ans-opt-letter">{{ String.fromCharCode(65 + Number(optIndex)) }}</span>
+                  <span class="flex-1 min-w-0 text-[0.95rem] text-gray-800 dark:text-gray-100 break-words">{{ option.option_text }}</span>
+                  <span class="ans-opt-tick" aria-hidden="true"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg></span>
                 </label>
               </div>
 
               <!-- Multiple Choice Multiple -->
-              <div v-else-if="entry.question.question_type === 'multiple_choice_multiple'" class="space-y-2">
+              <div v-else-if="entry.question.question_type === 'multiple_choice_multiple'" class="grid gap-2.5">
                 <label
                   v-for="(option, optIndex) in entry.question.options"
                   :key="optIndex"
-                  class="flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
+                  class="ans-opt"
+                  :class="{ 'ans-opt-on': (multipleChoiceAnswers[entry.question.id] || []).includes(option.id), 'ans-opt-locked': isLocked }"
                 >
                   <input
                     v-model="multipleChoiceAnswers[entry.question.id]"
                     type="checkbox"
                     :value="option.id"
                     :disabled="isLocked"
-                    class="mr-3"
-                    @change="triggerAutoSave"
+                    class="sr-only"
+                    @change="answers[entry.question.id] = JSON.stringify(multipleChoiceAnswers[entry.question.id] || []); triggerAutoSave()"
                   >
-                  <span class="text-gray-700 dark:text-gray-300">{{ option.option_text }}</span>
+                  <span class="ans-opt-letter">{{ String.fromCharCode(65 + Number(optIndex)) }}</span>
+                  <span class="flex-1 min-w-0 text-[0.95rem] text-gray-800 dark:text-gray-100 break-words">{{ option.option_text }}</span>
+                  <span class="ans-opt-tick" aria-hidden="true"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg></span>
                 </label>
               </div>
 
               <!-- True/False -->
-              <div v-else-if="entry.question.question_type === 'true_false'" class="space-y-2">
-                <label class="flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer">
+              <div v-else-if="entry.question.question_type === 'true_false'" class="grid sm:grid-cols-2 gap-2.5" role="radiogroup">
+                <label class="ans-opt" :class="{ 'ans-opt-on': answers[entry.question.id] === 'true', 'ans-opt-locked': isLocked }">
                   <input
                     v-model="answers[entry.question.id]"
                     type="radio"
                     value="true"
                     :disabled="isLocked"
-                    class="mr-3"
+                    class="sr-only"
                     @change="triggerAutoSave"
                   >
-                  <span class="text-gray-700 dark:text-gray-300">True</span>
+                  <span class="ans-opt-letter">T</span>
+                  <span class="flex-1 text-[0.95rem] font-medium text-gray-800 dark:text-gray-100">True</span>
+                  <span class="ans-opt-tick" aria-hidden="true"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg></span>
                 </label>
-                <label class="flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer">
+                <label class="ans-opt" :class="{ 'ans-opt-on': answers[entry.question.id] === 'false', 'ans-opt-locked': isLocked }">
                   <input
                     v-model="answers[entry.question.id]"
                     type="radio"
                     value="false"
                     :disabled="isLocked"
-                    class="mr-3"
+                    class="sr-only"
                     @change="triggerAutoSave"
                   >
-                  <span class="text-gray-700 dark:text-gray-300">False</span>
+                  <span class="ans-opt-letter">F</span>
+                  <span class="flex-1 text-[0.95rem] font-medium text-gray-800 dark:text-gray-100">False</span>
+                  <span class="ans-opt-tick" aria-hidden="true"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg></span>
                 </label>
               </div>
+
+              <!-- An ICT practical: done in Tusome's Word, Excel, PowerPoint or Access -->
+              <PracticalAnswerCard
+                v-else-if="(entry.question as any).practical_app"
+                :question="entry.question as any"
+                :assignment-id="Number(route.params.id)"
+                :saved-files="practicalFilesByQuestion[entry.question.id] || []"
+                :readonly="isLocked"
+                :title="assignment?.title || 'Practical'"
+                @saved="(files: PracticalFile[], sid: number) => { practicalFilesByQuestion[entry.question.id] = files; if (sid) submissionId = sid }"
+              />
 
               <!-- Fill in Blank, Short Answer, Essay, Structured -->
               <div v-else>
@@ -430,15 +467,16 @@
                 />
               </div>
             </div>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- Objective questions, one at a time: Next opens once this one is answered; the last one finishes -->
-      <div v-if="stepMode && !isLocked" class="mt-4 flex items-center gap-2">
+      <div v-if="opened && stepMode && !isLocked" class="mt-4 flex items-center gap-2">
         <button
           type="button"
-          class="px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40"
+          class="px-4 py-2.5 rounded-xl bg-white dark:bg-gray-800 ring-1 ring-gray-200 dark:ring-gray-700 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 shadow-sm"
           :disabled="step === 0"
           @click="goStep(step - 1)"
         >← Back</button>
@@ -448,21 +486,21 @@
         <button
           v-if="step < totalCount - 1"
           type="button"
-          class="px-5 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-40"
+          class="px-6 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-40 disabled:shadow-none shadow-md shadow-emerald-600/25 transition"
           :disabled="!answeredFlags[step]"
           @click="goStep(step + 1)"
         >Next →</button>
         <button
           v-else
           type="button"
-          class="px-5 py-2.5 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-40"
+          class="px-6 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-40 disabled:shadow-none shadow-md shadow-emerald-600/25 transition"
           :disabled="!answeredFlags[step] || submitting"
           @click="submitAssignment"
         >{{ submitting ? 'Marking…' : 'Finish & see my mark' }}</button>
       </div>
 
       <!-- Sticky bottom action bar -->
-      <div v-if="!isLocked && !stepMode" class="sticky bottom-0 -mx-3 sm:-mx-6 px-3 sm:px-6 py-3 mt-6 bg-white/95 dark:bg-gray-800/95 backdrop-blur border-t border-gray-200 dark:border-gray-700 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 z-10">
+      <div v-if="opened && !isLocked && !stepMode" class="sticky bottom-0 -mx-3 sm:-mx-6 px-3 sm:px-6 py-3 mt-6 bg-white/95 dark:bg-gray-800/95 backdrop-blur border-t border-gray-200 dark:border-gray-700 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 z-10">
         <p class="flex items-center gap-2 text-sm" :class="saveState.tone" role="status" aria-live="polite">
           <span class="w-2 h-2 rounded-full flex-shrink-0" :class="saveState.dot"></span>
           <span>{{ saveState.text }}</span>
@@ -514,7 +552,7 @@ import type { AdditionalAnswerFile } from '@/components/assignment/FreeResponseA
 const FreeResponseAnswer = defineAsyncComponent(() => import('@/components/assignment/FreeResponseAnswer.vue'))
 import QuestionProgress from '@/components/assignment/QuestionProgress.vue'
 import SubmitConfirmDialog from '@/components/assignment/SubmitConfirmDialog.vue'
-import NeedHelpPanel from '@/components/assignment/NeedHelpPanel.vue'
+import PracticalAnswerCard, { type PracticalFile } from '@/components/practical/PracticalAnswerCard.vue'
 import { isPlaceholderAttachmentName } from '@/utils/answerAttachment'
 import { useToastStore } from '@/stores/toast'
 import { offline } from '@/utils/offline/enotes'
@@ -644,6 +682,8 @@ function isObjectiveQuestion(question: any): boolean {
 // wording, not a hard gate (matches canSubmit's existing loose philosophy - the spec's own
 // "Submit Anyway" escape hatch confirms this is meant as a nudge, not a blocker).
 function isFreeResponseAnswered(question: any): boolean {
+  // an ICT practical is answered once there is saved work
+  if (question.practical_app) return !!practicalFilesByQuestion.value[question.id]?.length || !!answerAttachmentByQuestion.value[question.id]?.path
   // Type, Write, and Upload are independent - completing any one of them is enough, regardless
   // of whether the other two are empty (Upload in particular never populates `answers`/typed
   // text, so it needs its own check here rather than falling through to "unanswered").
@@ -723,6 +763,8 @@ const answers = ref<Record<number, string>>({})
 const multipleChoiceAnswers = ref<Record<number, number[]>>({})
 const answerAnnotationsByQuestion = ref<Record<number, Record<number, AnnotationLayerJSON>>>({})
 const answerAttachmentByQuestion = ref<Record<number, { path: string; originalName?: string } | null>>({})
+// ICT practicals: the learner's file in each app they used
+const practicalFilesByQuestion = ref<Record<number, PracticalFile[]>>({})
 const answerAdditionalFilesByQuestion = ref<Record<number, AdditionalAnswerFile[]>>({})
 
 const submissionId = ref<number | null>(null)
@@ -848,6 +890,7 @@ const loadAssignment = async () => {
       submissionStatus.value = response.data.data.submission_status || null
       answerAnnotationsByQuestion.value = response.data.data.answer_annotations || {}
 
+      practicalFilesByQuestion.value = response.data.data.practical_files || {}
       const rawAdditionalFiles: Record<string, any[]> = response.data.data.answer_attachments || {}
       answerAdditionalFilesByQuestion.value = Object.fromEntries(
         Object.entries(rawAdditionalFiles).map(([qId, files]) => [
@@ -856,11 +899,21 @@ const loadAssignment = async () => {
         ])
       )
 
+      // "Choose all that are correct": each question keeps a list of the options chosen
+      const multi = questions.value.filter(q => q.question_type === 'multiple_choice_multiple')
+      multi.forEach(q => { multipleChoiceAnswers.value[q.id] = [] })
+
       // Load existing answers if submission exists
       if (response.data.data.answers) {
         response.data.data.answers.forEach((answer: any) => {
           if (answer.answer_text !== null && answer.answer_text !== undefined) {
             answers.value[answer.question_id] = answer.answer_text
+            if (multi.some(q => q.id === Number(answer.question_id))) {
+              try {
+                const picked = JSON.parse(answer.answer_text)
+                if (Array.isArray(picked)) multipleChoiceAnswers.value[answer.question_id] = picked.map(Number)
+              } catch { /* not a list - nothing chosen */ }
+            }
           }
           if (answer.answer_style) answerStyleByQuestion.value[answer.question_id] = answer.answer_style
           if (answer.parts_order) {
@@ -877,14 +930,40 @@ const loadAssignment = async () => {
 
       // Start timer if duration is set and the attempt is still editable - counting from when
       // they first started, so coming back later doesn't give them the full time again
-      if (assignment.value.duration_minutes && !isLocked.value) {
-        startTimer(Number(response.data.data.seconds_used) || 0)
-      }
+      const secondsUsed = Number(response.data.data.seconds_used) || 0
+      // already started (or handed in): straight to the answer sheet, not the opening card
+      if (isLocked.value || secondsUsed > 0 || response.data.data.submission_status === 'in_progress') opened.value = true
+      if (assignment.value.duration_minutes && !isLocked.value && opened.value) startTimer(secondsUsed)
     }
   } catch (err: any) {
     error.value = err.response?.data?.message || 'Failed to load assignment'
   } finally {
     loading.value = false
+  }
+}
+
+// The card first: nothing of the questions until the learner opens it
+const opened = ref(false)
+// the colours of the assessments list's cards, by kind
+const INTRO_LOOK: Record<'LOA' | 'AOI' | 'EOC', { icon: string; solid: string; glow: string; band: string; text: string; soft: string }> = {
+  LOA: { icon: 'target', solid: 'bg-indigo-600', glow: 'shadow-indigo-500/30', band: 'from-indigo-50 dark:from-indigo-950/40', text: 'text-indigo-700 dark:text-indigo-300', soft: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' },
+  AOI: { icon: 'bulb', solid: 'bg-violet-600', glow: 'shadow-violet-500/30', band: 'from-violet-50 dark:from-violet-950/40', text: 'text-violet-700 dark:text-violet-300', soft: 'bg-violet-50 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300' },
+  EOC: { icon: 'clipboard', solid: 'bg-amber-500', glow: 'shadow-amber-500/30', band: 'from-amber-50 dark:from-amber-950/40', text: 'text-amber-700 dark:text-amber-300', soft: 'bg-amber-50 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' }
+}
+const introLook = computed(() => INTRO_LOOK[curriculum.value?.category as 'LOA' | 'AOI' | 'EOC'] || INTRO_LOOK.LOA)
+const introTiles = computed(() => [
+  { label: 'Total marks', icon: 'star', value: fmtMarks(assignment.value?.total_marks) },
+  { label: 'Questions', icon: 'document', value: totalCount.value },
+  { label: 'Duration', icon: 'clock', value: assignment.value?.duration_minutes ? `${assignment.value.duration_minutes} min` : 'No limit' },
+  { label: 'Deadline', icon: 'hourglass', value: assignment.value?.due_date ? formatDate(assignment.value.due_date) : 'None' }
+])
+const openAssessment = () => {
+  opened.value = true
+  window.scrollTo({ top: 0 })
+  if (assignment.value?.duration_minutes && !isLocked.value && !isPreview.value && !timerInterval && !timeUp.value) {
+    startTimer(0)
+    // saved straight away, so the school's clock starts now too
+    autoSave(0)
   }
 }
 
@@ -895,17 +974,35 @@ const startTimer = (secondsUsed = 0) => {
 
   const durationSeconds = assignment.value.duration_minutes * 60
   const endTime = Date.now() + (durationSeconds - secondsUsed) * 1000
+  let warned = false
   const tick = () => {
     const remaining = Math.floor((endTime - Date.now()) / 1000)
     timeRemaining.value = remaining > 0 ? remaining : 0
-    timeUp.value = remaining <= 0
-    if (remaining <= 0 && timerInterval) {
-      clearInterval(timerInterval)
-      timerInterval = null
+    if (remaining <= 60 && remaining > 0 && !warned && durationSeconds > 120) {
+      warned = true
+      toast.info('One minute left - your answers will be handed in when the time is over')
+    }
+    if (remaining <= 0) {
+      timeUp.value = true
+      if (timerInterval) {
+        clearInterval(timerInterval)
+        timerInterval = null
+      }
+      handInWhenTimeIsUp()
     }
   }
   tick()
   if (!timeUp.value) timerInterval = window.setInterval(tick, 1000)
+}
+
+// The time is over: whatever has been answered is handed in, as in an exam room
+let handedInForTime = false
+const handInWhenTimeIsUp = async () => {
+  if (handedInForTime || isLocked.value || isPreview.value) return
+  handedInForTime = true
+  toast.info('Time is up - your answers are being handed in')
+  showSubmitConfirm.value = false
+  await submitAssignment()
 }
 
 const triggerAutoSave = () => {
@@ -1125,3 +1222,28 @@ onUnmounted(() => {
   window.removeEventListener('beforeunload', onBeforeUnload)
 })
 </script>
+
+<style scoped>
+/* an answer choice: a card with its letter, green and ticked when chosen */
+.ans-opt { display: flex; align-items: center; gap: 0.75rem; padding: 0.8rem 1rem; border-radius: 0.9rem; background: #fff; box-shadow: inset 0 0 0 1.5px #e5e7eb; cursor: pointer; transition: box-shadow .15s, background-color .15s, transform .15s; }
+.ans-opt:hover { box-shadow: inset 0 0 0 1.5px #86efac; background: #f7fdf9; }
+.ans-opt:active { transform: scale(0.995); }
+.ans-opt:focus-within { outline: 2px solid #22a45d; outline-offset: 2px; }
+.ans-opt-letter { width: 2rem; height: 2rem; flex-shrink: 0; border-radius: 0.6rem; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; color: #4b5563; background: #f3f4f6; transition: background-color .15s, color .15s; }
+.ans-opt-tick { width: 1.4rem; height: 1.4rem; flex-shrink: 0; border-radius: 9999px; display: flex; align-items: center; justify-content: center; color: #fff; background: #16a34a; opacity: 0; transform: scale(.6); transition: opacity .15s, transform .15s; }
+.ans-opt-on { box-shadow: inset 0 0 0 2px #16a34a; background: #f0fdf4; }
+.ans-opt-on:hover { box-shadow: inset 0 0 0 2px #16a34a; background: #f0fdf4; }
+.ans-opt-on .ans-opt-letter { background: #16a34a; color: #fff; }
+.ans-opt-on .ans-opt-tick { opacity: 1; transform: scale(1); }
+.ans-opt-locked { cursor: default; }
+.ans-opt-locked:hover:not(.ans-opt-on) { box-shadow: inset 0 0 0 1.5px #e5e7eb; background: #fff; }
+</style>
+
+<style>
+/* the answer choices in dark mode (not scoped, so .dark on <html> reaches them) */
+html.dark .ans-opt { background: #1f2937; box-shadow: inset 0 0 0 1.5px #374151; }
+html.dark .ans-opt:hover { background: #1f2a24; box-shadow: inset 0 0 0 1.5px #166534; }
+html.dark .ans-opt-letter { background: #374151; color: #d1d5db; }
+html.dark .ans-opt-on, html.dark .ans-opt-on:hover { background: #14271c; box-shadow: inset 0 0 0 2px #22c55e; }
+html.dark .ans-opt-on .ans-opt-letter { background: #22c55e; color: #052e16; }
+</style>

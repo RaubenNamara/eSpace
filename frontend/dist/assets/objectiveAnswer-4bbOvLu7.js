@@ -1,0 +1,2 @@
+const o="(This option is no longer on the question)";function p(i,t){if(t==null||t==="")return"";if(i.question_type==="true_false"){if(t==="true")return"True";if(t==="false")return"False"}const n=i.options||[],u=e=>{const r=n.findIndex(c=>String(c.id)===String(e));return r<0?o:`${String.fromCharCode(65+r)}. ${n[r].option_text}`};if(i.question_type==="multiple_choice_multiple"){let e;try{e=JSON.parse(t)}catch{return o}return Array.isArray(e)?e.map(u).join(`
+`):o}return u(t)}export{p as o};

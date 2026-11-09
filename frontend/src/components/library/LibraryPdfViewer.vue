@@ -42,7 +42,7 @@
             <!-- Read Mode - whole screen given over to the book, floating overlay controls
                  replace every other piece of chrome. Student-only, same as the eNotes reader. -->
             <button
-              v-if="bookImages.length > 0 && isStudentRole"
+              v-if="bookImages.length > 0 && canReadMode"
               @click="enterReadMode"
               class="flex items-center gap-1.5 px-3 py-2 bg-white text-emerald-700 font-medium text-sm rounded-lg hover:bg-emerald-50 transition-colors shadow-sm"
             >
@@ -382,12 +382,14 @@ import BookFlipbook from '@/components/common/BookFlipbook.vue'
 // withNotes: the student's private per-page notes. notesBase: where they're stored - the eLibrary's
 // by default; the Item Bank reader passes its own (/student/itembank/{id}).
 // startInReadMode: opened with "Start reading" on the shelf - goes into Read Mode once the book is up
-const props = withDefaults(defineProps<{ book: LibraryBook; withNotes?: boolean; notesBase?: string; startInReadMode?: boolean }>(), { withNotes: true })
+// studentView: a teacher reading a colleague's book the way students do (Read Mode, no notes)
+const props = withDefaults(defineProps<{ book: LibraryBook; withNotes?: boolean; notesBase?: string; startInReadMode?: boolean; studentView?: boolean }>(), { withNotes: true })
 defineEmits(['close'])
 
 const API_BASE = '/api'
 const authStore = useAuthStore()
 const isStudentRole = computed(() => authStore.userRole === 'student')
+const canReadMode = computed(() => isStudentRole.value || props.studentView)
 const notesEnabled = computed(() => isStudentRole.value && props.withNotes)
 const notesBase = computed(() => `${API_BASE}${props.notesBase ?? `/student/library/books/${props.book.id}`}`)
 
@@ -807,7 +809,7 @@ const enterReadMode = () => {
 
 const stopWaitingForBook = watch(() => bookImages.value.length, (count) => {
   if (!count) return
-  if (props.startInReadMode && isStudentRole.value && !readMode.value) enterReadMode()
+  if (props.startInReadMode && canReadMode.value && !readMode.value) enterReadMode()
   stopWaitingForBook()
 })
 

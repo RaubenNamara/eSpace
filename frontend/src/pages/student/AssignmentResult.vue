@@ -104,11 +104,24 @@
             <p class="text-gray-700 dark:text-gray-300 whitespace-pre-line break-words text-justify [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.scenario_text"></p>
           </div>
 
-          <!-- Objective (MCQ/true-false) questions: raw stored answer only -->
+          <!-- Objective (MCQ/true-false) questions: the answer in words -->
           <div v-if="isObjective(question)" class="ml-3 sm:ml-6 p-3 sm:p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
             <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">{{ oversightRole ? "Student's answer" : "Your answer" }}</p>
-            <p class="text-gray-900 dark:text-white whitespace-pre-line break-words text-justify">{{ answerFor(question.id) || '(No answer provided)' }}</p>
+            <p class="text-gray-900 dark:text-white whitespace-pre-line break-words text-justify">{{ objectiveAnswerText(question, answerFor(question.id)) || '(No answer provided)' }}</p>
           </div>
+
+          <!-- An ICT practical: the work, in the app it was made in, view only -->
+          <PracticalWorkView
+            v-else-if="(question as any).practical_app"
+            class="sm:ml-10"
+            :app="(question as any).practical_app"
+            :path="question.answer?.student_attachment_path || null"
+            :files="(question as any).practical_files || null"
+            :student-name="oversightRole ? submission?.student_name || null : null"
+            :title="submission?.assignment_title || 'Practical'"
+            :instructions="question.question_text || null"
+            :who="oversightRole ? 'The learner\'s' : 'Your'"
+          />
 
           <!-- Free-response question: typed answer (rendered on a canvas so any teacher marks
                made directly over it are visible), plus its drawing/PDF layer(s) -->
@@ -171,6 +184,7 @@
 <script setup lang="ts">
 import { fmtMarks } from '@/utils/marks'
 import VoiceNote from '@/components/assignment/VoiceNote.vue'
+import PracticalWorkView from '@/components/practical/PracticalWorkView.vue'
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
@@ -181,6 +195,7 @@ import PdfAnnotationViewer from '@/components/assignment/PdfAnnotationViewer.vue
 import { createTypedAnswerLayer, htmlToPlainText, handwritingFontReady, answerLook, sheetWidth } from '@/composables/useAnnotationCanvas'
 import { resolveAssetUrl } from '@/utils/url'
 import { isPlaceholderAttachmentName } from '@/utils/answerAttachment'
+import { objectiveAnswerText } from '@/utils/objectiveAnswer'
 
 const route = useRoute()
 

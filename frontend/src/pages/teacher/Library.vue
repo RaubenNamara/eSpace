@@ -206,7 +206,7 @@
     </template>
 
     </div>
-    <DepartmentWork v-if="view === 'department'" :items="deptItems" :loading="deptLoading" noun="books" open-label="Read" @open="previewBook = ($event as LibraryBook)" @edit="editBook($event as LibraryBook)" @remove="deleteBook(($event as LibraryBook).id)" />
+    <DepartmentShelves v-if="view === 'department'" kind="library" :items="deptItems" :loading="deptLoading" noun="books" @open="deptBook = ($event as LibraryBook)" @edit="editBook($event as LibraryBook)" @remove="deleteBook(($event as LibraryBook).id)" />
 
     <!-- Upload/Edit Modal -->
     <div v-if="showBookModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -476,6 +476,9 @@
       @saved="onDesignSaved"
     />
     <LibraryDocumentViewer v-if="previewBook" :book="previewBook" @close="previewBook = null" />
+    <!-- A colleague's book, in the reader students use -->
+    <LibraryPdfViewer v-if="deptBook && (deptBook.file_type || 'pdf') === 'pdf'" :book="deptBook" start-in-read-mode student-view @close="deptBook = null" />
+    <LibraryDocumentViewer v-else-if="deptBook" :book="deptBook" @close="deptBook = null" />
     <AudiencePanel
       v-if="readersFor"
       :title="readersFor.title"
@@ -493,7 +496,9 @@ import { ref, computed, watch, onMounted } from 'vue'
 import axios from 'axios'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import WorkScopeSwitch from '@/components/teacher/WorkScopeSwitch.vue'
-import DepartmentWork, { type DeptItem } from '@/components/teacher/DepartmentWork.vue'
+import type { DeptItem } from '@/components/teacher/DepartmentWork.vue'
+import DepartmentShelves from '@/components/teacher/DepartmentShelves.vue'
+import LibraryPdfViewer from '@/components/library/LibraryPdfViewer.vue'
 import StatStrip, { type StatItem } from '@/components/ui/StatStrip.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import Skeleton from '@/components/ui/Skeleton.vue'
@@ -573,6 +578,7 @@ const readersFor = ref<LibraryBook | null>(null)
 const showBookModal = ref(false)
 const editingBook = ref<LibraryBook | null>(null)
 const previewBook = ref<LibraryBook | null>(null)
+const deptBook = ref<LibraryBook | null>(null)
 const bookForm = ref<LibraryBookForm>({
   title: '',
   description: '',

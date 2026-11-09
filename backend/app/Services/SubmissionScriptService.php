@@ -160,6 +160,7 @@ class SubmissionScriptService
             $ansStmt = $db->prepare("SELECT * FROM assignment_answers WHERE submission_id = :submission_id AND question_id = :question_id");
             $ansStmt->execute(['submission_id' => $submissionId, 'question_id' => $questionId]);
             $question['answer'] = $ansStmt->fetch() ?: null;
+            $question['practical_files'] = \eSpace\App\Utils\Practical::files($db, $submissionId, $question, $question['answer']);
 
             if (!in_array($question['question_type'], $objectiveTypes, true)) {
                 $qaStmt = $db->prepare("SELECT page_number, annotation_data FROM question_annotations WHERE question_id = :question_id ORDER BY page_number ASC");

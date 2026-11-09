@@ -81,10 +81,11 @@
                 </span>
               </span>
               <button
-                v-if="submission.status !== 'in_progress' && submission.status !== 'draft'"
+                v-if="handedIn(submission)"
                 class="flex-shrink-0 px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-xs font-bold"
                 @click="selectSubmission(submission)"
               >{{ isMarked(submission) ? 'View' : 'Mark' }}</button>
+              <button v-else-if="Number(submission.has_work)" class="flex-shrink-0 px-3 py-1.5 border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 rounded-lg text-xs font-bold" @click="collect(submission)">Collect &amp; mark</button>
               <span v-else class="flex-shrink-0 text-[11px] text-gray-400">Not handed in</span>
             </li>
           </ul>
@@ -129,13 +130,14 @@
                 </td>
                 <td class="px-6 py-4 text-right">
                   <button
-                    v-if="submission.status !== 'in_progress' && submission.status !== 'draft'"
+                    v-if="handedIn(submission)"
                     @click="selectSubmission(submission)"
                     class="px-4 py-2 rounded-lg transition-colors text-sm"
                     :class="isMarked(submission) ? 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700' : 'bg-indigo-600 text-white hover:bg-indigo-700'"
                   >
                     {{ isMarked(submission) ? 'View / change' : 'Mark' }}
                   </button>
+                  <button v-else-if="Number(submission.has_work)" class="px-4 py-2 rounded-lg border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 text-sm font-semibold" title="Saved but never handed in: hand it in for them and mark it" @click="collect(submission)">Collect &amp; mark</button>
                   <span v-else class="text-xs text-gray-400">Not submitted yet</span>
                 </td>
               </tr>
@@ -197,10 +199,10 @@
               </div>
             </div>
 
-            <!-- Objective (MCQ/true-false) questions: raw stored answer only -->
+            <!-- Objective (MCQ/true-false) questions: the answer in words -->
             <div v-if="isObjective(question)" class="ml-3 sm:ml-6 p-3 sm:p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
               <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Student's answer</p>
-              <p class="text-gray-900 dark:text-white whitespace-pre-line break-words">{{ question.answer?.answer_text || '(No answer provided)' }}</p>
+              <p class="text-gray-900 dark:text-white whitespace-pre-line break-words">{{ objectiveAnswerText(question, question.answer?.answer_text) || '(No answer provided)' }}</p>
             </div>
 
             <!-- Free-response question: typed answer (annotatable), drawing layer, and PDF/image
@@ -210,6 +212,7 @@
                 :question="question"
                 :assignment-id="assignmentId"
                 :submission-id="markingData.submission.id"
+                :student-name="markingData.submission.student_name"
               />
             </template>
           </div>
@@ -245,8 +248,6 @@
               :status="markingData.submission.status"
               :total-marks="Number(markingData.submission.total_marks)"
               :initial-feedback="markingData.submission.feedback || ''"
-              :initial-voice-path="markingData.submission.voice_feedback_path || null"
-              :initial-voice-seconds="markingData.submission.voice_feedback_seconds || null"
               @status-changed="onStatusChanged"
             />
           </div>
@@ -264,8 +265,11 @@ import axios from 'axios'
 import TeacherMarkingCanvas from '@/components/assignment/TeacherMarkingCanvas.vue'
 import MarkingPanel from '@/components/assignment/MarkingPanel.vue'
 import { useToastStore } from '@/stores/toast'
+import { useConfirmStore } from '@/stores/confirm'
+import { objectiveAnswerText } from '@/utils/objectiveAnswer'
 
 const toast = useToastStore()
+const confirmDialog = useConfirmStore()
 
 const router = useRouter()
 const route = useRoute()
@@ -279,7 +283,8 @@ const submissions = ref<any[]>([])
 type ListTab = 'tomark' | 'marked' | 'out'
 const listTab = ref<ListTab>('tomark')
 const isMarked = (sub: any) => sub.status === 'graded' || sub.status === 'returned'
-const isOut = (sub: any) => sub.status === 'in_progress' || sub.status === 'draft' || !sub.submitted_at
+const isOut = (sub: any) => sub.status === 'in_progress' || sub.status === 'draft' || !sub.status || !sub.submitted_at
+const handedIn = (sub: any) => isMarked(sub) || !isOut(sub)
 const listGroups = computed(() => ({
   tomark: submissions.value.filter(sub => !isMarked(sub) && !isOut(sub)),
   marked: submissions.value.filter(isMarked),
@@ -371,6 +376,25 @@ const openNext = async () => {
   if (!nextToMark.value) return
   await selectSubmission(nextToMark.value)
   window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+// Saved work the learner never handed in: hand it in for them, then mark it. Asked first only
+// when they could still be working on it.
+const collect = async (submission: any) => {
+  if (Number(submission.can_still_work) && !await confirmDialog.open({
+    title: 'Collect this script?',
+    message: `${submission.student_name} has not handed this in and still has time. Collecting hands it in as it is now, and they won't be able to change it.`,
+    confirmLabel: 'Collect and mark'
+  })) return
+  try {
+    const response = await axios.post(`${API_BASE}/teacher/assignments/${assignmentId.value}/submissions/${submission.id}/collect`)
+    submission.status = response.data.data.status
+    submission.submitted_at = response.data.data.submitted_at
+    await selectSubmission(submission)
+  } catch (err: any) {
+    toast.error(err.response?.data?.message || 'The script could not be collected')
+    loadSubmissions()
+  }
 }
 
 const selectSubmission = async (submission: any) => {

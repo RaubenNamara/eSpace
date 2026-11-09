@@ -3,7 +3,11 @@ import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
 import { VitePWA } from 'vite-plugin-pwa'
 
-export default defineConfig(() => ({
+export default defineConfig(({ command }) => ({
+  // In the built site: no source maps, debug logging or licence comments for anyone to browse.
+  // (Real protection is on the server - whatever reaches a browser can be read there.)
+  build: { sourcemap: false },
+  esbuild: command === 'build' ? { pure: ['console.log', 'console.debug', 'console.info'], legalComments: 'none' as const } : undefined,
   // Production is deployed at the root of its own subdomain (https://tusome.ug/), so
   // every route, asset URL, and API call is root-relative - no prefix to strip anywhere. (An
   // older deployment lived under https://stmark.sc.ug/eSpace/ and needed base: '/eSpace/' plus
@@ -58,6 +62,14 @@ export default defineConfig(() => ({
         // .mjs and the standard fonts are the PDF reader's own (pdf.js worker) - kept so a PDF saved
         // for offline reading (utils/offline/docs.ts) opens with no network
         globPatterns: ['**/*.{js,mjs,css,html,ico,png,svg,woff2}', 'pdfjs/standard_fonts/*'],
+        // The ICT practical apps (components/practical) and the libraries only they use load when a
+        // practical is opened, not with the app for everyone
+        globIgnores: ['**/{WordEditor,SheetEditor,SlideEditor,DatabaseEditor,html-to-docx,exceljs,pptxgen,mammoth,index.browser}*'],
+        // ...and the spreadsheet's hyphenation dictionaries, one per language ("hu-<hash>-<hash>.js")
+        manifestTransforms: [async entries => ({
+          manifest: entries.filter(e => !/(^|\/)assets\/[a-z]{2,3}(-[a-z0-9]+)*-[A-Za-z0-9_-]{8}-[A-Za-z0-9_-]{8}\.js$/.test(e.url)),
+          warnings: []
+        })],
         runtimeCaching: [
           {
             // Character maps pdf.js loads only for some scripts (e.g. Chinese) - kept once used
