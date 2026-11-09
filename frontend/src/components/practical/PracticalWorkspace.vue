@@ -9,7 +9,7 @@
         <p class="text-sm font-semibold truncate">{{ title }}</p>
         <p class="text-[11px] text-white/80 truncate">
           {{ info.label }}<template v-if="subtitle"> · {{ subtitle }}</template>
-          <template v-if="readonly"> · view only</template>
+          <template v-if="readonly"> · {{ canMark ? 'marking' : 'view only' }}</template>
           <template v-else-if="saver"> · <span :class="status === 'error' ? 'font-semibold text-amber-200' : ''">{{ statusText }}</span></template>
         </p>
       </div>
@@ -43,6 +43,8 @@
         ref="editorRef"
         :initial="initial"
         :readonly="readonly"
+        :show-tools="!!marking"
+        :markable="showMarkup"
         @change="onChange"
         @ready="ready = true"
         @download="download"
@@ -52,6 +54,31 @@
       </div>
     </div>
 
+    <!-- The teacher's pen marks, in the app itself: on the page, slide, sheet or table -->
+    <Teleport v-if="surface" :to="surface.host">
+      <div
+        class="absolute left-0 top-0 z-[5]"
+        :class="drawing ? 'pointer-events-auto' : 'pointer-events-none'"
+        :style="surface.fill ? { width: '100%', height: '100%' } : { width: `${surface.width}px`, height: `${surface.height}px` }"
+      >
+        <AnnotationCanvas
+          v-for="p in [layerPage]"
+          :key="`${p}-${surface.width}-${surface.height}`"
+          :ref="(el: any) => { markCanvas = el }"
+          :width="surface.width"
+          :height="surface.height"
+          stretch
+          transparent
+          :editable-layer="layers[p] || EMPTY_LAYER"
+          :mode="canMark ? 'teacher-marking' : 'readonly'"
+          :tool="markTool"
+          :color="markColor"
+          :stroke-width="2"
+          @update:editable-layer="onLayerChange(p, $event)"
+        />
+      </div>
+    </Teleport>
+
     <!-- Marking, beside the work: the teacher reads it and gives the mark and comment here -->
     <aside v-if="marking" class="w-64 sm:w-72 flex-shrink-0 border-l border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 flex flex-col">
       <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-800">
@@ -59,6 +86,35 @@
         <p class="text-[11px] text-gray-500 dark:text-gray-400">Look through the work, then type the score. It saves by itself.</p>
       </div>
       <div class="p-4 space-y-3 overflow-y-auto">
+        <!-- the same pen, ticks and text as every other script -->
+        <div v-if="canMark" class="pb-3 border-b border-gray-200 dark:border-gray-800">
+          <p class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Mark on the work</p>
+          <div class="flex flex-wrap items-center gap-1.5">
+            <button type="button" class="px-2 py-1 rounded-md text-xs font-semibold border" :class="viewing ? 'border-transparent text-white ' + info.bar : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800'" :aria-pressed="viewing" title="Put the pen down to click and scroll the work" @click="viewing = !viewing">View only</button>
+          </div>
+          <div class="practical-mark-tools mt-1.5">
+            <AnnotationToolbar
+              variant="marking"
+              :tool="viewing ? 'pan' : markTool"
+              :color="markColor"
+              :stroke-width="2"
+              :disabled="!surface"
+              @update:tool="pickTool"
+              @update:color="markColor = $event"
+              @undo="markCanvas?.undo()"
+              @redo="markCanvas?.redo()"
+              @clear-all="markCanvas?.clearAll()"
+              @clear-selected="markCanvas?.clearSelected()"
+            />
+          </div>
+          <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400" role="status" aria-live="polite">
+            <template v-if="!surface">Open what you want to mark on it.</template>
+            <template v-else-if="layerError">Marks not saved. <button type="button" class="underline" @click="flushLayers">Try again</button></template>
+            <template v-else-if="layerSaving || pendingLayers.size">Saving marks…</template>
+            <template v-else-if="layerSaved">✓ Marks saved</template>
+            <template v-else>Marks save by themselves. The learner sees them with the result.</template>
+          </p>
+        </div>
         <div>
           <label for="practical-mark" class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Score</label>
           <div class="flex items-center gap-1.5">
@@ -97,7 +153,8 @@
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, shallowRef } from 'vue'
 import { useToastStore } from '@/stores/toast'
 import { resolveAssetUrl } from '@/utils/url'
-import { PRACTICAL_APPS, downloadBlob, safeFileName, type PracticalApp, type PracticalEditorApi } from './apps'
+import { MARKUP_PAGE_BASE, MARKUP_PAGE_RANGE, PRACTICAL_APPS, downloadBlob, safeFileName, type MarkSurface, type PracticalApp, type PracticalEditorApi } from './apps'
+import type { AnnotationLayerJSON, AnnotationTool } from '@/types'
 
 const props = withDefaults(defineProps<{
   app: PracticalApp
@@ -115,8 +172,10 @@ const props = withDefaults(defineProps<{
   /** the name a download gets */
   fileName?: string
   /** a teacher marking the work: the mark out of max and a comment, saved with save() */
-  marking?: { max: number; mark: number | null; comment: string; locked?: boolean; save: (mark: number | null, comment: string) => Promise<void> } | null
-}>(), { subtitle: '', instructions: null, src: null, readonly: false, canImport: false, saver: null, doneLabel: 'Done', fileName: '', marking: null })
+  marking?: { max: number; mark: number | null; comment: string; locked?: boolean; save: (mark: number | null, comment: string) => Promise<void>; layers?: Record<number, AnnotationLayerJSON>; saveLayer?: (page: number, layer: AnnotationLayerJSON) => Promise<void> } | null
+  /** the teacher's pen marks, shown to whoever looks at marked work */
+  markupLayers?: Record<number, AnnotationLayerJSON> | null
+}>(), { subtitle: '', instructions: null, src: null, readonly: false, canImport: false, saver: null, doneLabel: 'Done', fileName: '', marking: null, markupLayers: null })
 const emit = defineEmits<{ close: [] }>()
 
 const toast = useToastStore()
@@ -203,6 +262,8 @@ window.addEventListener('beforeunload', warnLeaving)
 
 const closing = ref(false)
 const close = async () => {
+  await flushLayers()
+  if (layerError.value && !window.confirm('Your latest pen marks could not be saved. Close anyway?')) return
   // a score still waiting to save goes now
   if (markDirty.value && !markOver.value) await saveMark()
   if (markDirty.value && !window.confirm('The score is not saved. Close anyway?')) return
@@ -221,7 +282,75 @@ onBeforeUnmount(() => {
   window.removeEventListener('beforeunload', warnLeaving)
   if (timer) clearTimeout(timer)
   if (markTimer) clearTimeout(markTimer)
+  flushLayers()
 })
+
+// ---- pen marks on the work ----
+// The canvas library is only fetched when marks are there to draw or show
+const AnnotationCanvas = defineAsyncComponent(() => import('@/components/assignment/AnnotationCanvas.vue'))
+const AnnotationToolbar = defineAsyncComponent(() => import('@/components/assignment/AnnotationToolbar.vue'))
+const EMPTY_LAYER: AnnotationLayerJSON = { objects: [] }
+const markTool = ref<AnnotationTool>('pen')
+const markColor = ref('#dc2626')
+const viewing = ref(false)
+let markCanvas: any = null
+const canMark = computed(() => !!props.marking?.saveLayer && !props.marking.locked)
+const drawing = computed(() => canMark.value && !viewing.value)
+const pickTool = (t: AnnotationTool) => { markTool.value = t; viewing.value = false }
+
+const layers = shallowRef<Record<number, AnnotationLayerJSON>>({ ...(props.marking?.layers || props.markupLayers || {}) })
+// a learner's own marked work only opens the layer on the apps that were marked
+const hasMarksHere = computed(() => {
+  const base = MARKUP_PAGE_BASE[props.app]
+  return Object.entries(layers.value).some(([p, l]) => Number(p) >= base && Number(p) < base + MARKUP_PAGE_RANGE && (l?.objects?.length || 0) > 0)
+})
+const showMarkup = computed(() => !!props.marking?.saveLayer || hasMarksHere.value)
+const surface = computed<MarkSurface | null>(() => (showMarkup.value && ready.value ? editorRef.value?.markSurface || null : null))
+const layerPage = computed(() => MARKUP_PAGE_BASE[props.app] + (surface.value?.page || 0))
+
+const pendingLayers = shallowRef(new Map<number, AnnotationLayerJSON>())
+const layerSaving = ref(false)
+const layerSaved = ref(false)
+const layerError = ref(false)
+let layerTimer: number | null = null
+let layerFlush: Promise<void> | null = null
+const onLayerChange = (page: number, layer: AnnotationLayerJSON) => {
+  if (!canMark.value) return
+  // a layer only being loaded, not drawn on, has nothing to save
+  if (JSON.stringify(layer) === JSON.stringify(layers.value[page] || EMPTY_LAYER)) return
+  layers.value = { ...layers.value, [page]: layer }
+  pendingLayers.value = new Map(pendingLayers.value).set(page, layer)
+  layerError.value = false
+  if (layerTimer) clearTimeout(layerTimer)
+  layerTimer = window.setTimeout(() => { layerTimer = null; flushLayers() }, 1200)
+}
+const flushLayers = async (): Promise<void> => {
+  if (layerTimer) { clearTimeout(layerTimer); layerTimer = null }
+  if (layerFlush) await layerFlush
+  if (!pendingLayers.value.size || !props.marking?.saveLayer) return
+  const save = props.marking.saveLayer
+  const sending = [...pendingLayers.value.entries()]
+  layerSaving.value = true
+  layerFlush = (async () => {
+    for (const [page, layer] of sending) {
+      try {
+        await save(page, layer)
+        layerSaved.value = true
+        // drawn on again while this was on its way: that one still has to go
+        if (pendingLayers.value.get(page) === layer) {
+          const left = new Map(pendingLayers.value)
+          left.delete(page)
+          pendingLayers.value = left
+        }
+      } catch (err: any) {
+        layerError.value = true
+        toast.error(err?.response?.data?.message || 'Your marks could not be saved. Check your connection and mark again.')
+        return
+      }
+    }
+  })()
+  try { await layerFlush } finally { layerFlush = null; layerSaving.value = false }
+}
 
 // ---- marking beside the work ----
 const COMMENTS: Record<PracticalApp, string[]> = {
@@ -296,3 +425,9 @@ const download = async () => {
   }
 }
 </script>
+
+<style>
+/* The marking tools in the narrow panel beside the work: they wrap, so undo and clear stay in reach */
+.practical-mark-tools .annotation-toolbar.annotation-toolbar--marking { flex-wrap: wrap; padding: 0; border: 0; background: transparent; }
+.practical-mark-tools .annotation-toolbar.annotation-toolbar--marking .toolbar-section { flex-wrap: wrap; padding-right: 0; border-right: 0; }
+</style>

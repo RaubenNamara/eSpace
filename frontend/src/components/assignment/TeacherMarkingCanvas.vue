@@ -235,6 +235,12 @@ const practicalMarking = computed(() => {
       await axios.put(`${API_BASE}/teacher/assignments/${props.assignmentId}/submissions/${props.submissionId}/marks`, { question_id: q.id, marks_awarded: mark, feedback: comment || null })
       q.question_mark = { ...(q.question_mark || {}), marks_awarded: mark, feedback: comment }
       announceQuestionMarked({ submissionId: Number(props.submissionId), questionId: Number(q.id), marks: mark, feedback: comment })
+    },
+    // pen marks on the work, saved like the marks on any other script
+    layers: q.marking_annotations || {},
+    saveLayer: async (page: number, layer: AnnotationLayerJSON) => {
+      await axios.put(`${API_BASE}/teacher/assignments/${props.assignmentId}/submissions/${props.submissionId}/marking-annotations`, { question_id: q.id, page_number: page, annotation_data: layer })
+      q.marking_annotations = { ...(q.marking_annotations || {}), [page]: layer }
     }
   }
 })

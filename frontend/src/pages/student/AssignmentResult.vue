@@ -121,6 +121,7 @@
             :title="submission?.assignment_title || 'Practical'"
             :instructions="question.question_text || null"
             :who="oversightRole ? 'The learner\'s' : 'Your'"
+            :markup-layers="(question as any).marking_annotations || null"
           />
 
           <!-- Free-response question: typed answer (rendered on a canvas so any teacher marks

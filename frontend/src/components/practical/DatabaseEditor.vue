@@ -85,6 +85,7 @@
       </aside>
 
       <main class="flex-1 min-w-0 overflow-auto p-3">
+        <div :class="markable ? 'relative w-max min-w-full min-h-full' : 'contents'">
         <p v-if="error" class="mb-2 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800 dark:border-rose-800 dark:bg-rose-900/20 dark:text-rose-200">{{ error }}</p>
         <p v-if="notice" class="mb-2 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-200">{{ notice }}</p>
 
@@ -204,6 +205,11 @@
             <button v-if="editable" type="button" class="px-3 py-1 rounded bg-[#a4373a] text-white font-semibold" @click="addRecord">Add record</button>
           </div>
         </div>
+        <!-- a teacher's pen marks, scrolling with what is open under them -->
+        <div v-if="markable" class="absolute inset-0 overflow-hidden pointer-events-none">
+          <div ref="markHost" class="absolute left-0 top-0" :style="{ width: `${MARK_W}px`, height: `${MARK_H}px` }"></div>
+        </div>
+        </div>
       </main>
     </div>
     <footer class="flex-shrink-0 flex items-center gap-4 px-3 py-1 text-[11px] text-white bg-[#a4373a]">
@@ -222,7 +228,7 @@ import OfficeRibbon from './ribbon/OfficeRibbon.vue'
 import RibbonGroup from './ribbon/RibbonGroup.vue'
 import RibbonIcon from './ribbon/RibbonIcon.vue'
 
-const props = defineProps<{ initial: ArrayBuffer | null; readonly: boolean }>()
+const props = defineProps<{ initial: ArrayBuffer | null; readonly: boolean; showTools?: boolean; markable?: boolean }>()
 const emit = defineEmits<{ change: []; ready: []; download: [] }>()
 
 const TYPES = ['AutoNumber', 'Short Text', 'Long Text', 'Number', 'Currency', 'Date/Time', 'Yes/No'] as const
@@ -591,7 +597,19 @@ onMounted(async () => {
   emit('ready')
 })
 
+// marking on what is open: each table or query, in each view, has its own layer
+const MARK_W = 1800
+const MARK_H = 1600
+const markHost = ref<HTMLElement | null>(null)
+const markSurface = computed(() => {
+  if (!props.markable || !markHost.value || !open.value) return null
+  const o = open.value
+  const at = o.kind === 'table' ? tables.value.indexOf(o.name) : 500 + queries.value.findIndex(x => x.name === o.name)
+  return { page: at * 10 + (['data', 'design', 'sql'].indexOf(o.view)), host: markHost.value, width: MARK_W, height: MARK_H }
+})
+
 defineExpose({
+  markSurface,
   save: async () => new Blob([db.export() as BlobPart], { type: 'application/x-sqlite3' }),
   importFile: async (file: File) => {
     if (/\.csv$/i.test(file.name)) return importCsv(file.name.replace(/\.\w+$/, ''), await file.text())

@@ -5,7 +5,7 @@
        downloaded, and a teacher's .docx opens into it. Tools that need desktop Word are shown
        greyed out, as Word itself shows tools that don't apply. -->
   <div class="absolute inset-0 flex flex-col" :data-tick="tick">
-    <OfficeRibbon v-if="!readonly && editor" v-model:active="tab" :tabs="TABS" color="bg-[#185abd]">
+    <OfficeRibbon v-if="(!readonly || showTools) && editor" v-model:active="tab" :tabs="TABS" color="bg-[#185abd]" :locked="readonly">
       <!-- File -->
       <template v-if="tab === 'File'">
         <RibbonGroup label="Save">
@@ -443,6 +443,7 @@
 
       <div ref="desk" class="flex-1 min-w-0 overflow-auto bg-[#e6e6e6] dark:bg-gray-800 py-6 px-2" :class="{ 'is-painting': painter, 'bg-white dark:bg-gray-900 py-2': viewMode === 'web' }">
         <div
+          ref="pageEl"
           class="word-page mx-auto text-gray-900 relative"
           :class="pageClasses"
           :style="pageStyle"
@@ -578,7 +579,7 @@ import RibbonGroup from './ribbon/RibbonGroup.vue'
 import RibbonIcon from './ribbon/RibbonIcon.vue'
 import { downloadBlob } from './apps'
 
-const props = defineProps<{ initial: ArrayBuffer | null; readonly: boolean }>()
+const props = defineProps<{ initial: ArrayBuffer | null; readonly: boolean; showTools?: boolean; markable?: boolean }>()
 const emit = defineEmits<{ change: []; ready: []; download: [] }>()
 const toast = useToastStore()
 
@@ -1313,11 +1314,37 @@ const pageClasses = computed(() => ({
   'hide-fields': !highlightFields.value, [`border-${page.pageBorder}`]: !!page.pageBorder,
   'shadow-lg': viewMode.value !== 'web', 'is-web': viewMode.value === 'web', 'is-read': viewMode.value === 'read'
 }))
+// ---- marking on the document: a layer over whole sheets of paper, so a mark stays where it was put ----
+const MAX_MARK_PAGES = 20
+const pageEl = ref<HTMLElement | null>(null)
+const markPages = ref(1)
+let markObserver: ResizeObserver | null = null
+const measureMarkPages = () => {
+  const body = pageEl.value?.querySelector('.ProseMirror') as HTMLElement | null
+  if (!body) return
+  const breaks = editor.value?.getJSON().content?.filter(n => n.type === 'pageBreak').length || 0
+  const needed = Math.ceil((body.offsetHeight + margin.value.top * 2 - 2) / pageSize.value[1])
+  // only ever grows (a picture finishing loading), or marks already made would move
+  markPages.value = Math.min(MAX_MARK_PAGES, Math.max(markPages.value, needed, breaks + 1))
+}
+watch(pageEl, el => {
+  markObserver?.disconnect()
+  if (!el || !props.markable) return
+  markObserver = new ResizeObserver(measureMarkPages)
+  const body = el.querySelector('.ProseMirror')
+  markObserver.observe(body || el)
+  measureMarkPages()
+})
+onBeforeUnmount(() => markObserver?.disconnect())
+const markSurface = computed(() => (props.markable && pageEl.value && viewMode.value !== 'web'
+  ? { page: 0, host: pageEl.value, width: pageSize.value[0], height: pageSize.value[1] * markPages.value }
+  : null))
+
 const pageStyle = computed(() => {
   const web = viewMode.value === 'web'
   return {
     width: web ? '100%' : `${pageSize.value[0]}px`,
-    minHeight: web ? 'auto' : `${pageSize.value[1]}px`,
+    minHeight: web ? 'auto' : `${pageSize.value[1] * (props.markable ? markPages.value : 1)}px`,
     padding: web ? '24px 32px' : `${margin.value.top}px ${margin.value.side}px`,
     zoom: zoom.value / 100,
     background: page.pageColor || '#ffffff',
@@ -1401,6 +1428,7 @@ const documentHtml = () => `<!doctype html><html><head><meta charset="utf-8"><me
 watch(() => [page.merge.on], () => emit('change'))
 
 defineExpose({
+  markSurface,
   save: async () => new Blob([documentHtml()], { type: 'text/html' }),
   importFile: async (file: File) => {
     const mammoth = await import('mammoth')

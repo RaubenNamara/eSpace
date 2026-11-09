@@ -29,8 +29,26 @@ export const PRACTICAL_APPS: Record<PracticalApp, PracticalAppInfo> = {
 export const practicalInfo = (app?: string | null): PracticalAppInfo | null =>
   app && app in PRACTICAL_APPS ? PRACTICAL_APPS[app as PracticalApp] : null
 
+/** Where a teacher's pen marks go in the app showing the work: a layer of a fixed size placed in
+ *  `host`, so it scrolls and zooms with the page, slide, sheet or table under it. */
+export interface MarkSurface {
+  /** which page, slide, sheet or object of this file the marks belong to */
+  page: number
+  host: HTMLElement
+  width: number
+  height: number
+  /** the host is drawn at a changing size: fill it (a slide) */
+  fill?: boolean
+}
+
+/** Each app's marks are saved under its own range of page numbers on the question */
+export const MARKUP_PAGE_BASE: Record<PracticalApp, number> = { word: 100000, excel: 200000, powerpoint: 300000, access: 400000 }
+export const MARKUP_PAGE_RANGE = 100000
+
 /** What every editor offers the workspace around it */
 export interface PracticalEditorApi {
+  /** where marks can be drawn right now; null when nothing is open to draw on */
+  markSurface?: MarkSurface | null
   /** the work in Tusome's format, to save */
   save: () => Promise<Blob>
   /** an Office file (.docx, .xlsx ...) opened into the editor */

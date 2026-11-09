@@ -7,7 +7,7 @@
        out of the slide show and the .pptx until typed in. Transitions and animations play in the
        slide show (slides/SlideShow.vue). -->
   <div class="absolute inset-0 flex flex-col bg-[#e6e6e6] dark:bg-gray-900" :data-tick="tick" @mousedown="closeMenus">
-    <OfficeRibbon v-if="!readonly" v-model:active="tab" :tabs="TABS" color="bg-[#b7472a]">
+    <OfficeRibbon v-if="!readonly || showTools" v-model:active="tab" :tabs="TABS" color="bg-[#b7472a]" :locked="readonly">
       <!-- File -->
       <template v-if="tab === 'File'">
         <RibbonGroup label="Save">
@@ -525,7 +525,7 @@
               <div class="w-full" :style="{ height: `${H * scale}px`, backgroundImage: rulerTicks('y'), backgroundSize: `100% ${(H * scale) / 12}px` }"></div>
             </div>
             <div ref="stage" class="relative flex-1 min-w-0 flex p-3 sm:p-6" :class="zoomPct === null ? 'items-center justify-center overflow-hidden' : 'overflow-auto'">
-              <div class="shadow-md relative m-auto flex-shrink-0" :style="{ width: `${W * scale}px`, height: `${H * scale}px`, filter: COLOR_MODES.find(m => m.key === colorMode)?.filter }">
+              <div ref="slideEl" class="shadow-md relative m-auto flex-shrink-0" :style="{ width: `${W * scale}px`, height: `${H * scale}px`, filter: COLOR_MODES.find(m => m.key === colorMode)?.filter }">
                 <canvas ref="canvasEl"></canvas>
                 <button v-if="current?.comments?.length" type="button" class="absolute -left-2 -top-2 z-10 px-1.5 py-0.5 rounded bg-amber-300 text-[10px] font-bold text-gray-900 shadow" :title="`${current.comments.length} comment(s)`" @click="openPane('comments')">💬 {{ current.comments.length }}</button>
               </div>
@@ -818,7 +818,7 @@ import { ANIMATIONS, DIR_LABEL, TRANSITIONS, animDef, transitionDef, type Dir, t
 import { useToastStore } from '@/stores/toast'
 import { useConfirmStore } from '@/stores/confirm'
 
-const props = defineProps<{ initial: ArrayBuffer | null; readonly: boolean }>()
+const props = defineProps<{ initial: ArrayBuffer | null; readonly: boolean; showTools?: boolean; markable?: boolean }>()
 const emit = defineEmits<{ change: []; ready: []; download: [] }>()
 const toast = useToastStore()
 const confirmDialog = useConfirmStore()
@@ -2521,7 +2521,14 @@ const exportPptx = async (): Promise<Blob> => {
   return pptx.write({ outputType: 'blob' }) as Promise<Blob>
 }
 
+// marking on a slide: each slide has its own layer, drawn at the slide's size
+const slideEl = ref<HTMLElement | null>(null)
+const markSurface = computed(() => (props.markable && slideEl.value && (view.value === 'normal' || view.value === 'outline')
+  ? { page: index.value, host: slideEl.value, width: W.value, height: H, fill: true }
+  : null))
+
 defineExpose({
+  markSurface,
   save: async () => new Blob([JSON.stringify(deckJson())], { type: 'application/json' }),
   exportFile: exportPptx
 })

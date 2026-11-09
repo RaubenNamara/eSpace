@@ -13,7 +13,8 @@
       >{{ t }}</button>
     </div>
     <div ref="tools" class="bg-[#f3f3f3] dark:bg-gray-800 border-b border-gray-300 dark:border-gray-700 overflow-x-auto" @scroll="placeMenus">
-      <div class="flex items-stretch min-w-max px-1 py-1 text-gray-800 dark:text-gray-100">
+      <!-- locked: a teacher sees the tools the learner had, and can't change the learner's work with them -->
+      <div class="flex items-stretch min-w-max px-1 py-1 text-gray-800 dark:text-gray-100" :class="{ 'opacity-70': locked }" :inert="locked || undefined">
         <slot />
       </div>
     </div>
@@ -23,7 +24,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 
-defineProps<{ tabs: string[]; active: string; color: string }>()
+defineProps<{ tabs: string[]; active: string; color: string; locked?: boolean }>()
 defineEmits<{ 'update:active': [string] }>()
 
 // the ribbon's buttons never take the cursor out of the document, so typing carries on

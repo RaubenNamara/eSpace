@@ -39,6 +39,7 @@
         done-label="Close"
         :file-name="fileName || title"
         :marking="marking"
+        :markup-layers="markupLayers"
         @close="openApp = null"
       />
     </Teleport>
@@ -68,7 +69,9 @@ const props = withDefaults(defineProps<{
   fileName?: string
   /** a teacher marking it (PracticalWorkspace's marking) - one mark for the whole practical */
   marking?: InstanceType<typeof PracticalWorkspace>['$props']['marking']
-}>(), { files: null, path: null, subtitle: '', studentName: null, instructions: null, who: "The learner's", fileName: '', marking: null })
+  /** the teacher's pen marks, for the learner to see with the result */
+  markupLayers?: Record<number, any> | null
+}>(), { files: null, path: null, subtitle: '', studentName: null, instructions: null, who: "The learner's", fileName: '', marking: null, markupLayers: null })
 
 const mainApp = computed(() => (props.app in PRACTICAL_APPS ? props.app : 'word') as PracticalApp)
 const list = computed(() => {

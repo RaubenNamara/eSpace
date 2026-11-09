@@ -4,7 +4,7 @@
        work is the workbook's snapshot; an .xlsx is made when it is downloaded, and a teacher's .xlsx
        opens into it (excelConvert.ts). Tools that need desktop Excel are greyed out. -->
   <div class="absolute inset-0 flex flex-col bg-white">
-    <OfficeRibbon v-if="!readonly" v-model:active="tab" :tabs="TABS" color="bg-[#107c41]">
+    <OfficeRibbon v-if="!readonly || showTools" v-model:active="tab" :tabs="TABS" color="bg-[#107c41]" :locked="readonly">
       <!-- File -->
       <template v-if="tab === 'File'">
         <RibbonGroup label="Save">
@@ -360,7 +360,13 @@
       </template>
     </OfficeRibbon>
 
-    <div ref="host" class="flex-1 min-h-0 relative"></div>
+    <div class="flex-1 min-h-0 relative">
+      <div ref="host" class="absolute inset-0"></div>
+      <!-- a teacher's pen marks, over the cells and moving with them when the sheet scrolls -->
+      <div v-if="markable" ref="markClip" class="absolute left-0 top-0 z-10 overflow-hidden pointer-events-none" @wheel.prevent="forwardWheel">
+        <div ref="markHost" class="absolute left-0 top-0" :style="{ width: `${MARK_W}px`, height: `${MARK_H}px`, transformOrigin: '0 0' }"></div>
+      </div>
+    </div>
 
     <!-- Dialogs -->
     <div v-if="dialog" class="absolute inset-0 z-40 flex items-center justify-center bg-black/30 p-4" @click.self="dialog = null">
@@ -426,7 +432,7 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { createUniver, LocaleType, mergeLocales } from '@univerjs/presets'
 import { UniverSheetsCorePreset } from '@univerjs/preset-sheets-core'
 import UniverPresetSheetsCoreEnUS from '@univerjs/preset-sheets-core/locales/en-US'
@@ -461,7 +467,7 @@ import OfficeRibbon from './ribbon/OfficeRibbon.vue'
 import RibbonGroup from './ribbon/RibbonGroup.vue'
 import RibbonIcon from './ribbon/RibbonIcon.vue'
 
-const props = defineProps<{ initial: ArrayBuffer | null; readonly: boolean }>()
+const props = defineProps<{ initial: ArrayBuffer | null; readonly: boolean; showTools?: boolean; markable?: boolean }>()
 const emit = defineEmits<{ change: []; ready: []; download: [] }>()
 const toast = useToastStore()
 
@@ -912,7 +918,79 @@ const open = (snapshot: Record<string, any>) => {
   setTimeout(() => { quiet = false }, 300)
 }
 
+// ---- marking on the sheet ----
+// Univer draws the grid on a canvas and scrolls it itself, so the layer is moved to follow it. Marks
+// are placed in the sheet's own coordinates, each sheet with its own layer.
+const MARK_W = 2000
+const MARK_H = 1600
+const markClip = ref<HTMLElement | null>(null)
+const markHost = ref<HTMLElement | null>(null)
+const markSheet = ref(0)
+const markSurface = computed(() => (props.markable && markHost.value
+  ? { page: markSheet.value, host: markHost.value, width: MARK_W, height: MARK_H }
+  : null))
+let gridCanvas: HTMLCanvasElement | null = null
+let followFrame = 0
+let gridCheck = 0
+let lastPlaced = ''
+let scrolledKey = ''
+let scrolled = { x: 0, y: 0 }
+const findGrid = () => {
+  let best: HTMLCanvasElement | null = null
+  host.value?.querySelectorAll('canvas').forEach(c => {
+    if (!best || c.clientWidth * c.clientHeight > best.clientWidth * best.clientHeight) best = c
+  })
+  return best as HTMLCanvasElement | null
+}
+const followGrid = () => {
+  followFrame = requestAnimationFrame(followGrid)
+  if (!api || !host.value || !markClip.value || !markHost.value) return
+  try {
+    const book = api.getActiveWorkbook()
+    const sheet: any = book?.getActiveSheet()
+    if (!book || !sheet) return
+    const at = book.getSheets().findIndex((s: any) => s.getSheetId() === sheet.getSheetId())
+    if (at >= 0 && at !== markSheet.value) markSheet.value = at
+    // the grid's canvas can appear after the formula bar's: keep looking for the largest
+    if (!gridCanvas || !gridCanvas.isConnected || ++gridCheck % 30 === 0) gridCanvas = findGrid()
+    if (!gridCanvas) return
+    const box = host.value.getBoundingClientRect()
+    const grid = gridCanvas.getBoundingClientRect()
+    const zoom = Number(sheet.getZoom?.()) || 1
+    const cfg = sheet.getSheet().getConfig()
+    const headW = (cfg.rowHeader?.hidden ? 0 : cfg.rowHeader?.width ?? 46) * zoom
+    const headH = (cfg.columnHeader?.hidden ? 0 : cfg.columnHeader?.height ?? 20) * zoom
+    const st = sheet.getScrollState()
+    const key = `${sheet.getSheetId()}:${st.sheetViewStartRow}:${st.sheetViewStartColumn}`
+    if (key !== scrolledKey) {
+      scrolledKey = key
+      let x = 0
+      let y = 0
+      for (let c = 0; c < st.sheetViewStartColumn; c++) x += sheet.getColumnWidth(c)
+      for (let r = 0; r < st.sheetViewStartRow; r++) y += sheet.getRowHeight(r)
+      scrolled = { x, y }
+    }
+    const x = (scrolled.x + st.offsetX) * zoom
+    const y = (scrolled.y + st.offsetY) * zoom
+    const placed = [grid.left - box.left + headW, grid.top - box.top + headH, grid.width - headW, grid.height - headH, x, y, zoom].join()
+    if (placed === lastPlaced) return
+    lastPlaced = placed
+    Object.assign(markClip.value.style, {
+      left: `${grid.left - box.left + headW}px`,
+      top: `${grid.top - box.top + headH}px`,
+      width: `${grid.width - headW}px`,
+      height: `${grid.height - headH}px`
+    })
+    markHost.value.style.transform = `translate(${-x}px, ${-y}px) scale(${zoom})`
+  } catch { /* the sheet is between states; the next frame places it */ }
+}
+// the pen is over the sheet: the wheel still scrolls it
+const forwardWheel = (e: WheelEvent) => {
+  gridCanvas?.dispatchEvent(new WheelEvent('wheel', { deltaX: e.deltaX, deltaY: e.deltaY, deltaMode: e.deltaMode, clientX: e.clientX, clientY: e.clientY, shiftKey: e.shiftKey, bubbles: true, cancelable: true }))
+}
+
 onMounted(() => {
+  if (props.markable) followFrame = requestAnimationFrame(followGrid)
   const made = createUniver({
     locale: LocaleType.EN_US,
     locales: { [LocaleType.EN_US]: mergeLocales(UniverPresetSheetsCoreEnUS, SheetsSortEnUS, SheetsFilterEnUS, SheetsConditionalFormattingEnUS, SheetsDataValidationEnUS, SheetsFindReplaceEnUS, SheetsHyperLinkEnUS, SheetsNoteEnUS, SheetsDrawingEnUS) },
@@ -943,6 +1021,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  cancelAnimationFrame(followFrame)
   document.removeEventListener('mousedown', closeMenus)
   univer?.dispose()
   univer = null
@@ -956,6 +1035,7 @@ const snapshotNow = () => {
 }
 
 defineExpose({
+  markSurface,
   save: async () => new Blob([JSON.stringify(snapshotNow() || blankWorkbook())], { type: 'application/json' }),
   importFile: async (file: File) => {
     open(await xlsxToWorkbook(await file.arrayBuffer(), file.name.replace(/\.\w+$/, '')))
