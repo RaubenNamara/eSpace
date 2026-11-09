@@ -108,7 +108,7 @@ class AssignmentController extends Controller
                 'graded' => 'submitted',
                 'returned' => 'marked',
             ];
-            $now = new \DateTime();
+            $now = new \DateTime((string) $this->pdo->query('SELECT NOW()')->fetchColumn());
             $assignments = array_map(function ($row) use ($now, $statusMap) {
                 $status = $statusMap[$row['submission_status']] ?? $row['submission_status'];
 
@@ -176,6 +176,21 @@ class AssignmentController extends Controller
         }
     }
 
+    /** True once the deadline has gone by, on the database's clock. No deadline: never. */
+    private function pastDeadline(int $assignmentId): bool
+    {
+        $stmt = $this->pdo->prepare('SELECT COALESCE(deadline_at, due_date) < NOW() FROM assignments WHERE id = :id');
+        $stmt->execute(['id' => $assignmentId]);
+        return (bool) $stmt->fetchColumn();
+    }
+
+    /** The refusal the answering page recognises, so it can lock instead of retrying */
+    private function deadlineRefused(): void
+    {
+        $this->error('The deadline has passed - this can no longer be handed in', 403, ['deadline_passed' => true]);
+    }
+
+
     /**
      * Get single assignment for student to answer
      */
@@ -197,7 +212,8 @@ class AssignmentController extends Controller
                 INNER JOIN teachers t ON a.teacher_id = t.id
                 WHERE a.id = :assignment_id
                 AND a.status = 'published'
-                AND a.deleted_at IS NULL" . AssignmentRemoval::openOrSubmitted((string) (int) $studentId) . "
+                AND a.deleted_at IS NULL
+                AND (a.open_at IS NULL OR a.open_at <= NOW())" . AssignmentRemoval::openOrSubmitted((string) (int) $studentId) . "
                 AND EXISTS (
                     SELECT 1 FROM student_department_enrollments sde
                     LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
@@ -231,6 +247,36 @@ class AssignmentController extends Controller
             if (!$assignment) {
                 $this->notFound('Assignment not found or access denied');
                 return;
+            }
+            // the marking rubric is for teachers
+            unset($assignment['rubric']);
+
+            // A timed paper: the questions come only once the student begins, and that starts the
+            // clock. Time already run out: what was saved is handed in.
+            if ((int) ($assignment['duration_minutes'] ?? 0) > 0) {
+                $stmt = $this->pdo->prepare('SELECT id FROM assignment_submissions WHERE assignment_id = :assignment_id AND student_id = :student_id LIMIT 1');
+                $stmt->execute(['assignment_id' => $assignmentId, 'student_id' => $studentId]);
+                $startedId = $stmt->fetchColumn();
+                if (!$startedId) {
+                    if (!$this->query('begin')) {
+                        $this->success(['assignment' => $assignment, 'questions' => [], 'not_started' => true, 'submission_id' => null, 'submission_status' => null]);
+                        return;
+                    }
+                    if (!$this->pastDeadline((int) $assignmentId)) {
+                        $this->pdo->prepare(
+                            "INSERT IGNORE INTO assignment_submissions (assignment_id, student_id, attempt_number, started_at, status, created_at, updated_at)
+                             VALUES (:assignment_id, :student_id, 1, NOW(), 'in_progress', NOW(), NOW())"
+                        )->execute(['assignment_id' => $assignmentId, 'student_id' => $studentId]);
+                    }
+                } elseif ($this->attemptTimeIsUp((int) $startedId)) {
+                    $this->pdo->prepare("UPDATE assignment_submissions SET status = 'submitted', submitted_at = NOW(), updated_at = NOW() WHERE id = :id AND status = 'in_progress'")
+                        ->execute(['id' => $startedId]);
+                    try {
+                        \eSpace\App\Services\ObjectiveAutoMark::markAndRelease($this->pdo, (int) $startedId, (int) $assignmentId);
+                    } catch (\Throwable $e) {
+                        error_log('Objective auto-marking failed: ' . $e->getMessage());
+                    }
+                }
             }
 
             // Get questions
@@ -366,6 +412,7 @@ class AssignmentController extends Controller
 
             $this->success([
                 'assignment' => $assignment,
+                'deadline_passed' => $this->pastDeadline((int) $assignmentId),
                 'questions' => $questions,
                 'curriculum' => $this->getCurriculumStructure((int) $assignmentId, $assignment['assessment_category'], $assignment['construct_id'] ?? null),
                 'submission_id' => $submissionId,
@@ -534,7 +581,7 @@ class AssignmentController extends Controller
             }
 
             // Validate assignment access
-            $checkSql = "SELECT * FROM assignments WHERE id = :assignment_id AND status = 'published'"
+            $checkSql = "SELECT * FROM assignments WHERE id = :assignment_id AND status = 'published' AND (open_at IS NULL OR open_at <= NOW())"
                 . AssignmentRemoval::openOrSubmitted((string) (int) $studentId, 'assignments');
             $stmt = $this->pdo->prepare($checkSql);
             $stmt->execute(['assignment_id' => $assignmentId]);
@@ -546,16 +593,14 @@ class AssignmentController extends Controller
                 return;
             }
 
-            // Check deadline
-            $now = new \DateTime();
-            // No deadline: never late
-            $isLate = !empty($assignment['due_date']) && $now > new \DateTime($assignment['due_date']);
-
-            if ($isLate && !$assignment['allow_late_submission']) {
+            // Past the deadline nothing more is taken. The clock is the database's: deadlines are
+            // written in its time, and PHP here runs in UTC, three hours behind it.
+            if ($this->pastDeadline((int) $assignmentId)) {
                 $this->pdo->rollBack();
-                $this->error('Late submissions are not allowed for this assignment');
+                $this->deadlineRefused();
                 return;
             }
+            $now = new \DateTime((string) $this->pdo->query('SELECT NOW()')->fetchColumn());
 
             // Get or create submission. Look this up authoritatively by (assignment_id,
             // student_id) rather than trusting a client-supplied submission_id: the
@@ -585,6 +630,12 @@ class AssignmentController extends Controller
                 $this->pdo->rollBack();
                 $this->error('This attempt has already been submitted and can no longer be edited', 403);
                 return;
+            }
+
+            $timeUp = $existingSubmission && $existingSubmission['status'] === 'in_progress' && $this->attemptTimeIsUp((int) $existingSubmission['id']);
+            if ($timeUp) {
+                $status = 'submitted';
+                unset($data['answers']);
             }
 
             if ($existingSubmission) {
@@ -700,9 +751,7 @@ class AssignmentController extends Controller
                 $hoursBeforeDue = !empty($assignment['due_date'])
                     ? ((new \DateTime($assignment['due_date']))->getTimestamp() - $now->getTimestamp()) / 3600
                     : 0;
-                if ($isLate) {
-                    $submissionTiming = 'late';
-                } elseif ($hoursBeforeDue >= 24) {
+                if ($hoursBeforeDue >= 24) {
                     $submissionTiming = 'early';
                 } else {
                     $submissionTiming = 'on_time';
@@ -726,8 +775,9 @@ class AssignmentController extends Controller
                 'status' => $autoMarked ? 'returned' : $status,
                 'attempt_number' => $attemptNumber,
                 'submission_timing' => $submissionTiming,
-                'auto_marked' => $autoMarked
-            ], $autoMarked ? 'Marked - see your result' : 'Assignment saved successfully');
+                'auto_marked' => $autoMarked,
+                'time_up' => $timeUp
+            ], $timeUp ? 'Time is up - what you saved has been handed in' : ($autoMarked ? 'Marked - see your result' : 'Assignment saved successfully'));
         } catch (\Exception $e) {
             if ($this->pdo->inTransaction()) {
                 $this->pdo->rollBack();
@@ -955,11 +1005,20 @@ class AssignmentController extends Controller
                 (float) ($submission['total_marks'] ?? 0)
             );
 
+            // the school's name and crest, for the result's certificate header
+            $school = null;
+            try {
+                $school = $this->pdo->query('SELECT school_name AS name, logo_path AS logo FROM school_settings ORDER BY id LIMIT 1')->fetch(\PDO::FETCH_ASSOC) ?: null;
+            } catch (\PDOException $e) {
+                // no settings table on this database
+            }
+
             $this->success([
                 'submission' => $submission,
                 'answers' => $answers,
                 'questions' => $questions,
-                'summary' => $summary
+                'summary' => $summary,
+                'school' => $school
             ]);
         } catch (\Exception $e) {
             $this->serverError('Failed to load result: ' . $e->getMessage());
@@ -1028,6 +1087,12 @@ class AssignmentController extends Controller
                 return;
             }
 
+            if ($this->pastDeadline($assignmentId)) {
+                $this->pdo->rollBack();
+                $this->deadlineRefused();
+                return;
+            }
+
             // Get or create the in-progress submission
             $stmt = $this->pdo->prepare(
                 "SELECT id, status FROM assignment_submissions WHERE assignment_id = :assignment_id AND student_id = :student_id ORDER BY attempt_number DESC LIMIT 1"
@@ -1035,7 +1100,7 @@ class AssignmentController extends Controller
             $stmt->execute(['assignment_id' => $assignmentId, 'student_id' => $studentId]);
             $submission = $stmt->fetch();
 
-            if ($submission && $submission['status'] !== 'in_progress') {
+            if ($submission && ($submission['status'] !== 'in_progress' || $this->attemptTimeIsUp((int) $submission['id']))) {
                 $this->pdo->rollBack();
                 $this->error('This attempt is no longer editable', 403);
                 return;
@@ -1231,6 +1296,12 @@ class AssignmentController extends Controller
             return null;
         }
 
+        if ($this->pastDeadline($assignmentId)) {
+            $this->pdo->rollBack();
+            $this->deadlineRefused();
+            return null;
+        }
+
         // Get or create the in-progress submission
         $stmt = $this->pdo->prepare(
             "SELECT id, status FROM assignment_submissions WHERE assignment_id = :assignment_id AND student_id = :student_id ORDER BY attempt_number DESC LIMIT 1"
@@ -1238,7 +1309,7 @@ class AssignmentController extends Controller
         $stmt->execute(['assignment_id' => $assignmentId, 'student_id' => $studentId]);
         $submission = $stmt->fetch();
 
-        if ($submission && $submission['status'] !== 'in_progress') {
+        if ($submission && ($submission['status'] !== 'in_progress' || $this->attemptTimeIsUp((int) $submission['id']))) {
             $this->pdo->rollBack();
             $this->error('This attempt is no longer editable', 403);
             return null;
@@ -1675,14 +1746,14 @@ class AssignmentController extends Controller
 
         try {
             $stmt = $this->pdo->prepare(
-                "SELECT aa.id, aa.file_path FROM assignment_answer_attachments aa
+                "SELECT aa.id, aa.file_path, s.id AS submission_id, s.assignment_id FROM assignment_answer_attachments aa
                  INNER JOIN assignment_submissions s ON s.id = aa.submission_id
                  WHERE aa.id = :id AND s.student_id = :student_id AND s.status = 'in_progress'"
             );
             $stmt->execute(['id' => $attachmentId, 'student_id' => $studentId]);
             $attachment = $stmt->fetch();
 
-            if (!$attachment) {
+            if (!$attachment || $this->attemptTimeIsUp((int) $attachment['submission_id']) || $this->pastDeadline((int) $attachment['assignment_id'])) {
                 $this->notFound('File not found or this attempt is no longer editable');
                 return;
             }

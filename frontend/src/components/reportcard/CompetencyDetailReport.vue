@@ -92,7 +92,7 @@
                   <td class="border border-gray-400 dark:border-gray-700 px-2 sm:px-3 py-1.5 sm:py-2 text-gray-600 dark:text-gray-300">{{ row.descriptor_text }}</td>
                   <td class="border border-gray-400 dark:border-gray-700 px-2 py-1.5 sm:py-2 text-center font-semibold text-gray-900 dark:text-white whitespace-nowrap">{{ row.percentage }}%</td>
                   <td class="border border-gray-400 dark:border-gray-700 px-2 py-1.5 sm:py-2 text-center">
-                    <span class="grade-badge font-bold text-white shadow-sm print-color-exact" :class="gradeColor(row.status)">
+                    <span class="grade-badge font-bold text-white shadow-sm print-color-exact" :class="gradeBg(row.status)">
                       {{ row.status }}
                     </span>
                   </td>
@@ -148,6 +148,7 @@
 </template>
 
 <script setup lang="ts">
+import { gradeBg } from '@/utils/grades'
 import { ref, onMounted } from 'vue'
 import QRCode from 'qrcode'
 import type { CompetencyDetailReport } from '@/types/reportCard'
@@ -188,12 +189,6 @@ const STATUS_KEY = [
   { range: '0-49.99%', level: 'Elementary', grade: 'E' },
 ]
 
-const gradeColor = (grade: string | null) => {
-  const colors: Record<string, string> = {
-    A: 'bg-emerald-600', B: 'bg-blue-600', C: 'bg-amber-500', D: 'bg-orange-500', E: 'bg-red-600',
-  }
-  return grade ? colors[grade] || 'bg-gray-400' : 'bg-gray-300'
-}
 
 const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 

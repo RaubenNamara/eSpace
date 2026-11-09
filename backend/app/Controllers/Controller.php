@@ -151,6 +151,12 @@ abstract class Controller
      */
     public function error(string $message, int $statusCode = 400, array $errors = []): void
     {
+        // A database error names tables and columns - it goes to the log, not the browser
+        if ($statusCode >= 500 && !Config::isDebug() && preg_match('/SQLSTATE|PDOException|\.php\b/', $message)) {
+            error_log($message);
+            $message = 'An error occurred';
+        }
+
         $response = [
             'success' => false,
             'message' => $message

@@ -8,12 +8,12 @@
     <div class="flex flex-wrap items-center gap-2 mb-2">
       <span class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200">{{ ext }}</span>
       <span class="flex-1 min-w-0 truncate text-sm font-medium text-gray-800 dark:text-gray-100">{{ name }}</span>
-      <a v-if="viewable && !local" :href="fullUrl" target="_blank" rel="noopener" class="px-2.5 py-1 rounded-lg text-xs font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">Open full screen</a>
+      <a v-if="viewable && !local && signed" :href="fullUrl" target="_blank" rel="noopener" class="px-2.5 py-1 rounded-lg text-xs font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">Open full screen</a>
       <a :href="url" :download="name" class="px-2.5 py-1 rounded-lg text-xs font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">Download</a>
     </div>
 
     <iframe
-      v-if="viewable && !local"
+      v-if="viewable && !local && signed"
       :src="embedUrl"
       :title="`${name} - Office viewer`"
       class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white"
@@ -30,7 +30,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { signedFileUrl } from '@/utils/fileLink'
 
 const props = withDefaults(defineProps<{ url: string; name: string; height?: string }>(), { height: '75vh' })
 
@@ -41,6 +42,12 @@ const viewable = computed(() => VIEWABLE.includes(ext.value))
 // The viewer needs the file's full public address
 const absolute = computed(() => new URL(props.url, window.location.origin).href)
 const local = computed(() => /^(localhost|127\.|10\.|192\.168\.)/.test(new URL(absolute.value).hostname))
-const embedUrl = computed(() => `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(absolute.value)}`)
-const fullUrl = computed(() => `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(absolute.value)}`)
+// Files need a sign-in; Microsoft is given a link that works for an hour
+const signed = ref('')
+watch(() => props.url, async () => {
+  signed.value = ''
+  if (viewable.value && !local.value) signed.value = await signedFileUrl(props.url).catch(() => '')
+}, { immediate: true })
+const embedUrl = computed(() => `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(signed.value)}`)
+const fullUrl = computed(() => `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(signed.value)}`)
 </script>

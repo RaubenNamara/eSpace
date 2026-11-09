@@ -4,7 +4,7 @@
        Used by the paper reader and wherever a question is placed on an eNote page. With `preview`
        (the teacher) nothing is recorded and the answer key shows straight away. -->
   <div class="practice-question">
-    <div class="prose prose-sm dark:prose-invert max-w-none text-gray-900 dark:text-gray-100" v-html="html"></div>
+    <div class="prose prose-sm dark:prose-invert max-w-none text-gray-900 dark:text-gray-100" v-html="safeHtml(html)"></div>
 
     <!-- Choices -->
     <div v-if="question.answer_type === 'single' || question.answer_type === 'multiple'" class="mt-3 space-y-1.5" role="group" :aria-label="question.answer_type === 'multiple' ? 'Choose all that are right' : 'Choose one'">
@@ -50,7 +50,7 @@
       <div v-else class="rounded-xl px-3 py-2.5 text-sm" :class="result?.right === true ? 'bg-emerald-50 text-emerald-900 dark:bg-emerald-900/25 dark:text-emerald-100' : result?.right === false ? 'bg-rose-50 text-rose-900 dark:bg-rose-900/25 dark:text-rose-100' : 'bg-indigo-50 text-indigo-900 dark:bg-indigo-900/25 dark:text-indigo-100'">
         <p class="font-semibold">{{ result?.right === true ? 'Right!' : result?.right === false ? 'Not quite.' : 'Compare your answer:' }}</p>
         <p v-if="result?.right === false && answerText" class="mt-0.5">The answer: <b>{{ answerText }}</b></p>
-        <div v-if="result?.model_answer" class="mt-1 prose prose-sm dark:prose-invert max-w-none" v-html="result.model_answer"></div>
+        <div v-if="result?.model_answer" class="mt-1 prose prose-sm dark:prose-invert max-w-none" v-html="safeHtml(result.model_answer)"></div>
         <button v-if="!preview" type="button" class="mt-1.5 text-xs font-semibold underline" @click="reset">Try again</button>
       </div>
     </div>
@@ -58,6 +58,7 @@
 </template>
 
 <script setup lang="ts">
+import { safeHtml } from '@/utils/safeHtml'
 import { computed, ref, watch } from 'vue'
 import axios from 'axios'
 import { resolveContentAssetUrls } from '@/utils/richContent'

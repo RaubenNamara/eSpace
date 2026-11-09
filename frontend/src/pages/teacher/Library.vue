@@ -2,7 +2,7 @@
   <div class="w-full">
     <PageHeader title="eLibrary" :description="COPY[role].description" icon="book" accent="emerald" :active-filters="activeFilterCount">
       <template #actions>
-        <button type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm shadow-emerald-500/20" @click="openCreateModal">
+        <button type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-500/20" @click="openCreateModal">
           <AppIcon name="upload" class="w-4 h-4" />
           <span class="hidden sm:inline">Add a book</span><span class="sm:hidden">Add</span>
         </button>
@@ -25,7 +25,7 @@
     <Skeleton v-if="loading && !books.length" variant="cards" :count="6" />
 
     <EmptyState v-else-if="!books.length" icon="book" tone="emerald" :title="COPY[role].emptyTitle" :message="COPY[role].emptyMessage">
-      <button type="button" class="px-4 py-2 rounded-xl text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700" @click="openCreateModal">Add your first book</button>
+      <button type="button" class="px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700" @click="openCreateModal">Add your first book</button>
     </EmptyState>
 
     <template v-else>
@@ -456,7 +456,7 @@
               <button
                 type="submit"
                 :disabled="saving"
-                class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {{ saving ? (uploadProgress > 0 ? `Uploading... ${uploadProgress}%` : 'Saving...') : (editingBook ? 'Update Book' : 'Upload') }}
               </button>

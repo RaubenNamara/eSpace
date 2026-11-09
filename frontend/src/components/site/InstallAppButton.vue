@@ -22,7 +22,7 @@
           <div class="flex items-start gap-4">
             <img src="/pwa-192x192.png" alt="" width="56" height="56" class="w-14 h-14 rounded-2xl shadow ring-1 ring-black/5 flex-shrink-0">
             <div class="min-w-0">
-              <h2 id="install-title" class="font-jakarta text-lg font-extrabold text-slate-900 dark:text-white">{{ title }}</h2>
+              <h2 id="install-title" class="font-heading text-lg font-extrabold text-slate-900 dark:text-white">{{ title }}</h2>
               <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">{{ intro }}</p>
             </div>
           </div>

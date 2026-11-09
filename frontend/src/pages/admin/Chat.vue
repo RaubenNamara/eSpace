@@ -72,7 +72,7 @@
                 <h2 class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ activeConversation.type === 'direct' ? niceName(activeConversation.name) : activeConversation.name }}</h2>
                 <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-gray-500 dark:text-gray-400">
                   <span v-for="p in (activeConversation.participants || [])" :key="`${p.role}-${p.id}`" class="inline-flex items-center gap-1">
-                    <span v-if="p.is_online" class="w-1.5 h-1.5 rounded-full bg-indigo-500 flex-shrink-0 dark:shadow-[0_0_5px_1.5px_rgba(21,135,74,0.65)]" title="Online"></span>
+                    <span v-if="p.is_online" class="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0 dark:shadow-[0_0_5px_1.5px_rgba(16,185,129,0.65)]" title="Online"></span>
                     {{ p.name }}
                   </span>
                 </div>
@@ -216,10 +216,10 @@ onBeforeUnmount(() => {
 .wa-chat-bg {
   background-color: #eef5f0;
   background-image:
-    radial-gradient(circle at 12% 18%, rgba(21, 135, 74, 0.10) 1.5px, transparent 1.5px),
-    radial-gradient(circle at 62% 42%, rgba(21, 135, 74, 0.08) 1.5px, transparent 1.5px),
-    radial-gradient(circle at 38% 78%, rgba(21, 135, 74, 0.09) 1.5px, transparent 1.5px),
-    radial-gradient(circle at 88% 88%, rgba(21, 135, 74, 0.07) 1.5px, transparent 1.5px);
+    radial-gradient(circle at 12% 18%, rgba(27, 63, 160, 0.10) 1.5px, transparent 1.5px),
+    radial-gradient(circle at 62% 42%, rgba(27, 63, 160, 0.08) 1.5px, transparent 1.5px),
+    radial-gradient(circle at 38% 78%, rgba(27, 63, 160, 0.09) 1.5px, transparent 1.5px),
+    radial-gradient(circle at 88% 88%, rgba(27, 63, 160, 0.07) 1.5px, transparent 1.5px);
   background-size: 120px 120px;
 }
 

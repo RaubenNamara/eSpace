@@ -9,7 +9,7 @@
         <AppIcon :name="icon" class="w-5 h-5" />
       </div>
       <div class="min-w-[11rem] flex-1">
-        <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-tight truncate">{{ title }}</h1>
+        <h1 class="font-heading text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight truncate">{{ title }}</h1>
         <p v-if="description" class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">{{ description }}</p>
       </div>
 
@@ -93,9 +93,9 @@ const props = withDefaults(defineProps<{
   filtersRight?: boolean
 }>(), { accent: 'indigo', activeFilters: 0 })
 
-// Every page header uses the brand green, whatever accent a page asks for - one look across Tusome
-const GREEN = { icon: 'bg-indigo-600 text-white', badge: 'bg-indigo-600', text: 'text-indigo-600 dark:text-indigo-300' }
-const ACCENT: Record<Accent, { icon: string; badge: string; text: string }> = { indigo: GREEN, emerald: GREEN, violet: GREEN, amber: GREEN, rose: GREEN, sky: GREEN }
+// Every page header uses the brand blue, whatever accent a page asks for - one look across Tusome
+const BRAND = { icon: 'bg-indigo-600 text-white', badge: 'bg-indigo-600', text: 'text-indigo-600 dark:text-indigo-300' }
+const ACCENT: Record<Accent, { icon: string; badge: string; text: string }> = { indigo: BRAND, emerald: BRAND, violet: BRAND, amber: BRAND, rose: BRAND, sky: BRAND }
 
 const sheetOpen = ref(false)
 // A student's page keeps its search and pickers top right, beside the title

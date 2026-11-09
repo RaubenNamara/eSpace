@@ -108,7 +108,7 @@ defineEmits<{ reply: [ChatMessage]; 'scroll-to': [number]; 'preview-image': [str
 const tick = computed(() => props.message.status ?? (props.message.is_read ? 'read' : 'sent'))
 
 // each group member keeps one colour for their name, as on WhatsApp
-const NAME_COLORS = ['#e542a3', '#02a698', '#7f66ff', '#d3396d', '#1f7aec', '#fa6533', '#6bcbef', '#a62c71', '#008069', '#ff8b53']
+const NAME_COLORS = ['#e542a3', '#02a698', '#7f66ff', '#d3396d', '#1f7aec', '#fa6533', '#6bcbef', '#a62c71', '#14307d', '#ff8b53']
 const nameColor = computed(() => {
   const key = `${props.message.sender_role}:${props.message.sender_id}`
   let h = 0

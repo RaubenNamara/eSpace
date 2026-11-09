@@ -579,7 +579,7 @@ const viewCards = computed(() => {
   const d = data.value
   if (!d) return []
   return [
-    { key: 'outcomes' as View, title: 'Outcomes achieved', noun: 'learning outcomes', percent: d.overall.percent, achieved: d.overall.achieved, total: d.overall.outcomes, color: '#15874a', accent: 'text-emerald-700 dark:text-emerald-300 font-semibold', selected: 'border-emerald-400 ring-2 ring-emerald-200 dark:ring-emerald-900' },
+    { key: 'outcomes' as View, title: 'Outcomes achieved', noun: 'learning outcomes', percent: d.overall.percent, achieved: d.overall.achieved, total: d.overall.outcomes, color: '#1b3fa0', accent: 'text-emerald-700 dark:text-emerald-300 font-semibold', selected: 'border-emerald-400 ring-2 ring-emerald-200 dark:ring-emerald-900' },
     { key: 'competencies' as View, title: 'Competencies achieved', noun: 'topic competencies', percent: d.competencies.percent, achieved: d.competencies.achieved, total: d.competencies.competencies, color: '#1f2937', accent: 'text-violet-700 dark:text-violet-300 font-semibold', selected: VIEW_SELECTED.competencies },
     { key: 'constructs' as View, title: 'Constructs achieved', noun: 'Elements of Construct', percent: d.constructs.percent, achieved: d.constructs.achieved, total: d.constructs.constructs, color: '#d97706', accent: 'text-amber-700 dark:text-amber-300 font-semibold', selected: VIEW_SELECTED.constructs }
   ]

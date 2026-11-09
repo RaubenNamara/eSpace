@@ -105,7 +105,7 @@
           <p class="flex-1 min-w-0 text-sm text-emerald-900 dark:text-emerald-100">
             <b>Q{{ current?.number }}</b> is marked for every student.<template v-if="!nextQ"> That was the last question.</template>
           </p>
-          <button v-if="nextQ" type="button" class="px-3.5 py-2 rounded-lg text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700" @click="openQuestion(nextQ.id)">Mark Q{{ nextQ.number }} →</button>
+          <button v-if="nextQ" type="button" class="px-3.5 py-2 rounded-lg text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700" @click="openQuestion(nextQ.id)">Mark Q{{ nextQ.number }} →</button>
         </div>
 
         <!-- One student at a time, A-Z: the same layout as marking a script, for this question only -->
@@ -129,7 +129,7 @@
                   <span class="inline-flex h-7 min-w-[2rem] items-center justify-center rounded-lg bg-indigo-50 px-2 text-xs font-bold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">Q{{ current?.number }}</span>
                   <span class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-bold tabular-nums text-gray-700 dark:bg-gray-700 dark:text-gray-200 whitespace-nowrap">{{ fmtMarks(q.marks) }} {{ Number(q.marks) === 1 ? 'mark' : 'marks' }}</span>
                 </div>
-                <div class="min-w-0 overflow-x-auto text-[15px] font-medium leading-relaxed text-gray-900 dark:text-white break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="q.html"></div>
+                <div class="min-w-0 overflow-x-auto text-[15px] font-medium leading-relaxed text-gray-900 dark:text-white break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="safeHtml(q.html)"></div>
                 <p v-if="q.correct && q.correct.length" class="mt-2 text-xs text-emerald-700 dark:text-emerald-300"><b>Correct:</b> {{ q.correct.join(' · ') }}</p>
               </div>
 
@@ -249,6 +249,7 @@
 </template>
 
 <script setup lang="ts">
+import { safeHtml } from '@/utils/safeHtml'
 import { fmtMarks } from '@/utils/marks'
 import { computed, onMounted, onBeforeUnmount, reactive, ref, nextTick, watch } from 'vue'
 import { QUESTION_MARKED, type QuestionMarked } from '@/components/practical/apps'

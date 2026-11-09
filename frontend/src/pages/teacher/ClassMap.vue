@@ -26,7 +26,7 @@
           <p class="text-sm font-bold text-emerald-900 dark:text-emerald-100">This map fills in as you mark</p>
           <p class="text-xs text-emerald-800/80 dark:text-emerald-200/80">Link an assessment to its learning outcomes (in the assessment builder), then return the marked work - each outcome here turns green, amber or red for every student.</p>
         </div>
-        <RouterLink to="/teacher/assignments/create" class="flex-shrink-0 px-4 py-2 rounded-xl text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 text-center">New assessment</RouterLink>
+        <RouterLink to="/teacher/assignments/create" class="flex-shrink-0 px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 text-center">New assessment</RouterLink>
       </div>
 
       <!-- Reteach next: the outcomes with the most students needing help -->

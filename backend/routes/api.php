@@ -67,6 +67,9 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
     Router::put('/auth/password', 'eSpace\App\Controllers\AuthController@changePassword');
     Router::post('/auth/profile-photo', 'eSpace\App\Controllers\AuthController@uploadProfilePhoto');
 
+    // A short-lived link to one uploaded file, for Microsoft's Office viewer
+    Router::get('/files/link', 'eSpace\App\Controllers\FileLinkController@link');
+
     // Notifications (shared across every role - each request is scoped to the signed-in user's
     // own id+role from the session, same pattern as the /auth/* routes above)
     Router::get('/notifications', 'eSpace\App\Controllers\NotificationController@index');
@@ -139,7 +142,6 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/library', 'eSpace\App\Controllers\Student\LibraryController@index');
         Router::get('/library/{id}', 'eSpace\App\Controllers\Student\LibraryController@show');
         Router::post('/library/{id}/progress', 'eSpace\App\Controllers\Student\LibraryController@updateProgress');
-        Router::post('/library/{id}/bookmark', 'eSpace\App\Controllers\Student\LibraryController@toggleBookmark');
         Router::get('/library/books/{bookId}/notes', 'eSpace\App\Controllers\Student\PageNoteController@listLibraryNotes');
         Router::get('/library/books/{bookId}/pages/{pageNumber}/note', 'eSpace\App\Controllers\Student\PageNoteController@getLibraryNote');
         Router::put('/library/books/{bookId}/pages/{pageNumber}/note', 'eSpace\App\Controllers\Student\PageNoteController@saveLibraryNote');
@@ -1124,6 +1126,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         // System Logs
         Router::get('/logs', 'eSpace\App\Controllers\Admin\LogController@index');
         Router::get('/logs/times', 'eSpace\App\Controllers\Admin\LogController@times');
+        Router::get('/logs/report', 'eSpace\App\Controllers\Admin\LogController@report');
 
         // Global search (shared eSpace\App\Controllers\SearchController - see notes there)
         Router::get('/search', 'eSpace\App\Controllers\SearchController@index');
@@ -1133,7 +1136,6 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
     // Student routes (require student role)
     Router::group(['middleware' => 'auth'], function () {
         Router::get('/student/profile', 'eSpace\App\Controllers\Student\StudentController@profile');
-        Router::put('/student/profile', 'eSpace\App\Controllers\Student\StudentController@updateProfile');
     });
 
     // Presence heartbeat - shared across every role, see PresenceController

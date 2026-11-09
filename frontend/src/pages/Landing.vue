@@ -31,9 +31,9 @@
               <span class="w-1.5 h-1.5 rounded-full bg-indigo-300"></span>
               {{ hero.eyebrow }}
             </span>
-            <h1 class="mt-5 font-jakarta text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.05]" :aria-label="`${hero.lines.join(' ')} ${hero.words.join(', ')}`">
+            <h1 class="mt-5 font-heading text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.05]" :aria-label="`${hero.lines.join(' ')} ${hero.words.join(', ')}`">
               {{ hero.lines[0] }}<br>{{ hero.lines[1] }}<br>
-              <span class="relative inline-block min-w-[6ch] text-indigo-300" aria-hidden="true">
+              <span class="relative inline-block min-w-[6ch] text-gold-400" aria-hidden="true">
                 <Transition name="word" mode="out-in"><span :key="heroWord" class="inline-block">{{ heroWord }}.</span></Transition>
               </span>
             </h1>
@@ -94,7 +94,7 @@
               <div class="rounded-2xl bg-white text-slate-900 shadow-xl p-3.5 float-b">
                 <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">{{ cards.c.label }}</p>
                 <div class="flex items-center gap-3">
-                  <svg class="w-12 h-12 -rotate-90" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.5" fill="none" stroke-width="4" class="stroke-slate-100" /><circle cx="18" cy="18" r="15.5" fill="none" stroke-width="4" stroke-linecap="round" stroke="#22a45d" :stroke-dasharray="`${cards.c.pct * 0.974} 97.4`" /></svg>
+                  <svg class="w-12 h-12 -rotate-90" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.5" fill="none" stroke-width="4" class="stroke-slate-100" /><circle cx="18" cy="18" r="15.5" fill="none" stroke-width="4" stroke-linecap="round" stroke="#3a5fc4" :stroke-dasharray="`${cards.c.pct * 0.974} 97.4`" /></svg>
                   <div>
                     <p class="font-jakarta text-lg font-extrabold">{{ cards.c.pct }}%</p>
                     <p class="text-[10px] text-slate-500">{{ cards.c.caption }}</p>
@@ -203,7 +203,7 @@
         <div class="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div class="reveal max-w-2xl">
             <p class="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-indigo-200 ring-1 ring-white/10">A day with Tusome</p>
-            <h2 class="mt-3 font-jakarta text-3xl sm:text-4xl font-extrabold tracking-tight">{{ day.title }}</h2>
+            <h2 class="mt-3 font-heading text-3xl sm:text-4xl font-extrabold tracking-tight">{{ day.title }}</h2>
             <p class="mt-3 text-white/70">{{ day.text }}</p>
           </div>
           <DayStory class="mt-6" :only="audience" />
@@ -227,8 +227,8 @@
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div class="grid lg:grid-cols-2 gap-12 items-center">
             <div class="reveal">
-              <p class="text-sm font-bold uppercase tracking-widest text-indigo-300">Competency-based, by design</p>
-              <h2 class="mt-3 font-jakarta text-3xl sm:text-4xl font-extrabold tracking-tight">From one learning outcome to the end-of-term report.</h2>
+              <p class="text-sm font-bold uppercase tracking-widest text-gold-400">Competency-based, by design</p>
+              <h2 class="mt-3 font-heading text-3xl sm:text-4xl font-extrabold tracking-tight">From one learning outcome to the end-of-term report.</h2>
               <p class="mt-4 text-slate-300 leading-relaxed">Teachers link each assessment to the curriculum. Tusome does the rest: every marked answer updates the learner's Learning Map, shows the class what to reteach, and feeds straight into the report card.</p>
             </div>
             <div class="reveal grid gap-3">
@@ -275,7 +275,7 @@
       </section>
 
       <!-- ===== Modules: an explorer ===== -->
-      <section id="modules" class="py-20 sm:py-28 bg-indigo-50/60 dark:bg-indigo-950/20 scroll-mt-20">
+      <section id="modules" class="py-20 sm:py-28 bg-cream-100 dark:bg-indigo-950/20 scroll-mt-20">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div class="reveal max-w-2xl">
             <p :class="EYEBROW">The modules</p>
@@ -338,7 +338,7 @@
           <div class="reveal relative overflow-hidden rounded-3xl bg-indigo-600 text-white p-7 sm:p-9">
             <div class="absolute -right-16 -bottom-16 w-56 h-56 rounded-full bg-white/10" aria-hidden="true"></div>
             <p class="relative text-xs font-bold uppercase tracking-widest text-indigo-100">Your school is on Tusome</p>
-            <h2 class="relative mt-3 font-jakarta text-2xl sm:text-3xl font-extrabold">Log in and pick up where you stopped.</h2>
+            <h2 class="relative mt-3 font-heading text-2xl sm:text-3xl font-extrabold">Log in and pick up where you stopped.</h2>
             <p class="relative mt-2 text-white/85 leading-relaxed">Use the username and password your school gave you - on any phone or computer. Add Tusome to your home screen and it opens like an app.</p>
             <div class="relative mt-6 flex flex-wrap items-center gap-3">
               <router-link to="/login" class="inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold text-indigo-900 bg-white hover:bg-indigo-50 transition">Login</router-link>
@@ -347,7 +347,7 @@
           </div>
           <div class="reveal rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.03] p-7 sm:p-9">
             <p class="text-xs font-bold uppercase tracking-widest text-slate-400">Not on Tusome yet?</p>
-            <h2 class="mt-3 font-jakarta text-2xl sm:text-3xl font-extrabold">Learn on your own - today.</h2>
+            <h2 class="mt-3 font-heading text-2xl sm:text-3xl font-extrabold">Learn on your own - today.</h2>
             <p class="mt-2 text-slate-600 dark:text-slate-400 leading-relaxed">Your school isn't on Tusome? Ask to learn on your own: notes, books and practice for your class on any phone. Or show this page to your head teacher, and we set up the whole school.</p>
             <div class="mt-6 flex flex-wrap items-center gap-3">
               <router-link to="/join" class="inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition">Ask to learn</router-link>
@@ -360,11 +360,11 @@
       </section>
 
       <!-- ===== Your data, your school ===== -->
-      <section v-if="audience === 'school'" id="trust" class="py-20 sm:py-28 bg-indigo-50/60 dark:bg-indigo-950/20 scroll-mt-20">
+      <section v-if="audience === 'school'" id="trust" class="py-20 sm:py-28 bg-cream-100 dark:bg-indigo-950/20 scroll-mt-20">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div class="reveal">
             <p :class="EYEBROW">Your data</p>
-            <h2 class="mt-3 font-jakarta text-3xl sm:text-4xl font-extrabold tracking-tight max-w-2xl">Safe, private - and built for the phones and connections learners really have.</h2>
+            <h2 class="mt-3 font-heading text-3xl sm:text-4xl font-extrabold tracking-tight max-w-2xl">Safe, private - and built for the phones and connections learners really have.</h2>
             <div class="mt-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div v-for="t in TRUST" :key="t.title" class="flex gap-4 rounded-2xl bg-white dark:bg-white/[0.03] p-5 ring-1 ring-indigo-100 dark:ring-white/10">
                 <span class="flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center bg-indigo-600 text-white"><AppIcon :name="t.icon" class="w-5 h-5" /></span>
@@ -418,7 +418,7 @@
       </section>
 
       <!-- ===== Team ===== -->
-      <section v-if="audience === 'school'" id="team" class="py-20 sm:py-28 bg-indigo-50/60 dark:bg-indigo-950/20 scroll-mt-20">
+      <section v-if="audience === 'school'" id="team" class="py-20 sm:py-28 bg-cream-100 dark:bg-indigo-950/20 scroll-mt-20">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div class="grid lg:grid-cols-[1fr_1.4fr] gap-10 lg:gap-16 items-start">
             <div class="reveal lg:sticky lg:top-28">
@@ -526,7 +526,7 @@ import { teamLead, teamStakeholders } from '@/data/team'
 import { TRUST, STORY, STAT_LABELS } from '@/data/site'
 
 const EYEBROW = 'inline-flex items-center rounded-full bg-indigo-100 px-3 py-1 text-xs font-bold uppercase tracking-widest text-indigo-800 dark:bg-indigo-500/15 dark:text-indigo-200'
-const H2 = 'mt-3 font-jakarta text-3xl sm:text-4xl font-extrabold tracking-tight'
+const H2 = 'mt-3 font-heading text-3xl sm:text-4xl font-extrabold tracking-tight'
 
 const NUMBERS = [
   { value: `${MODULES.length}`, label: 'modules in one sign-in' },

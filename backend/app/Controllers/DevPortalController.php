@@ -65,13 +65,21 @@ class DevPortalController extends Controller
             return;
         }
         $email = strtolower(trim((string) $this->input('email', '')));
+        $wait = \eSpace\App\Support\LoginThrottle::waitFor('dev', $email);
+        if ($wait > 0) {
+            $this->error(\eSpace\App\Support\LoginThrottle::message($wait), 429);
+            return;
+        }
         $stmt = $this->platform->prepare('SELECT id, name, email, password FROM platform_admins WHERE email = ? AND is_active = 1');
         $stmt->execute([$email]);
         $admin = $stmt->fetch(\PDO::FETCH_ASSOC);
         if (!$admin || !password_verify((string) $this->input('password', ''), $admin['password'])) {
+            \eSpace\App\Support\LoginThrottle::failed('dev', $email);
             $this->error('Wrong email or password', 401);
             return;
         }
+        \eSpace\App\Support\LoginThrottle::succeeded('dev', $email);
+        session_regenerate_id(true);
         session_regenerate_id(true);
         $_SESSION['dev_admin_id'] = (int) $admin['id'];
         $this->platform->prepare('UPDATE platform_admins SET last_login_at = NOW() WHERE id = ?')->execute([$admin['id']]);

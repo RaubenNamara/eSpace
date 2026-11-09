@@ -331,7 +331,7 @@
           </a>
           <button
             @click="showPasswordModal = false"
-            class="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            class="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
           >
             Close
           </button>

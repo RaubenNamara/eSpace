@@ -541,7 +541,7 @@ const myPhoto = computed(() => ((auth.user as any)?.profile_photo ? resolveAsset
 const homePath = computed(() => `/${auth.userRole || 'student'}/dashboard`)
 const totalUnread = computed(() => conversations.value.reduce((n, c) => n + (c.unread_count || 0), 0))
 const isGroup = computed(() => !!activeConversation.value && activeConversation.value.type !== 'direct')
-const THREAD_COLORS = ['#00a884', '#128c7e', '#25d366', '#34b7f1', '#7f66ff', '#e542a3', '#fa6533', '#54656f', '#008069']
+const THREAD_COLORS = ['#1b3fa0', '#3a5fc4', '#5f80d8', '#34b7f1', '#7f66ff', '#e542a3', '#fa6533', '#54656f', '#14307d']
 const threadAvatarColor = computed(() => THREAD_COLORS[Math.abs(activeConversation.value?.id ?? 0) % THREAD_COLORS.length])
 
 const threadSearchOpen = ref(false)

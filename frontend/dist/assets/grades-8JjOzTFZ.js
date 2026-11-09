@@ -1,0 +1,1 @@
+const b={A:"#059669",B:"#1b3fa0",C:"#d97706",D:"#ea580c",E:"#dc2626",F:"#b91c1c"},g={A:"bg-emerald-600",B:"bg-indigo-600",C:"bg-amber-600",D:"bg-orange-600",E:"bg-red-600",F:"bg-red-700"},s=a=>a?g[a]||"bg-gray-400":"bg-gray-300",c=a=>a?b[a]||"#6b7280":"#9ca3af",o=a=>a==="A"||a==="B";export{b as G,g as a,s as b,c as g,o as i};

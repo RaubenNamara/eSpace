@@ -14,7 +14,7 @@
           <span class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold text-indigo-100">
             <span class="w-1.5 h-1.5 rounded-full bg-indigo-300"></span>Last updated {{ PRIVACY_UPDATED }}
           </span>
-          <h1 class="mt-5 font-jakarta text-4xl sm:text-5xl font-extrabold tracking-tight leading-[1.08]">Privacy policy</h1>
+          <h1 class="mt-5 font-heading text-4xl sm:text-5xl font-extrabold tracking-tight leading-[1.08]">Privacy policy</h1>
           <p class="mt-5 max-w-2xl text-base sm:text-lg text-white/80 leading-relaxed">{{ PRIVACY_INTRO }}</p>
           <div class="mt-8 flex flex-wrap gap-3">
             <a href="#report" class="inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold text-indigo-950 bg-white hover:bg-indigo-50 transition">Report a concern</a>
@@ -42,7 +42,7 @@
 
           <article class="mt-12 space-y-12">
             <section v-for="(s, i) in PRIVACY_SECTIONS" :id="s.id" :key="s.id" class="scroll-mt-28">
-              <h2 class="font-jakarta text-2xl sm:text-3xl font-extrabold tracking-tight">{{ i + 1 }}. {{ s.title }}</h2>
+              <h2 class="font-heading text-2xl sm:text-3xl font-extrabold tracking-tight">{{ i + 1 }}. {{ s.title }}</h2>
               <p v-for="para in s.paragraphs ?? []" :key="para" class="mt-4 text-slate-700 dark:text-slate-300 leading-relaxed">{{ para }}</p>
               <ul v-if="s.items" class="mt-4 space-y-2.5">
                 <li v-for="item in s.items" :key="item.label + item.text" class="flex gap-3 text-slate-700 dark:text-slate-300 leading-relaxed">
@@ -61,7 +61,7 @@
         <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <div class="overflow-hidden rounded-[2rem] border border-slate-200 dark:border-white/10 grid lg:grid-cols-[1fr_1.2fr]">
             <div class="p-8 sm:p-10 bg-indigo-950 text-white">
-              <h2 class="font-jakarta text-3xl font-extrabold tracking-tight">Report a concern</h2>
+              <h2 class="font-heading text-3xl font-extrabold tracking-tight">Report a concern</h2>
               <p class="mt-4 text-slate-300 leading-relaxed">Data someone should not see, an account used by someone else, a learner who may be at risk, bullying - tell us. It goes straight to the Tusome team, and we look at every report.</p>
               <ul class="mt-6 space-y-3 text-sm">
                 <li class="flex items-start gap-3"><AppIcon name="check-circle" class="w-5 h-5 flex-shrink-0 text-indigo-300" />Reaches the team the moment you send it</li>

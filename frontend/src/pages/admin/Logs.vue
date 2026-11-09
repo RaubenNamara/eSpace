@@ -2,6 +2,9 @@
   <div class="w-full">
     <div>
       <PageHeader title="System logs" description="Who signed in each day and how many times - tap the count for each sign-in and the time between them." icon="document" accent="indigo">
+        <template #actions>
+          <RouterLink to="/admin/logs/report" class="btn-primary !py-2 inline-flex items-center gap-1.5 text-sm">Usage report</RouterLink>
+        </template>
       </PageHeader>
 
       <!-- Filters -->

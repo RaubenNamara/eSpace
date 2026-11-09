@@ -309,7 +309,7 @@
             </button>
             <button
               type="submit"
-              class="w-full sm:w-auto px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200 font-medium shadow-lg shadow-green-500/30"
+              class="w-full sm:w-auto px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-200 font-medium shadow-lg shadow-indigo-500/30"
             >
               Assign as HOD
             </button>

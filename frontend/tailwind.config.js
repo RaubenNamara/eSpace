@@ -8,50 +8,70 @@ export default {
   theme: {
     extend: {
       colors: {
-        // eSpace's colours are green, white and black. The app was built with Tailwind's indigo (and a
-        // little violet) as its brand colour, so those names are redefined here as the brand green -
-        // every button, link and highlight follows from this one place.
+        // Tusome's colours are royal blue and gold, with cream behind the work. The app was built with
+        // Tailwind's indigo (and a little violet) as its brand colour, so those names are redefined
+        // here as the brand blue - every button, link and highlight follows from this one place.
         primary: {
-          50: '#effbf3',
-          100: '#d7f5e1',
-          200: '#b0eac6',
-          300: '#7dd8a3',
-          400: '#46bf7b',
-          500: '#22a45d',
-          600: '#15874a',
-          700: '#126c3d',
-          800: '#115633',
-          900: '#0f472b',
-          950: '#062a18',
+          50: '#eef2fc',
+          100: '#dce4f8',
+          200: '#bbcbf1',
+          300: '#8fa8e6',
+          400: '#5f80d8',
+          500: '#3a5fc4',
+          600: '#1b3fa0',
+          700: '#18398f',
+          800: '#14307d',
+          900: '#0f2563',
+          950: '#09163f',
         },
         indigo: {
-          50: '#effbf3',
-          100: '#d7f5e1',
-          200: '#b0eac6',
-          300: '#7dd8a3',
-          400: '#46bf7b',
-          500: '#22a45d',
-          600: '#15874a',
-          700: '#126c3d',
-          800: '#115633',
-          900: '#0f472b',
-          950: '#062a18',
+          50: '#eef2fc',
+          100: '#dce4f8',
+          200: '#bbcbf1',
+          300: '#8fa8e6',
+          400: '#5f80d8',
+          500: '#3a5fc4',
+          600: '#1b3fa0',
+          700: '#18398f',
+          800: '#14307d',
+          900: '#0f2563',
+          950: '#09163f',
         },
         violet: {
-          50: '#effbf3',
-          100: '#d7f5e1',
-          200: '#b0eac6',
-          300: '#7dd8a3',
-          400: '#46bf7b',
-          500: '#22a45d',
-          600: '#15874a',
-          700: '#126c3d',
-          800: '#115633',
-          900: '#0f472b',
-          950: '#062a18',
+          50: '#eef2fc',
+          100: '#dce4f8',
+          200: '#bbcbf1',
+          300: '#8fa8e6',
+          400: '#5f80d8',
+          500: '#3a5fc4',
+          600: '#1b3fa0',
+          700: '#18398f',
+          800: '#14307d',
+          900: '#0f2563',
+          950: '#09163f',
         },
-        // Accent (amber) for attention and notices; success (emerald) for progress. Red (danger) is
-        // only a warning signal - overdue, errors - never decoration.
+        // The brand's gold: on blue, or as a filled badge with dark words - too faint as text on white
+        gold: {
+          50: '#fdf8e8',
+          100: '#faeec6',
+          200: '#f4dc8d',
+          300: '#edc95a',
+          400: '#e5b836',
+          500: '#d9a520',
+          600: '#b8871a',
+          700: '#8a6200',
+          800: '#6b4c00',
+          900: '#4a3705',
+        },
+        // Warm paper behind the white cards and on the public site's alternating sections
+        cream: {
+          50: '#fdfaf3',
+          100: '#faf5e8',
+          200: '#f3e9cf',
+          300: '#e8d9b3',
+        },
+        // Accent (amber) for attention and notices; success (emerald) means right or done, and is
+        // the only green left in Tusome. Red (danger) is only a warning signal - overdue, errors.
         accent: {
           50: '#fffbeb',
           100: '#fef3c7',
@@ -108,6 +128,8 @@ export default {
         display: ['Inter', 'system-ui', 'sans-serif'],
         jakarta: ['Inter', 'system-ui', 'sans-serif'],
         brand: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+        // page titles and the public site's headings: a book serif, academic in feel
+        heading: ['"Source Serif 4"', 'Georgia', 'Cambria', '"Times New Roman"', 'serif'],
       },
       // Light, calm type: nothing heavier than semi-bold, and "semibold" labels read as medium
       fontWeight: {

@@ -66,7 +66,7 @@
           :disabled="autosaveStatus === 'saving'"
           class="px-2.5 sm:px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5 sm:gap-2 disabled:opacity-60"
           :class="hasUnsavedChanges || autosaveStatus === 'error'
-            ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+            ? 'bg-indigo-600 text-white hover:bg-indigo-700'
             : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'"
           title="Save draft (Ctrl+S)"
         >

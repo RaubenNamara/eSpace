@@ -855,7 +855,7 @@
       class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
     >
       <div class="completion-card bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden text-center">
-        <div class="relative bg-gradient-to-br from-emerald-400 via-emerald-500 to-indigo-600 px-6 py-9 overflow-hidden">
+        <div class="relative bg-gradient-to-br from-indigo-600 via-indigo-700 to-indigo-900 px-6 py-9 overflow-hidden">
           <!-- Soft decorative circles, purely for depth - not confetti, those are the small
                rects below that actually animate outward. -->
           <div class="absolute -top-6 -left-6 w-24 h-24 rounded-full bg-white/10"></div>
@@ -911,7 +911,7 @@
           <button
             v-if="topic.linked_assignment && topic.linked_assignment.submission_status === 'new'"
             @click="attemptLinkedAssignment"
-            class="assessment-cta w-full py-3 text-sm font-semibold text-white bg-gradient-to-r from-emerald-500 to-indigo-600 rounded-xl transition-transform hover:scale-[1.02] flex items-center justify-center gap-2"
+            class="assessment-cta w-full py-3 text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-indigo-800 rounded-xl transition-transform hover:scale-[1.02] flex items-center justify-center gap-2"
           >
             <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
@@ -1712,7 +1712,7 @@ const assessmentState = (a: PageAssignment) => {
     return { action: 'attempt', label: 'Continue', note: 'Started - not submitted yet', buttonClass: 'bg-indigo-600 text-white hover:bg-indigo-700' }
   }
   if (status === 'returned') {
-    return { action: 'result', label: 'View results', note: 'Marked - your results are ready', buttonClass: 'bg-emerald-600 text-white hover:bg-emerald-700' }
+    return { action: 'result', label: 'View results', note: 'Marked - your results are ready', buttonClass: 'bg-indigo-600 text-white hover:bg-indigo-700' }
   }
   return { action: 'answers', label: 'View my answers', note: 'Submitted - waiting for your teacher to mark it', buttonClass: 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700' }
 }

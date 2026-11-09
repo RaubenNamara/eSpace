@@ -611,10 +611,6 @@
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                   <label class="flex items-center gap-2 px-3 py-2.5 sm:px-2.5 sm:py-1.5 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                    <input v-model="form.allow_late_submission" type="checkbox" class="w-4 h-4 sm:w-3.5 sm:h-3.5 flex-shrink-0 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-0">
-                    <span class="text-sm sm:text-xs text-gray-700 dark:text-gray-300 leading-tight">Late submission</span>
-                  </label>
-                  <label class="flex items-center gap-2 px-3 py-2.5 sm:px-2.5 sm:py-1.5 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                     <input v-model="form.shuffle_questions" type="checkbox" class="w-4 h-4 sm:w-3.5 sm:h-3.5 flex-shrink-0 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-0">
                     <span class="text-sm sm:text-xs text-gray-700 dark:text-gray-300 leading-tight">Shuffle questions</span>
                   </label>
@@ -3022,7 +3018,6 @@ const optionsSummary = computed(() => {
     `${f.attempts_allowed || 1} attempt${Number(f.attempts_allowed) > 1 ? 's' : ''}`
   ]
   if (f.pass_mark) parts.push(`pass mark ${f.pass_mark}`)
-  if (f.due_date && !f.allow_late_submission) parts.push('no late work')
   if (f.shuffle_questions || f.shuffle_options) parts.push('shuffled')
   if (f.show_marks_immediately) parts.push('marks shown at once')
   if (f.show_answers_after_submission) parts.push('answers shown after')

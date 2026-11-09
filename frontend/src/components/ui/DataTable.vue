@@ -28,8 +28,8 @@
 
     <template v-else>
       <!-- Tablet and up: a table -->
-      <div class="hidden md:block overflow-x-auto">
-        <table class="w-full text-sm">
+      <div class="hidden md:block data-table-box">
+        <table class="data-table w-full text-sm">
           <thead class="bg-gray-50/80 dark:bg-gray-900/40">
             <tr>
               <th

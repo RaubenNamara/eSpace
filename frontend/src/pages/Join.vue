@@ -15,7 +15,7 @@
           <span class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold text-indigo-100">
             <span class="w-1.5 h-1.5 rounded-full bg-indigo-300"></span>For learners on their own
           </span>
-          <h1 class="mt-5 font-jakarta text-4xl sm:text-5xl font-extrabold tracking-tight leading-[1.08]">Learn with Tusome, wherever you are</h1>
+          <h1 class="mt-5 font-heading text-4xl sm:text-5xl font-extrabold tracking-tight leading-[1.08]">Learn with Tusome, wherever you are</h1>
           <p class="mt-5 max-w-2xl text-base sm:text-lg text-white/80 leading-relaxed">Notes, books and practice for your class, on any phone - even if your school isn't on Tusome. Tell us who you are and we will contact you to get you started.</p>
         </div>
       </section>
@@ -31,7 +31,7 @@
 
           <div v-if="sent" class="rounded-3xl border border-slate-200 dark:border-white/10 p-8 sm:p-12 text-center">
             <span class="mx-auto w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300 flex items-center justify-center"><AppIcon name="check-circle" class="w-8 h-8" /></span>
-            <h2 class="mt-5 font-jakarta text-2xl font-bold">Thank you, {{ form.first_name }}</h2>
+            <h2 class="mt-5 font-heading text-2xl font-bold">Thank you, {{ form.first_name }}</h2>
             <p class="mt-2 text-slate-600 dark:text-slate-400">We have your request and will contact you on {{ form.phone || form.email }}.</p>
           </div>
 

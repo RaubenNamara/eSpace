@@ -103,7 +103,7 @@
                   {{ subject.avg_weight }}
                 </td>
                 <td class="border border-gray-400 dark:border-gray-700 px-2 py-2 text-center">
-                  <span class="grade-badge font-bold text-white shadow-sm print-color-exact" :class="gradeColor(subject.grade)">
+                  <span class="grade-badge font-bold text-white shadow-sm print-color-exact" :class="gradeBg(subject.grade)">
                     {{ subject.grade || '-' }}
                   </span>
                 </td>
@@ -152,7 +152,7 @@
                       {{ c.percentage }}%
                     </td>
                     <td class="border border-gray-400 dark:border-gray-700 px-2 py-2 text-center">
-                      <span class="grade-badge font-bold text-white shadow-sm print-color-exact" :class="gradeColor(c.status)">
+                      <span class="grade-badge font-bold text-white shadow-sm print-color-exact" :class="gradeBg(c.status)">
                         {{ c.status }}
                       </span>
                       <div class="text-[10px] text-gray-500 dark:text-gray-500 mt-0.5">{{ c.performance_descriptor }}</div>
@@ -312,6 +312,7 @@
 </template>
 
 <script setup lang="ts">
+import { gradeBg } from '@/utils/grades'
 import BadgeIcon from '@/components/common/BadgeIcon.vue'
 import AppIcon from '@/components/common/AppIcon.vue'
 import { computed, ref, watch, onMounted } from 'vue'
@@ -382,12 +383,6 @@ const RESULT_KEYS: Record<number, { range: string; level: string; grade: string;
 
 const resultKey = computed(() => RESULT_KEYS[props.report.max_weight] || RESULT_KEYS[5])
 
-const gradeColor = (grade: string | null) => {
-  const colors: Record<string, string> = {
-    A: 'bg-emerald-600', B: 'bg-blue-600', C: 'bg-amber-500', D: 'bg-orange-500', E: 'bg-red-600',
-  }
-  return grade ? colors[grade] || 'bg-gray-400' : 'bg-gray-300'
-}
 
 // Only subjects with at least one LOA/AOI/EOC-tagged assessment get a competency row - subjects
 // with only legacy/untagged assignments keep showing solely in the constructs table above.

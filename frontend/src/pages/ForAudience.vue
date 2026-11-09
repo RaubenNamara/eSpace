@@ -17,7 +17,7 @@
             <span class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold text-indigo-100 backdrop-blur">
               <span class="w-1.5 h-1.5 rounded-full bg-indigo-300"></span>{{ a.eyebrow }}
             </span>
-            <h1 class="mt-5 font-jakarta text-4xl sm:text-5xl font-extrabold tracking-tight leading-[1.08]">{{ a.title }}</h1>
+            <h1 class="mt-5 font-heading text-4xl sm:text-5xl font-extrabold tracking-tight leading-[1.08]">{{ a.title }}</h1>
             <p class="mt-5 max-w-xl text-base sm:text-lg text-white/80 leading-relaxed">{{ a.intro }}</p>
             <div class="mt-8 flex flex-wrap gap-3">
               <a href="#demo" class="inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold text-indigo-950 bg-white hover:bg-indigo-50 transition">
@@ -161,7 +161,7 @@ watch(a, v => { if (!v) router.replace('/') }, { immediate: true })
 
 // Same look as the home page (Landing.vue)
 const EYEBROW = 'inline-flex items-center rounded-full bg-indigo-100 px-3 py-1 text-xs font-bold uppercase tracking-widest text-indigo-800 dark:bg-indigo-500/15 dark:text-indigo-200'
-const H2 = 'mt-3 font-jakarta text-3xl sm:text-4xl font-extrabold tracking-tight'
+const H2 = 'mt-3 font-heading text-3xl sm:text-4xl font-extrabold tracking-tight'
 const openFaq = ref(0)
 watch(() => route.path, () => { openFaq.value = 0 })
 

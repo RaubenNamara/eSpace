@@ -7,15 +7,11 @@ export const useThemeStore = defineStore('theme', () => {
 
   // Actions
   function loadTheme() {
-    const stored = localStorage.getItem('theme')
-    
-    if (stored) {
-      isDarkMode.value = stored === 'dark'
-    } else {
-      // Check system preference
-      isDarkMode.value = window.matchMedia('(prefers-color-scheme: dark)').matches
-    }
-    
+    // Light unless the person chose dark with the toggle - the device's own dark setting is not followed
+    let stored: string | null = null
+    try { stored = localStorage.getItem('theme') } catch { /* private mode */ }
+    isDarkMode.value = stored === 'dark'
+
     applyTheme()
   }
 

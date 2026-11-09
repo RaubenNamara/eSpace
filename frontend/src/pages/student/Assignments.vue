@@ -93,8 +93,8 @@
               <button v-if="a.status === 'new' || a.status === 'in_progress'" type="button" class="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700" @click="startAssignment(a)">
                 {{ a.status === 'new' ? 'Start' : 'Continue' }}
               </button>
-              <button v-else-if="a.status === 'overdue' && Number(a.allow_late_submission)" type="button" class="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 text-white hover:bg-rose-700" @click="startAssignment(a)">Hand in late</button>
-              <button v-else-if="a.status === 'marked'" type="button" class="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700" @click="viewResult(a)">See result</button>
+              <span v-else-if="a.status === 'overdue'" class="px-3 py-2 text-xs font-semibold text-rose-700 dark:text-rose-300">Closed</span>
+              <button v-else-if="a.status === 'marked'" type="button" class="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700" @click="viewResult(a)">See result</button>
               <button v-else-if="a.status === 'submitted'" type="button" class="px-4 py-2 rounded-xl text-xs font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700" @click="viewSubmission(a)">Your answers</button>
             </div>
           </li>
@@ -112,7 +112,7 @@
 
     <!-- Finished work: marked and returned, the latest first; ten, then the rest on request -->
     <section v-if="!loading && !error && finished.length && !focusCard" class="mt-6 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/80 dark:border-gray-700 shadow-sm overflow-hidden">
-      <header class="relative flex items-center gap-3 px-4 py-3.5 bg-gradient-to-r from-emerald-50 to-white dark:from-emerald-950/40 dark:to-gray-800">
+      <header class="relative flex items-center gap-3 px-4 py-3.5 bg-gradient-to-r from-cream-100 to-white dark:from-indigo-950/40 dark:to-gray-800">
         <span class="absolute inset-y-0 left-0 w-1 bg-emerald-600"></span>
         <span class="w-10 h-10 flex-shrink-0 rounded-xl flex items-center justify-center text-white bg-emerald-600 shadow-md shadow-emerald-500/30">
           <AppIcon name="trophy" class="w-5 h-5" />
@@ -151,7 +151,7 @@
               {{ a.subject_name }}<template v-if="a.teacher_name"> · {{ a.teacher_name }}</template> · {{ Number(a.submission!.total_score) }} / {{ Number(a.total_marks) }} marks<template v-if="markedOn(a)"> · marked {{ markedOn(a) }}</template>
             </p>
           </div>
-          <button type="button" class="flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700" @click="viewResult(a)">See result</button>
+          <button type="button" class="flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700" @click="viewResult(a)">See result</button>
         </li>
       </ul>
 
@@ -235,7 +235,7 @@ const groupOf = (a: StudentAssignment): GroupKey => {
   return 'todo'
 }
 const GROUPS: { key: GroupKey; title: string; dot: string; hint?: string }[] = [
-  { key: 'overdue', title: 'Overdue', dot: 'bg-rose-500', hint: 'the deadline has passed' },
+  { key: 'overdue', title: 'Overdue', dot: 'bg-rose-500', hint: 'the deadline has passed - these are closed' },
   { key: 'started', title: 'In progress', dot: 'bg-amber-500', hint: 'pick up where you left off' },
   { key: 'todo', title: 'To do', dot: 'bg-indigo-500', hint: 'soonest deadline first' },
   { key: 'waiting', title: 'Waiting for marks', dot: 'bg-indigo-500' },

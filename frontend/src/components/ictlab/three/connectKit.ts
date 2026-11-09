@@ -57,7 +57,7 @@ function placed<T extends THREE.Object3D>(o: T, x: number, y: number, z: number)
 }
 
 /** A small name tag over a port */
-export function tagSprite(text: string, bg = '#115633') {
+export function tagSprite(text: string, bg = '#14307d') {
   const c = document.createElement('canvas')
   c.width = 256
   c.height = 64
@@ -117,7 +117,7 @@ export function buildConnectTower(): ConnectTower {
   // Name tags sit in a column just left of the case, one per kind of port, level with it (the three
   // sound jacks get their own colour, stepped down so they don't overlap)
   const TAG_X = -0.13
-  const addPort = (key: string, kind: PortKind, label: string, x: number, y: number, w: number, h: number, visual: THREE.Object3D, tagText: string, tagY = y, tagBg = '#115633') => {
+  const addPort = (key: string, kind: PortKind, label: string, x: number, y: number, w: number, h: number, visual: THREE.Object3D, tagText: string, tagY = y, tagBg = '#14307d') => {
     visual.position.set(x, y, BACK_Z + 0.0006)
     if (kind !== 'c14') visual.scale.setScalar(IO_SCALE)
     group.add(visual)

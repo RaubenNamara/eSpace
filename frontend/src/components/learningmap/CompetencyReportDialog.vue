@@ -148,6 +148,7 @@
 </template>
 
 <script setup lang="ts">
+import { GRADE_HEX } from '@/utils/grades'
 import { computed, onMounted, ref } from 'vue'
 import axios from 'axios'
 import { resolveAssetUrl } from '@/utils/url'
@@ -193,11 +194,11 @@ const notYet = computed(() => (report.value?.subjects ?? []).filter(s => s.asses
 
 // The Learning Map's levels and colours
 const GRADES = [
-  { grade: 'A', label: 'Exceptional', color: '#059669' },
-  { grade: 'B', label: 'Outstanding', color: '#0d9488' },
-  { grade: 'C', label: 'Satisfactory', color: '#2563eb' },
-  { grade: 'D', label: 'Basic', color: '#d97706' },
-  { grade: 'E', label: 'Elementary', color: '#e11d48' }
+  { grade: 'A', label: 'Exceptional', color: GRADE_HEX.A },
+  { grade: 'B', label: 'Outstanding', color: GRADE_HEX.B },
+  { grade: 'C', label: 'Satisfactory', color: GRADE_HEX.C },
+  { grade: 'D', label: 'Basic', color: GRADE_HEX.D },
+  { grade: 'E', label: 'Elementary', color: GRADE_HEX.E }
 ]
 const gradeColor = (g: string) => GRADES.find(x => x.grade === g)?.color ?? '#6b7280'
 // Green when most assessed outcomes are achieved, amber part-way, rose when few

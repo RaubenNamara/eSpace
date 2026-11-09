@@ -30,7 +30,7 @@ export default defineConfig(({ command }) => ({
         name: 'Tusome - the digital school',
         short_name: 'Tusome',
         description: 'Notes, books, videos, live lessons, competency-based assessment and Learning Maps for secondary schools',
-        theme_color: '#15874a',
+        theme_color: '#14307d',
         background_color: '#ffffff',
         id: '/',
         start_url: '/',

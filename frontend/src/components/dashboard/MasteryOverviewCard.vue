@@ -78,7 +78,7 @@ interface Overview { year: string | null; subjects: SubjectRow[]; totals: Record
 const props = withDefaults(defineProps<{ endpoint: string; params?: Record<string, unknown>; showDepartment?: boolean }>(), { params: () => ({}), showDepartment: false })
 
 const LAYERS: { key: LayerKey; label: string; short: string; by: string; unit: string; color: string }[] = [
-  { key: 'outcomes', label: 'Learning outcomes', short: 'Outcomes (LOA)', by: 'LOA', unit: 'outcomes', color: '#15874a' },
+  { key: 'outcomes', label: 'Learning outcomes', short: 'Outcomes (LOA)', by: 'LOA', unit: 'outcomes', color: '#1b3fa0' },
   { key: 'competencies', label: 'Topic competencies', short: 'Competencies (AOI)', by: 'AOI', unit: 'topics', color: '#1f2937' },
   { key: 'constructs', label: 'Elements of Construct', short: 'Constructs (EOC)', by: 'EOC', unit: 'constructs', color: '#d97706' }
 ]

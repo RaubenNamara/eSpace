@@ -60,8 +60,8 @@ function canvasTex(w: number, h: number, paint: (g: CanvasRenderingContext2D) =>
 function desktopTexture() {
   return canvasTex(512, 300, g => {
     const grad = g.createLinearGradient(0, 0, 512, 300)
-    grad.addColorStop(0, '#0f5b33')
-    grad.addColorStop(1, '#22a45d')
+    grad.addColorStop(0, '#12307f')
+    grad.addColorStop(1, '#3a5fc4')
     g.fillStyle = grad
     g.fillRect(0, 0, 512, 300)
     g.fillStyle = 'rgba(255,255,255,0.85)'
@@ -261,7 +261,7 @@ function flash() {
   g.add(rbox(0.018, 0.008, 0.045, mat(0x15874a, 0.35), 0.003, 0, 0.004, 0))
   g.add(box(0.012, 0.0045, 0.012, METAL(), 0, 0.004, 0.028))
   g.add(box(0.008, 0.001, 0.008, BLACK(), 0, 0.0063, 0.028))
-  const top = new THREE.Mesh(new THREE.PlaneGeometry(0.015, 0.024), pictured(label('32GB', ['USB 3.0'], '#115633', '#ffffff')))
+  const top = new THREE.Mesh(new THREE.PlaneGeometry(0.015, 0.024), pictured(label('32GB', ['USB 3.0'], '#14307d', '#ffffff')))
   top.rotation.x = -Math.PI / 2
   top.position.set(0, 0.0082, -0.004)
   g.add(top)
@@ -290,7 +290,7 @@ function sdcard() {
   const body = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth: 0.0021, bevelEnabled: false }), mat(0x1f2937, 0.4))
   body.rotation.x = -Math.PI / 2
   g.add(body)
-  const lbl = new THREE.Mesh(new THREE.PlaneGeometry(0.022, 0.02), pictured(label('SD', ['64GB'], '#15874a', '#ffffff')))
+  const lbl = new THREE.Mesh(new THREE.PlaneGeometry(0.022, 0.02), pictured(label('SD', ['64GB'], '#1b3fa0', '#ffffff')))
   lbl.rotation.x = -Math.PI / 2
   lbl.position.set(0, 0.0022, 0.002)
   g.add(lbl)
@@ -306,7 +306,7 @@ function disc() {
   const top = new THREE.Mesh(new THREE.RingGeometry(0.02, 0.058, 64), pictured(canvasTex(256, 256, c => {
     c.fillStyle = '#f8fafc'
     c.fillRect(0, 0, 256, 256)
-    c.fillStyle = '#115633'
+    c.fillStyle = '#14307d'
     c.font = 'bold 30px sans-serif'
     c.fillText('DVD-R', 80, 70)
     c.font = '18px sans-serif'

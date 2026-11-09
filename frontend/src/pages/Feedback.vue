@@ -15,7 +15,7 @@
           <span class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold text-indigo-100">
             <span class="w-1.5 h-1.5 rounded-full bg-indigo-300"></span>Anonymous · about 2 minutes
           </span>
-          <h1 class="mt-5 font-jakarta text-4xl sm:text-5xl font-extrabold tracking-tight leading-[1.08]">Tell us about Tusome</h1>
+          <h1 class="mt-5 font-heading text-4xl sm:text-5xl font-extrabold tracking-tight leading-[1.08]">Tell us about Tusome</h1>
           <p class="mt-5 max-w-2xl text-base sm:text-lg text-white/80 leading-relaxed">What works, what gets in your way, and what we should improve first. Your name, your account and your device are not recorded - even if you are signed in.</p>
         </div>
       </section>
@@ -24,7 +24,7 @@
         <div class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
           <div v-if="sent" class="rounded-3xl border border-slate-200 dark:border-white/10 p-8 sm:p-12 text-center">
             <span class="mx-auto w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300 flex items-center justify-center"><AppIcon name="check-circle" class="w-8 h-8" /></span>
-            <h2 class="mt-5 font-jakarta text-2xl font-bold">Thank you</h2>
+            <h2 class="mt-5 font-heading text-2xl font-bold">Thank you</h2>
             <p class="mt-2 text-slate-600 dark:text-slate-400">Your answers have reached the Tusome team. We read every one.</p>
             <router-link to="/" class="mt-6 inline-flex px-5 py-2.5 rounded-2xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700">Back to Tusome</router-link>
           </div>

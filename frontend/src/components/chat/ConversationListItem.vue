@@ -63,7 +63,7 @@ defineEmits(['click'])
 const displayName = computed(() => (props.conversation.type === 'direct' ? niceName(props.conversation.name) : props.conversation.name))
 
 // a steady colour per chat, from WhatsApp-like avatar tones
-const AVATAR_COLORS = ['#00a884', '#128c7e', '#25d366', '#34b7f1', '#7f66ff', '#e542a3', '#fa6533', '#54656f', '#008069']
+const AVATAR_COLORS = ['#1b3fa0', '#3a5fc4', '#5f80d8', '#34b7f1', '#7f66ff', '#e542a3', '#fa6533', '#54656f', '#14307d']
 const avatarColor = computed(() => AVATAR_COLORS[Math.abs(props.conversation.id) % AVATAR_COLORS.length])
 
 const initials = computed(() => {

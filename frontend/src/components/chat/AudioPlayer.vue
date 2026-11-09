@@ -18,7 +18,7 @@
           v-for="(h, i) in bars"
           :key="i"
           class="flex-1 rounded-full transition-colors"
-          :style="{ height: `${h}%`, background: (i + 0.5) / bars.length * 100 <= progressPct ? 'var(--wa-played, #00a884)' : 'var(--wa-unplayed, rgba(84,101,111,0.45))' }"
+          :style="{ height: `${h}%`, background: (i + 0.5) / bars.length * 100 <= progressPct ? 'var(--wa-played, #1b3fa0)' : 'var(--wa-unplayed, rgba(84,101,111,0.45))' }"
         ></span>
       </div>
       <span class="text-[11px] leading-3 text-[var(--wa-muted,#667781)]">
@@ -28,7 +28,7 @@
 
     <!-- mic badge, like the sender photo + mic on WhatsApp voice notes -->
     <div class="relative w-11 h-11 flex-shrink-0">
-      <div class="w-11 h-11 rounded-full flex items-center justify-center text-white" :style="{ background: isMine ? '#00a884' : '#54656f' }">
+      <div class="w-11 h-11 rounded-full flex items-center justify-center text-white" :style="{ background: isMine ? '#1b3fa0' : '#54656f' }">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 11a7 7 0 01-14 0m7 7v3m-3 0h6M12 15a3 3 0 003-3V6a3 3 0 00-6 0v6a3 3 0 003 3z" /></svg>
       </div>
     </div>

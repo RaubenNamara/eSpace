@@ -130,11 +130,11 @@
    page picks it up.
    --------------------------------------------------------------------------------------------- */
 :root {
-  --frame-border: rgba(21, 80, 50, 0.12);
+  --frame-border: rgba(20, 48, 125, 0.12);
   --frame-paper-top: #ffffff;
   --frame-paper-bottom: #ffffff;
-  --frame-shadow: 0 1px 2px rgba(15, 40, 25, 0.05), 0 6px 16px -8px rgba(15, 40, 25, 0.12);
-  --frame-shadow-hover: 0 2px 4px rgba(15, 40, 25, 0.07), 0 12px 26px -10px rgba(15, 40, 25, 0.2);
+  --frame-shadow: 0 1px 2px rgba(12, 24, 66, 0.05), 0 6px 16px -8px rgba(12, 24, 66, 0.12);
+  --frame-shadow-hover: 0 2px 4px rgba(12, 24, 66, 0.07), 0 12px 26px -10px rgba(12, 24, 66, 0.2);
 }
 
 html:not(.dark) :is(div, section, article, li, form, details, a, label).bg-white.border:is(.rounded-lg, .rounded-xl, .rounded-2xl):is([class*="border-gray-"], [class*="border-slate-"]),
@@ -191,19 +191,20 @@ html.dark .card:not([class*="ring-"]) {
   --tw-ring-color: rgba(255, 255, 255, 0.08);
 }
 
-/* The sidebar: white with a light green edge */
+/* The sidebar: solid deep blue, in both themes. MainLayout gives it the `dark` class, so every
+   dark: style inside it applies and its words are white. */
 .app-frame-sidebar {
-  background: #ffffff;
-  border: 1px solid rgba(21, 80, 50, 0.12);
-  box-shadow: 0 10px 30px -14px rgba(15, 40, 25, 0.25);
+  background: #14307d;
+  border: 1px solid #14307d;
+  box-shadow: 0 10px 30px -14px rgba(12, 24, 66, 0.55);
 }
 
 .app-frame-sidebar .app-frame-divider {
-  border-color: rgba(21, 80, 50, 0.1);
+  border-color: rgba(255, 255, 255, 0.14);
 }
 
 html.dark .app-frame-sidebar {
-  background: linear-gradient(180deg, rgba(23, 28, 26, 0.96), rgba(17, 21, 19, 0.96));
+  background: #0f2563;
   border-color: rgba(255, 255, 255, 0.07);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 10px 30px -12px rgba(0, 0, 0, 0.7);
 }
@@ -379,10 +380,10 @@ html.dark {
   --ck-color-base-foreground: #111827;
   --ck-color-base-border: #374151;
   --ck-color-base-action: #10b981;
-  --ck-color-base-focus: #22a45d;
+  --ck-color-base-focus: #3a5fc4;
   --ck-color-base-text: #e5e7eb;
-  --ck-color-base-active: #15874a;
-  --ck-color-base-active-focus: #126c3d;
+  --ck-color-base-active: #1b3fa0;
+  --ck-color-base-active-focus: #18398f;
   --ck-color-text: #e5e7eb;
   --ck-color-shadow-drop: rgba(0, 0, 0, 0.4);
   --ck-color-shadow-inner: rgba(0, 0, 0, 0.3);
@@ -391,10 +392,10 @@ html.dark {
   --ck-color-button-default-background: transparent;
   --ck-color-button-default-hover-background: #374151;
   --ck-color-button-default-active-background: #4b5563;
-  --ck-color-button-on-background: #0f472b;
-  --ck-color-button-on-hover-background: #115633;
-  --ck-color-button-on-color: #b0eac6;
-  --ck-color-button-action-background: #15874a;
+  --ck-color-button-on-background: #0f2563;
+  --ck-color-button-on-hover-background: #14307d;
+  --ck-color-button-on-color: #bbcbf1;
+  --ck-color-button-action-background: #1b3fa0;
   --ck-color-dropdown-panel-background: #1f2937;
   --ck-color-dropdown-panel-border: #374151;
   --ck-color-split-button-hover-background: #374151;
@@ -405,20 +406,20 @@ html.dark {
   --ck-color-input-disabled-background: #1f2937;
   --ck-color-list-background: #1f2937;
   --ck-color-list-button-hover-background: #374151;
-  --ck-color-list-button-on-background: #0f472b;
-  --ck-color-list-button-on-text: #d7f5e1;
+  --ck-color-list-button-on-background: #0f2563;
+  --ck-color-list-button-on-text: #dce4f8;
   --ck-color-panel-background: #1f2937;
   --ck-color-panel-border: #374151;
   --ck-color-labeled-field-label-background: #1f2937;
   --ck-color-tooltip-background: #111827;
   --ck-color-tooltip-text: #f9fafb;
-  --ck-color-focus-border: #22a45d;
+  --ck-color-focus-border: #3a5fc4;
   --ck-color-engine-placeholder-text: #6b7280;
 }
 html.dark .ck.ck-editor__editable:not(.ck-editor__nested-editable) { color: #e5e7eb; }
 
 /* ---------------------------------------------------------------------------------------------
-   Dashboard and report cards: cream card, a dark-green title bar, compact chips inside, and a
+   Dashboard and report cards: white card, a deep blue title bar, compact chips inside, and a
    "Show N more" button at the foot. Shared by every role's dashboard and the reports pages.
    --------------------------------------------------------------------------------------------- */
 .dash-box {
@@ -431,13 +432,13 @@ html.dark .dash-box {
   border-color: rgba(255, 255, 255, 0.06);
 }
 .dash-bar {
-  @apply flex items-center gap-2 px-4 py-2.5 bg-indigo-100 text-indigo-900 border-b border-indigo-200 border-l-4 border-l-indigo-600 text-[0.95rem] font-bold tracking-tight;
+  @apply flex items-center gap-2 px-4 py-2.5 bg-indigo-800 text-white text-[0.95rem] font-semibold;
 }
 html.dark .dash-bar {
-  @apply bg-indigo-900/40 text-white border-indigo-900 border-l-indigo-500;
+  @apply bg-indigo-900;
 }
 .dash-bar-link {
-  @apply ml-auto text-xs font-semibold text-indigo-700 hover:text-indigo-900 hover:underline dark:text-indigo-300 dark:hover:text-indigo-200;
+  @apply ml-auto text-xs font-semibold text-gold-400 hover:text-white hover:underline;
 }
 .dash-chip {
   @apply flex items-center gap-2 rounded-xl px-2 py-1.5 min-w-0 bg-white/70 ring-1 ring-black/5 hover:ring-indigo-300 hover:bg-indigo-50/60 dark:bg-gray-900/40 dark:ring-gray-700 dark:hover:ring-indigo-700 transition;
@@ -459,13 +460,36 @@ html.dark .dash-bar {
   .dash-pop-enter-active, .dash-pop-leave-active { transition: none; }
 }
 
-/* Chat: the list's and the conversation's title bars - a soft light-green band, dark words */
-.chat-bar { background: rgb(215 245 225) !important; border-bottom: 1px solid rgb(176 234 198); border-left: 4px solid rgb(21 135 74); color: rgb(15 71 43); }
-.dark .chat-bar { background: rgb(15 71 43 / 0.4) !important; border-bottom-color: rgb(15 71 43); border-left-color: rgb(34 164 93); color: #fff; }
-.chat-bar h1, .chat-bar h2 { color: rgb(15 71 43) !important; }
-.dark .chat-bar h1, .dark .chat-bar h2 { color: #fff !important; }
-.chat-bar p { color: rgb(18 108 61) !important; }
-.dark .chat-bar p { color: rgb(125 216 163) !important; }
-.chat-bar button:not(.chat-new) svg { color: rgb(18 108 61) !important; }
-.dark .chat-bar button:not(.chat-new) svg { color: rgb(209 213 219) !important; }
-.chat-bar button:not(.chat-new):hover { background: rgb(21 135 74 / 0.08) !important; }
+/* Chat: the list's and the conversation's title bars - the same deep blue band as the dashboards */
+.chat-bar { background: #14307d !important; border-bottom: 0; border-left: 0; }
+.dark .chat-bar { background: #0f2563 !important; }
+.chat-bar h1, .chat-bar h2 { color: #fff !important; }
+.chat-bar p { color: #bbcbf1 !important; }
+.chat-bar button:not(.chat-new) svg { color: #fff !important; }
+.chat-bar button:not(.chat-new):hover { background: rgba(255, 255, 255, 0.12) !important; }
+
+/* ---------------------------------------------------------------------------------------------
+   Data tables (marksheets, the shared DataTable): the header stays put while the rows scroll in
+   their box, every other row is lightly cream, and figures line up digit for digit.
+   --------------------------------------------------------------------------------------------- */
+.data-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background-color: #eef2fc;
+  color: #14307d;
+}
+.data-table thead th.sticky { z-index: 3; }
+.data-table tbody tr:nth-child(even) > td { background-color: #fdfaf3; }
+.data-table td { font-variant-numeric: tabular-nums; }
+.data-table .num { text-align: right; }
+.dark .data-table thead th { background-color: #172554; color: #e5e7eb; }
+.dark .data-table tbody tr:nth-child(even) > td { background-color: rgb(30 41 59 / 0.6); }
+.data-table-box { max-height: 70vh; overflow: auto; }
+
+/* Keyboard focus: a clear gold outline on whatever has focus - shown only for keyboard use, not
+   for a mouse click or a tap. Overrides the focus:outline-none many controls carry. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid #d9a520 !important;
+  outline-offset: 2px;
+}

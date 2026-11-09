@@ -1,10 +1,10 @@
 <template>
-  <!-- The Tusome word logo: a green "T" and "usome", set tight in Plus Jakarta Sans. Scales
+  <!-- The Tusome word logo: a blue "T" and "usome", set tight in Plus Jakarta Sans. Scales
        with `size`; `light` is for dark backgrounds that aren't the dark theme (e.g. a hero image). -->
   <span class="inline-flex items-baseline font-brand font-extrabold [font-weight:800] tracking-tight leading-none select-none" :class="SIZE[size]" aria-label="Tusome">
-    <span class="pr-[0.02em]" :class="light ? 'text-indigo-300' : 'text-indigo-600 dark:text-indigo-400'">T</span>
+    <span class="pr-[0.02em]" :class="light ? 'text-gold-400' : 'text-indigo-600 dark:text-gold-400'">T</span>
     <span :class="light ? 'text-white' : 'text-slate-900 dark:text-white'">usome</span>
-    <span class="ml-[0.06em] inline-block w-[0.22em] h-[0.22em] rounded-full self-start mt-[0.12em]" :class="light ? 'bg-indigo-300' : 'bg-indigo-600 dark:bg-indigo-400'" aria-hidden="true"></span>
+    <span class="ml-[0.06em] inline-block w-[0.22em] h-[0.22em] rounded-full self-start mt-[0.12em]" :class="light ? 'bg-gold-400' : 'bg-gold-500 dark:bg-gold-400'" aria-hidden="true"></span>
   </span>
 </template>
 

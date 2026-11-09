@@ -152,11 +152,11 @@ const props = withDefaults(defineProps<{
 
 // Book-cloth colours: [light, dark] ends of the cover gradient
 const cloths: [string, string][] = [
-  ['#15874a', '#0f5b33'], // brand green
+  ['#1b3fa0', '#12307f'], // brand blue
   ['#1f2937', '#111827'], // charcoal
   ['#2f6b4f', '#1d4633'], // forest
   ['#3d4a5c', '#262f3b'], // slate
-  ['#115633', '#0a3a22'], // deep green
+  ['#14307d', '#0c1f55'], // deep green
   ['#374151', '#1f2937'], // graphite
   ['#566b2a', '#3a481b'], // olive
   ['#22704a', '#164d33'], // pine

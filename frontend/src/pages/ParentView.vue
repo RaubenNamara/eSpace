@@ -2,7 +2,7 @@
   <!-- A parent's private weekly update on their child, opened from the link the school sent
        (/parent/{token}) - no login. Read-only: this week's reading and work, results that came
        back, outcomes achieved so far, and what is due next. -->
-  <div class="site-plain min-h-screen bg-slate-50 font-sans text-slate-900 antialiased dark:bg-slate-950 dark:text-white">
+  <div class="site-plain min-h-screen bg-cream-100 font-sans text-slate-900 antialiased dark:bg-slate-950 dark:text-white">
     <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-white/10">
       <div class="mx-auto max-w-3xl px-4 py-3 flex items-center gap-3">
         <Wordmark size="sm" />
@@ -19,13 +19,13 @@
 
       <div v-else-if="error" class="py-16 text-center">
         <span class="mx-auto w-14 h-14 rounded-2xl bg-slate-200 dark:bg-white/10 flex items-center justify-center text-slate-500"><AppIcon name="warning" class="w-7 h-7" /></span>
-        <h1 class="mt-4 text-xl font-bold">This link isn't working</h1>
+        <h1 class="font-heading mt-4 text-xl font-bold">This link isn't working</h1>
         <p class="mt-2 text-slate-600 dark:text-slate-400 max-w-sm mx-auto">{{ error }}</p>
       </div>
 
       <template v-else-if="data">
         <p class="text-sm text-slate-500 dark:text-slate-400">Weekly update · {{ range }}</p>
-        <h1 class="mt-1 font-jakarta text-3xl sm:text-4xl font-extrabold tracking-tight">{{ first }}'s week</h1>
+        <h1 class="mt-1 font-heading text-3xl sm:text-4xl font-extrabold tracking-tight">{{ first }}'s week</h1>
         <p class="mt-2 text-slate-600 dark:text-slate-300">Hello {{ data.guardian_name }}. Here is how {{ first }}<template v-if="data.student.class_label"> ({{ data.student.class_label }})</template> got on in the last seven days.</p>
 
         <!-- The week in numbers -->
@@ -39,7 +39,7 @@
 
         <!-- Outcomes -->
         <section class="mt-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-5">
-          <h2 class="font-bold">Learning outcomes this year</h2>
+          <h2 class="font-heading font-bold">Learning outcomes this year</h2>
           <template v-if="data.outcomes.assessed">
             <div class="mt-3 flex items-center gap-4">
               <div class="flex-1 h-3 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden"><div class="h-full rounded-full bg-emerald-500" :style="{ width: `${outcomePct}%` }"></div></div>
@@ -52,7 +52,7 @@
 
         <!-- Results -->
         <section class="mt-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-5">
-          <h2 class="font-bold">Results this week</h2>
+          <h2 class="font-heading font-bold">Results this week</h2>
           <ul v-if="data.results.length" class="mt-3 divide-y divide-slate-100 dark:divide-white/10">
             <li v-for="r in data.results" :key="r.title + r.date" class="py-2.5 flex items-center gap-3">
               <span class="flex-1 min-w-0">
@@ -67,7 +67,7 @@
 
         <!-- Coming up -->
         <section class="mt-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-5">
-          <h2 class="font-bold">Due in the next seven days</h2>
+          <h2 class="font-heading font-bold">Due in the next seven days</h2>
           <ul v-if="data.due.length" class="mt-3 space-y-2">
             <li v-for="d in data.due" :key="d.title + d.due" class="flex items-center gap-3 text-sm">
               <span class="w-14 flex-shrink-0 text-center rounded-lg bg-slate-100 dark:bg-white/10 py-1 text-xs font-bold">{{ shortDay(d.due) }}</span>

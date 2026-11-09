@@ -468,6 +468,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'settings', name: 'AdminSettings', component: AdminSettings },
       { path: 'backup', redirect: '/admin/dashboard' },
       { path: 'logs', name: 'AdminLogs', component: AdminLogs },
+      { path: 'logs/report', name: 'AdminUsageReport', component: () => import('../pages/admin/UsageReport.vue') },
       { path: 'library', name: 'AdminLibrary', component: AdminLibrary },
       { path: 'videos', name: 'AdminVideos', component: AdminVideos },
       { path: 'itembank', name: 'AdminItemBank', component: AdminItemBank },

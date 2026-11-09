@@ -76,8 +76,9 @@
               <span class="min-w-0 flex-1">
                 <span class="block text-sm font-semibold text-gray-900 dark:text-white truncate">{{ submission.student_name }}</span>
                 <span class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 min-w-0">
-                  <span :class="getStatusClasses(submission.status)" class="px-1.5 py-0.5 text-[10px] font-semibold rounded-full flex-shrink-0">{{ capitalizeFirst(submission.status) }}</span>
-                  <span class="truncate">{{ fmtMarks(submission.total_score) }} / {{ fmtMarks(assignment?.total_marks) }}</span>
+                  <span :class="getStatusClasses(submission.status)" class="px-1.5 py-0.5 text-[10px] font-semibold rounded-full flex-shrink-0">{{ statusWord(submission) }}</span>
+                  <span v-if="isOut(submission)" class="truncate">{{ stoppedAt(submission) }}</span>
+                  <span v-else class="truncate">{{ fmtMarks(submission.total_score) }} / {{ fmtMarks(assignment?.total_marks) }}</span>
                 </span>
               </span>
               <button
@@ -86,7 +87,7 @@
                 @click="selectSubmission(submission)"
               >{{ isMarked(submission) ? 'View' : 'Mark' }}</button>
               <button v-else-if="Number(submission.has_work)" class="flex-shrink-0 px-3 py-1.5 border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 rounded-lg text-xs font-bold" @click="collect(submission)">Collect &amp; mark</button>
-              <span v-else class="flex-shrink-0 text-[11px] text-gray-400">Not handed in</span>
+              <span v-else class="flex-shrink-0 text-[11px] font-semibold" :class="submission.deadline_passed ? 'text-rose-600 dark:text-rose-400' : 'text-gray-400'">{{ submission.deadline_passed ? 'Not handed in' : 'Still working' }}</span>
             </li>
           </ul>
           <div class="hidden md:block overflow-x-auto">
@@ -120,11 +121,15 @@
                 </td>
                 <td class="px-6 py-4">
                   <span :class="getStatusClasses(submission.status)" class="px-2 py-1 text-xs font-medium rounded-full">
-                    {{ capitalizeFirst(submission.status) }}
+                    {{ statusWord(submission) }}
                   </span>
                 </td>
                 <td class="px-6 py-4">
-                  <p class="text-sm text-gray-900 dark:text-white">
+                  <div v-if="isOut(submission)" class="min-w-[9rem]">
+                    <p class="text-sm text-gray-900 dark:text-white">{{ stoppedAt(submission) }}</p>
+                    <span class="mt-1 block h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden"><span class="block h-full rounded-full bg-amber-500" :style="{ width: `${answeredPercent(submission)}%` }"></span></span>
+                  </div>
+                  <p v-else class="text-sm text-gray-900 dark:text-white">
                     {{ fmtMarks(submission.total_score) }} / {{ fmtMarks(assignment?.total_marks) }}
                   </p>
                 </td>
@@ -138,7 +143,7 @@
                     {{ isMarked(submission) ? 'View / change' : 'Mark' }}
                   </button>
                   <button v-else-if="Number(submission.has_work)" class="px-4 py-2 rounded-lg border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 text-sm font-semibold" title="Saved but never handed in: hand it in for them and mark it" @click="collect(submission)">Collect &amp; mark</button>
-                  <span v-else class="text-xs text-gray-400">Not submitted yet</span>
+                  <span v-else class="text-xs font-semibold" :class="submission.deadline_passed ? 'text-rose-600 dark:text-rose-400' : 'text-gray-400'">{{ submission.deadline_passed ? 'Deadline passed - not handed in' : 'Still working' }}</span>
                 </td>
               </tr>
             </tbody>
@@ -167,7 +172,7 @@
               <template v-if="nextToMark"> {{ waitingCount }} more waiting.</template>
               <template v-else> That was the last one - everything here is marked.</template>
             </p>
-            <button v-if="nextToMark" type="button" class="px-3.5 py-2 rounded-lg text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700" @click="openNext">Mark next: {{ nextToMark.student_name }} →</button>
+            <button v-if="nextToMark" type="button" class="px-3.5 py-2 rounded-lg text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700" @click="openNext">Mark next: {{ nextToMark.student_name }} →</button>
             <button v-else type="button" class="px-3.5 py-2 rounded-lg text-sm font-semibold text-emerald-900 dark:text-emerald-100 hover:bg-emerald-100 dark:hover:bg-emerald-900/40" @click="backToList">Back to the list</button>
           </div>
 
@@ -194,8 +199,8 @@
                 <span class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-bold tabular-nums text-gray-700 dark:bg-gray-700 dark:text-gray-200 whitespace-nowrap">{{ fmtMarks(question.marks) }} {{ Number(question.marks) === 1 ? 'mark' : 'marks' }}</span>
               </div>
               <div class="min-w-0 overflow-x-auto">
-                <p v-if="question.question_text" class="text-[15px] font-medium leading-relaxed text-gray-900 dark:text-white mb-1 break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.question_text"></p>
-                <p v-else-if="question.scenario_text" class="text-[15px] leading-relaxed text-gray-700 dark:text-gray-300 mb-1 break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.scenario_text"></p>
+                <p v-if="question.question_text" class="text-[15px] font-medium leading-relaxed text-gray-900 dark:text-white mb-1 break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="safeHtml(question.question_text)"></p>
+                <p v-else-if="question.scenario_text" class="text-[15px] leading-relaxed text-gray-700 dark:text-gray-300 mb-1 break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="safeHtml(question.scenario_text)"></p>
               </div>
             </div>
 
@@ -258,6 +263,7 @@
 </template>
 
 <script setup lang="ts">
+import { safeHtml } from '@/utils/safeHtml'
 import { fmtMarks } from '@/utils/marks'
 import { computed, ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
@@ -285,6 +291,12 @@ const listTab = ref<ListTab>('tomark')
 const isMarked = (sub: any) => sub.status === 'graded' || sub.status === 'returned'
 const isOut = (sub: any) => sub.status === 'in_progress' || sub.status === 'draft' || !sub.status || !sub.submitted_at
 const handedIn = (sub: any) => isMarked(sub) || !isOut(sub)
+// Work never handed in: where the learner stopped
+const answeredPercent = (sub: any) => (sub.questions_total ? Math.round((sub.questions_answered / sub.questions_total) * 100) : 0)
+const stoppedAt = (sub: any) => sub.questions_total
+  ? `${sub.deadline_passed ? 'Stopped at' : 'So far'} ${sub.questions_answered} of ${sub.questions_total} questions (${answeredPercent(sub)}%)`
+  : 'Started'
+const statusWord = (sub: any) => (isOut(sub) ? (sub.deadline_passed ? 'Not handed in' : 'Started') : capitalizeFirst(sub.status))
 const listGroups = computed(() => ({
   tomark: submissions.value.filter(sub => !isMarked(sub) && !isOut(sub)),
   marked: submissions.value.filter(isMarked),

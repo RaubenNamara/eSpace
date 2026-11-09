@@ -16,6 +16,10 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
 
+  # Hidden folders and files (.git, .env, ...) are never served - only the certificate checks under
+  # .well-known/. A stray .git folder in this directory was downloadable before this.
+  RewriteRule "(^|/)\.(?!well-known/)" - [F,L]
+
   # eSpace's address is https://tusome.ug. The old address (and the cPanel helper subdomain the
   # addon domain sits on) send every path there permanently, and plain http goes to https.
   # Certificate checks under /.well-known/ are left alone so AutoSSL renewals keep working.
@@ -57,6 +61,13 @@
 
 # Static assets are content-hashed by Vite - safe to cache aggressively.
 <IfModule mod_headers.c>
+  # Security headers on every page: HTTPS only, not framed by other sites, no type guessing, the
+  # address not leaked to other sites, and only the camera and microphone (voice notes, photos) used.
+  Header always set Strict-Transport-Security "max-age=31536000"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "camera=(self), microphone=(self), geolocation=(), payment=(), usb=()"
   <FilesMatch "\.(js|css|woff2?|ttf|eot|svg|png|jpg|jpeg|gif|webp|ico)$">
     Header set Cache-Control "public, max-age=31536000, immutable"
   </FilesMatch>

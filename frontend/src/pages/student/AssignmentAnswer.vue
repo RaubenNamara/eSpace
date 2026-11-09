@@ -123,6 +123,11 @@
           <p class="text-amber-900 dark:text-amber-100 text-sm"><span class="font-semibold">Submitted on this device.</span> It will be sent to your teacher as soon as you're online.</p>
         </div>
 
+        <!-- The deadline has passed and it was never handed in -->
+        <div v-else-if="neverHandedIn" class="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-lg p-4 mb-4">
+          <p class="text-rose-800 dark:text-rose-200 text-sm font-medium">The deadline has passed, so this can no longer be handed in. If you need more time, speak to your teacher.</p>
+        </div>
+
         <!-- Locked banner: attempt already submitted -->
         <div v-else-if="isLocked" class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg p-4 mb-4">
           <p class="text-indigo-800 dark:text-indigo-200 text-sm">
@@ -216,7 +221,7 @@
                 </svg>
                 Instructions
               </h3>
-              <p class="text-gray-600 dark:text-gray-400 text-sm break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="assignment.instructions"></p>
+              <p class="text-gray-600 dark:text-gray-400 text-sm break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="safeHtml(assignment.instructions)"></p>
             </div>
 
             <!-- Files the teacher attached to work with (ICT: starter files, a zip of resources...) -->
@@ -282,7 +287,7 @@
                   <AppIcon name="book" class="w-4 h-4" /> Scenario
                 </h3>
                 <div v-if="entry.question.scenario_text" class="bg-indigo-50/50 dark:bg-indigo-900/10 border-l-4 border-indigo-300 dark:border-indigo-700 p-3 sm:p-4 rounded-lg mb-4 overflow-x-auto">
-                  <p class="text-gray-700 dark:text-gray-300 whitespace-pre-line break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="entry.question.scenario_text"></p>
+                  <p class="text-gray-700 dark:text-gray-300 whitespace-pre-line break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="safeHtml(entry.question.scenario_text)"></p>
                 </div>
               </div>
 
@@ -354,7 +359,7 @@
                 <p v-if="!isObjectiveQuestion(entry.question)" class="text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 mb-1.5 flex items-center gap-1.5">
                   <AppIcon name="target" class="w-3.5 h-3.5" /> Your task
                 </p>
-                <div class="text-lg sm:text-xl font-semibold leading-snug text-gray-900 dark:text-white break-words [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_table]:max-w-full" v-html="entry.question.question_text"></div>
+                <div class="text-lg sm:text-xl font-semibold leading-snug text-gray-900 dark:text-white break-words [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_table]:max-w-full" v-html="safeHtml(entry.question.question_text)"></div>
                 <p v-if="entry.question.question_type === 'multiple_choice_multiple'" class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">Choose all that are correct.</p>
               </div>
 
@@ -486,14 +491,14 @@
         <button
           v-if="step < totalCount - 1"
           type="button"
-          class="px-6 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-40 disabled:shadow-none shadow-md shadow-emerald-600/25 transition"
+          class="px-6 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-40 disabled:shadow-none shadow-md shadow-indigo-600/25 transition"
           :disabled="!answeredFlags[step]"
           @click="goStep(step + 1)"
         >Next →</button>
         <button
           v-else
           type="button"
-          class="px-6 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-40 disabled:shadow-none shadow-md shadow-emerald-600/25 transition"
+          class="px-6 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-40 disabled:shadow-none shadow-md shadow-indigo-600/25 transition"
           :disabled="!answeredFlags[step] || submitting"
           @click="submitAssignment"
         >{{ submitting ? 'Marking…' : 'Finish & see my mark' }}</button>
@@ -539,6 +544,7 @@
 </template>
 
 <script setup lang="ts">
+import { safeHtml } from '@/utils/safeHtml'
 import { fmtMarks } from '@/utils/marks'
 import AppIcon from '@/components/common/AppIcon.vue'
 import { ref, computed, watch, onMounted, onUnmounted, defineAsyncComponent } from 'vue'
@@ -787,16 +793,20 @@ const loadUrl = computed(() => {
 // Locked once the attempt has moved past in_progress (submitted/marking/graded/returned) -
 // a teacher reopening it resets status back to in_progress server-side. Preview mode is always
 // locked - there's no real submission to save answers into.
-const isLocked = computed(() => isPreview.value || (submissionStatus.value !== null && submissionStatus.value !== 'in_progress'))
+const deadlinePassed = ref(false)
+const isLocked = computed(() => isPreview.value || deadlinePassed.value || (submissionStatus.value !== null && submissionStatus.value !== 'in_progress'))
+const neverHandedIn = computed(() => deadlinePassed.value && (submissionStatus.value === null || submissionStatus.value === 'in_progress'))
 
 const questionStatusLabel = computed(() => {
   if (!isLocked.value) return 'Draft'
+  if (neverHandedIn.value) return 'Not handed in'
   if (submissionStatus.value === 'graded' || submissionStatus.value === 'returned') return 'Marked'
   return 'Submitted'
 })
 
 const questionStatusBadgeClass = computed(() => {
   if (!isLocked.value) return 'border-amber-300 text-amber-700 bg-amber-50 dark:border-amber-700 dark:text-amber-300 dark:bg-amber-900/20'
+  if (neverHandedIn.value) return 'border-rose-300 text-rose-700 bg-rose-50 dark:border-rose-700 dark:text-rose-300 dark:bg-rose-900/20'
   return 'border-green-300 text-green-700 bg-green-50 dark:border-green-700 dark:text-green-300 dark:bg-green-900/20'
 })
 
@@ -879,10 +889,13 @@ const loadAssignment = async () => {
   currentQuestionIndex.value = 0
 
   try {
-    const response = await axios.get(loadUrl.value)
+    let response = await axios.get(loadUrl.value)
+    // a timed paper is released when the student begins - this starts its clock
+    if (response.data.data?.not_started) response = await axios.get(loadUrl.value, { params: { begin: 1 } })
     if (response.data.success) {
       loadedOffline.value = !!response.data.offline
       lastLoad.value = response.data.data
+      deadlinePassed.value = !!response.data.data.deadline_passed
       assignment.value = response.data.data.assignment
       questions.value = response.data.data.questions
       curriculum.value = response.data.data.curriculum || null
@@ -1045,8 +1058,20 @@ const autoSave = async (delay = 3000) => {
       if (response.data.success) {
         autoSaveStatus.value = 'saved'
         lastSavedAt.value = Date.now()
+        // past the time limit the server has handed in what was saved
+        if (response.data.data.time_up) {
+          submissionStatus.value = response.data.data.status
+          toast.error(response.data.message)
+        }
       }
     } catch (err: any) {
+      // the deadline went by while the page was open: lock it rather than keep retrying
+      if (err.response?.data?.errors?.deadline_passed) {
+        deadlinePassed.value = true
+        autoSaveStatus.value = null
+        toast.error(err.response.data.message)
+        return
+      }
       autoSaveStatus.value = 'failed'
       console.error('Auto-save failed:', err)
       // try again by itself; also as soon as the internet is back (see onOnline)
@@ -1176,6 +1201,7 @@ const submitAssignment = async () => {
       showCompletionScreen.value = true
     }
   } catch (err: any) {
+    if (err.response?.data?.errors?.deadline_passed) deadlinePassed.value = true
     toast.error(err.response?.data?.message || 'Failed to submit assignment')
   } finally {
     submitting.value = false

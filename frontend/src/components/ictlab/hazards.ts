@@ -402,8 +402,8 @@ export function centreStation() {
   g.add(mesh(new THREE.PlaneGeometry(0.47, 0.27), new THREE.MeshBasicMaterial({
     map: canvasTex(512, 300, c => {
       const grad = c.createLinearGradient(0, 0, 512, 300)
-      grad.addColorStop(0, '#0f5b33')
-      grad.addColorStop(1, '#22a45d')
+      grad.addColorStop(0, '#12307f')
+      grad.addColorStop(1, '#3a5fc4')
       c.fillStyle = grad
       c.fillRect(0, 0, 512, 300)
       c.fillStyle = '#fff'

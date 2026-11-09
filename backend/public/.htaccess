@@ -12,6 +12,11 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
     
+    # Uploaded files go through file.php, which needs a signed-in user or a signed link.
+    # School logos and default pictures stay public: the login page and parents' links show them.
+    RewriteRule ^uploads/(defaults|settings)/ - [L]
+    RewriteRule ^uploads/. file.php [L,QSA]
+
     # Redirect Trailing Slashes If Not A Folder
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_URI} (.+)/$

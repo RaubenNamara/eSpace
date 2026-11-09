@@ -1,13 +1,13 @@
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-950">
+  <div class="min-h-screen bg-cream-100 dark:bg-gray-950">
     <!-- Sidebar -->
     <!-- Floats as a card off the page edges on desktop (flush on mobile, where an inset drawer
          just wastes thumb-reach): white, with a dark-green brand bar on top like the dashboard
-         cards' title bars, and the page you are on in solid green (.app-frame-sidebar in
+         cards' title bars, and the page you are on in solid gold (.app-frame-sidebar in
          assets/style.css). -->
     <aside
       v-if="!shouldHideAppChrome"
-      class="print:hidden overflow-hidden fixed left-0 top-3 bottom-3 lg:left-3 lg:top-3 lg:bottom-3 rounded-r-2xl lg:rounded-2xl app-frame-sidebar backdrop-blur-xl transform transition-all duration-300 z-50 flex flex-col"
+      class="print:hidden overflow-hidden fixed left-0 top-3 bottom-3 lg:left-3 lg:top-3 lg:bottom-3 dark rounded-r-2xl lg:rounded-2xl app-frame-sidebar backdrop-blur-xl transform transition-all duration-300 z-50 flex flex-col"
       :class="[isIconOnly ? 'w-16' : 'w-48 md:w-56', { '-translate-x-[calc(100%+1rem)]': !sidebarOpen, 'translate-x-0': sidebarOpen }]"
     >
 
@@ -18,7 +18,7 @@
           <img v-if="isIconOnly" src="/favicon.svg" alt="Tusome" class="w-9 h-9 rounded-xl">
           <div v-else class="min-w-0">
             <p class="leading-none"><Wordmark size="sm" /></p>
-            <p class="text-[10.5px] text-gray-500 dark:text-white/40 font-semibold tracking-wide leading-tight mt-1">{{ consoleName }}</p>
+            <p class="text-[10.5px] text-white/75 font-semibold tracking-wide leading-tight mt-1">{{ consoleName }}</p>
           </div>
         </div>
       </div>
@@ -43,7 +43,7 @@
             <span class="nav-fold-label">
               <span class="truncate">{{ group.name }}</span>
               <span v-if="groupHasActive(group)" class="w-1.5 h-1.5 rounded-full bg-indigo-500 flex-shrink-0" title="You are on a page in here"></span>
-              <span class="ml-auto text-[10px] font-semibold text-slate-400 dark:text-white/30 tabular-nums">{{ leavesOf(group).length }}</span>
+              <span class="ml-auto text-[10px] font-semibold text-slate-400 dark:text-white/75 tabular-nums">{{ leavesOf(group).length }}</span>
             </span>
             <svg class="nav-fold-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M19 9l-7 7-7-7"></path></svg>
           </button>
@@ -58,11 +58,11 @@
                   type="button"
                   :style="{ '--i': row.i }"
                   class="nav-item w-full flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-xl transition-all duration-150 text-sm font-medium group text-left"
-                  :class="childActive(row.item) ? 'text-indigo-800 dark:text-white font-semibold' : 'text-gray-800 dark:text-white/60 hover:bg-indigo-50 dark:hover:bg-white/[0.07] hover:text-indigo-800 dark:hover:text-white'"
+                  :class="childActive(row.item) ? 'text-indigo-800 dark:text-white font-semibold' : 'text-gray-800 dark:text-white/90 hover:bg-indigo-50 dark:hover:bg-white/[0.07] hover:text-indigo-800 dark:hover:text-white'"
                   :aria-expanded="subOpen(row.item)"
                   @click="toggleSub(row.item.path)"
                 >
-                  <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 text-indigo-700 dark:text-indigo-300/80 group-hover:text-indigo-800 dark:group-hover:text-white/80">
+                  <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 text-indigo-700 dark:text-indigo-100 group-hover:text-indigo-800 dark:group-hover:text-white">
                     <component :is="iconMap[row.item.icon]" class="w-4 h-4" />
                   </div>
                   <span class="truncate flex-1">{{ row.item.label }}</span>
@@ -74,10 +74,10 @@
                   :title="isIconOnly ? row.item.label : undefined"
                   :style="{ '--i': row.i }"
                   class="nav-item flex items-center gap-2.5 pr-2.5 py-1.5 rounded-xl transition-all duration-150 text-sm font-medium group"
-                  :class="[row.child && !isIconOnly ? 'pl-7' : 'pl-3.5', isActive(row.item.path) ? 'bg-indigo-100 text-indigo-900 font-semibold ring-1 ring-indigo-200 dark:bg-indigo-900/50 dark:ring-indigo-800 dark:text-white' : 'text-gray-800 dark:text-white/60 hover:bg-indigo-50 dark:hover:bg-white/[0.07] hover:text-indigo-800 dark:hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
+                  :class="[row.child && !isIconOnly ? 'pl-7' : 'pl-3.5', isActive(row.item.path) ? 'bg-indigo-100 text-indigo-900 font-semibold ring-1 ring-indigo-200 dark:bg-white/15 dark:ring-0 dark:text-white dark:shadow-[inset_3px_0_0_#d9a520]' : 'text-gray-800 dark:text-white/90 hover:bg-indigo-50 dark:hover:bg-white/[0.07] hover:text-indigo-800 dark:hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
                 >
                   <div class="relative w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-all duration-150"
-                    :class="isActive(row.item.path) ? 'bg-indigo-600 text-white shadow-sm' : 'text-indigo-700 dark:text-indigo-300/80 group-hover:text-indigo-800 dark:group-hover:text-white/80'"
+                    :class="isActive(row.item.path) ? 'bg-gold-500 text-indigo-950 shadow-sm' : 'text-indigo-700 dark:text-indigo-100 group-hover:text-indigo-800 dark:group-hover:text-white'"
                   >
                     <component :is="iconMap[row.item.icon]" class="w-4 h-4" />
                     <!-- Folded sidebar: the count sits on the icon -->
@@ -105,7 +105,7 @@
             target="_blank"
             rel="noopener"
             :title="isIconOnly ? 'User guide' : undefined"
-            class="flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-xl text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white w-full transition-colors duration-150"
+            class="flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-xl text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 dark:text-white/90 dark:hover:bg-white/10 dark:hover:text-white w-full transition-colors duration-150"
             :class="isIconOnly ? 'justify-center px-0' : ''"
           >
             <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -118,7 +118,7 @@
           <a
             :href="`mailto:${SUPPORT_EMAIL}`"
             :title="isIconOnly ? `Support: ${SUPPORT_EMAIL}` : undefined"
-            class="flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-xl text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white w-full transition-colors duration-150"
+            class="flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-xl text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 dark:text-white/90 dark:hover:bg-white/10 dark:hover:text-white w-full transition-colors duration-150"
             :class="isIconOnly ? 'justify-center px-0' : ''"
           >
             <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -436,7 +436,7 @@
        screen; "More" opens the full menu. Hidden while reading (the reader has its own controls). -->
   <nav
     v-if="showStudentTabs"
-    class="lg:hidden print:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-t border-gray-200 dark:border-gray-800 pb-[env(safe-area-inset-bottom)]"
+    class="lg:hidden print:hidden fixed bottom-0 inset-x-0 z-40 bg-indigo-800 dark:bg-indigo-900 border-t border-indigo-900 shadow-[0_-4px_14px_-6px_rgba(12,24,66,0.45)] pb-[env(safe-area-inset-bottom)]"
     aria-label="Main"
   >
     <div class="grid grid-cols-5">
@@ -445,15 +445,15 @@
         :key="tab.path"
         :to="tab.path"
         class="relative flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-semibold"
-        :class="isActive(tab.path) || tab.also.some(p => isActive(p)) ? 'text-indigo-600 dark:text-indigo-300' : 'text-gray-500 dark:text-gray-400'"
+        :class="isActive(tab.path) || tab.also.some(p => isActive(p)) ? 'text-gold-400' : 'text-white/80'"
       >
-        <span v-if="isActive(tab.path) || tab.also.some(p => isActive(p))" class="absolute top-0 inset-x-6 h-0.5 rounded-full bg-indigo-500"></span>
+        <span v-if="isActive(tab.path) || tab.also.some(p => isActive(p))" class="absolute top-0 inset-x-5 h-1 rounded-b-full bg-gold-400"></span>
         <component :is="iconMap[tab.icon]" class="w-5 h-5" />
         {{ tab.label }}
         <span v-if="tab.path === '/student/chat' && chatBadge.unreadCount > 0" class="absolute top-1 right-[calc(50%-1.25rem)] min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] leading-4 text-center">{{ chatBadge.unreadCount > 9 ? '9+' : chatBadge.unreadCount }}</span>
         <span v-else-if="badgeFor(tab.path)" class="absolute top-1 right-[calc(50%-1.25rem)] min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] leading-4 text-center">{{ badgeFor(tab.path) > 9 ? '9+' : badgeFor(tab.path) }}</span>
       </RouterLink>
-      <button type="button" class="flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-semibold text-gray-500 dark:text-gray-400" aria-label="Open the full menu" @click="sidebarOpen = true">
+      <button type="button" class="flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-semibold text-white/80" aria-label="Open the full menu" @click="sidebarOpen = true">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
         More
       </button>
@@ -1322,11 +1322,11 @@ const iconMap: Record<string, any> = {
   color: rgb(100 116 139);
   transition: background-color 0.2s, padding 0.3s ease, margin 0.3s ease;
 }
-.nav-fold:focus-visible { outline: 2px solid rgb(21 135 74); outline-offset: 1px; }
+.nav-fold:focus-visible { outline: 2px solid rgb(27 63 160); outline-offset: 1px; }
 .nav-fold-line {
   flex: 1 1 auto;
   height: 1px;
-  background: rgba(21, 135, 74, 0.2);
+  background: rgba(27, 63, 160, 0.2);
   transform-origin: left;
   transition: transform 0.3s ease, opacity 0.2s ease;
 }
@@ -1356,7 +1356,7 @@ const iconMap: Record<string, any> = {
 }
 .nav-fold:hover .nav-fold-chevron,
 .nav-fold:focus-visible .nav-fold-chevron { opacity: 0.75; }
-.nav-fold:hover .nav-fold-line { background: rgba(21, 135, 74, 0.45); }
+.nav-fold:hover .nav-fold-line { background: rgba(27, 63, 160, 0.45); }
 .dark .nav-fold:hover .nav-fold-line { background: rgba(255, 255, 255, 0.22); }
 /* Touch screens have no hover - keep the chevron faintly visible so the fold can be found */
 @media (hover: none) { .nav-fold-chevron { opacity: 0.45; } }
@@ -1365,10 +1365,10 @@ const iconMap: Record<string, any> = {
   min-height: 2rem;
   margin-bottom: 0;
   padding: 0 0.6rem 0 0.9rem;
-  background: rgba(21, 135, 74, 0.06);
+  background: rgba(27, 63, 160, 0.06);
 }
 .dark .is-folded .nav-fold { background: rgba(255, 255, 255, 0.04); color: rgba(255, 255, 255, 0.5); }
-.is-folded .nav-fold:hover { background: rgba(21, 135, 74, 0.12); color: rgb(17 86 51); }
+.is-folded .nav-fold:hover { background: rgba(27, 63, 160, 0.12); color: rgb(20 48 125); }
 .dark .is-folded .nav-fold:hover { background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.85); }
 .is-folded .nav-fold-line { transform: scaleX(0); opacity: 0; flex: 0 0 0; }
 .is-folded .nav-fold-label { flex: 1 1 auto; max-width: 100%; opacity: 1; }

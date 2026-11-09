@@ -228,8 +228,8 @@ const cardPalettes = [
   'bg-violet-600'
 ]
 // One colour per subject (the same subject keeps its colour everywhere on the page)
-// Subject badges: shades of the brand green, and near-black
-const TINTS = ['#15874a', '#126c3d', '#22a45d', '#0f472b', '#1f2937', '#46bf7b', '#115633', '#374151']
+// Subject badges: shades of the brand blue, and near-black
+const TINTS = ['#1b3fa0', '#18398f', '#3a5fc4', '#0f2563', '#1f2937', '#5f80d8', '#14307d', '#374151']
 const tint = (name: string) => TINTS[[...name].reduce((h, c) => h + c.charCodeAt(0), 0) % TINTS.length]
 const code = (name: string | null) => (name || '?').replace(/[^A-Za-z]/g, '').slice(0, 4).toUpperCase()
 

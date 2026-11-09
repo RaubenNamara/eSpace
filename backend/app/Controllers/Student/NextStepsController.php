@@ -47,14 +47,15 @@ class NextStepsController extends Controller
         }
 
         $steps = [];
-        $now = time();
+        // the database's clock, which deadlines are written in (PHP here runs in UTC)
+        $now = strtotime((string) $db->query('SELECT NOW()')->fetchColumn());
 
         // ---- Assessments ------------------------------------------------------------------------
         $assessments = $this->openAssessments($db, $studentId);
         $pendingAssessmentIds = [];
         foreach ($assessments as $a) {
             $due = $a['due_date'] ? strtotime($a['due_date']) : null;
-            if ($due !== null && $due < $now && !(int) $a['allow_late_submission']) {
+            if ($due !== null && $due < $now) {
                 continue; // closed
             }
             $pendingAssessmentIds[(int) $a['id']] = true;

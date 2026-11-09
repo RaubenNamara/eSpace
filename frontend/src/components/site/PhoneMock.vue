@@ -20,7 +20,7 @@
           </div>
           <div class="mt-3 rounded-xl bg-white p-2.5 shadow-sm ring-1 ring-slate-200">
             <div class="h-16 rounded-lg bg-gradient-to-br from-indigo-50 to-indigo-100 flex items-center justify-center">
-              <svg viewBox="0 0 120 40" class="w-28"><rect x="6" y="14" width="108" height="10" rx="2" fill="#15874a" /><rect x="40" y="10" width="26" height="22" rx="2" fill="#7dd8a3" /><path v-for="i in 18" :key="i" :d="`M${8 + i * 6} 24 v${i % 5 === 0 ? 6 : 3}`" stroke="#0f472b" stroke-width="1" /></svg>
+              <svg viewBox="0 0 120 40" class="w-28"><rect x="6" y="14" width="108" height="10" rx="2" fill="#1b3fa0" /><rect x="40" y="10" width="26" height="22" rx="2" fill="#8fa8e6" /><path v-for="i in 18" :key="i" :d="`M${8 + i * 6} 24 v${i % 5 === 0 ? 6 : 3}`" stroke="#0f2563" stroke-width="1" /></svg>
             </div>
           </div>
           <div class="mt-auto mb-3">
@@ -158,7 +158,7 @@
             <span class="leading-tight"><span class="block font-bold">Brian, Joel and Grace</span><span class="block text-[0.5625rem] text-slate-400">Haven't opened the notes</span></span>
           </div>
           <div class="flex-1 px-3 py-3 space-y-2 bg-[#efeae2]">
-            <p class="ml-auto w-fit max-w-[85%] rounded-xl rounded-tr-none bg-[#d9fdd3] px-2.5 py-1.5 shadow-sm">Hello! The Measurements notes are up - start with page 1 tonight, it takes 10 minutes. 📘<span class="block text-right text-[0.5rem] text-sky-500 font-bold">5:02 ✓✓</span></p>
+            <p class="ml-auto w-fit max-w-[85%] rounded-xl rounded-tr-none bg-[#dce4f8] px-2.5 py-1.5 shadow-sm">Hello! The Measurements notes are up - start with page 1 tonight, it takes 10 minutes. 📘<span class="block text-right text-[0.5rem] text-sky-500 font-bold">5:02 ✓✓</span></p>
             <p class="w-fit max-w-[85%] rounded-xl rounded-tl-none bg-white px-2.5 py-1.5 shadow-sm">Yes sir, opening now 👍<span class="block text-right text-[0.5rem] text-slate-400">5:04</span></p>
             <p class="w-fit max-w-[85%] rounded-xl rounded-tl-none bg-white px-2.5 py-1.5 shadow-sm">Thank you sir!<span class="block text-right text-[0.5rem] text-slate-400">5:06</span></p>
           </div>
@@ -224,7 +224,7 @@ const OUTCOMES = [
 .phone-wave { transform-origin: bottom; animation: phone-wave 1s ease-in-out infinite; }
 @keyframes phone-pop { 0% { transform: scale(0.92); opacity: 0; } 60% { transform: scale(1.03); opacity: 1; } 100% { transform: scale(1); } }
 .phone-pop { animation: phone-pop 0.6s ease-out both; }
-@keyframes phone-glow { 0%, 100% { box-shadow: 0 0 0 0 rgba(34, 164, 93, 0.0); } 50% { box-shadow: 0 0 0 4px rgba(34, 164, 93, 0.25); } }
+@keyframes phone-glow { 0%, 100% { box-shadow: 0 0 0 0 rgba(58, 95, 196, 0.0); } 50% { box-shadow: 0 0 0 4px rgba(58, 95, 196, 0.25); } }
 .phone-glow { animation: phone-glow 1.8s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .phone-wave, .phone-pop, .phone-glow { animation: none; } }
 </style>

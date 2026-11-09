@@ -39,7 +39,7 @@
       <!-- Body -->
       <div class="flex-1 overflow-auto bg-gray-200 dark:bg-gray-900">
         <iframe
-          v-if="canEmbed"
+          v-if="canEmbed && signed"
           :src="embedUrl"
           class="w-full h-full border-0"
           title="Presentation preview"
@@ -62,7 +62,7 @@
             :href="absoluteUrl"
             target="_blank"
             rel="noopener"
-            class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium"
+            class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
           >
             Open File
           </a>
@@ -73,7 +73,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { signedFileUrl } from '@/utils/fileLink'
 import type { LibraryBook } from '@/types/library'
 import { resolveAssetUrl } from '@/utils/url'
 import { useAuthStore } from '@/stores/auth'
@@ -98,7 +99,12 @@ const canEmbed = computed(() => {
   return protocol === 'https:' && hostname !== 'localhost' && hostname !== '127.0.0.1'
 })
 
-const embedUrl = computed(() => `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(absoluteUrl.value)}`)
+// Files need a sign-in; Microsoft is given a link that works for an hour
+const signed = ref('')
+onMounted(async () => {
+  if (canEmbed.value) signed.value = await signedFileUrl(resolveAssetUrl(props.book.file_path)).catch(() => '')
+})
+const embedUrl = computed(() => `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(signed.value)}`)
 
 const teacherName = computed(() => {
   if (!props.book.teacher_first_name) return ''

@@ -151,8 +151,8 @@ const visibleGroups = computed(() => groups.value
   .map(g => ({ ...g, count: g.sources.reduce((n, s) => n + s.notes.length, 0) })))
 
 // One colour per subject, for its notebooks' spines
-// Subject badges: shades of the brand green, and near-black
-const TINTS = ['#15874a', '#126c3d', '#22a45d', '#0f472b', '#1f2937', '#46bf7b', '#115633', '#374151']
+// Subject badges: shades of the brand blue, and near-black
+const TINTS = ['#1b3fa0', '#18398f', '#3a5fc4', '#0f2563', '#1f2937', '#5f80d8', '#14307d', '#374151']
 const tint = (subject: string) => TINTS[[...subject].reduce((h, c) => h + c.charCodeAt(0), 0) % TINTS.length]
 
 // A note's heading: its page's own title when it has one (the badge already says which page)

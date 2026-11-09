@@ -2,7 +2,7 @@
   <!-- Marksheets by assessment: a teacher's own assessments, a HOD's department, or (admin) every
        department. Open one for every learner's marks, question by question, and download it as Excel. -->
   <div class="w-full">
-    <PageHeader title="Marksheets" :description="description" icon="clipboard" accent="emerald" filters-right :active-filters="(search.trim() ? 1 : 0) + (classFilter ? 1 : 0) + (departmentFilter ? 1 : 0) + (onlyMarked ? 1 : 0)">
+    <PageHeader title="Marksheets" :description="description" icon="clipboard" accent="indigo" filters-right :active-filters="(search.trim() ? 1 : 0) + (classFilter ? 1 : 0) + (departmentFilter ? 1 : 0) + (onlyMarked ? 1 : 0)">
       <template v-if="!openId" #filters>
         <div class="relative">
           <svg class="w-4 h-4 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"></path></svg>
@@ -13,11 +13,11 @@
         <button
           type="button"
           class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold transition"
-          :class="onlyMarked ? 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200' : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
+          :class="onlyMarked ? 'border-indigo-300 bg-indigo-50 text-indigo-800 dark:border-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-200' : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
           :aria-pressed="onlyMarked"
           @click="onlyMarked = !onlyMarked"
         >
-          <span class="w-3.5 h-3.5 rounded flex items-center justify-center border" :class="onlyMarked ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-gray-400'">
+          <span class="w-3.5 h-3.5 rounded flex items-center justify-center border" :class="onlyMarked ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-gray-400'">
             <svg v-if="onlyMarked" class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="3.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
           </span>
           With marks only
@@ -42,7 +42,7 @@
               {{ [sheet.assessment.subject_name, sheet.assessment.class_label, role !== 'teacher' ? sheet.assessment.teacher_name : null, `out of ${fmtMarks(sheet.assessment.total_marks)}`].filter(Boolean).join(' · ') }}
             </p>
           </div>
-          <button type="button" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm" @click="downloadExcel">
+          <button type="button" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm" @click="downloadExcel">
             <AppIcon name="download" class="w-4 h-4" /> Download Excel{{ classFilter ? ` - ${classFilter}` : '' }}
           </button>
         </div>
@@ -63,8 +63,8 @@
         </div>
 
         <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm border-separate border-spacing-0">
+          <div class="data-table-box">
+            <table class="data-table w-full text-sm border-separate border-spacing-0">
               <thead>
                 <tr class="bg-gray-50 dark:bg-gray-700/60 text-[11px] uppercase tracking-wider text-gray-500 dark:text-gray-400">
                   <th class="sticky left-0 z-10 bg-gray-50 dark:bg-gray-700 px-3 py-2.5 text-left font-bold border-b border-gray-200 dark:border-gray-700 min-w-[12rem]">Learner</th>
@@ -145,12 +145,12 @@
             <PickerDropdown v-if="peopleClassOptions.length > 2" v-model="peopleClass" label="Class" :options="peopleClassOptions" />
             <input v-model="learnerSearch" type="search" placeholder="Search learner or student number" class="flex-1 min-w-[12rem] sm:max-w-xs px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
             <label class="inline-flex items-center gap-2 text-xs font-semibold text-gray-600 dark:text-gray-300 cursor-pointer select-none">
-              <input v-model="peopleWithMarks" type="checkbox" class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"> Learners with marks only
+              <input v-model="peopleWithMarks" type="checkbox" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"> Learners with marks only
             </label>
             <span class="text-xs text-gray-500 dark:text-gray-400">{{ shownPeople.length }} learners · {{ allMarks.columns.length }} assessments</span>
             <button
               type="button"
-              class="sm:ml-auto inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm disabled:opacity-60"
+              class="sm:ml-auto inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm disabled:opacity-60"
               :disabled="!shownPeople.length"
               @click="downloadAllMarks"
             >
@@ -158,14 +158,14 @@
             </button>
           </div>
           <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/80 dark:border-gray-700 shadow-sm overflow-hidden">
-            <div class="overflow-x-auto">
-              <table class="w-full text-sm border-separate border-spacing-0">
+            <div class="data-table-box">
+              <table class="data-table w-full text-sm border-separate border-spacing-0">
                 <thead>
                   <tr class="bg-gray-50 dark:bg-gray-700/60 text-[11px] text-gray-500 dark:text-gray-400">
                     <th class="sticky left-0 z-10 bg-gray-50 dark:bg-gray-700 px-3 py-2.5 text-left font-bold uppercase tracking-wider border-b border-gray-200 dark:border-gray-700 min-w-[12rem]">Learner</th>
                     <th class="px-2 py-2.5 text-left font-bold uppercase tracking-wider border-b border-gray-200 dark:border-gray-700">Class</th>
                     <th v-for="c in allMarks.columns" :key="c.id" class="px-2 py-2 text-center font-semibold border-b border-gray-200 dark:border-gray-700 align-bottom min-w-[6.5rem]">
-                      <button type="button" class="w-full hover:text-emerald-700 dark:hover:text-emerald-300" :title="`Open ${c.title}`" @click="open(c.id)">
+                      <button type="button" class="w-full hover:text-indigo-700 dark:hover:text-indigo-300" :title="`Open ${c.title}`" @click="open(c.id)">
                         <span class="block text-gray-800 dark:text-gray-100 leading-tight line-clamp-2 normal-case">{{ c.title }}</span>
                         <span v-if="c.date" class="block font-normal whitespace-nowrap">{{ c.date }}</span>
                         <span class="block font-semibold text-gray-600 dark:text-gray-300 whitespace-nowrap">out of {{ fmtMarks(c.total) }}</span>
@@ -190,7 +190,7 @@
                 </tbody>
               </table>
             </div>
-            <button v-if="shownPeople.length > peopleLimit" type="button" class="w-full py-3 border-t border-gray-100 dark:border-gray-700 text-sm font-semibold text-emerald-700 dark:text-emerald-300 hover:bg-gray-50 dark:hover:bg-gray-700/40" @click="peopleLimit += 100">
+            <button v-if="shownPeople.length > peopleLimit" type="button" class="w-full py-3 border-t border-gray-100 dark:border-gray-700 text-sm font-semibold text-indigo-700 dark:text-indigo-300 hover:bg-gray-50 dark:hover:bg-gray-700/40" @click="peopleLimit += 100">
               Show more ({{ shownPeople.length - peopleLimit }} left)
             </button>
           </div>
@@ -205,7 +205,7 @@
           </h3>
           <ul class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/80 dark:border-gray-700 shadow-sm overflow-hidden divide-y divide-gray-100 dark:divide-gray-700">
             <li v-for="a in group.items" :key="a.id">
-              <button type="button" class="group w-full flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 px-4 py-3 text-left hover:bg-emerald-50/40 dark:hover:bg-gray-700/40 transition-colors" @click="open(a.id)">
+              <button type="button" class="group w-full flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 px-4 py-3 text-left hover:bg-indigo-50/40 dark:hover:bg-gray-700/40 transition-colors" @click="open(a.id)">
                 <!-- the average, at a glance -->
                 <span class="w-12 h-12 flex-shrink-0 rounded-xl flex flex-col items-center justify-center" :class="avgTile(a.average)">
                   <span class="text-sm font-extrabold tabular-nums leading-none">{{ a.average === null ? '-' : `${Math.round(a.average)}` }}</span>
@@ -228,7 +228,7 @@
                     <span class="block h-full rounded-full" :class="a.handed_in && a.marked >= a.handed_in ? 'bg-emerald-500' : 'bg-amber-400'" :style="{ width: `${a.handed_in ? (a.marked / a.handed_in) * 100 : 0}%` }"></span>
                   </span>
                 </span>
-                <span class="flex-shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-emerald-600 text-emerald-700 dark:text-emerald-300 text-xs font-semibold group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                <span class="flex-shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-indigo-600 text-indigo-700 dark:text-indigo-300 text-xs font-semibold group-hover:bg-indigo-600 group-hover:text-white transition-colors">
                   Open
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
                 </span>
@@ -242,6 +242,7 @@
 </template>
 
 <script setup lang="ts">
+import { GRADE_BG } from '@/utils/grades'
 import { computed, ref, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
@@ -290,7 +291,6 @@ const STATUS: Record<Status, { label: string; cls: string }> = {
   marked: { label: 'Marked', cls: 'bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300' },
   returned: { label: 'Returned', cls: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' }
 }
-const GRADE_BG: Record<string, string> = { A: 'bg-emerald-500', B: 'bg-indigo-500', C: 'bg-amber-400', D: 'bg-orange-500', E: 'bg-rose-500', F: 'bg-rose-600' }
 const pctTone = (p: number | null) => (p === null ? 'text-gray-400' : p >= 70 ? 'text-emerald-700 dark:text-emerald-300 font-semibold' : p >= 50 ? 'text-amber-700 dark:text-amber-300 font-semibold' : 'text-rose-700 dark:text-rose-300 font-semibold')
 // the average tile on each row
 const avgTile = (p: number | null) => (p === null ? 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-400'

@@ -116,7 +116,7 @@
             <button
               v-if="credentials.length"
               @click="downloadCredentials"
-              class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
             >
               Download Credentials
             </button>

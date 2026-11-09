@@ -48,8 +48,8 @@
             Your complete digital learning workspace
           </div>
 
-          <h2 class="max-w-xl 2xl:max-w-3xl text-4xl font-bold leading-tight tracking-tight text-white drop-shadow-sm xl:text-6xl xl:leading-[1.08] 2xl:text-7xl">
-            Learn, teach and grow <span class="text-indigo-300">together.</span>
+          <h2 class="font-heading max-w-xl 2xl:max-w-3xl text-4xl font-bold leading-tight tracking-tight text-white drop-shadow-sm xl:text-6xl xl:leading-[1.08] 2xl:text-7xl">
+            Learn, teach and grow <span class="text-gold-400">together.</span>
           </h2>
 
           <p class="mt-6 max-w-xl 2xl:max-w-2xl text-base leading-8 text-white/85 xl:text-lg 2xl:text-xl 2xl:leading-9">
@@ -79,7 +79,7 @@
 
       <!-- Right section -->
       <section
-        class="flex min-h-screen flex-1 items-center justify-center bg-indigo-50/50 px-4 py-8 dark:bg-slate-900 sm:px-8 lg:px-10"
+        class="flex min-h-screen flex-1 items-center justify-center bg-cream-100 px-4 py-8 dark:bg-slate-900 sm:px-8 lg:px-10"
       >
         <div class="w-full max-w-[460px] animate-card-in">
           <!-- Mobile logo -->
@@ -143,7 +143,7 @@
               </div>
 
               <h2
-                class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl"
+                class="font-heading text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl"
               >
                 Welcome back
               </h2>

@@ -38,7 +38,7 @@
         <span class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold text-indigo-100 print:hidden">
           <span class="w-1.5 h-1.5 rounded-full bg-indigo-300"></span>User guide
         </span>
-        <h1 class="mt-4 font-jakarta text-3xl sm:text-5xl font-extrabold tracking-tight">How to use Tusome</h1>
+        <h1 class="mt-4 font-heading text-3xl sm:text-5xl font-extrabold tracking-tight">How to use Tusome</h1>
         <p class="mt-3 max-w-2xl text-white/80 print:text-slate-600">Short, step-by-step help for students, teachers, heads of department and administrators. Pick your role, or search for what you want to do.</p>
         <div class="mt-7 flex flex-wrap gap-2 print:hidden">
           <a v-for="p in GUIDE" :key="p.key" :href="`#${p.key}`" class="px-4 py-2 rounded-xl text-sm font-semibold bg-white/10 ring-1 ring-white/15 text-white hover:bg-white hover:text-indigo-950 transition" @click="search = ''">{{ p.label }}</a>
@@ -63,7 +63,7 @@
 
         <section v-for="p in shownParts" :id="p.key" :key="p.key" class="mb-14 scroll-mt-24">
           <div class="mb-6 pb-3 border-b border-slate-200 dark:border-white/10">
-            <h2 class="flex items-center gap-3 font-jakarta text-2xl sm:text-3xl font-extrabold tracking-tight"><span class="w-1.5 h-7 rounded-full bg-indigo-600" aria-hidden="true"></span>{{ p.label }}</h2>
+            <h2 class="flex items-center gap-3 font-heading text-2xl sm:text-3xl font-extrabold tracking-tight"><span class="w-1.5 h-7 rounded-full bg-indigo-600" aria-hidden="true"></span>{{ p.label }}</h2>
             <p class="mt-1 text-slate-600 dark:text-slate-400">{{ p.blurb }}</p>
           </div>
           <div class="grid gap-5">
@@ -91,7 +91,7 @@
         </section>
 
         <div class="mt-4 rounded-3xl bg-indigo-950 dark:bg-white/5 dark:border dark:border-white/10 p-6 sm:p-8 text-white print:hidden">
-          <h2 class="font-jakarta text-xl font-bold">Still stuck?</h2>
+          <h2 class="font-heading text-xl font-bold">Still stuck?</h2>
           <p class="mt-1 text-sm text-indigo-100/80">Ask a teacher or your school's Tusome administrator - or, if your school isn't on Tusome yet, request a demo. You can also write to us at <a :href="`mailto:${SUPPORT_EMAIL}`" class="font-semibold text-white underline">{{ SUPPORT_EMAIL }}</a>.</p>
           <div class="mt-4 flex flex-wrap gap-2">
             <router-link :to="account.to" class="px-4 py-2 rounded-xl text-sm font-semibold bg-white text-slate-900">{{ account.label }}</router-link>

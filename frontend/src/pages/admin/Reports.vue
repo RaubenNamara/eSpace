@@ -223,7 +223,7 @@
           v-if="selectedClassId"
           :disabled="bulkDownloading || generatedCount === 0"
           @click="downloadClassPdf"
-          class="px-4 py-2 text-sm font-medium rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          class="px-4 py-2 text-sm font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {{ bulkDownloading ? `Preparing (${bulkProgress}/${generatedCount})...` : `Download Class PDF (${generatedCount})` }}
         </button>
@@ -389,6 +389,7 @@
 </template>
 
 <script setup lang="ts">
+import { gradeBg } from '@/utils/grades'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import axios from 'axios'
@@ -429,12 +430,6 @@ const CATEGORY_SHORT_LABELS: Record<CompetencyCategory, string> = {
   EOC: 'Elements of Construct',
 }
 
-const gradeBg = (grade: string | null) => {
-  const colors: Record<string, string> = {
-    A: 'bg-emerald-600', B: 'bg-indigo-600', C: 'bg-amber-500', D: 'bg-orange-500', E: 'bg-red-600',
-  }
-  return grade ? colors[grade] || 'bg-gray-400' : 'bg-gray-300'
-}
 
 // --- Student Competency Reports (LOA/AOI/EOC) -------------------------------------------------
 

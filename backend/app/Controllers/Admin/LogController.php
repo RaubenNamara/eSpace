@@ -166,6 +166,149 @@ class LogController extends Controller
         $this->success(['times' => $times]);
     }
 
+    /**
+     * Usage and sign-ins over a day, a week, a month or the current term, for a printed report:
+     * who signed in (by role, against the people on roll), sign-ins day by day (hour by hour for a
+     * day), what was done - learning and teaching - and the staff who did not sign in at all.
+     * GET /admin/logs/report?period=day|week|month|term
+     */
+    public function report(): void
+    {
+        if (!$this->isAdmin()) {
+            $this->forbidden();
+            return;
+        }
+        $db = $this->db;
+        $period = (string) $this->query('period', 'week');
+        if (!in_array($period, ['day', 'week', 'month', 'term'], true)) {
+            $period = 'week';
+        }
+
+        // The window, on the database's clock (sign-ins are written in its time)
+        $now = (string) $db->query('SELECT NOW()')->fetchColumn();
+        $today = substr($now, 0, 10);
+        if ($period === 'day') {
+            $from = $today . ' 00:00:00';
+            $label = 'Today, ' . date('j F Y', strtotime($today));
+        } elseif ($period === 'week') {
+            $from = date('Y-m-d 00:00:00', strtotime($today . ' -6 days'));
+            $label = 'The last 7 days (' . date('j M', strtotime($from)) . ' - ' . date('j M Y', strtotime($today)) . ')';
+        } elseif ($period === 'month') {
+            $from = substr($today, 0, 8) . '01 00:00:00';
+            $label = date('F Y', strtotime($today));
+        } else {
+            $term = $db->query("SELECT name, start_date, end_date FROM terms WHERE is_current = 1 AND deleted_at IS NULL ORDER BY start_date DESC LIMIT 1")->fetch(\PDO::FETCH_ASSOC);
+            $from = ($term['start_date'] ?? date('Y-m-d', strtotime($today . ' -90 days'))) . ' 00:00:00';
+            $label = $term ? $term['name'] . ' (' . date('j M', strtotime($term['start_date'])) . ' - ' . date('j M Y', strtotime($term['end_date'])) . ')' : 'This term';
+        }
+        $w = ['from' => $from, 'to' => $now];
+        // One figure over the window; a table or column this database lacks counts as nothing
+        $count = function (string $sql, array $params = []) use ($db): int {
+            try {
+                $stmt = $db->prepare($sql);
+                $stmt->execute($params);
+                return (int) $stmt->fetchColumn();
+            } catch (\PDOException $e) {
+                return 0;
+            }
+        };
+        $in = 'BETWEEN :from AND :to';
+
+        // ---- sign-ins by role, against the people on roll
+        $onRoll = [
+            'student' => $count('SELECT COUNT(*) FROM students WHERE deleted_at IS NULL AND is_active = 1'),
+            'teacher' => $count('SELECT COUNT(*) FROM teachers WHERE deleted_at IS NULL AND is_active = 1'),
+            'hod' => $count('SELECT COUNT(*) FROM hods WHERE deleted_at IS NULL AND is_active = 1'),
+        ];
+        $stmt = $db->prepare("SELECT role, COUNT(*) AS logins, COUNT(DISTINCT user_id) AS people FROM login_logs WHERE logged_in_at $in GROUP BY role");
+        $stmt->execute($w);
+        $byRole = [];
+        foreach ($stmt->fetchAll(\PDO::FETCH_ASSOC) as $r) {
+            $byRole[$r['role']] = ['logins' => (int) $r['logins'], 'people' => (int) $r['people']];
+        }
+        $roles = [];
+        foreach (['student' => 'Students', 'teacher' => 'Teachers', 'hod' => 'Heads of department', 'admin' => 'Administrators', 'super_admin' => 'Super admins'] as $key => $name) {
+            $people = $byRole[$key]['people'] ?? 0;
+            $roll = $onRoll[$key] ?? null;
+            if (!$roll && !$people) {
+                continue;
+            }
+            $roles[] = [
+                'role' => $name,
+                'people' => $people,
+                'on_roll' => $roll,
+                'percent' => $roll ? (int) round(100 * $people / $roll) : null,
+                'logins' => $byRole[$key]['logins'] ?? 0,
+            ];
+        }
+
+        // ---- sign-ins over time: hour by hour for a day, otherwise day by day
+        $slot = $period === 'day' ? "DATE_FORMAT(logged_in_at, '%H:00')" : 'DATE(logged_in_at)';
+        $stmt = $db->prepare("SELECT $slot AS slot, COUNT(*) AS logins, COUNT(DISTINCT role, user_id) AS people FROM login_logs WHERE logged_in_at $in GROUP BY slot ORDER BY slot");
+        $stmt->execute($w);
+        $series = array_map(fn ($r) => ['slot' => (string) $r['slot'], 'logins' => (int) $r['logins'], 'people' => (int) $r['people']], $stmt->fetchAll(\PDO::FETCH_ASSOC));
+
+        // ---- what was done
+        $learning = [
+            ['label' => 'Learners active (any learning)', 'value' => $count('SELECT COUNT(DISTINCT student_id) FROM learning_activity_days WHERE day BETWEEN DATE(:from) AND DATE(:to)', $w)],
+            ['label' => 'eNote pages read', 'value' => $count("SELECT COUNT(*) FROM enote_page_views WHERE last_viewed_at $in", $w)],
+            ['label' => 'eLibrary books opened', 'value' => $count("SELECT COUNT(*) FROM library_progress WHERE last_read_at $in", $w)],
+            ['label' => 'Videos watched', 'value' => $count("SELECT COUNT(*) FROM video_views WHERE last_watched_at $in", $w)],
+            ['label' => 'Live class attendances', 'value' => $count("SELECT COUNT(*) FROM live_class_attendance WHERE join_time $in", $w)],
+            ['label' => 'ICT Lab practicals finished', 'value' => $count("SELECT COUNT(*) FROM ict_lab_attempts WHERE completed_at $in", $w)],
+            ['label' => 'Chat messages sent', 'value' => $count("SELECT COUNT(*) FROM chat_messages WHERE created_at $in", $w)],
+        ];
+        $teaching = [
+            ['label' => 'Assessments published', 'value' => $count("SELECT COUNT(*) FROM assignments WHERE deleted_at IS NULL AND published_at $in", $w)],
+            ['label' => 'Scripts handed in', 'value' => $count("SELECT COUNT(*) FROM assignment_submissions WHERE deleted_at IS NULL AND submitted_at $in", $w)],
+            ['label' => 'Scripts marked', 'value' => $count("SELECT COUNT(*) FROM assignment_submissions WHERE deleted_at IS NULL AND COALESCE(graded_at, marked_at) $in", $w)],
+            ['label' => 'Results returned to learners', 'value' => $count("SELECT COUNT(*) FROM assignment_submissions WHERE deleted_at IS NULL AND released_at $in", $w)],
+            ['label' => 'Live classes held', 'value' => $count("SELECT COUNT(*) FROM live_classes WHERE deleted_at IS NULL AND COALESCE(actual_start, scheduled_start) $in", $w)],
+        ];
+
+        // ---- staff who did not sign in at all during the period (to follow up)
+        $quiet = [];
+        foreach (['teacher' => ['teachers', 'Teacher'], 'hod' => ['hods', 'Head of department']] as $role => [$table, $roleName]) {
+            try {
+                $stmt = $db->prepare(
+                    "SELECT CONCAT(p.first_name, ' ', p.last_name) AS name,
+                            (SELECT MAX(l2.logged_in_at) FROM login_logs l2 WHERE l2.role = :role2 AND l2.user_id = p.id) AS last_seen
+                     FROM {$table} p
+                     WHERE p.deleted_at IS NULL AND p.is_active = 1
+                       AND NOT EXISTS (SELECT 1 FROM login_logs l WHERE l.role = :role AND l.user_id = p.id AND l.logged_in_at BETWEEN :from AND :to)
+                     ORDER BY p.first_name, p.last_name"
+                );
+                $stmt->execute($w + ['role' => $role, 'role2' => $role]);
+                foreach ($stmt->fetchAll(\PDO::FETCH_ASSOC) as $r) {
+                    $quiet[] = ['name' => $r['name'], 'role' => $roleName, 'last_seen' => $r['last_seen']];
+                }
+            } catch (\PDOException $e) {
+                // that table isn't on this database
+            }
+        }
+
+        $busiest = null;
+        foreach ($series as $row) {
+            if ($busiest === null || $row['logins'] > $busiest['logins']) {
+                $busiest = $row;
+            }
+        }
+
+        $this->success([
+            'period' => $period,
+            'label' => $label,
+            'from' => $from,
+            'to' => $now,
+            'total_logins' => array_sum(array_column($series, 'logins')),
+            'busiest' => $busiest,
+            'roles' => $roles,
+            'series' => $series,
+            'learning' => $learning,
+            'teaching' => $teaching,
+            'staff_not_signed_in' => $quiet,
+        ]);
+    }
+
     private function isAdmin(): bool
     {
         $role = $this->getCurrentUserRole();

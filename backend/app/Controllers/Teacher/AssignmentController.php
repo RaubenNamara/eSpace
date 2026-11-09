@@ -1929,6 +1929,37 @@ class AssignmentController extends Controller
         $stmt->execute(['assignment_id' => $assignmentId]);
         $submissions = $stmt->fetchAll();
 
+        // How far each learner got: the questions with something in them - typed, drawn or uploaded -
+        // so work never handed in still shows where the learner stopped
+        $total = $db->prepare('SELECT COUNT(*) FROM assignment_questions WHERE assignment_id = ? AND parent_question_id IS NULL AND deleted_at IS NULL');
+        $total->execute([$assignmentId]);
+        $questions = (int) $total->fetchColumn();
+        $answered = [];
+        $stmt = $db->prepare(
+            "SELECT x.submission_id, COUNT(DISTINCT x.question_id) AS n FROM (
+                SELECT a.submission_id, a.question_id FROM assignment_answers a
+                 WHERE (TRIM(COALESCE(a.answer_text, '')) <> '' OR a.student_attachment_path IS NOT NULL)
+                UNION SELECT n.submission_id, n.question_id FROM student_answer_annotations n
+                UNION SELECT f.submission_id, f.question_id FROM assignment_answer_attachments f
+             ) x
+             INNER JOIN assignment_submissions sb ON sb.id = x.submission_id AND sb.assignment_id = ?
+             INNER JOIN assignment_questions q ON q.id = x.question_id AND q.parent_question_id IS NULL
+             GROUP BY x.submission_id"
+        );
+        $stmt->execute([$assignmentId]);
+        foreach ($stmt->fetchAll(\PDO::FETCH_ASSOC) as $r) {
+            $answered[(int) $r['submission_id']] = (int) $r['n'];
+        }
+        $passed = $db->prepare('SELECT COALESCE(deadline_at, due_date) < NOW() FROM assignments WHERE id = ?');
+        $passed->execute([$assignmentId]);
+        $deadlinePassed = (bool) $passed->fetchColumn();
+        foreach ($submissions as &$sub) {
+            $sub['questions_total'] = $questions;
+            $sub['questions_answered'] = min($questions, $answered[(int) $sub['id']] ?? 0);
+            $sub['deadline_passed'] = $deadlinePassed;
+        }
+        unset($sub);
+
         $this->success($submissions);
     }
 

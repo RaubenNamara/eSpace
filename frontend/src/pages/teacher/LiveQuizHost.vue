@@ -38,7 +38,7 @@
       <div class="flex items-start gap-5">
         <div class="flex-1 min-w-0">
           <p class="text-sm font-semibold text-slate-400">Question {{ state.index + 1 }} of {{ state.total }}<span v-if="state.question?.type === 'multiple_choice_multiple'"> · pick all that are right</span></p>
-          <div class="mt-2 font-jakarta text-2xl sm:text-4xl font-bold leading-snug quiz-text" v-html="state.question?.text"></div>
+          <div class="mt-2 font-jakarta text-2xl sm:text-4xl font-bold leading-snug quiz-text" v-html="safeHtml(state.question?.text)"></div>
           <img v-if="state.question?.image" :src="resolveAssetUrl(state.question.image)" alt="" class="mt-4 max-h-64 rounded-xl bg-white">
         </div>
         <!-- Countdown -->
@@ -117,7 +117,7 @@
         <template v-else-if="state.counts_on_map">
           <p class="font-semibold">Count these scores on the Learning Map?</p>
           <p class="mt-1 text-sm text-slate-300">Every question in "{{ state.assignment.title }}" marks itself, so each player's score can stand as their result - just as if they had done it on their own. Anyone who already did it keeps their own result.</p>
-          <button type="button" :disabled="busy || !state.players.length" class="mt-4 px-5 py-2.5 rounded-xl font-bold bg-emerald-500 text-slate-950 hover:bg-emerald-400 disabled:opacity-50" @click="save">Save to the Learning Map</button>
+          <button type="button" :disabled="busy || !state.players.length" class="mt-4 px-5 py-2.5 rounded-xl font-bold bg-indigo-500 text-slate-950 hover:bg-indigo-400 disabled:opacity-50" @click="save">Save to the Learning Map</button>
         </template>
         <template v-else>
           <p class="font-semibold">Practice round</p>
@@ -145,6 +145,7 @@
 </template>
 
 <script setup lang="ts">
+import { safeHtml } from '@/utils/safeHtml'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'

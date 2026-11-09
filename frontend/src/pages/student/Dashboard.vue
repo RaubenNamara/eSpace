@@ -13,7 +13,7 @@
     <!-- Greeting -->
     <header class="mb-3">
       <p class="text-sm font-semibold text-indigo-600 dark:text-indigo-400">{{ today }}</p>
-      <h1 class="text-2xl sm:text-[1.7rem] font-extrabold tracking-tight text-gray-900 dark:text-white truncate">{{ greeting }}, {{ firstName }}</h1>
+      <h1 class="font-heading text-2xl sm:text-[1.8rem] font-bold text-gray-900 dark:text-white truncate">{{ greeting }}, {{ firstName }}</h1>
     </header>
 
     <NoticesTicker role="student" />
@@ -181,8 +181,8 @@ const dueText = (v: string | null) => {
   return `due ${d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}`
 }
 
-// Subject badges: shades of the brand green, and near-black
-const TINTS = ['#15874a', '#126c3d', '#22a45d', '#0f472b', '#1f2937', '#46bf7b', '#115633', '#374151']
+// Subject badges: shades of the brand blue, and near-black
+const TINTS = ['#1b3fa0', '#18398f', '#3a5fc4', '#0f2563', '#1f2937', '#5f80d8', '#14307d', '#374151']
 const tint = (name: string) => TINTS[[...name].reduce((h, c) => h + c.charCodeAt(0), 0) % TINTS.length]
 const code = (name: string) => name.replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase() || '?'
 

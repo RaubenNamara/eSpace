@@ -84,9 +84,9 @@ defineProps<{
   font-weight: 600;
   letter-spacing: 0.02em;
   color: #fff;
-  background: #115633;
+  background: #14307d;
   border-radius: 8px;
-  box-shadow: 0 1px 2px rgba(15, 40, 25, 0.25);
+  box-shadow: 0 1px 2px rgba(12, 24, 66, 0.25);
   max-width: 100%;
 }
 
@@ -129,10 +129,10 @@ defineProps<{
   border-radius: 14px;
   overflow: hidden;
   background:
-    linear-gradient(to bottom, rgba(21, 80, 50, 0.05), transparent 35%),
+    linear-gradient(to bottom, rgba(20, 48, 125, 0.05), transparent 35%),
     linear-gradient(180deg, #f4f9f5, #e8f2ec);
-  box-shadow: inset 0 1px 4px rgba(15, 40, 25, 0.06), 0 1px 2px rgba(15, 40, 25, 0.05);
-  border: 1px solid rgba(21, 80, 50, 0.12);
+  box-shadow: inset 0 1px 4px rgba(12, 24, 66, 0.06), 0 1px 2px rgba(12, 24, 66, 0.05);
+  border: 1px solid rgba(20, 48, 125, 0.12);
 }
 
 .dark .shelf-cabinet {
@@ -182,9 +182,9 @@ defineProps<{
     #ffffff var(--plank-top),
     #f1f6f3 calc(var(--plank-top) + 4px),
     #dce8e1 calc(var(--plank-top) + var(--plank-h) - 3px),
-    #15874a calc(var(--plank-top) + var(--plank-h) - 3px),
-    #15874a calc(var(--plank-top) + var(--plank-h)),
-    rgba(15, 40, 25, 0.16) calc(var(--plank-top) + var(--plank-h)),
+    #1b3fa0 calc(var(--plank-top) + var(--plank-h) - 3px),
+    #1b3fa0 calc(var(--plank-top) + var(--plank-h)),
+    rgba(12, 24, 66, 0.16) calc(var(--plank-top) + var(--plank-h)),
     transparent calc(var(--plank-top) + var(--plank-h) + 8px),
     transparent var(--row-pitch)
   );
@@ -232,7 +232,7 @@ defineProps<{
   padding-bottom: 10px;
   font-size: 12px;
   font-style: italic;
-  color: rgba(17, 86, 51, 0.6);
+  color: rgba(20, 48, 125, 0.6);
   white-space: nowrap;
 }
 
@@ -248,8 +248,8 @@ defineProps<{
     #3a4a41 var(--plank-top),
     #2c3a33 calc(var(--plank-top) + 4px),
     #24302a calc(var(--plank-top) + var(--plank-h) - 3px),
-    #22a45d calc(var(--plank-top) + var(--plank-h) - 3px),
-    #22a45d calc(var(--plank-top) + var(--plank-h)),
+    #3a5fc4 calc(var(--plank-top) + var(--plank-h) - 3px),
+    #3a5fc4 calc(var(--plank-top) + var(--plank-h)),
     rgba(0, 0, 0, 0.35) calc(var(--plank-top) + var(--plank-h)),
     transparent calc(var(--plank-top) + var(--plank-h) + 8px),
     transparent var(--row-pitch)

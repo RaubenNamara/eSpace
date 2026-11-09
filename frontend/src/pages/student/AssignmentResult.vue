@@ -43,27 +43,33 @@
         </RouterLink>
       </div>
 
-      <!-- Marks / Grade summary (result mode only) -->
-      <div v-if="(mode === 'result' || oversightRole) && summary" class="grid grid-cols-4 gap-1.5 sm:gap-3 mb-4 sm:mb-6">
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 px-1.5 py-2 sm:p-3 text-center min-w-0">
-          <p class="text-[10.5px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400">Marks</p>
-          <p class="text-sm sm:text-xl font-extrabold text-gray-900 dark:text-white truncate">{{ fmtMarks(summary.marks_awarded) }} / {{ fmtMarks(summary.total_marks) }}</p>
+      <!-- The result as a certificate: cream paper in a gold frame, the school's crest, and the
+           grade - in a gold seal for an A or B (result mode only) -->
+      <section v-if="(mode === 'result' || oversightRole) && summary" class="result-cert mb-4 sm:mb-6">
+        <div class="flex items-center gap-3">
+          <img v-if="school?.logo && !logoFailed" :src="resolveAssetUrl(school.logo)" alt="" class="w-11 h-11 sm:w-12 sm:h-12 rounded-full object-contain bg-white ring-1 ring-gold-300 flex-shrink-0" @error="logoFailed = true">
+          <div class="min-w-0">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-gold-700 dark:text-gold-300">Assessment result</p>
+            <p v-if="school?.name" class="font-heading text-base sm:text-lg font-semibold text-indigo-900 dark:text-white capitalize truncate">{{ school.name }}</p>
+          </div>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 px-1.5 py-2 sm:p-3 text-center min-w-0">
-          <p class="text-[10.5px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400">Percentage</p>
-          <p class="text-sm sm:text-xl font-extrabold text-gray-900 dark:text-white">{{ summary.percentage }}%</p>
+        <div class="mt-4 flex items-center gap-4 sm:gap-6">
+          <div class="cert-seal flex-shrink-0" :class="honours ? 'cert-seal-gold' : ''" :style="honours ? undefined : { background: gradeHex(summary.grade) }" :aria-label="`Grade ${summary.grade || 'not given'}`">
+            <span class="font-heading text-3xl sm:text-4xl font-bold leading-none">{{ summary.grade || '–' }}</span>
+            <span class="mt-0.5 text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider">{{ gradeStatus.label }}</span>
+          </div>
+          <dl class="grid grid-cols-2 gap-x-6 gap-y-2 min-w-0">
+            <div>
+              <dt class="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Marks</dt>
+              <dd class="font-heading text-xl sm:text-2xl font-bold text-gray-900 dark:text-white tabular-nums">{{ fmtMarks(summary.marks_awarded) }}<span class="text-sm font-normal text-gray-500"> / {{ fmtMarks(summary.total_marks) }}</span></dd>
+            </div>
+            <div>
+              <dt class="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Percentage</dt>
+              <dd class="font-heading text-xl sm:text-2xl font-bold text-gray-900 dark:text-white tabular-nums">{{ summary.percentage }}%</dd>
+            </div>
+          </dl>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 px-1.5 py-2 sm:p-3 text-center min-w-0">
-          <p class="text-[10.5px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400">Grade</p>
-          <p class="text-sm sm:text-xl font-extrabold text-indigo-600 dark:text-indigo-400">{{ summary.grade }}</p>
-        </div>
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 px-1.5 py-2 sm:p-3 text-center min-w-0">
-          <p class="text-[10.5px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400">Status</p>
-          <p class="text-sm sm:text-xl font-extrabold truncate" :class="gradeStatus.color">
-            {{ gradeStatus.label }}
-          </p>
-        </div>
-      </div>
+      </section>
 
       <!-- General feedback -->
       <div v-if="(mode === 'result' || oversightRole) && submission.feedback" class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
@@ -94,14 +100,14 @@
             </div>
             <div class="min-w-0">
               <div class="min-w-0 overflow-x-auto">
-                <p v-if="question.question_text" class="text-[15px] font-medium leading-relaxed text-gray-900 dark:text-white mb-1 break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.question_text"></p>
-                <p v-else-if="question.scenario_text" class="text-gray-700 dark:text-gray-300 mb-1 break-words text-justify [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.scenario_text"></p>
+                <p v-if="question.question_text" class="text-[15px] font-medium leading-relaxed text-gray-900 dark:text-white mb-1 break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="safeHtml(question.question_text)"></p>
+                <p v-else-if="question.scenario_text" class="text-gray-700 dark:text-gray-300 mb-1 break-words text-justify [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="safeHtml(question.scenario_text)"></p>
               </div>
             </div>
           </div>
 
           <div v-if="question.scenario_text && question.question_text" class="bg-gray-50 dark:bg-gray-700/50 p-3 sm:p-4 rounded-lg mb-4 overflow-x-auto">
-            <p class="text-gray-700 dark:text-gray-300 whitespace-pre-line break-words text-justify [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.scenario_text"></p>
+            <p class="text-gray-700 dark:text-gray-300 whitespace-pre-line break-words text-justify [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="safeHtml(question.scenario_text)"></p>
           </div>
 
           <!-- Objective (MCQ/true-false) questions: the answer in words -->
@@ -183,6 +189,9 @@
 </template>
 
 <script setup lang="ts">
+import { gradeHex, isHonours } from '@/utils/grades'
+import { resolveAssetUrl } from '@/utils/url'
+import { safeHtml } from '@/utils/safeHtml'
 import { fmtMarks } from '@/utils/marks'
 import VoiceNote from '@/components/assignment/VoiceNote.vue'
 import PracticalWorkView from '@/components/practical/PracticalWorkView.vue'
@@ -194,7 +203,6 @@ import { TYPED_ANSWER_PAGE } from '@/types'
 import AnnotationCanvas from '@/components/assignment/AnnotationCanvas.vue'
 import PdfAnnotationViewer from '@/components/assignment/PdfAnnotationViewer.vue'
 import { createTypedAnswerLayer, htmlToPlainText, handwritingFontReady, answerLook, sheetWidth } from '@/composables/useAnnotationCanvas'
-import { resolveAssetUrl } from '@/utils/url'
 import { isPlaceholderAttachmentName } from '@/utils/answerAttachment'
 import { objectiveAnswerText } from '@/utils/objectiveAnswer'
 
@@ -215,12 +223,15 @@ const submission = ref<any>(null)
 const answers = ref<any[]>([])
 const questions = ref<any[]>([])
 const summary = ref<{ marks_awarded: number; total_marks: number; percentage: number; grade: string } | null>(null)
+const school = ref<{ name: string | null; logo: string | null } | null>(null)
+const logoFailed = ref(false)
+const honours = computed(() => isHonours(summary.value?.grade))
 const evidenceImageDims = ref<Record<number, { width: number; height: number }>>({})
 const additionalFileImageDims = ref<Record<number, { width: number; height: number }>>({})
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp']
 
 const gradingScale = [
-  { grade: 'A', label: 'Exceptional', color: 'text-green-600 dark:text-green-400' },
+  { grade: 'A', label: 'Exceptional', color: 'text-emerald-700 dark:text-emerald-400' },
   { grade: 'B', label: 'Outstanding', color: 'text-indigo-600 dark:text-indigo-400' },
   { grade: 'C', label: 'Satisfactory', color: 'text-indigo-600 dark:text-indigo-400' },
   { grade: 'D', label: 'Basic', color: 'text-indigo-600 dark:text-indigo-400' },
@@ -449,6 +460,7 @@ const load = async () => {
       answers.value = response.data.data.answers || []
       questions.value = response.data.data.questions || []
       summary.value = response.data.data.summary || null
+      school.value = response.data.data.school || null
       measureImages()
     } else {
       error.value = response.data.message || 'Failed to load submission'
@@ -478,4 +490,36 @@ onMounted(load)
 html.dark .mark-sheet-frame {
   border-color: #374151;
 }
+</style>
+
+<style scoped>
+/* The result's certificate: cream paper inside a thin gold frame */
+.result-cert {
+  position: relative;
+  padding: 1.25rem 1.25rem 1.4rem;
+  border-radius: 1rem;
+  background: #fdfaf3;
+  border: 1px solid #edc95a;
+  box-shadow: inset 0 0 0 4px #fdfaf3, inset 0 0 0 5px rgba(217, 165, 32, 0.45), 0 1px 3px rgba(12, 24, 66, 0.08);
+}
+.dark .result-cert { background: #14223f; border-color: rgba(217, 165, 32, 0.5); box-shadow: inset 0 0 0 4px #14223f, inset 0 0 0 5px rgba(217, 165, 32, 0.3); }
+.cert-seal {
+  width: 5.5rem;
+  height: 5.5rem;
+  border-radius: 9999px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.35), 0 2px 6px rgba(0, 0, 0, 0.15);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.cert-seal-gold {
+  color: #4a3705;
+  background: radial-gradient(circle at 35% 30%, #faeec6, #e5b836 55%, #b8871a);
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.45), 0 0 0 3px #d9a520, 0 3px 8px rgba(138, 98, 0, 0.35);
+}
+@media (min-width: 640px) { .cert-seal { width: 6.5rem; height: 6.5rem; } }
 </style>

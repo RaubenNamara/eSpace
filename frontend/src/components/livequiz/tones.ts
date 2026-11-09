@@ -2,7 +2,7 @@
 export const OPTION_TONES = [
   { solid: 'bg-indigo-600', soft: 'bg-indigo-600/90 hover:bg-indigo-600', bar: 'bg-indigo-500' },
   { solid: 'bg-amber-500', soft: 'bg-amber-500/90 hover:bg-amber-500', bar: 'bg-amber-400' },
-  { solid: 'bg-emerald-600', soft: 'bg-emerald-600/90 hover:bg-emerald-600', bar: 'bg-emerald-500' },
+  { solid: 'bg-indigo-600', soft: 'bg-indigo-600/90 hover:bg-indigo-600', bar: 'bg-indigo-500' },
   { solid: 'bg-rose-600', soft: 'bg-rose-600/90 hover:bg-rose-600', bar: 'bg-rose-500' }
 ]
 

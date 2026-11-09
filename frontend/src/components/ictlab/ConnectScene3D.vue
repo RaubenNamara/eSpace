@@ -162,7 +162,7 @@ function drawScreen(state: 'off' | 'logo' | 'loading' | 'desktop', progress = 0)
     g.font = '600 46px Inter, sans-serif'
     g.textAlign = 'center'
     g.fillText('Tusome', 256, 140)
-    g.fillStyle = '#22a45d'
+    g.fillStyle = '#3a5fc4'
     g.beginPath()
     g.arc(340, 106, 6, 0, Math.PI * 2)
     g.fill()
@@ -172,13 +172,13 @@ function drawScreen(state: 'off' | 'logo' | 'loading' | 'desktop', progress = 0)
     if (state === 'loading') {
       g.fillStyle = '#1f2937'
       g.fillRect(156, 200, 200, 6)
-      g.fillStyle = '#22a45d'
+      g.fillStyle = '#3a5fc4'
       g.fillRect(156, 200, 200 * progress, 6)
     }
   } else if (state === 'desktop') {
     const grad = g.createLinearGradient(0, 0, 512, 300)
-    grad.addColorStop(0, '#0f5b33')
-    grad.addColorStop(1, '#22a45d')
+    grad.addColorStop(0, '#12307f')
+    grad.addColorStop(1, '#3a5fc4')
     g.fillStyle = grad
     g.fillRect(0, 0, 512, 300)
     // icons down the left
@@ -194,7 +194,7 @@ function drawScreen(state: 'off' | 'logo' | 'loading' | 'desktop', progress = 0)
     // a welcome window
     g.fillStyle = 'rgba(255,255,255,0.95)'
     g.fillRect(130, 66, 290, 128)
-    g.fillStyle = '#115633'
+    g.fillStyle = '#14307d'
     g.fillRect(130, 66, 290, 22)
     g.fillStyle = '#fff'
     g.font = '600 12px Inter, sans-serif'

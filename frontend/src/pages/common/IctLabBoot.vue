@@ -102,7 +102,7 @@
             </div>
 
             <!-- the desktop -->
-            <div v-else-if="screen === 'desktop'" class="absolute inset-0 font-sans" style="background: linear-gradient(135deg, #0f5b33, #22a45d)">
+            <div v-else-if="screen === 'desktop'" class="absolute inset-0 font-sans" style="background: linear-gradient(135deg, #12307f, #3a5fc4)">
               <div class="absolute left-3 top-3 space-y-3">
                 <div v-for="ic in ['Tusome', 'Files', 'Browser']" :key="ic" class="w-14 text-center text-white text-[10px]"><div class="mx-auto w-8 h-8 rounded-lg bg-white/85 mb-0.5"></div>{{ ic }}</div>
               </div>

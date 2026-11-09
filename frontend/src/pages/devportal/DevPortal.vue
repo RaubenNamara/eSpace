@@ -3,7 +3,7 @@
        every school's accounts (DevPortalController). Schools: enrol (each gets its own database),
        pause and resume. Learners: independent learners' requests - contact, then activate to
        create a login. Activity: everything the team did. -->
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white font-sans">
+  <div class="min-h-screen bg-cream-100 dark:bg-gray-950 text-gray-900 dark:text-white font-sans">
     <!-- Sign in -->
     <div v-if="!admin" class="min-h-screen flex items-center justify-center px-4">
       <form class="w-full max-w-sm rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 space-y-4" @submit.prevent="login">

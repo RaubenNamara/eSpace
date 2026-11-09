@@ -140,7 +140,7 @@ const IPOS: { key: Ipos; label: string; hint: string }[] = [
   { key: 'output', label: 'Output', hint: 'the result comes out' },
   { key: 'storage', label: 'Storage', hint: 'it is kept' }
 ]
-const IPOS_COLOR: Record<Ipos, string> = { input: '#15874a', process: '#b45309', output: '#2563eb', storage: '#7c3aed' }
+const IPOS_COLOR: Record<Ipos, string> = { input: '#1b3fa0', process: '#b45309', output: '#2563eb', storage: '#7c3aed' }
 
 // ------------------------------------------------------------ the stops
 interface Stage {
@@ -394,7 +394,7 @@ function drawScreen() {
   const h = screenCanvas.height
   g.fillStyle = '#e8f3ec'
   g.fillRect(0, 0, w, h)
-  g.fillStyle = '#115633'
+  g.fillStyle = '#14307d'
   g.fillRect(0, 0, w, 54)
   g.fillStyle = '#fff'
   g.font = 'bold 28px sans-serif'
@@ -405,7 +405,7 @@ function drawScreen() {
   g.font = 'bold 88px sans-serif'
   g.fillText(typed.value, 80, 230)
   const tw = g.measureText(typed.value).width
-  g.fillStyle = '#15874a'
+  g.fillStyle = '#1b3fa0'
   g.fillRect(84 + tw, 160, 6, 84)
   if (saved.value) {
     g.fillStyle = '#7c3aed'

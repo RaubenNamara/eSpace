@@ -239,7 +239,7 @@
             <button
               v-else
               @click="doRestore"
-              class="px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
+              class="px-3 py-1.5 text-xs font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
             >
               Restore
             </button>

@@ -4,7 +4,7 @@
   <div class="relative overflow-hidden rounded-[2rem] border border-slate-200 dark:border-white/10">
     <div class="grid lg:grid-cols-2 gap-0 overflow-hidden">
       <div class="p-8 sm:p-12 bg-indigo-950 text-white">
-        <h2 class="font-jakarta text-3xl sm:text-4xl font-extrabold tracking-tight">{{ title }}</h2>
+        <h2 class="font-heading text-3xl sm:text-4xl font-extrabold tracking-tight">{{ title }}</h2>
         <p class="mt-4 text-slate-300 leading-relaxed">Tell us a little about your school and we'll walk you through Tusome with your own classes and subjects - no obligation.</p>
         <ul class="mt-8 space-y-3">
           <li v-for="b in POINTS" :key="b" class="flex items-start gap-3 text-sm"><AppIcon name="check-circle" class="w-5 h-5 flex-shrink-0 text-indigo-300" />{{ b }}</li>

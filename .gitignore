@@ -104,3 +104,6 @@ composer.lock
 # Package manager
 package-lock.json
 yarn.lock
+
+# login attempt counters (see LoginThrottle)
+backend/storage/throttle/

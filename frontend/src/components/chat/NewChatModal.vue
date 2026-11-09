@@ -109,14 +109,14 @@
                 </div>
                 <span
                   v-if="contact.is_online"
-                  class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-indigo-500 border-2 border-white dark:border-gray-800"
+                  class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-gray-800"
                   title="Online"
                 ></span>
               </div>
               <div class="min-w-0">
                 <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ contact.first_name }} {{ contact.last_name }}</p>
                 <p v-if="contact.department_name" class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ contact.department_name }}</p>
-                <p v-else-if="contact.is_online" class="text-xs text-indigo-600 dark:text-indigo-400">Online</p>
+                <p v-else-if="contact.is_online" class="text-xs text-emerald-600 dark:text-emerald-400">Online</p>
               </div>
             </button>
             <p v-if="filteredContacts.length === 0" class="text-center text-sm text-gray-400 py-8">No contacts found</p>
