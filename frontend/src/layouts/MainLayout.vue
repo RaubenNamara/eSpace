@@ -446,16 +446,12 @@
         :aria-label="`${currentHub.label} pages`"
       >
         <div ref="hubTabsEl" class="hub-tabs-scroll font-nav flex items-center gap-2 overflow-x-auto px-4 sm:px-6 py-2.5">
-          <span class="hidden md:inline-flex items-center gap-2 pr-4 mr-1 border-r border-indigo-100 dark:border-gray-700 whitespace-nowrap">
-            <span class="w-7 h-7 rounded-lg flex items-center justify-center bg-gold-100 text-gold-800 dark:bg-gold-500/15 dark:text-gold-300"><component :is="iconMap[currentHub.icon]" class="w-4 h-4" /></span>
-            <span class="font-heading text-[1.05rem] font-semibold text-indigo-900 dark:text-white">{{ currentHub.label }}</span>
-          </span>
           <router-link
             v-for="tab in hubTabs"
             :key="tab.path"
             :to="tab.path"
             class="hub-tab"
-            :class="{ 'hub-tab-on': isActive(tab.path) }"
+            :class="isActive(tab.path) ? 'hub-tab-on' : (hubTabs.some(t => isActive(t.path)) ? 'hub-tab-dim' : '')"
             :aria-current="isActive(tab.path) ? 'page' : undefined"
           >
             <component :is="iconMap[tab.icon]" class="w-4 h-4 flex-shrink-0" />
@@ -1149,11 +1145,15 @@ const iconMap: Record<string, any> = {
   color: #24407f;
   background: #fff;
   border: 1px solid #dce4f8;
-  transition: background-color 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.15s, opacity 0.2s, filter 0.2s;
 }
 .hub-tab :deep(svg) { color: #5f80d8; transition: color 0.15s; }
 .hub-tab:hover { background: #eef2fc; border-color: #bbcbf1; color: #0f2563; }
 .hub-tab:hover :deep(svg) { color: #1b3fa0; }
+/* the tabs you are not on step back (faded, a little soft) and come clear when pointed at */
+.hub-tab-dim { opacity: 0.6; filter: blur(0.4px); }
+.hub-tab-dim:hover,
+.hub-tab-dim:focus-visible { opacity: 1; filter: none; }
 .hub-tab-on,
 .hub-tab-on:hover {
   background: linear-gradient(180deg, #1b3fa0, #14307d);

@@ -4,7 +4,7 @@
       <!-- Header - a plain title/subtitle row, matching the compact style used on the teacher
            dashboard, instead of a hero card. -->
       <div class="mb-4 flex flex-wrap items-start gap-x-4 gap-y-3">
-        <div class="min-w-0 flex-1">
+        <div class="min-w-0 flex-1 2xl:min-w-[20rem]">
           <div class="flex items-center gap-2 mb-1">
             <div class="hidden sm:flex w-7 h-7 rounded-lg bg-indigo-600 items-center justify-center flex-shrink-0">
               <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v6.5L4.5 18A2 2 0 006.3 21h11.4a2 2 0 001.8-3L15 9.5V3M8 3h8M7 15h10" /></svg>
@@ -14,8 +14,29 @@
           <p class="text-xs text-gray-500 dark:text-gray-400">Step into a 3D laboratory and run real science experiments in Physics, Chemistry, Biology and Agriculture, right from your browser.</p>
         </div>
         <!-- Search + filters (client-side only - the assignment list is already fully loaded) -->
-        <div v-if="activeTab === 'experiments'" class="w-full xl:w-auto xl:ml-auto flex flex-wrap items-center xl:justify-end gap-2">
-          <input v-model="search" type="text" placeholder="Search experiments..." class="input-field flex-1 xl:flex-none xl:w-56 min-w-[10rem] text-sm">
+        <!-- beside the title only on a wide screen; on a laptop the description needs the room -->
+        <div v-if="activeTab === 'experiments'" class="w-full 2xl:w-auto 2xl:ml-auto flex flex-wrap items-center 2xl:justify-end gap-2">
+          <!-- Search: a round button that opens into a box when tapped, and folds back when left empty -->
+          <div class="relative flex items-center order-last">
+            <svg class="absolute left-3 w-4 h-4 pointer-events-none transition-colors" :class="searchShown ? 'text-indigo-500' : 'text-indigo-700 dark:text-indigo-200'" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path stroke-linecap="round" d="M20 20l-3.5-3.5" /></svg>
+            <input
+              ref="searchEl"
+              v-model="search"
+              type="text"
+              aria-label="Search experiments"
+              :placeholder="searchShown ? 'Search experiments...' : ''"
+              class="h-10 rounded-full border text-sm bg-white dark:bg-gray-700 dark:text-white outline-none transition-[width,padding,border-color,box-shadow] duration-300 ease-out focus:ring-2 focus:ring-indigo-500/40"
+              :class="searchShown ? 'w-56 sm:w-64 pl-9 pr-8 border-indigo-300 dark:border-indigo-500' : 'w-10 pl-9 pr-0 cursor-pointer border-gray-300 dark:border-gray-600 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-gray-600'"
+              :title="searchShown ? undefined : 'Search experiments'"
+              @focus="searchOpen = true"
+              @click="searchOpen = true"
+              @blur="!search && (searchOpen = false)"
+              @keydown.esc="search = ''; ($event.target as HTMLInputElement).blur()"
+            >
+            <button v-if="search" type="button" class="absolute right-2 w-6 h-6 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white" aria-label="Clear search" @mousedown.prevent @click="search = ''; searchEl?.focus()">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M6 6l12 12M18 6L6 18" /></svg>
+            </button>
+          </div>
           <select v-model="subjectFilter" class="input-field text-sm w-auto">
             <option value="">All Subjects</option>
             <option v-for="s in subjectOptions" :key="s" :value="s">{{ s }}</option>
@@ -231,6 +252,10 @@ const loading = ref(true)
 const loadError = ref<string | null>(null)
 const activeCategory = ref<LabCategory | null>(null)
 const search = ref('')
+const searchOpen = ref(false)
+// open while it has the cursor or holds words
+const searchShown = computed(() => searchOpen.value || !!search.value)
+const searchEl = ref<HTMLInputElement | null>(null)
 const subjectFilter = ref('')
 const topicFilter = ref('')
 const difficultyFilter = ref('')
