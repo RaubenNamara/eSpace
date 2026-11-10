@@ -82,7 +82,8 @@ const DEVICE_ICON: Record<string, string> = { computer: '💻', phone: '📱', t
 export const DeviceText = defineComponent({
   props: { person: { type: Object as PropType<SignInPerson>, required: true } },
   setup(p) {
-    return () => h('span', { title: [p.person.device, p.person.ip_address ? `IP ${p.person.ip_address}` : ''].filter(Boolean).join(' · ') }, [
+    // shortened with an ellipsis on a narrow screen; the whole of it shows on hover
+    return () => h('span', { class: 'block max-w-full truncate', title: [p.person.device, p.person.ip_address ? `IP ${p.person.ip_address}` : ''].filter(Boolean).join(' · ') }, [
       p.person.device_type ? h('span', { 'aria-hidden': 'true' }, `${DEVICE_ICON[p.person.device_type] ?? ''} `) : null,
       p.person.device,
     ])

@@ -11,89 +11,49 @@
       :class="[isIconOnly ? 'w-16' : 'w-48 md:w-56', { '-translate-x-[calc(100%+1rem)]': !sidebarOpen, 'translate-x-0': sidebarOpen }]"
     >
 
-      <!-- The brand bar: the logo in white on dark green -->
-      <div class="relative px-4 py-3.5 border-b app-frame-divider flex-shrink-0">
+      <!-- The brand bar: the logo, and which console this is -->
+      <div class="relative px-4 py-4 border-b app-frame-divider flex-shrink-0">
         <!-- The Tusome word logo; just the "T" mark when the sidebar is folded to icons -->
         <div class="flex items-center gap-3" :class="{ 'justify-center': isIconOnly }">
           <img v-if="isIconOnly" src="/favicon.svg" alt="Tusome" class="w-9 h-9 rounded-xl">
           <div v-else class="min-w-0">
-            <p class="leading-none"><Wordmark size="sm" /></p>
-            <p class="text-[10.5px] text-white/75 font-semibold tracking-wide leading-tight mt-1">{{ consoleName }}</p>
+            <p class="leading-none"><Wordmark size="md" /></p>
+            <p class="font-nav text-[10.5px] font-semibold uppercase tracking-[0.16em] text-gold-300/90 leading-tight mt-1.5">{{ consoleName }}</p>
           </div>
         </div>
       </div>
 
-      <nav class="sidebar-nav font-jakarta relative flex-1 overflow-y-auto px-3 py-4">
-        <!-- The menu in named groups. Open, a group is just its items under a thin line (the
-             names stay out of the way); the line is also the fold - click it and the group folds
-             up into a single row with its name, so a teacher can tuck away what they don't use.
-             Folds are remembered per role. With the sidebar narrowed to icons there is nowhere
-             for a name to go, so every group stays open there. -->
-        <section v-for="group in menuGroups" :key="group.key" class="nav-group" :class="{ 'is-folded': isFolded(group.key) }">
-          <button
-            v-if="!isIconOnly"
-            type="button"
-            class="nav-fold"
-            :aria-expanded="!isFolded(group.key)"
-            :aria-controls="`nav-group-${group.key}`"
-            :title="isFolded(group.key) ? `Show ${group.name}` : `Fold ${group.name} away`"
-            @click="toggleFold(group.key)"
-          >
-            <span class="nav-fold-line" aria-hidden="true"></span>
-            <span class="nav-fold-label">
-              <span class="truncate">{{ group.name }}</span>
-              <span v-if="groupHasActive(group)" class="w-1.5 h-1.5 rounded-full bg-indigo-500 flex-shrink-0" title="You are on a page in here"></span>
-              <span class="ml-auto text-[10px] font-semibold text-slate-400 dark:text-white/75 tabular-nums">{{ leavesOf(group).length }}</span>
-            </span>
-            <svg class="nav-fold-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M19 9l-7 7-7-7"></path></svg>
-          </button>
-          <div v-else class="mx-3 mb-2.5 h-px bg-slate-300 dark:bg-white/10"></div>
-
-          <div :id="`nav-group-${group.key}`" class="nav-fold-body" :inert="!isIconOnly && isFolded(group.key) ? true : undefined">
-            <div class="nav-fold-inner space-y-0.5">
-              <template v-for="row in rowsOf(group)" :key="row.item.path">
-                <!-- An item that opens into others (Virtual Lab: Science Lab and ICT Lab) -->
-                <button
-                  v-if="row.parent"
-                  type="button"
-                  :style="{ '--i': row.i }"
-                  class="nav-item w-full flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-xl transition-all duration-150 text-sm font-medium group text-left"
-                  :class="childActive(row.item) ? 'text-indigo-800 dark:text-white font-semibold' : 'text-gray-800 dark:text-white/90 hover:bg-indigo-50 dark:hover:bg-white/[0.07] hover:text-indigo-800 dark:hover:text-white'"
-                  :aria-expanded="subOpen(row.item)"
-                  @click="toggleSub(row.item.path)"
-                >
-                  <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 text-indigo-700 dark:text-indigo-100 group-hover:text-indigo-800 dark:group-hover:text-white">
-                    <component :is="iconMap[row.item.icon]" class="w-4 h-4" />
-                  </div>
-                  <span class="truncate flex-1">{{ row.item.label }}</span>
-                  <svg class="w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200" :class="{ 'rotate-180': subOpen(row.item) }" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M19 9l-7 7-7-7"></path></svg>
-                </button>
-                <router-link
-                  v-else
-                  :to="row.item.path"
-                  :title="isIconOnly ? row.item.label : undefined"
-                  :style="{ '--i': row.i }"
-                  class="nav-item flex items-center gap-2.5 pr-2.5 py-1.5 rounded-xl transition-all duration-150 text-sm font-medium group"
-                  :class="[row.child && !isIconOnly ? 'pl-7' : 'pl-3.5', isActive(row.item.path) ? 'bg-indigo-100 text-indigo-900 font-semibold ring-1 ring-indigo-200 dark:bg-white/15 dark:ring-0 dark:text-white dark:shadow-[inset_3px_0_0_#d9a520]' : 'text-gray-800 dark:text-white/90 hover:bg-indigo-50 dark:hover:bg-white/[0.07] hover:text-indigo-800 dark:hover:text-white', isIconOnly ? 'justify-center px-0' : '']"
-                >
-                  <div class="relative w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-all duration-150"
-                    :class="isActive(row.item.path) ? 'bg-gold-500 text-indigo-950 shadow-sm' : 'text-indigo-700 dark:text-indigo-100 group-hover:text-indigo-800 dark:group-hover:text-white'"
-                  >
-                    <component :is="iconMap[row.item.icon]" class="w-4 h-4" />
-                    <!-- Folded sidebar: the count sits on the icon -->
-                    <span v-if="isIconOnly && badgeFor(row.item.path)" class="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-semibold leading-4 text-center ring-2 ring-white dark:ring-gray-900">{{ badgeFor(row.item.path) > 9 ? '9+' : badgeFor(row.item.path) }}</span>
-                  </div>
-                  <span v-if="!isIconOnly" class="truncate">{{ row.item.label }}</span>
-                  <span
-                    v-if="!isIconOnly && badgeFor(row.item.path)"
-                    class="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-rose-500 text-white text-[11px] font-semibold leading-5 text-center"
-                    :title="`${badgeFor(row.item.path)} new ${badgeFor(row.item.path) === 1 ? 'assessment' : 'assessments'} to do`"
-                  >{{ badgeFor(row.item.path) > 9 ? '9+' : badgeFor(row.item.path) }}</span>
-                </router-link>
-              </template>
-            </div>
-          </div>
-        </section>
+      <nav class="sidebar-nav font-nav relative flex-1 overflow-y-auto px-3 py-4" aria-label="Main">
+        <!-- The hubs (data/navHubs.ts). A hub of several pages shows them as tabs across the top of
+             each page; here it opens the one last used. -->
+        <ul class="space-y-1">
+          <li v-for="(hub, i) in hubs" :key="hub.key">
+            <div v-if="hub.divider && i > 0" class="mx-3 my-3 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" aria-hidden="true"></div>
+            <router-link
+              :to="hubLink(hub)"
+              :title="isIconOnly ? hub.label : undefined"
+              :aria-current="hubActive(hub) ? 'page' : undefined"
+              :style="{ '--i': i }"
+              class="hub-link nav-item flex items-center gap-3 py-2 rounded-xl transition-all duration-150 text-[0.95rem] group"
+              :class="[hubActive(hub) ? 'hub-link-on' : 'text-white/80 hover:bg-white/[0.09] hover:text-white', isIconOnly ? 'justify-center px-0' : 'pl-2.5 pr-2.5']"
+            >
+              <span
+                class="relative w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors duration-150"
+                :class="hubActive(hub) ? 'bg-gold-500 text-indigo-950 shadow-[0_2px_6px_-1px_rgba(138,98,0,0.5)]' : 'bg-white/[0.08] ring-1 ring-inset ring-white/10 text-indigo-100 group-hover:bg-white/15 group-hover:text-white'"
+              >
+                <component :is="iconMap[hub.icon]" class="w-[18px] h-[18px]" />
+                <!-- Folded sidebar: the count sits on the icon -->
+                <span v-if="isIconOnly && hubBadge(hub)" class="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-semibold leading-4 text-center ring-2 ring-indigo-800">{{ hubBadge(hub) > 9 ? '9+' : hubBadge(hub) }}</span>
+              </span>
+              <span v-if="!isIconOnly" class="truncate flex-1">{{ hub.label }}</span>
+              <span
+                v-if="!isIconOnly && hubBadge(hub)"
+                class="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-rose-500 text-white text-[11px] font-semibold leading-5 text-center"
+                :title="`${hubBadge(hub)} new to do`"
+              >{{ hubBadge(hub) > 9 ? '9+' : hubBadge(hub) }}</span>
+            </router-link>
+          </li>
+        </ul>
       </nav>
 
       <!-- Footer -->
@@ -175,6 +135,7 @@
       <!-- Top Bar - hides on scroll-down and reappears on scroll-up (like the Landing header),
            so it doesn't permanently eat vertical space on long pages. -->
       <header
+        ref="headerEl"
         v-if="!shouldHideAppChrome && !isFullScreenChat"
         class="print:hidden bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-40 transition-transform duration-300"
         :class="[{ '-translate-y-full': headerHidden }, isImmersiveReader ? 'hidden lg:block' : '']"
@@ -459,7 +420,7 @@
       </button>
     </div>
   </nav>
-  <CommandPalette v-if="menuGroups.length" :groups="paletteGroups" :icons="iconMap" :role="menuRole" :actions="paletteActions" />
+  <CommandPalette v-if="hubs.length" :groups="paletteGroups" :icons="iconMap" :role="menuRole" :actions="paletteActions" />
   </div>
       </header>
 
@@ -475,6 +436,34 @@
       <div v-else-if="offline.pending > 0 && authStore.userRole === 'student' && !shouldHideAppChrome && !isFullScreenChat" class="px-4 py-1 text-center bg-indigo-50 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-200 text-[11px]">
         Sending {{ offline.pending }} {{ offline.pending === 1 ? 'change' : 'changes' }} you made offline…
       </div>
+
+      <!-- The pages of the hub you are in, as tabs (data/navHubs.ts). Stays under the top bar while
+           scrolling; at the very top once the top bar has slid away. -->
+      <nav
+        v-if="currentHub && hubTabs.length > 1 && !shouldHideAppChrome && !isFullScreenChat && !isImmersiveReader"
+        class="hub-tabs print:hidden sticky z-30 border-b border-indigo-100 bg-white/95 backdrop-blur dark:bg-gray-900/95 dark:border-gray-800 transition-[top] duration-300"
+        :style="{ top: headerHidden ? '0px' : `${headerHeight}px` }"
+        :aria-label="`${currentHub.label} pages`"
+      >
+        <div ref="hubTabsEl" class="hub-tabs-scroll font-nav flex items-center gap-2 overflow-x-auto px-4 sm:px-6 py-2.5">
+          <span class="hidden md:inline-flex items-center gap-2 pr-4 mr-1 border-r border-indigo-100 dark:border-gray-700 whitespace-nowrap">
+            <span class="w-7 h-7 rounded-lg flex items-center justify-center bg-gold-100 text-gold-800 dark:bg-gold-500/15 dark:text-gold-300"><component :is="iconMap[currentHub.icon]" class="w-4 h-4" /></span>
+            <span class="font-heading text-[1.05rem] font-semibold text-indigo-900 dark:text-white">{{ currentHub.label }}</span>
+          </span>
+          <router-link
+            v-for="tab in hubTabs"
+            :key="tab.path"
+            :to="tab.path"
+            class="hub-tab"
+            :class="{ 'hub-tab-on': isActive(tab.path) }"
+            :aria-current="isActive(tab.path) ? 'page' : undefined"
+          >
+            <component :is="iconMap[tab.icon]" class="w-4 h-4 flex-shrink-0" />
+            <span>{{ tab.label }}</span>
+            <span v-if="badgeFor(tab.path)" class="min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-semibold leading-[18px] text-center">{{ badgeFor(tab.path) > 9 ? '9+' : badgeFor(tab.path) }}</span>
+          </router-link>
+        </div>
+      </nav>
 
       <main class="flex-1 print:!p-0" :class="[shouldHideAppChrome || isFullScreenChat ? 'p-0' : (isImmersiveReader ? 'p-0 lg:p-6' : 'p-4 sm:p-6'), showStudentTabs ? 'pb-24 lg:pb-6' : '']">
         <router-view />
@@ -565,7 +554,8 @@ import { usePersistedRef } from '@/composables/usePersistedRef'
 import { usePublicationsAccess } from '@/composables/usePublicationsAccess'
 import Wordmark from '@/components/brand/Wordmark.vue'
 import { SUPPORT_EMAIL } from '@/data/site'
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
+import { HUBS, type Hub, type HubTab } from '@/data/navHubs'
 import { appSidebarRequests } from '@/utils/appSidebar'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
@@ -895,191 +885,49 @@ const openProfileSection = (section: 'photo' | 'password') => {
   showProfileDropdown.value = false
 }
 
-// gate: shown only to some users of the role (see visible())
-interface NavItem { path: string; label: string; icon: string; children?: NavItem[]; gate?: 'publications' | 'super_admin' }
-interface NavGroup { key: string; name: string; items: NavItem[] }
-
-// The sidebar, by role, in named groups (see the template for how a group folds away)
-const MENU: Record<string, NavGroup[]> = {
-  student: [
-    { key: 'home', name: 'Home', items: [
-      { path: '/student/dashboard', label: 'eClass', icon: 'DashboardIcon' }
-    ] },
-    { key: 'learning', name: 'Learning', items: [
-      { path: '/student/live-classes', label: 'Live Classes', icon: 'VideoCameraIcon' },
-      { path: '/student/enotes', label: 'eNotes', icon: 'NoteIcon' }
-    ] },
-    { key: 'revision', name: 'Revision', items: [
-      { path: '/student/assignments', label: 'Assessments', icon: 'DocumentTextIcon' }
-    ] },
-    { key: 'resources', name: 'Resources', items: [
-      { path: '/student/library', label: 'eLibrary', icon: 'LibraryIcon' },
-      { path: '/student/publications', label: 'Publications', icon: 'NewspaperIcon', gate: 'publications' },
-      { path: '/student/videos', label: 'Videos', icon: 'VideoCameraIcon' },
-      { path: '/student/itembank', label: 'Item Bank', icon: 'QuestionMarkCircleIcon' },
-      { path: '/student/labs', label: 'Virtual Lab', icon: 'FlaskIcon', children: [
-        { path: '/student/virtual-lab', label: 'Science Lab', icon: 'FlaskIcon' },
-        { path: '/student/ict-lab', label: 'ICT Lab', icon: 'ComputerIcon' },
-        { path: '/student/anatomy', label: 'Anatomy Explorer', icon: 'FlaskIcon' }
-      ] }
-    ] },
-    { key: 'progress', name: 'Progress', items: [
-      { path: '/student/academic-history', label: 'Academic History', icon: 'AcademicCapIcon' },
-      { path: '/student/achievements', label: 'Achievements', icon: 'TrophyIcon' },
-      { path: '/student/learning-map', label: 'Learning Map', icon: 'MapIcon' }
-    ] },
-    { key: 'community', name: 'Community', items: [
-      { path: '/student/chat', label: 'Chats', icon: 'ChatIcon' }
-    ] }
-  ],
-  teacher: [
-    { key: 'home', name: 'Home', items: [
-      { path: '/teacher/dashboard', label: 'Dashboard', icon: 'DashboardIcon' }
-    ] },
-    { key: 'teaching', name: 'Teaching', items: [
-      { path: '/teacher/classes', label: 'My Classes', icon: 'BookOpenIcon' },
-      { path: '/teacher/live-classes', label: 'Live Classes', icon: 'VideoCameraIcon' }
-    ] },
-    { key: 'content', name: 'Content', items: [
-      { path: '/teacher/enotes', label: 'eNotes', icon: 'NoteIcon' },
-      { path: '/teacher/library', label: 'eLibrary', icon: 'LibraryIcon' },
-      { path: '/teacher/videos', label: 'Videos', icon: 'VideoCameraIcon' },
-      { path: '/teacher/itembank', label: 'Item Bank', icon: 'QuestionMarkCircleIcon' },
-      { path: '/teacher/publications', label: 'Publications', icon: 'NewspaperIcon', gate: 'publications' },
-      { path: '/teacher/labs', label: 'Virtual Lab', icon: 'FlaskIcon', children: [
-        { path: '/teacher/virtual-lab', label: 'Science Lab', icon: 'FlaskIcon' },
-        { path: '/teacher/ict-lab', label: 'ICT Lab', icon: 'ComputerIcon' },
-        { path: '/teacher/anatomy', label: 'Anatomy Explorer', icon: 'FlaskIcon' }
-      ] }
-    ] },
-    { key: 'assessment', name: 'Assessment', items: [
-      { path: '/teacher/assignments', label: 'Assessments', icon: 'DocumentTextIcon' },
-      { path: '/teacher/marksheet', label: 'Marksheet', icon: 'TableCellsIcon' },
-      { path: '/teacher/physical-exams', label: 'Physical Exams', icon: 'DocumentTextIcon' }
-    ] },
-    { key: 'insights', name: 'Insights', items: [
-      { path: '/teacher/class-map', label: 'Class Learning Map', icon: 'MapIcon' },
-      { path: '/teacher/engagement', label: 'Engagement', icon: 'ChartIcon' },
-      { path: '/teacher/coverage', label: 'Coverage', icon: 'ChartBarIcon' },
-      { path: '/teacher/scheme', label: 'Scheme of work', icon: 'ClipboardListIcon' }
-    ] },
-    { key: 'community', name: 'Community', items: [
-      { path: '/teacher/chat', label: 'Chats', icon: 'ChatIcon' }
-    ] }
-  ],
-  hod: [
-    { key: 'home', name: 'Home', items: [
-      { path: '/hod/dashboard', label: 'Dashboard', icon: 'DashboardIcon' }
-    ] },
-    { key: 'department', name: 'Department', items: [
-      { path: '/hod/teachers', label: 'Teachers', icon: 'UsersIcon' },
-      { path: '/hod/students', label: 'Students', icon: 'AcademicCapIcon' },
-      { path: '/hod/live-classes', label: 'Live Classes', icon: 'VideoCameraIcon' }
-    ] },
-    { key: 'content', name: 'Content', items: [
-      { path: '/hod/enotes', label: 'eNotes', icon: 'NoteIcon' },
-      { path: '/hod/library', label: 'eLibrary', icon: 'LibraryIcon' },
-      { path: '/hod/videos', label: 'Videos', icon: 'VideoCameraIcon' },
-      { path: '/hod/itembank', label: 'Item Bank', icon: 'QuestionMarkCircleIcon' },
-      { path: '/hod/labs', label: 'Virtual Lab', icon: 'FlaskIcon', children: [
-        { path: '/hod/virtual-lab', label: 'Science Lab', icon: 'FlaskIcon' },
-        { path: '/hod/ict-lab', label: 'ICT Lab', icon: 'ComputerIcon' },
-        { path: '/hod/anatomy', label: 'Anatomy Explorer', icon: 'FlaskIcon' }
-      ] }
-    ] },
-    { key: 'assessment', name: 'Assessment', items: [
-      { path: '/hod/assessments', label: 'Assessments', icon: 'DocumentTextIcon' },
-      { path: '/hod/marking', label: 'Marking', icon: 'TargetIcon' },
-      { path: '/hod/marksheet', label: 'Marksheet', icon: 'TableCellsIcon' },
-      { path: '/hod/physical-exams', label: 'Physical Exams', icon: 'DocumentTextIcon' }
-    ] },
-    { key: 'insights', name: 'Insights', items: [
-      { path: '/hod/term-report', label: 'Term report', icon: 'ClipboardListIcon' },
-      { path: '/hod/analytics', label: 'Analytics', icon: 'ChartIcon' },
-      { path: '/hod/early-warning', label: 'Early warning', icon: 'BellAlertIcon' },
-      { path: '/hod/charts', label: 'Engagement', icon: 'ChartIcon' }
-    ] },
-    { key: 'community', name: 'Community', items: [
-      { path: '/hod/chat', label: 'Chats', icon: 'ChatIcon' },
-      { path: '/hod/notices', label: 'Noticeboard', icon: 'MegaphoneIcon' }
-    ] }
-  ],
-  admin: [
-    { key: 'home', name: 'Home', items: [
-      { path: '/admin/dashboard', label: 'Dashboard', icon: 'DashboardIcon' }
-    ] },
-    { key: 'people', name: 'People', items: [
-      { path: '/admin/students', label: 'Students', icon: 'AcademicCapIcon' },
-      { path: '/admin/bulk-enrol', label: 'Bulk enrolment', icon: 'TableCellsIcon' },
-      { path: '/admin/teachers', label: 'Teachers', icon: 'BriefcaseIcon' },
-      { path: '/admin/hods', label: 'HODs', icon: 'UserGroupIcon' },
-      { path: '/admin/assign-teachers', label: 'Assign Teachers', icon: 'CheckCircleIcon' },
-      { path: '/admin/promotion', label: 'Student Promotion', icon: 'AcademicCapIcon' },
-      { path: '/admin/parent-links', label: 'Parents', icon: 'UserGroupIcon' }
-    ] },
-    { key: 'setup', name: 'School setup', items: [
-      { path: '/admin/departments', label: 'Departments', icon: 'BuildingOfficeIcon' },
-      { path: '/admin/subjects', label: 'Subjects', icon: 'BookIcon' },
-      { path: '/admin/classes', label: 'Classes', icon: 'BuildingLibraryIcon' },
-      { path: '/admin/academic-years', label: 'Academic Years', icon: 'CalendarIcon' },
-      { path: '/admin/terms', label: 'Terms', icon: 'CalendarDaysIcon' },
-      { path: '/admin/exam-dates', label: 'Exam dates', icon: 'TargetIcon' },
-      { path: '/admin/enotes-curriculum', label: 'Curriculum', icon: 'NoteIcon' }
-    ] },
-    { key: 'content', name: 'Content', items: [
-      { path: '/admin/notes', label: 'eNotes', icon: 'NoteIcon' },
-      { path: '/admin/library', label: 'eLibrary', icon: 'LibraryIcon' },
-      { path: '/admin/videos', label: 'Videos', icon: 'VideoCameraIcon' },
-      { path: '/admin/itembank', label: 'Item Bank', icon: 'QuestionMarkCircleIcon' },
-      { path: '/admin/live-classes', label: 'Live Classes', icon: 'VideoCameraIcon' },
-      { path: '/admin/labs', label: 'Virtual Lab', icon: 'FlaskIcon', children: [
-        { path: '/admin/virtual-lab', label: 'Science Lab', icon: 'FlaskIcon' },
-        { path: '/admin/ict-lab', label: 'ICT Lab', icon: 'ComputerIcon' },
-        { path: '/admin/anatomy', label: 'Anatomy Explorer', icon: 'FlaskIcon' }
-      ] }
-    ] },
-    { key: 'assessment', name: 'Assessment', items: [
-      { path: '/admin/supervision', label: 'Supervision', icon: 'TargetIcon' },
-      { path: '/admin/assessments', label: 'Assessments', icon: 'DocumentTextIcon' },
-      { path: '/admin/marksheet', label: 'Marksheet', icon: 'TableCellsIcon' },
-      { path: '/admin/physical-exams', label: 'Physical Exams', icon: 'DocumentTextIcon' },
-      { path: '/admin/reports', label: 'Reports', icon: 'ChartBarIcon' },
-      { path: '/admin/end-of-term', label: 'End of term', icon: 'CheckCircleIcon' },
-      { path: '/admin/rewards', label: 'Rewards & Badges', icon: 'TrophyIcon' },
-      { path: '/admin/charts', label: 'Engagement', icon: 'ChartIcon' }
-    ] },
-    { key: 'community', name: 'Community', items: [
-      { path: '/admin/chat', label: 'Chats', icon: 'ChatIcon' },
-      { path: '/admin/notices', label: 'Noticeboard', icon: 'MegaphoneIcon' }
-    ] },
-    { key: 'system', name: 'System', items: [
-      { path: '/admin/users', label: 'Admin', icon: 'UsersIcon' },
-      { path: '/admin/settings', label: 'Settings', icon: 'CogIcon' },
-      { path: '/admin/demo-requests', label: 'Demo requests', icon: 'BriefcaseIcon' },
-      { path: '/admin/privacy-reports', label: 'Privacy reports', icon: 'KeyIcon', gate: 'super_admin' },
-      { path: '/admin/feedback', label: 'Feedback', icon: 'ChatQuestionIcon', gate: 'super_admin' },
-      { path: '/admin/logs', label: 'System Logs', icon: 'DocumentIcon' }
-    ] }
-  ]
-}
-
+// The sidebar and the tabs at the top of each page come from data/navHubs.ts
 const menuRole = computed(() => (authStore.userRole === 'super_admin' ? 'admin' : authStore.userRole || ''))
 // Publications: A level students and GP teachers only
 const publications = usePublicationsAccess()
 watch(menuRole, r => publications.check(r), { immediate: true })
-const visible = (item: NavItem) => !item.gate || (item.gate === 'publications' && publications.allowed.value)
-  || (item.gate === 'super_admin' && authStore.userRole === 'super_admin')
-const menuGroups = computed<NavGroup[]>(() => (MENU[menuRole.value] || []).map(g => ({ ...g, items: g.items.filter(visible) })))
+const visible = (tab: HubTab) => !tab.gate || (tab.gate === 'publications' && publications.allowed.value)
+  || (tab.gate === 'super_admin' && authStore.userRole === 'super_admin')
+// the role's hubs, each with only the pages this user may open (a hub left empty is dropped)
+const hubs = computed<Hub[]>(() => (HUBS[menuRole.value] || []).map(h => ({ ...h, tabs: h.tabs.filter(visible) })).filter(h => h.tabs.length))
+const inHub = (hub: Hub) => [...hub.tabs.map(t => t.path), ...(hub.also || [])].some(p => isActive(p))
+const currentHub = computed(() => hubs.value.find(inHub) || null)
+const hubTabs = computed(() => currentHub.value?.tabs || [])
+const hubActive = (hub: Hub) => currentHub.value?.key === hub.key
+const hubBadge = (hub: Hub) => hub.tabs.reduce((n, t) => n + badgeFor(t.path), 0)
 
-// Folded groups, remembered per role in this browser
-const foldStore = usePersistedRef<Record<string, string[]>>('sidebar-folds', {})
-const isFolded = (key: string) => !isIconOnly.value && (foldStore.value[menuRole.value] || []).includes(key)
-const toggleFold = (key: string) => {
-  const folded = new Set(foldStore.value[menuRole.value] || [])
-  if (folded.has(key)) folded.delete(key)
-  else folded.add(key)
-  foldStore.value = { ...foldStore.value, [menuRole.value]: [...folded] }
+// The tab last opened in each hub, so the sidebar takes you back to it
+const lastTab = usePersistedRef<Record<string, string>>('hub-last-tab', {})
+const hubLink = (hub: Hub) => {
+  const last = lastTab.value[`${menuRole.value}:${hub.key}`]
+  return hub.tabs.some(t => t.path === last) ? last : hub.tabs[0].path
 }
+const hubTabsEl = ref<HTMLElement | null>(null)
+watch(() => route.path, async () => {
+  const hub = currentHub.value
+  const tab = hub?.tabs.find(t => isActive(t.path))
+  if (hub && tab) lastTab.value = { ...lastTab.value, [`${menuRole.value}:${hub.key}`]: tab.path }
+  // on a phone the tabs scroll sideways: bring the open one into view
+  await nextTick()
+  hubTabsEl.value?.querySelector('.hub-tab-on')?.scrollIntoView({ inline: 'center', block: 'nearest' })
+}, { immediate: true })
+
+// The top bar's height, so the tab bar sits just beneath it
+const headerEl = ref<HTMLElement | null>(null)
+const headerHeight = ref(64)
+let headerObserver: ResizeObserver | null = null
+onMounted(() => {
+  if (headerEl.value && typeof ResizeObserver !== 'undefined') {
+    headerObserver = new ResizeObserver(() => { headerHeight.value = headerEl.value?.offsetHeight || 64 })
+    headerObserver.observe(headerEl.value)
+  }
+})
+onBeforeUnmount(() => headerObserver?.disconnect())
+
 // ---- Students' bottom tab bar on phones ----
 const STUDENT_TABS = [
   { path: '/student/dashboard', label: 'Home', icon: 'DashboardIcon', also: ['/student/notices'] },
@@ -1117,38 +965,8 @@ const paletteActions = computed<PaletteAction[]>(() => {
   return [...(byRole[menuRole.value] || []), ...common]
 })
 
-// Items that open into others: the links themselves, for counting, the palette and "you are in here"
-const leavesOf = (group: NavGroup) => group.items.flatMap(item => item.children ?? [item])
-const groupHasActive = (group: NavGroup) => isFolded(group.key) && leavesOf(group).some(item => isActive(item.path))
-const childActive = (item: NavItem) => !!item.children?.some(c => isActive(c.path))
-// Which fold-out items are open: one holding the page you are on opens by itself, until closed
-const openSubs = ref(new Set<string>())
-const closedSubs = ref(new Set<string>())
-const subOpen = (item: NavItem) => openSubs.value.has(item.path) || (childActive(item) && !closedSubs.value.has(item.path))
-const toggleSub = (path: string) => {
-  const item = menuGroups.value.flatMap(g => g.items).find(i => i.path === path)
-  if (!item) return
-  const open = new Set(openSubs.value)
-  const closed = new Set(closedSubs.value)
-  if (subOpen(item)) { open.delete(path); closed.add(path) } else { open.add(path); closed.delete(path) }
-  openSubs.value = open
-  closedSubs.value = closed
-}
-// The rows a group draws: plain links, and fold-out items followed by their links when open
-// (an icon-only sidebar shows the links straight away)
-const rowsOf = (group: NavGroup) => {
-  const rows: { item: NavItem; i: number; parent?: boolean; child?: boolean }[] = []
-  let i = 0
-  for (const item of group.items) {
-    if (!item.children) { rows.push({ item, i: i++ }); continue }
-    if (isIconOnly.value) { for (const c of item.children) rows.push({ item: c, i: i++, child: true }); continue }
-    rows.push({ item, i: i++, parent: true })
-    if (subOpen(item)) for (const c of item.children) rows.push({ item: c, i: i++, child: true })
-  }
-  return rows
-}
-// The command palette lists the links, not the fold-out headings
-const paletteGroups = computed(() => menuGroups.value.map(g => ({ ...g, items: leavesOf(g) })))
+// The command palette lists every page, under its hub
+const paletteGroups = computed(() => hubs.value.map(h => ({ key: h.key, name: h.label, items: h.tabs })))
 
 function isActive(path: string): boolean {
   // Study groups are opened from inside Chats, so Chats stays lit there
@@ -1304,95 +1122,69 @@ const iconMap: Record<string, any> = {
 </script>
 
 <style scoped>
-/* ---- Sidebar groups and their fold ---- */
-.nav-group { margin-bottom: 1.25rem; transition: margin 0.35s ease; }
-.nav-group.is-folded { margin-bottom: 0.35rem; }
-
-/* Open: a thin line (the group's name hidden), with a chevron that shows on hover.
-   Folded: the line gives way to the group's name in a soft row. */
-.nav-fold {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  width: calc(100% - 0.75rem);
-  margin: 0 0.375rem 0.55rem;
-  min-height: 0.9rem;
-  padding: 0 0.375rem;
-  border-radius: 0.75rem;
-  color: rgb(100 116 139);
-  transition: background-color 0.2s, padding 0.3s ease, margin 0.3s ease;
-}
-.nav-fold:focus-visible { outline: 2px solid rgb(27 63 160); outline-offset: 1px; }
-.nav-fold-line {
-  flex: 1 1 auto;
-  height: 1px;
-  background: rgba(27, 63, 160, 0.2);
-  transform-origin: left;
-  transition: transform 0.3s ease, opacity 0.2s ease;
-}
-.dark .nav-fold-line { background: rgba(255, 255, 255, 0.1); }
-.nav-fold-label {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  flex: 0 1 0;
-  min-width: 0;
-  max-width: 0;
-  overflow: hidden;
-  opacity: 0;
-  font-size: 0.6875rem;
+/* ---- The sidebar's hubs ---- */
+.hub-link { font-weight: 500; letter-spacing: -0.005em; }
+/* the hub you are in: a white card on the blue, a gold edge, the words in deep blue */
+.hub-link-on {
+  background: #fff;
+  color: #14307d;
   font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  box-shadow: inset 3px 0 0 #d9a520, 0 6px 16px -8px rgba(0, 0, 0, 0.45);
+}
+.dark .hub-link-on { background: #fff; color: #14307d; }
+
+/* ---- The hub tabs across the top of a page ---- */
+.hub-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.95rem;
+  border-radius: 0.8rem;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  letter-spacing: -0.005em;
   white-space: nowrap;
-  transition: opacity 0.25s ease 0.05s, max-width 0.3s ease;
+  color: #24407f;
+  background: #fff;
+  border: 1px solid #dce4f8;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.15s;
 }
-.nav-fold-chevron {
-  width: 0.8rem;
-  height: 0.8rem;
-  flex-shrink: 0;
-  opacity: 0;
-  transition: opacity 0.2s, transform 0.3s ease;
+.hub-tab :deep(svg) { color: #5f80d8; transition: color 0.15s; }
+.hub-tab:hover { background: #eef2fc; border-color: #bbcbf1; color: #0f2563; }
+.hub-tab:hover :deep(svg) { color: #1b3fa0; }
+.hub-tab-on,
+.hub-tab-on:hover {
+  background: linear-gradient(180deg, #1b3fa0, #14307d);
+  border-color: #14307d;
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 4px 12px -4px rgba(12, 24, 66, 0.55);
 }
-.nav-fold:hover .nav-fold-chevron,
-.nav-fold:focus-visible .nav-fold-chevron { opacity: 0.75; }
-.nav-fold:hover .nav-fold-line { background: rgba(27, 63, 160, 0.45); }
-.dark .nav-fold:hover .nav-fold-line { background: rgba(255, 255, 255, 0.22); }
-/* Touch screens have no hover - keep the chevron faintly visible so the fold can be found */
-@media (hover: none) { .nav-fold-chevron { opacity: 0.45; } }
-
-.is-folded .nav-fold {
-  min-height: 2rem;
-  margin-bottom: 0;
-  padding: 0 0.6rem 0 0.9rem;
-  background: rgba(27, 63, 160, 0.06);
+.hub-tab-on :deep(svg),
+.hub-tab-on:hover :deep(svg) { color: #edc95a; }
+/* the gold line under the open tab, sitting on the bar's bottom edge */
+.hub-tab-on::after {
+  content: '';
+  position: absolute;
+  left: 0.8rem;
+  right: 0.8rem;
+  bottom: -0.65rem;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: #d9a520;
 }
-.dark .is-folded .nav-fold { background: rgba(255, 255, 255, 0.04); color: rgba(255, 255, 255, 0.5); }
-.is-folded .nav-fold:hover { background: rgba(27, 63, 160, 0.12); color: rgb(20 48 125); }
-.dark .is-folded .nav-fold:hover { background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.85); }
-.is-folded .nav-fold-line { transform: scaleX(0); opacity: 0; flex: 0 0 0; }
-.is-folded .nav-fold-label { flex: 1 1 auto; max-width: 100%; opacity: 1; }
-.is-folded .nav-fold-chevron { opacity: 0.6; transform: rotate(-90deg); }
-
-/* The fold itself: the group's height closes up while its items tip back like a page
-   folding away, one after another */
-.nav-fold-body {
-  display: grid;
-  grid-template-rows: 1fr;
-  transition: grid-template-rows 0.38s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.is-folded .nav-fold-body { grid-template-rows: 0fr; }
-.nav-fold-inner { min-height: 0; overflow: hidden; perspective: 700px; }
-.nav-fold-body .nav-item {
-  transform-origin: top center;
-  transition: background-color 0.15s, color 0.15s, box-shadow 0.15s,
-    transform 0.34s cubic-bezier(0.3, 0.7, 0.4, 1) calc(var(--i, 0) * 22ms),
-    opacity 0.26s ease calc(var(--i, 0) * 22ms);
-}
-.is-folded .nav-fold-body .nav-item { transform: rotateX(-80deg) translateY(-0.4rem); opacity: 0; }
-
-@media (prefers-reduced-motion: reduce) {
-  .nav-fold-body, .nav-fold-body .nav-item, .nav-fold, .nav-fold-line, .nav-fold-label, .nav-fold-chevron { transition: none; }
+.dark .hub-tab { background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.1); color: #dce4f8; }
+.dark .hub-tab :deep(svg) { color: #8fa8e6; }
+.dark .hub-tab:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+.dark .hub-tab-on,
+.dark .hub-tab-on:hover { background: linear-gradient(180deg, #3a5fc4, #1b3fa0); border-color: #3a5fc4; color: #fff; }
+.hub-tabs-scroll { scrollbar-width: none; }
+.hub-tabs-scroll::-webkit-scrollbar { display: none; }
+/* on a phone the row scrolls sideways: its edges fade, so it shows there is more to swipe to */
+@media (max-width: 767px) {
+  .hub-tabs-scroll { mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%); }
 }
 
 .sidebar-nav {

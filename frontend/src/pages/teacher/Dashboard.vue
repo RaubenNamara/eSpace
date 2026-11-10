@@ -150,7 +150,7 @@
             <li v-for="st in shown('word', needing)" :key="st.id" class="dash-chip">
               <span class="dash-chip-badge bg-gray-800 dark:bg-gray-600">{{ initials(niceName(st.name)) }}</span>
               <span class="min-w-0 flex-1">
-                <span class="block text-sm font-bold text-gray-900 dark:text-white truncate">{{ niceName(st.name) }} <span class="font-medium text-gray-500 dark:text-gray-400">{{ st.class_label }}</span></span>
+                <span class="flex items-baseline gap-1 min-w-0 text-sm font-bold text-gray-900 dark:text-white"><span class="truncate">{{ niceName(st.name) }}</span> <span class="flex-shrink-0 font-medium text-gray-500 dark:text-gray-400">{{ st.class_label }}</span></span>
                 <span class="block text-xs text-red-600 dark:text-red-400 truncate">{{ reason(st) }}</span>
               </span>
               <RouterLink :to="`/teacher/chat?student=${st.id}`" class="flex-shrink-0 px-2.5 py-1 rounded-lg text-xs font-bold text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-200 dark:ring-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/40">Message</RouterLink>

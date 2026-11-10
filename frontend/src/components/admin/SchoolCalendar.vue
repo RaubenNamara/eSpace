@@ -53,7 +53,8 @@
             <span class="absolute -top-0 left-1 text-[9px] font-bold text-rose-600 dark:text-rose-400 uppercase">Today</span>
           </div>
         </div>
-        <div class="mt-1 flex justify-between text-[10px] text-gray-400">
+        <!-- on a phone every other month, so the labels fit -->
+        <div class="mt-1 flex justify-between gap-1 text-[10px] text-gray-400 min-w-0 [&>span:nth-child(even)]:hidden sm:[&>span:nth-child(even)]:inline">
           <span v-for="m in monthTicks(y)" :key="m">{{ m }}</span>
         </div>
       </div>

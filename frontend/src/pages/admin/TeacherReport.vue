@@ -52,7 +52,8 @@
         <div class="px-4 py-3">
         <p class="report-sub !mt-0">Scripts handed in more than {{ data.marking_days }} days ago and still not marked.</p>
         <p v-if="!data.late_marking.length" class="report-none">None - every script is marked within {{ data.marking_days }} days.</p>
-        <table v-else class="report-table">
+        <div v-else class="overflow-x-auto">
+        <table class="report-table">
           <thead><tr><th>Teacher</th><th>Department</th><th class="text-right">Overdue scripts</th><th class="text-right">Oldest</th><th>Waiting on</th></tr></thead>
           <tbody>
             <tr v-for="t in data.late_marking" :key="t.id">
@@ -65,6 +66,7 @@
           </tbody>
         </table>
         </div>
+        </div>
       </section>
 
       <!-- 2. still marking -->
@@ -73,7 +75,8 @@
         <div class="px-4 py-3">
         <p class="report-sub !mt-0">Scripts handed in within the last {{ data.marking_days }} days, still waiting to be marked.</p>
         <p v-if="!data.still_marking.length" class="report-none">None waiting.</p>
-        <table v-else class="report-table">
+        <div v-else class="overflow-x-auto">
+        <table class="report-table">
           <thead><tr><th>Teacher</th><th>Department</th><th class="text-right">Scripts waiting</th><th>Waiting on</th></tr></thead>
           <tbody>
             <tr v-for="t in data.still_marking" :key="t.id">
@@ -85,6 +88,7 @@
           </tbody>
         </table>
         </div>
+        </div>
       </section>
 
       <!-- 3. nothing set -->
@@ -93,7 +97,8 @@
         <div class="px-4 py-3">
         <p class="report-sub !mt-0">Teachers with no assessment published this term.</p>
         <p v-if="!data.none_set.length" class="report-none">None - every teacher has set work.</p>
-        <table v-else class="report-table">
+        <div v-else class="overflow-x-auto">
+        <table class="report-table">
           <thead><tr><th>Teacher</th><th>Department</th><th class="text-right">eNotes published</th><th class="text-right">Drafts not published</th><th>Last signed in</th></tr></thead>
           <tbody>
             <tr v-for="t in data.none_set" :key="t.id">
@@ -106,6 +111,7 @@
           </tbody>
         </table>
         </div>
+        </div>
       </section>
 
       <!-- 4. learners not handing in -->
@@ -114,7 +120,8 @@
         <div class="px-4 py-3">
         <p class="report-sub !mt-0">Teachers whose closed assessments had fewer than half of their learners hand in.</p>
         <p v-if="!data.low_hand_in.length" class="report-none">None.</p>
-        <table v-else class="report-table">
+        <div v-else class="overflow-x-auto">
+        <table class="report-table">
           <thead><tr><th>Teacher</th><th>Department</th><th class="text-right">Assessments set</th><th class="text-right">Handed in</th><th class="text-right">Learners who missed</th></tr></thead>
           <tbody>
             <tr v-for="t in data.low_hand_in" :key="t.id">
@@ -126,6 +133,7 @@
             </tr>
           </tbody>
         </table>
+        </div>
         </div>
       </section>
 

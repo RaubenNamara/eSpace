@@ -29,7 +29,7 @@
           <div class="flex items-center gap-3 min-w-0 flex-1">
             <span class="w-10 h-10 flex-shrink-0 rounded-full flex items-center justify-center text-sm font-bold" :class="s.needs_teacher ? 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-200' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'">{{ initials(s.name) }}</span>
             <div class="min-w-0 flex-1">
-              <p class="font-semibold text-gray-900 dark:text-white truncate">{{ niceName(s.name) }} <span class="font-normal text-sm text-gray-500 dark:text-gray-400">· {{ s.class_label }}</span></p>
+              <p class="flex items-baseline gap-1 min-w-0 font-semibold text-gray-900 dark:text-white"><span class="truncate">{{ niceName(s.name) }}</span> <span class="flex-shrink-0 font-normal text-sm text-gray-500 dark:text-gray-400">· {{ s.class_label }}</span></p>
               <p class="mt-1 flex flex-wrap gap-1.5">
                 <span v-for="g in s.signals" :key="g.key" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold" :class="SIGNAL[g.key].chip">
                   <AppIcon :name="SIGNAL[g.key].icon" class="w-3 h-3" />{{ g.text }}

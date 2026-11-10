@@ -128,6 +128,8 @@ export default {
         display: ['Inter', 'system-ui', 'sans-serif'],
         jakarta: ['Inter', 'system-ui', 'sans-serif'],
         brand: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+        // the sidebar and the hub tabs: the logo's own face, at reading weights
+        nav: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', 'sans-serif'],
         // page titles and the public site's headings: a book serif, academic in feel
         heading: ['"Source Serif 4"', 'Georgia', 'Cambria', '"Times New Roman"', 'serif'],
       },

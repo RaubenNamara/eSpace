@@ -13,7 +13,7 @@
         <p v-if="description" class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">{{ description }}</p>
       </div>
 
-      <div class="flex flex-wrap items-center justify-end gap-2 ml-auto" :class="filtersTop ? 'min-w-0' : 'flex-shrink-0'">
+      <div class="flex flex-wrap items-center justify-end gap-2 ml-auto max-w-full" :class="filtersTop ? 'min-w-0' : 'flex-shrink-0'">
         <!-- Student pages: the filters sit top right, beside the title -->
         <div v-if="$slots.filters && filtersTop" class="min-w-0">
           <div v-if="sheetOpen" class="md:hidden fixed inset-0 z-40 bg-black/40" @click="sheetOpen = false"></div>

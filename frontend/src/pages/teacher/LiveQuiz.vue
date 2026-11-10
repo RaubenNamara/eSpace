@@ -35,7 +35,7 @@
     <EmptyState v-else-if="!shown.length" compact icon="bolt" title="No assessment matches" :message="`Nothing matches &quot;${search}&quot;.`" />
 
     <ul v-else class="grid md:grid-cols-2 gap-3">
-      <li v-for="a in shown" :key="a.id">
+      <li v-for="a in shown" :key="a.id" class="min-w-0">
         <button
           type="button"
           class="w-full text-left rounded-2xl border bg-white dark:bg-gray-800 p-4 transition hover:border-indigo-300 dark:hover:border-indigo-600"

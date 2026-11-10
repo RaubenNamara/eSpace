@@ -54,6 +54,7 @@
       <!-- Who signed in -->
       <section class="mt-7 avoid-break">
         <h2 class="font-heading text-lg font-bold text-gray-900 dark:text-white mb-2">Who signed in</h2>
+        <div class="overflow-x-auto">
         <table class="data-table w-full text-sm border-separate border-spacing-0">
           <thead>
             <tr>
@@ -74,6 +75,7 @@
             </tr>
           </tbody>
         </table>
+        </div>
       </section>
 
       <!-- Sign-ins over time -->
@@ -96,6 +98,7 @@
       <section class="mt-7 grid sm:grid-cols-2 gap-6 avoid-break">
         <div v-for="block in [{ title: 'Learning', rows: report.learning }, { title: 'Teaching', rows: report.teaching }]" :key="block.title">
           <h2 class="font-heading text-lg font-bold text-gray-900 dark:text-white mb-2">{{ block.title }}</h2>
+          <div class="overflow-x-auto">
           <table class="data-table w-full text-sm border-separate border-spacing-0">
             <tbody>
               <tr v-for="row in block.rows" :key="row.label">
@@ -104,6 +107,7 @@
               </tr>
             </tbody>
           </table>
+          </div>
         </div>
       </section>
 
