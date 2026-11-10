@@ -123,15 +123,7 @@
       </aside>
     </div>
 
-    <!-- Licence / attribution, as the CC BY licence requires -->
-    <p v-if="manifest" class="mt-3 text-[11px] text-gray-500 dark:text-gray-400">
-      3D anatomy: <a :href="manifest.source.url" target="_blank" rel="noopener" class="underline">{{ manifest.source.name }} {{ manifest.source.version }}</a>,
-      © {{ manifest.source.holder }}, licensed under <a :href="manifest.source.licenceUrl" target="_blank" rel="noopener" class="underline">{{ manifest.source.licence }}</a>.
-      <template v-for="x in manifest.extraSources ?? []" :key="x.version">
-        {{ x.covers }}: <a :href="x.url" target="_blank" rel="noopener" class="underline">{{ x.name }} {{ x.version }}</a>, © {{ x.holder }}, licensed under <a :href="x.licenceUrl" target="_blank" rel="noopener" class="underline">{{ x.licence }}</a>.
-      </template>
-      {{ manifest.source.changes }} The model is of one adult male; it is a teaching aid, not a medical reference.
-    </p>
+    <!-- The models' licence credits (CC BY / CC BY-SA) are kept off the screen, in public/anatomy/bodyparts3d/LICENSE.md served with the models -->
   </div>
 </template>
 

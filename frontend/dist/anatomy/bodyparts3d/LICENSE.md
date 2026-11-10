@@ -10,7 +10,7 @@ The files in this folder (`*.glb`, `manifest.json`) are derived from **BodyParts
 
 ## What CC BY 4.0 allows
 Commercial use, modification, redistribution and embedding are all allowed, provided that:
-1. the attribution above is shown where the models are used (the Anatomy Explorer shows it under the viewer);
+1. the attribution above is shown where the models are used (this file is served with the models, at /anatomy/bodyparts3d/LICENSE.md; the app's screens do not show it);
 2. the licence is named and linked;
 3. changes are indicated (see below).
 

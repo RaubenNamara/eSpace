@@ -33,7 +33,7 @@ const labs = (r: string): Hub => ({
   tabs: [
     { path: `/${r}/virtual-lab`, label: 'Science Lab', icon: 'FlaskIcon' },
     { path: `/${r}/ict-lab`, label: 'ICT Lab', icon: 'ComputerIcon' },
-    { path: `/${r}/anatomy`, label: 'Anatomy Explorer', icon: 'FlaskIcon' }
+    { path: `/${r}/anatomy`, label: 'Anatomy', icon: 'FlaskIcon' }
   ]
 })
 

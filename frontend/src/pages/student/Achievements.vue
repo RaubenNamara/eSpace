@@ -4,32 +4,36 @@
 
     <GrowthBoard />
 
-    <div class="flex flex-wrap gap-2 mb-6">
-      <span
+    <!-- Badge totals -->
+    <h2 class="text-sm font-bold text-gray-900 dark:text-white mb-2.5">My badges</h2>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-5">
+      <div
         v-for="type in (['platinum', 'gold', 'silver', 'bronze'] as BadgeType[])"
         :key="type"
-        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-white"
-        :class="BADGE_COLORS[type]"
+        class="flex items-center gap-3 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-3 shadow-sm"
       >
-        <BadgeIcon :type="type" plain class="w-4 h-4 inline-block align-[-3px]" /> {{ BADGE_LABELS[type] }}: {{ summary?.[type] ?? 0 }}
-      </span>
+        <span class="w-10 h-10 rounded-xl flex items-center justify-center text-white flex-shrink-0 shadow-sm" :class="BADGE_COLORS[type]">
+          <BadgeIcon :type="type" plain class="w-5 h-5" />
+        </span>
+        <div class="min-w-0">
+          <p class="text-xl font-extrabold leading-none text-gray-900 dark:text-white tabular-nums">{{ summary?.[type] ?? 0 }}</p>
+          <p class="mt-1 text-xs font-medium text-gray-500 dark:text-gray-400">{{ BADGE_LABELS[type] }}</p>
+        </div>
+      </div>
     </div>
 
-    <div class="flex items-center gap-2 mb-5">
+    <!-- Active badges, or every badge ever given -->
+    <div class="inline-flex p-1 mb-4 rounded-xl bg-gray-100 dark:bg-gray-800 ring-1 ring-gray-200/70 dark:ring-gray-700" role="tablist" aria-label="Which badges">
       <button
-        @click="showRevoked = false"
-        class="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
-        :class="!showRevoked ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700'"
-      >
-        Active
-      </button>
-      <button
-        @click="showRevoked = true"
-        class="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
-        :class="showRevoked ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700'"
-      >
-        Full History
-      </button>
+        v-for="opt in [{ v: false, l: 'Active' }, { v: true, l: 'Full history' }]"
+        :key="opt.l"
+        type="button"
+        role="tab"
+        :aria-selected="showRevoked === opt.v"
+        class="px-4 py-1.5 rounded-lg text-sm font-semibold transition"
+        :class="showRevoked === opt.v ? 'bg-white text-indigo-700 shadow-sm dark:bg-gray-700 dark:text-white' : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200'"
+        @click="showRevoked = opt.v"
+      >{{ opt.l }}</button>
     </div>
 
     <div v-if="loading" class="flex justify-center py-16">
@@ -38,26 +42,27 @@
 
     <EmptyState v-else-if="filteredAwards.length === 0" compact icon="trophy" tone="amber" title="No badges yet" message="Badges are awarded automatically - for strong results, steady improvement and keeping a learning streak going." />
 
-    <div v-else class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2.5">
-      <div
+    <div v-else class="grid grid-cols-1 min-[420px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+      <article
         v-for="a in filteredAwards"
         :key="a.id"
-        class="rounded-xl p-3 text-white shadow-sm relative"
+        class="relative overflow-hidden rounded-2xl p-4 text-white shadow-md"
         :class="[BADGE_COLORS[a.badge_type], a.status === 'revoked' ? 'opacity-50 grayscale' : '']"
       >
-        <span v-if="a.status === 'revoked'" class="absolute top-2 right-2 text-[10px] font-semibold bg-black/40 px-2 py-0.5 rounded-full">Revoked</span>
-        <div class="flex items-start justify-between gap-2">
-          <BadgeIcon :type="a.badge_type" class="w-6 h-6" />
-          <span class="text-[10px] uppercase tracking-wide font-semibold bg-white/20 px-2 py-0.5 rounded-full">{{ BADGE_LABELS[a.badge_type] }}</span>
+        <!-- a soft light from the top corner -->
+        <span class="pointer-events-none absolute -top-10 -right-10 w-32 h-32 rounded-full bg-white/15" aria-hidden="true"></span>
+        <div class="relative flex items-start justify-between gap-2">
+          <span class="w-10 h-10 rounded-xl bg-white/20 ring-1 ring-white/30 flex items-center justify-center"><BadgeIcon :type="a.badge_type" plain class="w-5 h-5" /></span>
+          <span class="text-[10px] uppercase tracking-wider font-bold bg-white/20 px-2 py-0.5 rounded-full">{{ a.status === 'revoked' ? 'Revoked' : BADGE_LABELS[a.badge_type] }}</span>
         </div>
-        <p class="font-bold mt-1.5 text-sm leading-tight">{{ a.award_title }}</p>
-        <p v-if="a.average !== null" class="text-xs opacity-90">Average: {{ a.average }}%</p>
-        <p v-else-if="a.score !== null" class="text-xs opacity-90">Score: {{ a.score }}%</p>
-        <p class="text-[11px] opacity-75 mt-0.5 truncate">
-          {{ a.subject_name ? a.subject_name + ' · ' : '' }}{{ a.term_name }}{{ a.academic_year ? ', ' + a.academic_year : '' }}
-        </p>
-        <p class="text-[10px] opacity-60 mt-1">Awarded {{ formatDate(a.awarded_at) }}</p>
-      </div>
+        <p class="relative mt-3 font-bold text-[15px] leading-snug">{{ a.award_title }}</p>
+        <p v-if="a.average !== null" class="relative text-sm text-white/90">Average {{ a.average }}%</p>
+        <p v-else-if="a.score !== null" class="relative text-sm text-white/90">Score {{ a.score }}%</p>
+        <div class="relative mt-3 pt-2.5 border-t border-white/20 flex items-center justify-between gap-2 text-[11px] text-white/80">
+          <span class="truncate">{{ a.subject_name ? a.subject_name + ' · ' : '' }}{{ a.term_name }}{{ a.academic_year ? ', ' + a.academic_year : '' }}</span>
+          <span class="flex-shrink-0">{{ formatDate(a.awarded_at) }}</span>
+        </div>
+      </article>
     </div>
   </div>
 </template>

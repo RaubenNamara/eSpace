@@ -100,7 +100,7 @@ export const GUIDE: GuidePart[] = [
       {
         id: 's-anatomy', title: 'The Anatomy Explorer', icon: 'beaker',
         intro: 'A real 3D model of the human body for biology - turn it, zoom in and click any part to read what it does.',
-        steps: ['Open Labs in the menu, then the Anatomy Explorer tab.', 'Choose a body system to show (skeleton, muscles, heart and blood vessels and more), search for a part, or open a system on its own.', 'Click a part to read its name and what it does.', 'Open the heart close-up to watch it pump - the valves and the blood flowing, inside and outside.', '"Modules, tours & quizzes" has step-by-step tours and quizzes on each system.']
+        steps: ['Open Labs in the menu, then the Anatomy tab.', 'Choose a body system to show (skeleton, muscles, heart and blood vessels and more), search for a part, or open a system on its own.', 'Click a part to read its name and what it does.', 'Open the heart close-up to watch it pump - the valves and the blood flowing, inside and outside.', '"Modules, tours & quizzes" has step-by-step tours and quizzes on each system.']
       },
       {
         id: 's-live', title: 'Joining live classes', icon: 'video',
@@ -171,7 +171,7 @@ export const GUIDE: GuidePart[] = [
       {
         id: 't-ictlab', title: 'The ICT Lab and linking it to your notes', icon: 'keyboard',
         steps: ['Open Labs in the menu, then the ICT Lab tab. Try any activity at any level - your own runs are not saved.', 'Computer lab rules comes first for students: 12 rules, then situations to judge. A student who scores 80% has a lab pass, shown on their ICT Lab page.', 'The Parts and devices showroom shows every part and 22 devices in HD 3D, with numbered details to fly in to - useful on a projector when teaching input, output, storage and networking. Test yourself checks what students know.', 'Beside every step is a page icon. Tap it to link that step to one of your eNotes - the whole topic, or one page.', 'Students on that step then see "Read about this", which opens your page. A link works at every level.', 'Students\' best scores for each activity and level are kept as they finish.'],
-        tips: ['Each student\'s best Test yourself and lab rules scores are kept like any activity.', 'The Anatomy Explorer (Labs, then the Anatomy Explorer tab) gives biology lessons a 3D human body, with tours and quizzes.']
+        tips: ['Each student\'s best Test yourself and lab rules scores are kept like any activity.', 'The Anatomy Explorer (Labs, then the Anatomy tab) gives biology lessons a 3D human body, with tours and quizzes.']
       },
       {
         id: 't-ictlab-results', title: 'ICT Lab results and setting a practical', icon: 'clipboard',

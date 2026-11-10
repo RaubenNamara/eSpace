@@ -71,10 +71,19 @@
         <!-- Where to improve -->
         <div class="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
           <h3 class="px-4 py-3 border-b border-gray-100 dark:border-gray-700 text-sm font-bold text-gray-900 dark:text-white">Where to improve</h3>
-          <ul class="px-4 py-3 space-y-2">
-            <li v-for="(tip, i) in tips" :key="i" class="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-200">
-              <AppIcon name="sparkles" class="w-4 h-4 mt-0.5 flex-shrink-0 text-indigo-500" />
-              <span><b v-if="tip.subject" class="font-semibold text-gray-900 dark:text-white">{{ tip.subject }}: </b>{{ tip.text }}</span>
+          <!-- One short line each: the subject, the fact, and the next step (tap to open it) -->
+          <ul class="font-nav divide-y divide-gray-100 dark:divide-gray-700/60">
+            <li v-for="(tip, i) in tips" :key="i" class="flex items-center gap-3 px-4 py-2.5">
+              <span class="self-stretch w-1 flex-shrink-0 rounded-full bg-indigo-200 dark:bg-indigo-800" aria-hidden="true"></span>
+              <div class="min-w-0 flex-1">
+                <p v-if="tip.subject" class="text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-300 truncate">{{ tip.subject }}</p>
+                <p class="text-[13px] font-semibold leading-5 text-gray-900 dark:text-white">{{ tip.text }}</p>
+                <button v-if="tip.item" type="button" class="max-w-full flex items-center gap-1 text-[12px] leading-5 text-indigo-600 dark:text-indigo-300 hover:underline" @click="$emit('open', tip.item)">
+                  <span class="flex-shrink-0 font-semibold">{{ tip.verb }}:</span>
+                  <span class="truncate">{{ tip.item.title }}</span>
+                  <span aria-hidden="true">→</span>
+                </button>
+              </div>
             </li>
           </ul>
         </div>
@@ -192,26 +201,35 @@ const attention = computed(() => props.items
   .sort((a, b) => b.wait - a.wait))
 
 const tips = computed(() => {
-  const out: { subject?: string; text: string }[] = []
+  const out: { subject?: string; text: string; verb?: string; item?: ReadingItem }[] = []
   const weak = subjects.value.filter(s => s.verdict === 'none' || s.verdict === 'behind')
   for (const s of weak.slice(0, 3)) {
     const fresh = s.list.filter(i => i.state === 'new')
     const stuck = s.list.filter(i => i.state === 'reading').sort((a, b) => (b.percent ?? 0) - (a.percent ?? 0))[0]
-    if (s.verdict === 'none') out.push({ subject: s.name, text: `you haven't opened any of its ${s.total} ${plural(s.total)}. Start with "${s.list[0].title}".` })
-    else if (s.idle > 7 && stuck) out.push({ subject: s.name, text: `no reading for ${s.idle} days. Pick up "${stuck.title}" where you stopped (${stuck.percent ?? 0}%).` })
-    else if (fresh.length) out.push({ subject: s.name, text: `${fresh.length} of ${s.total} ${plural(s.total)} not started yet. Read "${fresh[0].title}" next.` })
-    else if (stuck) out.push({ subject: s.name, text: `finish "${stuck.title}": you're ${stuck.percent ?? 0}% through.` })
+    if (s.verdict === 'none') out.push({ subject: s.name, text: `0 of ${s.total} ${plural(s.total)} opened`, verb: 'Start', item: s.list[0] })
+    else if (s.idle > 7 && stuck) out.push({ subject: s.name, text: `No reading for ${s.idle} days`, verb: `Resume at ${stuck.percent ?? 0}%`, item: stuck })
+    else if (fresh.length) out.push({ subject: s.name, text: `${fresh.length} of ${s.total} ${plural(s.total)} not started`, verb: 'Next', item: fresh[0] })
+    else if (stuck) out.push({ subject: s.name, text: `${stuck.percent ?? 0}% through`, verb: 'Finish', item: stuck })
   }
-  // The subject with the least time against the rest
+  // The subject with the least time against the rest - only where there is real time to compare
+  // (at least 10 minutes in the busiest subject) and only for a subject not already done well
   const timed = subjects.value.filter(s => s.verdict !== 'none')
   if (timed.length > 1) {
-    const least = [...timed].sort((a, b) => a.minutes - b.minutes)[0]
     const most = [...timed].sort((a, b) => b.minutes - a.minutes)[0]
-    if (most.minutes > 0 && least.minutes < most.minutes / 3 && !weak.some(w => w.name === least.name)) {
-      out.push({ subject: least.name, text: `only ${duration(least.minutes)} of reading, far less than ${most.name} (${duration(most.minutes)}). Give it a little time each day.` })
+    const least = timed.filter(s => s.verdict !== 'well' && s.name !== most.name).sort((a, b) => a.minutes - b.minutes)[0]
+    if (least && most.minutes >= 10 && least.minutes < most.minutes / 3 && !weak.some(w => w.name === least.name)) {
+      const next = least.list.find(i => i.state === 'reading') || least.list.find(i => i.state === 'new')
+      out.push({ subject: least.name, text: `Least time so far: ${duration(least.minutes)} (${most.name}: ${duration(most.minutes)})`, verb: 'Read', item: next })
     }
   }
-  if (!out.length) out.push({ text: read.value.length ? 'You are keeping up with your reading. Keep a little reading each day to stay ahead.' : `Open your first ${props.noun} to see how your reading is going.` })
+  // Nothing behind: point at what is still unread in a subject that is on track
+  if (!out.length) {
+    for (const s of subjects.value.filter(x => x.verdict === 'track').slice(0, 2)) {
+      const fresh = s.list.filter(i => i.state === 'new')
+      if (fresh.length) out.push({ subject: s.name, text: `${fresh.length} of ${s.total} ${plural(s.total)} not started`, verb: 'Next', item: fresh[0] })
+    }
+  }
+  if (!out.length) out.push({ text: read.value.length ? 'On track. Keep a little reading each day.' : `Open your first ${props.noun} to see your progress.` })
   return out
 })
 </script>

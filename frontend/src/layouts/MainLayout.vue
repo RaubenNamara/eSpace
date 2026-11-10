@@ -393,7 +393,11 @@
               </div>
             </div>
           </div>
-          <!-- Students on a phone: the places they go most, one thumb-tap away at the bottom of the
+  <CommandPalette v-if="hubs.length" :groups="paletteGroups" :icons="iconMap" :role="menuRole" :actions="paletteActions" />
+  </div>
+      </header>
+
+      <!-- Students on a phone: the places they go most, one thumb-tap away at the bottom of the
        screen; "More" opens the full menu. Hidden while reading (the reader has its own controls). -->
   <nav
     v-if="showStudentTabs"
@@ -420,9 +424,6 @@
       </button>
     </div>
   </nav>
-  <CommandPalette v-if="hubs.length" :groups="paletteGroups" :icons="iconMap" :role="menuRole" :actions="paletteActions" />
-  </div>
-      </header>
 
       <ProfileSettingsModal v-if="showProfileModal" :focus-section="profileModalFocusSection" @close="showProfileModal = false" />
 
@@ -445,7 +446,7 @@
         :style="{ top: headerHidden ? '0px' : `${headerHeight}px` }"
         :aria-label="`${currentHub.label} pages`"
       >
-        <div ref="hubTabsEl" class="hub-tabs-scroll font-nav flex items-center gap-2 overflow-x-auto px-4 sm:px-6 py-2.5">
+        <div ref="hubTabsEl" class="hub-tabs-scroll font-nav flex items-center gap-2 overflow-x-auto px-4 sm:px-6 py-2.5" :class="{ 'hub-tabs-few': hubTabs.length <= 3 }">
           <router-link
             v-for="tab in hubTabs"
             :key="tab.path"
@@ -1185,6 +1186,60 @@ const iconMap: Record<string, any> = {
 /* on a phone the row scrolls sideways: its edges fade, so it shows there is more to swipe to */
 @media (max-width: 767px) {
   .hub-tabs-scroll { mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%); }
+
+  /* Phones: the tabs become one switch, like a phone app's - a soft track with the open page as a
+     raised white pill. Up to three tabs share the width equally; more scroll sideways in the track. */
+  .hub-tabs { border-bottom-color: transparent; }
+  .hub-tabs-scroll {
+    margin: 0.5rem 1rem;
+    padding: 3px;
+    gap: 2px;
+    border-radius: 0.95rem;
+    background: #e6ebf7;
+    box-shadow: inset 0 1px 2px rgba(12, 24, 66, 0.08);
+  }
+  .hub-tabs-few { mask-image: none; }
+  .hub-tab {
+    flex: 0 0 auto;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.5rem 0.85rem;
+    border: 0;
+    border-radius: 0.75rem;
+    background: transparent;
+    font-size: 0.84rem;
+    color: #3d5594;
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* icon over a short label, as a phone app's tabs - so even "Academic History" fits */
+  .hub-tabs-few .hub-tab {
+    flex: 1 1 0;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding: 0.4rem 0.3rem 0.35rem;
+    font-size: 0.72rem;
+    line-height: 1rem;
+  }
+  .hub-tabs-few .hub-tab > span:not([class]) { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .hub-tabs-few .hub-tab :deep(svg) { width: 1.15rem; height: 1.15rem; }
+  .hub-tab:hover { background: transparent; }
+  .hub-tab:active { transform: scale(0.96); }
+  .hub-tab-dim { opacity: 1; filter: none; }
+  .hub-tab-on,
+  .hub-tab-on:hover {
+    background: #fff;
+    color: #14307d;
+    box-shadow: 0 1px 2px rgba(12, 24, 66, 0.12), 0 3px 8px -2px rgba(12, 24, 66, 0.18);
+  }
+  .hub-tab-on :deep(svg),
+  .hub-tab-on:hover :deep(svg) { color: #1b3fa0; }
+  .hub-tab-on::after { display: none; }
+  .dark .hub-tabs-scroll { background: rgba(255, 255, 255, 0.07); box-shadow: none; }
+  .dark .hub-tab { background: transparent; color: #b9c6ea; }
+  .dark .hub-tab-on,
+  .dark .hub-tab-on:hover { background: #3a5fc4; color: #fff; }
+  .dark .hub-tab-on :deep(svg) { color: #edc95a; }
 }
 
 .sidebar-nav {

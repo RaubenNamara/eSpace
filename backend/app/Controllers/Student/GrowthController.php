@@ -8,17 +8,15 @@ use eSpace\App\Controllers\Controller;
 use eSpace\App\Services\GrowthService;
 
 /**
- * The class growth board: who in the student's class stream is improving most - by their recent
- * results against their earlier ones, and by learning outcomes achieved this term - so a student
- * doesn't have to be top of the class to be on it (see GrowthService). Classmates appear by first
- * name and initial; the student sees where they stand themselves.
+ * A student's own growth: how much their recent results have improved on their earlier ones, and
+ * the learning outcomes they achieved this term (see GrowthService), with where that places them
+ * in their class stream. Only the student's own figures are sent - never a classmate's name or
+ * marks (the old class board listed classmates, and sent their averages to the browser).
  *
  * GET /student/growth
  */
 class GrowthController extends Controller
 {
-    private const TOP = 10;
-
     public function index(): void
     {
         if (!$this->isAuthenticated()) {
@@ -39,7 +37,7 @@ class GrowthController extends Controller
         $stmt->execute([$studentId]);
         $class = $stmt->fetch();
         if (!$class) {
-            $this->success(['class_name' => null, 'improved' => [], 'climbers' => [], 'me' => null, 'student_count' => 0]);
+            $this->success(['class_name' => null, 'me' => null, 'student_count' => 0]);
             return;
         }
 
@@ -73,8 +71,6 @@ class GrowthController extends Controller
         $this->success([
             'class_name' => $class['class_name'],
             'student_count' => count($students),
-            'improved' => array_map($row, array_slice($improved, 0, self::TOP)),
-            'climbers' => array_map($row, array_slice($climbers, 0, self::TOP)),
             'me' => $me,
         ]);
     }
