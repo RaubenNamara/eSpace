@@ -16,8 +16,9 @@
         <!-- Search + filters (client-side only - the assignment list is already fully loaded) -->
         <!-- beside the title only on a wide screen; on a laptop the description needs the room -->
         <div v-if="activeTab === 'experiments'" class="w-full 2xl:w-auto 2xl:ml-auto flex flex-wrap items-center 2xl:justify-end gap-2">
-          <!-- Search: a round button that opens into a box when tapped, and folds back when left empty -->
-          <div class="relative flex items-center order-last">
+          <!-- Search: a round button that opens into a box when tapped, and folds back when left empty.
+               Not on phones - the filters are enough there. -->
+          <div class="relative hidden sm:flex items-center order-last">
             <svg class="absolute left-3 w-4 h-4 pointer-events-none transition-colors" :class="searchShown ? 'text-indigo-500' : 'text-indigo-700 dark:text-indigo-200'" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path stroke-linecap="round" d="M20 20l-3.5-3.5" /></svg>
             <input
               ref="searchEl"
