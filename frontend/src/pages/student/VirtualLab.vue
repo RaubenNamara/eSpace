@@ -15,7 +15,7 @@
         </div>
         <!-- Search + filters (client-side only - the assignment list is already fully loaded) -->
         <!-- beside the title only on a wide screen; on a laptop the description needs the room -->
-        <div v-if="activeTab === 'experiments'" class="w-full 2xl:w-auto 2xl:ml-auto flex flex-wrap items-center 2xl:justify-end gap-2">
+        <div v-if="activeTab === 'experiments'" class="w-full 2xl:w-auto 2xl:ml-auto grid grid-cols-4 gap-1.5 sm:flex sm:flex-wrap sm:items-center 2xl:justify-end sm:gap-2">
           <!-- Search: a round button that opens into a box when tapped, and folds back when left empty.
                Not on phones - the filters are enough there. -->
           <div class="relative hidden sm:flex items-center order-last">
@@ -38,22 +38,22 @@
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M6 6l12 12M18 6L6 18" /></svg>
             </button>
           </div>
-          <select v-model="subjectFilter" class="input-field text-sm w-auto">
-            <option value="">All Subjects</option>
+          <select v-model="subjectFilter" class="vl-filter input-field text-sm min-w-0 sm:w-auto" aria-label="Subject">
+            <option value="">{{ compactFilters ? 'Subject' : 'All Subjects' }}</option>
             <option v-for="s in subjectOptions" :key="s" :value="s">{{ s }}</option>
           </select>
-          <select v-model="topicFilter" class="input-field text-sm w-auto">
-            <option value="">All Topics</option>
+          <select v-model="topicFilter" class="vl-filter input-field text-sm min-w-0 sm:w-auto" aria-label="Topic">
+            <option value="">{{ compactFilters ? 'Topic' : 'All Topics' }}</option>
             <option v-for="t in topicOptions" :key="t" :value="t">{{ t }}</option>
           </select>
-          <select v-model="difficultyFilter" class="input-field text-sm w-auto">
-            <option value="">All Difficulties</option>
+          <select v-model="difficultyFilter" class="vl-filter input-field text-sm min-w-0 sm:w-auto" aria-label="Difficulty">
+            <option value="">{{ compactFilters ? 'Level' : 'All Difficulties' }}</option>
             <option value="beginner">Beginner</option>
             <option value="intermediate">Intermediate</option>
             <option value="advanced">Advanced</option>
           </select>
-          <select v-model="statusFilter" class="input-field text-sm w-auto">
-            <option value="">All Statuses</option>
+          <select v-model="statusFilter" class="vl-filter input-field text-sm min-w-0 sm:w-auto" aria-label="Status">
+            <option value="">{{ compactFilters ? 'Status' : 'All Statuses' }}</option>
             <option value="not_started">Not Started</option>
             <option value="in_progress">In Progress</option>
             <option value="submitted">Submitted</option>
@@ -85,19 +85,20 @@
           <span class="flex-shrink-0 text-indigo-600 dark:text-indigo-400 text-sm font-semibold transition-transform group-hover:translate-x-0.5">Explore &rarr;</span>
         </router-link>
 
-        <div class="flex flex-wrap gap-2 mb-6">
+        <!-- one line on a phone (it scrolls sideways if a Clear button joins them) -->
+        <div class="vl-cats flex flex-nowrap sm:flex-wrap sm:justify-center gap-1.5 sm:gap-2 mb-6 -mx-1 px-1 py-1 overflow-x-auto sm:overflow-visible">
           <button
             v-for="cat in categories"
             :key="cat"
             @click="activeCategory = activeCategory === cat ? null : cat"
-            class="inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold rounded-full border shadow-sm transition-all"
+            class="flex-shrink-0 inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-[13px] sm:text-sm font-semibold rounded-full border shadow-sm transition-all"
             :class="activeCategory === cat
               ? `${CATEGORY_COLORS[cat]} text-white border-transparent shadow-md scale-[1.03]`
               : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'"
           >
-            <span><AppIcon :name="CATEGORY_ICONS[cat]" class="w-4 h-4" /></span> {{ CATEGORY_LABELS[cat] }}
+            {{ cat === 'agriculture' ? 'Agric' : CATEGORY_LABELS[cat] }}
           </button>
-          <button v-if="activeCategory" @click="activeCategory = null" class="inline-flex items-center gap-1 px-3 py-2 text-xs font-medium rounded-full text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">Clear filter ✕</button>
+          <button v-if="activeCategory" @click="activeCategory = null" class="flex-shrink-0 inline-flex items-center gap-1 px-3 py-2 text-xs font-medium rounded-full text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">Clear filter ✕</button>
         </div>
 
         <!-- Loading skeleton -->
@@ -136,7 +137,6 @@
             <div class="p-5 flex-1 flex flex-col">
               <div class="flex items-start justify-between gap-2 mb-2">
                 <h3 class="font-bold text-gray-900 dark:text-white leading-snug">{{ a.experiment_title }}</h3>
-                <span class="w-9 h-9 flex-shrink-0 rounded-xl flex items-center justify-center text-lg print-color-exact" :class="CATEGORY_COLORS[a.category]"><AppIcon :name="CATEGORY_ICONS[a.category]" class="w-4 h-4" /></span>
               </div>
               <p class="text-xs font-medium text-gray-400 dark:text-gray-500 mb-2 uppercase tracking-wide">{{ a.subject_name || CATEGORY_LABELS[a.category] }}<span v-if="a.topic"> · {{ a.topic }}</span></p>
 
@@ -230,10 +230,10 @@
 
 <script setup lang="ts">
 import AppIcon from '@/components/common/AppIcon.vue'
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
-import { CATEGORY_ICONS, CATEGORY_LABELS, CATEGORY_COLORS } from '@/types/virtualLab'
+import { CATEGORY_LABELS, CATEGORY_COLORS } from '@/types/virtualLab'
 import type { StudentAssignment, LabCategory, ExperimentDetail } from '@/types/virtualLab'
 import VirtualLabSkillsPanel from '@/components/virtuallab/VirtualLabSkillsPanel.vue'
 
@@ -253,6 +253,12 @@ const loading = ref(true)
 const loadError = ref<string | null>(null)
 const activeCategory = ref<LabCategory | null>(null)
 const search = ref('')
+// Phones: the four filters share one row, so their "All ..." labels shorten to one word
+const phoneQuery = typeof window !== 'undefined' ? window.matchMedia('(max-width: 639px)') : null
+const compactFilters = ref(!!phoneQuery?.matches)
+const onPhoneQuery = (e: MediaQueryListEvent) => { compactFilters.value = e.matches }
+phoneQuery?.addEventListener('change', onPhoneQuery)
+onBeforeUnmount(() => phoneQuery?.removeEventListener('change', onPhoneQuery))
 const searchOpen = ref(false)
 // open while it has the cursor or holds words
 const searchShown = computed(() => searchOpen.value || !!search.value)
@@ -340,3 +346,24 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style scoped>
+/* Phones: the four filters in one row - small type, tight padding, long names cut with an ellipsis */
+@media (max-width: 639px) {
+  .vl-cats { scrollbar-width: none; }
+  /* centred while they fit; if a Clear button makes the row too long it still scrolls from the start */
+  .vl-cats > :first-child { margin-left: auto; }
+  .vl-cats > :last-child { margin-right: auto; }
+  .vl-cats::-webkit-scrollbar { display: none; }
+  .vl-filter {
+    width: 100%;
+    height: 2.1rem;
+    padding: 0 1.1rem 0 0.5rem;
+    font-size: 11px;
+    border-radius: 0.6rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+}
+</style>

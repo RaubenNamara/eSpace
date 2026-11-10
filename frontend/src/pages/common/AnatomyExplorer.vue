@@ -40,7 +40,7 @@
     <div
       v-else
       :class="labMaximized
-        ? 'fixed inset-0 z-[60] bg-white dark:bg-gray-900 p-2 grid gap-2 grid-rows-[auto_minmax(0,1fr)] lg:grid-rows-1'
+        ? 'fixed inset-0 z-[60] bg-white dark:bg-gray-900 p-2 grid gap-2 grid-rows-[minmax(0,1fr)]'
         : 'grid gap-3'"
       :style="gridStyle"
     >
