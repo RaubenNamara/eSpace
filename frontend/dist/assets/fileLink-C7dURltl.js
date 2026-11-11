@@ -1,0 +1,1 @@
+import{i as n}from"./index-7Cg2it0K.js";async function t(a){const i=await n.get("/api/files/link",{params:{path:new URL(a,window.location.origin).pathname}});return window.location.origin+i.data.data.url}export{t as s};

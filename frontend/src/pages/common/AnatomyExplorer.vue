@@ -1,23 +1,24 @@
 <template>
   <div>
     <!-- Top bar -->
-    <div class="flex flex-wrap items-center gap-x-3 gap-y-2 mb-3">
-      <RouterLink :to="`/${role}/virtual-lab`" class="p-2 rounded-xl text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Back to the Science Lab">
+    <!-- on a phone: back, the title, Modules and the level in one line -->
+    <div class="flex flex-nowrap sm:flex-wrap items-center gap-x-2 sm:gap-x-3 gap-y-2 mb-3">
+      <RouterLink :to="`/${role}/virtual-lab`" class="flex-shrink-0 p-1.5 sm:p-2 -ml-1.5 sm:ml-0 rounded-xl text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Back to the Science Lab">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
       </RouterLink>
       <div class="min-w-0 flex-1">
-        <p class="text-[11px] font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">Virtual Lab · Biology</p>
-        <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-tight">Anatomy Explorer</h1>
+        <p class="hidden sm:block text-[11px] font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">Virtual Lab · Biology</p>
+        <h1 class="text-base sm:text-xl font-bold text-gray-900 dark:text-white leading-tight truncate">Anatomy<span class="hidden min-[400px]:inline"> Explorer</span></h1>
       </div>
-      <RouterLink :to="`/${role}/anatomy/modules`" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700">Modules, tours &amp; quizzes</RouterLink>
-      <div class="flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden" role="radiogroup" aria-label="Level of detail">
+      <RouterLink :to="`/${role}/anatomy/modules`" class="flex-shrink-0 px-2.5 sm:px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700">Modules<span class="hidden sm:inline">, tours &amp; quizzes</span></RouterLink>
+      <div class="flex-shrink-0 flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden" role="radiogroup" aria-label="Level of detail">
         <button
           v-for="l in LEVELS"
           :key="l.key"
           type="button"
           role="radio"
           :aria-checked="level === l.key"
-          class="px-3 py-1.5 text-xs font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500"
+          class="px-2.5 sm:px-3 py-1.5 text-xs font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500"
           :class="level === l.key ? 'bg-indigo-600 text-white' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800'"
           :title="l.hint"
           @click="setLevel(l.key)"
@@ -116,7 +117,7 @@
       <aside
         v-show="rightOpen || !!selected"
         class="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 lg:overflow-y-auto"
-        :class="[labMaximized ? 'hidden lg:block' : '', 'order-2 lg:order-none lg:max-h-[calc(100vh-10rem)]', !rightOpen ? 'lg:hidden' : '']"
+        :class="[labMaximized || !selected ? 'hidden lg:block' : '', 'order-2 lg:order-none lg:max-h-[calc(100vh-10rem)]', !rightOpen ? 'lg:hidden' : '']"
         aria-label="Details"
       >
         <AnatomyDetailsPanel :info="info" :level="level" @clear="clearSelection" @focus="focusSelection" @full-view="fullView" />

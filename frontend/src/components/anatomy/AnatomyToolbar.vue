@@ -1,6 +1,17 @@
 <template>
+  <!-- On a phone, two tidy rows with nothing hidden: the view (as a picker), zoom and full screen;
+       then the display switches sharing the width. Wider screens keep one wrapping row. -->
   <div class="flex flex-wrap items-center gap-1.5" role="toolbar" aria-label="Camera and display controls">
-    <div class="flex rounded-lg bg-white/95 dark:bg-gray-900/95 shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden" role="group" aria-label="Views">
+    <select
+      class="sm:hidden h-8 pl-2.5 pr-7 rounded-lg bg-white/95 dark:bg-gray-900/95 shadow-sm border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-700 dark:text-gray-200"
+      aria-label="View"
+      value=""
+      @change="pickView"
+    >
+      <option value="" disabled>View</option>
+      <option v-for="v in VIEWS" :key="v.key" :value="v.key">{{ v.label }}</option>
+    </select>
+    <div class="hidden sm:flex rounded-lg bg-white/95 dark:bg-gray-900/95 shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden" role="group" aria-label="Views">
       <button
         v-for="v in VIEWS"
         :key="v.key"
@@ -21,11 +32,11 @@
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v6h6M20 20v-6h-6M5.5 15a7 7 0 0012.4 2.5M18.5 9A7 7 0 006.1 6.5" /></svg>
       </button>
     </div>
-    <div class="flex rounded-lg bg-white/95 dark:bg-gray-900/95 shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden" role="group" aria-label="Display">
+    <div class="order-last sm:order-none w-full sm:w-auto flex rounded-lg bg-white/95 dark:bg-gray-900/95 shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden [&>button]:flex-1 [&>button]:whitespace-nowrap [&>button]:px-2 sm:[&>button]:px-2.5 sm:[&>button]:flex-none" role="group" aria-label="Display">
       <button type="button" :class="toggle(labels)" :aria-pressed="labels" title="Show or hide labels" @click="$emit('update:labels', !labels)">Labels</button>
-      <button type="button" :class="toggle(seeThrough)" :aria-pressed="seeThrough" title="See-through skin when other systems are shown" @click="$emit('update:seeThrough', !seeThrough)">See-through skin</button>
+      <button type="button" :class="toggle(seeThrough)" :aria-pressed="seeThrough" title="See-through skin when other systems are shown" aria-label="See-through skin" @click="$emit('update:seeThrough', !seeThrough)">See-through<span class="hidden sm:inline"> skin</span></button>
       <button type="button" :class="toggle(isolate)" :aria-pressed="isolate" :disabled="!hasSelection" title="Fade everything except the selection" @click="$emit('update:isolate', !isolate)">Isolate</button>
-      <button type="button" :class="toggle(living)" :aria-pressed="living" title="Organs working: heartbeat, blood flow, breathing, digestion…" @click="$emit('update:living', !living)">Living body</button>
+      <button type="button" :class="toggle(living)" :aria-pressed="living" title="Organs working: heartbeat, blood flow, breathing, digestion…" aria-label="Living body" @click="$emit('update:living', !living)">Living<span class="hidden sm:inline"> body</span></button>
     </div>
     <button
       type="button"
@@ -46,7 +57,7 @@
 import type { ViewName } from '@/anatomy/types'
 
 withDefaults(defineProps<{ labels: boolean; seeThrough: boolean; isolate: boolean; hasSelection: boolean; fullscreen: boolean; living?: boolean }>(), { living: false })
-defineEmits<{
+const emit = defineEmits<{
   view: [ViewName]
   zoom: [number]
   reset: []
@@ -57,6 +68,12 @@ defineEmits<{
   'update:living': [boolean]
 }>()
 
+// the phone's view picker: go to the view, then show "View" again so the same one can be picked twice
+const pickView = (e: Event) => {
+  const el = e.target as HTMLSelectElement
+  if (el.value) emit('view', el.value as ViewName)
+  el.value = ''
+}
 const VIEWS: { key: ViewName; label: string }[] = [
   { key: 'front', label: 'Front' }, { key: 'back', label: 'Back' }, { key: 'left', label: 'Left' }, { key: 'right', label: 'Right' }, { key: 'top', label: 'Top' },
 ]
