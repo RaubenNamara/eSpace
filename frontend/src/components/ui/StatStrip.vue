@@ -8,19 +8,20 @@
       v-for="item in items"
       :key="item.label"
       :type="item.key !== undefined ? 'button' : undefined"
-      class="text-left rounded-xl border px-2 py-1.5 sm:px-3.5 sm:py-2.5 transition-all min-w-0"
-      :class="[
-        isActive(item) ? ['ring-2', TONE[item.tone || 'indigo'].ring, 'border-transparent bg-white dark:bg-gray-800'] : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700',
-        item.key !== undefined ? 'hover:-translate-y-0.5 hover:shadow-md cursor-pointer' : ''
-      ]"
+      class="stat-card"
+      :class="[isActive(item) && 'stat-card-on', item.key !== undefined && 'stat-card-action']"
       :aria-pressed="item.key !== undefined ? isActive(item) : undefined"
       @click="item.key !== undefined && toggle(item.key)"
     >
-      <p class="text-[10.5px] sm:text-xs font-semibold text-gray-600 dark:text-gray-400 truncate">{{ item.label }}</p>
-      <p class="text-base sm:text-xl font-extrabold leading-tight" :class="nonZero(item.value) ? TONE[item.tone || 'indigo'].value : 'text-gray-300 dark:text-gray-600'">
+      <StatCrest :label="item.label" />
+      <p class="stat-label">
+        <span v-if="DOT[item.tone || 'indigo']" class="stat-dot" :class="DOT[item.tone || 'indigo']" aria-hidden="true"></span>
+        <span class="stat-label-text">{{ item.label }}</span>
+      </p>
+      <p class="stat-num" :class="{ 'stat-num-zero': !nonZero(item.value) }">
         <CountUp :value="item.value" />
       </p>
-      <p v-if="item.hint" class="hidden sm:block text-[11px] text-gray-400 dark:text-gray-500 truncate">{{ item.hint }}</p>
+      <p v-if="item.hint" class="stat-note hidden sm:block truncate">{{ item.hint }}</p>
     </component>
   </div>
 </template>
@@ -28,6 +29,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import CountUp from '@/components/common/CountUp.vue'
+import StatCrest from '@/components/ui/StatCrest.vue'
 
 export type StatTone = 'indigo' | 'emerald' | 'violet' | 'amber' | 'rose' | 'sky' | 'gray'
 export interface StatItem {
@@ -46,14 +48,11 @@ const props = withDefaults(defineProps<{
 }>(), { modelValue: null, hideWhenEmpty: false })
 const emit = defineEmits<{ 'update:modelValue': [value: string | null] }>()
 
-const TONE: Record<StatTone, { value: string; ring: string }> = {
-  indigo: { value: 'text-indigo-700 dark:text-indigo-300', ring: 'ring-indigo-400' },
-  emerald: { value: 'text-emerald-700 dark:text-emerald-300', ring: 'ring-emerald-400' },
-  violet: { value: 'text-violet-700 dark:text-violet-300', ring: 'ring-violet-400' },
-  amber: { value: 'text-amber-600 dark:text-amber-300', ring: 'ring-amber-400' },
-  rose: { value: 'text-rose-600 dark:text-rose-300', ring: 'ring-rose-400' },
-  sky: { value: 'text-indigo-700 dark:text-indigo-300', ring: 'ring-indigo-400' },
-  gray: { value: 'text-gray-700 dark:text-gray-200', ring: 'ring-gray-400' }
+// The figures stay navy; a dot before the label carries the meaning, and only these tones have one
+const DOT: Partial<Record<StatTone, string>> = {
+  emerald: 'bg-emerald-500',
+  amber: 'bg-amber-500',
+  rose: 'bg-rose-500',
 }
 const GRID: Record<number, string> = {
   1: 'grid-cols-1',

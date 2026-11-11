@@ -51,6 +51,59 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
   </head>
   <body class="antialiased">
+    <!-- While the app starts: books drop onto a pile and a graduation cap lands on top.
+         Public pages (the website) skip it; utils/motion.ts takes it away when the app is ready. -->
+    <div id="splash" role="status" aria-label="Loading Tusome">
+      <style>
+        #splash { position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; background: radial-gradient(circle at 30% 18%, #1b3fa0, #14307d 45%, #0b1d52); font-family: Inter, system-ui, sans-serif; }
+        #splash .pile { position: relative; width: 150px; height: 112px; transform: scale(1.2); margin: 6px 0 10px; }
+        #splash .book, #splash .cap { position: absolute; animation: splash-drop 2.4s cubic-bezier(.3, 1.25, .6, 1) infinite both; }
+        #splash .book { left: 13px; width: 124px; height: 19px; border-radius: 3px 5px 5px 3px; box-shadow: 0 3px 8px rgba(0, 0, 0, .35); box-sizing: border-box; }
+        /* the page edges on the right, and two bands on the spine */
+        #splash .book::after { content: ''; position: absolute; right: 3px; top: 3px; bottom: 3px; width: 9px; border-radius: 0 2px 2px 0; background: repeating-linear-gradient(180deg, #fffaf0 0 1px, #e9dfc6 1px 2px); }
+        #splash .book::before { content: ''; position: absolute; left: 14px; top: 0; bottom: 0; width: 22px; border-left: 2px solid rgba(255, 255, 255, .45); border-right: 2px solid rgba(255, 255, 255, .45); }
+        #splash .b1 { bottom: 0; width: 132px; left: 9px; background: linear-gradient(180deg, #2a52c0, #1b3fa0); --r: -2deg; animation-delay: 0s; }
+        #splash .b2 { bottom: 19px; background: linear-gradient(180deg, #edc95a, #d9a520); --r: 3deg; animation-delay: .2s; }
+        #splash .b3 { bottom: 38px; width: 116px; left: 18px; background: linear-gradient(180deg, #9c2f3a, #7a1f2b); --r: -3deg; animation-delay: .4s; }
+        #splash .b4 { bottom: 57px; width: 108px; left: 21px; background: linear-gradient(180deg, #fbf4e2, #e9dcb8); --r: 2deg; animation-delay: .6s; }
+        #splash .b4::before { border-color: rgba(20, 48, 125, .35); }
+        /* the cap: a board seen at an angle, a crown under it, a gold tassel */
+        #splash .cap { left: 46px; bottom: 74px; width: 58px; height: 34px; --r: -6deg; animation-delay: .85s; }
+        #splash .cap i { position: absolute; display: block; }
+        #splash .cap .board { left: 3px; top: 2px; width: 52px; height: 16px; background: #10183a; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+        #splash .cap .crown { left: 16px; top: 13px; width: 26px; height: 13px; background: #182352; border-radius: 0 0 9px 9px; }
+        #splash .cap .tassel { left: 50px; top: 9px; width: 2px; height: 17px; background: #edc95a; }
+        #splash .cap .tassel::after { content: ''; position: absolute; left: -3px; bottom: -6px; width: 8px; height: 8px; border-radius: 2px 2px 4px 4px; background: #d9a520; }
+        #splash .word { margin: 0; font-family: "Source Serif 4", Georgia, serif; font-size: 30px; font-weight: 600; letter-spacing: -.01em; color: #fff; }
+        #splash .word span { color: #edc95a; }
+        #splash p.say { margin: 0; font-size: 14px; letter-spacing: .02em; color: #dce4f8; min-height: 1.3em; }
+        @keyframes splash-drop { 0% { transform: translateY(-120px) rotate(calc(var(--r) * 4)); opacity: 0; } 25%, 82% { transform: rotate(var(--r)); opacity: 1; } 100% { transform: rotate(var(--r)); opacity: 0; } }
+        @media (prefers-reduced-motion: reduce) { #splash .book, #splash .cap { animation: none; transform: rotate(var(--r)); } }
+      </style>
+      <div class="pile" aria-hidden="true">
+        <i class="book b1"></i><i class="book b2"></i><i class="book b3"></i><i class="book b4"></i>
+        <i class="cap"><i class="board"></i><i class="crown"></i><i class="tassel"></i></i>
+      </div>
+      <p class="word">Tusome<span>.</span></p>
+      <p class="say" id="splash-say">Opening your books…</p>
+      <script>
+        (function () {
+          // The website itself opens straight away
+          var path = location.pathname
+          if (path === '/' || /^\/(guide|for\/|privacy|join|feedback|slips|parent\/)/.test(path)) {
+            var s = document.getElementById('splash'); s && s.parentNode.removeChild(s); return
+          }
+          var lines = ['Opening your books…', 'Sharpening the pencils…', 'Finding your class…', 'Almost there…']
+          var i = 0
+          var t = setInterval(function () {
+            var el = document.getElementById('splash-say')
+            if (!el) return clearInterval(t)
+            i = (i + 1) % lines.length
+            el.textContent = lines[i]
+          }, 1300)
+        })()
+      </script>
+    </div>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>

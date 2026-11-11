@@ -16,55 +16,60 @@
 
     <!-- Dashboard summary -->
     <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-      <div class="group bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 relative overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700">
+      <div class="stat-card">
         <div v-if="summary.live_now > 0" class="absolute top-3 right-3 w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
         <template v-if="loading">
           <div class="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
           <div class="h-8 w-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
         </template>
         <template v-else>
-          <p class="text-sm text-gray-500 dark:text-gray-400">Live Now</p>
-          <p class="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">{{ summary.live_now }}</p>
+          <StatCrest label="Live Now" />
+          <p class="stat-label"><span class="stat-label-text">Live Now</span></p>
+          <p class="stat-num">{{ summary.live_now }}</p>
         </template>
       </div>
-      <div class="group bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700">
+      <div class="stat-card">
         <template v-if="loading">
           <div class="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
           <div class="h-8 w-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
         </template>
         <template v-else>
-          <p class="text-sm text-gray-500 dark:text-gray-400">Upcoming Today</p>
-          <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">{{ summary.upcoming_today }}</p>
+          <StatCrest label="Upcoming Today" />
+          <p class="stat-label"><span class="stat-label-text">Upcoming Today</span></p>
+          <p class="stat-num">{{ summary.upcoming_today }}</p>
         </template>
       </div>
-      <div class="group bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700">
+      <div class="stat-card">
         <template v-if="loading">
           <div class="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
           <div class="h-8 w-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
         </template>
         <template v-else>
-          <p class="text-sm text-gray-500 dark:text-gray-400">Completed Today</p>
-          <p class="text-2xl font-bold text-gray-600 dark:text-gray-400 mt-1">{{ summary.completed_today }}</p>
+          <StatCrest label="Completed Today" />
+          <p class="stat-label"><span class="stat-label-text">Completed Today</span></p>
+          <p class="stat-num">{{ summary.completed_today }}</p>
         </template>
       </div>
-      <div class="group bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700">
+      <div class="stat-card">
         <template v-if="loading">
           <div class="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
           <div class="h-8 w-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
         </template>
         <template v-else>
-          <p class="text-sm text-gray-500 dark:text-gray-400">Students Online</p>
-          <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1 transition-colors">{{ summary.students_online }}</p>
+          <StatCrest label="Students Online" />
+          <p class="stat-label"><span class="stat-label-text">Students Online</span></p>
+          <p class="stat-num">{{ summary.students_online }}</p>
         </template>
       </div>
-      <div class="group bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700">
+      <div class="stat-card">
         <template v-if="loading">
           <div class="h-4 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
           <div class="h-8 w-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
         </template>
         <template v-else>
-          <p class="text-sm text-gray-500 dark:text-gray-400">Recorded Sessions</p>
-          <p class="text-2xl font-bold text-slate-600 dark:text-slate-400 mt-1">{{ summary.recorded_sessions }}</p>
+          <StatCrest label="Recorded Sessions" />
+          <p class="stat-label"><span class="stat-label-text">Recorded Sessions</span></p>
+          <p class="stat-num">{{ summary.recorded_sessions }}</p>
         </template>
       </div>
     </div>
@@ -259,6 +264,7 @@
 </template>
 
 <script setup lang="ts">
+import StatCrest from '@/components/ui/StatCrest.vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import { ref, computed, onMounted } from 'vue'

@@ -8,6 +8,7 @@ import { installOfflineSupport } from './utils/offline/adapter'
 import { installFriendlyErrors } from './utils/friendlyErrors'
 import api from './services/api'
 import { captureInstallPrompt } from './utils/install'
+import { installMotion } from './utils/motion'
 import './assets/style.css'
 // the handwriting a learner can choose for their mark sheet (bundled, so it works offline)
 import '@fontsource/patrick-hand/latin-400.css'
@@ -58,6 +59,8 @@ installOfflineSupport()
 // Error messages people can act on: no internet, server trouble - never raw database text
 installFriendlyErrors()
 installFriendlyErrors(api)
+// The loading screen, the progress bar, pages arriving and figures counting up (utils/motion.ts)
+installMotion(router, [axios, api])
 
 // Create Vue app
 const app = createApp(App)

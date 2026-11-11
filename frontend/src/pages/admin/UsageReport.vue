@@ -44,10 +44,11 @@
 
       <!-- Headline figures -->
       <dl class="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div v-for="t in tiles" :key="t.label" class="rounded-xl bg-cream-50 dark:bg-gray-900/40 border border-cream-200 dark:border-gray-700 px-3 py-2.5">
-          <dt class="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ t.label }}</dt>
-          <dd class="font-heading text-2xl font-bold text-gray-900 dark:text-white tabular-nums">{{ t.value }}</dd>
-          <dd v-if="t.hint" class="text-xs text-gray-500 dark:text-gray-400">{{ t.hint }}</dd>
+        <div v-for="t in tiles" :key="t.label" class="stat-card">
+          <StatCrest :label="t.label" />
+          <dt class="stat-label"><span class="stat-label-text">{{ t.label }}</span></dt>
+          <dd class="stat-num">{{ t.value }}</dd>
+          <dd v-if="t.hint" class="stat-note">{{ t.hint }}</dd>
         </div>
       </dl>
 
@@ -128,6 +129,7 @@
 </template>
 
 <script setup lang="ts">
+import StatCrest from '@/components/ui/StatCrest.vue'
 import { computed, ref, watch } from 'vue'
 import { apiService } from '../../services/api'
 import { niceName } from '@/components/dashboard/teacher/time'

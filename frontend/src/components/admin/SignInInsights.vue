@@ -12,10 +12,11 @@
     <div v-else-if="data" class="p-3 space-y-4">
       <!-- headline numbers -->
       <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2">
-        <div v-for="t in tiles" :key="t.label" class="rounded-xl ring-1 ring-gray-200 dark:ring-gray-700 px-3 py-2">
-          <p class="text-[11px] font-semibold text-gray-500 dark:text-gray-400">{{ t.label }}</p>
-          <p class="text-xl font-extrabold text-gray-900 dark:text-white tabular-nums">{{ t.value }}</p>
-          <p class="text-[11px] text-gray-500 dark:text-gray-400">{{ t.note }}</p>
+        <div v-for="t in tiles" :key="t.label" class="stat-card">
+          <StatCrest :label="t.label" />
+          <p class="stat-label"><span class="stat-label-text">{{ t.label }}</span></p>
+          <p class="stat-num">{{ t.value }}</p>
+          <p class="stat-note">{{ t.note }}</p>
         </div>
       </div>
 
@@ -134,6 +135,7 @@
 </template>
 
 <script setup lang="ts">
+import StatCrest from '@/components/ui/StatCrest.vue'
 import { ref, computed, watch, onMounted, h, defineComponent } from 'vue'
 import apiService from '@/services/api'
 import ColumnChart, { type ColumnItem } from './ColumnChart.vue'

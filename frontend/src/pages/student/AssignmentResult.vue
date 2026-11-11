@@ -190,12 +190,13 @@
 
 <script setup lang="ts">
 import { gradeHex, isHonours } from '@/utils/grades'
+import { confetti } from '@/utils/motion'
 import { resolveAssetUrl } from '@/utils/url'
 import { safeHtml } from '@/utils/safeHtml'
 import { fmtMarks } from '@/utils/marks'
 import VoiceNote from '@/components/assignment/VoiceNote.vue'
 import PracticalWorkView from '@/components/practical/PracticalWorkView.vue'
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
 import type { AnnotationLayerJSON } from '@/types'
@@ -226,6 +227,8 @@ const summary = ref<{ marks_awarded: number; total_marks: number; percentage: nu
 const school = ref<{ name: string | null; logo: string | null } | null>(null)
 const logoFailed = ref(false)
 const honours = computed(() => isHonours(summary.value?.grade))
+// An honours result is worth a moment: confetti, once, as it opens
+watch(honours, (h) => { if (h) setTimeout(() => confetti(), 600) }, { immediate: true })
 const evidenceImageDims = ref<Record<number, { width: number; height: number }>>({})
 const additionalFileImageDims = ref<Record<number, { width: number; height: number }>>({})
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp']

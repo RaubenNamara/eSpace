@@ -27,10 +27,11 @@
     <template v-else>
       <!-- Headline -->
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div v-for="t in tiles" :key="t.label" class="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-          <p class="text-xs font-semibold text-gray-500 dark:text-gray-400">{{ t.label }}</p>
-          <p class="mt-1 text-2xl font-extrabold text-gray-900 dark:text-white tabular-nums">{{ t.value }}</p>
-          <p v-if="t.hint" class="mt-0.5 text-xs text-gray-500 dark:text-gray-400 truncate">{{ t.hint }}</p>
+        <div v-for="t in tiles" :key="t.label" class="stat-card">
+          <StatCrest :label="t.label" />
+          <p class="stat-label"><span class="stat-label-text">{{ t.label }}</span></p>
+          <p class="stat-num">{{ t.value }}</p>
+          <p v-if="t.hint" class="stat-note truncate">{{ t.hint }}</p>
         </div>
       </div>
 
@@ -108,6 +109,7 @@
 </template>
 
 <script setup lang="ts">
+import StatCrest from '@/components/ui/StatCrest.vue'
 import { ref, computed, watch, onMounted } from 'vue'
 import axios from 'axios'
 import PageHeader from '@/components/ui/PageHeader.vue'
