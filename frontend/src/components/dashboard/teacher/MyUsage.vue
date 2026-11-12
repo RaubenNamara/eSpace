@@ -3,7 +3,7 @@
   <section class="dash-box">
     <h2 class="dash-bar">
       My usage
-      <span class="inline-flex rounded-lg bg-white/70 dark:bg-gray-900/40 p-0.5 ring-1 ring-black/5 dark:ring-white/10">
+      <span v-if="props.days === undefined" class="inline-flex rounded-lg bg-white/70 dark:bg-gray-900/40 p-0.5 ring-1 ring-black/5 dark:ring-white/10">
         <button
           v-for="d in [7, 30]"
           :key="d"
@@ -11,27 +11,18 @@
           class="px-2.5 py-0.5 rounded-md text-xs font-semibold transition"
           :class="days === d ? 'bg-indigo-600 text-white' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'"
           :aria-pressed="days === d"
-          @click="days = d"
+          @click="ownDays = d"
         >{{ d }} days</button>
       </span>
     </h2>
 
     <div v-if="loading && !data" class="p-4 space-y-3">
-      <div class="grid grid-cols-3 gap-2"><div v-for="i in 3" :key="i" class="h-14 rounded-xl bg-gray-100 dark:bg-gray-700/50 animate-pulse"></div></div>
       <div class="h-32 rounded-xl bg-gray-100 dark:bg-gray-700/50 animate-pulse"></div>
     </div>
     <p v-else-if="failed" class="p-4 text-sm text-gray-500 dark:text-gray-400">Your usage couldn't be loaded just now.</p>
 
     <div v-else-if="data" class="p-3 sm:p-4 space-y-4">
-      <!-- Totals -->
-      <div class="grid grid-cols-3 gap-2">
-        <div v-for="t in totals" :key="t.label" class="rounded-xl bg-gray-50 dark:bg-gray-900/40 px-3 py-2 min-w-0">
-          <p class="text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 truncate">{{ t.label }}</p>
-          <p class="text-lg font-bold leading-tight text-gray-900 dark:text-white tabular-nums">{{ t.value }}</p>
-          <p class="text-[10px] text-gray-500 dark:text-gray-400 truncate">{{ t.hint }}</p>
-        </div>
-      </div>
-
+      <!-- (the totals are the usage cards at the top of the dashboard) -->
       <!-- One bar per day: how much work was done in Tusome that day -->
       <div>
         <p class="text-sm font-semibold text-gray-800 dark:text-gray-100">Your activity each day</p>
@@ -107,7 +98,10 @@ interface Usage {
   by_kind: { type: string; count: number }[]
 }
 
-const days = ref<7 | 30>(30)
+// days: from the dashboard's own 7/30 switch when it has one (then this card shows none)
+const props = defineProps<{ days?: 7 | 30 }>()
+const ownDays = ref<7 | 30>(30)
+const days = computed(() => props.days ?? ownDays.value)
 const data = ref<Usage | null>(null)
 const loading = ref(false)
 const failed = ref(false)
@@ -134,14 +128,6 @@ const tipSide = computed(() => {
   return f < 0.25 ? '-translate-x-4' : f > 0.75 ? '-translate-x-[calc(100%-1rem)]' : '-translate-x-1/2'
 })
 const maxActions = computed(() => Math.max(1, ...(data.value?.series.map(s => s.actions) ?? [1])))
-const totals = computed(() => {
-  const t = data.value!.totals
-  return [
-    { label: 'Active days', value: t.active_days, hint: `of the last ${days.value}` },
-    { label: 'Sign-ins', value: t.signins, hint: t.signins ? `${(t.signins / days.value).toFixed(1)} a day` : 'none yet' },
-    { label: 'Things done', value: t.actions, hint: 'marking, notes, sets...' }
-  ]
-})
 
 const asDate = (d: string) => new Date(`${d}T00:00:00`)
 const dayLabel = (d: string) => asDate(d).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })

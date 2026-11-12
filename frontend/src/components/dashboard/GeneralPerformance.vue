@@ -2,11 +2,27 @@
   <!-- General performance: every marked assessment's score as a point on a line, in the order the marks came
        back, with the trend (the average of the last three) as a second, dashed line - both in percent,
        on one axis. A subject and a range narrow it; a table shows the same numbers. Only marks a
-       teacher has released are here (the assessments list gives no percentage before that). -->
+       teacher has released are here (the assessments list gives no percentage before that).
+       A page can add an "activity" view (slot): the switch then reads Performance / Activity / Table
+       and only one of them shows at a time. -->
   <section class="dash-box flex flex-col">
     <h2 class="dash-bar">General performance <RouterLink to="/student/assignments" class="dash-bar-link">All results</RouterLink></h2>
 
-    <div v-if="loading" class="p-3 space-y-2">
+    <!-- One switch for what the card shows, on the right (beside the filters when they show) -->
+    <div v-if="hasActivity && !filtersShown" class="px-3 pt-3 flex items-center gap-2">
+      <div v-if="view === 'Activity'" class="min-w-0 flex-1"><slot name="activity-head" /></div>
+      <div class="gp-switch ml-auto" role="tablist" aria-label="What to show">
+        <button v-for="v in VIEWS" :key="v" type="button" role="tab" class="gp-switch-btn" :title="v" :class="{ 'gp-switch-on': view === v }" :aria-selected="view === v" @click="view = v">
+          <AppIcon :name="VIEW_ICON[v]" class="w-4 h-4 sm:w-3.5 sm:h-3.5 lg:w-4 lg:h-4 xl:w-3.5 xl:h-3.5" /><span class="sr-only sm:not-sr-only lg:sr-only xl:not-sr-only">{{ v }}</span>
+        </button>
+      </div>
+    </div>
+
+    <div v-if="hasActivity && view === 'Activity'" class="gp-activity px-3 pb-3 pt-2">
+      <slot name="activity" />
+    </div>
+
+    <div v-else-if="loading" class="p-3 space-y-2">
       <div class="h-10 rounded-xl bg-gray-100 dark:bg-gray-700/50 animate-pulse"></div>
       <div class="h-56 rounded-xl bg-gray-100 dark:bg-gray-700/50 animate-pulse"></div>
     </div>
@@ -18,15 +34,22 @@
 
     <div v-else class="p-3 space-y-2.5">
       <!-- Filters, in one row -->
-      <div class="flex flex-wrap items-center gap-2">
-        <select v-model="subject" class="px-2.5 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100" aria-label="Subject">
+      <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+        <select v-model="subject" class="max-w-[7.5rem] sm:max-w-none lg:max-w-[8.5rem] xl:max-w-none px-2 sm:px-2.5 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100" aria-label="Subject">
           <option value="">All subjects</option>
           <option v-for="s in subjects" :key="s" :value="s">{{ s }}</option>
         </select>
         <div class="inline-flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden text-xs font-semibold" role="group" aria-label="How many">
-          <button v-for="r in RANGES" :key="r.v" type="button" class="px-2.5 py-1.5" :class="range === r.v ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'" :aria-pressed="range === r.v" @click="range = r.v">{{ r.label }}</button>
+          <button v-for="r in RANGES" :key="r.v" type="button" class="px-2.5 py-1.5" :class="range === r.v ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'" :aria-pressed="range === r.v" @click="range = r.v"><span v-if="r.short" class="sm:hidden lg:inline xl:hidden">{{ r.short }}</span><span :class="r.short ? 'hidden sm:inline lg:hidden xl:inline' : ''">{{ r.label }}</span></button>
         </div>
-        <div class="ml-auto inline-flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden text-xs font-semibold" role="group" aria-label="View">
+        <div v-if="hasActivity" class="ml-auto">
+          <div class="gp-switch" role="tablist" aria-label="What to show">
+            <button v-for="v in VIEWS" :key="v" type="button" role="tab" class="gp-switch-btn" :title="v" :class="{ 'gp-switch-on': view === v }" :aria-selected="view === v" @click="view = v">
+              <AppIcon :name="VIEW_ICON[v]" class="w-4 h-4 sm:w-3.5 sm:h-3.5 lg:w-4 lg:h-4 xl:w-3.5 xl:h-3.5" /><span class="sr-only sm:not-sr-only lg:sr-only xl:not-sr-only">{{ v }}</span>
+            </button>
+          </div>
+        </div>
+        <div v-else class="ml-auto inline-flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden text-xs font-semibold" role="group" aria-label="View">
           <button v-for="v in ['Chart', 'Table']" :key="v" type="button" class="px-2.5 py-1.5" :class="view === v ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'" :aria-pressed="view === v" @click="view = v">{{ v }}</button>
         </div>
       </div>
@@ -55,19 +78,19 @@
 
       <!-- The trend -->
       <!-- the chart: compact, a glance at the direction -->
-      <div v-show="view === 'Chart'">
+      <div v-show="view === 'Chart' || view === 'Performance'">
         <div class="relative h-40 sm:h-44">
           <canvas ref="canvasEl" role="img" :aria-label="`Scores of your last ${shownList.length} marked assessments, with the trend`"></canvas>
         </div>
         <p class="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">Dashed line: the trend, the average of your last three marks.</p>
       </div>
-      <div v-if="view === 'Table'" class="overflow-x-auto max-h-72 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700">
+      <div v-if="view === 'Table'" class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
         <table class="w-full text-sm">
           <thead class="sticky top-0 bg-gray-50 dark:bg-gray-800 text-left text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
             <tr><th class="px-3 py-2">Date</th><th class="px-3 py-2">Assessment</th><th class="px-3 py-2">Subject</th><th class="px-3 py-2 text-right">Score</th><th class="px-3 py-2 text-right">Trend</th></tr>
           </thead>
           <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-            <tr v-for="(r, i) in shownList.slice().reverse()" :key="r.id" class="text-gray-800 dark:text-gray-100">
+            <tr v-for="(r, i) in tableRows" :key="r.id" class="text-gray-800 dark:text-gray-100">
               <td class="px-3 py-1.5 whitespace-nowrap text-gray-500 dark:text-gray-400">{{ r.dateLabel }}</td>
               <td class="px-3 py-1.5 max-w-[14rem] truncate" :title="r.title">{{ r.title }}</td>
               <td class="px-3 py-1.5 whitespace-nowrap">{{ r.subject }}</td>
@@ -76,13 +99,18 @@
             </tr>
           </tbody>
         </table>
+        <!-- five rows, the rest a tap away -->
+        <button v-if="shownList.length > TABLE_ROWS" type="button" class="dash-more" :aria-expanded="tableAll" @click="tableAll = !tableAll">
+          {{ tableAll ? 'Show less' : `Show ${shownList.length - TABLE_ROWS} more` }}
+          <svg class="w-4 h-4 transition-transform duration-300" :class="tableAll ? 'rotate-180' : ''" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6" /></svg>
+        </button>
       </div>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, useSlots, watch } from 'vue'
 import axios from 'axios'
 import AppIcon from '@/components/common/AppIcon.vue'
 import { useThemeStore } from '@/stores/theme'
@@ -91,7 +119,7 @@ interface Row { id: number; title: string; subject: string; pct: number; at: num
 
 // Checked with the dataviz palette validator: bars and trend line, light and dark
 const COLORS = { light: { score: '#22a45d', line: '#126c3d', grid: '#e5e7eb', ink: '#4b5563' }, dark: { score: '#22a45d', line: '#9a7cf2', grid: '#374151', ink: '#9ca3af' } }
-const RANGES = [{ v: 10, label: 'Last 10' }, { v: 20, label: 'Last 20' }, { v: 0, label: 'All' }]
+const RANGES = [{ v: 10, label: 'Last 10', short: '10' }, { v: 20, label: 'Last 20', short: '20' }, { v: 0, label: 'All', short: '' }]
 const TREND = {
   up: { arrow: '▲', label: 'Improving', cls: 'text-emerald-600 dark:text-emerald-400' },
   down: { arrow: '▼', label: 'Dropping', cls: 'text-rose-600 dark:text-rose-400' },
@@ -104,7 +132,16 @@ const loading = ref(true)
 const marked = ref<Row[]>([])
 const subject = ref('')
 const range = ref(10)
-const view = ref('Chart')
+const hasActivity = !!useSlots().activity
+const VIEWS = ['Activity', 'Performance', 'Table'] as const
+const VIEW_ICON: Record<string, string> = { Performance: 'trend', Activity: 'chart', Table: 'clipboard' }
+// Activity (the week) always opens first; Performance and Table are a tap away
+const view = ref<string>(hasActivity ? 'Activity' : 'Chart')
+// the table shows the newest five until "Show more"
+const TABLE_ROWS = 5
+const tableAll = ref(false)
+const tableRows = computed(() => { const rows = shownList.value.slice().reverse(); return tableAll.value ? rows : rows.slice(0, TABLE_ROWS) })
+const filtersShown = computed(() => !loading.value && marked.value.length > 0 && view.value !== 'Activity')
 
 const subjects = computed(() => [...new Set(marked.value.map(r => r.subject))].sort())
 const filtered = computed(() => marked.value.filter(r => !subject.value || r.subject === subject.value))
@@ -219,7 +256,8 @@ const draw = async () => {
   chart.value = new Chart(canvasEl.value, { data, options, plugins: [latestLabel] } as any)
 }
 watch([shownList, () => theme.isDarkMode], draw)
-watch(view, v => { if (v === 'Chart') nextTick(() => chart.value?.resize()) })
+// the canvas is rebuilt whenever the graph comes back into view (the Activity view removes it)
+watch(view, v => { if (v === 'Chart' || v === 'Performance') draw() })
 
 onMounted(async () => {
   try {

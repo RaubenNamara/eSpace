@@ -1,14 +1,16 @@
 <template>
   <div class="min-h-full">
     <!-- Header -->
-    <div class="flex items-center gap-2 mb-1">
-      <div class="hidden sm:flex w-7 h-7 rounded-lg bg-indigo-600 items-center justify-center flex-shrink-0">
-        <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v6.5L4.5 18A2 2 0 006.3 21h11.4a2 2 0 001.8-3L15 9.5V3M8 3h8M7 15h10" /></svg>
+    <div class="flex flex-wrap items-start gap-x-3 gap-y-2 mb-4 sm:mb-5">
+      <div class="hidden sm:flex w-10 h-10 rounded-xl bg-indigo-600 items-center justify-center flex-shrink-0 shadow-sm">
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v6.5L4.5 18A2 2 0 006.3 21h11.4a2 2 0 001.8-3L15 9.5V3M8 3h8M7 15h10" /></svg>
       </div>
-      <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight">Virtual Lab</h1>
+      <div class="min-w-[11rem] flex-1">
+        <h1 class="font-heading text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight">Virtual Lab</h1>
+        <p v-if="isHod" class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">The Virtual Lab experiments of {{ hodDepartment?.name || 'your department' }}: publish them to its classes and see where each one is published.</p>
+        <p v-else class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">Share library experiments with departments, oversee every teacher's experiments, and manage the 3D apparatus catalogue.</p>
+      </div>
     </div>
-    <p v-if="isHod" class="text-xs text-gray-500 dark:text-gray-400 mb-4">The Virtual Lab experiments of {{ hodDepartment?.name || 'your department' }}: publish them to its classes and see where each one is published.</p>
-    <p v-else class="text-xs text-gray-500 dark:text-gray-400 mb-4">Share library experiments with departments, oversee every teacher's experiments, and manage the 3D apparatus catalogue.</p>
 
     <!-- Tabs -->
     <div class="inline-flex flex-wrap gap-1 mb-5 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-1 shadow-sm">

@@ -313,7 +313,7 @@ class NextStepsController extends Controller
     {
         try {
             $stmt = $db->prepare(
-                "SELECT et.id, et.title, s.name AS subject_name, prog.current_page_id,
+                "SELECT et.id, et.title, s.name AS subject_name, prog.current_page_id, prog.pages_completed AS pages_reached,
                         (SELECT COUNT(*) FROM enote_pages p WHERE p.topic_id = et.id AND p.is_active = 1 AND p.deleted_at IS NULL) AS total_pages,
                         (SELECT COUNT(*) FROM enote_pages rp INNER JOIN enote_pages cp ON cp.id = prog.current_page_id
                           WHERE rp.topic_id = et.id AND rp.is_active = 1 AND rp.deleted_at IS NULL AND rp.order_number <= cp.order_number) AS page_number
@@ -328,7 +328,10 @@ class NextStepsController extends Controller
         } catch (\PDOException $e) {
             return [];
         }
-        return array_values(array_filter($stmt->fetchAll(), fn($r) => (int) $r['page_number'] > 1 && (int) $r['page_number'] < (int) $r['total_pages']));
+        // part-way: past the first page, and not yet reached the last (a two-page spread can reach the
+        // last page while the place kept is the page before it, so the farthest page reached decides)
+        return array_values(array_filter($stmt->fetchAll(), fn($r) => (int) $r['page_number'] > 1
+            && max((int) $r['page_number'], (int) $r['pages_reached']) < (int) $r['total_pages']));
     }
 
     private function categoryName(?string $category): string

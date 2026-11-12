@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-cream-100 dark:bg-gray-950" :class="{ 'student-look': menuRole === 'student' }">
+  <div class="app-look min-h-screen bg-cream-100 dark:bg-gray-950">
     <!-- Sidebar -->
     <!-- Floats as a card off the page edges on desktop (flush on mobile, where an inset drawer
          just wastes thumb-reach): white, with a dark-green brand bar on top like the dashboard
@@ -13,14 +13,22 @@
 
       <!-- The brand bar: the logo, and which console this is -->
       <div class="relative px-4 py-4 border-b app-frame-divider flex-shrink-0">
-        <!-- The Tusome word logo; just the "T" mark when the sidebar is folded to icons -->
-        <div class="flex items-center gap-3" :class="{ 'justify-center': isIconOnly }">
-          <img v-if="isIconOnly" src="/favicon.svg" alt="Tusome" class="w-9 h-9 rounded-xl">
-          <div v-else class="min-w-0">
-            <p class="leading-none"><Wordmark size="md" /></p>
-            <p class="font-nav text-[10.5px] font-semibold uppercase tracking-[0.16em] text-gold-300/90 leading-tight mt-1.5">{{ consoleName }}</p>
-          </div>
-        </div>
+        <!-- The Tusome word logo (just the "T" mark when the sidebar is folded to icons). It is also
+             the button that closes the sidebar; the menu button in the top bar brings it back. -->
+        <button
+          type="button"
+          class="sidebar-brand w-full flex items-center gap-3 rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-300/70"
+          :class="{ 'justify-center': isIconOnly }"
+          aria-label="Close menu"
+          title="Close menu"
+          @click="sidebarOpen = false"
+        >
+          <img v-if="isIconOnly" src="/favicon.svg" alt="" class="w-9 h-9 rounded-xl">
+          <span v-else class="block min-w-0">
+            <span class="block leading-none"><Wordmark size="md" /></span>
+            <span class="block font-nav text-[10.5px] font-semibold uppercase tracking-[0.16em] text-gold-300/90 leading-tight mt-1.5">{{ consoleName }}</span>
+          </span>
+        </button>
       </div>
 
       <nav class="sidebar-nav font-nav relative flex-1 overflow-y-auto px-3 py-4" aria-label="Main">
@@ -56,10 +64,17 @@
         </ul>
       </nav>
 
-      <!-- Students: the mascot, where the sidebar is tall enough -->
-      <div v-if="menuRole === 'student' && !isIconOnly" class="student-mascot" aria-hidden="true">
-        <img src="/images/student-mascot.webp" alt="">
-        <p>Learn · Practice · Excel</p>
+      <!-- Under the menu, where the sidebar is tall enough: the robot and its line for learners, a
+           quote with a gold sweep under it for staff -->
+      <div v-if="!isIconOnly" class="student-mascot" aria-hidden="true">
+        <template v-if="menuRole === 'student'">
+          <img src="/images/student-mascot.webp" alt="">
+          <p>{{ mascotLine }}</p>
+        </template>
+        <template v-else>
+          <p class="mascot-quote">{{ mascotQuote }}</p>
+          <svg class="mascot-sweep" viewBox="0 0 120 14" aria-hidden="true"><path d="M4 11C34 3 74 1 116 4" fill="none" stroke="#f5b301" stroke-width="3" stroke-linecap="round" /></svg>
+        </template>
       </div>
 
       <!-- Footer -->
@@ -149,11 +164,14 @@
         <div class="flex items-center justify-between px-3 sm:px-6 py-2.5 sm:py-3">
           <div class="flex items-center gap-2 flex-shrink-0">
             <RouterLink v-if="showStudentTabs" to="/student/dashboard" class="lg:hidden leading-none" aria-label="Tusome home"><Wordmark size="sm" /></RouterLink>
+            <!-- shown only while the sidebar is closed (the sidebar has its own close button) -->
             <button
-              @click="sidebarOpen = !sidebarOpen"
+              v-if="!sidebarOpen"
+              @click="sidebarOpen = true"
               class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
               :class="showStudentTabs ? 'hidden lg:block' : ''"
-              aria-label="Menu"
+              aria-label="Open menu"
+              title="Open menu"
             >
               <svg class="w-6 h-6 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
@@ -873,6 +891,8 @@ const roleName = computed(() => {
   const name = r.replace(/_/g, ' ')
   return name.charAt(0).toUpperCase() + name.slice(1)
 })
+const mascotQuote = computed(() => (menuRole.value === 'admin' || menuRole.value === 'super_admin' ? '"Lead Today, Transform Tomorrow"' : '"Teach Today, Transform Tomorrow"'))
+const mascotLine = computed(() => (menuRole.value === 'student' ? 'Learn · Practice · Excel' : menuRole.value === 'teacher' || menuRole.value === 'hod' ? 'Teach · Inspire · Excel' : 'Lead · Support · Excel'))
 const consoleName = computed(() => (menuRole.value === 'student' ? 'Student portal' : `${roleName.value} console`))
 const activeRole = computed(() => authStore.activeRole || authStore.userRole || 'Guest')
 const hasDualRoles = computed(() => authStore.hasDualRoles)

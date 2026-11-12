@@ -4,21 +4,31 @@
        slipping, and each teacher's week. Each card shows a few and opens up for the rest. The
        curriculum figures live in Term report and Analytics. -->
   <div class="w-full">
-    <header class="mb-3 flex flex-col sm:flex-row sm:items-end gap-x-3 gap-y-2">
+    <!-- the greeting and the usage heading, the sky for the time of day behind them -->
+    <SkyHeader :period="dayPeriod" :narrow="narrowSky">
+    <header class="flex flex-col sm:flex-row sm:items-end gap-x-3 gap-y-2">
       <div class="min-w-0 flex-1">
-        <p class="text-sm font-semibold text-indigo-600 dark:text-indigo-400">{{ todayLabel }}</p>
-        <h1 class="font-heading text-2xl sm:text-[1.8rem] font-bold text-gray-900 dark:text-white truncate">{{ greeting }}, {{ firstName }}</h1>
+        <p class="sky-sub text-sm font-semibold text-indigo-600 dark:text-indigo-300">{{ todayLabel }}</p>
+        <h1 class="sky-text font-heading text-2xl sm:text-[1.8rem] font-bold text-gray-900 dark:text-white truncate">{{ greeting }}, {{ firstName }}</h1>
       </div>
       <div class="flex flex-wrap items-center gap-2">
-        <span v-if="department" class="px-3 py-1.5 rounded-xl bg-indigo-800 text-white text-sm font-bold">{{ department.name }}</span>
-        <RouterLink v-if="stats" to="/hod/students" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-gray-800 ring-1 ring-gray-200 dark:ring-gray-700 text-sm font-semibold text-gray-800 dark:text-gray-100 hover:ring-indigo-300">
-          <AppIcon name="users" class="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+        <span v-if="department" class="px-2 py-0.5 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl bg-indigo-800 text-white text-[11px] sm:text-sm font-bold">{{ department.name }}</span>
+        <RouterLink v-if="stats" to="/hod/students" class="flex items-center gap-1 sm:gap-1.5 px-2 py-0.5 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl bg-white dark:bg-gray-800 ring-1 ring-gray-200 dark:ring-gray-700 text-[11px] sm:text-sm font-semibold text-gray-800 dark:text-gray-100 hover:ring-indigo-300">
+          <AppIcon name="users" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-600 dark:text-indigo-400" />
           {{ stats.students_count.toLocaleString() }} students
         </RouterLink>
       </div>
     </header>
+    <UsageStatCards mode="hod" part="heading" v-model:days="usageDays" class="mt-3" />
+    </SkyHeader>
 
     <NoticesTicker role="hod" />
+
+    <!-- How the department's teachers are using Tusome: teachers active, sign-ins, things done, marking -->
+    <UsageStatCards mode="hod" part="cards" v-model:days="usageDays" />
+
+    <!-- Each teacher's work over 7 days, 30 days or 3 months, as bars -->
+    <TeacherWorkChart class="mb-4" />
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
       <div class="lg:col-span-2 flex flex-col gap-4 min-w-0">
@@ -47,15 +57,11 @@
         <section class="dash-box">
           <h2 class="dash-bar">Jump in</h2>
           <TransitionGroup tag="nav" name="dash-pop" class="grid grid-cols-4 gap-1 sm:gap-2 p-2 sm:p-3" aria-label="Shortcuts">
-            <RouterLink v-for="q in shown('jump', QUICK)" :key="q.to" :to="q.to" class="group flex flex-col items-center gap-1.5 rounded-xl py-2.5 px-1 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition min-w-0">
+            <RouterLink v-for="q in QUICK" :key="q.to" :to="q.to" class="group flex flex-col items-center gap-1.5 rounded-xl py-2.5 px-1 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition min-w-0">
               <span class="w-11 h-11 rounded-2xl flex items-center justify-center bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100 dark:bg-indigo-950/50 dark:text-indigo-300 dark:ring-indigo-900 group-hover:bg-indigo-600 group-hover:text-white transition"><AppIcon :name="q.icon" class="w-5 h-5" /></span>
               <span class="text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-100 text-center leading-tight">{{ q.label }}</span>
             </RouterLink>
           </TransitionGroup>
-          <button v-if="QUICK.length > LIMIT.jump" type="button" class="dash-more" :aria-expanded="!!open.jump" @click="toggle('jump')">
-            {{ open.jump ? 'Show less' : `Show ${QUICK.length - LIMIT.jump} more` }}
-            <svg class="w-4 h-4 transition-transform duration-300" :class="open.jump ? 'rotate-180' : ''" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6" /></svg>
-          </button>
         </section>
       </div>
 
@@ -111,6 +117,10 @@ import { useAuthStore } from '@/stores/auth'
 import { useLiveRefresh } from '@/composables/useLiveRefresh'
 import AppIcon from '@/components/common/AppIcon.vue'
 import NoticesTicker from '@/components/dashboard/NoticesTicker.vue'
+import UsageStatCards from '@/components/dashboard/teacher/UsageStatCards.vue'
+import SkyHeader from '@/components/dashboard/SkyHeader.vue'
+import TeacherWorkChart from '@/components/dashboard/hod/TeacherWorkChart.vue'
+import { useDayPeriod } from '@/composables/useDayPeriod'
 import { initials, niceName, timeAgo } from '@/components/dashboard/teacher/time'
 
 interface Stats { teachers_count: number; students_count: number; subjects_count: number }
@@ -128,7 +138,7 @@ const QUICK = [
 ]
 
 // ---- each card shows a few, and opens up to show the rest
-const LIMIT = { recent: 4, jump: 4, teachers: 4 } as const
+const LIMIT = { recent: 6, teachers: 5 } as const
 type CardKey = keyof typeof LIMIT
 const open = ref<Partial<Record<CardKey, boolean>>>({})
 const toggle = (k: CardKey) => { open.value = { ...open.value, [k]: !open.value[k] } }
@@ -136,7 +146,9 @@ const shown = <T,>(k: CardKey, list: readonly T[]) => (open.value[k] ? list : li
 
 const authStore = useAuthStore()
 const firstName = computed(() => niceName(String(authStore.userName || '').split(' ')[0] || ''))
-const greeting = computed(() => { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening' })
+// the greeting and the banner's sky follow the time of day together
+const { period: dayPeriod, narrow: narrowSky, greeting } = useDayPeriod()
+const usageDays = ref<7 | 30>(30)
 const todayLabel = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
 
 const stats = ref<Stats | null>(null)

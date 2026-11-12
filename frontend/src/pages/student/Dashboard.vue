@@ -11,15 +11,13 @@
     </RouterLink>
 
     <!-- The welcome banner -->
-    <section class="sd-hero relative mt-7 sm:mt-9 mb-4 rounded-[1.25rem] h-[146px] sm:h-[150px] xl:h-[170px] shadow-sm">
-      <picture aria-hidden="true">
-        <source media="(min-width: 1280px)" srcset="/images/student-hero.webp">
-        <img src="/images/student-hero-small.webp" alt="" class="absolute right-0 bottom-0 h-[123%] w-auto max-w-none pointer-events-none select-none">
-      </picture>
-      <div class="relative h-full flex flex-col justify-center pl-4 sm:pl-6 pr-[14.25rem] sm:pr-64 xl:pr-[46%]">
-        <h1 class="-mr-11 sm:mr-0 font-brand text-[1.3rem] sm:text-[1.75rem] xl:text-[2rem] font-extrabold tracking-tight leading-tight text-[#061a55] dark:text-white truncate">Hello {{ firstName }}! <span class="sd-wave">👋</span></h1>
-        <p class="mt-0.5 font-brand text-[0.82rem] sm:text-base xl:text-lg font-semibold leading-snug text-[#10296e] dark:text-blue-100">Keep learning. You're doing great!</p>
-        <p class="mt-1 sm:mt-1.5 text-[0.72rem] sm:text-sm italic text-[#1d3a86] dark:text-blue-200">"Small steps make big progress."</p>
+    <!-- tucked up under the top bar (into the page's top padding), and kept short -->
+    <section class="sd-hero relative overflow-hidden -mt-3 sm:-mt-5 mb-4 rounded-[1.25rem] h-[108px] sm:h-[118px] xl:h-[130px] shadow-sm" :class="`sd-hero-${period}`">
+      <DaySky :period="period" :narrow="narrowSky" />
+      <div class="relative h-full flex flex-col justify-center pl-4 sm:pl-6 pr-24 sm:pr-56 xl:pr-[32%]">
+        <h1 class="font-brand text-[1.15rem] sm:text-[1.45rem] xl:text-[1.65rem] font-extrabold tracking-tight leading-tight truncate" :class="period === 'night' ? 'text-white' : 'text-[#061a55] dark:text-white'">{{ greeting }}, {{ firstName }}!</h1>
+        <p class="mt-0.5 font-brand text-[0.78rem] sm:text-[0.9rem] xl:text-base font-semibold leading-snug" :class="period === 'night' ? 'text-blue-50' : 'text-[#10296e] dark:text-blue-100'">{{ dayLine }}</p>
+        <p class="mt-0.5 sm:mt-1 text-[0.7rem] sm:text-[0.8rem] italic" :class="period === 'night' ? 'text-blue-200' : 'text-[#1d3a86] dark:text-blue-200'">"Small steps make big progress."</p>
       </div>
     </section>
 
@@ -38,12 +36,18 @@
             <h2 class="sd-card-title">My Learning Overview</h2>
             <RouterLink to="/student/learning-map" class="sd-card-link">View Details <span aria-hidden="true">→</span></RouterLink>
           </header>
-          <div class="sd-stats grid grid-cols-2 sm:grid-cols-4 gap-y-3 py-4">
-            <RouterLink v-for="o in overview" :key="o.label" :to="o.to" class="sd-stat group">
-              <span class="sd-stat-icon group-hover:scale-105" :style="{ background: o.color, boxShadow: `0 0 0 5px ${o.ring}` }"><AppIcon :name="o.icon" class="w-5 h-5 sm:w-6 sm:h-6" /></span>
-              <span class="mt-2 text-2xl font-extrabold font-brand text-[#061a55] dark:text-white tabular-nums leading-none">{{ o.value }}</span>
-              <span class="mt-1 text-xs sm:text-[0.82rem] lg:text-[11px] xl:text-xs min-[1800px]:text-[0.82rem] font-medium text-gray-600 dark:text-gray-300 text-center xl:whitespace-nowrap">{{ o.label }}</span>
+          <!-- eight figures, two rows of four: the overview (each opens its page), then the summaries -->
+          <div class="sd-tiles grid grid-cols-4 gap-1.5 sm:gap-3 p-2.5 sm:p-4">
+            <RouterLink v-for="o in overview" :key="o.label" :to="o.to" class="sd-tile transition hover:-translate-y-0.5" :class="o.tile">
+              <AppIcon :name="o.icon" class="w-5 h-5 sm:w-6 sm:h-6" :class="o.ink" />
+              <span class="mt-1 text-base sm:text-xl font-extrabold font-brand text-[#061a55] dark:text-white tabular-nums leading-tight">{{ o.value }}</span>
+              <span class="text-[10px] sm:text-xs lg:text-[11px] xl:text-xs font-medium text-gray-600 dark:text-gray-300 text-center leading-tight sm:whitespace-nowrap">{{ o.label }}</span>
             </RouterLink>
+            <div v-for="t in summaryTiles" :key="t.label" class="sd-tile" :class="t.tile">
+              <AppIcon :name="t.icon" class="w-5 h-5 sm:w-6 sm:h-6" :class="t.ink" />
+              <span class="mt-1 text-base sm:text-xl font-extrabold font-brand text-[#061a55] dark:text-white tabular-nums leading-tight">{{ t.value }}</span>
+              <span class="text-[10px] sm:text-xs lg:text-[11px] xl:text-xs font-medium text-gray-600 dark:text-gray-300 text-center leading-tight sm:whitespace-nowrap">{{ t.label }}</span>
+            </div>
           </div>
         </section>
 
@@ -51,14 +55,10 @@
         <section class="dash-box order-2 lg:order-none">
           <h2 class="dash-bar"><AppIcon name="play" class="w-4 h-4" /> Continue Learning <RouterLink to="/student/enotes" class="dash-bar-link">Resume all <span aria-hidden="true">→</span></RouterLink></h2>
           <div v-if="!topicsLoaded" class="p-3"><div class="h-24 rounded-xl bg-gray-100 dark:bg-gray-700/50 animate-pulse"></div></div>
-          <div v-else-if="nextTopic" class="sd-next p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
-            <span class="sd-topic-art flex-shrink-0" :style="{ background: `linear-gradient(135deg, ${tint(nextTopic.subject_name || 'eNotes')}, #061a55)` }">
-              <AppIcon name="book" class="w-8 h-8 sm:w-10 sm:h-10" />
-              <span class="mt-1 text-[11px] font-bold tracking-wide">{{ code(nextTopic.subject_name || 'eNotes') }}</span>
-            </span>
+          <div v-else-if="nextTopic" class="sd-next px-3 py-2.5 sm:px-4 flex items-center gap-3">
+            <span class="sd-topic-art flex-shrink-0"><SubjectMonogram :code="code(nextTopic.subject_name || 'eNotes')" :color="tint(nextTopic.subject_name || 'eNotes')" /></span>
             <div class="min-w-0 flex-1">
-              <p class="font-brand text-base sm:text-lg font-bold text-[#061a55] dark:text-white truncate">{{ nextTopic.subject_name || 'eNotes' }}</p>
-              <p class="text-sm text-gray-600 dark:text-gray-300 truncate">Topic: {{ nextTopic.title }}</p>
+              <p class="text-[0.95rem] sm:text-base font-semibold tracking-[-0.005em] font-sans text-[#10296e] dark:text-white truncate" :title="nextTopic.title">{{ readableTitle(nextTopic.title) }}</p>
               <div class="mt-2 flex items-center gap-2.5">
                 <span class="flex-1 h-2 rounded-full bg-blue-100 dark:bg-gray-700 overflow-hidden"><span class="block h-full rounded-full bg-emerald-500" :style="{ width: `${progressOf(nextTopic)}%` }"></span></span>
                 <span class="flex-shrink-0 text-xs font-medium text-gray-600 dark:text-gray-300">{{ progressOf(nextTopic) }}% complete</span>
@@ -71,45 +71,36 @@
           <div v-else class="p-4 text-[0.95rem] text-gray-600 dark:text-gray-300">{{ topics.length ? "You've finished all your eNotes. Well done!" : 'Your eNotes appear here once a teacher publishes them to your class.' }}</div>
         </section>
 
-        <!-- My Summaries: the learner's totals and the week -->
-        <section class="sd-card order-6 lg:order-none">
-          <header class="sd-card-head">
-            <span class="sd-card-icon"><AppIcon name="chart" class="w-4 h-4" /></span>
-            <h2 class="sd-card-title">My Summaries</h2>
-            <RouterLink to="/student/my-notes" class="sd-card-link">View More <span aria-hidden="true">→</span></RouterLink>
-          </header>
-          <div class="sd-tiles grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 p-3 sm:p-4">
-            <div v-for="t in summaryTiles" :key="t.label" class="sd-tile" :class="t.tile">
-              <AppIcon :name="t.icon" class="w-6 h-6" :class="t.ink" />
-              <span class="mt-1 text-xl font-extrabold font-brand text-[#061a55] dark:text-white tabular-nums leading-tight">{{ t.value }}</span>
-              <span class="text-xs lg:text-[11px] xl:text-xs font-medium text-gray-600 dark:text-gray-300 whitespace-nowrap">{{ t.label }}</span>
+        <!-- How the marks are going (each score and the trend), the week's activity, and the marks as a
+             table: one graph at a time, chosen with the switch at the top of the card -->
+        <GeneralPerformance class="order-7 lg:order-none">
+          <template #activity-head>
+            <div class="sd-weekbox">
+              <h3 class="text-sm font-bold text-[#061a55] dark:text-white leading-snug">Your Activity This Week <span class="text-xs font-normal text-gray-500 dark:text-gray-400">(pages read, videos watched, books opened and work handed in)</span></h3>
             </div>
-          </div>
-          <div class="sd-weekbox px-3 sm:px-4 pb-4">
-            <h3 class="text-sm font-bold text-[#061a55] dark:text-white">Your Activity This Week</h3>
-            <p class="text-xs text-gray-500 dark:text-gray-400">Pages read, videos watched, books opened and work handed in</p>
-            <div class="sd-week mt-3" role="img" :aria-label="weekSummary">
-              <div v-for="d in week" :key="d.date" class="sd-week-col" tabindex="0" :aria-label="`${d.day}: ${d.count}`">
-                <span class="sd-week-tip">{{ d.day }}: {{ d.count }} {{ d.count === 1 ? 'activity' : 'activities' }}</span>
-                <div class="sd-week-track">
-                  <span class="sd-week-bar" :class="{ 'sd-week-bar-zero': !d.count }" :style="{ height: d.count ? `${Math.max(8, (d.count / weekMax) * 100)}%` : undefined }"></span>
+          </template>
+          <template #activity>
+            <div class="sd-weekbox">
+              <div class="sd-week mt-1" role="img" :aria-label="weekSummary">
+                <div v-for="d in week" :key="d.date" class="sd-week-col" tabindex="0" :aria-label="`${d.day}: ${d.count}`">
+                  <span class="sd-week-tip">{{ d.day }}: {{ d.count }} {{ d.count === 1 ? 'activity' : 'activities' }}</span>
+                  <div class="sd-week-track">
+                    <span class="sd-week-bar" :class="{ 'sd-week-bar-zero': !d.count }" :style="{ height: d.count ? `${Math.max(8, (d.count / weekMax) * 100)}%` : undefined }"></span>
+                  </div>
+                  <span class="mt-1.5 text-xs" :class="d.date === todayKey ? 'font-bold text-[#0b5fe0] dark:text-blue-300' : 'text-gray-600 dark:text-gray-400'">{{ d.day }}</span>
                 </div>
-                <span class="mt-1.5 text-xs" :class="d.date === todayKey ? 'font-bold text-[#0b5fe0] dark:text-blue-300' : 'text-gray-600 dark:text-gray-400'">{{ d.day }}</span>
               </div>
             </div>
-          </div>
-        </section>
-
-        <!-- How the marks are going: each score and the trend -->
-        <GeneralPerformance class="order-7 lg:order-none" />
+          </template>
+        </GeneralPerformance>
       </div>
 
       <div class="contents lg:flex lg:col-span-2 min-[1800px]:col-span-1 lg:flex-col lg:gap-4 min-w-0 lg:[&>*:last-child]:flex-grow">
-        <!-- My Classes -->
+        <!-- My Subjects (each subject the learner takes, with its class) -->
         <section class="dash-box order-5 lg:order-none">
-          <h2 class="dash-bar"><AppIcon name="book" class="w-4 h-4" /> My Classes <RouterLink to="/student/classes" class="dash-bar-link">Open All <span aria-hidden="true">→</span></RouterLink></h2>
+          <h2 class="dash-bar"><AppIcon name="book" class="w-4 h-4" /> My Subjects <RouterLink to="/student/classes" class="dash-bar-link">Open All <span aria-hidden="true">→</span></RouterLink></h2>
           <div v-if="!classesLoaded" class="space-y-2 p-3"><div v-for="i in 4" :key="i" class="h-8 rounded-lg bg-gray-100 dark:bg-gray-700/50 animate-pulse"></div></div>
-          <p v-else-if="!classes.length" class="p-4 text-[0.95rem] text-gray-500 dark:text-gray-400">You are not in any class yet.</p>
+          <p v-else-if="!classes.length" class="p-4 text-[0.95rem] text-gray-500 dark:text-gray-400">You are not taking any subjects yet.</p>
           <TransitionGroup v-else tag="ul" name="dash-pop" class="sd-rows px-3 py-1.5 divide-y divide-gray-100 dark:divide-gray-700/60">
             <li v-for="c in shown('classes', sortedClasses)" :key="c.id">
               <RouterLink to="/student/enotes" class="flex items-center gap-3 py-2 group">
@@ -140,7 +131,6 @@
         <!-- Need Attention: today's live classes, then what is most useful next (next-steps) -->
         <section class="sd-card order-3 lg:order-none">
           <header class="sd-card-head">
-            <span class="w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center text-sm font-extrabold flex-shrink-0" aria-hidden="true">!</span>
             <h2 class="sd-card-title">Need Attention</h2>
             <span v-if="todo.length" class="min-w-[22px] h-[22px] px-1 rounded-full bg-red-500 text-white text-xs font-bold leading-[22px] text-center">{{ todo.length }}</span>
             <RouterLink to="/student/assignments" class="sd-card-link">View All <span aria-hidden="true">→</span></RouterLink>
@@ -194,11 +184,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import axios from 'axios'
 import AppIcon from '@/components/common/AppIcon.vue'
 import NoticesTicker from '@/components/dashboard/NoticesTicker.vue'
 import GeneralPerformance from '@/components/dashboard/GeneralPerformance.vue'
+import DaySky, { type DayPeriod } from '@/components/dashboard/DaySky.vue'
+import SubjectMonogram from '@/components/dashboard/SubjectMonogram.vue'
 import { useLiveRefresh } from '@/composables/useLiveRefresh'
 import { usePublicationsAccess } from '@/composables/usePublicationsAccess'
 import { useAuthStore } from '@/stores/auth'
@@ -213,7 +205,7 @@ interface DashboardData {
   learning?: Learning
 }
 interface StudentClass { id: number; name: string; department_name: string | null }
-interface Learning { minutes: number; videos_watched: number; week: { day: string; date: string; count: number }[] }
+interface Learning { minutes: number; books_read: number; week: { day: string; date: string; count: number }[] }
 interface Topic { id: number; title: string; subject_name?: string | null; active_pages?: number; total_pages?: number; resume_page_id?: number | null; resume_page_number?: number | null; pages_reached?: number | string | null; progress_last_read_at?: string | null }
 
 const authStore = useAuthStore()
@@ -226,6 +218,22 @@ const firstName = computed(() => {
   const name = u?.first_name || String(authStore.userName || '').split(' ')[0] || ''
   return name ? name.charAt(0).toUpperCase() + name.slice(1).toLowerCase() : 'there'
 })
+// The banner follows the learner's clock: the greeting, the line under it and the sky (sun or moon)
+const periodAt = (h: number): DayPeriod => (h >= 5 && h < 12 ? 'morning' : h >= 12 && h < 16 ? 'afternoon' : h >= 16 && h < 19 ? 'evening' : 'night')
+const period = ref<DayPeriod>(periodAt(new Date().getHours()))
+const periodTimer = window.setInterval(() => { period.value = periodAt(new Date().getHours()) }, 60_000)
+const narrowQuery = window.matchMedia('(max-width: 639px)')
+const narrowSky = ref(narrowQuery.matches)
+const onNarrow = (e: MediaQueryListEvent) => { narrowSky.value = e.matches }
+narrowQuery.addEventListener('change', onNarrow)
+onUnmounted(() => { window.clearInterval(periodTimer); narrowQuery.removeEventListener('change', onNarrow) })
+const greeting = computed(() => (period.value === 'morning' ? 'Good morning' : period.value === 'afternoon' ? 'Good afternoon' : 'Good evening'))
+const dayLine = computed(() => ({
+  morning: 'A fresh day to learn something new.',
+  afternoon: "Keep learning. You're doing great!",
+  evening: 'A little revision this evening goes a long way.',
+  night: "Rest well. Tomorrow's lessons are waiting.",
+})[period.value])
 const toDate = (v: string) => new Date(v.replace(' ', 'T'))
 const isToday = (d: Date) => d.toDateString() === new Date().toDateString()
 const dueText = (v: string | null) => {
@@ -242,6 +250,10 @@ const dueText = (v: string | null) => {
 // Subject badges: one bright colour each, the same subject always the same colour
 const TINTS = ['#0a8a5f', '#6d3fe0', '#1a6fe0', '#0d8177', '#c95f08', '#d02a7c', '#2f55d4', '#b34e0a']
 const tint = (name: string) => TINTS[[...name].reduce((h, c) => h + c.charCodeAt(0), 0) % TINTS.length]
+// Titles typed in capitals read better in title case ("MEASUREMENTS IN PHYSICS" -> "Measurements in Physics");
+// short words stay lower case, and anything already mixed case is left as typed
+const SMALL_WORDS = new Set(['a', 'an', 'and', 'as', 'at', 'by', 'for', 'in', 'of', 'on', 'or', 'the', 'to', 'with'])
+const readableTitle = (t: string) => (t !== t.toUpperCase() || !/[A-Z]{2}/.test(t) ? t : t.toLowerCase().replace(/[a-z][a-z']*/g, (w, i) => (i > 0 && SMALL_WORDS.has(w) ? w : w[0].toUpperCase() + w.slice(1))))
 const code = (name: string) => name.replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase() || '?'
 
 // ---- To do: live classes later today, then the next steps (most useful first: work started,
@@ -275,7 +287,7 @@ const todo = computed(() => {
 })
 
 // ---- each card shows a few, and opens up to show the rest
-const LIMIT = { pending: 3, classes: 5, publications: 3 } as const
+const LIMIT = { pending: 5, classes: 6, publications: 3 } as const
 type CardKey = keyof typeof LIMIT
 const open = ref<Partial<Record<CardKey, boolean>>>({})
 const toggle = (k: CardKey) => { open.value = { ...open.value, [k]: !open.value[k] } }
@@ -323,10 +335,10 @@ const overview = computed(() => {
   const done = list.filter(t => stateOf(t) === 'done').length
   const overall = list.length ? Math.round(list.reduce((n, t) => n + progressOf(t), 0) / list.length) : 0
   return [
-    { label: 'My Classes', value: classes.value.length, icon: 'book', to: '/student/classes', color: 'linear-gradient(135deg,#4f9bf7,#1a6fe0)', ring: 'rgba(26,123,240,.14)' },
-    { label: 'Lessons Completed', value: done, icon: 'check', to: '/student/enotes', color: 'linear-gradient(135deg,#34c77b,#0e9f5c)', ring: 'rgba(14,159,92,.14)' },
-    { label: 'Assessments Pending', value: data.value?.stats.assignments_pending ?? 0, icon: 'document', to: '/student/assignments', color: 'linear-gradient(135deg,#fbab3c,#f0760f)', ring: 'rgba(240,118,15,.14)' },
-    { label: 'Overall Progress', value: `${overall}%`, icon: 'star', to: '/student/learning-map', color: 'linear-gradient(135deg,#9a6bf5,#6d3fe0)', ring: 'rgba(109,63,224,.14)' }
+    { label: 'My Classes', tile: 'sd-t-blue', ink: 'sd-i-blue', value: classes.value.length, icon: 'book', to: '/student/classes', color: 'linear-gradient(135deg,#4f9bf7,#1a6fe0)', ring: 'rgba(26,123,240,.14)' },
+    { label: 'Lessons Completed', tile: 'sd-t-rose', ink: 'sd-i-rose', value: done, icon: 'check', to: '/student/enotes', color: 'linear-gradient(135deg,#34c77b,#0e9f5c)', ring: 'rgba(14,159,92,.14)' },
+    { label: 'Assessments Pending', tile: 'sd-t-peach', ink: 'sd-i-peach', value: data.value?.stats.assignments_pending ?? 0, icon: 'document', to: '/student/assignments', color: 'linear-gradient(135deg,#fbab3c,#f0760f)', ring: 'rgba(240,118,15,.14)' },
+    { label: 'Overall Progress', tile: 'sd-t-violet', ink: 'sd-i-violet', value: `${overall}%`, icon: 'star', to: '/student/learning-map', color: 'linear-gradient(135deg,#9a6bf5,#6d3fe0)', ring: 'rgba(109,63,224,.14)' }
   ]
 })
 
@@ -342,7 +354,7 @@ const summaryTiles = computed(() => {
   return [
     { label: 'Notes Read', value: topics.value.filter(t => stateOf(t) !== 'new').length, icon: 'book', tile: 'sd-t-violet', ink: 'sd-i-violet' },
     { label: 'Learning Time', value: learningTime(l?.minutes ?? 0), icon: 'clock', tile: 'sd-t-mint', ink: 'sd-i-mint' },
-    { label: 'Videos Watched', value: l?.videos_watched ?? 0, icon: 'video', tile: 'sd-t-blue', ink: 'sd-i-blue' },
+    { label: 'Books Read', value: l?.books_read ?? 0, icon: 'document', tile: 'sd-t-blue', ink: 'sd-i-blue' },
     { label: 'Avg Score', value: avg === null || avg === undefined ? '-' : `${Math.round(Number(avg))}%`, icon: 'trophy', tile: 'sd-t-peach', ink: 'sd-i-peach' }
   ]
 })

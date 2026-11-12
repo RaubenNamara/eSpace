@@ -3,31 +3,37 @@
        cards with dark-green title bars - what is waiting to be marked, shortcuts, today, who
        needs attention and each class. Each card shows a few and opens up for the rest. -->
   <div class="w-full">
-    <!-- Greeting, the department and its students -->
-    <header class="mb-3 flex flex-col sm:flex-row sm:items-end gap-x-3 gap-y-2">
+    <!-- Greeting, the department and its students, and the usage heading - the sky for the time of day behind them -->
+    <SkyHeader :period="dayPeriod" :narrow="narrowSky">
+    <header class="flex flex-col sm:flex-row sm:items-end gap-x-3 gap-y-2">
       <div class="min-w-0 flex-1">
-        <p class="text-sm font-semibold text-indigo-600 dark:text-indigo-400">{{ todayLabel }}</p>
-        <h1 class="font-heading text-2xl sm:text-[1.8rem] font-bold text-gray-900 dark:text-white truncate">{{ greeting }}, {{ firstName }}</h1>
+        <p class="sky-sub text-sm font-semibold text-indigo-600 dark:text-indigo-300">{{ todayLabel }}</p>
+        <h1 class="sky-text font-heading text-2xl sm:text-[1.8rem] font-bold text-gray-900 dark:text-white truncate">{{ greeting }}, {{ firstName }}</h1>
       </div>
       <div class="flex flex-wrap items-center gap-2">
         <select
           v-if="myDepartments.length > 1"
           :value="activeDepartmentId"
           :disabled="switchingDepartment"
-          class="rounded-xl border-0 ring-1 ring-gray-200 dark:ring-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 pl-3 pr-8 py-1.5 text-sm font-semibold focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+          class="rounded-xl border-0 ring-1 ring-gray-200 dark:ring-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 pl-2 pr-7 py-0.5 sm:pl-3 sm:pr-8 sm:py-1.5 text-[11px] sm:text-sm font-semibold focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
           @change="switchDepartment(($event.target as HTMLSelectElement).value)"
         >
           <option v-for="dept in myDepartments" :key="dept.id" :value="dept.id">{{ dept.name }}{{ dept.is_primary ? ' (Primary)' : '' }}</option>
         </select>
-        <span v-else-if="analytics.department" class="px-3 py-1.5 rounded-xl bg-indigo-800 text-white text-sm font-bold">{{ analytics.department.name }}</span>
-        <button v-if="analytics.department" type="button" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-gray-800 ring-1 ring-gray-200 dark:ring-gray-700 text-sm font-semibold text-gray-800 dark:text-gray-100 hover:ring-indigo-300" @click="openViewEnrolledModal">
-          <AppIcon name="users" class="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+        <span v-else-if="analytics.department" class="px-2 py-0.5 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl bg-indigo-800 text-white text-[11px] sm:text-sm font-bold">{{ analytics.department.name }}</span>
+        <button v-if="analytics.department" type="button" class="flex items-center gap-1 sm:gap-1.5 px-2 py-0.5 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl bg-white dark:bg-gray-800 ring-1 ring-gray-200 dark:ring-gray-700 text-[11px] sm:text-sm font-semibold text-gray-800 dark:text-gray-100 hover:ring-indigo-300" @click="openViewEnrolledModal">
+          <AppIcon name="users" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-600 dark:text-indigo-400" />
           {{ analytics.total_enrollments ? `${analytics.total_enrollments.toLocaleString()} students` : 'Enrolled students' }}
         </button>
       </div>
     </header>
+    <UsageStatCards mode="teacher" part="heading" v-model:days="usageDays" class="mt-3" />
+    </SkyHeader>
 
     <NoticesTicker role="teacher" />
+
+    <!-- How the teacher is using Tusome: active days, sign-ins, things done, marking -->
+    <UsageStatCards mode="teacher" part="cards" v-model:days="usageDays" />
 
     <div v-if="!overview && !overviewError" class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
       <div class="lg:col-span-2"><Skeleton variant="list" :count="4" /></div>
@@ -94,7 +100,7 @@
         </section>
 
         <!-- The teacher's own use of Tusome -->
-        <MyUsage />
+        <MyUsage :days="usageDays" />
       </div>
 
       <div class="flex flex-col gap-4 min-w-0">
@@ -319,6 +325,9 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import NoticesTicker from '@/components/dashboard/NoticesTicker.vue'
+import UsageStatCards from '@/components/dashboard/teacher/UsageStatCards.vue'
+import SkyHeader from '@/components/dashboard/SkyHeader.vue'
+import { useDayPeriod } from '@/composables/useDayPeriod'
 import AppIcon from '@/components/common/AppIcon.vue'
 import MyUsage from '@/components/dashboard/teacher/MyUsage.vue'
 import { niceName } from '@/components/dashboard/teacher/time'
@@ -338,12 +347,9 @@ const confirmDialog = useConfirmStore()
 
 const authStore = useAuthStore()
 
-const greeting = computed(() => {
-  const hour = new Date().getHours()
-  if (hour < 12) return 'Good morning'
-  if (hour < 17) return 'Good afternoon'
-  return 'Good evening'
-})
+// the greeting and the banner's sky follow the time of day together
+const { period: dayPeriod, narrow: narrowSky, greeting } = useDayPeriod()
+const usageDays = ref<7 | 30>(30)
 
 // ---- The day at a glance (GET /teacher/dashboard/overview) ----
 interface Overview {
@@ -390,7 +396,7 @@ const firstName = computed(() => {
 const todayLabel = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
 
 // ---- each card shows a few, and opens up to show the rest
-const LIMIT = { marking: 4, today: 3, word: 3, classes: 4 } as const
+const LIMIT = { marking: 4, today: 3, word: 3, classes: 6 } as const
 type CardKey = keyof typeof LIMIT
 const open = ref<Partial<Record<CardKey, boolean>>>({})
 const toggle = (k: CardKey) => { open.value = { ...open.value, [k]: !open.value[k] } }

@@ -6,6 +6,7 @@ namespace eSpace\App\Controllers\Teacher;
 
 use eSpace\App\Controllers\Controller;
 use eSpace\App\Controllers\Admin\StaffActivityController;
+use eSpace\App\Services\TeachingUsage;
 
 /**
  * A teacher's own use of Tusome over the last 7 or 30 days, for the chart on their dashboard:
@@ -75,5 +76,27 @@ class UsageController extends Controller
             ],
             'by_kind' => array_map(fn ($k, $n) => ['type' => $k, 'count' => $n], array_keys($kinds), $kinds),
         ]);
+    }
+
+    /**
+     * The figures for the usage cards on the dashboard: this period and the one before it
+     *
+     * GET /teacher/usage/summary?days=30
+     */
+    public function summary(): void
+    {
+        $this->requireAuth();
+        $role = $_SESSION['role'] ?? null;
+        $teacherId = $role === 'hod' ? (int) ($_SESSION['teacher_id'] ?? 0) : (int) ($_SESSION['user_id'] ?? 0);
+        if (!$teacherId) {
+            $this->forbidden();
+            return;
+        }
+        $this->success(TeachingUsage::summary(
+            [$teacherId],
+            $role === 'hod' ? 'hod' : 'teacher',
+            [(int) ($_SESSION['user_id'] ?? 0)],
+            (int) $this->query('days', 30)
+        ));
     }
 }

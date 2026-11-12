@@ -316,7 +316,12 @@ class DashboardController extends Controller
             ($learningTotal("SELECT COALESCE(SUM(seconds), 0) FROM enote_page_views WHERE student_id = ?")
                 + $learningTotal("SELECT COALESCE(SUM(watched_seconds), 0) FROM video_views WHERE student_id = ?")) / 60
         ) + $learningTotal("SELECT COALESCE(SUM(time_spent_minutes), 0) FROM library_progress WHERE student_id = ?");
-        $videosWatched = $learningTotal("SELECT COUNT(*) FROM video_views WHERE student_id = ?");
+        // eLibrary books the learner has opened (books since removed from the library are not counted)
+        $booksRead = $learningTotal(
+            "SELECT COUNT(DISTINCT lp.book_id) FROM library_progress lp
+             JOIN library_books b ON b.id = lp.book_id AND b.deleted_at IS NULL
+             WHERE lp.student_id = ?"
+        );
 
         $monday = new \DateTimeImmutable('monday this week');
         $sources = [
@@ -343,7 +348,7 @@ class DashboardController extends Controller
         }
 
         $this->success([
-            'learning' => ['minutes' => $learningMinutes, 'videos_watched' => $videosWatched, 'week' => $week],
+            'learning' => ['minutes' => $learningMinutes, 'books_read' => $booksRead, 'week' => $week],
             'stats' => [
                 'classes_enrolled' => count($enrollments),
                 'subjects_enrolled' => $subjectsCount,

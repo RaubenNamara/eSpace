@@ -3,19 +3,22 @@
        dark-green title bars - finishing the setup, who signed in this week, shortcuts and where
        the learners are. Curriculum mastery lives in Reports. -->
   <div class="w-full">
-    <header class="mb-3 flex flex-col sm:flex-row sm:items-end gap-x-3 gap-y-2">
+    <!-- the greeting, the sky for the time of day behind it -->
+    <SkyHeader :period="dayPeriod" :narrow="narrowSky">
+    <header class="flex flex-col sm:flex-row sm:items-end gap-x-3 gap-y-2">
       <div class="min-w-0 flex-1">
-        <p class="text-sm font-semibold text-indigo-600 dark:text-indigo-400">{{ todayLabel }}</p>
-        <h1 class="font-heading text-2xl sm:text-[1.8rem] font-bold text-gray-900 dark:text-white truncate">{{ greeting }}, {{ firstName }}</h1>
+        <p class="sky-sub text-sm font-semibold text-indigo-600 dark:text-indigo-300">{{ todayLabel }}</p>
+        <h1 class="sky-text font-heading text-2xl sm:text-[1.8rem] font-bold text-gray-900 dark:text-white truncate">{{ greeting }}, {{ firstName }}</h1>
       </div>
       <div class="flex flex-wrap items-center gap-2">
-        <span v-if="currentTerm" class="px-3 py-1.5 rounded-xl bg-indigo-800 text-white text-sm font-bold">{{ currentTerm }}</span>
-        <span v-if="figures" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-gray-800 ring-1 ring-gray-200 dark:ring-gray-700 text-sm font-semibold text-gray-800 dark:text-gray-100">
-          <AppIcon name="users" class="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+        <span v-if="currentTerm" class="px-2 py-0.5 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl bg-indigo-800 text-white text-[11px] sm:text-sm font-bold">{{ currentTerm }}</span>
+        <span v-if="figures" class="flex items-center gap-1 sm:gap-1.5 px-2 py-0.5 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl bg-white dark:bg-gray-800 ring-1 ring-gray-200 dark:ring-gray-700 text-[11px] sm:text-sm font-semibold text-gray-800 dark:text-gray-100">
+          <AppIcon name="users" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-600 dark:text-indigo-400" />
           {{ figures.students.toLocaleString() }} learners · {{ figures.teachers.toLocaleString() }} teachers
         </span>
       </div>
     </header>
+    </SkyHeader>
 
     <NoticesTicker role="admin" />
 
@@ -610,6 +613,8 @@ import { PERIODS } from '@/components/admin/signInParts'
 import { useAuthStore } from '@/stores/auth'
 import AppIcon from '@/components/common/AppIcon.vue'
 import NoticesTicker from '@/components/dashboard/NoticesTicker.vue'
+import SkyHeader from '@/components/dashboard/SkyHeader.vue'
+import { useDayPeriod } from '@/composables/useDayPeriod'
 import EnrolmentCard from '@/components/admin/EnrolmentCard.vue'
 import SetupChecklist, { type SetupFigures } from '@/components/admin/SetupChecklist.vue'
 import EndOfTermCard from '@/components/admin/EndOfTermCard.vue'
@@ -676,12 +681,8 @@ const activityDays = ref((() => {
 })())
 watch(activityDays, v => { try { localStorage.setItem(ACTIVITY_DAYS_KEY, String(v)) } catch { /* private mode */ } })
 
-const greeting = computed(() => {
-  const hour = new Date().getHours()
-  if (hour < 12) return 'Good morning'
-  if (hour < 17) return 'Good afternoon'
-  return 'Good evening'
-})
+// the greeting and the banner's sky follow the time of day together
+const { period: dayPeriod, narrow: narrowSky, greeting } = useDayPeriod()
 
 const loadingAnalytics = ref(false)
 const departments = ref<Department[]>([])

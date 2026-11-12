@@ -303,6 +303,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/dashboard/overview', 'eSpace\App\Controllers\Teacher\DashboardOverviewController@index');
         // The teacher's own use of Tusome, for the chart on their dashboard
         Router::get('/usage', 'eSpace\App\Controllers\Teacher\UsageController@index');
+        Router::get('/usage/summary', 'eSpace\App\Controllers\Teacher\UsageController@summary');
 
         // Departments (a teacher in more than one department can switch their active one)
         Router::get('/departments', 'eSpace\App\Controllers\Teacher\DepartmentController@index');
@@ -675,6 +676,9 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::delete('/ict-lab/tasks/{id}', 'eSpace\App\Controllers\IctLabController@deleteTask');
 
         // Teachers
+        // How the department's teachers are using Tusome (the cards on the HOD dashboard)
+        Router::get('/teacher-usage', 'eSpace\App\Controllers\HOD\TeacherUsageController@index');
+        Router::get('/teacher-performance', 'eSpace\App\Controllers\HOD\TeacherUsageController@performance');
         Router::get('/teachers', 'eSpace\App\Controllers\HOD\TeacherController@index');
         Router::post('/teachers', 'eSpace\App\Controllers\HOD\TeacherController@create');
         Router::get('/teachers/{id}', 'eSpace\App\Controllers\HOD\TeacherController@show');

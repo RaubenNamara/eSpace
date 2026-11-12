@@ -2,11 +2,14 @@
   <div class="min-h-full">
     <!-- Header - same compact icon + title + subtitle pattern as the other module pages, with the
          main action on the right -->
-    <div class="flex items-center gap-2 mb-1">
-      <div class="hidden sm:flex w-7 h-7 rounded-lg bg-indigo-600 items-center justify-center flex-shrink-0">
-        <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v6.5L4.5 18A2 2 0 006.3 21h11.4a2 2 0 001.8-3L15 9.5V3M8 3h8M7 15h10" /></svg>
+    <div class="flex flex-wrap items-start gap-x-3 gap-y-2 mb-4 sm:mb-5">
+      <div class="hidden sm:flex w-10 h-10 rounded-xl bg-indigo-600 items-center justify-center flex-shrink-0 shadow-sm">
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v6.5L4.5 18A2 2 0 006.3 21h11.4a2 2 0 001.8-3L15 9.5V3M8 3h8M7 15h10" /></svg>
       </div>
-      <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight whitespace-nowrap">Virtual Lab</h1>
+      <div class="min-w-[11rem] flex-1">
+        <h1 class="font-heading text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight whitespace-nowrap">Virtual Lab</h1>
+        <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">Create 3D practical experiments, publish them to your classes, and mark what students submit.</p>
+      </div>
       <router-link to="/teacher/virtual-lab/playground" class="ml-auto inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 bg-white dark:bg-gray-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors" title="Try any apparatus freely in 3D">
         <AppIcon name="kit" class="w-4 h-4" /><span class="hidden sm:inline">Apparatus</span> Playground
       </router-link>
@@ -14,7 +17,6 @@
         <span class="text-base leading-none">+</span> New Experiment
       </button>
     </div>
-    <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Create 3D practical experiments, publish them to your classes, and mark what students submit.</p>
 
     <div>
       <transition
