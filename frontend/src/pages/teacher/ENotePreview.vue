@@ -359,6 +359,13 @@
       </div>
     </div>
 
+    <!-- A learner's progress through this topic, always in view while reading (Read Mode too: the reader opens in it) -->
+    <div v-if="isStudentMode && pages.length" class="flex-shrink-0 flex items-center gap-2.5 sm:gap-3 pl-3 sm:pl-6 py-1.5 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800" :class="readMode ? 'pr-[3.75rem] sm:pr-24' : 'pr-3 sm:pr-6'" role="progressbar" :aria-valuenow="progressPercentage" aria-valuemin="0" aria-valuemax="100" aria-label="Your progress through this topic">
+      <span class="flex-shrink-0 text-xs font-medium text-gray-600 dark:text-gray-300">Page {{ currentPageNumber }} of {{ pages.length }}</span>
+      <span class="flex-1 h-2 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden"><span class="block h-full rounded-full bg-emerald-500 transition-all duration-300" :style="{ width: `${progressPercentage}%` }"></span></span>
+      <span class="flex-shrink-0 text-xs font-bold text-gray-900 dark:text-white tabular-nums">{{ progressPercentage }}%</span>
+    </div>
+
     <!-- Main Content -->
     <div class="flex-1 flex overflow-hidden relative">
       <!-- Mobile/tablet backdrop for the table-of-contents drawer -->
@@ -480,7 +487,7 @@
             </div>
           </div>
           <div class="text-xs text-gray-500 dark:text-gray-400">
-            {{ visitedCount }} of {{ pages.length }} pages read
+            {{ readCount }} of {{ pages.length }} pages read
           </div>
         </div>
       </div>
@@ -548,7 +555,7 @@
                 :prefer-single-page="preferSinglePage"
                 class="transition-shadow duration-300 hover:drop-shadow-2xl"
                 @flip="onBookFlip"
-                @orientation="bookOrientation = $event"
+                @orientation="bookOrientation = $event; orientationKnown = true"
               >
                 <template #pages>
                   <!-- No blanket @touchstart.stop here any more: BookFlipbook's edge guard (edgeFlipOnly)
@@ -1359,7 +1366,7 @@ const visitedCount = computed(() => pages.value.filter(p => visitedPageIds.value
 
 const progressPercentage = computed(() => {
   if (pages.value.length === 0) return 0
-  return Math.round((visitedCount.value / pages.value.length) * 100)
+  return Math.round((readCount.value / pages.value.length) * 100)
 })
 
 const totalReadingTime = computed(() => pages.value.reduce((sum, p) => sum + getReadingTime(p.content), 0))
@@ -1447,6 +1454,7 @@ const loadTopic = async () => {
     if (response.data.success) {
       topic.value = response.data.data
       pages.value = response.data.data.pages || []
+      pagesReached.value = Math.max(pagesReached.value, Number(response.data.data.pages_reached || 0))
 
       // A student arriving back from a per-page Learning Outcome Assessment (see
       // attemptPageLoa()) resumes on the page after the one they attempted from, rather than
@@ -1501,6 +1509,16 @@ const selectPage = (pageId: number) => {
 // student is moving on from (a two-page spread shows the left page's index and the one after it)
 let lastBookIndex = 0
 const bookOrientation = ref<'portrait' | 'landscape'>('landscape')
+
+// A learner's progress is the farthest page they have reached, over all their visits (a spread
+// shows two pages, so the one beside the current page counts); staff previews count this session.
+const pagesReached = ref(0)
+const currentPageNumber = computed(() => pages.value.findIndex(p => p.id === currentPage.value?.id) + 1)
+// (the book reports its layout once it has measured itself; until then only the current page counts)
+const orientationKnown = ref(false)
+const lastPageShowing = computed(() => Math.min(pages.value.length, currentPageNumber.value + (orientationKnown.value && bookOrientation.value === 'landscape' ? 1 : 0)))
+watch(lastPageShowing, n => { pagesReached.value = Math.max(pagesReached.value, n) })
+const readCount = computed(() => (isStudentMode.value ? Math.min(pagesReached.value, pages.value.length) : visitedCount.value))
 // The pages on show (one, or two side by side) and where each one's summary tab sits: under its
 // own page - the book fills the frame, so the spine is the middle
 const NOTE_GAP = '0.75rem'
@@ -1556,6 +1574,7 @@ const saveReadingPlace = () => {
     savedPage = { id: pageId, at: Date.now() }
     axios.post(`${API_BASE}/student/enotes/topics/${topicIdNow}/progress`, {
       page_id: pageId,
+      seen_page_id: orientationKnown.value && bookOrientation.value === 'landscape' ? pages.value[pages.value.findIndex(p => p.id === pageId) + 1]?.id : undefined,
       prev_page_id: prev?.id,
       prev_seconds: prev ? Math.round((Date.now() - prev.at) / 1000) : undefined
     }).catch(() => {})

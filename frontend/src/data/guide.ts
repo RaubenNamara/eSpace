@@ -72,7 +72,7 @@ export const GUIDE: GuidePart[] = [
       {
         id: 's-dashboard', title: 'Your dashboard (eClass)', icon: 'sparkles',
         intro: 'Open Tusome and your dashboard shows what matters today, in a few small cards.',
-        steps: ['The school\'s notices slide across the top - tap one to read it in full.', 'Pending assessments lists the work waiting for you, overdue first, with a Start button on each.', 'Jump in takes you straight to eNotes, Live classes, the eLibrary, the Item Bank and more - tap "Show more" for the rest.', 'My classes shows your subjects; My notes shows the notes you wrote most recently.', 'If a live class has started, a red banner at the top lets you join in one tap.'],
+        steps: ['A welcome banner greets you, and the school\'s notices slide past under it - tap one to read it in full.', 'My Learning Overview counts your classes, finished lessons and assessments waiting, with your overall progress.', 'Continue Learning opens the eNote you were reading, at your page.', 'Need Attention lists what is most useful next, overdue work first.', 'Jump In takes you straight to eNotes, Live classes, the eLibrary, the Item Bank and more.', 'My Summaries adds up your reading, learning time, videos and average score, and shows what you did each day this week.', 'If a live class has started, a red banner at the top lets you join in one tap.'],
       },
       {
         id: 's-enotes', title: 'Reading eNotes', icon: 'document',

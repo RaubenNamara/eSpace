@@ -186,7 +186,7 @@ class ENoteController extends Controller
                        GREATEST(et.updated_at, COALESCE((SELECT MAX(vp.updated_at) FROM enote_pages vp WHERE vp.topic_id = et.id), et.updated_at)) AS content_version,
                        s.name as subject_name, s.code as subject_code,
                        t.first_name as teacher_first_name, t.last_name as teacher_last_name,
-                       prog.current_page_id AS resume_page_id,
+                       prog.current_page_id AS resume_page_id, prog.pages_completed AS pages_reached,
                        prog.percentage_completed AS progress_percent, prog.completed_at AS progress_completed_at,
                        prog.last_read_at AS progress_last_read_at,
                        (SELECT COALESCE(SUM(pv.seconds), 0) FROM enote_page_views pv WHERE pv.topic_id = et.id AND pv.student_id = :student_id_pv1) AS reading_seconds,
@@ -256,6 +256,16 @@ class ENoteController extends Controller
         }
 
         $number = (int) $page['page_number'];
+        // A two-page spread shows the next page too: reaching it counts as reaching the page after
+        $reached = $number;
+        $seenPageId = (int) ($this->input('seen_page_id') ?? 0);
+        if ($seenPageId && $seenPageId !== $pageId) {
+            $stmt->execute(['page_id' => $seenPageId, 'topic_id' => $id]);
+            $seen = $stmt->fetch();
+            if ($seen) {
+                $reached = max($reached, (int) $seen['page_number']);
+            }
+        }
         $db->prepare(
             "INSERT INTO enote_progress (topic_id, student_id, current_page_id, pages_completed, last_read_at)
              VALUES (:topic_id, :student_id, :page_id, :pages, NOW())
@@ -266,9 +276,9 @@ class ENoteController extends Controller
             'topic_id' => $id,
             'student_id' => $studentId,
             'page_id' => $pageId,
-            'pages' => $number,
+            'pages' => $reached,
             'page_id_update' => $pageId,
-            'pages_update' => $number,
+            'pages_update' => $reached,
         ]);
 
         // Reading analytics: one more view of this page, and the time spent on the page before it
@@ -338,6 +348,11 @@ class ENoteController extends Controller
 
         $topic = $this->decodeLearningOutcomes($topic);
         $this->recordRead($db, $id, $studentId);
+
+        // How far they have really read (recordRead's percentage only says "opened")
+        $stmt = $db->prepare("SELECT pages_completed FROM enote_progress WHERE topic_id = ? AND student_id = ?");
+        $stmt->execute([$id, $studentId]);
+        $topic['pages_reached'] = (int) $stmt->fetchColumn();
 
         $stmt = $db->prepare(
             "SELECT id, title, content, order_number FROM enote_pages

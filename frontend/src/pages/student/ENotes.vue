@@ -213,17 +213,15 @@ const filteredSubjectGroups = computed(() => {
 })
 
 // ---- The student's own reading ----
-type Progress = ENoteTopic & { progress_percent?: number | string | null; progress_completed_at?: string | null; progress_last_read_at?: string | null; reading_seconds?: number | string | null; first_read_at?: string | null }
+type Progress = ENoteTopic & { pages_reached?: number | string | null; progress_percent?: number | string | null; progress_completed_at?: string | null; progress_last_read_at?: string | null; reading_seconds?: number | string | null; first_read_at?: string | null }
 const progressOf = (t: Progress) => {
-  if (t.progress_completed_at) return 100
-  const pct = Number(t.progress_percent || 0)
-  if (pct) return Math.min(100, Math.round(pct))
-  const page = Number(t.resume_page_number || 0)
+  // the farthest page reached (progress_percent and progress_completed_at only record that it was opened)
   const total = Number(t.active_pages || t.total_pages || 0)
-  return total && page ? Math.round((page / total) * 100) : 0
+  const reached = Math.max(Number(t.pages_reached || 0), Number(t.resume_page_number || 0))
+  return total && reached ? Math.min(100, Math.round((reached / total) * 100)) : 0
 }
 const stateOf = (t: Progress): 'done' | 'reading' | 'new' =>
-  t.progress_completed_at || progressOf(t) >= 100 ? 'done' : (t.resume_page_id || progressOf(t) > 0) ? 'reading' : 'new'
+  progressOf(t) >= 100 ? 'done' : (t.progress_last_read_at || t.resume_page_id) ? 'reading' : 'new'
 // The topic read most recently and not finished yet
 const continueTopic = computed(() => (topics.value as Progress[])
   .filter(t => stateOf(t) === 'reading' && t.resume_page_id && Number(t.resume_page_number || 0) > 1)

@@ -304,7 +304,46 @@ class DashboardController extends Controller
             $unreadMessages += (int) $stmt->fetch()['cnt'];
         }
 
+        // The summary tiles and "Your activity this week". Only running totals of time are stored,
+        // so each day's bar counts what was done that day: pages read, videos watched, books
+        // opened and assessments handed in (by when each was last touched).
+        $learningTotal = static function (string $sql) use ($db, $studentId): int {
+            $stmt = $db->prepare($sql);
+            $stmt->execute([$studentId]);
+            return (int) $stmt->fetchColumn();
+        };
+        $learningMinutes = (int) round(
+            ($learningTotal("SELECT COALESCE(SUM(seconds), 0) FROM enote_page_views WHERE student_id = ?")
+                + $learningTotal("SELECT COALESCE(SUM(watched_seconds), 0) FROM video_views WHERE student_id = ?")) / 60
+        ) + $learningTotal("SELECT COALESCE(SUM(time_spent_minutes), 0) FROM library_progress WHERE student_id = ?");
+        $videosWatched = $learningTotal("SELECT COUNT(*) FROM video_views WHERE student_id = ?");
+
+        $monday = new \DateTimeImmutable('monday this week');
+        $sources = [
+            ['enote_page_views', 'last_viewed_at', ''],
+            ['video_views', 'last_watched_at', ''],
+            ['library_progress', 'last_read_at', ''],
+            ['assignment_submissions', 'submitted_at', ' AND deleted_at IS NULL'],
+        ];
+        $perDay = [];
+        foreach ($sources as [$table, $column, $extra]) {
+            $stmt = $db->prepare(
+                "SELECT DATE({$column}) AS day, COUNT(*) AS n FROM {$table}
+                 WHERE student_id = ? AND {$column} >= ?{$extra} GROUP BY DATE({$column})"
+            );
+            $stmt->execute([$studentId, $monday->format('Y-m-d 00:00:00')]);
+            foreach ($stmt->fetchAll() as $row) {
+                $perDay[$row['day']] = ($perDay[$row['day']] ?? 0) + (int) $row['n'];
+            }
+        }
+        $week = [];
+        for ($i = 0; $i < 7; $i++) {
+            $day = $monday->modify("+{$i} days");
+            $week[] = ['day' => $day->format('D'), 'date' => $day->format('Y-m-d'), 'count' => $perDay[$day->format('Y-m-d')] ?? 0];
+        }
+
         $this->success([
+            'learning' => ['minutes' => $learningMinutes, 'videos_watched' => $videosWatched, 'week' => $week],
             'stats' => [
                 'classes_enrolled' => count($enrollments),
                 'subjects_enrolled' => $subjectsCount,

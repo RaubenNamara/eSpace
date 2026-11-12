@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-cream-100 dark:bg-gray-950">
+  <div class="min-h-screen bg-cream-100 dark:bg-gray-950" :class="{ 'student-look': menuRole === 'student' }">
     <!-- Sidebar -->
     <!-- Floats as a card off the page edges on desktop (flush on mobile, where an inset drawer
          just wastes thumb-reach): white, with a dark-green brand bar on top like the dashboard
@@ -56,6 +56,12 @@
         </ul>
       </nav>
 
+      <!-- Students: the mascot, where the sidebar is tall enough -->
+      <div v-if="menuRole === 'student' && !isIconOnly" class="student-mascot" aria-hidden="true">
+        <img src="/images/student-mascot.webp" alt="">
+        <p>Learn · Practice · Excel</p>
+      </div>
+
       <!-- Footer -->
       <div class="relative border-t app-frame-divider flex-shrink-0">
         <div class="p-2.5 space-y-0.5">
@@ -92,7 +98,7 @@
           <button
             @click="handleLogout"
             :title="isIconOnly ? 'Logout' : undefined"
-            class="flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-xl text-red-600 hover:bg-red-50 dark:text-rose-300 dark:hover:bg-rose-500/15 dark:hover:text-rose-200 w-full transition-colors duration-150 group"
+            class="sidebar-logout flex items-center gap-2.5 pl-3.5 pr-2.5 py-1.5 rounded-xl text-red-600 hover:bg-red-50 dark:text-rose-300 dark:hover:bg-rose-500/15 dark:hover:text-rose-200 w-full transition-colors duration-150 group"
             :class="isIconOnly ? 'justify-center px-0' : ''"
           >
             <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -867,7 +873,7 @@ const roleName = computed(() => {
   const name = r.replace(/_/g, ' ')
   return name.charAt(0).toUpperCase() + name.slice(1)
 })
-const consoleName = computed(() => `${roleName.value} console`)
+const consoleName = computed(() => (menuRole.value === 'student' ? 'Student portal' : `${roleName.value} console`))
 const activeRole = computed(() => authStore.activeRole || authStore.userRole || 'Guest')
 const hasDualRoles = computed(() => authStore.hasDualRoles)
 const userName = computed(() => {

@@ -606,3 +606,178 @@ html.dark .stat-card-on .stat-num { color: #edc95a; }
 @media print {
   .route-bar, #splash { display: none !important; }
 }
+
+/* ---------------------------------------------------------------------------------------------
+   The student portal's look: deep navy sidebar, bright blue actions, soft sky-blue page. Only the
+   student role has .student-look (MainLayout), so staff screens stay as they are.
+   --------------------------------------------------------------------------------------------- */
+html:not(.dark) .student-look {
+  background: linear-gradient(160deg, #e6edff 0%, #dbe5fd 55%, #e4ecff 100%);
+}
+.student-look h1, .student-look h2, .student-look h3, .student-look .font-heading {
+  font-family: 'Plus Jakarta Sans', Inter, system-ui, sans-serif;
+}
+/* Bright blue for actions and links (the brand classes are fixed colours, so they are re-pointed here) */
+.student-look .bg-indigo-600, .student-look .btn-primary { background-color: #0b5fe0; }
+.student-look .hover\:bg-indigo-700:hover, .student-look .btn-primary:hover { background-color: #094fbd; }
+html:not(.dark) .student-look .text-indigo-600, html:not(.dark) .student-look .text-indigo-700 { color: #0b5fe0; }
+
+/* the top bar and the tabs sit on the page */
+html:not(.dark) .student-look > div > header,
+html:not(.dark) .student-look .hub-tabs { background: rgba(230, 237, 255, 0.86); backdrop-filter: blur(10px); box-shadow: none; border-color: transparent; }
+.student-look > div > header input { border-radius: 9999px; }
+html:not(.dark) .student-look > div > header input { background: #fff; border-color: #d3dff8; }
+
+/* the sidebar: same menu, navy, reaching the page edge; the open page is a bright blue pill */
+.student-look aside.app-frame-sidebar {
+  background: linear-gradient(180deg, #021e67 0%, #012072 55%, #011a5e 100%);
+  border: 0;
+  box-shadow: 6px 0 24px -14px rgba(1, 26, 94, 0.7);
+}
+@media (min-width: 1024px) {
+  .student-look aside.app-frame-sidebar { left: 0; top: 0; bottom: 0; width: 236px; border-radius: 0 1.75rem 1.75rem 0; }
+  .student-look aside.app-frame-sidebar.w-16 { width: 76px; }
+}
+/* room under Logout for the gold sweep across the foot */
+.student-look aside.app-frame-sidebar > div:last-of-type > div { padding-bottom: 2.4rem; }
+.student-look aside.app-frame-sidebar::after {
+  content: ''; position: absolute; left: -10%; right: -30%; bottom: -46px; height: 70px;
+  border-radius: 50%; background: #1464e6; box-shadow: 0 -5px 0 #f5b301; transform: rotate(-9deg); pointer-events: none; z-index: 0;
+}
+.student-look aside.app-frame-sidebar > div:first-of-type { text-align: center; }
+.student-look aside.app-frame-sidebar > div:first-of-type > div { justify-content: center; }
+.student-look aside.app-frame-sidebar .app-frame-divider { border-color: transparent; }
+.student-look aside.app-frame-sidebar .sidebar-nav .h-px { display: none; }
+.student-look aside.app-frame-sidebar .hub-link { color: #fff; min-height: 44px; }
+.student-look aside.app-frame-sidebar .hub-link > span:first-child { background: transparent; box-shadow: none; --tw-ring-shadow: 0 0 #0000; color: #fff; }
+.student-look aside.app-frame-sidebar .hub-link-on {
+  background: linear-gradient(135deg, #2a8bf5, #0f62e0); color: #fff; font-weight: 700;
+  box-shadow: 0 8px 18px -8px rgba(26, 123, 240, 0.9);
+}
+.student-look aside.app-frame-sidebar .sidebar-logout {
+  position: relative; z-index: 1; justify-content: center; color: #fff; background: #1464e6; padding-top: 0.6rem; padding-bottom: 0.6rem; margin-top: 0.35rem;
+}
+.student-look aside.app-frame-sidebar .sidebar-logout:hover { background: #2a8bf5; color: #fff; }
+/* The mascot fills whatever room is left under the menu (the menu never shrinks for it): the robot and the
+   blue band behind it step down in size as the sidebar gets shorter, and hide when there is no room. */
+.student-mascot { display: none; position: relative; z-index: 0; text-align: center; padding: 0 0.75rem 0.5rem; overflow: hidden; }
+/* the blue band that flows across the sidebar, its lower edge a navy dome over the mascot */
+.student-mascot::before {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 91px; height: 186px; pointer-events: none; z-index: -1;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 570 450' preserveAspectRatio='none'><defs><linearGradient id='b' x1='0' y1='0' x2='1' y2='0'><stop offset='0' stop-color='%23022f94'/><stop offset='.55' stop-color='%230440c4'/><stop offset='1' stop-color='%230a50da'/></linearGradient></defs><path fill='url(%23b)' d='M0 255C120 205 230 165 340 155C430 147 500 125 570 88V372C500 300 400 240 270 240C140 240 40 320 0 430Z'/><path fill='%231a66e6' opacity='.28' d='M0 255C120 205 230 165 340 155C430 147 500 125 570 88V170C470 205 400 196 300 200C190 206 90 240 0 318Z'/></svg>") center / 100% 100% no-repeat;
+}
+.student-look aside.app-frame-sidebar .sidebar-nav { z-index: 1; }
+.student-mascot img { width: 118px; margin: 0 auto; }
+.student-mascot p { margin-top: 0.3rem; font-size: 0.72rem; font-weight: 700; color: #f5b301; font-family: 'Plus Jakarta Sans', Inter, sans-serif; white-space: nowrap; }
+@media (min-width: 1024px) {
+  .student-look aside.app-frame-sidebar:has(.student-mascot) .sidebar-nav { flex: 0 1 auto; }
+  .student-mascot { display: flex; flex-direction: column; justify-content: flex-end; flex: 1 1 0; min-height: 0; container-type: size; }
+}
+@container (max-height: 268px) { .student-mascot img { width: 94px; } .student-mascot::before { bottom: 79px; height: 149px; } }
+@container (max-height: 219px) { .student-mascot img { width: 73px; } .student-mascot::before { bottom: 68px; height: 115px; } }
+@container (max-height: 171px) { .student-mascot img { width: 53px; } .student-mascot::before { bottom: 58px; height: 84px; } }
+@container (max-height: 131px) { .student-mascot img { width: 40px; } .student-mascot::before { bottom: 51px; height: 63px; } }
+@container (max-height: 95px) { .student-mascot img, .student-mascot p, .student-mascot::before { display: none; } }
+
+/* card title bars and the phone's bottom bar */
+.student-look .dash-bar { background: linear-gradient(90deg, #02236f, #022174); }
+.student-look .dash-bar-link { color: #fff; font-weight: 500; }
+.student-look .dash-bar-link:hover { color: #bcd6ff; }
+.student-look nav.fixed.bottom-0 { background: linear-gradient(90deg, #02236f, #012072); border-color: transparent; }
+.student-look .hub-tab-on, .student-look .hub-tab-on:hover { background: linear-gradient(135deg, #2a8bf5, #0f62e0); border-color: transparent; }
+@media (max-width: 767px) {
+  .student-look .hub-tab-on, .student-look .hub-tab-on:hover { background: #fff; }
+  .student-look .hub-tabs-scroll { background: #d3dff8; }
+}
+
+/* the dashboard's cards */
+.sd-hero { background: linear-gradient(100deg, #d4e5ff 0%, #bcd8ff 45%, #93c5f7 100%); }
+html.dark .sd-hero { background: linear-gradient(100deg, #12296b 0%, #17388c 60%, #1d4fa8 100%); }
+.sd-wave { display: inline-block; transform-origin: 70% 70%; animation: sd-wave 1.6s ease-in-out 1; }
+@keyframes sd-wave { 0%, 100% { transform: rotate(0); } 20%, 60% { transform: rotate(14deg); } 40%, 80% { transform: rotate(-8deg); } }
+@media (prefers-reduced-motion: reduce) { .sd-wave { animation: none; } }
+.sd-card { @apply rounded-2xl min-w-0 overflow-hidden bg-white dark:bg-gray-800; border: 1px solid rgba(2, 33, 116, 0.07); box-shadow: 0 8px 22px -16px rgba(2, 33, 116, 0.45); }
+html.dark .sd-card { border-color: rgba(255, 255, 255, 0.06); }
+.sd-card-head { @apply flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-gray-700/60; }
+.sd-card-icon { @apply w-6 h-6 rounded-md text-white flex items-center justify-center flex-shrink-0; background: #1a6fe0; }
+.sd-card-title { @apply text-[1.02rem] font-extrabold text-[#061a55] dark:text-white; }
+.sd-card-link { @apply ml-auto text-xs sm:text-[0.82rem] font-semibold text-[#0b5fe0] hover:underline dark:text-blue-300 whitespace-nowrap; }
+.sd-stat { @apply flex flex-col items-center px-2 sm:border-r last:border-r-0 border-gray-100 dark:border-gray-700/60; }
+.sd-stat-icon { @apply w-11 h-11 sm:w-12 sm:h-12 rounded-full text-white flex items-center justify-center transition-transform; }
+.sd-topic-art { @apply w-[4.5rem] h-[4.5rem] sm:w-28 sm:h-24 rounded-xl text-white flex flex-col items-center justify-center; }
+.sd-continue { @apply inline-flex items-center gap-2 rounded-xl px-3 sm:px-5 py-2.5 text-sm font-bold text-white transition; background: linear-gradient(135deg, #1a7bf0, #0b55d0); box-shadow: 0 8px 16px -8px rgba(11, 85, 208, 0.9); }
+.sd-continue:hover { filter: brightness(1.08); }
+.sd-tile { @apply flex flex-col items-center rounded-xl py-3 px-1; }
+.sd-jump { @apply rounded-xl py-2.5 px-1 transition hover:-translate-y-0.5; box-shadow: inset 0 0 0 1px rgba(2, 33, 116, 0.05); }
+.sd-pill { @apply flex-shrink-0 min-w-[2.6rem] px-2 py-0.5 rounded-full text-center text-[11px] font-bold text-white; }
+.sd-dot { @apply w-9 h-9 flex-shrink-0 rounded-full flex items-center justify-center text-[10px] font-bold text-white; }
+.sd-t-blue { background: #e4efff; } .sd-t-rose { background: #ffe9ec; } .sd-t-mint { background: #dff5ea; } .sd-t-violet { background: #ece7ff; } .sd-t-peach { background: #ffefdc; }
+.sd-i-blue { color: #1a6fe0; } .sd-i-rose { color: #e5343f; } .sd-i-mint { color: #0e9f5c; } .sd-i-violet { color: #6d3fe0; } .sd-i-peach { color: #e0760b; }
+html.dark .sd-t-blue, html.dark .sd-t-rose, html.dark .sd-t-mint, html.dark .sd-t-violet, html.dark .sd-t-peach { background: rgba(255, 255, 255, 0.06); }
+html.dark .sd-i-blue { color: #7db4fb; } html.dark .sd-i-rose { color: #fb8f96; } html.dark .sd-i-mint { color: #5fd8a0; } html.dark .sd-i-violet { color: #b49bfa; } html.dark .sd-i-peach { color: #f7b267; }
+
+/* Your Activity This Week: one blue bar a day from a shared baseline, the count on hover or focus */
+.sd-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0.5rem; }
+.sd-week-col { position: relative; display: flex; flex-direction: column; align-items: center; outline: none; }
+.sd-week-track { width: 100%; height: 96px; display: flex; align-items: flex-end; justify-content: center; border-bottom: 1px solid #dfe7f6; }
+html.dark .sd-week-track { border-color: rgba(255, 255, 255, 0.12); }
+.sd-week-bar { display: block; width: 100%; max-width: 34px; border-radius: 4px 4px 0 0; background: #2f6bea; transition: height 0.4s ease, background-color 0.15s; }
+.sd-week-col:hover .sd-week-bar, .sd-week-col:focus-visible .sd-week-bar { background: #0b4fc7; }
+.sd-week-bar-zero { height: 2px; background: #cfdcf5; }
+html.dark .sd-week-bar { background: #6d9df5; } html.dark .sd-week-bar-zero { background: rgba(255, 255, 255, 0.15); }
+.sd-week-tip { position: absolute; bottom: calc(100% - 22px); left: 50%; transform: translateX(-50%); padding: 3px 8px; border-radius: 6px; background: #061a55; color: #fff; font-size: 11px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.12s; z-index: 2; }
+.sd-week-col:hover .sd-week-tip, .sd-week-col:focus-visible .sd-week-tip { opacity: 1; }
+
+/* Laptops (up to 1800 px wide): a more compact dashboard - smaller banner, cards, numbers, icons and gaps,
+   so more of it fits on the screen at once. Phones and big screens keep the roomier sizes. */
+@media (min-width: 1024px) and (max-width: 1799px) {
+  .student-look .sd-hero { height: 124px; margin-top: 1.6rem; margin-bottom: 0.75rem; }
+  .student-look .sd-hero h1 { font-size: 1.45rem; }
+  .student-look .sd-hero p { font-size: 0.85rem; }
+  .student-look .sd-hero p + p { font-size: 0.74rem; margin-top: 0.15rem; }
+  .student-look .sd-grid, .student-look .sd-grid > div { gap: 0.75rem; }
+  .student-look .sd-card-head { padding: 0.45rem 0.85rem; }
+  .student-look .sd-card-title { font-size: 0.9rem; }
+  .student-look .sd-card-link, .student-look .dash-bar-link { font-size: 0.72rem; }
+  .student-look .sd-card-icon { width: 1.25rem; height: 1.25rem; }
+  .student-look .sd-card-icon svg, .student-look .dash-bar > svg { width: 0.85rem; height: 0.85rem; }
+  .student-look .dash-bar { padding: 0.45rem 0.85rem; font-size: 0.85rem; }
+  .student-look .dash-more { padding-block: 0.35rem; font-size: 0.75rem; }
+  .student-look .sd-stats { padding-block: 0.6rem; }
+  .student-look .sd-stat-icon { width: 2.1rem; height: 2.1rem; }
+  .student-look .sd-stat-icon svg { width: 1.05rem; height: 1.05rem; }
+  .student-look .sd-stat > span:nth-child(2) { margin-top: 0.4rem; font-size: 1.2rem; }
+  .student-look .sd-stat > span:last-child { margin-top: 0.15rem; font-size: 0.68rem; }
+  .student-look .sd-next { padding: 0.6rem 0.85rem; gap: 0.75rem; }
+  .student-look .sd-topic-art { width: 4rem; height: 3.5rem; border-radius: 0.6rem; }
+  .student-look .sd-topic-art svg { width: 1.5rem; height: 1.5rem; }
+  .student-look .sd-topic-art span { font-size: 9px; margin-top: 0.1rem; }
+  .student-look .sd-next p:first-child { font-size: 0.92rem; }
+  .student-look .sd-next p { font-size: 0.78rem; }
+  .student-look .sd-next .mt-2 { margin-top: 0.35rem; }
+  .student-look .sd-next .mt-2 > span:last-child { font-size: 0.68rem; }
+  .student-look .sd-continue { padding: 0.4rem 0.85rem; font-size: 0.78rem; border-radius: 0.6rem; }
+  .student-look .sd-continue svg { width: 0.8rem; height: 0.8rem; }
+  .student-look .sd-tiles { padding: 0.6rem 0.85rem; gap: 0.5rem; }
+  .student-look .sd-tile { padding: 0.45rem 0.25rem; border-radius: 0.6rem; }
+  .student-look .sd-tile svg { width: 1.05rem; height: 1.05rem; }
+  .student-look .sd-tile > span:nth-child(2) { font-size: 1rem; margin-top: 0.1rem; }
+  .student-look .sd-tile > span:last-child { font-size: 0.66rem; }
+  .student-look .sd-weekbox { padding: 0 0.85rem 0.6rem; }
+  .student-look .sd-weekbox h3 { font-size: 0.8rem; }
+  .student-look .sd-weekbox h3 + p { font-size: 0.66rem; }
+  .student-look .sd-week { margin-top: 0.4rem; }
+  .student-look .sd-week-track { height: 64px; }
+  .student-look .sd-week-bar { max-width: 24px; }
+  .student-look .sd-week-col > span:last-child { font-size: 0.66rem; margin-top: 0.25rem; }
+  .student-look .sd-rows { padding-block: 0.15rem; }
+  .student-look .sd-rows a { padding-block: 0.3rem; gap: 0.6rem; }
+  .student-look .sd-rows a span { font-size: 0.78rem; }
+  .student-look .sd-rows a span span + span { font-size: 0.66rem; }
+  .student-look .sd-rows .sd-pill { min-width: 2.2rem; font-size: 9.5px; padding: 0.05rem 0.4rem; }
+  .student-look .sd-rows a > span.flex-shrink-0:not(.sd-pill) { font-size: 9.5px; padding: 0.05rem 0.35rem; }
+  .student-look .sd-rows .sd-dot { width: 1.75rem; height: 1.75rem; font-size: 8.5px; }
+  .student-look .sd-rows svg { width: 0.85rem; height: 0.85rem; }
+  .student-look .sd-grid .text-\[0\.95rem\] { font-size: 0.8rem; }
+  .student-look .sd-grid .p-4.text-\[0\.95rem\], .student-look .sd-grid .p-4:has(> .text-\[0\.95rem\]) { padding: 0.7rem 0.85rem; }
+}

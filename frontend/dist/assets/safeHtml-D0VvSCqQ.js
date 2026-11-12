@@ -1,1 +1,0 @@
-import e from"./purify.es-CvnoGZoo.js";e.addHook("afterSanitizeAttributes",t=>{t.tagName==="A"&&t.getAttribute("href")&&(t.setAttribute("target","_blank"),t.setAttribute("rel","noopener noreferrer"))});function i(t){return t?e.sanitize(t,{ADD_ATTR:["target"]}):""}export{i as s};
