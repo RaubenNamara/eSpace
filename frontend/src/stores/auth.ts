@@ -4,6 +4,7 @@ import { ref, computed } from 'vue'
 import type { User, LoginCredentials, RegisterData, AuthPayload, AuthApiResponse } from '../types'
 import { apiService } from '../services/api'
 import { detachPush } from '@/utils/push'
+import axios from 'axios'
 
 // Helper to normalize auth API responses
 const getAuthPayload = (
@@ -150,6 +151,37 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  /**
+   * "Try Tusome" on the website: into the demo school as a learner, a teacher or the head teacher,
+   * with no password (DemoController). Signed in exactly as by login(), and remembered as a demo
+   * visit so the app shows the demo banner.
+   */
+  async function enterDemo(as: 'learner' | 'teacher' | 'head') {
+    isLoading.value = true
+    error.value = null
+    try {
+      const res = await axios.post('/api/demo/enter', { as })
+      const p = res.data.data
+      const plainUser: any = {
+        id: p.user.id, username: p.user.username, email: p.user.email, role: p.user.role,
+        profile_photo: p.user.profile_photo, phone: p.user.phone, is_active: p.user.is_active,
+        email_verified_at: p.user.email_verified_at, teacher_id: p.user.teacher_id, must_change_password: false
+      }
+      for (const k of ['first_name', 'last_name', 'admission_number']) if (p.user[k]) plainUser[k] = p.user[k]
+      localStorage.removeItem('active_role')
+      applyUserData(plainUser)
+      if (p.csrf_token) localStorage.setItem('csrf_token', p.csrf_token)
+      localStorage.setItem('user', JSON.stringify(plainUser))
+      localStorage.setItem('tusome_demo', '1')
+      return { success: true, user: plainUser }
+    } catch (err: any) {
+      error.value = err.response?.data?.message || 'The demo school could not be opened just now.'
+      return { success: false, message: error.value }
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   async function register(data: RegisterData) {
     isLoading.value = true
     error.value = null
@@ -199,6 +231,7 @@ export const useAuthStore = defineStore('auth', () => {
       localStorage.removeItem('csrf_token')
       localStorage.removeItem('user')
       localStorage.removeItem('active_role')
+      localStorage.removeItem('tusome_demo')
 
       isLoading.value = false
     }
@@ -404,6 +437,7 @@ export const useAuthStore = defineStore('auth', () => {
     // Actions
     restoreFromStorage,
     login,
+    enterDemo,
     register,
     logout,
     refresh,

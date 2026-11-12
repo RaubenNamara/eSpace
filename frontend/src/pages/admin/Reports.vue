@@ -196,7 +196,23 @@
 
     <!-- ============================= Existing summative Report Cards (unchanged) ============================= -->
     <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-1">Report Cards</h2>
-    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">View, generate and download learners' summative assessment reports.</p>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Every learner has a card each term, with every subject they take. Until you generate it, it is provisional: grades from returned marks, subjects without marks shown as not yet assessed.</p>
+
+    <!-- Who besides the admins sees report cards - the super admin decides -->
+    <section v-if="visibility" class="mb-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3">
+      <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
+        <div class="min-w-0 flex-1 basis-56">
+          <p class="text-sm font-bold text-gray-900 dark:text-white">Who can see report cards</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">{{ visibility.can_change ? 'Admins always can. Turn on the others when the cards are ready.' : 'Only the super admin can change this.' }}</p>
+        </div>
+        <label v-for="w in VIS" :key="w.key" class="inline-flex items-center gap-2 text-sm text-gray-800 dark:text-gray-200" :class="visibility.can_change ? 'cursor-pointer' : 'opacity-70'">
+          <button type="button" role="switch" :aria-checked="visibility[w.key]" :disabled="!visibility.can_change || savingVis" class="relative inline-flex h-6 w-11 flex-shrink-0 rounded-full transition-colors disabled:cursor-not-allowed" :class="visibility[w.key] ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'" @click="toggleVisibility(w.key)">
+            <span class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform" :class="visibility[w.key] ? 'translate-x-5' : ''"></span>
+          </button>
+          <span><b>{{ w.label }}</b><span class="block text-[11px] text-gray-500 dark:text-gray-400">{{ w.hint }}</span></span>
+        </label>
+      </div>
+    </section>
 
     <!-- Filters -->
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
@@ -221,11 +237,11 @@
         </div>
         <button
           v-if="selectedClassId"
-          :disabled="bulkDownloading || generatedCount === 0"
+          :disabled="bulkDownloading || students.length === 0"
           @click="downloadClassPdf"
           class="px-4 py-2 text-sm font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {{ bulkDownloading ? `Preparing (${bulkProgress}/${generatedCount})...` : `Download Class PDF (${generatedCount})` }}
+          {{ bulkDownloading ? `Preparing (${bulkProgress}/${students.length})...` : `Download Class PDF (${students.length})` }}
         </button>
       </div>
     </div>
@@ -313,23 +329,21 @@
             <td class="px-6 py-4 font-medium text-gray-900 dark:text-white">{{ student.first_name }} {{ student.last_name }}</td>
             <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ student.admission_number }}</td>
             <td class="px-6 py-4">
-              <span v-if="student.report_card_id" class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
-                Generated{{ student.performance_level ? ` - ${student.performance_level}` : '' }}
+              <span v-if="student.report_card_id" class="px-2 py-1 text-xs font-medium rounded-full bg-indigo-50 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-200">
+                Finalised{{ student.performance_level ? ` - ${student.performance_level}` : '' }}
               </span>
               <span v-else class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-                Not generated
+                Provisional
               </span>
             </td>
             <td class="px-6 py-4 text-right space-x-2 whitespace-nowrap">
               <button
-                v-if="student.report_card_id"
                 @click="viewReport(student.id)"
                 class="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
               >
                 View
               </button>
               <button
-                v-if="student.report_card_id"
                 :disabled="downloadingId === student.id || bulkDownloading"
                 @click="downloadSingle(student)"
                 class="px-3 py-1.5 text-xs font-medium rounded-lg border border-indigo-300 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 disabled:opacity-50"
@@ -553,7 +567,6 @@ const reportCardRef = ref<InstanceType<typeof ReportCard> | null>(null)
 const bulkReport = ref<ReportCardType | null>(null)
 const bulkCardRef = ref<InstanceType<typeof ReportCard> | null>(null)
 
-const generatedCount = computed(() => students.value.filter(s => s.report_card_id).length)
 const selectedClassName = computed(() => {
   const c = classes.value.find(x => x.id === selectedClassId.value)
   return c ? `${c.name}${c.stream_name ? ` ${c.stream_name}` : ''}` : 'this class'
@@ -723,9 +736,9 @@ const downloadSingle = async (student: ReportCardStudentEntry) => {
 
 const downloadClassPdf = async () => {
   if (!selectedTermId.value) return
-  const targets = students.value.filter(s => s.report_card_id)
+  const targets = students.value
   if (targets.length === 0) {
-    error.value = 'No generated reports in this class yet'
+    error.value = 'No learners in this class'
     return
   }
 
@@ -764,6 +777,35 @@ const downloadClassPdf = async () => {
   }
 }
 
+// --- who besides the admins sees report cards (super admin only) ----------------------------
+type Who = 'students' | 'teachers' | 'parents'
+const VIS: { key: Who; label: string; hint: string }[] = [
+  { key: 'students', label: 'Students', hint: 'their own card' },
+  { key: 'teachers', label: 'Teachers', hint: 'learners they teach' },
+  { key: 'parents', label: 'Parents', hint: 'on the parent page' }
+]
+const visibility = ref<(Record<Who, boolean> & { can_change: boolean }) | null>(null)
+const savingVis = ref(false)
+const loadVisibility = async () => {
+  try {
+    const res = await axios.get(`${API_BASE}/report-cards/visibility`)
+    visibility.value = res.data.data
+  } catch { visibility.value = null }
+}
+const toggleVisibility = async (who: Who) => {
+  if (!visibility.value?.can_change) return
+  savingVis.value = true
+  const next = !visibility.value[who]
+  try {
+    const res = await axios.put(`${API_BASE}/report-cards/visibility`, { [who]: next })
+    visibility.value = res.data.data
+  } catch (err: any) {
+    error.value = err.response?.data?.message || 'Could not save who can see report cards'
+  } finally {
+    savingVis.value = false
+  }
+}
+
 const handleEscape = (e: KeyboardEvent) => {
   if (e.key === 'Escape') {
     if (detail.value) { detail.value = null; return }
@@ -788,7 +830,7 @@ watch(reportTab, async t => {
 
 onMounted(async () => {
   window.addEventListener('keydown', handleEscape)
-  await Promise.all([loadTerms(), loadClasses(), loadAcademicYears()])
+  await Promise.all([loadTerms(), loadClasses(), loadAcademicYears(), loadVisibility()])
   const q = new URLSearchParams(window.location.search)
   if (Number(q.get('term_id'))) selectedTermId.value = Number(q.get('term_id'))
   if (Number(q.get('class_id'))) selectedClassId.value = Number(q.get('class_id'))

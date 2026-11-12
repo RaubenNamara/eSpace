@@ -96,6 +96,28 @@ class AuthService extends Service
     }
 
     /**
+     * Sign a website visitor into one of the demo school's accounts - no password: the demo
+     * accounts' passwords are unguessable and the demo buttons are the only way in. Only for the
+     * demo school (DemoController enters it first); marks the session as a demo visit, which
+     * DemoGuard uses to keep visitors from changing what the next one would see.
+     */
+    public function startDemoSession(string $username): ?array
+    {
+        $school = DemoSchool::school();
+        if (!$school || \eSpace\App\Support\Tenant::sessionCode() !== $school['code']) {
+            return null;
+        }
+        $user = $this->userRepository->findByUsernameOrEmail($username);
+        if (!$user) {
+            return null;
+        }
+        $this->createSession($user);
+        $_SESSION['demo'] = true;
+        TermService::syncCurrent();
+        return $this->getUserData($user);
+    }
+
+    /**
      * Logout user
      */
     public function logout(): void

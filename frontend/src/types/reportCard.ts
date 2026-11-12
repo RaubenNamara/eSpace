@@ -28,6 +28,44 @@ export interface ReportCardSubject {
   assignments_total_count: number
   constructs: ReportCardConstruct[]
   competencies: ReportCardCompetency[]
+  /** false: the learner takes the subject but has no mark yet this term (ReportCardView) */
+  assessed?: boolean
+  teacher_name?: string | null
+}
+
+/** One subject's term on Tusome (ReportCardView::activity) */
+export interface ReportCardSubjectActivity {
+  subject_id: number
+  set: number
+  handed_in: number
+  on_time: number
+  returned: number
+  average: number | null
+  topics_read: number
+  topics_finished: number
+  reading_minutes: number
+  live_attended: number
+  passed: number
+  failed: number
+  loa: number | null
+  aoi: number | null
+  eoc: number | null
+  notes_topics: number
+  notes_percent: number | null
+}
+
+export interface ReportCardActivity {
+  subjects: ReportCardSubjectActivity[]
+  totals: Omit<ReportCardSubjectActivity, 'subject_id' | 'average' | 'loa' | 'aoi' | 'eoc' | 'notes_percent'>
+  notes_percent: number | null
+  pass_from: number
+  outcomes: { subject_id: number; outcome: string; percentage: number; tasks: number; achieved: boolean }[]
+  aoi_tasks: { subject_id: number; title: string; percentage: number }[]
+  /** every marked assessment of the term, online and paper, by date */
+  record: { subject_id: number; title: string; kind: string; date: string; score: number | null; out_of: number | null; percentage: number }[]
+  days_active: number
+  revision_days: number
+  attendance: { present: number; absent: number } | null
 }
 
 export interface SchoolSettings {
@@ -78,6 +116,8 @@ export interface ReportCard {
     id: number
     name: string
     academic_year: string | null
+    start_date?: string
+    end_date?: string
   }
   class_name: string | null
   stream_name: string | null
@@ -89,8 +129,14 @@ export interface ReportCard {
   result_category: number | null
   class_teacher_comment: string | null
   head_teacher_comment: string | null
-  generated_at: string
+  generated_at: string | null
   login_count: number
+  /** final: made by the school; provisional: worked out now from released marks */
+  status?: 'final' | 'provisional'
+  activity?: ReportCardActivity
+  platform?: { name: string; tagline: string }
+  /** teacher view: the class teacher may write their comment */
+  can_comment?: boolean
   school: SchoolSettings | null
   subjects: ReportCardSubject[]
   virtual_lab: ReportCardVirtualLabResult[]

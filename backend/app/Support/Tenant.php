@@ -67,10 +67,28 @@ final class Tenant
         return self::$byCode[$code] = $row;
     }
 
+    /** A school chosen for this one request only, not kept in the session (see useForRequest) */
+    private static ?string $requestCode = null;
+
+    /**
+     * Read this one request from another school's database without touching the session - for a
+     * public page that names its school (the demo school's parent page). Never signs anyone in.
+     */
+    public static function useForRequest(string $code): bool
+    {
+        $school = self::find($code);
+        if (!$school || $school['status'] !== 'active') {
+            return false;
+        }
+        self::$requestCode = $school['code'];
+        \eSpace\Config\Database::close();
+        return true;
+    }
+
     /** The school code in this session, or null for the home database */
     public static function sessionCode(): ?string
     {
-        $code = $_SESSION['tenant'] ?? null;
+        $code = self::$requestCode ?? $_SESSION['tenant'] ?? null;
         return is_string($code) && $code !== '' ? $code : null;
     }
 

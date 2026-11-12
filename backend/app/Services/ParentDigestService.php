@@ -99,6 +99,32 @@ class ParentDigestService
             'due' => $r['due'],
         ], $stmt->fetchAll());
 
+        // Work whose deadline passed this week without being handed in
+        $stmt = $db->prepare(
+            "SELECT a.title, a.assessment_category, s.name AS subject, COALESCE(a.deadline_at, a.due_date) AS due
+             FROM assignments a INNER JOIN subjects s ON s.id = a.subject_id
+             WHERE a.deleted_at IS NULL AND a.status = 'published'
+               AND COALESCE(a.deadline_at, a.due_date) BETWEEN ? AND NOW()
+               AND NOT EXISTS (SELECT 1 FROM assignment_submissions sb WHERE sb.assignment_id = a.id AND sb.student_id = ? AND sb.deleted_at IS NULL AND sb.status <> 'in_progress')
+               AND " . AssignmentAccess::clause() . "
+             ORDER BY due DESC LIMIT 6"
+        );
+        $stmt->execute([$since, $studentId, $studentId, $studentId]);
+        $missed = array_map(fn($r) => [
+            'title' => $r['title'],
+            'category' => $r['assessment_category'],
+            'subject' => $r['subject'],
+            'due' => $r['due'],
+        ], $stmt->fetchAll());
+
+        // Days on Tusome, and live classes joined, this week
+        $stmt = $db->prepare("SELECT COUNT(DISTINCT DATE(logged_in_at)) FROM student_logins WHERE student_id = ? AND logged_in_at >= ?");
+        $stmt->execute([$studentId, $since]);
+        $daysActive = (int) $stmt->fetchColumn();
+        $stmt = $db->prepare("SELECT COUNT(DISTINCT live_class_id) FROM live_class_attendance WHERE student_id = ? AND COALESCE(join_time, created_at) >= ?");
+        $stmt->execute([$studentId, $since]);
+        $liveClasses = (int) $stmt->fetchColumn();
+
         // Revision streak
         $stmt = $db->prepare("SELECT COUNT(*) FROM revision_days WHERE student_id = ? AND day >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)");
         $stmt->execute([$studentId]);
@@ -122,6 +148,8 @@ class ParentDigestService
                 'reading_minutes' => (int) ($reading['minutes'] ?? 0),
                 'handed_in' => $handedIn,
                 'revision_days' => $revisionDays,
+                'days_active' => $daysActive,
+                'live_classes' => $liveClasses,
             ],
             'results' => $results,
             'outcomes' => [
@@ -130,6 +158,7 @@ class ParentDigestService
                 'average' => $health['average'] ?? null,
             ],
             'due' => $due,
+            'missed' => $missed,
         ];
     }
 
@@ -150,7 +179,7 @@ class ParentDigestService
         $html = self::emailHtml($sum, (string) $link['guardian_name'], $url);
 
         $from = (string) (\eSpace\Config\Config::get('MAIL_FROM_ADDRESS') ?: 'no-reply@' . (parse_url($siteUrl, PHP_URL_HOST) ?: 'localhost'));
-        $fromName = (string) (\eSpace\Config\Config::get('MAIL_FROM_NAME') ?: 'eSpace');
+        $fromName = (string) (\eSpace\Config\Config::get('MAIL_FROM_NAME') ?: 'Tusome');
         $headers = implode("\r\n", [
             'MIME-Version: 1.0',
             'Content-Type: text/html; charset=UTF-8',
@@ -176,9 +205,11 @@ class ParentDigestService
         $first = $e($sum['student']['first_name']);
         $rows = '';
         foreach ([
+            ['Days on Tusome', $w['days_active'] . ' of 7'],
             ['Topics read', $w['topics_read']],
             ['Topics finished', $w['topics_finished']],
             ['Work handed in', $w['handed_in']],
+            ['Live classes joined', $w['live_classes']],
             ['Days of revision', $w['revision_days'] . ' of 7'],
         ] as [$k, $v]) {
             $rows .= "<tr><td style=\"padding:6px 0;color:#475569\">{$k}</td><td style=\"padding:6px 0;text-align:right;font-weight:700;color:#0f172a\">{$e($v)}</td></tr>";
@@ -191,12 +222,16 @@ class ParentDigestService
         foreach ($sum['due'] as $d) {
             $due .= "<li style=\"margin:4px 0\">{$e($d['subject'])} - {$e($d['title'])} (due {$e(date('D j M', strtotime($d['due'])))})</li>";
         }
+        $missed = '';
+        foreach ($sum['missed'] as $m) {
+            $missed .= "<li style=\"margin:4px 0\">{$e($m['subject'])} - {$e($m['title'])} (was due {$e(date('D j M', strtotime($m['due'])))})</li>";
+        }
         $o = $sum['outcomes'];
         $outcomes = $o['assessed'] ? "{$o['achieved']} of {$o['assessed']} learning outcomes achieved so far." : 'No outcomes assessed yet this year.';
         $school = $sum['school']['name'] ? $e($sum['school']['name']) . ' · ' : '';
         return "<!doctype html><html><body style=\"margin:0;background:#f8fafc;font-family:Segoe UI,Arial,sans-serif\">
 <div style=\"max-width:560px;margin:0 auto;padding:24px\">
-  <p style=\"font-size:22px;font-weight:800;margin:0 0 16px\"><span style=\"color:#4f46e5\">e</span>Space</p>
+  <p style=\"font-size:22px;font-weight:800;margin:0 0 16px\">Tusome<span style=\"color:#d9a520\">.</span></p>
   <div style=\"background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:24px\">
     <p style=\"margin:0;color:#64748b;font-size:13px\">{$school}Weekly update</p>
     <h1 style=\"margin:6px 0 4px;font-size:22px;color:#0f172a\">{$first}'s week</h1>
@@ -204,6 +239,7 @@ class ParentDigestService
     <table style=\"width:100%;border-collapse:collapse;font-size:14px\">{$rows}</table>
     <p style=\"margin:16px 0 0;color:#0f172a;font-size:14px\">{$e($outcomes)}</p>
     " . ($results ? "<h2 style=\"font-size:15px;margin:20px 0 6px\">Results this week</h2><ul style=\"padding-left:18px;margin:0;font-size:14px;color:#334155\">{$results}</ul>" : '') . "
+    " . ($missed ? "<h2 style=\"font-size:15px;margin:20px 0 6px;color:#b45309\">Not handed in this week</h2><ul style=\"padding-left:18px;margin:0;font-size:14px;color:#334155\">{$missed}</ul>" : '') . "
     " . ($due ? "<h2 style=\"font-size:15px;margin:20px 0 6px\">Coming up</h2><ul style=\"padding-left:18px;margin:0;font-size:14px;color:#334155\">{$due}</ul>" : '') . "
     <p style=\"margin:24px 0 0\"><a href=\"{$e($url)}\" style=\"display:inline-block;background:#4f46e5;color:#fff;text-decoration:none;padding:10px 18px;border-radius:10px;font-weight:700;font-size:14px\">See the full update</a></p>
   </div>

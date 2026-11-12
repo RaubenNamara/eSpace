@@ -23,6 +23,9 @@ Router::post('/api/auth/login', 'eSpace\App\Controllers\AuthController@login');
 
 // A school asking for a demo, from the public landing page
 Router::post('/api/demo-requests', 'eSpace\App\Controllers\DemoRequestController@store');
+// The live demo school: one tap in as a learner, teacher, head teacher or parent (DemoController)
+Router::get('/api/demo', 'eSpace\App\Controllers\DemoController@status');
+Router::post('/api/demo/enter', 'eSpace\App\Controllers\DemoController@enter');
 // A privacy or safety concern, from the public Privacy page (signed in or not)
 Router::post('/api/privacy-reports', 'eSpace\App\Controllers\PrivacyReportController@store');
 // Anonymous feedback about Tusome, from /feedback (signed in or not)
@@ -50,6 +53,7 @@ Router::post('/api/devportal/updates/baseline', 'eSpace\App\Controllers\DevPorta
 Router::get('/api/public/stats', 'eSpace\App\Controllers\PublicStatsController@index');
 // A parent's private weekly view of their child (the token is the key - see ParentLinkController)
 Router::get('/api/parent/{token}', 'eSpace\App\Controllers\ParentViewController@show');
+Router::get('/api/parent/{token}/report-card/{termId}', 'eSpace\App\Controllers\ParentViewController@reportCard');
 
 // BBB logoutURL target - a real browser navigation (BBB redirects the top-level window here), not
 // a JSON API call, so it's outside the /api + auth-middleware group: it checks the session itself
@@ -214,6 +218,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/reports/activity', 'eSpace\App\Controllers\Student\ActivityReportController@activity');
 
         // Report Cards (CBC assessment report - own reports only, read-only)
+        Router::get('/report-cards/access', 'eSpace\App\Controllers\Student\ReportCardController@access');
         Router::get('/report-cards/terms', 'eSpace\App\Controllers\Student\ReportCardController@listTerms');
         Router::get('/report-cards', 'eSpace\App\Controllers\Student\ReportCardController@index');
         Router::get('/report-cards/{termId}', 'eSpace\App\Controllers\Student\ReportCardController@show');
@@ -561,6 +566,8 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/analytics/engagement', 'eSpace\App\Controllers\Teacher\AnalyticsController@engagement');
 
         // Report Cards (CBC assessment report)
+        Router::get('/report-cards/access', 'eSpace\App\Controllers\Teacher\ReportCardController@access');
+        Router::get('/report-cards/learners', 'eSpace\App\Controllers\Teacher\ReportCardController@learners');
         Router::get('/report-cards/terms', 'eSpace\App\Controllers\Teacher\ReportCardController@listTerms');
         Router::get('/report-cards/students', 'eSpace\App\Controllers\Teacher\ReportCardController@listStudents');
         Router::get('/report-cards/my-subjects', 'eSpace\App\Controllers\Teacher\ReportCardController@listMySubjects');
@@ -1056,6 +1063,8 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/report-cards/terms', 'eSpace\App\Controllers\Admin\ReportCardController@listTerms');
         Router::get('/report-cards/students', 'eSpace\App\Controllers\Admin\ReportCardController@listStudents');
         Router::get('/report-cards/readiness', 'eSpace\App\Controllers\Admin\ReportCardController@readiness');
+        Router::get('/report-cards/visibility', 'eSpace\App\Controllers\Admin\ReportCardController@visibility');
+        Router::put('/report-cards/visibility', 'eSpace\App\Controllers\Admin\ReportCardController@updateVisibility');
         Router::post('/report-cards/{studentId}/{termId}/generate', 'eSpace\App\Controllers\Admin\ReportCardController@generate');
         Router::get('/report-cards/{studentId}/{termId}', 'eSpace\App\Controllers\Admin\ReportCardController@show');
         Router::put('/report-cards/{studentId}/{termId}/head-teacher-comment', 'eSpace\App\Controllers\Admin\ReportCardController@updateHeadTeacherComment');
@@ -1127,6 +1136,8 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/logs', 'eSpace\App\Controllers\Admin\LogController@index');
         Router::get('/logs/times', 'eSpace\App\Controllers\Admin\LogController@times');
         Router::get('/logs/report', 'eSpace\App\Controllers\Admin\LogController@report');
+        // Tusome at your school: the monthly impact report for the head teacher and board
+        Router::get('/impact-report', 'eSpace\App\Controllers\Admin\ImpactReportController@index');
 
         // Global search (shared eSpace\App\Controllers\SearchController - see notes there)
         Router::get('/search', 'eSpace\App\Controllers\SearchController@index');

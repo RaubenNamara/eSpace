@@ -12,7 +12,7 @@ export interface HubTab {
   label: string
   icon: string
   /** shown only to some users of the role (see MainLayout's visible()) */
-  gate?: 'publications' | 'super_admin'
+  gate?: 'publications' | 'super_admin' | 'report_cards'
 }
 
 export interface Hub {
@@ -64,7 +64,8 @@ export const HUBS: Record<string, Hub[]> = {
       tabs: [
         { path: '/student/learning-map', label: 'Learning Map', icon: 'MapIcon' },
         { path: '/student/academic-history', label: 'Academic History', icon: 'AcademicCapIcon' },
-        { path: '/student/achievements', label: 'Achievements', icon: 'TrophyIcon' }
+        { path: '/student/achievements', label: 'Achievements', icon: 'TrophyIcon' },
+        { path: '/student/report-card', label: 'Report card', icon: 'ClipboardListIcon', gate: 'report_cards' }
       ],
       also: ['/student/reports', '/student/constructs']
     },
@@ -103,7 +104,8 @@ export const HUBS: Record<string, Hub[]> = {
         { path: '/teacher/engagement', label: 'Engagement', icon: 'ChartIcon' },
         { path: '/teacher/coverage', label: 'Coverage', icon: 'ChartBarIcon' },
         { path: '/teacher/scheme', label: 'Scheme of work', icon: 'ClipboardListIcon' },
-        { path: '/teacher/early-warning', label: 'Early warning', icon: 'BellAlertIcon' }
+        { path: '/teacher/early-warning', label: 'Early warning', icon: 'BellAlertIcon' },
+        { path: '/teacher/report-cards', label: 'Report cards', icon: 'ClipboardListIcon', gate: 'report_cards' }
       ],
       also: ['/teacher/reports']
     },
@@ -212,6 +214,7 @@ export const HUBS: Record<string, Hub[]> = {
       key: 'reports', label: 'Reports', icon: 'ChartBarIcon',
       tabs: [
         { path: '/admin/reports', label: 'Reports', icon: 'ChartBarIcon' },
+        { path: '/admin/impact', label: 'School impact', icon: 'ChartIcon' },
         { path: '/admin/end-of-term', label: 'End of term', icon: 'CheckCircleIcon' },
         { path: '/admin/charts', label: 'Engagement', icon: 'ChartIcon' },
         { path: '/admin/rewards', label: 'Rewards & Badges', icon: 'TrophyIcon' }

@@ -270,7 +270,7 @@ class ReportCardService
      * are filled in by recomputeReportAggregates() right after subjects are written) - lets a
      * subject teacher generate before anyone else has touched this student's report.
      */
-    private function ensureReportShell(int $studentId, int $termId, ?int $classId): int
+    public function ensureReportShell(int $studentId, int $termId, ?int $classId): int
     {
         $db = $this->getDb();
 
@@ -814,7 +814,7 @@ class ReportCardService
      * every percentage-tier badge already implies a broader achievement than a single-category one.
      * Ties broken by the higher score/average, then the most recently awarded.
      */
-    private function topAwardsForReport(array $awards, int $maxAwards): array
+    public function topAwardsForReport(array $awards, int $maxAwards): array
     {
         $tierRank = ['platinum' => 1, 'gold' => 2, 'silver' => 3, 'bronze' => 4, 'special' => 5];
 

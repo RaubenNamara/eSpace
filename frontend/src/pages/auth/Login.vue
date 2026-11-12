@@ -28,13 +28,9 @@
 
         <!-- Top logo -->
         <div class="relative animate-fade-down">
-          <!-- Tusome is the brand; the badge says whose school space this is -->
+          <!-- Tusome is the brand; every school signs in here -->
           <div class="flex flex-wrap items-center gap-4">
             <router-link to="/" aria-label="Tusome home"><Wordmark size="lg" light /></router-link>
-            <span class="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/20 backdrop-blur pl-1 pr-3 py-1">
-              <img src="/images/stmark-logo.jpg" alt="" class="h-6 w-6 rounded-full object-contain bg-white">
-              <span class="text-xs font-semibold text-white/90">St Mark's College Namagoma</span>
-            </span>
           </div>
         </div>
 
@@ -86,10 +82,6 @@
           <div class="mb-8 flex justify-center lg:hidden">
             <div class="flex flex-col items-center gap-3">
               <router-link to="/" aria-label="Tusome home"><Wordmark size="lg" /></router-link>
-              <span class="inline-flex items-center gap-2 rounded-full bg-white/90 dark:bg-white/10 border border-slate-200 dark:border-white/10 pl-1 pr-3 py-1 shadow-sm">
-                <img src="/images/stmark-logo.jpg" alt="" class="h-6 w-6 rounded-full object-contain bg-white">
-                <span class="text-xs font-semibold text-slate-700 dark:text-slate-200">St Mark's College Namagoma</span>
-              </span>
             </div>
           </div>
           <picture class="lg:hidden">

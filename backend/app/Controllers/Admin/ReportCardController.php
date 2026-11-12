@@ -8,6 +8,7 @@ use eSpace\App\Controllers\Controller;
 use eSpace\App\Services\CompetencyReportService;
 use eSpace\App\Services\ReportCardGradingService;
 use eSpace\App\Services\ReportCardService;
+use eSpace\App\Services\ReportCardView;
 use RuntimeException;
 
 /**
@@ -70,7 +71,8 @@ class ReportCardController extends Controller
 
         $stmt = $this->getDb()->prepare(
             "SELECT s.id, s.first_name, s.last_name, s.admission_number, s.class_id,
-                    rc.id AS report_card_id, rc.performance_level, rc.total_points
+                    IF(EXISTS (SELECT 1 FROM report_card_subjects rcs WHERE rcs.report_card_id = rc.id), rc.id, NULL) AS report_card_id,
+                    rc.performance_level, rc.total_points
              FROM students s
              LEFT JOIN report_cards rc ON rc.student_id = s.id AND rc.term_id = :term_id
              WHERE " . implode(' AND ', $where) . "
@@ -239,20 +241,54 @@ class ReportCardController extends Controller
             return;
         }
 
-        $stmt = $this->getDb()->prepare('SELECT id FROM report_cards WHERE student_id = :student_id AND term_id = :term_id');
-        $stmt->execute(['student_id' => (int) $studentId, 'term_id' => (int) $termId]);
-        $report = $stmt->fetch();
-
-        if (!$report) {
-            $this->notFound('No report card generated for this student/term yet');
-            return;
-        }
-
+        // Always a card: made ones as made, otherwise provisional, with every subject listed
         try {
-            $this->success((new ReportCardService())->getFullReport((int) $report['id']));
+            $this->success(ReportCardView::build((int) $studentId, (int) $termId));
         } catch (RuntimeException $e) {
             $this->error($e->getMessage(), 404);
         }
+    }
+
+    /**
+     * GET /admin/report-cards/visibility - who besides the admins sees report cards
+     */
+    public function visibility(): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+        $this->success(ReportCardView::visibility() + ['can_change' => $this->getCurrentUserRole() === 'super_admin']);
+    }
+
+    /**
+     * PUT /admin/report-cards/visibility {students?, teachers?, parents?} - super admin only
+     */
+    public function updateVisibility(): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+        if ($this->getCurrentUserRole() !== 'super_admin') {
+            $this->forbidden('Only the super admin can choose who sees report cards');
+            return;
+        }
+        $set = [];
+        $params = [];
+        foreach (['students', 'teachers', 'parents'] as $who) {
+            $v = $this->input($who);
+            if ($v !== null) {
+                $set[] = "report_cards_{$who} = ?";
+                $params[] = filter_var($v, FILTER_VALIDATE_BOOLEAN) ? 1 : 0;
+            }
+        }
+        if (!$set) {
+            $this->validationError(['students' => 'Nothing to change']);
+            return;
+        }
+        $this->getDb()->prepare('UPDATE school_settings SET ' . implode(', ', $set) . ' WHERE id = 1')->execute($params);
+        $this->success(ReportCardView::visibility() + ['can_change' => true], 'Saved');
     }
 
     /**
@@ -277,8 +313,15 @@ class ReportCardController extends Controller
         $report = $stmt->fetch();
 
         if (!$report) {
-            $this->notFound('No report card generated for this student/term yet');
-            return;
+            // the comment can be written before the card is made: keep it on an empty card
+            $cls = $db->prepare('SELECT class_id FROM students WHERE id = ? AND deleted_at IS NULL');
+            $cls->execute([(int) $studentId]);
+            $classId = $cls->fetchColumn();
+            if ($classId === false) {
+                $this->notFound('Student not found');
+                return;
+            }
+            $report = ['id' => (new ReportCardService())->ensureReportShell((int) $studentId, (int) $termId, $classId !== null ? (int) $classId : null)];
         }
 
         $stmt = $db->prepare('UPDATE report_cards SET head_teacher_comment = :comment, updated_at = NOW() WHERE id = :id');

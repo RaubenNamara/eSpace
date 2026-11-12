@@ -8,6 +8,7 @@ use eSpace\App\Controllers\Controller;
 use eSpace\App\Services\CompetencyReportService;
 use eSpace\App\Services\PerformanceReportService;
 use eSpace\App\Services\ReportCardService;
+use eSpace\App\Services\ReportCardView;
 use RuntimeException;
 
 /**
@@ -153,20 +154,111 @@ class ReportCardController extends Controller
             return;
         }
 
-        $stmt = $this->getDb()->prepare('SELECT id FROM report_cards WHERE student_id = :student_id AND term_id = :term_id');
-        $stmt->execute(['student_id' => (int) $studentId, 'term_id' => (int) $termId]);
-        $report = $stmt->fetch();
-
-        if (!$report) {
-            $this->notFound('No report card generated for this student/term yet');
+        $teacherId = $this->getTeacherId();
+        if (!$teacherId) {
+            $this->error('Teacher not found', 403);
+            return;
+        }
+        if (!ReportCardView::allowed('teachers')) {
+            $this->forbidden('Report cards are not open to teachers yet');
+            return;
+        }
+        $studentId = (int) $studentId;
+        $classId = $this->getStudentClassId($studentId);
+        $isClassTeacher = $classId !== null && $this->isClassTeacher((int) $teacherId, $classId);
+        if (!$isClassTeacher && !$this->teaches((int) $teacherId, $studentId)) {
+            $this->forbidden('You can open the report cards of learners you teach, or of your class');
             return;
         }
 
         try {
-            $this->success((new ReportCardService())->getFullReport((int) $report['id']));
+            $this->success(ReportCardView::build($studentId, (int) $termId) + ['can_comment' => $isClassTeacher]);
         } catch (RuntimeException $e) {
             $this->error($e->getMessage(), 404);
         }
+    }
+
+    /** Whether the teacher teaches the learner (an active teacher enrolment) */
+    private function teaches(int $teacherId, int $studentId): bool
+    {
+        $stmt = $this->getDb()->prepare("SELECT 1 FROM student_teacher_enrollments WHERE teacher_id = ? AND student_id = ? AND status = 'active' LIMIT 1");
+        $stmt->execute([$teacherId, $studentId]);
+        return (bool) $stmt->fetchColumn();
+    }
+
+    /**
+     * GET /teacher/report-cards/access - whether the menu shows Report cards
+     */
+    public function access(): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+        $this->success(['allowed' => ReportCardView::allowed('teachers')]);
+    }
+
+    /**
+     * GET /teacher/report-cards/learners?term_id=
+     * The learners whose cards this teacher can open: the ones they teach, and the whole of any
+     * class they are class teacher of. With the terms, and whether each card is made yet.
+     */
+    public function learners(): void
+    {
+        if (!$this->isAuthenticated()) {
+            $this->unauthorized();
+            return;
+        }
+        $teacherId = (int) ($this->getTeacherId() ?? 0);
+        if (!$teacherId) {
+            $this->error('Teacher not found', 403);
+            return;
+        }
+        if (!ReportCardView::allowed('teachers')) {
+            $this->forbidden('Report cards are not open to teachers yet');
+            return;
+        }
+        $db = $this->getDb();
+        \eSpace\App\Services\TermService::syncCurrent();
+        $terms = $db->query(
+            "SELECT t.id, t.name, ay.name AS academic_year, t.is_current
+             FROM terms t LEFT JOIN academic_years ay ON ay.id = t.academic_year_id
+             WHERE t.deleted_at IS NULL AND t.start_date <= CURDATE() ORDER BY t.start_date DESC"
+        )->fetchAll();
+        $termId = (int) $this->query('term_id', 0);
+        if (!$termId) {
+            foreach ($terms as $t) {
+                if ((int) $t['is_current']) {
+                    $termId = (int) $t['id'];
+                }
+            }
+            $termId = $termId ?: (int) ($terms[0]['id'] ?? 0);
+        }
+
+        $stmt = $db->prepare(
+            "SELECT s.id, s.first_name, s.last_name, s.admission_number, c.id AS class_id, c.name AS class_name, c.stream_name,
+                    (c.class_teacher_id = :t1) AS my_class,
+                    EXISTS (SELECT 1 FROM report_cards rc INNER JOIN report_card_subjects rcs ON rcs.report_card_id = rc.id
+                            WHERE rc.student_id = s.id AND rc.term_id = :term) AS made
+             FROM students s
+             LEFT JOIN classes c ON c.id = s.class_id
+             WHERE s.deleted_at IS NULL
+               AND (c.class_teacher_id = :t2
+                    OR EXISTS (SELECT 1 FROM student_teacher_enrollments ste WHERE ste.student_id = s.id AND ste.teacher_id = :t3 AND ste.status = 'active'))
+             ORDER BY c.name, c.stream_name, s.first_name, s.last_name"
+        );
+        $stmt->execute(['t1' => $teacherId, 't2' => $teacherId, 't3' => $teacherId, 'term' => $termId]);
+        $learners = array_map(fn($r) => [
+            'id' => (int) $r['id'],
+            'name' => trim($r['first_name'] . ' ' . $r['last_name']),
+            'admission_number' => $r['admission_number'],
+            'class_id' => $r['class_id'] !== null ? (int) $r['class_id'] : null,
+            'class_label' => $r['class_name'] ? $r['class_name'] . ($r['stream_name'] ? ' ' . $r['stream_name'] : '') : 'No class',
+            'my_class' => (bool) $r['my_class'],
+            'made' => (bool) $r['made'],
+        ], $stmt->fetchAll());
+
+        $this->success(['terms' => $terms, 'term_id' => $termId, 'learners' => $learners]);
     }
 
     /**
@@ -317,8 +409,8 @@ class ReportCardController extends Controller
         $report = $stmt->fetch();
 
         if (!$report) {
-            $this->notFound('Generate this student\'s report card before adding a comment');
-            return;
+            // written before the card is made: kept on an empty card until it is
+            $report = ['id' => (new ReportCardService())->ensureReportShell($studentId, $termId, $classId)];
         }
 
         $stmt = $db->prepare('UPDATE report_cards SET class_teacher_comment = :comment, updated_at = NOW() WHERE id = :id');

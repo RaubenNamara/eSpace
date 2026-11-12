@@ -123,7 +123,7 @@
     <div
       v-if="sidebarOpen && !shouldHideAppChrome"
       @click="sidebarOpen = false"
-      class="fixed inset-0 bg-black/50 z-40"
+      class="print:hidden fixed inset-0 bg-black/50 z-40"
       :class="isFullScreenChat ? '' : 'lg:hidden'"
     ></div>
 
@@ -463,6 +463,12 @@
       </nav>
 
       <main class="flex-1 print:!p-0" :class="[shouldHideAppChrome || isFullScreenChat ? 'p-0' : (isImmersiveReader ? 'p-0 lg:p-6' : 'p-4 sm:p-6'), showStudentTabs ? 'pb-24 lg:pb-6' : '']">
+        <!-- A visitor in the demo school (the website's "Try Tusome") -->
+        <div v-if="inDemo" class="print:hidden mb-4 rounded-2xl border border-gold-300 bg-gold-50 dark:bg-gold-400/10 dark:border-gold-400/30 px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-800 dark:text-gray-100">
+          <span class="flex-1 min-w-[14rem]"><b>You're in the Tusome demo school.</b> The learners and teachers are made up, and anything you change is put back tonight.</span>
+          <a href="/#demo" class="font-semibold text-indigo-800 dark:text-indigo-200 hover:underline">Get Tusome for your school</a>
+          <button type="button" class="px-3 py-1.5 rounded-lg bg-indigo-900 text-white text-xs font-semibold hover:bg-indigo-800" @click="leaveDemo">Leave the demo</button>
+        </div>
         <router-view />
       </main>
     </div>
@@ -549,6 +555,7 @@
 <script setup lang="ts">
 import { usePersistedRef } from '@/composables/usePersistedRef'
 import { usePublicationsAccess } from '@/composables/usePublicationsAccess'
+import { useReportCardAccess } from '@/composables/useReportCardAccess'
 import Wordmark from '@/components/brand/Wordmark.vue'
 import { SUPPORT_EMAIL } from '@/data/site'
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
@@ -882,12 +889,23 @@ const openProfileSection = (section: 'photo' | 'password') => {
   showProfileDropdown.value = false
 }
 
+// A demo visit (TryDemo on the website): the banner above every page, and the way out
+const inDemo = computed(() => !!authStore.user && (() => { try { return localStorage.getItem('tusome_demo') === '1' } catch { return false } })())
+const leaveDemo = async () => {
+  await authStore.logout()
+  window.location.href = '/#try-demo'
+}
+
 // The sidebar and the tabs at the top of each page come from data/navHubs.ts
 const menuRole = computed(() => (authStore.userRole === 'super_admin' ? 'admin' : authStore.userRole || ''))
 // Publications: A level students and GP teachers only
 const publications = usePublicationsAccess()
 watch(menuRole, r => publications.check(r), { immediate: true })
+// Report cards: students and teachers only when the super admin has opened them
+const reportCards = useReportCardAccess()
+watch(menuRole, r => reportCards.check(r), { immediate: true })
 const visible = (tab: HubTab) => !tab.gate || (tab.gate === 'publications' && publications.allowed.value)
+  || (tab.gate === 'report_cards' && reportCards.allowed.value)
   || (tab.gate === 'super_admin' && authStore.userRole === 'super_admin')
 // the role's hubs, each with only the pages this user may open (a hub left empty is dropped)
 const hubs = computed<Hub[]>(() => (HUBS[menuRole.value] || []).map(h => ({ ...h, tabs: h.tabs.filter(visible) })).filter(h => h.tabs.length))

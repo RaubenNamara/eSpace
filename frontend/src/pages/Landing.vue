@@ -53,12 +53,16 @@
                 Watch the 30-second tour
               </button>
             </div>
+            <a href="#try-demo" class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-gold-300 hover:text-gold-200">
+              Or walk into our demo school now - no sign-up
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+            </a>
             </div>
             </Transition>
-            <!-- A client -->
+            <!-- Many schools, one platform -->
             <div class="mt-10 flex items-center gap-3">
-              <img src="/images/stmark-logo.jpg" alt="" width="40" height="40" class="w-10 h-10 rounded-xl object-contain bg-white p-0.5 shadow ring-1 ring-black/5">
-              <p class="text-sm text-white/70 leading-snug">Trusted by <span class="font-semibold text-white">St Mark's College Namagoma</span><br class="hidden sm:block"> - every class, every subject.</p>
+              <span class="w-10 h-10 rounded-xl bg-white/10 ring-1 ring-white/20 flex items-center justify-center text-gold-300"><AppIcon name="teacher" class="w-5 h-5" /></span>
+              <p class="text-sm text-white/70 leading-snug">One platform for <span class="font-semibold text-white">many schools</span><br class="hidden sm:block"> - each with its own private, branded space.</p>
             </div>
           </div>
 
@@ -120,6 +124,13 @@
       </section>
 
       <!-- ===== Why, as a bento - and how a school gets going ===== -->
+      <!-- ===== Try it now: the live demo school ===== -->
+      <section id="try-demo" class="pt-12 sm:pt-16 scroll-mt-20">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <TryDemo class="reveal" />
+        </div>
+      </section>
+
       <section id="features" class="py-20 sm:py-28 scroll-mt-20">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div class="reveal max-w-2xl">
@@ -306,26 +317,21 @@
         </div>
       </section>
 
-      <!-- ===== Client, with live totals ===== -->
+      <!-- ===== Many schools, one platform ===== -->
       <section id="proof" class="pb-20 sm:pb-28 scroll-mt-20">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div class="reveal relative overflow-hidden rounded-3xl bg-slate-900">
-            <picture>
-              <source srcset="/images/stmark-campus.webp" type="image/webp">
-              <img src="/images/stmark-campus.jpg" alt="St Mark's College Namagoma campus" loading="lazy" decoding="async" class="absolute inset-0 w-full h-full object-cover">
-            </picture>
-            <div class="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/80 to-slate-950/40"></div>
-            <div class="relative p-8 sm:p-12 lg:p-16 text-white">
-              <div class="max-w-2xl">
-                <div class="flex items-center gap-3">
-                  <img src="/images/stmark-logo.jpg" alt="" width="48" height="48" loading="lazy" class="w-12 h-12 rounded-xl object-contain bg-white p-0.5">
-                  <div>
-                    <p class="font-bold">St Mark's College Namagoma</p>
-                    <p class="text-xs text-slate-300">Running on Tusome</p>
-                  </div>
-                </div>
-                <p class="mt-6 font-jakarta text-2xl sm:text-3xl font-bold leading-snug">Every class, every subject - on one platform.</p>
-                <p class="mt-4 text-sm sm:text-base text-slate-300 leading-relaxed">At St Mark's, students read their notes, revise from the library, join live lessons and hand in their assessments on Tusome - and teachers follow each class, outcome by outcome, through to the end-of-term report card.</p>
+          <div class="reveal relative overflow-hidden rounded-3xl bg-indigo-950 text-white p-8 sm:p-12 lg:p-16">
+            <div class="absolute -right-24 -top-24 w-80 h-80 rounded-full bg-gold-400/10 blur-3xl" aria-hidden="true"></div>
+            <div class="relative max-w-2xl">
+              <span class="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-gold-300">Built for many schools</span>
+              <p class="mt-5 font-heading text-2xl sm:text-4xl font-bold leading-tight">Every school gets its own Tusome.</p>
+              <p class="mt-4 text-sm sm:text-base text-slate-300 leading-relaxed">One platform, many schools - and no school ever sees another's learners, marks or messages. Your name and badge are on every report card, and your teachers start with a shared library of notes and papers they can make their own.</p>
+            </div>
+            <div class="relative mt-10 grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div v-for="p in TENANCY" :key="p.title" class="rounded-2xl bg-white/5 ring-1 ring-white/10 p-5">
+                <AppIcon :name="p.icon" class="w-6 h-6 text-gold-300" />
+                <p class="mt-3 font-bold">{{ p.title }}</p>
+                <p class="mt-1 text-sm text-slate-300 leading-relaxed">{{ p.text }}</p>
               </div>
             </div>
           </div>
@@ -510,6 +516,7 @@ import ModuleSheet from '@/components/site/ModuleSheet.vue'
 import ENoteSample from '@/components/site/ENoteSample.vue'
 import LearningMapDemo from '@/components/site/LearningMapDemo.vue'
 import DemoForm from '@/components/site/DemoForm.vue'
+import TryDemo from '@/components/site/TryDemo.vue'
 import ModuleExplorer from '@/components/site/ModuleExplorer.vue'
 import DayStory from '@/components/site/DayStory.vue'
 import BeforeAfter from '@/components/site/BeforeAfter.vue'
@@ -524,6 +531,14 @@ import { MODULES, type EModule } from '@/data/modules'
 import { CHANGELOG } from '@/data/changelog'
 import { teamLead, teamStakeholders } from '@/data/team'
 import { TRUST, STORY, STAT_LABELS } from '@/data/site'
+
+// What a school gets as one of many on Tusome (the "Many schools" section)
+const TENANCY = [
+  { icon: 'clipboard', title: 'A private space', text: 'Your learners, marks and messages are kept apart from every other school.' },
+  { icon: 'star', title: 'Your name on it', text: 'Your badge, motto and contacts on report cards, slips and parent pages.' },
+  { icon: 'book', title: 'A head start', text: 'A shared library of eNotes, books and Item Bank papers from day one.' },
+  { icon: 'chart', title: 'Your own reports', text: 'Report cards and a monthly impact report for your head teacher and board.' }
+]
 
 const EYEBROW = 'inline-flex items-center rounded-full bg-indigo-100 px-3 py-1 text-xs font-bold uppercase tracking-widest text-indigo-800 dark:bg-indigo-500/15 dark:text-indigo-200'
 const H2 = 'mt-3 font-heading text-3xl sm:text-4xl font-extrabold tracking-tight'

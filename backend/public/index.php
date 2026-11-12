@@ -95,6 +95,14 @@ if ($tenantBlocked !== null) {
     exit;
 }
 
+// A demo visitor (the website's "Try Tusome") can look at everything but not change what the next one finds
+$demoBlocked = \eSpace\App\Middleware\DemoGuard::check();
+if ($demoBlocked !== null) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => $demoBlocked, 'demo' => true]);
+    exit;
+}
+
 // Load routes
 require_once __DIR__ . '/../routes/api.php';
 
