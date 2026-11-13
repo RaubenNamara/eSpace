@@ -52,9 +52,12 @@ export async function captureElement(el: HTMLElement): Promise<HTMLCanvasElement
   const box = el.getBoundingClientRect()
   const tops: number[] = []
   el.querySelectorAll<HTMLElement>(':scope > * > *, tr, li, [data-pdf-block], .pdf-block').forEach(n => {
-    // keep a heading with what it heads: no break just after a section label, or after a table's header row
+    // keep a heading with what it heads: no break between a section label and the table under it,
+    // after a section's heading band, or after a table's header row. (A plain line of text before
+    // anything else - "1 subject is not graded…" - is no label: a page may break after it.)
     const prev = n.previousElementSibling
-    if (prev && ((prev.tagName === 'P' && n.tagName !== 'P') || prev.classList.contains('record-head'))) return
+    const labelAbove = prev && prev.tagName === 'P' && n.tagName !== 'P' && (prev.classList.contains('rc-band') || !!n.querySelector('table'))
+    if (prev && (labelAbove || prev.classList.contains('record-head'))) return
     // side-by-side boxes (.pdf-keep) are never cut through: break before them, not inside
     const keep = n.closest('.pdf-keep')
     if (keep && keep !== n) return
@@ -131,8 +134,11 @@ function addCanvas(pdf: jsPDF, canvas: HTMLCanvasElement, isFirst: boolean): voi
     const start = cuts[cuts.length - 1]
     const limit = start + perPage
     // the lowest safe break on this page that still fills at least 60% of it
+    // the lowest safe break that still fills most of the page; failing that, any safe break below
+    // the top quarter - a shorter page is better than one cut through a row of boxes
     const safe = breaks.filter(b => b > start + perPage * 0.6 && b <= limit)
-    cuts.push(safe.length ? safe[safe.length - 1] : limit)
+    const fallback = safe.length ? safe : breaks.filter(b => b > start + perPage * 0.25 && b <= limit)
+    cuts.push(fallback.length ? fallback[fallback.length - 1] : limit)
   }
   cuts.push(canvas.height)
 
