@@ -48,8 +48,10 @@ class ParentDigestService
 
         // Reading this week
         $stmt = $db->prepare(
-            "SELECT COUNT(*) AS topics, SUM(completed_at IS NOT NULL AND completed_at >= ?) AS finished, COALESCE(SUM(time_spent_minutes), 0) AS minutes
-             FROM enote_progress WHERE student_id = ? AND last_read_at >= ?"
+            "SELECT COUNT(*) AS topics,
+                    SUM(ep.last_read_at >= ? AND ep.pages_completed >= GREATEST(1, (SELECT COUNT(*) FROM enote_pages pg WHERE pg.topic_id = ep.topic_id AND pg.is_active = 1 AND pg.deleted_at IS NULL))) AS finished,
+                    COALESCE(SUM(ep.time_spent_minutes), 0) AS minutes
+             FROM enote_progress ep WHERE ep.student_id = ? AND ep.last_read_at >= ?"
         );
         $stmt->execute([$since, $studentId, $since]);
         $reading = $stmt->fetch() ?: [];

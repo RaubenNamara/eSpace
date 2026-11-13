@@ -529,30 +529,49 @@ final class DemoSchool
         }
     }
 
+    /**
+     * Reading, the way eNotes measure it: each learner reaches some page of a topic (the farthest
+     * page reached is their progress), with a page view for every page up to it - which is what
+     * the student dashboard's "Your activity this week" counts. More of it recent than not.
+     */
     private function reading(): void
     {
         $topics = $this->rows(
-            "SELECT t.id, t.total_pages, (SELECT MIN(p.id) FROM enote_pages p WHERE p.topic_id = t.id) AS first_page
-             FROM enote_topics t WHERE t.status = 'published' AND t.deleted_at IS NULL
+            "SELECT t.id FROM enote_topics t WHERE t.status = 'published' AND t.deleted_at IS NULL
                AND (t.class_group_name = 'S.2' OR t.class_id IN (?, ?) OR (t.class_id IS NULL AND t.class_group_name IS NULL))
                AND t.department_id IN (" . implode(',', array_map(fn($s) => (int) $s['department_id'], $this->subjects)) . ')',
             [$this->streams['A'], $this->streams['B']]
         );
+        $pagesOf = [];
+        foreach ($topics as $t) {
+            $pagesOf[(int) $t['id']] = array_map('intval', array_column($this->rows(
+                'SELECT id FROM enote_pages WHERE topic_id = ? AND is_active = 1 AND deleted_at IS NULL ORDER BY order_number, id',
+                [(int) $t['id']]
+            ), 'id'));
+        }
         $reads = 0;
         foreach ($this->learners as $sid => $l) {
-            foreach ($topics as $t) {
-                if ($this->rand() > $l['engagement'] * 0.95) {
+            foreach ($pagesOf as $topicId => $pages) {
+                if (!$pages || $this->rand() > $l['engagement'] * 0.95) {
                     continue;
                 }
-                $pct = min(100, (int) round(100 * min(1, $l['engagement'] * 0.6 + $this->rand() * 0.6)));
-                $pages = max(1, (int) $t['total_pages']);
-                $done = $pct >= 100;
-                $last = $this->at($this->rand() * $this->span(), 16, 22);
+                $total = count($pages);
+                $reached = max(1, min($total, (int) round($total * min(1, $l['engagement'] * 0.6 + $this->rand() * 0.6))));
+                // the demo learner has been reading this week, so her dashboard's week has something in it
+                $daysAgo = $sid === $this->demoLearner ? $this->rand() * 2.5 : $this->rand() ** 2 * $this->span();
+                $last = $this->at($daysAgo, 16, 22);
                 $this->exec(
                     "INSERT INTO enote_progress (topic_id, student_id, current_page_id, pages_completed, percentage_completed, last_read_at, time_spent_minutes, completed_at, created_at, updated_at)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    [$t['id'], $sid, $t['first_page'], (int) round($pages * $pct / 100), $pct, $last, mt_rand(3, 25), $done ? $last : null, $last, $last]
+                     VALUES (?, ?, ?, ?, 100, ?, ?, ?, ?, ?)",
+                    [$topicId, $sid, $pages[$reached - 1], $reached, $last, mt_rand(3, 25), $reached >= $total ? $last : null, $last, $last]
                 );
+                for ($i = 0; $i < $reached; $i++) {
+                    $seen = $this->at(min($this->span(), $daysAgo + ($reached - 1 - $i) * $this->rand() * 0.3), 16, 22);
+                    $this->exec(
+                        'INSERT INTO enote_page_views (page_id, student_id, topic_id, views, seconds, first_viewed_at, last_viewed_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                        [$pages[$i], $sid, $topicId, mt_rand(1, 3), mt_rand(40, 420), $seen, $seen]
+                    );
+                }
                 $reads++;
             }
         }

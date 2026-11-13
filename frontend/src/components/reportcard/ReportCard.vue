@@ -1,7 +1,7 @@
 <template>
   <div ref="rootEl" :data-pdf-title="pdfTitle" class="report-card relative bg-white dark:bg-gray-800 rounded-2xl shadow-md border-2 border-gray-300 dark:border-gray-700 overflow-hidden">
     <!-- Accent bar -->
-    <div class="h-2.5 bg-indigo-600 print-color-exact"></div>
+    <div class="h-2.5 bg-indigo-500 print-color-exact"></div>
 
     <!-- Watermark -->
     <div v-if="report.school?.logo_path && !logoFailed" class="pointer-events-none select-none absolute inset-0 flex items-center justify-center overflow-hidden z-0">
@@ -9,36 +9,35 @@
     </div>
 
     <div class="relative z-10 p-5 sm:p-8">
-      <!-- Header -->
-      <div class="flex flex-col sm:flex-row items-start justify-between gap-4 pb-5 mb-1 border-b-4 border-indigo-600 dark:border-indigo-500">
-        <div class="flex items-center gap-4 min-w-0">
-          <img v-if="report.school?.logo_path && !logoFailed" :src="resolveAssetUrl(report.school.logo_path)" alt="School logo" @error="logoFailed = true" class="w-20 h-20 object-contain flex-shrink-0 rounded-lg bg-white ring-2 ring-gray-200 dark:ring-gray-600 p-1">
-          <span v-else class="school-mark flex-shrink-0 bg-indigo-600 text-white font-bold print-color-exact" aria-hidden="true">{{ schoolInitials }}</span>
-          <div class="min-w-0 leading-normal">
-            <h1 class="text-xl sm:text-3xl font-extrabold text-gray-900 dark:text-white uppercase tracking-wide" style="line-height: 1.35; padding-top: 2px; padding-bottom: 2px;">
-              {{ report.school?.school_name || 'School' }}
-            </h1>
-            <p v-if="report.school?.address" class="text-xs sm:text-sm text-gray-500 dark:text-gray-400" style="line-height: 1.6;">{{ report.school.address }}</p>
-          </div>
+      <!-- Header: the school's badge on the left, its name and details in the middle, the learner on the right -->
+      <div class="rc-head pb-5 mb-1 border-b-4 border-indigo-500">
+        <div class="rc-head-side">
+          <img v-if="report.school?.logo_path && !logoFailed" :src="resolveAssetUrl(report.school.logo_path)" alt="School badge" @error="logoFailed = true" class="w-20 h-20 sm:w-24 sm:h-24 object-contain rounded-lg bg-white ring-2 ring-gray-200 dark:ring-gray-600 p-1">
+          <span v-else class="school-mark bg-indigo-500 text-white font-bold print-color-exact" aria-hidden="true">{{ schoolInitials }}</span>
         </div>
-        <div class="flex items-start gap-3 flex-shrink-0 sm:border-l-2 border-gray-200 dark:border-gray-700 sm:pl-4">
-          <div class="flex flex-col items-center flex-shrink-0">
-            <div class="qr-frame">
-              <img v-if="qrCodeDataUrl" :src="qrCodeDataUrl" alt="Scan to visit the system online" class="block w-full h-full">
-            </div>
-            <span class="mt-1 text-[9px] leading-tight text-gray-500 dark:text-gray-400 text-center">Open on<br><b class="text-gray-700 dark:text-gray-200">Tusome</b></span>
-          </div>
-          <div class="sm:text-right text-xs sm:text-sm text-gray-600 dark:text-gray-400 space-y-1 leading-relaxed">
-            <p v-if="report.school?.box_number"><span class="font-semibold text-gray-500 dark:text-gray-500">Box:</span> {{ report.school.box_number }}</p>
-            <p v-if="report.school?.website"><span class="font-semibold text-gray-500 dark:text-gray-500">Web:</span> {{ report.school.website }}</p>
-            <p v-if="report.school?.email"><span class="font-semibold text-gray-500 dark:text-gray-500">Email:</span> {{ report.school.email }}</p>
-            <p v-if="report.school?.phone"><span class="font-semibold text-gray-500 dark:text-gray-500">Tel:</span> {{ report.school.phone }}</p>
-          </div>
+        <div class="rc-head-mid">
+          <h1 class="text-xl sm:text-3xl font-extrabold text-gray-900 dark:text-white uppercase tracking-wide" style="line-height: 1.3; padding-top: 2px; padding-bottom: 2px;">
+            {{ report.school?.school_name || 'School' }}
+          </h1>
+          <p v-if="report.school?.address || report.school?.box_number" class="text-xs sm:text-sm text-gray-600 dark:text-gray-300" style="line-height: 1.6;">
+            {{ [report.school?.box_number, report.school?.address].filter(Boolean).join(' · ') }}
+          </p>
+          <p v-if="report.school?.phone || report.school?.email" class="text-xs sm:text-sm text-gray-600 dark:text-gray-300" style="line-height: 1.6;">
+            <template v-if="report.school?.phone"><span class="font-semibold">Tel:</span> {{ report.school.phone }}</template>
+            <template v-if="report.school?.phone && report.school?.email"> &middot; </template>
+            <template v-if="report.school?.email"><span class="font-semibold">Email:</span> {{ report.school.email }}</template>
+          </p>
+          <p v-if="report.school?.website" class="text-xs sm:text-sm text-gray-600 dark:text-gray-300" style="line-height: 1.6;"><span class="font-semibold">Web:</span> {{ report.school.website }}</p>
+          <p v-if="report.school?.motto" class="mt-0.5 text-xs sm:text-sm italic text-indigo-700 dark:text-indigo-300">&lsquo;{{ report.school.motto }}&rsquo;</p>
+        </div>
+        <div class="rc-head-side">
+          <img v-if="report.student.profile_photo && !photoFailed" :src="resolveAssetUrl(report.student.profile_photo)" alt="Learner's photo" @error="photoFailed = true" class="rc-photo object-cover ring-2 ring-gray-200 dark:ring-gray-600">
+          <div v-else class="rc-photo rc-photo-blank print-color-exact" aria-hidden="true">{{ studentInitials }}</div>
         </div>
       </div>
 
       <div class="flex justify-center mt-5">
-        <span class="inline-block px-4 py-1.5 rounded-full bg-indigo-600 text-white font-semibold text-xs sm:text-sm uppercase tracking-wide print-color-exact">
+        <span class="inline-block px-4 py-1.5 rounded-full bg-indigo-500 text-white font-semibold text-xs sm:text-sm uppercase tracking-wide print-color-exact">
           Learner's Summative Assessment Report &middot; {{ report.term.name }}{{ report.term.academic_year ? ` - ${report.term.academic_year}` : '' }}
         </span>
       </div>
@@ -50,18 +49,24 @@
       <!-- Student info -->
       <div class="pdf-keep grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
         <div class="sm:col-span-2 bg-gray-50 dark:bg-gray-900/40 border-2 border-gray-300 dark:border-gray-700 rounded-xl p-4 flex items-center gap-4 text-sm">
-          <img v-if="report.student.profile_photo" :src="resolveAssetUrl(report.student.profile_photo)" alt="" class="w-16 h-16 rounded-lg object-cover flex-shrink-0 ring-2 ring-gray-200 dark:ring-gray-600">
-          <div v-else class="student-photo-fallback w-16 h-16 rounded-lg flex-shrink-0 bg-indigo-600 text-white font-bold text-lg print-color-exact">
-            {{ studentInitials }}
+          <div class="flex flex-col items-center flex-shrink-0">
+            <div class="qr-frame">
+              <img v-if="qrCodeDataUrl" :src="qrCodeDataUrl" alt="Scan to open Tusome" class="block w-full h-full">
+            </div>
+            <span class="mt-1 text-[9px] leading-tight text-gray-500 dark:text-gray-400 text-center">Open on<br><b class="text-gray-700 dark:text-gray-200">Tusome</b></span>
           </div>
-          <div class="flex flex-wrap gap-x-6 gap-y-1.5">
-            <p><span class="block text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-500">Admission No</span><span class="font-medium text-gray-900 dark:text-white">{{ report.student.admission_number }}</span></p>
-            <p><span class="block text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-500">Name</span><span class="font-semibold text-gray-900 dark:text-white">{{ report.student.first_name }} {{ report.student.last_name }}</span></p>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-2 min-w-0">
+            <p class="col-span-2 sm:col-span-3"><span class="block text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-500">Name</span><span class="font-semibold text-base text-gray-900 dark:text-white uppercase">{{ report.student.first_name }} {{ report.student.last_name }}</span></p>
+            <p><span class="block text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-500">Admission No</span><span class="font-medium text-gray-900 dark:text-white">{{ report.student.admission_number || '-' }}</span></p>
             <p><span class="block text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-500">Class / Stream</span><span class="font-medium text-gray-900 dark:text-white">{{ report.class_name || '-' }}{{ report.stream_name ? ' / ' + report.stream_name : '' }}</span></p>
+            <p><span class="block text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-500">Sex</span><span class="font-medium text-gray-900 dark:text-white">{{ sexLabel }}</span></p>
+            <p v-if="report.student.lin"><span class="block text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-500">LIN</span><span class="font-medium text-gray-900 dark:text-white">{{ report.student.lin }}</span></p>
+            <p><span class="block text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-500">Term</span><span class="font-medium text-gray-900 dark:text-white">{{ report.term.name }}{{ report.term.academic_year ? ` ${report.term.academic_year}` : '' }}</span></p>
+            <p v-if="report.class_level"><span class="block text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-500">Level</span><span class="font-medium text-gray-900 dark:text-white">{{ report.class_level }}</span></p>
           </div>
         </div>
         <div class="border-2 border-gray-300 dark:border-gray-700 rounded-xl overflow-hidden self-start bg-gray-50 dark:bg-gray-900/40">
-          <div class="bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white print-color-exact">Activity</div>
+          <div class="bg-indigo-500 px-3 py-1.5 text-xs font-semibold text-white print-color-exact">Activity</div>
           <table class="w-full text-xs">
             <tbody>
               <tr>
@@ -89,13 +94,13 @@
         <div class="overflow-x-auto">
           <table class="w-full text-xs sm:text-sm border-collapse">
             <thead>
-              <tr class="bg-indigo-600 text-white print-color-exact">
-                <th class="border border-indigo-700 px-3 py-2 text-left whitespace-nowrap">Subject</th>
-                <th v-for="n in maxConstructs" :key="n" class="border border-indigo-700 px-2 py-2 text-center font-semibold">C{{ n }}</th>
-                <th class="border border-indigo-700 px-2 py-2 text-center whitespace-nowrap">Av. Weight (/{{ report.max_weight }})</th>
-                <th class="border border-indigo-700 px-2 py-2 text-center">Grade</th>
-                <th class="border border-indigo-700 px-3 py-2 text-left min-w-[220px]">Descriptor / Remark</th>
-                <th class="border border-indigo-700 px-2 py-2 text-center">Tr</th>
+              <tr class="bg-indigo-500 text-white print-color-exact">
+                <th class="border border-indigo-600 px-3 py-2 text-left whitespace-nowrap">Subject</th>
+                <th v-for="n in maxConstructs" :key="n" class="border border-indigo-600 px-2 py-2 text-center font-semibold">C{{ n }}</th>
+                <th class="border border-indigo-600 px-2 py-2 text-center whitespace-nowrap">Av. Weight (/{{ report.max_weight }})</th>
+                <th class="border border-indigo-600 px-2 py-2 text-center">Grade</th>
+                <th class="border border-indigo-600 px-3 py-2 text-left min-w-[220px]">Descriptor / Remark</th>
+                <th class="border border-indigo-600 px-2 py-2 text-center">Tr</th>
               </tr>
             </thead>
             <tbody>
@@ -103,8 +108,9 @@
                 <td class="border border-gray-400 dark:border-gray-700 px-3 py-2 font-medium text-gray-900 dark:text-white whitespace-nowrap">
                   {{ subject.subject_name }}
                 </td>
-                <td v-if="subject.assessed === false" :colspan="maxConstructs + 3" class="border border-gray-400 dark:border-gray-700 px-3 py-2 text-center italic text-gray-500 dark:text-gray-400">
-                  Not yet assessed this term
+                <td v-if="subject.assessed === false" :colspan="maxConstructs + 3" class="border border-gray-400 dark:border-gray-700 px-3 py-2 text-center" :class="subject.missed?.length ? 'text-rose-700 dark:text-rose-300' : 'italic text-gray-500 dark:text-gray-400'">
+                  <template v-if="subject.missed?.length"><b>Not graded</b> &middot; missed {{ subject.missed.join(', ') }}</template>
+                  <template v-else>Not yet assessed this term</template>
                 </td>
                 <template v-else>
                 <td v-for="n in maxConstructs" :key="n" class="border border-gray-400 dark:border-gray-700 px-1 py-2 text-center text-gray-700 dark:text-gray-300">
@@ -118,15 +124,19 @@
                   <template v-else>-</template>
                 </td>
                 <td class="border border-gray-400 dark:border-gray-700 px-2 py-2 text-center font-semibold text-gray-900 dark:text-white">
-                  {{ subject.avg_weight }}
+                  {{ subject.graded === false ? '-' : subject.avg_weight }}
                 </td>
                 <td class="border border-gray-400 dark:border-gray-700 px-2 py-2 text-center">
-                  <span class="grade-badge font-bold text-white shadow-sm print-color-exact" :class="gradeBg(subject.grade)">
+                  <span v-if="subject.graded === false" class="text-[11px] font-bold uppercase text-rose-700 dark:text-rose-300 leading-tight">Not<br>graded</span>
+                  <span v-else class="grade-badge font-bold text-white shadow-sm print-color-exact" :class="gradeBg(subject.grade)">
                     {{ subject.grade || '-' }}
                   </span>
                 </td>
-                <td class="border border-gray-400 dark:border-gray-700 px-3 py-2 text-gray-600 dark:text-gray-300">
-                  {{ subject.descriptor_text || (report.status === 'provisional' ? 'Remark comes when the report is finalised.' : (subject.assignments_included_count ? 'Descriptor pending - try regenerating.' : '-')) }}
+                <td class="border border-gray-400 dark:border-gray-700 px-3 py-2" :class="subject.graded === false ? 'text-rose-700 dark:text-rose-300' : 'text-gray-600 dark:text-gray-300'">
+                  <template v-if="subject.graded === false && subject.missed?.length">
+                    <b>Missed {{ subject.missed.length }} assessment{{ subject.missed.length === 1 ? '' : 's' }}:</b> {{ subject.missed.join(', ') }}. Not graded until every assessment is done.
+                  </template>
+                  <template v-else>{{ subject.descriptor_text || (report.status === 'provisional' ? 'Remark comes when the report is finalised.' : (subject.assignments_included_count ? 'Descriptor pending - try regenerating.' : '-')) }}</template>
                 </td>
                 </template>
                 <td class="border border-gray-400 dark:border-gray-700 px-2 py-2 text-center text-gray-500 dark:text-gray-400" :title="subject.teacher_name || undefined">
@@ -152,12 +162,12 @@
           <div class="overflow-x-auto">
             <table class="w-full text-xs sm:text-sm border-collapse">
               <thead>
-                <tr class="bg-indigo-600 text-white print-color-exact">
-                  <th class="border border-indigo-700 px-3 py-2 text-left whitespace-nowrap">Subject / Report</th>
-                  <th class="border border-indigo-700 px-2 py-2 text-center whitespace-nowrap">Average %</th>
-                  <th class="border border-indigo-700 px-2 py-2 text-center">Status</th>
-                  <th class="border border-indigo-700 px-3 py-2 text-left min-w-[260px]">Descriptor</th>
-                  <th class="border border-indigo-700 px-2 py-2 text-center whitespace-nowrap">Weight (/{{ report.max_weight }})</th>
+                <tr class="bg-indigo-500 text-white print-color-exact">
+                  <th class="border border-indigo-600 px-3 py-2 text-left whitespace-nowrap">Subject / Report</th>
+                  <th class="border border-indigo-600 px-2 py-2 text-center whitespace-nowrap">Average %</th>
+                  <th class="border border-indigo-600 px-2 py-2 text-center">Status</th>
+                  <th class="border border-indigo-600 px-3 py-2 text-left min-w-[260px]">Descriptor</th>
+                  <th class="border border-indigo-600 px-2 py-2 text-center whitespace-nowrap">Weight (/{{ report.max_weight }})</th>
                 </tr>
               </thead>
               <tbody>
@@ -196,7 +206,11 @@
         <div :class="{ 'border-l border-blue-300/40 pl-8': report.class_level !== 'O Level' }"><span class="block text-[10px] uppercase tracking-wide text-blue-200">Overall Av. Weight</span><span class="font-bold text-base">{{ report.overall_avg_weight }} / {{ report.max_weight }}</span></div>
         <div class="border-l border-blue-300/40 pl-8"><span class="block text-[10px] uppercase tracking-wide text-blue-200">Performance Level</span><span class="font-bold text-base">{{ report.performance_level || '-' }}</span></div>
         <div class="border-l border-blue-300/40 pl-8"><span class="block text-[10px] uppercase tracking-wide text-blue-200">Result</span><span class="font-bold text-base">{{ report.result_category ?? '-' }}</span></div>
+        <div v-if="notGraded" class="border-l border-blue-300/40 pl-8"><span class="block text-[10px] uppercase tracking-wide text-blue-200">Subjects graded</span><span class="font-bold text-base">{{ report.graded_subjects ?? 0 }} of {{ assessedCount }}</span></div>
       </div>
+      <p v-if="notGraded" class="mt-1.5 text-[11px] text-rose-700 dark:text-rose-300">
+        {{ notGraded }} subject{{ notGraded === 1 ? ' is' : 's are' }} not graded because of missed assessments, so the overall result counts only the {{ report.graded_subjects ?? 0 }} graded.
+      </p>
 
       <!-- ===================== The learning record on Tusome ===================== -->
       <template v-if="report.activity">
@@ -223,23 +237,23 @@
           <div class="overflow-x-auto">
             <table class="w-full text-xs sm:text-sm border-collapse">
               <thead>
-                <tr class="bg-indigo-600 text-white print-color-exact">
-                  <th class="border border-indigo-700 px-3 py-1"></th>
-                  <th colspan="4" class="border border-indigo-700 px-2 py-1 text-center">Assessments</th>
-                  <th colspan="3" class="border border-indigo-700 px-2 py-1 text-center">Average by type</th>
-                  <th colspan="2" class="border border-indigo-700 px-2 py-1 text-center">On Tusome</th>
+                <tr class="bg-indigo-500 text-white print-color-exact">
+                  <th class="border border-indigo-600 px-3 py-1"></th>
+                  <th colspan="4" class="border border-indigo-600 px-2 py-1 text-center">Assessments</th>
+                  <th colspan="3" class="border border-indigo-600 px-2 py-1 text-center">Average by type</th>
+                  <th colspan="2" class="border border-indigo-600 px-2 py-1 text-center">On Tusome</th>
                 </tr>
-                <tr class="bg-indigo-700 text-white text-[11px] print-color-exact">
-                  <th class="border border-indigo-800 px-3 py-1 text-left font-semibold">Subject</th>
-                  <th class="border border-indigo-800 px-2 py-1 text-center font-semibold">Done</th>
-                  <th class="border border-indigo-800 px-2 py-1 text-center font-semibold">Passed</th>
-                  <th class="border border-indigo-800 px-2 py-1 text-center font-semibold">Failed</th>
-                  <th class="border border-indigo-800 px-2 py-1 text-center font-semibold">On time</th>
-                  <th class="border border-indigo-800 px-2 py-1 text-center font-semibold" title="Learning Outcome Assessments">LOA</th>
-                  <th class="border border-indigo-800 px-2 py-1 text-center font-semibold" title="Activities of Integration">AOI</th>
-                  <th class="border border-indigo-800 px-2 py-1 text-center font-semibold" title="End of Cycle">EOC</th>
-                  <th class="border border-indigo-800 px-2 py-1 text-center font-semibold whitespace-nowrap min-w-[7.5rem]">Notes read</th>
-                  <th class="border border-indigo-800 px-2 py-1 text-center font-semibold whitespace-nowrap">Live classes</th>
+                <tr class="bg-indigo-600 text-white text-[11px] print-color-exact">
+                  <th class="border border-indigo-700 px-3 py-1 text-left font-semibold">Subject</th>
+                  <th class="border border-indigo-700 px-2 py-1 text-center font-semibold">Done</th>
+                  <th class="border border-indigo-700 px-2 py-1 text-center font-semibold">Passed</th>
+                  <th class="border border-indigo-700 px-2 py-1 text-center font-semibold">Failed</th>
+                  <th class="border border-indigo-700 px-2 py-1 text-center font-semibold">On time</th>
+                  <th class="border border-indigo-700 px-2 py-1 text-center font-semibold" title="Learning Outcome Assessments">LOA</th>
+                  <th class="border border-indigo-700 px-2 py-1 text-center font-semibold" title="Activities of Integration">AOI</th>
+                  <th class="border border-indigo-700 px-2 py-1 text-center font-semibold" title="End of Cycle">EOC</th>
+                  <th class="border border-indigo-700 px-2 py-1 text-center font-semibold whitespace-nowrap min-w-[7.5rem]">Notes read</th>
+                  <th class="border border-indigo-700 px-2 py-1 text-center font-semibold whitespace-nowrap">Live classes</th>
                 </tr>
               </thead>
               <tbody>
@@ -271,7 +285,7 @@
             <p class="focus-title">Needs attention</p>
             <ul v-if="weakPoints.length" class="focus-list">
               <li v-for="(w, i) in weakPoints" :key="i">
-                <span class="focus-pct">{{ w.pct }}%</span>
+                <span class="focus-pct" :class="{ 'focus-missed': w.pct < 0 }">{{ w.pct < 0 ? 'Missed' : `${w.pct}%` }}</span>
                 <span><b>{{ w.subject }}</b> &middot; <span class="focus-kind">{{ w.kind }}</span> {{ w.text }}</span>
               </li>
             </ul>
@@ -281,7 +295,7 @@
             <p class="focus-title">Doing well</p>
             <ul v-if="strongPoints.length" class="focus-list">
               <li v-for="(w, i) in strongPoints" :key="i">
-                <span class="focus-pct">{{ w.pct }}%</span>
+                <span class="focus-pct" :class="{ 'focus-missed': w.pct < 0 }">{{ w.pct < 0 ? 'Missed' : `${w.pct}%` }}</span>
                 <span><b>{{ w.subject }}</b> &middot; <span class="focus-kind">{{ w.kind }}</span> {{ w.text }}</span>
               </li>
             </ul>
@@ -292,20 +306,20 @@
         <!-- Every marked assessment of the term -->
         <template v-if="report.activity.record?.length">
           <p class="text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mt-5 mb-1.5">
-            Assessment record &mdash; every marked assessment this term ({{ report.activity.record.length }})
+            Assessment record &mdash; every assessment due this term ({{ report.activity.record.length }}<template v-if="report.activity.missed_count">, {{ report.activity.missed_count }} missed</template>)
           </p>
           <div class="rounded-xl border-2 border-gray-400 dark:border-gray-700 overflow-hidden shadow-sm">
             <div class="overflow-x-auto">
               <table class="w-full text-xs sm:text-sm border-collapse">
                 <thead>
-                  <tr class="bg-indigo-600 text-white print-color-exact">
-                    <th class="border border-indigo-700 px-2 py-1.5 text-left whitespace-nowrap">Date</th>
-                    <th class="border border-indigo-700 px-2 py-1.5 text-left whitespace-nowrap">Subject</th>
-                    <th class="border border-indigo-700 px-2 py-1.5 text-left">Assessment</th>
-                    <th class="border border-indigo-700 px-2 py-1.5 text-center whitespace-nowrap">Type</th>
-                    <th class="border border-indigo-700 px-2 py-1.5 text-center whitespace-nowrap">Score</th>
-                    <th class="border border-indigo-700 px-2 py-1.5 text-center whitespace-nowrap">%</th>
-                    <th class="border border-indigo-700 px-2 py-1.5 text-center whitespace-nowrap">Result</th>
+                  <tr class="bg-indigo-500 text-white print-color-exact">
+                    <th class="border border-indigo-600 px-2 py-1.5 text-left whitespace-nowrap">Date</th>
+                    <th class="border border-indigo-600 px-2 py-1.5 text-left whitespace-nowrap">Subject</th>
+                    <th class="border border-indigo-600 px-2 py-1.5 text-left">Assessment</th>
+                    <th class="border border-indigo-600 px-2 py-1.5 text-center whitespace-nowrap">Type</th>
+                    <th class="border border-indigo-600 px-2 py-1.5 text-center whitespace-nowrap">Score</th>
+                    <th class="border border-indigo-600 px-2 py-1.5 text-center whitespace-nowrap">%</th>
+                    <th class="border border-indigo-600 px-2 py-1.5 text-center whitespace-nowrap">Result</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -315,8 +329,8 @@
                     <td class="border border-gray-400 dark:border-gray-700 px-2 py-1 text-gray-800 dark:text-gray-200">{{ r.title }}</td>
                     <td class="border border-gray-400 dark:border-gray-700 px-2 py-1 text-center whitespace-nowrap text-gray-600 dark:text-gray-400">{{ r.kind }}</td>
                     <td class="border border-gray-400 dark:border-gray-700 px-2 py-1 text-center whitespace-nowrap tabular-nums text-gray-700 dark:text-gray-300">{{ r.score !== null && r.out_of ? `${+r.score.toFixed(1)}/${+r.out_of.toFixed(1)}` : '-' }}</td>
-                    <td class="border border-gray-400 dark:border-gray-700 px-2 py-1 text-center tabular-nums" :class="scoreClass(r.percentage)">{{ r.percentage }}%</td>
-                    <td class="border border-gray-400 dark:border-gray-700 px-2 py-1 text-center whitespace-nowrap font-semibold" :class="r.percentage >= report.activity.pass_from ? 'text-gray-900 dark:text-white' : 'text-rose-700 dark:text-rose-300'">{{ r.percentage >= report.activity.pass_from ? 'Passed' : 'Failed' }}</td>
+                    <td class="border border-gray-400 dark:border-gray-700 px-2 py-1 text-center tabular-nums" :class="scoreClass(r.percentage)">{{ r.percentage !== null ? `${r.percentage}%` : '-' }}</td>
+                    <td class="border border-gray-400 dark:border-gray-700 px-2 py-1 text-center whitespace-nowrap font-semibold" :class="r.percentage !== null && r.percentage >= report.activity.pass_from ? 'text-gray-900 dark:text-white' : 'text-rose-700 dark:text-rose-300'">{{ r.percentage === null ? 'Missed' : r.percentage >= report.activity.pass_from ? 'Passed' : 'Failed' }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -350,11 +364,11 @@
         <div class="rounded-xl border-2 border-gray-300 dark:border-gray-700 overflow-hidden">
           <table class="w-full text-xs sm:text-sm border-collapse">
             <thead>
-              <tr class="bg-indigo-600 text-white print-color-exact">
-                <th class="border border-indigo-700 px-3 py-2 text-left">Practical</th>
-                <th class="border border-indigo-700 px-2 py-2 text-center">Score</th>
-                <th class="border border-indigo-700 px-2 py-2 text-center">Status</th>
-                <th class="border border-indigo-700 px-3 py-2 text-left">Teacher Comment</th>
+              <tr class="bg-indigo-500 text-white print-color-exact">
+                <th class="border border-indigo-600 px-3 py-2 text-left">Practical</th>
+                <th class="border border-indigo-600 px-2 py-2 text-center">Score</th>
+                <th class="border border-indigo-600 px-2 py-2 text-center">Status</th>
+                <th class="border border-indigo-600 px-3 py-2 text-left">Teacher Comment</th>
               </tr>
             </thead>
             <tbody>
@@ -381,15 +395,16 @@
           <p><strong class="text-gray-800 dark:text-gray-200">Construct:</strong> an assessed item (assignment) contributing to a subject's grade.</p>
           <p><strong class="text-gray-800 dark:text-gray-200">Weight:</strong> a 1-{{ report.max_weight }} competency rating derived from the score on that item{{ report.class_level ? ` (${report.class_level} scale)` : '' }}.</p>
           <p><strong class="text-gray-800 dark:text-gray-200">Av. Weight:</strong> the average of a subject's construct weights.</p>
+          <p><strong class="text-gray-800 dark:text-gray-200">Not graded:</strong> a subject is graded only when every assessment due in it was done. One missed and it is not graded, and the overall result counts only the graded subjects.</p>
         </div>
         <div class="border-2 border-gray-300 dark:border-gray-700 rounded-xl overflow-hidden self-start">
           <table class="w-full text-[11px] sm:text-xs border-collapse">
             <thead>
-              <tr class="bg-indigo-600 text-white print-color-exact">
-                <th class="border border-indigo-700 px-2 py-1.5 text-left">Weight Range</th>
-                <th class="border border-indigo-700 px-2 py-1.5 text-left">Level</th>
-                <th class="border border-indigo-700 px-2 py-1.5 text-center">Grade</th>
-                <th v-if="report.class_level !== 'O Level'" class="border border-indigo-700 px-2 py-1.5 text-center">Points</th>
+              <tr class="bg-indigo-500 text-white print-color-exact">
+                <th class="border border-indigo-600 px-2 py-1.5 text-left">Weight Range</th>
+                <th class="border border-indigo-600 px-2 py-1.5 text-left">Level</th>
+                <th class="border border-indigo-600 px-2 py-1.5 text-center">Grade</th>
+                <th v-if="report.class_level !== 'O Level'" class="border border-indigo-600 px-2 py-1.5 text-center">Points</th>
               </tr>
             </thead>
             <tbody>
@@ -406,9 +421,9 @@
 
       <!-- Comments -->
       <div class="pdf-keep grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5">
-        <div class="border-2 border-indigo-300 dark:border-indigo-800/60 bg-indigo-50/60 dark:bg-indigo-900/20 rounded-xl p-4">
+        <div class="border-2 border-indigo-300 dark:border-indigo-700/60 bg-indigo-50/60 dark:bg-indigo-900/20 rounded-xl p-4">
           <div class="flex items-center gap-2 mb-2">
-            <span class="initials-badge bg-indigo-600 text-white text-[10px] font-bold flex-shrink-0 print-color-exact">CT</span>
+            <span class="initials-badge bg-indigo-500 text-white text-[10px] font-bold flex-shrink-0 print-color-exact">CT</span>
             <p class="text-xs font-semibold text-gray-700 dark:text-gray-200">Class Teacher's Comment</p>
           </div>
           <textarea
@@ -448,11 +463,43 @@
         </div>
       </div>
 
+      <!-- Every learning outcome assessed this term, subject by subject -->
+      <template v-if="outcomesBySubject.length">
+        <p class="text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mt-6 mb-1.5">
+          Learning outcomes assessed this term &mdash; achieved at 60% or more
+        </p>
+        <div class="rounded-xl border-2 border-gray-400 dark:border-gray-700 overflow-hidden shadow-sm">
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs sm:text-sm border-collapse">
+              <thead>
+                <tr class="bg-indigo-500 text-white print-color-exact">
+                  <th class="border border-indigo-600 px-3 py-2 text-left whitespace-nowrap">Subject</th>
+                  <th class="border border-indigo-600 px-3 py-2 text-left">Learning outcome</th>
+                  <th class="border border-indigo-600 px-2 py-2 text-center whitespace-nowrap">Tasks</th>
+                  <th class="border border-indigo-600 px-2 py-2 text-center whitespace-nowrap">Score</th>
+                  <th class="border border-indigo-600 px-2 py-2 text-center whitespace-nowrap">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template v-for="group in outcomesBySubject" :key="group.subject_id">
+                  <tr v-for="(o, i) in group.outcomes" :key="group.subject_id + '-' + i" :class="i % 2 === 1 ? 'bg-gray-50 dark:bg-gray-900/30' : ''">
+                    <td class="border border-gray-400 dark:border-gray-700 px-3 py-1.5 font-medium text-gray-900 dark:text-white whitespace-nowrap align-top">{{ i === 0 ? group.name : '' }}</td>
+                    <td class="border border-gray-400 dark:border-gray-700 px-3 py-1.5 text-gray-700 dark:text-gray-300">{{ o.outcome }}</td>
+                    <td class="border border-gray-400 dark:border-gray-700 px-2 py-1.5 text-center tabular-nums text-gray-700 dark:text-gray-300">{{ o.tasks }}</td>
+                    <td class="border border-gray-400 dark:border-gray-700 px-2 py-1.5 text-center tabular-nums" :class="scoreClass(o.percentage)">{{ o.percentage }}%</td>
+                    <td class="border border-gray-400 dark:border-gray-700 px-2 py-1.5 text-center whitespace-nowrap font-semibold" :class="o.achieved ? 'text-gray-900 dark:text-white' : 'text-rose-700 dark:text-rose-300'">{{ o.achieved ? 'Achieved' : 'Not yet' }}</td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </template>
+
       <!-- Footer -->
       <div class="flex flex-wrap items-center justify-between gap-2 mt-6 pt-3 border-t-2 border-dashed border-gray-300 dark:border-gray-600 text-[11px] text-gray-500 dark:text-gray-500">
         <span>{{ report.status === 'provisional' ? `Provisional · as at ${asAt}` : `Generated ${formatDate(report.generated_at)}` }}</span>
         <span class="tusome-sign">Prepared on <b>Tusome<span class="tusome-dot">.</span></b> &middot; {{ report.platform?.tagline || 'Online learning platform' }}</span>
-        <span v-if="report.school?.motto" class="italic">Motto: '{{ report.school.motto }}'</span>
       </div>
     </div>
   </div>
@@ -557,6 +604,19 @@ const awardColor = (badgeType: string) => {
 
 const formatDate = (dateString: string | null) => (dateString ? new Date(dateString.replace(' ', 'T')).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '-')
 const logoFailed = ref(false)
+// subjects with marks but missed work: not graded, and left out of the overall result
+const notGraded = computed(() => props.report.subjects.filter(s => s.graded === false && (s.missed?.length ?? 0) > 0).length)
+const assessedCount = computed(() => props.report.subjects.filter(s => s.assessed !== false || (s.missed?.length ?? 0) > 0).length)
+const photoFailed = ref(false)
+const sexLabel = computed(() => ({ male: 'Male', female: 'Female' } as Record<string, string>)[String(props.report.student.gender || '').toLowerCase()] || '-')
+
+// The learning outcomes assessed this term, grouped by subject in the grades table's order
+const outcomesBySubject = computed(() => {
+  const all = props.report.activity?.outcomes ?? []
+  return props.report.subjects
+    .map(sub => ({ subject_id: sub.subject_id, name: sub.subject_name, outcomes: all.filter(o => o.subject_id === sub.subject_id).sort((x, y) => y.percentage - x.percentage) }))
+    .filter(g => g.outcomes.length)
+})
 const shortDate = (d: string) => (d ? new Date(`${d}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '-')
 // the running line on every PDF page
 const pdfTitle = computed(() => `${props.report.student.first_name} ${props.report.student.last_name} · ${props.report.term.name}${props.report.term.academic_year ? ` ${props.report.term.academic_year}` : ''} · ${props.report.school?.school_name || ''}`)
@@ -600,13 +660,14 @@ const weakPoints = computed<Point[]>(() => {
   const a = props.report.activity
   if (!a) return []
   const pass = a.pass_from
+  const missed: Point[] = (a.record ?? []).filter(r => r.percentage === null).map(r => ({ subject: subjectName(r.subject_id), kind: '', text: r.title, pct: -1 }))
   const pts: Point[] = [
     ...a.outcomes.filter(o => !o.achieved).map(o => ({ subject: subjectName(o.subject_id), kind: 'Learning outcome:', text: o.outcome, pct: o.percentage })),
     ...a.aoi_tasks.filter(x => x.percentage < pass).map(x => ({ subject: subjectName(x.subject_id), kind: 'AOI:', text: x.title, pct: x.percentage })),
     ...a.subjects.flatMap(sub => (['loa', 'aoi', 'eoc'] as const).filter(k => sub[k] !== null && (sub[k] as number) < pass)
       .map(k => ({ subject: subjectName(sub.subject_id), kind: `${k.toUpperCase()} average`, text: '', pct: sub[k] as number })))
   ]
-  return pts.sort((x, y) => x.pct - y.pct).slice(0, 6)
+  return [...missed, ...pts.sort((x, y) => x.pct - y.pct)].slice(0, 7)
 })
 const strongPoints = computed<Point[]>(() => {
   const a = props.report.activity
@@ -649,7 +710,44 @@ watch(() => props.report, (r) => {
 
 /* Pure navy, not a gray/black gradient - kept as one flat color in both light and dark mode. */
 .totals-bar {
-  background-color: #001f4d;
+  background-color: #1b3fa0;
+}
+
+.rc-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 16px;
+}
+.rc-head-side {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.rc-head-mid {
+  min-width: 0;
+  text-align: center;
+}
+.rc-photo {
+  display: block;
+  width: 84px;
+  height: 100px;
+  border-radius: 10px;
+}
+.rc-photo-blank {
+  background-color: #eef2fc;
+  color: #3a5fc4;
+  border: 2px solid #bbcbf1;
+  font-weight: 700;
+  font-size: 26px;
+  line-height: 96px;
+  text-align: center;
+}
+@media (max-width: 480px) {
+  .rc-head { grid-template-columns: 1fr 1fr; }
+  .rc-head-mid { grid-column: 1 / -1; grid-row: 2; }
+  .rc-photo { width: 64px; height: 76px; }
+  .rc-photo-blank { line-height: 72px; font-size: 20px; }
 }
 
 .school-mark {
@@ -676,7 +774,7 @@ watch(() => props.report, (r) => {
   gap: 2px 12px;
   padding: 7px 14px;
   border-radius: 10px;
-  background-color: #001f4d;
+  background-color: #1b3fa0;
   color: #fff;
   font-weight: 700;
   font-size: 13px;
@@ -828,6 +926,12 @@ watch(() => props.report, (r) => {
 }
 .dark .focus-strong .focus-pct {
   color: #c7d2fe;
+}
+.focus-missed {
+  width: auto;
+  min-width: 38px;
+  font-size: 10px;
+  text-transform: uppercase;
 }
 .focus-kind {
   color: #6b7280;

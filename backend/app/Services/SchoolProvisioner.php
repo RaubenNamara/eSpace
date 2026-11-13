@@ -88,7 +88,9 @@ final class SchoolProvisioner
             }
         }
         if ((int) $target->query('SELECT COUNT(*) FROM school_settings')->fetchColumn() === 0) {
-            $target->prepare('INSERT INTO school_settings (school_name) VALUES (?)')->execute([$schoolName]);
+            // id 1: the one row every page reads (school_settings.id has no AUTO_INCREMENT, so an
+            // insert without it would store 0 and the school's name and badge would never show)
+            $target->prepare('INSERT INTO school_settings (id, school_name) VALUES (1, ?)')->execute([$schoolName]);
         }
     }
 

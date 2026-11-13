@@ -1,0 +1,1 @@
+import{a as i,r as o}from"./index-CxVbHxCB.js";const t=o(!1);let s="";function f(){return{allowed:t,check:e=>{const a=e==="student"||e==="teacher"?e:"";a!==s&&(s=a,t.value=!1,a&&i.get(`/api/${a}/publications/access`).then(r=>{var c,n;s===a&&(t.value=!!((n=(c=r.data)==null?void 0:c.data)!=null&&n.allowed))}).catch(()=>{}))}}}export{f as u};

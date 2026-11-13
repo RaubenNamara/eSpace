@@ -31,6 +31,10 @@ export interface ReportCardSubject {
   /** false: the learner takes the subject but has no mark yet this term (ReportCardView) */
   assessed?: boolean
   teacher_name?: string | null
+  /** false when an assessment due in the subject was missed: then it isn't graded */
+  graded?: boolean
+  /** the assessments missed (titles) */
+  missed?: string[]
 }
 
 /** One subject's term on Tusome (ReportCardView::activity) */
@@ -62,7 +66,8 @@ export interface ReportCardActivity {
   outcomes: { subject_id: number; outcome: string; percentage: number; tasks: number; achieved: boolean }[]
   aoi_tasks: { subject_id: number; title: string; percentage: number }[]
   /** every marked assessment of the term, online and paper, by date */
-  record: { subject_id: number; title: string; kind: string; date: string; score: number | null; out_of: number | null; percentage: number }[]
+  record: { subject_id: number; title: string; kind: string; date: string; score: number | null; out_of: number | null; percentage: number | null; missed?: boolean }[]
+  missed_count?: number
   days_active: number
   revision_days: number
   attendance: { present: number; absent: number } | null
@@ -111,6 +116,8 @@ export interface ReportCard {
     last_name: string
     admission_number: string
     profile_photo: string | null
+    gender?: string | null
+    lin?: string | null
   }
   term: {
     id: number
@@ -135,6 +142,8 @@ export interface ReportCard {
   status?: 'final' | 'provisional'
   activity?: ReportCardActivity
   platform?: { name: string; tagline: string }
+  /** how many subjects the overall result counts (the rest were not graded: missed work) */
+  graded_subjects?: number
   /** teacher view: the class teacher may write their comment */
   can_comment?: boolean
   school: SchoolSettings | null

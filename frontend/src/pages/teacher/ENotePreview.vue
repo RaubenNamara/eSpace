@@ -362,7 +362,7 @@
     <!-- A learner's progress through this topic, always in view while reading (Read Mode too: the reader opens in it) -->
     <div v-if="isStudentMode && pages.length" class="flex-shrink-0 flex items-center gap-2.5 sm:gap-3 pl-3 sm:pl-6 py-1.5 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800" :class="readMode ? 'pr-[3.75rem] sm:pr-24' : 'pr-3 sm:pr-6'" role="progressbar" :aria-valuenow="progressPercentage" aria-valuemin="0" aria-valuemax="100" aria-label="Your progress through this topic">
       <span class="flex-shrink-0 text-xs font-medium text-gray-600 dark:text-gray-300">Page {{ currentPageNumber }} of {{ pages.length }}</span>
-      <span class="flex-1 h-2 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden"><span class="block h-full rounded-full bg-emerald-500 transition-all duration-300" :style="{ width: `${progressPercentage}%` }"></span></span>
+      <span class="flex-1 h-2 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden"><span class="block h-full rounded-full transition-all duration-300" :class="progressPercentage >= 100 ? 'bg-emerald-500' : 'bg-indigo-600'" :style="{ width: `${progressPercentage}%` }"></span></span>
       <span class="flex-shrink-0 text-xs font-bold text-gray-900 dark:text-white tabular-nums">{{ progressPercentage }}%</span>
     </div>
 

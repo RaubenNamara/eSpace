@@ -79,7 +79,12 @@ class ImpactReportController extends Controller
                 'active_teachers' => (int) $one("SELECT COUNT(DISTINCT user_id) FROM login_logs WHERE role IN ('teacher', 'hod') AND logged_in_at BETWEEN ? AND ?", $w),
                 'topics_published' => (int) $one("SELECT COUNT(*) FROM enote_topics WHERE deleted_at IS NULL AND status = 'published' AND published_at BETWEEN ? AND ?", $w),
                 'topics_read' => (int) $one('SELECT COUNT(*) FROM enote_progress WHERE last_read_at BETWEEN ? AND ?', $w),
-                'topics_finished' => (int) $one('SELECT COUNT(*) FROM enote_progress WHERE completed_at BETWEEN ? AND ?', $w),
+                // finished = read to the last page (the farthest page reached, as eNotes count it)
+                'topics_finished' => (int) $one(
+                    'SELECT COUNT(*) FROM enote_progress ep WHERE ep.last_read_at BETWEEN ? AND ?
+                       AND ep.pages_completed >= GREATEST(1, (SELECT COUNT(*) FROM enote_pages pg WHERE pg.topic_id = ep.topic_id AND pg.is_active = 1 AND pg.deleted_at IS NULL))',
+                    $w
+                ),
                 'readers' => (int) $one('SELECT COUNT(DISTINCT student_id) FROM enote_progress WHERE last_read_at BETWEEN ? AND ?', $w),
                 'assessments_set' => (int) $one("SELECT COUNT(*) FROM assignments WHERE deleted_at IS NULL AND status = 'published' AND COALESCE(published_at, created_at) BETWEEN ? AND ?", $w),
                 'handed_in' => (int) $one("SELECT COUNT(*) FROM assignment_submissions WHERE deleted_at IS NULL AND status <> 'in_progress' AND submitted_at BETWEEN ? AND ?", $w),

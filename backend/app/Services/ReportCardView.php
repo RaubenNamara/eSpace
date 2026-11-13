@@ -152,7 +152,95 @@ final class ReportCardView
         $card['activity'] = self::activity($studentId, $termId, $from, $to);
         $card['platform'] = ['name' => 'Tusome', 'tagline' => 'Online learning platform'];
 
+        // A subject is graded only when every assessment already due in it was done. One missed
+        // (an online assessment past its deadline and never handed in, or a paper exam the class
+        // was marked on but this learner has no mark for) and the subject is not graded: the card
+        // names what was missed, and the overall result counts only the subjects that are graded.
+        $missed = self::missedBySubject($studentId, $termId, $from, $to);
+        foreach ($card['subjects'] as &$s) {
+            $list = $missed[(int) $s['subject_id']] ?? [];
+            $s['missed'] = array_column($list, 'title');
+            $s['graded'] = ($s['assessed'] ?? false) && !$list;
+        }
+        unset($s);
+        foreach ($missed as $subjectId => $list) {
+            foreach ($list as $m) {
+                $card['activity']['record'][] = ['subject_id' => $subjectId, 'title' => $m['title'], 'kind' => $m['kind'], 'date' => $m['date'], 'score' => null, 'out_of' => null, 'percentage' => null, 'missed' => true];
+            }
+        }
+        usort($card['activity']['record'], fn($x, $y) => strcmp((string) $x['date'], (string) $y['date']));
+        $card['activity']['missed_count'] = array_sum(array_map('count', $missed));
+        self::overall($card);
+
         return $card;
+    }
+
+    /**
+     * Assessments the learner should have done by now and didn't, by subject: online work in the
+     * term whose deadline has passed with nothing handed in (the same learners as the Assessments
+     * page), and paper exams set to count where the class has marks but this learner has none.
+     *
+     * @return array<int, array<int, array{title: string, kind: string, date: string}>>
+     */
+    private static function missedBySubject(int $studentId, int $termId, string $from, string $to): array
+    {
+        $db = self::db();
+        $out = [];
+        $deadline = "COALESCE(a.deadline_at, IF(TIME(a.due_date) = '00:00:00', a.due_date + INTERVAL 1 DAY, a.due_date))";
+        $stmt = $db->prepare(
+            "SELECT a.subject_id, a.title, a.assessment_category, DATE(COALESCE(a.deadline_at, a.due_date)) AS day
+             FROM assignments a INNER JOIN subjects s ON s.id = a.subject_id
+             WHERE a.deleted_at IS NULL AND a.status = 'published'
+               AND COALESCE(a.due_date, a.published_at, a.created_at) BETWEEN ? AND ?
+               AND {$deadline} IS NOT NULL AND {$deadline} <= NOW()
+               AND NOT EXISTS (SELECT 1 FROM assignment_submissions sb WHERE sb.assignment_id = a.id AND sb.student_id = ?
+                               AND sb.deleted_at IS NULL AND sb.status <> 'in_progress')
+               AND " . AssignmentAccess::clause() . "
+             ORDER BY day"
+        );
+        $stmt->execute([$from, $to, $studentId, $studentId, $studentId]);
+        foreach ($stmt->fetchAll() as $r) {
+            $out[(int) $r['subject_id']][] = ['title' => $r['title'], 'kind' => $r['assessment_category'] ?: 'Online', 'date' => (string) $r['day']];
+        }
+
+        $stmt = $db->prepare(
+            "SELECT pa.subject_id, pa.title, pa.exam_date
+             FROM physical_assessments pa
+             INNER JOIN students st ON st.id = ? AND st.class_id = pa.class_id
+             WHERE pa.term_id = ? AND pa.include_on_report = 1 AND pa.deleted_at IS NULL AND pa.exam_date <= CURDATE()
+               AND EXISTS (SELECT 1 FROM physical_assessment_scores x WHERE x.physical_assessment_id = pa.id AND x.score IS NOT NULL)
+               AND NOT EXISTS (SELECT 1 FROM physical_assessment_scores y WHERE y.physical_assessment_id = pa.id AND y.student_id = st.id AND y.score IS NOT NULL)"
+        );
+        try {
+            $stmt->execute([$studentId, $termId]);
+            foreach ($stmt->fetchAll() as $r) {
+                $out[(int) $r['subject_id']][] = ['title' => $r['title'], 'kind' => 'Paper exam', 'date' => (string) $r['exam_date']];
+            }
+        } catch (\PDOException $e) {
+            // no paper exams table here
+        }
+        return $out;
+    }
+
+    /** The overall result from the graded subjects only (a subject with missed work doesn't count) */
+    private static function overall(array &$card): void
+    {
+        $maxWeight = (int) $card['max_weight'];
+        $graded = array_values(array_filter($card['subjects'], fn($s) => !empty($s['graded']) && $s['grade'] !== null));
+        if (!$graded) {
+            $card['overall_avg_weight'] = 0.0;
+            $card['performance_level'] = null;
+            $card['total_points'] = 0;
+            $card['result_category'] = null;
+            $card['graded_subjects'] = 0;
+            return;
+        }
+        $overall = round(array_sum(array_map(fn($s) => (float) $s['avg_weight'], $graded)) / count($graded), 1);
+        $card['overall_avg_weight'] = $overall;
+        $card['performance_level'] = ReportCardGradingService::weightToPerformanceLevel($overall, $maxWeight);
+        $card['total_points'] = array_sum(array_map(fn($s) => ReportCardGradingService::gradeToPrinciplePoints((string) $s['grade'], $maxWeight), $graded));
+        $card['result_category'] = ReportCardGradingService::resultCategory($overall, $maxWeight);
+        $card['graded_subjects'] = count($graded);
     }
 
     /** The parts of a card that don't depend on marks - for a learner the school hasn't made one for */
@@ -160,7 +248,7 @@ final class ReportCardView
     {
         $db = self::db();
         $stmt = $db->prepare(
-            "SELECT s.id, s.first_name, s.last_name, s.admission_number, s.profile_photo,
+            "SELECT s.id, s.first_name, s.last_name, s.admission_number, s.profile_photo, s.gender, s.lin,
                     c.name AS class_name, c.stream_name, c.level AS class_level
              FROM students s LEFT JOIN classes c ON c.id = s.class_id
              WHERE s.id = ? AND s.deleted_at IS NULL"
@@ -197,6 +285,8 @@ final class ReportCardView
                 'last_name' => $st['last_name'],
                 'admission_number' => $st['admission_number'],
                 'profile_photo' => $st['profile_photo'],
+                'gender' => $st['gender'],
+                'lin' => $st['lin'],
             ],
             'term' => ['id' => (int) $term['id'], 'name' => $term['name'], 'academic_year' => $term['academic_year']],
             'class_name' => $st['class_name'],
@@ -404,9 +494,11 @@ final class ReportCardView
             $bySubject[$id]['average'] = $r['average'] !== null ? (int) round((float) $r['average']) : null;
         }
 
-        // eNote topics opened in the term
+        // eNote topics opened in the term; finished = reached the last page (eNotes measure reading
+        // by the farthest page reached - enote_progress.pages_completed - not by being opened)
         $stmt = $db->prepare(
-            "SELECT t.subject_id, COUNT(*) AS topics, SUM(ep.completed_at IS NOT NULL) AS finished, COALESCE(SUM(ep.time_spent_minutes), 0) AS minutes
+            "SELECT t.subject_id, COUNT(*) AS topics, SUM(ep.pages_completed >= GREATEST(1, (SELECT COUNT(*) FROM enote_pages pg WHERE pg.topic_id = t.id AND pg.is_active = 1 AND pg.deleted_at IS NULL))) AS finished,
+                    COALESCE(SUM(ep.time_spent_minutes), 0) AS minutes
              FROM enote_progress ep INNER JOIN enote_topics t ON t.id = ep.topic_id
              WHERE ep.student_id = ? AND ep.last_read_at BETWEEN ? AND ? AND t.subject_id IS NOT NULL
              GROUP BY t.subject_id"
@@ -519,10 +611,11 @@ final class ReportCardView
         ], $stmt->fetchAll());
 
         // How far through the notes: every eNote topic open to the learner by the end of the term,
-        // and how much of each they have read (an unopened topic counts as 0%)
+        // and how much of each they have read - the farthest page reached out of its pages, as the
+        // learner's own eNotes page shows it (an unopened topic counts as 0%)
         $stmt = $db->prepare(
-            "SELECT et.subject_id, COUNT(*) AS topics, COALESCE(SUM(ep.percentage_completed), 0) AS pct_sum,
-                    SUM(ep.completed_at IS NOT NULL) AS finished
+            "SELECT et.subject_id, COUNT(*) AS topics,
+                    COALESCE(SUM(LEAST(100, 100 * COALESCE(ep.pages_completed, 0) / GREATEST(1, (SELECT COUNT(*) FROM enote_pages pg WHERE pg.topic_id = et.id AND pg.is_active = 1 AND pg.deleted_at IS NULL)))), 0) AS pct_sum
              FROM enote_topics et
              LEFT JOIN enote_progress ep ON ep.topic_id = et.id AND ep.student_id = :student_id_p
              WHERE et.subject_id IS NOT NULL AND et.published_at <= :term_end AND " . \eSpace\App\Controllers\Student\ENoteController::visibilityClause() . "

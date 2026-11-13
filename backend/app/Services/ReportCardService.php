@@ -686,7 +686,7 @@ class ReportCardService
         $db = $this->getDb();
 
         $stmt = $db->prepare(
-            "SELECT rc.*, s.first_name, s.last_name, s.admission_number, s.profile_photo, c.name AS class_name, c.stream_name, c.level AS class_level,
+            "SELECT rc.*, s.first_name, s.last_name, s.admission_number, s.profile_photo, s.gender, s.lin, c.name AS class_name, c.stream_name, c.level AS class_level,
                     t.name AS term_name, t.start_date AS term_start_date, t.end_date AS term_end_date, ay.name AS academic_year_name
              FROM report_cards rc
              INNER JOIN students s ON rc.student_id = s.id
@@ -782,6 +782,8 @@ class ReportCardService
                 'last_name' => $report['last_name'],
                 'admission_number' => $report['admission_number'],
                 'profile_photo' => $report['profile_photo'],
+                'gender' => $report['gender'] ?? null,
+                'lin' => $report['lin'] ?? null,
             ],
             'term' => [
                 'id' => (int) $report['term_id'],
