@@ -101,7 +101,7 @@ class AuthService extends Service
      * demo school (DemoController enters it first); marks the session as a demo visit, which
      * DemoGuard uses to keep visitors from changing what the next one would see.
      */
-    public function startDemoSession(string $username): ?array
+    public function startDemoSession(string $username, ?string $until = null): ?array
     {
         $school = DemoSchool::school();
         if (!$school || \eSpace\App\Support\Tenant::sessionCode() !== $school['code']) {
@@ -113,6 +113,8 @@ class AuthService extends Service
         }
         $this->createSession($user);
         $_SESSION['demo'] = true;
+        // the visit ends with the demo link (DemoGuard signs it out after this)
+        $_SESSION['demo_until'] = $until ? strtotime($until) : null;
         TermService::syncCurrent();
         return $this->getUserData($user);
     }

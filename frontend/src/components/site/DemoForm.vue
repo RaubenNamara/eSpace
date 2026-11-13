@@ -5,7 +5,7 @@
     <div class="grid lg:grid-cols-2 gap-0 overflow-hidden">
       <div class="p-8 sm:p-12 bg-indigo-950 text-white">
         <h2 class="font-heading text-3xl sm:text-4xl font-extrabold tracking-tight">{{ title }}</h2>
-        <p class="mt-4 text-slate-300 leading-relaxed">Tell us a little about your school and we'll walk you through Tusome with your own classes and subjects - no obligation.</p>
+        <p class="mt-4 text-slate-300 leading-relaxed">Leave your email and we'll send you a private link to our demo school. Open it as a learner, a teacher, the head teacher or a parent - for 7 days, no obligation.</p>
         <ul class="mt-8 space-y-3">
           <li v-for="b in POINTS" :key="b" class="flex items-start gap-3 text-sm"><AppIcon name="check-circle" class="w-5 h-5 flex-shrink-0 text-indigo-300" />{{ b }}</li>
         </ul>
@@ -14,7 +14,7 @@
         <div v-if="sent" class="h-full flex flex-col items-center justify-center text-center py-10">
           <span class="w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300 flex items-center justify-center"><AppIcon name="check-circle" class="w-8 h-8" /></span>
           <h3 class="mt-5 font-jakarta text-2xl font-bold">Thank you!</h3>
-          <p class="mt-2 text-slate-600 dark:text-slate-400">We've got your request and will be in touch with {{ form.school_name || 'your school' }} shortly.</p>
+          <p class="mt-2 text-slate-600 dark:text-slate-400">We've got your request. Your private demo link will come to <b>{{ form.email }}</b> shortly - it works for 7 days.</p>
         </div>
         <form v-else class="grid sm:grid-cols-2 gap-4" novalidate @submit.prevent="send">
           <label class="sm:col-span-2 block">
@@ -32,7 +32,7 @@
             <input v-model="form.role" type="text" maxlength="80" placeholder="e.g. Head teacher, DOS" :class="[INPUT, 'border-slate-300 dark:border-white/15']">
           </label>
           <label class="block">
-            <span class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Email</span>
+            <span class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Email * <span class="font-normal text-slate-400">(the demo link comes here)</span></span>
             <input v-model="form.email" type="email" maxlength="150" autocomplete="email" :class="[INPUT, errors.email ? 'border-rose-400' : 'border-slate-300 dark:border-white/15']">
             <span v-if="errors.email" class="mt-1 block text-xs text-rose-600">{{ errors.email }}</span>
           </label>
@@ -54,9 +54,9 @@
           <input v-model="form.website" type="text" name="website" tabindex="-1" autocomplete="off" class="hidden" aria-hidden="true">
           <p v-if="error" class="sm:col-span-2 text-sm text-rose-600">{{ error }}</p>
           <button type="submit" :disabled="sending" class="sm:col-span-2 py-3 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 transition">
-            {{ sending ? 'Sending…' : 'Request a demo' }}
+            {{ sending ? 'Sending…' : 'Send me a demo link' }}
           </button>
-          <p class="sm:col-span-2 text-[11px] text-slate-400 text-center">We only use these details to arrange your demo.</p>
+          <p class="sm:col-span-2 text-[11px] text-slate-400 text-center">We only use these details to send and follow up your demo.</p>
         </form>
       </div>
     </div>
@@ -71,7 +71,7 @@ import AppIcon from '@/components/common/AppIcon.vue'
 withDefaults(defineProps<{ title?: string }>(), { title: 'See Tusome in your school.' })
 
 const INPUT = 'w-full px-3.5 py-2.5 rounded-xl border bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500'
-const POINTS = ['A walk-through with your own classes and subjects', 'Answers to your questions from the people who build Tusome', 'A clear plan for your first term']
+const POINTS = ['A private link to the demo school, in your inbox', 'Try everything for 7 days: notes, assessments, marking, report cards', 'What you change is wiped after the week - nothing to tidy up', 'Then a walk-through with your own classes, if you like']
 const SIZES = ['Under 300', '300-600', '600-1,000', 'Over 1,000']
 
 const form = ref({ school_name: '', contact_name: '', role: '', email: '', phone: '', students: '', message: '', website: '' })
@@ -86,7 +86,7 @@ const send = async () => {
   const d = form.value
   if (!d.school_name.trim()) errors.value.school_name = 'Please give the school\'s name'
   if (!d.contact_name.trim()) errors.value.contact_name = 'Please give your name'
-  if (!d.email.trim() && !d.phone.trim()) errors.value.email = 'Please give an email address or a phone number'
+  if (!d.email.trim()) errors.value.email = 'Please give an email address - the demo link is sent there'
   if (Object.keys(errors.value).length) return
   sending.value = true
   try {

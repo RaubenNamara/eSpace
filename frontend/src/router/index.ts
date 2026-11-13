@@ -191,6 +191,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../pages/ForAudience.vue')
   },
   {
+    // A school's private demo link (sent from Admin > Demo requests) - the doors into the demo school
+    path: '/demo/:token',
+    name: 'DemoAccess',
+    component: () => import('../pages/DemoAccess.vue')
+  },
+  {
     // A parent's private weekly update on their child - opened from the school's link, no login
     path: '/parent/:token',
     name: 'ParentView',
@@ -352,6 +358,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'live-quiz/:id', name: 'TeacherLiveQuizHost', component: () => import('../pages/teacher/LiveQuizHost.vue') },
       { path: 'early-warning', name: 'TeacherEarlyWarning', component: () => import('../pages/teacher/EarlyWarning.vue') },
       { path: 'report-cards', name: 'TeacherReportCards', component: () => import('../pages/teacher/ReportCards.vue') },
+      { path: 'cases', name: 'TeacherCases', component: () => import('../pages/teacher/Cases.vue') },
       { path: 'notices', name: 'TeacherNotices', component: () => import('../pages/common/Noticeboard.vue') },
       { path: 'scheme', name: 'TeacherScheme', component: () => import('../pages/teacher/Scheme.vue') },
       { path: 'enote-questions', name: 'TeacherENoteQuestions', component: () => import('../pages/teacher/ENoteQuestions.vue') },
@@ -430,6 +437,8 @@ const routes: RouteRecordRaw[] = [
       { path: 'live-classes', name: 'HODLiveClasses', component: HODLiveClasses },
       { path: 'chat', name: 'HODChat', component: TeacherChat, meta: { fullScreenChat: true } },
       { path: 'early-warning', name: 'HODEarlyWarning', component: () => import('../pages/teacher/EarlyWarning.vue') },
+      { path: 'cases', name: 'HODCases', component: () => import('../pages/teacher/Cases.vue') },
+      { path: 'case-records', name: 'HODCaseRecords', component: () => import('../pages/common/CaseRecords.vue') },
       { path: 'notices', name: 'HODNotices', component: () => import('../pages/common/Noticeboard.vue') },
       { path: 'marksheet', name: 'HODMarksheet', component: HODMarksheet },
       { path: 'physical-exams', name: 'HODPhysicalExams', component: HODPhysicalExams },
@@ -464,6 +473,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'privacy-reports', name: 'AdminPrivacyReports', component: AdminPrivacyReports },
       { path: 'feedback', name: 'AdminFeedback', component: AdminFeedback },
       { path: 'parent-links', name: 'AdminParentLinks', component: () => import('../pages/admin/ParentLinks.vue') },
+      { path: 'cases', name: 'AdminCases', component: () => import('../pages/common/CaseRecords.vue') },
       { path: 'notices', name: 'AdminNotices', component: () => import('../pages/common/Noticeboard.vue') },
       { path: 'exam-dates', name: 'AdminExamDates', component: () => import('../pages/admin/ExamDates.vue') },
       { path: 'permissions', redirect: '/admin/dashboard' },

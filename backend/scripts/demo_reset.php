@@ -3,9 +3,10 @@
 declare(strict_types=1);
 
 /**
- * Rebuild the live demo school (DemoSchool) - run every night by a cPanel cron job, e.g. at 02:30:
+ * Rebuild the demo school (DemoSchool), wiping whatever visitors changed - run every week by a
+ * cPanel cron job, e.g. Sundays at 02:30:
  *
- *   30 2 * * *  php /home/smacon/public_html/eSpace/backend/scripts/demo_reset.php
+ *   30 2 * * 0  php /home/smacon/public_html/eSpace/backend/scripts/demo_reset.php
  *
  * Needs a school in the developer portal with the code in DEMO_SCHOOL_CODE (default "demo") and
  * its own database. Everything in that database is thrown away and built again; nothing else is

@@ -24,7 +24,7 @@ Router::post('/api/auth/login', 'eSpace\App\Controllers\AuthController@login');
 // A school asking for a demo, from the public landing page
 Router::post('/api/demo-requests', 'eSpace\App\Controllers\DemoRequestController@store');
 // The live demo school: one tap in as a learner, teacher, head teacher or parent (DemoController)
-Router::get('/api/demo', 'eSpace\App\Controllers\DemoController@status');
+Router::get('/api/demo/link/{token}', 'eSpace\App\Controllers\DemoController@link');
 Router::post('/api/demo/enter', 'eSpace\App\Controllers\DemoController@enter');
 // A privacy or safety concern, from the public Privacy page (signed in or not)
 Router::post('/api/privacy-reports', 'eSpace\App\Controllers\PrivacyReportController@store');
@@ -62,6 +62,16 @@ Router::get('/live-class/return', 'eSpace\App\Controllers\LiveClassReturnControl
 
 // Protected routes (authentication required)
 Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
+    // Evidence attached to a case: its reporter, HODs and admins (CaseController::file)
+    Router::get('/cases/files/{id}', 'eSpace\App\Controllers\CaseController@file');
+    // Every case, for HODs and admins: by learner, the disciplinary report; admins resolve, the super admin deletes
+    Router::get('/case-records', 'eSpace\App\Controllers\CaseController@learners');
+    Router::get('/case-records/scopes', 'eSpace\App\Controllers\CaseController@scopes');
+    Router::get('/case-records/report', 'eSpace\App\Controllers\CaseController@report');
+    Router::get('/case-records/students/{id}', 'eSpace\App\Controllers\CaseController@learnerCases');
+    Router::put('/case-records/{id}', 'eSpace\App\Controllers\CaseController@update');
+    Router::delete('/case-records/{id}', 'eSpace\App\Controllers\CaseController@destroy');
+
     
     // Auth routes
     Router::post('/auth/logout', 'eSpace\App\Controllers\AuthController@logout');
@@ -276,6 +286,11 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
 
     // Teacher routes
     Router::group(['prefix' => '/teacher', 'middleware' => ['role:teacher', 'must_change_password']], function () {
+        // Cases: a learner's discipline record - report one, see your own (CaseController)
+        Router::get('/cases/students', 'eSpace\App\Controllers\CaseController@students');
+        Router::get('/cases', 'eSpace\App\Controllers\CaseController@mine');
+        Router::post('/cases', 'eSpace\App\Controllers\CaseController@store');
+
         // Scheme of work
         Router::get('/term-copy', 'eSpace\App\Controllers\Teacher\TermCopyController@preview');
         Router::post('/term-copy', 'eSpace\App\Controllers\Teacher\TermCopyController@copy');
@@ -633,6 +648,11 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
 
     // HOD routes
     Router::group(['prefix' => '/hod', 'middleware' => ['role:hod']], function () {
+        // Cases: a learner's discipline record - report one, see your own (CaseController)
+        Router::get('/cases/students', 'eSpace\App\Controllers\CaseController@students');
+        Router::get('/cases', 'eSpace\App\Controllers\CaseController@mine');
+        Router::post('/cases', 'eSpace\App\Controllers\CaseController@store');
+
         // Noticeboard (same for every role - see NoticeController)
         Router::get('/notices', 'eSpace\App\Controllers\NoticeController@index');
         Router::get('/notices/options', 'eSpace\App\Controllers\NoticeController@options');
@@ -812,6 +832,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
 
     // Admin routes
     Router::group(['prefix' => '/admin', 'middleware' => ['role:admin,super_admin']], function () {
+
         // Exam dates (student countdown and revision plan)
         Router::get('/exam-dates', 'eSpace\App\Controllers\Admin\ExamDateController@index');
         Router::post('/exam-dates', 'eSpace\App\Controllers\Admin\ExamDateController@store');
@@ -826,6 +847,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         // Demo requests from the landing page
         Router::get('/demo-requests', 'eSpace\App\Controllers\DemoRequestController@index');
         Router::put('/demo-requests/{id}', 'eSpace\App\Controllers\DemoRequestController@update');
+        Router::post('/demo-requests/{id}/demo-link', 'eSpace\App\Controllers\DemoRequestController@sendLink');
         // Privacy reports from the Privacy page (super admins only)
         Router::get('/privacy-reports', 'eSpace\App\Controllers\PrivacyReportController@index');
         Router::put('/privacy-reports/{id}', 'eSpace\App\Controllers\PrivacyReportController@update');

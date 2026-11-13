@@ -27,7 +27,9 @@
         </template>
         <template v-else>
           <router-link to="/login" class="hdr-text hidden sm:inline-flex whitespace-nowrap px-4 py-2 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10">Login</router-link>
-          <router-link :to="{ path: '/', query: route.query, hash: '#demo' }" class="inline-flex whitespace-nowrap px-3.5 sm:px-4 py-2 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition"><span class="min-[400px]:hidden">Demo</span><span class="hidden min-[400px]:inline">Request a demo</span></router-link>
+          <router-link :to="{ path: '/', query: route.query, hash: '#demo' }" class="inline-flex items-center gap-1.5 whitespace-nowrap px-3.5 sm:px-4 py-2 rounded-xl text-sm font-semibold text-indigo-950 bg-gold-400 hover:bg-gold-300 shadow-sm transition">
+            <span class="min-[420px]:hidden">Demo</span><span class="hidden min-[420px]:inline">Request a demo</span>
+          </router-link>
         </template>
         <button type="button" class="hdr-text xl:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10" aria-label="Menu" :aria-expanded="menuOpen" @click="menuOpen = !menuOpen">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="menuOpen ? 'M6 18L18 6M6 6l12 12' : 'M4 6h16M4 12h16M4 18h16'"></path></svg>
@@ -40,6 +42,7 @@
       <AudienceSwitch class="lg:hidden mb-3" label />
       <router-link v-for="l in nav" :key="l.to" :to="l.to" class="block px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10" @click="menuOpen = false">{{ l.label }}</router-link>
       <div class="mt-2 pt-2 border-t border-slate-200 dark:border-white/10">
+        <router-link :to="{ path: '/', query: route.query, hash: '#demo' }" class="block px-3 py-2 rounded-lg text-sm font-semibold text-indigo-950 bg-gold-400 mb-1" @click="menuOpen = false">Request a demo</router-link>
         <router-link to="/login" class="block px-3 py-2 rounded-lg text-sm font-semibold text-indigo-700 dark:text-indigo-300">Login</router-link>
         <InstallAppButton variant="menu" />
       </div>

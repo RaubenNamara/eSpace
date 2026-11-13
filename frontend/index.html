@@ -90,7 +90,7 @@
         (function () {
           // The website itself opens straight away
           var path = location.pathname
-          if (path === '/' || /^\/(guide|for\/|privacy|join|feedback|slips|parent\/)/.test(path)) {
+          if (path === '/' || /^\/(guide|for\/|privacy|join|feedback|slips|parent\/|demo\/)/.test(path)) {
             var s = document.getElementById('splash'); s && s.parentNode.removeChild(s); return
           }
           var lines = ['Opening your books…', 'Sharpening the pencils…', 'Finding your class…', 'Almost there…']

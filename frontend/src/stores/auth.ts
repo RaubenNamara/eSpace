@@ -156,11 +156,11 @@ export const useAuthStore = defineStore('auth', () => {
    * with no password (DemoController). Signed in exactly as by login(), and remembered as a demo
    * visit so the app shows the demo banner.
    */
-  async function enterDemo(as: 'learner' | 'teacher' | 'head') {
+  async function enterDemo(as: 'learner' | 'teacher' | 'head', token: string) {
     isLoading.value = true
     error.value = null
     try {
-      const res = await axios.post('/api/demo/enter', { as })
+      const res = await axios.post('/api/demo/enter', { as, token })
       const p = res.data.data
       const plainUser: any = {
         id: p.user.id, username: p.user.username, email: p.user.email, role: p.user.role,

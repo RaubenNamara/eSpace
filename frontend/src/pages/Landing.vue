@@ -39,7 +39,13 @@
             </h1>
             <p class="mt-5 max-w-xl text-base sm:text-lg text-white/80 leading-relaxed">{{ hero.text }}</p>
             <div class="mt-8 flex flex-wrap gap-3">
+              <!-- schools and teachers: ask for a demo first (a private link to the demo school follows) -->
+              <a v-if="audience !== 'student'" href="#demo" class="group inline-flex items-center gap-2.5 px-6 py-3 rounded-2xl text-sm font-semibold text-indigo-950 bg-gold-400 hover:bg-gold-300 shadow-lg shadow-black/25 ring-4 ring-gold-400/25 transition">
+                Request a demo
+                <svg class="w-4 h-4 group-hover:translate-x-0.5 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+              </a>
               <component
+                v-if="hero.primary.to !== '#demo'"
                 :is="hero.primary.to.startsWith('#') ? 'a' : 'router-link'"
                 v-bind="hero.primary.to.startsWith('#') ? { href: hero.primary.to } : { to: hero.primary.to }"
                 class="group inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold text-indigo-900 bg-white hover:bg-indigo-50 shadow-lg shadow-black/20 transition"
@@ -53,10 +59,6 @@
                 Watch the 30-second tour
               </button>
             </div>
-            <a href="#try-demo" class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-gold-300 hover:text-gold-200">
-              Or walk into our demo school now - no sign-up
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
-            </a>
             </div>
             </Transition>
             <!-- Many schools, one platform -->
@@ -124,12 +126,6 @@
       </section>
 
       <!-- ===== Why, as a bento - and how a school gets going ===== -->
-      <!-- ===== Try it now: the live demo school ===== -->
-      <section id="try-demo" class="pt-12 sm:pt-16 scroll-mt-20">
-        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <TryDemo class="reveal" />
-        </div>
-      </section>
 
       <section id="features" class="py-20 sm:py-28 scroll-mt-20">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -516,7 +512,6 @@ import ModuleSheet from '@/components/site/ModuleSheet.vue'
 import ENoteSample from '@/components/site/ENoteSample.vue'
 import LearningMapDemo from '@/components/site/LearningMapDemo.vue'
 import DemoForm from '@/components/site/DemoForm.vue'
-import TryDemo from '@/components/site/TryDemo.vue'
 import ModuleExplorer from '@/components/site/ModuleExplorer.vue'
 import DayStory from '@/components/site/DayStory.vue'
 import BeforeAfter from '@/components/site/BeforeAfter.vue'

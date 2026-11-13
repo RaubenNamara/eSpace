@@ -489,7 +489,7 @@
       <main class="flex-1 print:!p-0" :class="[shouldHideAppChrome || isFullScreenChat ? 'p-0' : (isImmersiveReader ? 'p-0 lg:p-6' : 'p-4 sm:p-6'), showStudentTabs ? 'pb-24 lg:pb-6' : '']">
         <!-- A visitor in the demo school (the website's "Try Tusome") -->
         <div v-if="inDemo" class="print:hidden mb-4 rounded-2xl border border-gold-300 bg-gold-50 dark:bg-gold-400/10 dark:border-gold-400/30 px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-800 dark:text-gray-100">
-          <span class="flex-1 min-w-[14rem]"><b>You're in the Tusome demo school.</b> The learners and teachers are made up, and anything you change is put back tonight.</span>
+          <span class="flex-1 min-w-[14rem]"><b>You're in the Tusome demo school.</b> The learners and teachers are made up, and anything you change is wiped at the end of the week.</span>
           <a href="/#demo" class="font-semibold text-indigo-800 dark:text-indigo-200 hover:underline">Get Tusome for your school</a>
           <button type="button" class="px-3 py-1.5 rounded-lg bg-indigo-900 text-white text-xs font-semibold hover:bg-indigo-800" @click="leaveDemo">Leave the demo</button>
         </div>
@@ -915,11 +915,13 @@ const openProfileSection = (section: 'photo' | 'password') => {
   showProfileDropdown.value = false
 }
 
-// A demo visit (TryDemo on the website): the banner above every page, and the way out
+// A demo visit (a school's private demo link, pages/DemoAccess.vue): the banner above every page, and the way back to the link
 const inDemo = computed(() => !!authStore.user && (() => { try { return localStorage.getItem('tusome_demo') === '1' } catch { return false } })())
 const leaveDemo = async () => {
   await authStore.logout()
-  window.location.href = '/#try-demo'
+  let back = '/'
+  try { const t = localStorage.getItem('tusome_demo_link'); if (t) back = `/demo/${t}` } catch { /* private window */ }
+  window.location.href = back
 }
 
 // The sidebar and the tabs at the top of each page come from data/navHubs.ts
@@ -1131,6 +1133,8 @@ const TableCellsIcon = icon(['M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5M8.25 
 
 const MegaphoneIcon = icon(['M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z'])
 
+const ShieldIcon = icon(['M12 3l7 3v5c0 4.418-2.985 8.268-7 9.5C7.985 19.268 5 15.418 5 11V6l7-3z', 'M12 8v4m0 3h.01'])
+
 const TargetIcon = icon(['M12 21a9 9 0 100-18 9 9 0 000 18z', 'M12 17a5 5 0 100-10 5 5 0 000 10z', 'M12 13a1 1 0 100-2 1 1 0 000 2z'])
 
 const ClipboardListIcon = icon(['M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01'])
@@ -1147,7 +1151,7 @@ const NewspaperIcon = icon(['M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v
 
 const MapIcon = icon(['M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7'])
 
-export { NewspaperIcon, MegaphoneIcon, TargetIcon, ClipboardListIcon, ChatQuestionIcon, BoltIcon, BulbIcon, BellAlertIcon, MapIcon, DashboardIcon, BookOpenIcon, DocumentTextIcon, LibraryIcon, NoteIcon, QuestionMarkCircleIcon, ChatIcon, ChartBarIcon, CogIcon, UsersIcon, VideoCameraIcon, ChartIcon, AcademicCapIcon, BookIcon, CheckCircleIcon, BriefcaseIcon, UserGroupIcon, BuildingOfficeIcon, BuildingLibraryIcon, CalendarIcon, CalendarDaysIcon, KeyIcon, CloudArrowUpIcon, CloudArrowDownIcon, DocumentIcon, TrophyIcon, FlaskIcon, ComputerIcon, TableCellsIcon }
+export { ShieldIcon, NewspaperIcon, MegaphoneIcon, TargetIcon, ClipboardListIcon, ChatQuestionIcon, BoltIcon, BulbIcon, BellAlertIcon, MapIcon, DashboardIcon, BookOpenIcon, DocumentTextIcon, LibraryIcon, NoteIcon, QuestionMarkCircleIcon, ChatIcon, ChartBarIcon, CogIcon, UsersIcon, VideoCameraIcon, ChartIcon, AcademicCapIcon, BookIcon, CheckCircleIcon, BriefcaseIcon, UserGroupIcon, BuildingOfficeIcon, BuildingLibraryIcon, CalendarIcon, CalendarDaysIcon, KeyIcon, CloudArrowUpIcon, CloudArrowDownIcon, DocumentIcon, TrophyIcon, FlaskIcon, ComputerIcon, TableCellsIcon }
 
 // Sidebar menu items reference icons by name (e.g. icon: 'BookOpenIcon') so the menu arrays stay
 // plain, serialisable data - <component :is="item.icon"> can't resolve a local script-setup
@@ -1158,7 +1162,7 @@ const iconMap: Record<string, any> = {
   ChatIcon, ChartBarIcon, CogIcon, UsersIcon, VideoCameraIcon, ChartIcon, AcademicCapIcon, BookIcon,
   CheckCircleIcon, BriefcaseIcon, UserGroupIcon, BuildingOfficeIcon, BuildingLibraryIcon,
   CalendarIcon, CalendarDaysIcon, KeyIcon, CloudArrowUpIcon, CloudArrowDownIcon, DocumentIcon, TrophyIcon, FlaskIcon, ComputerIcon,
-  TableCellsIcon, MapIcon, BoltIcon, BulbIcon, BellAlertIcon, MegaphoneIcon, TargetIcon, ClipboardListIcon, ChatQuestionIcon, NewspaperIcon
+  TableCellsIcon, MapIcon, BoltIcon, BulbIcon, BellAlertIcon, MegaphoneIcon, TargetIcon, ClipboardListIcon, ChatQuestionIcon, NewspaperIcon, ShieldIcon
 }
 </script>
 

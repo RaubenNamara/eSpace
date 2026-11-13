@@ -107,3 +107,6 @@ yarn.lock
 
 # login attempt counters (see LoginThrottle)
 backend/storage/throttle/
+
+# Cases: evidence about learners (photos, PDFs) - never in git
+backend/storage/cases/

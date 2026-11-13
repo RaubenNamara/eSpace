@@ -1,8 +1,9 @@
 <template>
-  <!-- Schools that asked for a demo on the Tusome website - newest and unanswered first. Each one
-       moves from New to Contacted to Closed as it's followed up. -->
+  <!-- Schools that asked for a demo on the Tusome website - newest and unanswered first. Send demo
+       link gives the school a private link into the demo school for 7 days (emailed, and shown here
+       to copy for WhatsApp); each request then moves from New to Contacted to Closed. -->
   <div class="w-full">
-    <PageHeader title="Demo requests" description="Schools that asked for a demo on the Tusome website - follow each one up, then mark it." icon="users" accent="violet">
+    <PageHeader title="Demo requests" description="Schools that asked for a demo on the website. Send each one its private demo link (it works for 7 days), then follow up." icon="users" accent="violet">
       <StatStrip v-if="requests.length" v-model="statusFilter" :items="statItems" />
     </PageHeader>
 
@@ -25,8 +26,22 @@
             </p>
             <p v-if="r.message" class="mt-2 text-sm text-gray-600 dark:text-gray-300 whitespace-pre-line">{{ r.message }}</p>
             <p class="mt-2 text-[11px] text-gray-400">Received {{ when(r.created_at) }}</p>
+            <!-- the demo link: its state, and the link itself once made here -->
+            <div v-if="r.demo_sent_at" class="mt-2 rounded-xl px-3 py-2 text-xs" :class="linkOpen(r) ? 'bg-indigo-50 text-indigo-900 dark:bg-indigo-900/30 dark:text-indigo-100' : 'bg-gray-100 text-gray-600 dark:bg-gray-700/50 dark:text-gray-300'">
+              <p><b>Demo link {{ linkOpen(r) ? 'open' : 'ended' }}</b> &middot; sent {{ when(r.demo_sent_at) }} &middot; {{ linkOpen(r) ? 'works until' : 'ended' }} {{ when(r.demo_expires_at!) }}</p>
+              <p v-if="links[r.id]" class="mt-1.5 flex items-center gap-2">
+                <input :value="links[r.id]" readonly class="flex-1 min-w-0 px-2 py-1 rounded-md border border-indigo-200 dark:border-indigo-700 bg-white dark:bg-gray-800 text-[11px] text-gray-800 dark:text-gray-100" @focus="($event.target as HTMLInputElement).select()">
+                <button type="button" class="px-2.5 py-1 rounded-md bg-indigo-600 text-white text-[11px] font-semibold hover:bg-indigo-700" @click="copy(r)">{{ copiedId === r.id ? 'Copied' : 'Copy' }}</button>
+              </p>
+            </div>
           </div>
-          <div class="flex sm:flex-col gap-1.5 flex-shrink-0">
+          <div class="flex flex-wrap sm:flex-col gap-1.5 flex-shrink-0">
+            <button
+              type="button"
+              :disabled="busyId === r.id"
+              class="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-950 bg-gold-400 hover:bg-gold-300 disabled:opacity-50"
+              @click="sendLink(r)"
+            >{{ busyId === r.id ? 'Sending…' : r.demo_sent_at ? 'Send a new link' : 'Send demo link' }}</button>
             <button
               v-for="s in NEXT"
               v-show="s !== r.status"
@@ -65,6 +80,8 @@ interface DemoRequest {
   message: string | null
   status: Status
   created_at: string
+  demo_sent_at?: string | null
+  demo_expires_at?: string | null
 }
 
 const STATUS: Record<Status, { label: string; action: string; chip: string }> = {
@@ -85,6 +102,37 @@ const statItems = computed<StatItem[]>(() => (['new', 'contacted', 'closed'] as 
 })))
 const shown = computed(() => requests.value.filter(r => !statusFilter.value || r.status === statusFilter.value))
 const when = (v: string) => new Date(v.replace(' ', 'T')).toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })
+
+// The demo link: made and (when there is an address) emailed by the server; shown here to copy
+const links = ref<Record<number, string>>({})
+const copiedId = ref<number | null>(null)
+const linkOpen = (r: DemoRequest) => !!r.demo_expires_at && new Date(r.demo_expires_at.replace(' ', 'T')) > new Date()
+const sendLink = async (r: DemoRequest) => {
+  if (r.demo_sent_at && linkOpen(r) && !confirm(`${r.school_name} already has a demo link open. Send a new one? The old link stops working.`)) return
+  busyId.value = r.id
+  try {
+    const res = await axios.post(`/api/admin/demo-requests/${r.id}/demo-link`, { site: window.location.origin })
+    const d = res.data.data
+    links.value[r.id] = d.link
+    r.demo_sent_at = d.demo_sent_at
+    r.demo_expires_at = d.demo_expires_at
+    r.status = d.status
+    toast.success(d.emailed ? `Demo link emailed to ${r.email}` : 'Demo link ready - copy it and send it (the email could not be sent)')
+  } catch (err: any) {
+    toast.error(err.response?.data?.message || 'Could not make the demo link')
+  } finally {
+    busyId.value = null
+  }
+}
+const copy = async (r: DemoRequest) => {
+  try {
+    await navigator.clipboard.writeText(links.value[r.id])
+    copiedId.value = r.id
+    setTimeout(() => { if (copiedId.value === r.id) copiedId.value = null }, 2000)
+  } catch {
+    toast.error('Select the link and copy it')
+  }
+}
 
 const load = async () => {
   loading.value = true

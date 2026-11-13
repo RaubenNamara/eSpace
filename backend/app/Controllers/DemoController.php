@@ -10,21 +10,37 @@ use eSpace\App\Services\ParentDigestService;
 use eSpace\App\Support\Tenant;
 
 /**
- * "Try Tusome" on the website: one tap opens the demo school (DemoSchool) as a learner, a teacher
- * or a head teacher - or a parent's weekly page. No sign-up and no password.
+ * The demo school (DemoSchool), opened only with the private link a school is sent after asking
+ * for a demo (Admin > Demo requests > Send demo link). The link works for 7 days; with it, one tap
+ * opens the demo as a learner, a teacher or the head teacher - or a parent's weekly page.
  *
- * GET  /api/demo         - whether the demo is open
- * POST /api/demo/enter   { as: learner | teacher | head | parent }
+ * GET  /api/demo/link/{token}  - whether the link works, and until when
+ * POST /api/demo/enter         { token, as: learner | teacher | head | parent }
  */
 class DemoController extends Controller
 {
-    public function status(): void
+    public function link(): void
     {
-        $this->success(['open' => DemoSchool::school() !== null]);
+        $request = DemoRequestController::activeLink((string) $this->routeParam('token'));
+        if (!$request) {
+            $this->notFound('This demo link has ended or is not right. Ask us for a new one.');
+            return;
+        }
+        $this->success([
+            'school_name' => $request['school_name'],
+            'contact_name' => $request['contact_name'],
+            'expires_at' => $request['demo_expires_at'],
+            'open' => DemoSchool::school() !== null,
+        ]);
     }
 
     public function enter(): void
     {
+        $request = DemoRequestController::activeLink((string) $this->input('token', ''));
+        if (!$request) {
+            $this->error('This demo link has ended or is not right. Ask us for a new one.', 403);
+            return;
+        }
         $as = (string) $this->input('as', '');
         $school = DemoSchool::school();
         if (!$school) {
@@ -53,7 +69,7 @@ class DemoController extends Controller
             $this->error($entered['error'], 503);
             return;
         }
-        $user = (new AuthService())->startDemoSession(DemoSchool::ACCOUNTS[$as]);
+        $user = (new AuthService())->startDemoSession(DemoSchool::ACCOUNTS[$as], (string) $request['demo_expires_at']);
         if (!$user) {
             Tenant::enter('');
             $this->error('The demo school is being set up. Please try again in a few minutes.', 503);

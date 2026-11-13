@@ -109,6 +109,7 @@ export const HUBS: Record<string, Hub[]> = {
       ],
       also: ['/teacher/reports']
     },
+    { key: 'cases', label: 'Cases', icon: 'ShieldIcon', tabs: [{ path: '/teacher/cases', label: 'Cases', icon: 'ShieldIcon' }] },
     { key: 'chats', label: 'Chats', icon: 'ChatIcon', divider: true, tabs: [{ path: '/teacher/chat', label: 'Chats', icon: 'ChatIcon' }] }
   ],
 
@@ -154,6 +155,13 @@ export const HUBS: Record<string, Hub[]> = {
       also: ['/hod/reports']
     },
     {
+      key: 'cases', label: 'Cases', icon: 'ShieldIcon',
+      tabs: [
+        { path: '/hod/case-records', label: 'All cases', icon: 'ShieldIcon' },
+        { path: '/hod/cases', label: 'Record a case', icon: 'ClipboardListIcon' }
+      ]
+    },
+    {
       key: 'community', label: 'Chats & notices', icon: 'ChatIcon', divider: true,
       tabs: [
         { path: '/hod/chat', label: 'Chats', icon: 'ChatIcon' },
@@ -173,7 +181,8 @@ export const HUBS: Record<string, Hub[]> = {
         { path: '/admin/assign-teachers', label: 'Assign Teachers', icon: 'CheckCircleIcon' },
         { path: '/admin/bulk-enrol', label: 'Bulk enrolment', icon: 'TableCellsIcon' },
         { path: '/admin/promotion', label: 'Promotion', icon: 'AcademicCapIcon' },
-        { path: '/admin/parent-links', label: 'Parents', icon: 'UserGroupIcon' }
+        { path: '/admin/parent-links', label: 'Parents', icon: 'UserGroupIcon' },
+        { path: '/admin/cases', label: 'Cases', icon: 'ShieldIcon' }
       ],
       also: ['/admin/student-sign-ins']
     },

@@ -36,15 +36,13 @@
         </div>
       </div>
 
-      <div class="flex justify-center mt-5">
-        <span class="inline-block px-4 py-1.5 rounded-full bg-indigo-500 text-white font-semibold text-xs sm:text-sm uppercase tracking-wide print-color-exact">
-          Learner's Summative Assessment Report &middot; {{ report.term.name }}{{ report.term.academic_year ? ` - ${report.term.academic_year}` : '' }}
-        </span>
+      <!-- The report's title: between two gold rules, the term beneath -->
+      <div class="rc-title mt-5">
+        <span class="rc-title-rule" aria-hidden="true"></span>
+        <h2 class="rc-title-text">Learner's Assessment Report</h2>
+        <span class="rc-title-rule" aria-hidden="true"></span>
       </div>
-
-      <p v-if="report.status === 'provisional'" class="mt-3 mx-auto max-w-2xl text-center text-[11px] sm:text-xs rounded-lg border border-amber-300 bg-amber-50 text-amber-900 dark:bg-amber-900/20 dark:border-amber-700/60 dark:text-amber-200 px-3 py-1.5 print-color-exact">
-        <b>Provisional</b> &middot; the school has not finalised this report yet. Grades use the marked work returned so far, as at {{ asAt }}; subjects without a mark show as not yet assessed.
-      </p>
+      <p class="mt-1 text-center text-xs sm:text-sm font-semibold tracking-wide text-gray-600 dark:text-gray-300">{{ report.term.name }}{{ report.term.academic_year ? ` · ${report.term.academic_year}` : '' }}</p>
 
       <!-- Student info -->
       <div class="pdf-keep grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
@@ -87,10 +85,10 @@
       </div>
 
       <!-- Subjects table -->
-      <p class="text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mt-6 mb-1.5">
+      <p class="rc-band">
         Assessed Items &mdash; Score / Weight per Construct (C1, C2, ...)
       </p>
-      <div class="rounded-xl border-2 border-gray-400 dark:border-gray-700 overflow-hidden shadow-sm">
+      <div class="rc-frame">
         <div class="overflow-x-auto">
           <table class="w-full text-xs sm:text-sm border-collapse">
             <thead>
@@ -105,15 +103,15 @@
             </thead>
             <tbody>
               <tr v-for="(subject, idx) in report.subjects" :key="subject.subject_id" :class="idx % 2 === 1 ? 'bg-gray-50 dark:bg-gray-900/30' : ''">
-                <td class="border border-gray-400 dark:border-gray-700 px-3 py-2 font-medium text-gray-900 dark:text-white whitespace-nowrap">
+                <td class="rc-cell px-3 py-2 font-medium text-gray-900 dark:text-white whitespace-nowrap">
                   {{ subject.subject_name }}
                 </td>
-                <td v-if="subject.assessed === false" :colspan="maxConstructs + 3" class="border border-gray-400 dark:border-gray-700 px-3 py-2 text-center" :class="subject.missed?.length ? 'text-rose-700 dark:text-rose-300' : 'italic text-gray-500 dark:text-gray-400'">
+                <td v-if="subject.assessed === false" :colspan="maxConstructs + 3" class="rc-cell px-3 py-2 text-center" :class="subject.missed?.length ? 'text-rose-700 dark:text-rose-300' : 'italic text-gray-500 dark:text-gray-400'">
                   <template v-if="subject.missed?.length"><b>Not graded</b> &middot; missed {{ subject.missed.join(', ') }}</template>
                   <template v-else>Not yet assessed this term</template>
                 </td>
                 <template v-else>
-                <td v-for="n in maxConstructs" :key="n" class="border border-gray-400 dark:border-gray-700 px-1 py-2 text-center text-gray-700 dark:text-gray-300">
+                <td v-for="n in maxConstructs" :key="n" class="rc-cell px-1 py-2 text-center text-gray-700 dark:text-gray-300">
                   <template v-if="subject.constructs[n - 1]">
                     {{ subject.constructs[n - 1].score_obtained }}/{{ subject.constructs[n - 1].score_total }}
                     <div class="text-[10px] text-gray-500 dark:text-gray-500">
@@ -123,28 +121,28 @@
                   </template>
                   <template v-else>-</template>
                 </td>
-                <td class="border border-gray-400 dark:border-gray-700 px-2 py-2 text-center font-semibold text-gray-900 dark:text-white">
+                <td class="rc-cell px-2 py-2 text-center font-semibold text-gray-900 dark:text-white">
                   {{ subject.graded === false ? '-' : subject.avg_weight }}
                 </td>
-                <td class="border border-gray-400 dark:border-gray-700 px-2 py-2 text-center">
+                <td class="rc-cell px-2 py-2 text-center">
                   <span v-if="subject.graded === false" class="text-[11px] font-bold uppercase text-rose-700 dark:text-rose-300 leading-tight">Not<br>graded</span>
                   <span v-else class="grade-badge font-bold text-white shadow-sm print-color-exact" :class="gradeBg(subject.grade)">
                     {{ subject.grade || '-' }}
                   </span>
                 </td>
-                <td class="border border-gray-400 dark:border-gray-700 px-3 py-2" :class="subject.graded === false ? 'text-rose-700 dark:text-rose-300' : 'text-gray-600 dark:text-gray-300'">
+                <td class="rc-cell px-3 py-2" :class="subject.graded === false ? 'text-rose-700 dark:text-rose-300' : 'text-gray-600 dark:text-gray-300'">
                   <template v-if="subject.graded === false && subject.missed?.length">
                     <b>Missed {{ subject.missed.length }} assessment{{ subject.missed.length === 1 ? '' : 's' }}:</b> {{ subject.missed.join(', ') }}. Not graded until every assessment is done.
                   </template>
                   <template v-else>{{ subject.descriptor_text || (report.status === 'provisional' ? 'Remark comes when the report is finalised.' : (subject.assignments_included_count ? 'Descriptor pending - try regenerating.' : '-')) }}</template>
                 </td>
                 </template>
-                <td class="border border-gray-400 dark:border-gray-700 px-2 py-2 text-center text-gray-500 dark:text-gray-400" :title="subject.teacher_name || undefined">
+                <td class="rc-cell px-2 py-2 text-center text-gray-500 dark:text-gray-400" :title="subject.teacher_name || undefined">
                   {{ subject.teacher_initials || '-' }}
                 </td>
               </tr>
               <tr v-if="report.subjects.length === 0">
-                <td :colspan="maxConstructs + 5" class="border border-gray-400 dark:border-gray-700 px-3 py-8 text-center text-gray-400">
+                <td :colspan="maxConstructs + 5" class="rc-cell px-3 py-8 text-center text-gray-400">
                   No subjects on record for this term yet.
                 </td>
               </tr>
@@ -155,10 +153,10 @@
 
       <!-- Competency Report (LOA / AOI / EOC) -->
       <template v-if="subjectsWithCompetencies.length > 0">
-        <p class="text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mt-6 mb-1.5">
+        <p class="rc-band">
           Competency Report &mdash; Learning Outcomes (LOA) &middot; Areas of Integration (AOI) &middot; End of Cycle (EOC)
         </p>
-        <div class="rounded-xl border-2 border-gray-400 dark:border-gray-700 overflow-hidden shadow-sm">
+        <div class="rc-frame">
           <div class="overflow-x-auto">
             <table class="w-full text-xs sm:text-sm border-collapse">
               <thead>
@@ -173,23 +171,23 @@
               <tbody>
                 <template v-for="subject in subjectsWithCompetencies" :key="subject.subject_id">
                   <tr v-for="(c, ci) in subject.competencies" :key="subject.subject_id + '-' + c.category" :class="ci % 2 === 1 ? 'bg-gray-50 dark:bg-gray-900/30' : ''">
-                    <td class="border border-gray-400 dark:border-gray-700 px-3 py-2 font-medium text-gray-900 dark:text-white whitespace-nowrap">
+                    <td class="rc-cell px-3 py-2 font-medium text-gray-900 dark:text-white whitespace-nowrap">
                       <template v-if="ci === 0">{{ subject.subject_name }}</template>
                       <span class="block text-[11px] font-normal text-gray-500 dark:text-gray-400">{{ categoryLabel(c.category) }}</span>
                     </td>
-                    <td class="border border-gray-400 dark:border-gray-700 px-2 py-2 text-center font-semibold text-gray-900 dark:text-white">
+                    <td class="rc-cell px-2 py-2 text-center font-semibold text-gray-900 dark:text-white">
                       {{ c.percentage }}%
                     </td>
-                    <td class="border border-gray-400 dark:border-gray-700 px-2 py-2 text-center">
+                    <td class="rc-cell px-2 py-2 text-center">
                       <span class="grade-badge font-bold text-white shadow-sm print-color-exact" :class="gradeBg(c.status)">
                         {{ c.status }}
                       </span>
                       <div class="text-[10px] text-gray-500 dark:text-gray-500 mt-0.5">{{ c.performance_descriptor }}</div>
                     </td>
-                    <td class="border border-gray-400 dark:border-gray-700 px-3 py-2 text-gray-600 dark:text-gray-300">
+                    <td class="rc-cell px-3 py-2 text-gray-600 dark:text-gray-300">
                       {{ c.descriptor_text }}
                     </td>
-                    <td class="border border-gray-400 dark:border-gray-700 px-2 py-2 text-center font-semibold text-gray-900 dark:text-white">
+                    <td class="rc-cell px-2 py-2 text-center font-semibold text-gray-900 dark:text-white">
                       {{ c.weight }}
                     </td>
                   </tr>
@@ -230,10 +228,10 @@
         </div>
 
         <!-- Subject by subject -->
-        <p class="text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mt-5 mb-1.5">
+        <p class="rc-band">
           Subject by subject &mdash; assessments, results by type, notes read and live classes
         </p>
-        <div class="rounded-xl border-2 border-gray-400 dark:border-gray-700 overflow-hidden shadow-sm">
+        <div class="rc-frame">
           <div class="overflow-x-auto">
             <table class="w-full text-xs sm:text-sm border-collapse">
               <thead>
@@ -258,20 +256,20 @@
               </thead>
               <tbody>
                 <tr v-for="(row, idx) in activityRows" :key="row.subject_id" :class="idx % 2 === 1 ? 'bg-gray-50 dark:bg-gray-900/30' : ''">
-                  <td class="border border-gray-400 dark:border-gray-700 px-3 py-1.5 font-medium text-gray-900 dark:text-white whitespace-nowrap">{{ row.name }}</td>
-                  <td class="border border-gray-400 dark:border-gray-700 px-2 py-1.5 text-center text-gray-700 dark:text-gray-300 tabular-nums">{{ row.set ? `${row.handed_in} of ${row.set}` : '-' }}</td>
-                  <td class="border border-gray-400 dark:border-gray-700 px-2 py-1.5 text-center tabular-nums" :class="row.passed ? 'font-semibold text-gray-900 dark:text-white' : 'text-gray-400'">{{ row.passed || '-' }}</td>
-                  <td class="border border-gray-400 dark:border-gray-700 px-2 py-1.5 text-center tabular-nums" :class="row.failed ? 'font-semibold text-rose-700 dark:text-rose-300' : 'text-gray-400'">{{ row.failed || '-' }}</td>
-                  <td class="border border-gray-400 dark:border-gray-700 px-2 py-1.5 text-center text-gray-700 dark:text-gray-300 tabular-nums">{{ row.handed_in ? `${Math.round((row.on_time / row.handed_in) * 100)}%` : '-' }}</td>
-                  <td v-for="k in (['loa', 'aoi', 'eoc'] as const)" :key="k" class="border border-gray-400 dark:border-gray-700 px-2 py-1.5 text-center tabular-nums" :class="scoreClass(row[k])">{{ row[k] !== null ? `${row[k]}%` : '-' }}</td>
-                  <td class="border border-gray-400 dark:border-gray-700 px-2 py-1.5">
+                  <td class="rc-cell px-3 py-1.5 font-medium text-gray-900 dark:text-white whitespace-nowrap">{{ row.name }}</td>
+                  <td class="rc-cell px-2 py-1.5 text-center text-gray-700 dark:text-gray-300 tabular-nums">{{ row.set ? `${row.handed_in} of ${row.set}` : '-' }}</td>
+                  <td class="rc-cell px-2 py-1.5 text-center tabular-nums" :class="row.passed ? 'font-semibold text-gray-900 dark:text-white' : 'text-gray-400'">{{ row.passed || '-' }}</td>
+                  <td class="rc-cell px-2 py-1.5 text-center tabular-nums" :class="row.failed ? 'font-semibold text-rose-700 dark:text-rose-300' : 'text-gray-400'">{{ row.failed || '-' }}</td>
+                  <td class="rc-cell px-2 py-1.5 text-center text-gray-700 dark:text-gray-300 tabular-nums">{{ row.handed_in ? `${Math.round((row.on_time / row.handed_in) * 100)}%` : '-' }}</td>
+                  <td v-for="k in (['loa', 'aoi', 'eoc'] as const)" :key="k" class="rc-cell px-2 py-1.5 text-center tabular-nums" :class="scoreClass(row[k])">{{ row[k] !== null ? `${row[k]}%` : '-' }}</td>
+                  <td class="rc-cell px-2 py-1.5">
                     <span v-if="row.notes_topics" class="flex items-center gap-1.5">
                       <span class="meter flex-1"><i :style="{ width: `${row.notes_percent ?? 0}%` }"></i></span>
                       <span class="w-9 text-right text-[11px] tabular-nums text-gray-700 dark:text-gray-300">{{ row.notes_percent ?? 0 }}%</span>
                     </span>
                     <span v-else class="block text-center text-gray-400">no notes yet</span>
                   </td>
-                  <td class="border border-gray-400 dark:border-gray-700 px-2 py-1.5 text-center text-gray-700 dark:text-gray-300 tabular-nums">{{ row.live_attended || '-' }}</td>
+                  <td class="rc-cell px-2 py-1.5 text-center text-gray-700 dark:text-gray-300 tabular-nums">{{ row.live_attended || '-' }}</td>
                 </tr>
               </tbody>
             </table>
@@ -305,10 +303,10 @@
 
         <!-- Every marked assessment of the term -->
         <template v-if="report.activity.record?.length">
-          <p class="text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mt-5 mb-1.5">
+          <p class="rc-band">
             Assessment record &mdash; every assessment due this term ({{ report.activity.record.length }}<template v-if="report.activity.missed_count">, {{ report.activity.missed_count }} missed</template>)
           </p>
-          <div class="rounded-xl border-2 border-gray-400 dark:border-gray-700 overflow-hidden shadow-sm">
+          <div class="rc-frame">
             <div class="overflow-x-auto">
               <table class="w-full text-xs sm:text-sm border-collapse">
                 <thead>
@@ -324,13 +322,13 @@
                 </thead>
                 <tbody>
                   <tr v-for="(r, idx) in report.activity.record" :key="idx" :class="idx % 2 === 1 ? 'bg-gray-50 dark:bg-gray-900/30' : ''">
-                    <td class="border border-gray-400 dark:border-gray-700 px-2 py-1 whitespace-nowrap text-gray-600 dark:text-gray-400 tabular-nums">{{ shortDate(r.date) }}</td>
-                    <td class="border border-gray-400 dark:border-gray-700 px-2 py-1 whitespace-nowrap font-medium text-gray-900 dark:text-white">{{ subjectName(r.subject_id) }}</td>
-                    <td class="border border-gray-400 dark:border-gray-700 px-2 py-1 text-gray-800 dark:text-gray-200">{{ r.title }}</td>
-                    <td class="border border-gray-400 dark:border-gray-700 px-2 py-1 text-center whitespace-nowrap text-gray-600 dark:text-gray-400">{{ r.kind }}</td>
-                    <td class="border border-gray-400 dark:border-gray-700 px-2 py-1 text-center whitespace-nowrap tabular-nums text-gray-700 dark:text-gray-300">{{ r.score !== null && r.out_of ? `${+r.score.toFixed(1)}/${+r.out_of.toFixed(1)}` : '-' }}</td>
-                    <td class="border border-gray-400 dark:border-gray-700 px-2 py-1 text-center tabular-nums" :class="scoreClass(r.percentage)">{{ r.percentage !== null ? `${r.percentage}%` : '-' }}</td>
-                    <td class="border border-gray-400 dark:border-gray-700 px-2 py-1 text-center whitespace-nowrap font-semibold" :class="r.percentage !== null && r.percentage >= report.activity.pass_from ? 'text-gray-900 dark:text-white' : 'text-rose-700 dark:text-rose-300'">{{ r.percentage === null ? 'Missed' : r.percentage >= report.activity.pass_from ? 'Passed' : 'Failed' }}</td>
+                    <td class="rc-cell px-2 py-1 whitespace-nowrap text-gray-600 dark:text-gray-400 tabular-nums">{{ shortDate(r.date) }}</td>
+                    <td class="rc-cell px-2 py-1 whitespace-nowrap font-medium text-gray-900 dark:text-white">{{ subjectName(r.subject_id) }}</td>
+                    <td class="rc-cell px-2 py-1 text-gray-800 dark:text-gray-200">{{ r.title }}</td>
+                    <td class="rc-cell px-2 py-1 text-center whitespace-nowrap text-gray-600 dark:text-gray-400">{{ r.kind }}</td>
+                    <td class="rc-cell px-2 py-1 text-center whitespace-nowrap tabular-nums text-gray-700 dark:text-gray-300">{{ r.score !== null && r.out_of ? `${+r.score.toFixed(1)}/${+r.out_of.toFixed(1)}` : '-' }}</td>
+                    <td class="rc-cell px-2 py-1 text-center tabular-nums" :class="scoreClass(r.percentage)">{{ r.percentage !== null ? `${r.percentage}%` : '-' }}</td>
+                    <td class="rc-cell px-2 py-1 text-center whitespace-nowrap font-semibold" :class="r.percentage !== null && r.percentage >= report.activity.pass_from ? 'text-gray-900 dark:text-white' : 'text-rose-700 dark:text-rose-300'">{{ r.percentage === null ? 'Missed' : r.percentage >= report.activity.pass_from ? 'Passed' : 'Failed' }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -373,15 +371,15 @@
             </thead>
             <tbody>
               <tr v-for="lab in report.virtual_lab" :key="lab.id" class="odd:bg-gray-50 dark:odd:bg-gray-900/30">
-                <td class="border border-gray-300 dark:border-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200">
+                <td class="rc-cell px-3 py-2 text-gray-800 dark:text-gray-200">
                   <span><AppIcon :name="({ physics: 'bolt', chemistry: 'beaker', biology: 'leaf', agriculture: 'sprout' } as Record<string, string>)[lab.category] || 'beaker'" class="w-4 h-4" /></span>
                   {{ lab.subject_name ? lab.subject_name + ' Practical: ' : '' }}{{ lab.experiment_title }}
                 </td>
-                <td class="border border-gray-300 dark:border-gray-700 px-2 py-2 text-center font-semibold text-gray-900 dark:text-white whitespace-nowrap">
+                <td class="rc-cell px-2 py-2 text-center font-semibold text-gray-900 dark:text-white whitespace-nowrap">
                   {{ lab.score }}/{{ lab.max_marks }}
                 </td>
-                <td class="border border-gray-300 dark:border-gray-700 px-2 py-2 text-center text-gray-600 dark:text-gray-300">Completed</td>
-                <td class="border border-gray-300 dark:border-gray-700 px-3 py-2 text-gray-600 dark:text-gray-300 italic">{{ lab.teacher_comment || '-' }}</td>
+                <td class="rc-cell px-2 py-2 text-center text-gray-600 dark:text-gray-300">Completed</td>
+                <td class="rc-cell px-3 py-2 text-gray-600 dark:text-gray-300 italic">{{ lab.teacher_comment || '-' }}</td>
               </tr>
             </tbody>
           </table>
@@ -409,10 +407,10 @@
             </thead>
             <tbody>
               <tr v-for="(row, idx) in resultKey" :key="row.grade" :class="idx % 2 === 1 ? 'bg-gray-50 dark:bg-gray-900/30' : ''">
-                <td class="border border-gray-300 dark:border-gray-700 px-2 py-1.5 text-gray-600 dark:text-gray-300">{{ row.range }}</td>
-                <td class="border border-gray-300 dark:border-gray-700 px-2 py-1.5 text-gray-600 dark:text-gray-300">{{ row.level }}</td>
-                <td class="border border-gray-300 dark:border-gray-700 px-2 py-1.5 text-center font-semibold text-gray-900 dark:text-white">{{ row.grade }}</td>
-                <td v-if="report.class_level !== 'O Level'" class="border border-gray-300 dark:border-gray-700 px-2 py-1.5 text-center text-gray-600 dark:text-gray-300">{{ row.points }}</td>
+                <td class="rc-cell px-2 py-1.5 text-gray-600 dark:text-gray-300">{{ row.range }}</td>
+                <td class="rc-cell px-2 py-1.5 text-gray-600 dark:text-gray-300">{{ row.level }}</td>
+                <td class="rc-cell px-2 py-1.5 text-center font-semibold text-gray-900 dark:text-white">{{ row.grade }}</td>
+                <td v-if="report.class_level !== 'O Level'" class="rc-cell px-2 py-1.5 text-center text-gray-600 dark:text-gray-300">{{ row.points }}</td>
               </tr>
             </tbody>
           </table>
@@ -422,10 +420,7 @@
       <!-- Comments -->
       <div class="pdf-keep grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5">
         <div class="border-2 border-indigo-300 dark:border-indigo-700/60 bg-indigo-50/60 dark:bg-indigo-900/20 rounded-xl p-4">
-          <div class="flex items-center gap-2 mb-2">
-            <span class="initials-badge bg-indigo-500 text-white text-[10px] font-bold flex-shrink-0 print-color-exact">CT</span>
-            <p class="text-xs font-semibold text-gray-700 dark:text-gray-200">Class Teacher's Comment</p>
-          </div>
+          <p class="mb-2 text-sm font-semibold text-indigo-900 dark:text-indigo-100">Class Teacher's Comment</p>
           <textarea
             v-if="editableClassTeacherComment"
             v-model="classTeacherCommentDraft"
@@ -442,10 +437,7 @@
           </button>
         </div>
         <div class="border-2 border-amber-300 dark:border-amber-800/60 bg-amber-50/60 dark:bg-amber-900/20 rounded-xl p-4">
-          <div class="flex items-center gap-2 mb-2">
-            <span class="initials-badge bg-amber-600 text-white text-[10px] font-bold flex-shrink-0 print-color-exact">HT</span>
-            <p class="text-xs font-semibold text-gray-700 dark:text-gray-200">Head Teacher's Comment</p>
-          </div>
+          <p class="mb-2 text-sm font-semibold text-amber-900 dark:text-amber-100">Head Teacher's Comment</p>
           <textarea
             v-if="editableHeadTeacherComment"
             v-model="headTeacherCommentDraft"
@@ -465,10 +457,10 @@
 
       <!-- Every learning outcome assessed this term, subject by subject -->
       <template v-if="outcomesBySubject.length">
-        <p class="text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mt-6 mb-1.5">
+        <p class="rc-band">
           Learning outcomes assessed this term &mdash; achieved at 60% or more
         </p>
-        <div class="rounded-xl border-2 border-gray-400 dark:border-gray-700 overflow-hidden shadow-sm">
+        <div class="rc-frame">
           <div class="overflow-x-auto">
             <table class="w-full text-xs sm:text-sm border-collapse">
               <thead>
@@ -483,11 +475,11 @@
               <tbody>
                 <template v-for="group in outcomesBySubject" :key="group.subject_id">
                   <tr v-for="(o, i) in group.outcomes" :key="group.subject_id + '-' + i" :class="i % 2 === 1 ? 'bg-gray-50 dark:bg-gray-900/30' : ''">
-                    <td class="border border-gray-400 dark:border-gray-700 px-3 py-1.5 font-medium text-gray-900 dark:text-white whitespace-nowrap align-top">{{ i === 0 ? group.name : '' }}</td>
-                    <td class="border border-gray-400 dark:border-gray-700 px-3 py-1.5 text-gray-700 dark:text-gray-300">{{ o.outcome }}</td>
-                    <td class="border border-gray-400 dark:border-gray-700 px-2 py-1.5 text-center tabular-nums text-gray-700 dark:text-gray-300">{{ o.tasks }}</td>
-                    <td class="border border-gray-400 dark:border-gray-700 px-2 py-1.5 text-center tabular-nums" :class="scoreClass(o.percentage)">{{ o.percentage }}%</td>
-                    <td class="border border-gray-400 dark:border-gray-700 px-2 py-1.5 text-center whitespace-nowrap font-semibold" :class="o.achieved ? 'text-gray-900 dark:text-white' : 'text-rose-700 dark:text-rose-300'">{{ o.achieved ? 'Achieved' : 'Not yet' }}</td>
+                    <td class="rc-cell px-3 py-1.5 font-medium text-gray-900 dark:text-white whitespace-nowrap align-top">{{ i === 0 ? group.name : '' }}</td>
+                    <td class="rc-cell px-3 py-1.5 text-gray-700 dark:text-gray-300">{{ o.outcome }}</td>
+                    <td class="rc-cell px-2 py-1.5 text-center tabular-nums text-gray-700 dark:text-gray-300">{{ o.tasks }}</td>
+                    <td class="rc-cell px-2 py-1.5 text-center tabular-nums" :class="scoreClass(o.percentage)">{{ o.percentage }}%</td>
+                    <td class="rc-cell px-2 py-1.5 text-center whitespace-nowrap font-semibold" :class="o.achieved ? 'text-gray-900 dark:text-white' : 'text-rose-700 dark:text-rose-300'">{{ o.achieved ? 'Achieved' : 'Not yet' }}</td>
                   </tr>
                 </template>
               </tbody>
@@ -498,7 +490,7 @@
 
       <!-- Footer -->
       <div class="flex flex-wrap items-center justify-between gap-2 mt-6 pt-3 border-t-2 border-dashed border-gray-300 dark:border-gray-600 text-[11px] text-gray-500 dark:text-gray-500">
-        <span>{{ report.status === 'provisional' ? `Provisional · as at ${asAt}` : `Generated ${formatDate(report.generated_at)}` }}</span>
+        <span>{{ report.status === 'provisional' ? `As at ${asAt}` : `Generated ${formatDate(report.generated_at)}` }}</span>
         <span class="tusome-sign">Prepared on <b>Tusome<span class="tusome-dot">.</span></b> &middot; {{ report.platform?.tagline || 'Online learning platform' }}</span>
       </div>
     </div>
@@ -749,6 +741,61 @@ watch(() => props.report, (r) => {
   .rc-photo { width: 64px; height: 76px; }
   .rc-photo-blank { line-height: 72px; font-size: 20px; }
 }
+
+/* Tables: each section's label is a heading band joined to its table's frame; every cell ruled
+   in a light blue-grey, every other row shaded (matches the disciplinary report) */
+.rc-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.rc-title-rule {
+  flex: 1;
+  height: 0;
+  border-top: 2px solid #d9a520;
+}
+.rc-title-text {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.4;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #14307d;
+  white-space: nowrap;
+}
+.dark .rc-title-text { color: #dce4f8; }
+@media (max-width: 480px) {
+  .rc-title-text { font-size: 13px; letter-spacing: 0.08em; }
+}
+
+.rc-band {
+  margin-top: 1.5rem;
+  padding: 7px 12px;
+  background: #eef2fc;
+  color: #14307d;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border: 1px solid #c9d5f2;
+  border-bottom: 2px solid #d9a520;
+  border-radius: 10px 10px 0 0;
+}
+.dark .rc-band { background: rgb(27 63 160 / 0.25); color: #dce4f8; border-color: #374151; }
+.rc-frame {
+  border: 1px solid #c9d5f2;
+  border-top: 0;
+  border-radius: 0 0 10px 10px;
+  overflow: hidden;
+}
+.dark .rc-frame { border-color: #374151; }
+.rc-cell { border: 1px solid #d5ddef; }
+.dark .rc-cell { border-color: #374151; }
+.rc-frame tbody tr:nth-child(even) > td { background-color: #f6f8fd; }
+.dark .rc-frame tbody tr:nth-child(even) > td { background-color: rgb(17 24 39 / 0.35); }
+.rc-frame thead th { padding-top: 9px; padding-bottom: 9px; letter-spacing: 0.02em; }
+.rc-frame tbody td { padding-top: 8px; padding-bottom: 8px; }
 
 .school-mark {
   display: inline-block;

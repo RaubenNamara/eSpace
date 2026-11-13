@@ -98,7 +98,7 @@ if ($tenantBlocked !== null) {
 // A demo visitor (the website's "Try Tusome") can look at everything but not change what the next one finds
 $demoBlocked = \eSpace\App\Middleware\DemoGuard::check();
 if ($demoBlocked !== null) {
-    http_response_code(403);
+    http_response_code(\eSpace\App\Middleware\DemoGuard::$status);
     echo json_encode(['success' => false, 'message' => $demoBlocked, 'demo' => true]);
     exit;
 }

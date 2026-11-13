@@ -10,7 +10,7 @@ use eSpace\App\Services\DemoSchool;
  * Keeps demo visitors (DemoSchool) from changing what the next visitor would find, or from
  * reaching anyone real. Run before every request (public/index.php). Reading is always allowed,
  * and so is the everyday work a visitor wants to try - answering an assessment, marking, writing
- * an eNote, posting work - since the whole school is put back every night. Turned off:
+ * an eNote, posting work - since the whole school is wiped and rebuilt every week. Turned off:
  *   - passwords, sign-in details, profiles and photos; admins, staff and learner records; school settings
  *   - anything uploaded (files would be seen by every visitor until the night's reset)
  *   - chat messages and anything that sends email, SMS or push to a real address
@@ -28,11 +28,21 @@ final class DemoGuard
         '#(generate|tutor|explain|narrat|tts|speech|gemini|/ai[-/])#',
     ];
 
+    /** 401 when the visit has ended (the app then signs out), else 403 */
+    public static int $status = 403;
+
     /** The message to stop the request with, or null to let it through */
     public static function check(): ?string
     {
         if (!DemoSchool::inDemo()) {
             return null;
+        }
+        // the demo link has ended: the visit ends too
+        if (!empty($_SESSION['demo_until']) && time() > (int) $_SESSION['demo_until']) {
+            session_unset();
+            session_destroy();
+            self::$status = 401;
+            return 'Your demo link has ended. Ask us for a new one on the Tusome website.';
         }
         $method = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
         if (in_array($method, ['GET', 'HEAD', 'OPTIONS'], true)) {

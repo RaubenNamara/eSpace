@@ -12,7 +12,9 @@ use eSpace\Config\Config;
  * a teacher, a head teacher or a parent - without signing up.
  *
  * It is an ordinary school in the platform (code DEMO_SCHOOL_CODE, default "demo") whose database
- * is rebuilt from nothing every night (backend/scripts/demo_reset.php, run by cron):
+ * is rebuilt from nothing every week (backend/scripts/demo_reset.php, run by cron), so whatever
+ * visitors changed is wiped after a week. Visitors come in only through a private link sent to a
+ * school that asked for a demo (DemoRequestController::sendLink, valid 7 days):
  *   - the tables, empty, from the home database; the shared content (curriculum, eNotes, books,
  *     Item Bank, videos) copied from the master school exactly as for a new school
  *   - made-up people only: a head teacher, six teachers, two S.2 streams of learners
@@ -637,7 +639,7 @@ final class DemoSchool
         $this->exec(
             "INSERT INTO notices (author_role, author_id, author_name, title, body, audience, pinned, created_at)
              VALUES ('admin', ?, 'Head Teacher', 'Welcome to the Tusome demo school', ?, 'everyone', 1, NOW())",
-            [$this->headId, "This is a demo school with made-up learners and teachers. Look around as much as you like - anything you change is put back every night.\n\nWant Tusome at your school? Write to demo@tusome.ug."]
+            [$this->headId, "This is a demo school with made-up learners and teachers. Look around as much as you like - anything you change is wiped at the end of the week.\n\nWant Tusome at your school? Write to demo@tusome.ug."]
         );
         // a parent link for the demo learner, for the "as a parent" door
         $this->exec(
