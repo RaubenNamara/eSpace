@@ -85,9 +85,7 @@
       </div>
 
       <!-- Subjects table -->
-      <p class="rc-band">
-        Assessed Items &mdash; Score / Weight per Construct (C1, C2, ...)
-      </p>
+      <p class="rc-band">Assessed Items</p>
       <div class="rc-frame">
         <div class="overflow-x-auto">
           <table class="w-full text-xs sm:text-sm border-collapse">
@@ -153,9 +151,7 @@
 
       <!-- Competency Report (LOA / AOI / EOC) -->
       <template v-if="subjectsWithCompetencies.length > 0">
-        <p class="rc-band">
-          Competency Report &mdash; Learning Outcomes (LOA) &middot; Areas of Integration (AOI) &middot; End of Cycle (EOC)
-        </p>
+        <p class="rc-band">Competency Report</p>
         <div class="rc-frame">
           <div class="overflow-x-auto">
             <table class="w-full text-xs sm:text-sm border-collapse">
@@ -228,9 +224,7 @@
         </div>
 
         <!-- Subject by subject -->
-        <p class="rc-band">
-          Subject by subject &mdash; assessments, results by type, notes read and live classes
-        </p>
+        <p class="rc-band">Subject by Subject</p>
         <div class="rc-frame">
           <div class="overflow-x-auto">
             <table class="w-full text-xs sm:text-sm border-collapse">
@@ -303,9 +297,7 @@
 
         <!-- Every marked assessment of the term -->
         <template v-if="report.activity.record?.length">
-          <p class="rc-band">
-            Assessment record &mdash; every assessment due this term ({{ report.activity.record.length }}<template v-if="report.activity.missed_count">, {{ report.activity.missed_count }} missed</template>)
-          </p>
+          <p class="rc-band">Assessment Record</p>
           <div class="rc-frame">
             <div class="overflow-x-auto">
               <table class="w-full text-xs sm:text-sm border-collapse">
@@ -457,9 +449,7 @@
 
       <!-- Every learning outcome assessed this term, subject by subject -->
       <template v-if="outcomesBySubject.length">
-        <p class="rc-band">
-          Learning outcomes assessed this term &mdash; achieved at 60% or more
-        </p>
+        <p class="rc-band">Learning Outcomes</p>
         <div class="rc-frame">
           <div class="overflow-x-auto">
             <table class="w-full text-xs sm:text-sm border-collapse">
@@ -770,6 +760,7 @@ watch(() => props.report, (r) => {
 }
 
 .rc-band {
+  text-align: center;
   margin-top: 1.5rem;
   padding: 7px 12px;
   background: #eef2fc;
