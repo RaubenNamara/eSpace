@@ -1,9 +1,10 @@
 <template>
   <!-- Cases (teachers and HODs): record a learner's discipline case - find the learner, say what
        happened and what was done, attach evidence such as a photo or PDF of an apology - and see the
-       cases you have reported. Only you and the super admin see them (CaseController). -->
+       cases you have reported. Teachers, HODs and the super admin record cases; HODs and admins see
+       them all (CaseController). The super admin's are marked as theirs. -->
   <div class="w-full max-w-5xl">
-    <PageHeader title="Cases" description="Record a learner's discipline case, with evidence. Only you and the super admin can see what you report." icon="document" accent="indigo" />
+    <PageHeader title="Cases" :description="headerText" icon="document" accent="indigo" />
 
     <!-- Record a case -->
     <section class="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
@@ -93,7 +94,7 @@
 
         <div class="sm:col-span-2 flex flex-wrap items-center gap-3">
           <button type="submit" class="btn-primary" :disabled="saving">{{ saving ? 'Saving…' : 'Submit case' }}</button>
-          <p class="text-xs text-gray-500 dark:text-gray-400">The super admin sees every case, for the discipline committee. Learners and parents never see them.</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">HODs and the administration see every case, for the discipline committee. Learners and parents never see them.</p>
         </div>
       </form>
     </section>
@@ -147,7 +148,11 @@ const SEVERITY = [
 const sev = (k: string) => SEVERITY.find(s => s.key === k) || SEVERITY[0]
 
 const route = useRoute()
-const base = route.path.startsWith('/hod') ? '/api/hod/cases' : '/api/teacher/cases'
+const isAdmin = route.path.startsWith('/admin')
+const headerText = isAdmin
+  ? "Record a learner's discipline case, with evidence. It is marked as added by the super admin."
+  : "Record a learner's discipline case, with evidence. HODs and the administration see the cases you report."
+const base = isAdmin ? '/api/admin/cases' : route.path.startsWith('/hod') ? '/api/hod/cases' : '/api/teacher/cases'
 const toast = useToastStore()
 const today = new Date().toISOString().slice(0, 10)
 

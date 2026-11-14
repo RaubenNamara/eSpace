@@ -79,7 +79,7 @@
               <span class="chip" :class="c.status === 'resolved' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200'">{{ c.status === 'resolved' ? 'Resolved' : 'Open' }}</span>
             </div>
             <p class="mt-2 text-base font-semibold text-gray-900 dark:text-white">{{ c.title }}</p>
-            <p class="text-xs text-gray-500 dark:text-gray-400">Reported by <b class="text-gray-700 dark:text-gray-200">{{ c.reporter_name }}</b> ({{ c.reporter_role === 'hod' ? 'HOD' : 'teacher' }}) &middot; recorded {{ when(c.created_at) }}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Reported by <b class="text-gray-700 dark:text-gray-200">{{ c.reporter_name }}</b> ({{ c.reporter_role === 'hod' ? 'HOD' : c.reporter_role === 'super_admin' ? 'Super admin' : 'teacher' }}) &middot; recorded {{ when(c.created_at) }}</p>
             <p class="mt-2 text-sm text-gray-700 dark:text-gray-200 whitespace-pre-line">{{ c.description }}</p>
             <p v-if="c.action_taken" class="mt-1.5 text-sm text-gray-700 dark:text-gray-200"><b>Action taken:</b> {{ c.action_taken }}</p>
             <div v-if="c.files.length" class="mt-3 flex flex-wrap gap-2"><CaseFile v-for="f in c.files" :key="f.id" :file="f" /></div>
@@ -258,7 +258,7 @@
                     <td><span class="chip" :class="sev(c.severity).chip">{{ sev(c.severity).label }}</span></td>
                     <td class="text-left text-xs"><b>{{ c.title }}</b> - {{ c.description }}<template v-if="c.action_taken"><br><i>Action: {{ c.action_taken }}</i></template><template v-if="c.admin_note"><br><i>Committee: {{ c.admin_note }}</i></template></td>
                     <td><span class="chip" :class="c.status === 'resolved' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200'">{{ c.status === 'resolved' ? 'Resolved' : 'Open' }}</span></td>
-                    <td class="text-left text-xs">{{ c.reporter_name }}</td>
+                    <td class="text-left text-xs">{{ c.reporter_name }}<span v-if="c.reporter_role === 'super_admin' && !c.reporter_name.startsWith('Super admin')" class="block text-[10px] text-indigo-700">Super admin</span></td>
                   </tr>
                 </tbody>
               </table>
@@ -309,7 +309,7 @@ interface Report {
   classes: { label: string; cases: number; learners: number }[]
   months: { month: string; cases: number }[]
   reporters: { name: string; cases: number }[]
-  cases: { id: number; occurred_on: string; category: string; severity: string; title: string; description: string; action_taken: string | null; status: string; admin_note: string | null; reporter_name: string; student: string; class_label: string | null }[]
+  cases: { id: number; occurred_on: string; category: string; severity: string; title: string; description: string; action_taken: string | null; status: string; admin_note: string | null; reporter_name: string; reporter_role?: string; student: string; class_label: string | null }[]
 }
 
 const TABS = [{ key: 'learners', label: 'Learners' }, { key: 'report', label: 'Disciplinary report' }] as const

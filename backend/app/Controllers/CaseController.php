@@ -45,9 +45,10 @@ class CaseController extends Controller
         return (string) ($this->getCurrentUserRole() ?? '');
     }
 
+    /** Records cases: teachers, HODs and the super admin */
     private function isReporterRole(): bool
     {
-        return in_array($this->role(), ['teacher', 'hod'], true);
+        return in_array($this->role(), ['teacher', 'hod', 'super_admin'], true);
     }
 
     private function isSuperAdmin(): bool
@@ -73,6 +74,11 @@ class CaseController extends Controller
         $role = $this->role();
         $id = (int) ($_SESSION['user_id'] ?? 0);
         $name = '';
+        // the super admin's cases are marked as theirs: "Super admin" (with their username)
+        if ($role === 'super_admin') {
+            $user = trim((string) ($_SESSION['username'] ?? ''));
+            return [$role, $id, $user !== '' ? "Super admin ({$user})" : 'Super admin'];
+        }
         $table = $role === 'hod' ? 'hods' : 'teachers';
         try {
             $stmt = $this->db()->prepare("SELECT first_name, last_name FROM {$table} WHERE id = ?");
@@ -485,7 +491,7 @@ class CaseController extends Controller
         $cases = array_map(fn($r) => [
             'id' => (int) $r['id'], 'occurred_on' => $r['occurred_on'], 'category' => $r['category'], 'severity' => $r['severity'],
             'title' => $r['title'], 'description' => $r['description'], 'action_taken' => $r['action_taken'], 'status' => $r['status'],
-            'admin_note' => $r['admin_note'], 'reporter_name' => $r['reporter_name'],
+            'admin_note' => $r['admin_note'], 'reporter_name' => $r['reporter_name'], 'reporter_role' => $r['reporter_role'],
             'student' => ucwords(strtolower($r['first_name'] . ' ' . $r['last_name'])),
             'class_label' => $r['cname'] ? $r['cname'] . ($r['stream_name'] ? ' ' . $r['stream_name'] : '') : null,
         ], $all('k.*, s.first_name, s.last_name, c.name AS cname, c.stream_name', 'ORDER BY k.occurred_on DESC, k.id DESC LIMIT 500'));

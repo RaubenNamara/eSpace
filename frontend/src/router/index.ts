@@ -474,6 +474,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'feedback', name: 'AdminFeedback', component: AdminFeedback },
       { path: 'parent-links', name: 'AdminParentLinks', component: () => import('../pages/admin/ParentLinks.vue') },
       { path: 'cases', name: 'AdminCases', component: () => import('../pages/common/CaseRecords.vue') },
+      { path: 'cases/new', name: 'AdminRecordCase', component: () => import('../pages/teacher/Cases.vue') },
       { path: 'notices', name: 'AdminNotices', component: () => import('../pages/common/Noticeboard.vue') },
       { path: 'exam-dates', name: 'AdminExamDates', component: () => import('../pages/admin/ExamDates.vue') },
       { path: 'permissions', redirect: '/admin/dashboard' },

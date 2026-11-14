@@ -182,7 +182,8 @@ export const HUBS: Record<string, Hub[]> = {
         { path: '/admin/bulk-enrol', label: 'Bulk enrolment', icon: 'TableCellsIcon' },
         { path: '/admin/promotion', label: 'Promotion', icon: 'AcademicCapIcon' },
         { path: '/admin/parent-links', label: 'Parents', icon: 'UserGroupIcon' },
-        { path: '/admin/cases', label: 'Cases', icon: 'ShieldIcon' }
+        { path: '/admin/cases', label: 'Cases', icon: 'ShieldIcon' },
+        { path: '/admin/cases/new', label: 'Record a case', icon: 'ClipboardListIcon', gate: 'super_admin' }
       ],
       also: ['/admin/student-sign-ins']
     },

@@ -832,6 +832,10 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
 
     // Admin routes
     Router::group(['prefix' => '/admin', 'middleware' => ['role:admin,super_admin']], function () {
+        // Cases recorded by the super admin (CaseController checks the role)
+        Router::get('/cases/students', 'eSpace\App\Controllers\CaseController@students');
+        Router::get('/cases', 'eSpace\App\Controllers\CaseController@mine');
+        Router::post('/cases', 'eSpace\App\Controllers\CaseController@store');
 
         // Exam dates (student countdown and revision plan)
         Router::get('/exam-dates', 'eSpace\App\Controllers\Admin\ExamDateController@index');
