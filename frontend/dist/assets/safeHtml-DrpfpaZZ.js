@@ -1,0 +1,1 @@
+import e from"./purify.es-18JuyMri.js";e.addHook("afterSanitizeAttributes",t=>{t.tagName==="A"&&t.getAttribute("href")&&(t.setAttribute("target","_blank"),t.setAttribute("rel","noopener noreferrer"))});function a(t){return t?e.sanitize(t,{ADD_ATTR:["target"]}):""}export{a as s};

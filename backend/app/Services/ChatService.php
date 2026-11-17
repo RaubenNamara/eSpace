@@ -691,11 +691,22 @@ class ChatService
 
             $displayName = $conv['name'] ?: implode(' & ', array_column($participants, 'name'));
 
+            // A class or group chat sends how many are in it, not who: the admin's monitor never
+            // lists a whole class of learners by name. A direct chat still names its two people.
+            $roles = array_count_values(array_column($participants, 'role'));
+            $members = [
+                'total' => count($participants),
+                'students' => $roles['student'] ?? 0,
+                'teachers' => ($roles['teacher'] ?? 0) + ($roles['hod'] ?? 0),
+                'online' => count(array_filter($participants, fn ($p) => !empty($p['is_online']))),
+            ];
+
             $result[] = [
                 'id' => (int) $conv['id'],
                 'type' => $conv['type'],
                 'name' => $displayName,
-                'participants' => $participants,
+                'participants' => $conv['type'] === 'direct' ? $participants : [],
+                'members' => $members,
                 'class_id' => $conv['class_id'] ? (int) $conv['class_id'] : null,
                 'department_id' => $conv['department_id'] ? (int) $conv['department_id'] : null,
                 'updated_at' => $conv['updated_at'],

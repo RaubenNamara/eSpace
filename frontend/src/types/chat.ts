@@ -51,6 +51,8 @@ export interface Conversation {
   /** Others typing / recording in this conversation right now */
   activity?: ChatActivity[]
   participants?: { id: number; role: ChatRole; name: string; is_online?: boolean; last_active_at?: string | null }[]
+  /** the admin's monitor: how many are in a class or group chat (its people are not listed) */
+  members?: { total: number; students: number; teachers: number; online: number }
 }
 
 export interface ReplyPreview {
