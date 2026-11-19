@@ -75,7 +75,7 @@ class SupervisionService
                         OR EXISTS (SELECT 1 FROM assignment_classes ac WHERE ac.assignment_id = a.id AND ac.class_id = sde.class_id))
                    AND sde.department_id = s.department_id
                    AND sde.deleted_at IS NULL AND sde.status = 'active'
-                   AND COALESCE(a.published_at, a.created_at) BETWEEN sde.start_date AND COALESCE(sde.end_date, NOW())
+                   AND COALESCE(a.published_at, a.created_at) BETWEEN LEAST(sde.start_date, COALESCE((SELECT ay_w.start_date FROM academic_years ay_w WHERE ay_w.name = sde.academic_year AND ay_w.deleted_at IS NULL LIMIT 1), sde.start_date)) AND COALESCE(sde.end_date, NOW())
                    AND NOT EXISTS (SELECT 1 FROM student_teacher_enrollments ste
                                    WHERE ste.student_id = sde.student_id AND ste.teacher_id = a.teacher_id
                                      AND ste.department_id = s.department_id AND ste.status = 'withdrawn'))";
@@ -587,7 +587,7 @@ class SupervisionService
              JOIN subjects s ON s.id = a.subject_id
              JOIN student_department_enrollments sde ON sde.department_id = s.department_id
                   AND sde.deleted_at IS NULL AND sde.status = 'active'
-                  AND COALESCE(a.published_at, a.created_at) BETWEEN sde.start_date AND COALESCE(sde.end_date, NOW())
+                  AND COALESCE(a.published_at, a.created_at) BETWEEN LEAST(sde.start_date, COALESCE((SELECT ay_w.start_date FROM academic_years ay_w WHERE ay_w.name = sde.academic_year AND ay_w.deleted_at IS NULL LIMIT 1), sde.start_date)) AND COALESCE(sde.end_date, NOW())
              LEFT JOIN classes sc ON sc.id = sde.class_id
              JOIN students st ON st.id = sde.student_id AND st.deleted_at IS NULL
              WHERE a.id = :id

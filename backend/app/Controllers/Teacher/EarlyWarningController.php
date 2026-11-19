@@ -107,7 +107,7 @@ class EarlyWarningController extends Controller
              INNER JOIN assignments a ON a.deleted_at IS NULL AND a.status = 'published' AND a.subject_id IN (" . self::in($subjectIds) . ")
                     AND (a.class_id = sde.class_id OR a.class_group_name = c.name OR EXISTS (SELECT 1 FROM assignment_classes ac WHERE ac.assignment_id = a.id AND ac.class_id = sde.class_id))
                     AND COALESCE(a.deadline_at, a.due_date) BETWEEN DATE_SUB(NOW(), INTERVAL " . self::MISSED_DAYS . " DAY) AND NOW()
-                    AND COALESCE(a.published_at, a.created_at) >= sde.start_date
+                    AND COALESCE(a.published_at, a.created_at) >= LEAST(sde.start_date, COALESCE((SELECT ay_w.start_date FROM academic_years ay_w WHERE ay_w.name = sde.academic_year AND ay_w.deleted_at IS NULL LIMIT 1), sde.start_date))
              WHERE sde.student_id IN (" . self::in($ids) . ") AND sde.department_id = ? AND sde.status = 'active' AND sde.deleted_at IS NULL
                AND NOT EXISTS (
                    SELECT 1 FROM assignment_submissions sb WHERE sb.assignment_id = a.id AND sb.student_id = sde.student_id

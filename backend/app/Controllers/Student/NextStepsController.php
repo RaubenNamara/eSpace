@@ -292,7 +292,7 @@ class NextStepsController extends Controller
                      AND sde.department_id = s.department_id
                      AND sde.deleted_at IS NULL
                      AND sde.status = 'active'
-                     AND COALESCE(a.published_at, a.created_at) BETWEEN sde.start_date AND COALESCE(sde.end_date, NOW())
+                     AND COALESCE(a.published_at, a.created_at) BETWEEN LEAST(sde.start_date, COALESCE((SELECT ay_w.start_date FROM academic_years ay_w WHERE ay_w.name = sde.academic_year AND ay_w.deleted_at IS NULL LIMIT 1), sde.start_date)) AND COALESCE(sde.end_date, NOW())
                )
                AND NOT EXISTS (
                    SELECT 1 FROM student_teacher_enrollments ste

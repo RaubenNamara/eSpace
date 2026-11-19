@@ -7,8 +7,10 @@ namespace eSpace\App\Services;
 /**
  * Whether a student is one of an assessment's learners - the same rule the student Assessments
  * page uses (Student\AssignmentController::index): enrolled in the assessment's class, stream group
- * or one of its extra classes, in the subject's department, at the time it was published, and not
- * withdrawn from that teacher. Shared by Live Quiz and Daily Revision so they never disagree.
+ * or one of its extra classes, in the subject's department, and not withdrawn from that teacher.
+ * The window runs from the start of the enrolment's academic year (or the enrolment, if earlier)
+ * to the day the learner left - so a learner added late sees all the work their classmates got
+ * that year, and a leaver sees nothing set after they went. Shared by Live Quiz and Daily Revision so they never disagree.
  */
 class AssignmentAccess
 {
@@ -30,7 +32,7 @@ class AssignmentAccess
                   AND sde.department_id = {$s}.department_id
                   AND sde.deleted_at IS NULL
                   AND sde.status = 'active'
-                  AND COALESCE({$a}.published_at, {$a}.created_at) BETWEEN sde.start_date AND COALESCE(sde.end_date, NOW())
+                  AND COALESCE({$a}.published_at, {$a}.created_at) BETWEEN LEAST(sde.start_date, COALESCE((SELECT ay_w.start_date FROM academic_years ay_w WHERE ay_w.name = sde.academic_year AND ay_w.deleted_at IS NULL LIMIT 1), sde.start_date)) AND COALESCE(sde.end_date, NOW())
             )
             AND NOT EXISTS (
                 SELECT 1 FROM student_teacher_enrollments ste
