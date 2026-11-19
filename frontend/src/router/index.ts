@@ -264,6 +264,8 @@ const routes: RouteRecordRaw[] = [
       { path: 'chat', name: 'StudentChat', component: StudentChat, meta: { fullScreenChat: true } },
       { path: 'reports', redirect: '/student/dashboard' },
       { path: 'learning-map', name: 'StudentLearningMap', component: StudentLearningMap },
+      { path: 'ask', name: 'StudentAskNotes', component: () => import('../pages/student/AskNotes.vue') },
+      { path: 'my-path', name: 'StudentMyPath', component: () => import('../pages/student/MyPath.vue') },
       { path: 'study-groups', name: 'StudentStudyGroups', component: () => import('../pages/student/StudyGroups.vue') },
       { path: 'notices', name: 'StudentNotices', component: () => import('../pages/common/Noticeboard.vue') },
       { path: 'my-notes', name: 'StudentMyNotes', component: () => import('../pages/student/MyNotes.vue') },

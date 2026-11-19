@@ -70,6 +70,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
     Router::get('/case-records/report', 'eSpace\App\Controllers\CaseController@report');
     Router::get('/case-records/students/{id}', 'eSpace\App\Controllers\CaseController@learnerCases');
     Router::put('/case-records/{id}', 'eSpace\App\Controllers\CaseController@update');
+    Router::post('/case-records/{id}/resolve', 'eSpace\App\Controllers\CaseController@resolve');
     Router::delete('/case-records/{id}', 'eSpace\App\Controllers\CaseController@destroy');
 
     
@@ -122,6 +123,10 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::post('/live-quiz/join', 'eSpace\App\Controllers\Student\LiveQuizController@join');
         Router::get('/live-quiz/{id}', 'eSpace\App\Controllers\Student\LiveQuizController@show');
         Router::post('/live-quiz/{id}/answer', 'eSpace\App\Controllers\Student\LiveQuizController@answer');
+        // Ask my notes (answers from the learner's own eNotes) and My path (A Level combinations and careers)
+        Router::get('/ask-notes', 'eSpace\App\Controllers\Student\AskNotesController@index');
+        Router::post('/ask-notes', 'eSpace\App\Controllers\Student\AskNotesController@ask');
+        Router::get('/my-path', 'eSpace\App\Controllers\Student\MyPathController@index');
         Router::get('/revision', 'eSpace\App\Controllers\Student\RevisionController@index');
         Router::post('/revision/answer', 'eSpace\App\Controllers\Student\RevisionController@answer');
         Router::post('/revision/finish', 'eSpace\App\Controllers\Student\RevisionController@finish');
@@ -917,6 +922,9 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::get('/students/enrolled-by-class', 'eSpace\App\Controllers\Admin\StudentController@enrolledByClass');
         Router::get('/students/analytics', 'eSpace\App\Controllers\Admin\StudentController@analytics');
         Router::post('/students', 'eSpace\App\Controllers\Admin\StudentController@create');
+        // Import learners from a spreadsheet (preview, then confirm)
+        Router::get('/students/import/options', 'eSpace\App\Controllers\Admin\StudentImportController@options');
+        Router::post('/students/import', 'eSpace\App\Controllers\Admin\StudentImportController@import');
         Router::post('/students/enroll', 'eSpace\App\Controllers\Admin\StudentController@enroll');
         // Bulk subject enrolment from a spreadsheet (a sheet of names per subject)
         Router::get('/bulk-enrol/options', 'eSpace\App\Controllers\Admin\BulkEnrolController@options');

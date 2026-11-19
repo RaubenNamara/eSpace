@@ -82,23 +82,51 @@
             <p class="text-xs text-gray-500 dark:text-gray-400">Reported by <b class="text-gray-700 dark:text-gray-200">{{ c.reporter_name }}</b> ({{ c.reporter_role === 'hod' ? 'HOD' : c.reporter_role === 'super_admin' ? 'Super admin' : 'teacher' }}) &middot; recorded {{ when(c.created_at) }}</p>
             <p class="mt-2 text-sm text-gray-700 dark:text-gray-200 whitespace-pre-line">{{ c.description }}</p>
             <p v-if="c.action_taken" class="mt-1.5 text-sm text-gray-700 dark:text-gray-200"><b>Action taken:</b> {{ c.action_taken }}</p>
-            <div v-if="c.files.length" class="mt-3 flex flex-wrap gap-2"><CaseFile v-for="f in c.files" :key="f.id" :file="f" /></div>
+            <div v-if="c.files.length" class="mt-3">
+              <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1.5">Evidence from the reporter</p>
+              <div class="flex flex-wrap gap-2"><CaseFile v-for="f in c.files" :key="f.id" :file="f" /></div>
+            </div>
 
-            <div class="mt-3 rounded-xl bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 p-3">
-              <p class="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Committee note / decision</p>
+            <!-- How it ended: the outcome, its dates, the decision and the signed forms -->
+            <div v-if="c.status === 'resolved' && c.outcome" class="resolution mt-3">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="text-[11px] font-semibold uppercase tracking-wide text-indigo-900 dark:text-indigo-200">Resolution</span>
+                <span class="chip" :class="outcomeTone(c.outcome)">{{ c.outcome_label }}</span>
+                <span class="text-xs text-gray-600 dark:text-gray-300">decided {{ day(c.decided_on || c.resolved_at || '') }}</span>
+              </div>
+              <p v-if="c.outcome === 'suspension' && c.outcome_from" class="mt-1.5 text-sm text-gray-800 dark:text-gray-100"><b class="font-semibold">Suspended</b> from {{ day(c.outcome_from) }} to {{ day(c.outcome_to || c.outcome_from) }} ({{ daysBetween(c.outcome_from, c.outcome_to) }} days)</p>
+              <p v-else-if="c.outcome === 'expulsion' && c.outcome_from" class="mt-1.5 text-sm text-gray-800 dark:text-gray-100"><b class="font-semibold">Expelled</b> with effect from {{ day(c.outcome_from) }}</p>
+              <p v-if="c.outcome_detail" class="mt-1 text-sm text-gray-800 dark:text-gray-100 whitespace-pre-line">{{ c.outcome_detail }}</p>
+              <p v-if="c.admin_note" class="mt-1 text-sm text-gray-700 dark:text-gray-200"><b class="font-semibold">Committee:</b> {{ c.admin_note }}</p>
+              <div v-if="c.resolution_files?.length" class="mt-2">
+                <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1.5">Resolution forms</p>
+                <div class="flex flex-wrap gap-2"><CaseFile v-for="f in c.resolution_files" :key="f.id" :file="f" /></div>
+              </div>
+              <p class="mt-2 text-[11px] text-gray-500 dark:text-gray-400">Resolved by {{ c.resolved_by || 'the administration' }}</p>
+            </div>
+
+            <div v-else class="mt-3 rounded-xl bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 p-3">
+              <p class="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Committee note</p>
               <template v-if="can.manage">
-                <textarea v-model="notes[c.id]" rows="2" maxlength="3000" placeholder="e.g. Seen by the committee on 14 Nov: warned, parents informed." class="inp print:hidden"></textarea>
+                <textarea v-model="notes[c.id]" rows="2" maxlength="3000" placeholder="e.g. To be seen by the committee on 14 Nov; parents invited." class="inp print:hidden"></textarea>
                 <p class="hidden print:block text-sm">{{ c.admin_note || '-' }}</p>
               </template>
               <p v-else class="text-sm text-gray-700 dark:text-gray-200">{{ c.admin_note || 'No note yet.' }}</p>
-              <div v-if="can.manage || can.delete" class="print:hidden mt-2 flex flex-wrap gap-2">
-                <template v-if="can.manage">
+            </div>
+
+            <div v-if="can.manage || can.delete" class="print:hidden mt-2 flex flex-wrap gap-2">
+              <template v-if="can.manage">
+                <template v-if="c.status !== 'resolved'">
                   <button type="button" class="btn-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-gray-700" :disabled="busy === c.id || (notes[c.id] || '') === (c.admin_note || '')" @click="save(c, { admin_note: notes[c.id] || '' })">Save note</button>
-                  <button type="button" class="btn-sm" :class="c.status === 'resolved' ? 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200' : 'bg-indigo-600 text-white hover:bg-indigo-700'" :disabled="busy === c.id" @click="save(c, { status: c.status === 'resolved' ? 'open' : 'resolved' })">{{ c.status === 'resolved' ? 'Reopen' : 'Mark resolved' }}</button>
+                  <button type="button" class="btn-sm bg-indigo-600 text-white hover:bg-indigo-700" :disabled="busy === c.id" @click="startResolve(c)">Resolve case</button>
                 </template>
-                <span class="flex-1"></span>
-                <button v-if="can.delete" type="button" class="btn-sm text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-900/30" :disabled="busy === c.id" @click="remove(c)">Delete case</button>
-              </div>
+                <template v-else>
+                  <button type="button" class="btn-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-gray-700" :disabled="busy === c.id" @click="startResolve(c)">{{ c.outcome ? 'Edit resolution / add forms' : 'Record the outcome' }}</button>
+                  <button type="button" class="btn-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-gray-700" :disabled="busy === c.id" @click="save(c, { status: 'open' })">Reopen</button>
+                </template>
+              </template>
+              <span class="flex-1"></span>
+              <button v-if="can.delete" type="button" class="btn-sm text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-900/30" :disabled="busy === c.id" @click="remove(c)">Delete case</button>
             </div>
           </li>
         </ol>
@@ -210,6 +238,13 @@
               </section>
             </div>
 
+            <section v-if="report.outcomes?.length" class="panel">
+              <h3 class="panel-title">How cases were resolved</h3>
+              <table class="tbl"><thead><tr><th class="text-left">Outcome</th><th>Cases</th><th>Learners</th></tr></thead>
+                <tbody><tr v-for="o in report.outcomes" :key="o.outcome"><td class="text-left font-semibold">{{ o.label }}</td><td>{{ o.cases }}</td><td>{{ o.learners }}</td></tr></tbody>
+              </table>
+            </section>
+
             <section v-if="report.scope !== 'student'" class="panel">
               <h3 class="panel-title">Learners with the most cases</h3>
               <table class="tbl">
@@ -256,7 +291,7 @@
                     <td v-if="report.scope !== 'student'" class="text-left"><b>{{ c.student }}</b><span class="block text-[11px] text-gray-500">{{ c.class_label }}</span></td>
                     <td class="text-left">{{ c.category }}</td>
                     <td><span class="chip" :class="sev(c.severity).chip">{{ sev(c.severity).label }}</span></td>
-                    <td class="text-left text-xs"><b>{{ c.title }}</b> - {{ c.description }}<template v-if="c.action_taken"><br><i>Action: {{ c.action_taken }}</i></template><template v-if="c.admin_note"><br><i>Committee: {{ c.admin_note }}</i></template></td>
+                    <td class="text-left text-xs"><b>{{ c.title }}</b> - {{ c.description }}<template v-if="c.action_taken"><br><i>Action: {{ c.action_taken }}</i></template><template v-if="c.admin_note"><br><i>Committee: {{ c.admin_note }}</i></template><template v-if="c.outcome_label"><br><b>Outcome: {{ c.outcome_label }}</b><template v-if="c.outcome_from"> ({{ c.outcome_to ? `${day(c.outcome_from)} to ${day(c.outcome_to)}` : `from ${day(c.outcome_from)}` }})</template><template v-if="c.outcome_detail"> - {{ c.outcome_detail }}</template></template></td>
                     <td><span class="chip" :class="c.status === 'resolved' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200'">{{ c.status === 'resolved' ? 'Resolved' : 'Open' }}</span></td>
                     <td class="text-left text-xs">{{ c.reporter_name }}<span v-if="c.reporter_role === 'super_admin' && !c.reporter_name.startsWith('Super admin')" class="block text-[10px] text-indigo-700">Super admin</span></td>
                   </tr>
@@ -280,6 +315,85 @@
         </div>
       </article>
     </div>
+
+    <!-- Resolve a case: the outcome, its dates, the decision and the signed forms -->
+    <div v-if="resolving" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 print:hidden" @click.self="resolving = null">
+      <form class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[92vh] flex flex-col" role="dialog" aria-modal="true" aria-labelledby="resolve-title" @submit.prevent="submitResolve">
+        <div class="px-5 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 id="resolve-title" class="text-lg font-semibold text-gray-900 dark:text-white">{{ resolving.status === 'resolved' ? 'Edit the resolution' : 'Resolve the case' }}</h2>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ active?.student.name }} &middot; {{ resolving.title }} &middot; {{ day(resolving.occurred_on) }}</p>
+        </div>
+        <div class="flex-1 overflow-y-auto px-5 sm:px-6 py-5 space-y-4">
+          <fieldset>
+            <legend class="lbl">How did it end?</legend>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <label v-for="(label, key) in OUTCOMES" :key="key" class="outcome-opt" :class="rf.outcome === key ? 'is-on' : ''">
+                <input v-model="rf.outcome" type="radio" name="outcome" :value="key" class="sr-only">
+                <span>{{ label }}</span>
+              </label>
+            </div>
+            <p v-if="rErr.outcome" class="err">{{ rErr.outcome }}</p>
+          </fieldset>
+
+          <div class="grid sm:grid-cols-3 gap-3">
+            <label class="block">
+              <span class="lbl">Date decided</span>
+              <input v-model="rf.decided_on" type="date" :max="todayIso" class="inp">
+              <span v-if="rErr.decided_on" class="err">{{ rErr.decided_on }}</span>
+            </label>
+            <template v-if="rf.outcome === 'suspension'">
+              <label class="block">
+                <span class="lbl">Suspended from</span>
+                <input v-model="rf.outcome_from" type="date" class="inp">
+                <span v-if="rErr.outcome_from" class="err">{{ rErr.outcome_from }}</span>
+              </label>
+              <label class="block">
+                <span class="lbl">Returns on</span>
+                <input v-model="rf.outcome_to" type="date" :min="rf.outcome_from" class="inp">
+                <span v-if="rErr.outcome_to" class="err">{{ rErr.outcome_to }}</span>
+              </label>
+            </template>
+            <label v-else-if="rf.outcome === 'expulsion'" class="block">
+              <span class="lbl">Takes effect from</span>
+              <input v-model="rf.outcome_from" type="date" class="inp">
+              <span v-if="rErr.outcome_from" class="err">{{ rErr.outcome_from }}</span>
+            </label>
+          </div>
+
+          <label class="block">
+            <span class="lbl">{{ rf.outcome === 'internal' ? 'The punishment' : rf.outcome === 'other' ? 'How it ended' : 'Details (optional)' }}</span>
+            <textarea v-model="rf.outcome_detail" rows="2" maxlength="3000" class="inp" :placeholder="detailHint"></textarea>
+            <span v-if="rErr.outcome_detail" class="err">{{ rErr.outcome_detail }}</span>
+          </label>
+          <label class="block">
+            <span class="lbl">The committee's decision (optional)</span>
+            <textarea v-model="rf.admin_note" rows="2" maxlength="3000" class="inp" placeholder="e.g. Met on 14 Nov with the parents; the learner apologised and signed the undertaking."></textarea>
+          </label>
+
+          <div>
+            <span class="lbl">Signed forms and letters</span>
+            <label class="block rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-indigo-400 p-4 text-center cursor-pointer">
+              <input type="file" multiple accept=".pdf,image/jpeg,image/png,image/webp" class="sr-only" @change="pickForms">
+              <span class="text-sm text-gray-700 dark:text-gray-200"><b class="font-semibold text-indigo-700 dark:text-indigo-300">Attach PDFs or photos</b> - suspension letter, signed undertaking, committee minutes</span>
+              <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">Up to 5 files, 8 MB each</span>
+            </label>
+            <ul v-if="rf.files.length" class="mt-2 space-y-1">
+              <li v-for="(f, i) in rf.files" :key="i" class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+                <span class="truncate flex-1">{{ f.name }}</span>
+                <span class="text-xs text-gray-400">{{ Math.max(1, Math.round(f.size / 1024)) }} KB</span>
+                <button type="button" class="text-xs text-rose-700 dark:text-rose-300" @click="rf.files.splice(i, 1)">Remove</button>
+              </li>
+            </ul>
+            <p v-if="resolving.resolution_files?.length" class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ resolving.resolution_files.length }} form{{ resolving.resolution_files.length === 1 ? ' is' : 's are' }} already attached; new ones are added to them.</p>
+            <p v-if="rErr.files" class="err">{{ rErr.files }}</p>
+          </div>
+        </div>
+        <div class="px-5 sm:px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
+          <button type="button" class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-200" :disabled="resolveBusy" @click="resolving = null">Cancel</button>
+          <button type="submit" class="btn-primary" :disabled="resolveBusy || !rf.outcome">{{ resolveBusy ? 'Saving…' : resolving.status === 'resolved' ? 'Save the resolution' : 'Resolve the case' }}</button>
+        </div>
+      </form>
+    </div>
   </div>
 </template>
 
@@ -298,6 +412,9 @@ interface CaseItem {
   id: number; occurred_on: string; category: string; severity: string; title: string; description: string; action_taken: string | null
   status: 'open' | 'resolved'; admin_note: string | null; reporter_name: string; reporter_role: string; created_at: string
   files: { id: number; name: string; mime: string; size: number }[]
+  resolution_files?: { id: number; name: string; mime: string; size: number }[]
+  resolved_at?: string | null; resolved_by?: string | null; outcome?: string | null; outcome_label?: string | null
+  outcome_detail?: string | null; decided_on?: string | null; outcome_from?: string | null; outcome_to?: string | null
 }
 interface Report {
   scope: string; value: string; label: string; from: string; to: string
@@ -309,7 +426,8 @@ interface Report {
   classes: { label: string; cases: number; learners: number }[]
   months: { month: string; cases: number }[]
   reporters: { name: string; cases: number }[]
-  cases: { id: number; occurred_on: string; category: string; severity: string; title: string; description: string; action_taken: string | null; status: string; admin_note: string | null; reporter_name: string; reporter_role?: string; student: string; class_label: string | null }[]
+  cases: { id: number; occurred_on: string; category: string; severity: string; title: string; description: string; action_taken: string | null; status: string; admin_note: string | null; reporter_name: string; reporter_role?: string; student: string; class_label: string | null; outcome_label?: string | null; outcome_detail?: string | null; outcome_from?: string | null; outcome_to?: string | null }[]
+  outcomes?: { outcome: string; label: string; cases: number; learners: number }[]
 }
 
 const TABS = [{ key: 'learners', label: 'Learners' }, { key: 'report', label: 'Disciplinary report' }] as const
@@ -392,6 +510,60 @@ const save = async (c: CaseItem, change: { status?: string; admin_note?: string 
     toast.error(err.response?.data?.message || 'Could not save')
   } finally {
     busy.value = null
+  }
+}
+
+// ---- resolving a case
+const OUTCOMES: Record<string, string> = {
+  counselling: 'Counselling', warning: 'Warning', parents: 'Parents called', internal: 'Internal punishment',
+  suspension: 'Suspension', expulsion: 'Expulsion', no_action: 'No action needed', other: 'Other'
+}
+const outcomeTone = (o?: string | null) => o === 'expulsion' ? 'bg-rose-600 text-white' : o === 'suspension' ? 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-200'
+  : o === 'internal' || o === 'parents' ? 'bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200' : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-200'
+const daysBetween = (a: string, b?: string | null) => Math.max(1, Math.round((new Date(`${(b || a).slice(0, 10)}T12:00:00`).getTime() - new Date(`${a.slice(0, 10)}T12:00:00`).getTime()) / 86400000))
+const resolving = ref<CaseItem | null>(null)
+const resolveBusy = ref(false)
+const rErr = ref<Record<string, string>>({})
+const rf = ref({ outcome: '', decided_on: todayIso, outcome_from: '', outcome_to: '', outcome_detail: '', admin_note: '', files: [] as File[] })
+const detailHint = computed(() => ({
+  internal: 'e.g. Slashing the compound for 3 days, supervised by the duty teacher.',
+  suspension: 'e.g. To return with a parent and a signed undertaking.',
+  expulsion: 'e.g. Board of Governors decision, minute 4/2026.',
+  other: 'Say how the case ended.',
+} as Record<string, string>)[rf.value.outcome] || 'Anything to add.')
+const startResolve = (c: CaseItem) => {
+  rErr.value = {}
+  rf.value = {
+    outcome: c.outcome || '', decided_on: c.decided_on || todayIso, outcome_from: c.outcome_from || '', outcome_to: c.outcome_to || '',
+    outcome_detail: c.outcome_detail || '', admin_note: notes.value[c.id] ?? c.admin_note ?? '', files: []
+  }
+  resolving.value = c
+}
+const pickForms = (e: Event) => {
+  const input = e.target as HTMLInputElement
+  rf.value.files.push(...Array.from(input.files || []))
+  input.value = ''
+}
+const submitResolve = async () => {
+  const c = resolving.value
+  if (!c) return
+  resolveBusy.value = true
+  rErr.value = {}
+  const fd = new FormData()
+  for (const k of ['outcome', 'decided_on', 'outcome_from', 'outcome_to', 'outcome_detail', 'admin_note'] as const) fd.append(k, rf.value[k])
+  rf.value.files.forEach(f => fd.append('files[]', f))
+  try {
+    const res = await axios.post(`/api/case-records/${c.id}/resolve`, fd)
+    Object.assign(c, res.data.data.case)
+    notes.value[c.id] = c.admin_note || ''
+    resolving.value = null
+    toast.success('Case resolved and kept on the record')
+    load()
+  } catch (err: any) {
+    rErr.value = err.response?.data?.errors || {}
+    if (!err.response?.data?.errors) toast.error(err.response?.data?.message || 'Could not save the resolution')
+  } finally {
+    resolveBusy.value = false
   }
 }
 
@@ -507,6 +679,11 @@ watch(q, () => { clearTimeout(timer); timer = setTimeout(load, 300) })
 .edge-serious::before { background: #e5b836; }
 .edge-major::before { background: #e11d48; }
 .case-no { @apply px-2 py-0.5 rounded-md text-[11px] font-semibold bg-indigo-900 text-white; }
+.resolution { @apply rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/60 dark:bg-indigo-900/20 p-3; border-left: 3px solid #d9a520; }
+.outcome-opt { @apply flex items-center justify-center text-center rounded-xl border border-gray-300 dark:border-gray-600 px-2 py-2.5 text-sm text-gray-700 dark:text-gray-200 cursor-pointer transition-colors min-h-[44px]; }
+.outcome-opt:hover { @apply border-indigo-400; }
+.outcome-opt.is-on { @apply border-indigo-600 bg-indigo-600 text-white; }
+.err { @apply block mt-1 text-xs text-rose-700 dark:text-rose-300; }
 
 .sheet { @apply bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden; }
 .sheet-head { @apply flex items-center gap-4 px-5 sm:px-7 py-5 text-white; background: linear-gradient(120deg, #14307d, #1b3fa0); border-bottom: 4px solid #d9a520; }

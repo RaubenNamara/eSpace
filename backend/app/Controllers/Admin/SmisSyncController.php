@@ -18,6 +18,13 @@ class SmisSyncController extends Controller
         return $this->getCurrentUserRole() === 'super_admin';
     }
 
+    /** The SMIS feed is St Mark's own register: only the home school may sync from it */
+    private static function isHomeSchool(): bool
+    {
+        $code = \eSpace\App\Support\Tenant::sessionCode();
+        return $code === null || $code === \eSpace\App\Support\Tenant::homeCode();
+    }
+
     /** GET /admin/students/smis-sync */
     public function status(): void
     {
@@ -25,13 +32,21 @@ class SmisSyncController extends Controller
             $this->forbidden();
             return;
         }
-        $this->success((new SmisStudentSync(\eSpace\Config\Database::getInstance()))->status());
+        if (!self::isHomeSchool()) {
+            $this->success(['available' => false, 'runs' => [], 'running' => false]);
+            return;
+        }
+        $this->success(['available' => true] + (new SmisStudentSync(\eSpace\Config\Database::getInstance()))->status());
     }
 
     /** POST /admin/students/smis-sync */
     public function run(): void
     {
         if (!$this->isSuperAdmin()) {
+            $this->forbidden();
+            return;
+        }
+        if (!self::isHomeSchool()) {
             $this->forbidden();
             return;
         }

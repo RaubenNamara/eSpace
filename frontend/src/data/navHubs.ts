@@ -44,7 +44,8 @@ export const HUBS: Record<string, Hub[]> = {
       key: 'learn', label: 'Learn', icon: 'NoteIcon', divider: true,
       tabs: [
         { path: '/student/enotes', label: 'eNotes', icon: 'NoteIcon' },
-        { path: '/student/live-classes', label: 'Live Classes', icon: 'VideoCameraIcon' }
+        { path: '/student/live-classes', label: 'Live Classes', icon: 'VideoCameraIcon' },
+        { path: '/student/ask', label: 'Ask my notes', icon: 'ChatQuestionIcon' }
       ],
       also: ['/student/notes', '/student/my-notes', '/student/downloads', '/student/classes']
     },
@@ -65,6 +66,7 @@ export const HUBS: Record<string, Hub[]> = {
         { path: '/student/learning-map', label: 'Learning Map', icon: 'MapIcon' },
         { path: '/student/academic-history', label: 'Academic History', icon: 'AcademicCapIcon' },
         { path: '/student/achievements', label: 'Achievements', icon: 'TrophyIcon' },
+        { path: '/student/my-path', label: 'My path', icon: 'BriefcaseIcon' },
         { path: '/student/report-card', label: 'Report card', icon: 'ClipboardListIcon', gate: 'report_cards' }
       ],
       also: ['/student/reports', '/student/constructs']

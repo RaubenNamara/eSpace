@@ -1,6 +1,6 @@
 <template>
   <!-- Super admin: sync students with SMIS. The switch runs a sync and turns itself off when it ends. -->
-  <section class="relative mb-4 overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
+  <section v-if="available" class="relative mb-4 overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
     <div class="flex items-center gap-3 sm:gap-4 p-3 sm:p-4">
       <span class="flex-shrink-0 w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-sm shadow-indigo-600/30" aria-hidden="true">
         <svg class="w-5 h-5" :class="on ? 'animate-spin [animation-duration:1.4s]' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
@@ -69,6 +69,8 @@ const toast = useToastStore()
 const confirmDialog = useConfirmStore()
 const on = ref(false)
 const loading = ref(true)
+// only the home school has an SMIS feed; other schools never see the card
+const available = ref(false)
 const runs = ref<Run[]>([])
 const last = computed(() => runs.value[0] || null)
 const statusLine = computed(() => {
@@ -97,6 +99,7 @@ let poll: ReturnType<typeof setTimeout> | null = null
 const loadStatus = async () => {
   try {
     const res = await axios.get('/api/admin/students/smis-sync')
+    available.value = res.data.data.available !== false
     runs.value = res.data.data.runs || []
     on.value = !!res.data.data.running
     // a run started elsewhere (another tab): follow it until it ends

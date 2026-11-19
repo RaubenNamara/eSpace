@@ -4,6 +4,10 @@
   <div class="w-full">
     <PageHeader title="Students" description="Every student in the school - find anyone, change their class, reset a password, or work on many at once." icon="users" accent="indigo" :active-filters="classFilter ? 1 : 0">
       <template #actions>
+        <button type="button" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold border border-indigo-200 dark:border-indigo-700 bg-white dark:bg-gray-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30" @click="showImport = true">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+          Import learners
+        </button>
         <button type="button" class="btn-primary" @click="showCreateModal = true">Add student</button>
       </template>
       <StatStrip v-if="!loading && students.length" v-model="quick" :items="statItems" />
@@ -18,6 +22,7 @@
     </PageHeader>
 
     <SmisSyncCard v-if="isSuperAdmin" @synced="fetchStudents" />
+    <ImportLearnersModal v-if="showImport" @close="showImport = false" @imported="fetchStudents(); fetchClasses()" />
 
     <!-- Toast Notification -->
     <transition name="toast">
@@ -63,7 +68,7 @@
       :page-size="30"
       :initial-sort="{ key: 'name', dir: 'asc' }"
       empty-title="No students here"
-      :empty-message="students.length ? 'Nothing matches this filter.' : 'Add your first student, or import a list from Admin tools.'"
+      :empty-message="students.length ? 'Nothing matches this filter.' : 'Add your first student, or bring in the whole register with Import learners.'"
     >
       <template #toolbar>
         <label class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none">
@@ -359,6 +364,7 @@ import { niceName, initials } from '@/components/dashboard/teacher/time'
 import StudentPhotoModal from '@/components/students/StudentPhotoModal.vue'
 import ProfilePhotoRemover from '@/components/admin/ProfilePhotoRemover.vue'
 import SmisSyncCard from '@/components/admin/SmisSyncCard.vue'
+import ImportLearnersModal from '@/components/admin/ImportLearnersModal.vue'
 import { useAuthStore } from '@/stores/auth'
 
 // only the super admin runs the SMIS sync
@@ -401,6 +407,7 @@ const pagination = ref({ page: 1, limit: 20, total: 0, pages: 0 })
 const loading = ref(false)
 const successMessage = ref('')
 const showCreateModal = ref(false)
+const showImport = ref(false)
 const showEditModal = ref(false)
 const showPhotoModal = ref(false)
 const showPasswordModal = ref(false)

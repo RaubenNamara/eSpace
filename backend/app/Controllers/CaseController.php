@@ -31,6 +31,17 @@ class CaseController extends Controller
 {
     public const CATEGORIES = ['Bullying', 'Fighting', 'Disrespect', 'Cheating', 'Absent without leave', 'Late coming', 'Uniform', 'Phone or gadget', 'Theft', 'Damage to property', 'Substance use', 'Other'];
     private const SEVERITIES = ['minor', 'serious', 'major'];
+    /** How a case can end (key => label); a suspension needs its dates, an expulsion the day it takes effect */
+    public const OUTCOMES = [
+        'counselling' => 'Counselling',
+        'warning' => 'Warning',
+        'parents' => 'Parents called',
+        'internal' => 'Internal punishment',
+        'suspension' => 'Suspension',
+        'expulsion' => 'Expulsion',
+        'no_action' => 'No action needed',
+        'other' => 'Other',
+    ];
     private const MAX_FILES = 5;
     private const MAX_BYTES = 8 * 1024 * 1024;
     private const ALLOWED = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'application/pdf' => 'pdf'];
@@ -361,6 +372,101 @@ class CaseController extends Controller
         $this->success(['case' => $this->withFiles([$case], false)[0]], 'Saved');
     }
 
+    /**
+     * POST /case-records/{id}/resolve (multipart) - record how a case ended and resolve it:
+     * outcome, decided_on, outcome_from / outcome_to (a suspension's days; the day an expulsion
+     * takes effect), outcome_detail (the punishment, or what "other" was), admin_note (the
+     * committee's decision) and files[] - the signed forms and letters. Sent again for a resolved
+     * case it corrects the record and adds the new files.
+     */
+    public function resolve($id): void
+    {
+        if (!$this->isAuthenticated() || !$this->isManager()) {
+            $this->forbidden('Only the administration resolves cases');
+            return;
+        }
+        $db = $this->db();
+        $stmt = $db->prepare('SELECT id, occurred_on FROM student_cases WHERE id = ? AND deleted_at IS NULL');
+        $stmt->execute([(int) $id]);
+        $case = $stmt->fetch(\PDO::FETCH_ASSOC);
+        if (!$case) {
+            $this->notFound('Case not found');
+            return;
+        }
+
+        $outcome = (string) $this->input('outcome', '');
+        $decided = (string) $this->input('decided_on', '');
+        $from = (string) $this->input('outcome_from', '');
+        $to = (string) $this->input('outcome_to', '');
+        $detail = mb_substr(trim(strip_tags((string) $this->input('outcome_detail', ''))), 0, 3000);
+        $note = mb_substr(trim(strip_tags((string) $this->input('admin_note', ''))), 0, 3000);
+        $isDate = static function (string $d): bool {
+            $x = \DateTime::createFromFormat('Y-m-d', $d);
+            return $x && $x->format('Y-m-d') === $d;
+        };
+
+        $errors = [];
+        if (!isset(self::OUTCOMES[$outcome])) $errors['outcome'] = 'Choose how the case ended';
+        if (!$isDate($decided) || $decided > date('Y-m-d')) $errors['decided_on'] = 'Give the date it was decided (not in the future)';
+        elseif ($decided < $case['occurred_on']) $errors['decided_on'] = 'The decision cannot be before the case happened';
+        if ($outcome === 'suspension') {
+            if (!$isDate($from)) $errors['outcome_from'] = 'Give the first day of the suspension';
+            if (!$isDate($to)) $errors['outcome_to'] = 'Give the day the learner returns';
+            elseif ($isDate($from) && $to < $from) $errors['outcome_to'] = 'The return day must be after the first day';
+        } elseif ($outcome === 'expulsion') {
+            if (!$isDate($from)) $errors['outcome_from'] = 'Give the day the expulsion takes effect';
+            $to = '';
+        } else {
+            $from = $to = '';
+        }
+        if (in_array($outcome, ['internal', 'other'], true) && mb_strlen($detail) < 3) {
+            $errors['outcome_detail'] = $outcome === 'internal' ? 'Say what the punishment was' : 'Say how the case ended';
+        }
+        $files = $this->uploads();
+        if (is_string($files)) $errors['files'] = $files;
+        if ($errors) {
+            $this->validationError($errors);
+            return;
+        }
+
+        $user = (string) ($_SESSION['username'] ?? '');
+        $by = ($this->role() === 'super_admin' ? 'Super admin' : 'Administrator') . ($user !== '' ? " ({$user})" : '');
+        $db->beginTransaction();
+        $saved = [];
+        try {
+            $db->prepare(
+                "UPDATE student_cases SET status = 'resolved', resolved_at = COALESCE(resolved_at, NOW()), resolved_by = ?,
+                        outcome = ?, outcome_detail = ?, decided_on = ?, outcome_from = ?, outcome_to = ?, admin_note = ?
+                  WHERE id = ?"
+            )->execute([$by, $outcome, $detail ?: null, $decided, $from ?: null, $to ?: null, $note ?: null, (int) $id]);
+
+            $dir = self::folder();
+            if ($files && !is_dir($dir) && !mkdir($dir, 0750, true) && !is_dir($dir)) {
+                throw new \RuntimeException('The forms could not be saved on the server.');
+            }
+            $ins = $db->prepare("INSERT INTO student_case_files (case_id, kind, stored_name, original_name, mime_type, size_bytes) VALUES (?, 'resolution', ?, ?, ?, ?)");
+            foreach ($files as $f) {
+                $stored = 'case' . (int) $id . '_res_' . bin2hex(random_bytes(10)) . '.' . $f['ext'];
+                if (!move_uploaded_file($f['tmp'], $dir . '/' . $stored)) {
+                    throw new \RuntimeException('The forms could not be saved on the server.');
+                }
+                $saved[] = $dir . '/' . $stored;
+                $ins->execute([(int) $id, $stored, $f['name'], $f['mime'], $f['size']]);
+            }
+            $db->commit();
+        } catch (\Throwable $e) {
+            $db->rollBack();
+            foreach ($saved as $path) {
+                @unlink($path);
+            }
+            $this->error($e instanceof \RuntimeException ? $e->getMessage() : 'The resolution could not be saved.', 500);
+            return;
+        }
+        $row = $db->prepare('SELECT * FROM student_cases WHERE id = ?');
+        $row->execute([(int) $id]);
+        $this->success(['case' => $this->withFiles([$row->fetch(\PDO::FETCH_ASSOC)], false)[0]], 'Case resolved');
+    }
+
     /** DELETE /case-records/{id} - take a case off the record (super admin only; kept, hidden) */
     public function destroy($id): void
     {
@@ -486,12 +592,17 @@ class CaseController extends Controller
             $all('c.name AS cname, COUNT(*) AS n, COUNT(DISTINCT k.student_id) AS l', 'GROUP BY c.name ORDER BY n DESC'));
         $months = array_map(fn($r) => ['month' => $r['m'], 'cases' => (int) $r['n']],
             $all("DATE_FORMAT(k.occurred_on, '%Y-%m') AS m, COUNT(*) AS n", 'GROUP BY m ORDER BY m'));
+        $outcomes = array_map(fn($r) => ['outcome' => $r['outcome'], 'label' => self::OUTCOMES[$r['outcome']] ?? $r['outcome'], 'cases' => (int) $r['n'], 'learners' => (int) $r['l']],
+            $all('k.outcome, COUNT(*) AS n, COUNT(DISTINCT k.student_id) AS l', "AND k.status = 'resolved' AND k.outcome IS NOT NULL GROUP BY k.outcome ORDER BY n DESC"));
         $reporters = array_map(fn($r) => ['name' => $r['reporter_name'], 'cases' => (int) $r['n']],
             $all('k.reporter_name, COUNT(*) AS n', 'GROUP BY k.reporter_name ORDER BY n DESC LIMIT 10'));
         $cases = array_map(fn($r) => [
             'id' => (int) $r['id'], 'occurred_on' => $r['occurred_on'], 'category' => $r['category'], 'severity' => $r['severity'],
             'title' => $r['title'], 'description' => $r['description'], 'action_taken' => $r['action_taken'], 'status' => $r['status'],
             'admin_note' => $r['admin_note'], 'reporter_name' => $r['reporter_name'], 'reporter_role' => $r['reporter_role'],
+            'outcome_label' => $r['status'] === 'resolved' ? (self::OUTCOMES[$r['outcome'] ?? ''] ?? null) : null,
+            'outcome_detail' => $r['outcome_detail'] ?? null, 'decided_on' => $r['decided_on'] ?? null,
+            'outcome_from' => $r['outcome_from'] ?? null, 'outcome_to' => $r['outcome_to'] ?? null,
             'student' => ucwords(strtolower($r['first_name'] . ' ' . $r['last_name'])),
             'class_label' => $r['cname'] ? $r['cname'] . ($r['stream_name'] ? ' ' . $r['stream_name'] : '') : null,
         ], $all('k.*, s.first_name, s.last_name, c.name AS cname, c.stream_name', 'ORDER BY k.occurred_on DESC, k.id DESC LIMIT 500'));
@@ -500,7 +611,7 @@ class CaseController extends Controller
         $this->success([
             'scope' => $scope, 'value' => $value, 'label' => $label, 'from' => $from, 'to' => $to, 'school' => $school,
             'totals' => $totals, 'offences' => $offences, 'learners' => $learners, 'streams' => $streams, 'classes' => $classes,
-            'months' => $months, 'reporters' => $reporters, 'cases' => $cases,
+            'months' => $months, 'reporters' => $reporters, 'cases' => $cases, 'outcomes' => $outcomes,
         ]);
     }
 
@@ -560,11 +671,11 @@ class CaseController extends Controller
         }
         $ids = array_map(fn($r) => (int) $r['id'], $rows);
         $in = implode(',', array_fill(0, count($ids), '?'));
-        $stmt = $this->db()->prepare("SELECT id, case_id, original_name, mime_type, size_bytes FROM student_case_files WHERE case_id IN ({$in}) ORDER BY id");
+        $stmt = $this->db()->prepare("SELECT id, case_id, kind, original_name, mime_type, size_bytes FROM student_case_files WHERE case_id IN ({$in}) ORDER BY id");
         $stmt->execute($ids);
         $files = [];
         foreach ($stmt->fetchAll(\PDO::FETCH_ASSOC) as $f) {
-            $files[(int) $f['case_id']][] = ['id' => (int) $f['id'], 'name' => $f['original_name'], 'mime' => $f['mime_type'], 'size' => (int) $f['size_bytes']];
+            $files[(int) $f['case_id']][$f['kind'] === 'resolution' ? 'resolution' : 'evidence'][] = ['id' => (int) $f['id'], 'name' => $f['original_name'], 'mime' => $f['mime_type'], 'size' => (int) $f['size_bytes']];
         }
         return array_map(fn($r) => [
             'id' => (int) $r['id'],
@@ -577,10 +688,18 @@ class CaseController extends Controller
             'status' => $r['status'],
             'admin_note' => $r['admin_note'],
             'resolved_at' => $r['resolved_at'],
+            'resolved_by' => $r['resolved_by'] ?? null,
+            'outcome' => $r['outcome'] ?? null,
+            'outcome_label' => self::OUTCOMES[$r['outcome'] ?? ''] ?? null,
+            'outcome_detail' => $r['outcome_detail'] ?? null,
+            'decided_on' => $r['decided_on'] ?? null,
+            'outcome_from' => $r['outcome_from'] ?? null,
+            'outcome_to' => $r['outcome_to'] ?? null,
             'reporter_name' => $r['reporter_name'],
             'reporter_role' => $r['reporter_role'],
             'created_at' => $r['created_at'],
-            'files' => $files[(int) $r['id']] ?? [],
+            'files' => $files[(int) $r['id']]['evidence'] ?? [],
+            'resolution_files' => $files[(int) $r['id']]['resolution'] ?? [],
         ] + ($withLearner ? ['student' => $this->learner(['id' => $r['student_id']] + $r)] : []), $rows);
     }
 }
