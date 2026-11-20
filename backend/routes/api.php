@@ -51,6 +51,9 @@ Router::post('/api/devportal/updates/run', 'eSpace\App\Controllers\DevPortalCont
 Router::post('/api/devportal/updates/baseline', 'eSpace\App\Controllers\DevPortalController@baselineUpdates');
 // Headline totals for the public website (no personal data)
 Router::get('/api/public/stats', 'eSpace\App\Controllers\PublicStatsController@index');
+// Student Voice (the school's anonymous feedback system) reads who teaches whom - with its own
+// secret key (STUDENT_VOICE_API_KEY), never a sign-in. Off when the key isn't set.
+Router::get('/api/integrations/student-voice/teaching', 'eSpace\App\Controllers\Integrations\StudentVoiceController@teaching');
 // A parent's private weekly view of their child (the token is the key - see ParentLinkController)
 Router::get('/api/parent/{token}', 'eSpace\App\Controllers\ParentViewController@show');
 Router::get('/api/parent/{token}/report-card/{termId}', 'eSpace\App\Controllers\ParentViewController@reportCard');
