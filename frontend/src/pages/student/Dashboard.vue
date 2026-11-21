@@ -15,7 +15,25 @@
     <section class="sd-hero relative overflow-hidden -mt-3 sm:-mt-5 mb-4 rounded-[1.25rem] h-[108px] sm:h-[118px] xl:h-[130px] shadow-sm" :class="`sd-hero-${period}`">
       <DaySky :period="period" :narrow="narrowSky" />
       <div class="relative h-full flex flex-col justify-center pl-4 sm:pl-6 pr-24 sm:pr-56 xl:pr-[32%]">
-        <h1 class="font-brand text-[1.15rem] sm:text-[1.45rem] xl:text-[1.65rem] font-extrabold tracking-tight leading-tight truncate" :class="period === 'night' ? 'text-white' : 'text-[#061a55] dark:text-white'">{{ greeting }}, {{ firstName }}!</h1>
+        <div class="flex min-w-0 items-center gap-2 sm:gap-3">
+          <h1 class="min-w-0 font-brand text-[1.15rem] sm:text-[1.45rem] xl:text-[1.65rem] font-extrabold tracking-tight leading-tight truncate" :class="period === 'night' ? 'text-white' : 'text-[#061a55] dark:text-white'">{{ greeting }}, {{ firstName }}!</h1>
+          <!-- Student Voice, beside the greeting: when the school has it switched on (Admin > Settings).
+               Opens it in a new tab, signed in with this learner's Tusome account. -->
+          <button
+            v-if="studentVoice.enabled.value"
+            type="button"
+            class="flex h-8 w-8 flex-shrink-0 items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-[#1c1b6c] to-[#2e3299] text-white shadow-md ring-2 ring-amber-300/70 transition hover:shadow-lg disabled:opacity-60 sm:h-auto sm:w-auto sm:px-3.5 sm:py-1.5 sm:ring-0"
+            :disabled="studentVoice.opening.value"
+            title="Student Voice - have your say (anonymous)"
+            @click="studentVoice.open()"
+          >
+            <svg class="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 1 1 0-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.461a20.845 20.845 0 0 1-1.44-4.282m3.102.069a18.03 18.03 0 0 1-.59-4.59c0-1.586.205-3.124.59-4.59m0 9.18a23.848 23.848 0 0 1 8.835 2.535M10.34 6.66a23.847 23.847 0 0 0 8.835-2.535m0 0A23.74 23.74 0 0 0 18.795 3m.38 1.125a23.91 23.91 0 0 1 1.014 5.395m-1.014 8.855c-.118.38-.245.754-.38 1.125m.38-1.125a23.91 23.91 0 0 0 1.014-5.395m0-3.46c.495.413.811 1.035.811 1.73 0 .695-.316 1.317-.811 1.73m0-3.46a24.347 24.347 0 0 1 0 3.46" />
+            </svg>
+            <span class="sr-only sm:hidden">Student Voice</span>
+            <span class="hidden text-sm font-semibold sm:inline">{{ studentVoice.opening.value ? 'Opening…' : 'Student Voice' }}</span>
+          </button>
+        </div>
         <p class="mt-0.5 font-brand text-[0.78rem] sm:text-[0.9rem] xl:text-base font-semibold leading-snug" :class="period === 'night' ? 'text-blue-50' : 'text-[#10296e] dark:text-blue-100'">{{ dayLine }}</p>
         <p class="mt-0.5 sm:mt-1 text-[0.7rem] sm:text-[0.8rem] italic" :class="period === 'night' ? 'text-blue-200' : 'text-[#1d3a86] dark:text-blue-200'">"Small steps make big progress."</p>
       </div>
@@ -192,6 +210,7 @@ import GeneralPerformance from '@/components/dashboard/GeneralPerformance.vue'
 import DaySky, { type DayPeriod } from '@/components/dashboard/DaySky.vue'
 import SubjectMonogram from '@/components/dashboard/SubjectMonogram.vue'
 import { useLiveRefresh } from '@/composables/useLiveRefresh'
+import { useStudentVoice } from '@/composables/useStudentVoice'
 import { usePublicationsAccess } from '@/composables/usePublicationsAccess'
 import { useAuthStore } from '@/stores/auth'
 import type { Publication } from '@/utils/publications'
@@ -212,6 +231,10 @@ const authStore = useAuthStore()
 const data = ref<DashboardData | null>(null)
 const loading = ref(false)
 const error = ref('')
+
+// Student Voice button beside the greeting (when the school has it on)
+const studentVoice = useStudentVoice()
+studentVoice.check()
 
 const firstName = computed(() => {
   const u = authStore.user as any
