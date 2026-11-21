@@ -3,7 +3,7 @@ import axios from 'axios'
 
 /**
  * Student Voice (the school's anonymous feedback polls) for learners: whether the school has it
- * switched on (Admin > Settings), and opening it in a new tab already signed in with their Tusome
+ * switched on (Admin > Settings), and opening it in this tab already signed in with their Tusome
  * account (a signed one-use link from /api/student/student-voice/link).
  */
 const enabled = ref(false)
@@ -21,20 +21,17 @@ export function useStudentVoice() {
   }
 
   /**
-   * Opens the tab straight away (so the browser doesn't treat it as a pop-up), then sends it to the
-   * link once Tusome has made it. If the tab was blocked, this page goes there instead.
+   * Goes to Student Voice in this same tab (no second tab left signed in on a shared computer).
+   * When the learner finishes there, Student Voice sends them to /signout here, so they end up
+   * signed out of both and the next learner signs in.
    */
   async function open() {
     problem.value = ''
     opening.value = true
-    const tab = window.open('', '_blank')
     try {
       const r = await axios.post('/api/student/student-voice/link')
-      const url = r.data?.data?.url as string
-      if (tab) tab.location.href = url
-      else window.location.href = url
+      window.location.href = r.data?.data?.url as string
     } catch (e: any) {
-      tab?.close()
       problem.value = e?.response?.data?.message || 'Could not open Student Voice. Try again.'
       window.alert(problem.value)
     } finally {

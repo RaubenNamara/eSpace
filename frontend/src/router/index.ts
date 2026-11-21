@@ -208,6 +208,17 @@ const routes: RouteRecordRaw[] = [
     component: Login
   },
   {
+    // Signs out and shows the sign-in page. Student Voice sends learners here when they finish
+    // voting, so the next learner on a shared computer signs in with their own account.
+    path: '/signout',
+    name: 'SignOut',
+    component: Login,
+    beforeEnter: async () => {
+      await useAuthStore().logout()
+      return { path: '/login' }
+    }
+  },
+  {
     path: '/register',
     component: AuthLayout,
     children: [

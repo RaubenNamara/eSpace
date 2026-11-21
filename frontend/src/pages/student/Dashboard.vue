@@ -18,7 +18,7 @@
         <div class="flex min-w-0 items-center gap-2 sm:gap-3">
           <h1 class="min-w-0 font-brand text-[1.15rem] sm:text-[1.45rem] xl:text-[1.65rem] font-extrabold tracking-tight leading-tight truncate" :class="period === 'night' ? 'text-white' : 'text-[#061a55] dark:text-white'">{{ greeting }}, {{ firstName }}!</h1>
           <!-- Student Voice, centred in the space between the greeting and the sky: when the school has it
-               switched on (Admin > Settings). Opens it in a new tab, signed in with this learner's Tusome account. -->
+               switched on (Admin > Settings). Opens it in this tab, signed in with this learner's Tusome account. -->
           <div v-if="studentVoice.enabled.value" class="flex flex-1 justify-center">
           <button
             type="button"
