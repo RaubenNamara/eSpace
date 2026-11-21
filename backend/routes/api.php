@@ -119,6 +119,9 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::delete('/notices/{id}', 'eSpace\App\Controllers\NoticeController@destroy');
         // Dashboard
         Router::get('/dashboard', 'eSpace\App\Controllers\Student\DashboardController@index');
+        // Student Voice: the dashboard button, and a one-use link that opens it signed in
+        Router::get('/student-voice', 'eSpace\App\Controllers\Student\StudentVoiceController@status');
+        Router::post('/student-voice/link', 'eSpace\App\Controllers\Student\StudentVoiceController@link');
         Router::get('/mastery', 'eSpace\App\Controllers\Student\MasteryController@index');
         Router::get('/next-steps', 'eSpace\App\Controllers\Student\NextStepsController@index');
         // Live Quiz (join with the teacher's code) and Daily Revision

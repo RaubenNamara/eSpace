@@ -102,6 +102,42 @@
         </div>
       </form>
     </div>
+
+    <!-- Student Voice: the button on learners' dashboards (opens it signed in with their Tusome account) -->
+    <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Student Voice</h2>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Learners see a <strong>Student Voice</strong> button on their dashboard. It opens the school's anonymous feedback polls already signed in with their Tusome account - no voting numbers. Switch it off when no vote is running.
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          :aria-checked="!!settings.student_voice_enabled"
+          aria-label="Show Student Voice to learners"
+          class="relative mt-1 h-7 w-12 shrink-0 rounded-full transition"
+          :class="settings.student_voice_enabled ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'"
+          @click="settings.student_voice_enabled = settings.student_voice_enabled ? 0 : 1"
+        >
+          <span class="absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all" :class="settings.student_voice_enabled ? 'left-6' : 'left-1'" />
+        </button>
+      </div>
+      <label class="mt-4 block text-sm font-medium text-gray-700 dark:text-gray-300">Student Voice address</label>
+      <input v-model="settings.student_voice_url" type="url" placeholder="https://studentvoice.stmark.sc.ug" class="input-field mt-1" />
+      <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+        Both systems also need the same secret key: STUDENT_VOICE_API_KEY in Tusome's backend/.env and TUSOME_API_KEY in Student Voice's.
+      </p>
+      <button
+        type="button"
+        :disabled="savingVoice"
+        class="mt-4 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+        @click="saveStudentVoice"
+      >
+        {{ savingVoice ? 'Saving...' : 'Save Student Voice' }}
+      </button>
+    </div>
   </div>
 </template>
 
@@ -126,6 +162,8 @@ interface SchoolSettings {
   motto: string | null
   address: string | null
   max_awards_on_report_card: number
+  student_voice_enabled: number
+  student_voice_url: string | null
 }
 
 const settings = ref<SchoolSettings>({
@@ -137,8 +175,31 @@ const settings = ref<SchoolSettings>({
   phone: null,
   motto: null,
   address: null,
-  max_awards_on_report_card: 2
+  max_awards_on_report_card: 2,
+  student_voice_enabled: 0,
+  student_voice_url: null
 })
+
+const savingVoice = ref(false)
+/** Student Voice switch and address, saved on their own */
+const saveStudentVoice = async () => {
+  savingVoice.value = true
+  try {
+    const response = await apiService.put('/admin/settings', {
+      student_voice_enabled: settings.value.student_voice_enabled ? 1 : 0,
+      student_voice_url: settings.value.student_voice_url ?? ''
+    })
+    if (response.data.success) {
+      showSuccess(settings.value.student_voice_enabled ? 'Student Voice is on for learners' : 'Student Voice is off for learners')
+    } else {
+      toast.error(response.data.message || 'Failed to save Student Voice')
+    }
+  } catch (error: any) {
+    toast.error(error.response?.data?.errors?.student_voice_url || error.response?.data?.message || 'Failed to save Student Voice')
+  } finally {
+    savingVoice.value = false
+  }
+}
 
 const saving = ref(false)
 const uploadingLogo = ref(false)

@@ -73,6 +73,21 @@ class SettingsController extends Controller
             $params['max_awards_on_report_card'] = max(1, min(4, (int) $data['max_awards_on_report_card']));
         }
 
+        // Student Voice button on the student dashboard (see Student\StudentVoiceController)
+        if (array_key_exists('student_voice_enabled', $data)) {
+            $set[] = 'student_voice_enabled = :student_voice_enabled';
+            $params['student_voice_enabled'] = !empty($data['student_voice_enabled']) ? 1 : 0;
+        }
+        if (array_key_exists('student_voice_url', $data)) {
+            $url = rtrim(trim((string) $data['student_voice_url']), '/');
+            if ($url !== '' && !preg_match('#^https?://\S+$#i', $url)) {
+                $this->validationError(['student_voice_url' => 'Use the full address, starting with https://']);
+                return;
+            }
+            $set[] = 'student_voice_url = :student_voice_url';
+            $params['student_voice_url'] = $url !== '' ? mb_substr($url, 0, 255) : null;
+        }
+
         if (empty($set)) {
             $this->validationError(['fields' => 'No valid fields provided']);
             return;
