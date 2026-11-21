@@ -23,8 +23,6 @@
 
     <NoticesTicker role="student" />
 
-    <StudentVoiceBanner />
-
     <div v-if="error" class="mb-4 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-3 text-sm text-red-800 dark:text-red-200">{{ error }}</div>
 
     <!-- Two columns on a wide screen. On a phone the columns dissolve (display: contents) so the
@@ -190,7 +188,6 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import axios from 'axios'
 import AppIcon from '@/components/common/AppIcon.vue'
 import NoticesTicker from '@/components/dashboard/NoticesTicker.vue'
-import StudentVoiceBanner from '@/components/dashboard/StudentVoiceBanner.vue'
 import GeneralPerformance from '@/components/dashboard/GeneralPerformance.vue'
 import DaySky, { type DayPeriod } from '@/components/dashboard/DaySky.vue'
 import SubjectMonogram from '@/components/dashboard/SubjectMonogram.vue'
