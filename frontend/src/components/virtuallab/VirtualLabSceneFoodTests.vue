@@ -675,8 +675,24 @@ function onPointerDown(ev: PointerEvent) {
   if (k) select(k)
 }
 
-const HOME_POS: THREE.Vector3Tuple = [0.12, 0.52, 1.1]
-const HOME_TARGET: THREE.Vector3Tuple = [0.14, 0.04, 0.0]
+/**
+ * The bench view frames what this practical actually puts on the bench (bottles on the left, then
+ * the rack, paper or tile, then any water baths), so a bench without a burner isn't all on the
+ * left with empty bench on the right. It sits a little right of centre because the tube panel
+ * covers the right of the view, and comes closer when there is less on the bench.
+ */
+function homeView(): { pos: THREE.Vector3Tuple; target: THREE.Vector3Tuple } {
+  const bottles = reagentList.value.length + samples.value.length
+  const left = -0.39
+  let right = Math.max(-0.05 + (tubeKeys.value.length - 1) * 0.0225 + 0.04, -0.36 + Math.max(0, bottles - 1) * 0.05 + 0.03)
+  if (paperEnabled.value) right = Math.max(right, 0.07)
+  if (baths.value.length) right = 0.22 + (baths.value.length - 1) * 0.17 + 0.08
+  const span = right - left
+  const k = Math.min(1.4, Math.max(0.8, span / 0.7))
+  const x = (left + right) / 2 + 0.09 * k
+  return { pos: [x - 0.02, 0.52 * k, 1.1 * k], target: [x, 0.04, 0.0] }
+}
+const { pos: HOME_POS, target: HOME_TARGET } = homeView()
 const { room, unsupported, pick, handleFurnitureClick } = useLabScene(
   { cameraPosition: HOME_POS, target: HOME_TARGET, minDistance: 0.2, maxDistance: 12, cupboard: true, wallCabinets: true, shelfCatalog: () => props.objectCatalog, benchLength: 3 },
   (r) => {

@@ -165,6 +165,10 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
   controls.enableDamping = true
   controls.dampingFactor = 0.08
   controls.enablePan = false
+  // Zoom towards what is under the pointer (like a map): zooming in to read the label on a bottle
+  // at the side of the bench brings that bottle closer, instead of closing in on the middle of the
+  // bench and pushing the bottle off the screen. Reset View brings the usual view back.
+  controls.zoomToCursor = true
   controls.minDistance = opts.minDistance ?? 0.5
   controls.maxDistance = opts.maxDistance ?? 3
   controls.maxPolarAngle = Math.PI / 2.05
