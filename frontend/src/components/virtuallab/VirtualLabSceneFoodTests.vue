@@ -50,6 +50,12 @@
           <LabButton v-if="tileEnabled" size="sm" variant="secondary" :disabled="readOnly || !canSpot(selected)" @click="spotTest(selected)">Iodine spot test</LabButton>
           <LabButton size="sm" variant="ghost" :disabled="readOnly" @click="wash(selected)">Empty &amp; wash</LabButton>
         </div>
+        <!-- The Bunsen burner under the boiling water bath: lit only when it is needed -->
+        <div v-if="hasBurner" class="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 px-2 py-1.5">
+          <LabButton size="sm" class="whitespace-nowrap" :variant="burnerOn ? 'danger' : 'success'" :disabled="readOnly" @click="toggleBurner">{{ burnerOn ? 'Turn off burner' : 'Light the burner' }}</LabButton>
+          <span class="whitespace-nowrap text-gray-600 dark:text-gray-300 tabular-nums">Water {{ Math.round(boilWater) }} °C</span>
+          <span class="ml-auto whitespace-nowrap font-medium" :class="boiling ? 'text-orange-600' : burnerOn ? 'text-amber-600' : 'text-gray-400'">{{ boiling ? 'Boiling' : burnerOn ? 'Heating…' : boilWater > 40 ? 'Burner off, cooling' : 'Burner off' }}</span>
+        </div>
         <div v-if="otherTubes.length" class="flex gap-1 items-center">
           <span class="text-gray-500">Pour into</span>
           <LabButton v-for="k in otherTubes" :key="k" size="sm" variant="secondary" :disabled="readOnly || !hasContents(selected)" @click="pourInto(selected, k)">{{ tubeLetter(k) }}</LabButton>
@@ -265,7 +271,28 @@ function shake(k: string) {
   shaking.set(k, 0.6)
   bump()
 }
+/**
+ * The Bunsen burner starts off. Lit, it brings the water bath to the boil in a few seconds; off,
+ * the water slowly cools. Tubes only "boil" (Benedict's, acid hydrolysis, vitamin C) while the
+ * water really is boiling.
+ */
+const BOILING = 95
+const burnerOn = ref(false)
+const boilWater = ref(ROOM_TEMP)
+const hasBurner = computed(() => baths.value.some(b => b.temp >= BOILING))
+/** Boiling needs the heat: with the burner off the water stops boiling at once, though it is still hot */
+const boiling = computed(() => burnerOn.value && boilWater.value >= BOILING)
+const bathTemp = (b: { temp: number }) => (b.temp >= BOILING ? (boiling.value ? boilWater.value : Math.min(boilWater.value, BOILING - 1)) : b.temp)
+function toggleBurner() {
+  if (props.readOnly) return
+  burnerOn.value = !burnerOn.value
+  flash(burnerOn.value ? 'Burner lit: wait for the water to boil before heating the tubes.' : 'Burner off. Turn it off whenever you are not heating.')
+}
 function putIn(k: string, bathKey: string) {
+  const bath = baths.value.find(b => b.key === bathKey)
+  if (bath && bath.temp >= BOILING && !boiling.value) {
+    flash(burnerOn.value ? 'The water is still heating: the tube will boil once the water boils.' : 'Light the Bunsen burner first: the water must be boiling to heat the tube.')
+  }
   placeOf[k] = bathKey
   emit('action', { objectKey: k, action: 'heat', value: bathKey })
   bump()
@@ -598,9 +625,13 @@ let sinceBump = 0
 function frame(dt: number) {
   clock += dt
   // Chemistry and enzymes keep going in real time, in whichever bath (or the room) each tube is in
+  // The boiling bath's water heats up over a lit burner (to the boil in about 6 s) and cools when it is off
+  if (hasBurner.value) {
+    boilWater.value = Math.min(100, Math.max(ROOM_TEMP, boilWater.value + (burnerOn.value ? 13 : -2) * dt))
+  }
   tubeKeys.value.forEach((k) => {
     const bath = baths.value.find(b => b.key === placeOf[k])
-    tick(tubeOf(k), dt, bath ? bath.temp : ROOM_TEMP)
+    tick(tubeOf(k), dt, bath ? bathTemp(bath) : ROOM_TEMP)
   })
   sinceBump += dt
   if (sinceBump > 0.3) { sinceBump = 0; bump() }
@@ -629,6 +660,7 @@ function frame(dt: number) {
 
   // Burner flame flicker and the boiling bath's bubbles
   burnerGroup?.traverse((c) => {
+    if (c.userData.role === 'flame') { c.visible = burnerOn.value; return }
     const layer = c.userData.flameLayer
     if (!layer) return
     const n = Math.sin(clock * 23) * 0.5 + Math.sin(clock * 37.7) * 0.3 + Math.sin(clock * 61.3) * 0.2
@@ -655,6 +687,8 @@ function frame(dt: number) {
       bm.group.add(grp)
       bm.bubbles = grp
     }
+    // Bubbles only once the water is close to boiling
+    bm.bubbles.visible = burnerOn.value && boilWater.value >= BOILING - 10
     bm.bubbles.children.forEach((s) => {
       s.position.y += s.userData.v * dt
       if (s.position.y > 0.065) { s.position.y = 0; s.position.x = (Math.random() - 0.5) * 0.1; s.position.z = (Math.random() - 0.5) * 0.1 }
@@ -672,7 +706,9 @@ function onHover(ev: PointerEvent) { hoverCursor.value = tubeUnder(ev) ? 'pointe
 function onPointerDown(ev: PointerEvent) {
   if (handleFurnitureClick(ev)) return
   const k = tubeUnder(ev)
-  if (k) select(k)
+  if (k) { select(k); return }
+  // Clicking the Bunsen burner lights it or turns it off
+  if (burnerGroup && pick(ev, [burnerGroup])) toggleBurner()
 }
 
 /**
@@ -699,7 +735,9 @@ const { room, unsupported, pick, handleFurnitureClick } = useLabScene(
     buildBench(r.scene)
     r.onFrame(frame)
     if (tubeKeys.value[0]) select(tubeKeys.value[0])
-    if (!props.readOnly) flash('Choose a test tube, add the food and the reagent, then record what you observe.')
+    if (!props.readOnly) flash(hasBurner.value
+      ? 'Choose a test tube, add the food and the reagent, then record what you observe. Light the burner only when you need the boiling water bath.'
+      : 'Choose a test tube, add the food and the reagent, then record what you observe.', 7000)
   },
 )
 
