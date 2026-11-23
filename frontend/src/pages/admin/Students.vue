@@ -8,6 +8,10 @@
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
           Import learners
         </button>
+        <button type="button" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700" @click="showClassLists = true">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+          Download class lists
+        </button>
         <button type="button" class="btn-primary" @click="showCreateModal = true">Add student</button>
       </template>
       <StatStrip v-if="!loading && students.length" v-model="quick" :items="statItems" />
@@ -23,6 +27,7 @@
 
     <SmisSyncCard v-if="isSuperAdmin" @synced="fetchStudents" />
     <ImportLearnersModal v-if="showImport" @close="showImport = false" @imported="fetchStudents(); fetchClasses()" />
+    <ClassListsModal v-if="showClassLists" :classes="classes" :preselect-id="classFilter" @close="showClassLists = false" />
 
     <!-- Toast Notification -->
     <transition name="toast">
@@ -365,6 +370,7 @@ import StudentPhotoModal from '@/components/students/StudentPhotoModal.vue'
 import ProfilePhotoRemover from '@/components/admin/ProfilePhotoRemover.vue'
 import SmisSyncCard from '@/components/admin/SmisSyncCard.vue'
 import ImportLearnersModal from '@/components/admin/ImportLearnersModal.vue'
+import ClassListsModal from '@/components/admin/ClassListsModal.vue'
 import { useAuthStore } from '@/stores/auth'
 
 // only the super admin runs the SMIS sync
@@ -402,6 +408,7 @@ interface Class {
 
 const students = ref<Student[]>([])
 const classes = ref<Class[]>([])
+const showClassLists = ref(false)
 const stats = ref({ total: 0, male: 0, female: 0, other: 0 })
 const pagination = ref({ page: 1, limit: 20, total: 0, pages: 0 })
 const loading = ref(false)

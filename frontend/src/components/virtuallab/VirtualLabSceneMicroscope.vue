@@ -147,9 +147,18 @@ function selectObjective(mag: number) {
 }
 
 const focusPosition = ref(50)
+// At ×400 the objective nearly touches the slide: a big coarse turn that raises the stage too far
+// drives the lens into the slide and cracks the cover slip, as on a real microscope
+const slideCracked = ref(false)
 function setCoarseFocus(value: number) {
   if (props.readOnly) return
+  const previous = focusPosition.value
   focusPosition.value = value
+  const crashAt = Number(mergedProps('slide1').optimal_focus ?? 50) + 3 * Number(mergedProps('slide1').focus_tolerance ?? 6)
+  if (objective.value === 400 && slideOnStage.value && !slideCracked.value && value > previous && value >= crashAt) {
+    slideCracked.value = true
+    flash('Crack! At ×400 the coarse focus drove the lens into the slide and cracked the cover slip. Use only the fine focus at high power. (Reset Microscope to start again.)', 9000)
+  }
   if (objective.value === 400) {
     coarseFocusAtHighPowerCount.value++
     if (coarseFocusAtHighPowerCount.value > 2) flash('Use the fine-focus control at high magnification - coarse focus can lose the specimen entirely.')
@@ -197,9 +206,26 @@ const fieldOfViewRadius = (mag: number) => (mag === 40 ? 140 : mag === 100 ? 70 
 const showSpecimen = computed(() => lightOn.value && slideOnStage.value)
 const cellColor = computed(() => mergedProps('slide1').cell_color ?? '#86efac')
 const nucleusColor = computed(() => mergedProps('slide1').nucleus_color ?? '#166534')
-const viewCenter = computed(() => ({ x: specimenOffsetX.value - stageX.value, y: specimenOffsetY.value - stageY.value }))
+// A real microscope shows the image upside down and back to front: moving the slide right moves
+// what you see to the left, so the stage moves the view the opposite way to the arrow pressed
+const viewCenter = computed(() => ({ x: specimenOffsetX.value + stageX.value, y: specimenOffsetY.value + stageY.value }))
 const isSpecimenVisible = computed(() => Math.hypot(viewCenter.value.x, viewCenter.value.y) <= fieldOfViewRadius(objective.value))
 const blurPx = computed(() => focusBlurPx(focusPosition.value, Number(mergedProps('slide1').optimal_focus ?? 50), Number(mergedProps('slide1').focus_tolerance ?? 6), objective.value))
+
+// What kind of specimen is on the slide decides what the cells look like
+const specimenKind = computed<'onion' | 'cheek' | 'generic'>(() => {
+  const s = String(mergedProps('slide1').specimen ?? '').toLowerCase()
+  if (s.includes('onion') || s.includes('plant') || s.includes('leaf')) return 'onion'
+  if (s.includes('cheek') || s.includes('epithel') || s.includes('animal')) return 'cheek'
+  return 'generic'
+})
+/** Less light reaches the eye at higher magnification, as on a real microscope */
+const effectiveLight = computed(() => lightLevel.value * (objective.value === 400 ? 0.6 : objective.value === 100 ? 0.85 : 1))
+/** The same pseudo-random numbers for the same cell every time it is drawn */
+function rnd(i: number, j: number, k: number) {
+  const x = Math.sin(i * 127.1 + j * 311.7 + k * 74.7) * 43758.5453
+  return x - Math.floor(x)
+}
 
 function drawViewer() {
   const c = viewerCanvas.value
@@ -209,31 +235,102 @@ function drawViewer() {
   ctx.clearRect(0, 0, VIEW_PX, VIEW_PX)
   ctx.save()
   ctx.beginPath(); ctx.arc(R, R, R, 0, Math.PI * 2); ctx.clip()
-  ctx.fillStyle = !lightOn.value ? '#020617' : lightLevel.value < 25 ? '#334155' : lightLevel.value > 88 ? '#fefefe' : '#f8fafc'
+  // Background: black with the lamp off, grey when too dim, bright white when the light is right
+  const L = lightOn.value ? effectiveLight.value : 0
+  const shade = Math.round(Math.min(255, 20 + L * 2.9))
+  ctx.fillStyle = `rgb(${shade},${shade},${Math.min(255, shade + 4)})`
   ctx.fillRect(0, 0, VIEW_PX, VIEW_PX)
   if (showSpecimen.value) {
     const fov = fieldOfViewRadius(objective.value)
     const scale = R / fov
     const { x: cx, y: cy } = viewCenter.value
-    const alpha = lightLevel.value > 88 ? 0.35 : 0.85
+    // Too much light washes the stained detail out; too little leaves it murky
+    const alpha = L > 88 ? 0.35 : L < 25 ? 0.5 : 0.9
     ctx.globalAlpha = alpha
-    for (let gx = Math.floor((cx - fov) / CELL_SPACING) * CELL_SPACING; gx <= cx + fov; gx += CELL_SPACING) {
-      for (let gy = Math.floor((cy - fov) / CELL_SPACING) * CELL_SPACING; gy <= cy + fov; gy += CELL_SPACING) {
-        if (Math.hypot(gx - cx, gy - cy) > fov * 1.05) continue
-        const x = R + (gx - cx) * scale, y = R + (gy - cy) * scale, s = CELL_SPACING * scale * 0.85
-        ctx.fillStyle = cellColor.value
-        ctx.strokeStyle = nucleusColor.value
-        ctx.lineWidth = Math.max(1, s * 0.03)
-        ctx.beginPath(); ctx.roundRect(x - s / 2, y - s / 2, s, s * 0.72, s * 0.06); ctx.fill(); ctx.stroke()
-        ctx.fillStyle = nucleusColor.value
-        ctx.beginPath(); ctx.arc(x + s * 0.12, y, s * 0.16, 0, Math.PI * 2); ctx.fill()
+    const P = (gx: number, gy: number) => [R + (gx - cx) * scale, R + (gy - cy) * scale] as const
+    const kind = specimenKind.value
+    if (kind === 'onion') {
+      // Onion epidermis stained with iodine: long brick-shaped cells in staggered rows, dark brown
+      // cell walls, pale yellow-brown cytoplasm, a darker round nucleus near one wall
+      const CW = 46, CH = 17
+      const wall = mergedProps('slide1').nucleus_color ?? '#7c4a1e'
+      const fill = mergedProps('slide1').cell_color ?? '#efd9a0'
+      for (let row = Math.floor((cy - fov) / CH) - 1; row <= Math.ceil((cy + fov) / CH) + 1; row++) {
+        const shift = (Math.abs(row) % 2) * CW * 0.5 + rnd(row, 0, 1) * 8
+        for (let col = Math.floor((cx - fov - shift) / CW) - 1; col <= Math.ceil((cx + fov - shift) / CW) + 1; col++) {
+          const gx = col * CW + shift, gy = row * CH
+          const w = CW * (0.92 + rnd(row, col, 2) * 0.16)
+          const [x, y] = P(gx, gy)
+          ctx.fillStyle = fill
+          ctx.strokeStyle = wall
+          ctx.lineWidth = Math.max(1, 1.1 * scale)
+          ctx.beginPath(); ctx.rect(x, y, w * scale, CH * scale); ctx.fill(); ctx.stroke()
+          ctx.fillStyle = wall
+          const nx = x + (0.2 + rnd(row, col, 3) * 0.6) * w * scale, ny = y + CH * scale * (0.35 + rnd(row, col, 4) * 0.3)
+          ctx.beginPath(); ctx.ellipse(nx, ny, 3.2 * scale, 2.6 * scale, 0, 0, Math.PI * 2); ctx.fill()
+        }
+      }
+    } else if (kind === 'cheek') {
+      // Cheek cells: loose, flat, irregular cells lying apart (no cell wall), a small dark central nucleus
+      const G = 40
+      const fill = mergedProps('slide1').cell_color ?? '#c7d7f5'
+      const nuc = mergedProps('slide1').nucleus_color ?? '#1e3a8a'
+      for (let i = Math.floor((cx - fov) / G) - 1; i <= Math.ceil((cx + fov) / G) + 1; i++) {
+        for (let j = Math.floor((cy - fov) / G) - 1; j <= Math.ceil((cy + fov) / G) + 1; j++) {
+          if (rnd(i, j, 5) < 0.3) continue // gaps between cells
+          const gx = i * G + (rnd(i, j, 6) - 0.5) * G * 0.6, gy = j * G + (rnd(i, j, 7) - 0.5) * G * 0.6
+          const r = G * (0.32 + rnd(i, j, 8) * 0.18)
+          const [x, y] = P(gx, gy)
+          ctx.fillStyle = fill
+          ctx.strokeStyle = nuc
+          ctx.lineWidth = Math.max(0.6, 0.4 * scale)
+          ctx.beginPath()
+          const sides = 7
+          for (let s = 0; s <= sides; s++) {
+            const ang = (s / sides) * Math.PI * 2 + rnd(i, j, 9)
+            const rr = r * (0.75 + rnd(i, j, 10 + (s % sides)) * 0.4) * scale
+            const px = x + Math.cos(ang) * rr, py = y + Math.sin(ang) * rr
+            if (s === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py)
+          }
+          ctx.closePath()
+          ctx.fill()
+          ctx.globalAlpha = alpha * 0.6
+          ctx.stroke()
+          ctx.globalAlpha = alpha
+          ctx.fillStyle = nuc
+          ctx.beginPath(); ctx.arc(x + (rnd(i, j, 20) - 0.5) * r * 0.3 * scale, y + (rnd(i, j, 21) - 0.5) * r * 0.3 * scale, 3.2 * scale, 0, Math.PI * 2); ctx.fill()
+        }
+      }
+    } else {
+      for (let gx = Math.floor((cx - fov) / CELL_SPACING) * CELL_SPACING; gx <= cx + fov; gx += CELL_SPACING) {
+        for (let gy = Math.floor((cy - fov) / CELL_SPACING) * CELL_SPACING; gy <= cy + fov; gy += CELL_SPACING) {
+          if (Math.hypot(gx - cx, gy - cy) > fov * 1.05) continue
+          const [x, y] = P(gx, gy)
+          const s = CELL_SPACING * scale * 0.85
+          ctx.fillStyle = cellColor.value
+          ctx.strokeStyle = nucleusColor.value
+          ctx.lineWidth = Math.max(1, s * 0.03)
+          ctx.beginPath(); ctx.roundRect(x - s / 2, y - s / 2, s, s * 0.72, s * 0.06); ctx.fill(); ctx.stroke()
+          ctx.fillStyle = nucleusColor.value
+          ctx.beginPath(); ctx.arc(x + s * 0.12, y, s * 0.16, 0, Math.PI * 2); ctx.fill()
+        }
       }
     }
     ctx.globalAlpha = 1
   }
+  if (slideCracked.value && slideOnStage.value && lightOn.value) {
+    // Cracked cover slip: sharp dark lines across the view
+    ctx.strokeStyle = 'rgba(30,30,30,0.75)'
+    ctx.lineWidth = 1.5
+    ctx.beginPath()
+    ctx.moveTo(R * 0.2, R * 0.3); ctx.lineTo(R * 0.9, R * 1.0); ctx.lineTo(R * 1.1, R * 1.7)
+    ctx.moveTo(R * 0.9, R * 1.0); ctx.lineTo(R * 1.7, R * 0.8)
+    ctx.moveTo(R * 0.9, R * 1.0); ctx.lineTo(R * 0.5, R * 1.6)
+    ctx.stroke()
+  }
   ctx.restore()
 }
-watch([showSpecimen, lightLevel, objective, viewCenter, cellColor, nucleusColor], drawViewer, { deep: true })
+watch([showSpecimen, lightLevel, objective, viewCenter, cellColor, nucleusColor, slideCracked, lightOn], drawViewer, { deep: true })
 
 // --- 3D microscope (metres, bench top y = 0) -----------------------------------------------------------
 const STAGE_Y = 0.115
@@ -410,7 +507,7 @@ function onPointerUp() {
 // --- Observe / record -------------------------------------------------------------------------------------
 const inspectText = ref<string | null>(null)
 const hint = ref<string | null>(null)
-function flash(text: string) { hint.value = text; setTimeout(() => { if (hint.value === text) hint.value = null }, 3500) }
+function flash(text: string, ms = 3500) { hint.value = text; setTimeout(() => { if (hint.value === text) hint.value = null }, ms) }
 
 function observeSpecimen() {
   if (props.readOnly) return
@@ -423,7 +520,7 @@ function observeSpecimen() {
   if (!lightOn.value) { inspectText.value = 'Switch on the illumination to see anything through the eyepiece.'; value = 'no_light' }
   else if (!isSpecimenVisible.value) { inspectText.value = 'The specimen is not in view - use the stage controls to recentre it.'; value = 'not_visible' }
   else if (quality === 'focused') {
-    inspectText.value = `At ×${objective.value}, clearly focused - you can see ${structures}.`
+    inspectText.value = `At ×${objective.value}, clearly focused - you can see ${structures}.${slideCracked.value ? ' (The cracked cover slip spoils part of the view.)' : ''}`
     value = 'focused'
     if (objective.value === 40 || objective.value === 100) hasObservedFocusedLowPower.value = true
   } else if (quality === 'almost_focused') { inspectText.value = `At ×${objective.value}, almost in focus - fine-tune the focus a little more.`; value = quality }
@@ -442,6 +539,7 @@ function resetMicroscope() {
   lightOn.value = false
   lightLevel.value = 70
   coarseFocusAtHighPowerCount.value = 0
+  slideCracked.value = false
   inspectText.value = null
 }
 

@@ -414,20 +414,58 @@ export function createObjectMesh(objectType: string, key: string, displayName: s
       inlet.rotation.z = Math.PI / 2 + 0.12
       inlet.position.set(-0.05, 0.16, 0)
       add(base, neck, collar, nut, ring, barrel, bore, lip, inlet)
+      // A real-looking gas flame: a pale blue inner cone inside a soft, glowing outer flame that
+      // fades out at its tip, plus a warm light it throws on the bench. VirtualLabScene flickers it
+      // every frame (see animateFlames) and shows or hides it with the burner's on/off state.
       const on = props.flame === 'on'
-      const outerFlame = mesh(
-        new THREE.ConeGeometry(0.09, 0.3, 24),
-        new THREE.MeshStandardMaterial({ color: 0xff9d3d, emissive: 0xff6a00, emissiveIntensity: on ? 1 : 0, transparent: true, opacity: on ? 0.75 : 0, depthWrite: false }),
-        0, 0.77,
-      )
-      outerFlame.userData.role = 'flame'
-      const innerFlame = mesh(
-        new THREE.ConeGeometry(0.045, 0.16, 16),
-        new THREE.MeshStandardMaterial({ color: 0x60a5fa, emissive: 0x2563eb, emissiveIntensity: on ? 1.3 : 0, transparent: true, opacity: on ? 0.85 : 0, depthWrite: false }),
-        0, 0.7,
-      )
-      innerFlame.userData.role = 'flame'
-      add(outerFlame, innerFlame)
+      const flame = new THREE.Group()
+      flame.position.y = 0.625
+      flame.userData.role = 'flame'
+      flame.visible = on
+      const teardrop = (r: number, hgt: number) => new THREE.LatheGeometry([
+        new THREE.Vector2(0, 0), new THREE.Vector2(r * 0.75, hgt * 0.04), new THREE.Vector2(r, hgt * 0.2),
+        new THREE.Vector2(r * 0.85, hgt * 0.45), new THREE.Vector2(r * 0.45, hgt * 0.75), new THREE.Vector2(0, hgt),
+      ], 32)
+      // Vertical colour ramp, transparent at the tip and the very base
+      const ramp = (stops: [number, string][]) => canvasTex(16, 256, (ctx, w, h) => {
+        const g = ctx.createLinearGradient(0, h, 0, 0)
+        stops.forEach(([at, c]) => g.addColorStop(at, c))
+        ctx.fillStyle = g; ctx.fillRect(0, 0, w, h)
+      })
+      // Outer flame blends normally (an additive orange washes out to white); the blue core glows
+      const flameMat = (map: THREE.Texture, additive = false) => new THREE.MeshBasicMaterial({
+        map, transparent: true, depthWrite: false, side: THREE.DoubleSide,
+        blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
+      })
+      const outer = new THREE.Mesh(teardrop(0.07, 0.3), flameMat(ramp([
+        [0, 'rgba(60,90,255,0)'], [0.06, 'rgba(70,110,255,0.75)'], [0.2, 'rgba(255,190,40,0.9)'],
+        [0.5, 'rgba(255,120,20,0.85)'], [0.8, 'rgba(240,70,10,0.45)'], [1, 'rgba(200,40,0,0)'],
+      ])))
+      outer.userData.flameLayer = 'outer'
+      outer.renderOrder = 2
+      const tongue = new THREE.Mesh(teardrop(0.04, 0.24), flameMat(ramp([
+        [0, 'rgba(255,230,120,0)'], [0.25, 'rgba(255,235,140,0.9)'], [0.7, 'rgba(255,170,40,0.6)'], [1, 'rgba(255,120,20,0)'],
+      ])))
+      tongue.userData.flameLayer = 'tongue'
+      tongue.renderOrder = 3
+      const inner = new THREE.Mesh(teardrop(0.03, 0.11), flameMat(ramp([
+        [0, 'rgba(60,120,255,0.4)'], [0.3, 'rgba(70,130,255,1)'], [0.8, 'rgba(140,190,255,0.85)'], [1, 'rgba(200,230,255,0)'],
+      ]), true))
+      inner.userData.flameLayer = 'inner'
+      inner.renderOrder = 4
+      // Where the flame meets a wire gauze above it, it spreads out flat under it (shown by the scene)
+      const spread = new THREE.Mesh(new THREE.SphereGeometry(0.15, 24, 12), flameMat(ramp([
+        [0, 'rgba(255,110,20,0)'], [0.45, 'rgba(255,140,30,0.75)'], [0.6, 'rgba(255,200,80,0.8)'], [1, 'rgba(255,120,20,0)'],
+      ])))
+      spread.scale.set(1, 0.22, 1)
+      spread.position.y = 0.17
+      spread.visible = false
+      spread.userData.flameLayer = 'spread'
+      const glow = new THREE.PointLight(0xff8a3d, 0.9, 2.2, 2)
+      glow.position.y = 0.12
+      glow.userData.flameLayer = 'light'
+      flame.add(outer, tongue, inner, spread, glow)
+      add(flame)
       break
     }
     case 'thermometer': {
@@ -452,10 +490,14 @@ export function createObjectMesh(objectType: string, key: string, displayName: s
       })
       const backing = mesh(rbox(0.1, 0.66, 0.02, 0.008), new THREE.MeshStandardMaterial({ map: scale, roughness: 0.5 }), 0, 0.45, -0.025)
       const stem = mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.62, 24), glass(0xffffff), 0, 0.45)
+      // The red column: VirtualLabScene stretches it to the temperature it is sitting in (role 'mercury')
       const mercury = mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.45, 12), new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.2 }), 0, 0.32)
+      mercury.userData.role = 'mercury'
       const bulb = mesh(new THREE.SphereGeometry(0.05, 24, 24), new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.2 }), 0, 0.1)
       const bulbGlass = mesh(new THREE.SphereGeometry(0.065, 24, 24), glass(0xffffff), 0, 0.1)
+      // Desk stand, hidden while the thermometer stands in a liquid
       const stand = mesh(rbox(0.26, 0.04, 0.2, 0.015), enamel(0x2f4b63), 0, 0.02)
+      stand.userData.role = 'thermo_stand'
       add(backing, stem, mercury, bulb, bulbGlass, stand)
       // Screen-size °C numbers beside the scale (0, 50, 100 always; 25 and 75 when there's room)
       const tempY = (c: number) => 0.78 - ((1440 - c * 12.9) / 1690) * 0.66

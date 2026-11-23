@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
+import { labInsets, labViewPose, roomFov, setActiveLabRoom, clearActiveLabRoom, isActiveLabRoom, type ActiveLabRoom, type LabViewKey } from './cameraViews'
 
 /**
  * Shared 3D laboratory room for the realistic per-experiment renderers. Units are metres, with
@@ -132,23 +133,26 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
   renderer.shadowMap.type = THREE.PCFShadowMap
   renderer.outputColorSpace = THREE.SRGBColorSpace
   renderer.toneMapping = THREE.ACESFilmicToneMapping
-  renderer.toneMappingExposure = 1.0
+  // Kept a little under 1 so pale surfaces (white cabinet frames, glass, the steel rod) don't glare
+  renderer.toneMappingExposure = 0.76
   renderer.domElement.style.display = 'block'
   renderer.domElement.style.touchAction = 'none'
   host.appendChild(renderer.domElement)
 
   const field = opts.setting === 'field'
+  if (field) renderer.toneMappingExposure = 1.0
   const s = opts.unitScale ?? 1
   const scene = new THREE.Scene()
   // Outdoors the fog is the hazy horizon colour, so distant hills and trees fade into the sky dome
-  scene.background = new THREE.Color(field ? 0xd6e8f5 : 0xdfe3e8)
-  scene.fog = field ? new THREE.Fog(0xd6e8f5, 70 * s, 200 * s) : new THREE.Fog(0xdfe3e8, 4 * s, 9 * s)
+  scene.background = new THREE.Color(field ? 0xd6e8f5 : 0xc8cdd4)
+  scene.fog = field ? new THREE.Fog(0xd6e8f5, 70 * s, 200 * s) : new THREE.Fog(0xc8cdd4, 4 * s, 9 * s)
 
   // Image-based lighting so metal, brass and glass pick up believable reflections.
   const pmrem = new THREE.PMREMGenerator(renderer)
   const envTexture = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
   scene.environment = envTexture
-  scene.environmentIntensity = 0.55
+  // Low enough that shiny apparatus keeps its shape instead of turning into a white reflection
+  scene.environmentIntensity = field ? 0.55 : 0.22
   pmrem.dispose()
 
   const camera = new THREE.PerspectiveCamera(40, (host.clientWidth || 1) / (host.clientHeight || 1), 0.01 * s, (field ? 300 : 30) * s)
@@ -290,7 +294,7 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
     }
   }
   // A wider view of the room needs the fog pushed back
-  if (!field && (opts.cupboard || opts.wallCabinets)) scene.fog = new THREE.Fog(0xdfe3e8, 11 * s, 26 * s)
+  if (!field && (opts.cupboard || opts.wallCabinets)) scene.fog = new THREE.Fog(0xc8cdd4, 11 * s, 26 * s)
   if (s !== 1) {
     world.traverse((o) => {
       if (!(o instanceof THREE.DirectionalLight) || !o.castShadow) return
@@ -302,6 +306,17 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
   }
 
   const frameCallbacks: ((dt: number) => void)[] = []
+  // What the page's camera buttons talk to (cameraViews.ts); flyTo is filled in once it exists
+  const normalFov = camera.fov
+  let roomLens = false
+  const applyLens = () => {
+    const fov = roomLens ? roomFov(camera.aspect) : normalFov
+    if (camera.fov !== fov) { camera.fov = fov; camera.updateProjectionMatrix() }
+  }
+  const roomHandle: ActiveLabRoom = {
+    camera, controls, unitScale: s, flyTo: () => {},
+    setRoomLens: (on) => { roomLens = on; applyLens() },
+  }
   const timer = new THREE.Timer()
   let raf = 0
   const loop = (ts: number) => {
@@ -332,9 +347,58 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
       }
     }
     updateScreenLabels(scene, camera, renderer.domElement.clientHeight)
+    renderInsets()
     renderer.render(scene, camera)
   }
   raf = requestAnimationFrame(loop)
+
+  // --- Camera windows: extra live views shown in a strip under the lab (see cameraViews.ts) ------
+  // Each window is the same scene through another fixed camera. It is drawn into the bottom-left
+  // corner of this canvas, copied onto the window's own 2D canvas, and then the main view is drawn
+  // over the whole canvas as usual - so nothing in the lab itself is ever covered by a window.
+  const insetCams = new Map<LabViewKey, THREE.PerspectiveCamera>()
+  let insetFrame = 0
+  function renderInsets() {
+    if (field || !isActiveLabRoom(roomHandle) || !labInsets.views.length) return
+    // Every other frame is plenty for a small window, and halves its cost
+    if (insetFrame++ % 2) return
+    const W = renderer.domElement.clientWidth
+    const H = renderer.domElement.clientHeight
+    const pr = renderer.getPixelRatio()
+    const fullH = renderer.domElement.height
+    let drew = false
+    for (const key of labInsets.views) {
+      const pose = labViewPose(key)
+      const out = labInsets.canvases.get(key)
+      if (!pose || !out || !out.clientWidth || !out.clientHeight) continue
+      const w = Math.min(out.clientWidth, W)
+      const h = Math.min(out.clientHeight, H)
+      const pw = Math.max(1, Math.round(w * pr))
+      const ph = Math.max(1, Math.round(h * pr))
+      if (out.width !== pw || out.height !== ph) { out.width = pw; out.height = ph }
+      let cam = insetCams.get(key)
+      if (!cam) { cam = new THREE.PerspectiveCamera(45, 1, camera.near, camera.far); insetCams.set(key, cam) }
+      cam.aspect = w / h
+      cam.fov = key === 'top' ? roomFov(cam.aspect) : 45
+      cam.updateProjectionMatrix()
+      cam.position.copy(pose.pos).multiplyScalar(s)
+      cam.lookAt(pose.target.clone().multiplyScalar(s))
+      if (!drew) {
+        // The shadows from the last frame are still right; only the main view redraws them
+        renderer.shadowMap.autoUpdate = false
+        renderer.setScissorTest(true)
+        drew = true
+      }
+      renderer.setViewport(0, 0, w, h)
+      renderer.setScissor(0, 0, w, h)
+      renderer.render(scene, cam)
+      out.getContext('2d')?.drawImage(renderer.domElement, 0, fullH - ph, pw, ph, 0, 0, pw, ph)
+    }
+    if (!drew) return
+    renderer.setScissorTest(false)
+    renderer.setViewport(0, 0, W, H)
+    renderer.shadowMap.autoUpdate = true
+  }
 
   // Last box framed by frameBox(); re-framed when the canvas changes shape (full screen, device
   // rotation) unless the student has since moved the camera themselves.
@@ -352,6 +416,7 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
     renderer.setSize(w, h)
     camera.aspect = w / h
     camera.updateProjectionMatrix()
+    applyLens()
     if (framedBox && !userMovedCamera) {
       if (fittedFill !== null) fitBox(framedBox, fittedFill, { dir: fittedDir || undefined })
       else frameBox(framedBox)
@@ -564,7 +629,7 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
     extinguisherApi = extinguisher.api
   }
 
-  return {
+  const roomApi: LabRoom = {
     cupboard,
     wallCabinets,
     furniture: { doors: furnitureDoors, blockers: furnitureBlockers },
@@ -622,14 +687,18 @@ export function createLabRoom(host: HTMLElement, opts: LabRoomOptions = {}): Lab
       // dispose() alone doesn't release the WebGL context; mobile browsers cap live contexts low.
       renderer.forceContextLoss()
       renderer.domElement.remove()
+      clearActiveLabRoom(roomHandle)
     },
   }
+  roomHandle.flyTo = roomApi.flyTo
+  setActiveLabRoom(roomHandle)
+  return roomApi
 }
 
 function buildLighting(scene: THREE.Object3D) {
-  scene.add(new THREE.HemisphereLight(0xf5f7ff, 0x8a8f99, 0.55))
+  scene.add(new THREE.HemisphereLight(0xf5f7ff, 0x8a8f99, 0.45))
 
-  const key = new THREE.DirectionalLight(0xffffff, 1.6)
+  const key = new THREE.DirectionalLight(0xffffff, 1.2)
   key.position.set(1.2, 2.4, 1.6)
   key.castShadow = true
   key.shadow.mapSize.set(1024, 1024)
@@ -644,7 +713,7 @@ function buildLighting(scene: THREE.Object3D) {
   key.shadow.radius = 4
   scene.add(key)
 
-  const fill = new THREE.DirectionalLight(0xdfe8ff, 0.45)
+  const fill = new THREE.DirectionalLight(0xdfe8ff, 0.35)
   fill.position.set(-1.6, 1.2, 0.8)
   scene.add(fill)
 }
@@ -1011,10 +1080,10 @@ const displayBacking = () => new THREE.MeshStandardMaterial({ color: 0x1e2a3a, r
 const displayShelf = () => new THREE.MeshStandardMaterial({ color: 0xe3c89c, roughness: 0.55 })
 
 /** A warm light inside a cabinet, plus the LED strip it seems to come from. `s` = scene units per metre. */
-function interiorLight(scene: THREE.Object3D, x: number, y: number, z: number, width: number, s: number, intensity = 3.5) {
+function interiorLight(scene: THREE.Object3D, x: number, y: number, z: number, width: number, s: number, intensity = 2) {
   const strip = new THREE.Mesh(
     new THREE.BoxGeometry(width, 0.008, 0.012),
-    new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff1d6, emissiveIntensity: 2 }),
+    new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff1d6, emissiveIntensity: 1.2 }),
   )
   strip.position.set(x, y, z)
   scene.add(strip)
@@ -1536,8 +1605,8 @@ function buildCupboard(scene: THREE.Object3D, woodTex: THREE.Texture, BENCH_W: n
   panel(bayW, t, D - t, W / 4, shelfY - t / 2, t / 2, inner)
   // A light under the bench top and under the shelf of each bay, so nothing sits in the dark
   if (lit) for (const bx of [-W / 4, W / 4]) {
-    interiorLight(scene, bx, top - 0.05, front - 0.12, bayW - 0.1, s, 4)
-    interiorLight(scene, bx, shelfY - t - 0.006, front - 0.12, bayW - 0.1, s, 4)
+    interiorLight(scene, bx, top - 0.05, front - 0.12, bayW - 0.1, s, 2.4)
+    interiorLight(scene, bx, shelfY - t - 0.006, front - 0.12, bayW - 0.1, s, 2.4)
   }
 
   // A pair of doors hinged on the outer sides, meeting in the middle (one door per bay)

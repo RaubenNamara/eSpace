@@ -9,20 +9,7 @@
         <span class="text-gray-300 dark:text-gray-600" aria-hidden="true">/</span>
         <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight">Apparatus Playground</h1>
         <!-- Camera views of the room -->
-        <div class="inline-flex flex-wrap rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm p-1 gap-1">
-          <button
-            v-for="v in CAMERA_VIEWS"
-            :key="v.key"
-            type="button"
-            @click="goToView(v.key)"
-            class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-colors"
-            :class="cameraView === v.key ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'"
-            :title="v.title"
-          >
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.55-2.28A1 1 0 0121 8.62v6.76a1 1 0 01-1.45.9L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-            {{ v.label }}
-          </button>
-        </div>
+        <LabCameraToggles :cams="cams" :labels="{ bench: 'Front' }" />
         <button @click="enterMaximize" class="ml-auto inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm" title="Fill the whole screen with the lab">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>
           Full Screen Lab
@@ -37,20 +24,7 @@
           <div v-if="labMaximized" class="flex-shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-3 sm:px-4 py-2 flex items-center gap-2 sm:gap-3">
             <p class="hidden sm:block text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 whitespace-nowrap">Apparatus Playground</p>
             <!-- Camera views of the room -->
-            <div class="inline-flex flex-wrap rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm p-1 gap-1">
-              <button
-                v-for="v in CAMERA_VIEWS"
-                :key="v.key"
-                type="button"
-                @click="goToView(v.key)"
-                class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-colors"
-                :class="cameraView === v.key ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'"
-                :title="v.title"
-              >
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.55-2.28A1 1 0 0121 8.62v6.76a1 1 0 01-1.45.9L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                {{ v.label }}
-              </button>
-            </div>
+            <LabCameraToggles :cams="cams" :labels="{ bench: 'Front' }" />
             <p class="flex-1 min-w-0 truncate text-[11px] text-gray-500 dark:text-gray-400">
               <template v-if="sceneObjects.length">{{ sceneObjects.length }} on the benches · working at the {{ BENCHES[activeBench].label.toLowerCase() }}</template>
               <template v-else>Open the glass cabinets for apparatus, or the cupboard for chemicals</template>
@@ -63,9 +37,11 @@
           </div>
 
           <div
-            class="relative overflow-hidden"
+            class="relative overflow-hidden flex"
             :class="labMaximized ? 'flex-1 min-h-0 min-w-0' : 'h-[68svh] min-h-[340px] sm:h-[72svh] lg:h-[calc(100svh-7rem)] lg:min-h-[560px] rounded-2xl shadow-lg ring-1 ring-gray-900/5'"
           >
+            <!-- The main camera, with a column beside it for any other cameras that are on -->
+            <div class="relative flex-1 min-w-0 h-full">
             <!-- The room is always there, even with an empty bench, so its cabinets can be opened -->
             <VirtualLabScene
               ref="sceneRef"
@@ -91,6 +67,8 @@
                 {{ lastPicked }}
               </p>
             </transition>
+            </div>
+            <LabCameraWindows :cams="cams" :labels="{ bench: 'Front' }" />
           </div>
         </div>
 
@@ -143,7 +121,11 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
-import VirtualLabScene, { type CameraView } from '@/components/virtuallab/VirtualLabScene.vue'
+import VirtualLabScene from '@/components/virtuallab/VirtualLabScene.vue'
+import LabCameraToggles from '@/components/virtuallab/LabCameraToggles.vue'
+import LabCameraWindows from '@/components/virtuallab/LabCameraWindows.vue'
+import { useLabCameras } from '@/components/virtuallab/lab3d/useLabCameras'
+import { flyActiveRoomTo, type LabViewKey } from '@/components/virtuallab/lab3d/cameraViews'
 import { chemicalById, chemicalObjectType, chemicalProps } from '@/components/virtuallab/chemicals'
 import { useFullscreenLab } from '@/components/virtuallab/lab3d/useFullscreenLab'
 import type { LabObjectDef, SceneObjectConfig } from '@/types/virtualLab'
@@ -232,21 +214,18 @@ const addToScene = (obj: LabObjectDef) => {
 }
 
 // Camera views of the room - the scene glides the camera to each
-const CAMERA_VIEWS: { key: CameraView; label: string; title: string }[] = [
-  { key: 'bench', label: 'Front', title: 'Work at the front table, with the subject cabinets behind it' },
-  { key: 'entrance', label: 'Entrance', title: 'Look at the lab entrance' },
-  { key: 'left', label: 'Left', title: 'Work at the left table, under the General cabinet' },
-  { key: 'right', label: 'Right', title: 'Work at the right table' },
-]
-const cameraView = ref<CameraView>('bench')
-const goToView = (v: CameraView) => {
-  cameraView.value = v
-  // Choosing a table's camera makes it the table to work at (the entrance has no table, so the
-  // last table stays in use)
-  if (v === 'bench') activeBench.value = 'front'
-  else if (v === 'left' || v === 'right') activeBench.value = v
-  sceneRef.value?.goToView(v)
-}
+// Camera toggles: any number on, the first is the main view and the rest live windows. Making a
+// table's camera the main view makes it the table to work at (the entrance and the top view have
+// no table of their own, so the last table stays in use).
+const cams = useLabCameras({
+  benchView: () => sceneRef.value?.goToView('bench'),
+  flyMain: (v: LabViewKey) => {
+    if (v === 'top') return flyActiveRoomTo('top')
+    if (v === 'bench') activeBench.value = 'front'
+    else if (v === 'left' || v === 'right') activeBench.value = v
+    sceneRef.value?.goToView(v)
+  },
+})
 
 const lastPicked = ref<string | null>(null)
 let pickedTimer: ReturnType<typeof setTimeout> | null = null

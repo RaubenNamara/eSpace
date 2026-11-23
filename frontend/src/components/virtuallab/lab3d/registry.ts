@@ -13,6 +13,8 @@ import VirtualLabSceneConcaveMirror from '../VirtualLabSceneConcaveMirror.vue'
 import VirtualLabSceneSilverDensity from '../VirtualLabSceneSilverDensity.vue'
 import VirtualLabSceneBulbResistance from '../VirtualLabSceneBulbResistance.vue'
 import VirtualLabSceneFrogDissection from '../VirtualLabSceneFrogDissection.vue'
+import VirtualLabSceneFoodTests from '../VirtualLabSceneFoodTests.vue'
+import VirtualLabSceneSoilTests from '../VirtualLabSceneSoilTests.vue'
 
 /**
  * Guided 3D experiments, keyed by an experiment's `render_component` slug. Experiments with
@@ -41,6 +43,10 @@ export const GUIDED_EXPERIMENTS: Record<string, Component> = {
   // Same bench without a bulb: cells, K, ammeter and wire P in series, voltmeter across the battery
   battery_internal_resistance: VirtualLabSceneBulbResistance,
   frog_dissection: VirtualLabSceneFrogDissection,
+  // Biology bench: food tests (starch, sugars, protein, vitamin C, lipids) and enzyme activity
+  food_tests: VirtualLabSceneFoodTests,
+  // Biology bench: soil drainage and water retention, air in soil, soil pH
+  soil_tests: VirtualLabSceneSoilTests,
 }
 
 export function resolveGuidedExperiment(renderComponent: string | null | undefined): Component | null {

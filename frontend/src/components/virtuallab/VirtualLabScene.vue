@@ -529,6 +529,7 @@ function placeFromTray(key: string) {
   if (idx === -1) return
   const cfg = trayItems.value[idx]
   placeObject(cfg)
+  relinkRig()
   trayItems.value.splice(idx, 1)
   emit('action', { objectKey: key, action: 'move', value: key })
 }
@@ -631,7 +632,371 @@ function circuitDiagnosis(instrumentKey: string): { value: number; reason: strin
   return { value: 0, reason: null }
 }
 
+// --- Heating rig: burner under a tripod, wire gauze on top, a flask on the gauze ----------------
+// Carried apparatus snaps into place the way it would sit in a real lab: a tripod over a burner,
+// gauze on the tripod's ring, a flask or beaker on the gauze, a thermometer standing in the water.
+// A container on the rig is heated for real while the burner under it is lit - its temperature
+// climbs towards boiling, it bubbles and steams, and a thermometer standing in it shows it live.
+const TRIPOD_TOP_Y = 0.81
+const GAUZE_T = 0.008
+const RIG_SNAP = 0.55
+const THERMO_SNAP = 0.45
+const ROOM_TEMP = 25
+const HEATABLE_TYPES = ['beaker', 'conical_flask', 'amber_conical_flask', 'round_bottom_flask', 'test_tube', 'evaporating_dish']
+/** gauze / container -> the tripod it sits on */
+const supportOf = new Map<string, string>()
+/** thermometer -> the container it stands in */
+const thermometerIn = new Map<string, string>()
+/** Live temperature of each heated container's contents (°C) */
+const liquidTemp = new Map<string, number>()
+/** What each thermometer currently shows (lags behind the liquid like a real one) */
+const thermoShown = new Map<string, number>()
+const flameOn = new Map<string, boolean>()
+
+const typeOf = (key: string) => props.sceneObjects.find(o => o.key === key)?.object_type
+function flatDistance(a: THREE.Vector3, b: THREE.Vector3) { return Math.hypot(a.x - b.x, a.z - b.z) }
+function nearestOfType(types: string[], from: THREE.Vector3, within: number, except?: string): string | null {
+  let best: string | null = null
+  let bestD = within
+  groups.forEach((g, k) => {
+    if (k === except || !types.includes(typeOf(k) ?? '')) return
+    const d = flatDistance(g.position, from)
+    if (d < bestD) { bestD = d; best = k }
+  })
+  return best
+}
+const burnerUnder = (tripodKey: string) => {
+  const t = groups.get(tripodKey)
+  return t ? nearestOfType(['bunsen_burner'], t.position, 0.25) : null
+}
+const gauzeOn = (tripodKey: string) => [...supportOf.entries()].find(([k, t]) => t === tripodKey && typeOf(k) === 'wire_gauze')?.[0] ?? null
+/** vessel -> burner, for a vessel put over a burner with the Heat action (see heatOverBurner) */
+const heldOver = new Map<string, string>()
+const isHeatingNow = (containerKey: string) => {
+  const held = heldOver.get(containerKey)
+  if (held) return !!flameOn.get(held)
+  const tripod = supportOf.get(containerKey)
+  if (!tripod || typeOf(containerKey) === 'wire_gauze') return false
+  const burner = burnerUnder(tripod)
+  return !!burner && !!flameOn.get(burner)
+}
+
+/** Shows the burner's flame (and its light) or puts it out. */
+function setFlame(burnerKey: string, on: boolean) {
+  flameOn.set(burnerKey, on)
+  groups.get(burnerKey)?.traverse((c) => { if (c.userData.role === 'flame') c.visible = on })
+}
+
+/** Everything riding on an object when it is carried: what sits on a tripod, a thermometer in a flask. */
+function ridersOf(key: string): string[] {
+  const out: string[] = []
+  supportOf.forEach((tripod, k) => { if (tripod === key) out.push(k) })
+  thermometerIn.forEach((container, k) => { if (container === key || out.includes(container)) out.push(k) })
+  return out
+}
+
+/** A thermometer standing in a container: centred in it, bulb down in the liquid, desk stand hidden. */
+function seatThermometer(thermoKey: string, containerKey: string | null) {
+  const g = groups.get(thermoKey)
+  if (!g) return
+  if (containerKey) {
+    const c = groups.get(containerKey)
+    if (c) g.position.set(c.position.x, c.position.y + 0.05, c.position.z)
+    thermometerIn.set(thermoKey, containerKey)
+  } else {
+    thermometerIn.delete(thermoKey)
+  }
+  g.traverse((ch) => { if (ch.userData.role === 'thermo_stand') ch.visible = !containerKey })
+}
+
+/**
+ * After something has been carried and put down: snaps it into the rig if it was put down on one
+ * (or a thermometer into a container). Returns what it now sits on/in, or null.
+ */
+function snapIntoRig(movedKey: string): string | null {
+  const g = groups.get(movedKey)
+  const type = typeOf(movedKey)
+  if (!g || !type) return null
+  const before = g.position.clone()
+  let target: string | null = null
+
+  heldOver.delete(movedKey) // carried off the flame
+  if (type === 'bunsen_burner') {
+    // The burner carried away from under whatever it was heating: that stops heating, and its stand stays put
+    heldOver.forEach((b, vessel) => { if (b === movedKey) heldOver.delete(vessel) })
+    heatStands.delete(movedKey)
+  }
+  if (type === 'tripod_stand') {
+    const burner = nearestOfType(['bunsen_burner'], g.position, RIG_SNAP)
+    if (burner) { const b = groups.get(burner)!; g.position.set(b.position.x, 0, b.position.z); target = burner }
+  } else if (type === 'bunsen_burner') {
+    const tripod = nearestOfType(['tripod_stand'], g.position, RIG_SNAP)
+    if (tripod) { const t = groups.get(tripod)!; g.position.set(t.position.x, 0, t.position.z); target = tripod }
+  } else if (type === 'wire_gauze' || HEATABLE_TYPES.includes(type)) {
+    supportOf.delete(movedKey)
+    const tripod = nearestOfType(['tripod_stand'], g.position, RIG_SNAP)
+    if (tripod) {
+      const t = groups.get(tripod)!
+      const onGauze = type !== 'wire_gauze' && !!gauzeOn(tripod)
+      g.position.set(t.position.x, TRIPOD_TOP_Y + (onGauze ? GAUZE_T : 0), t.position.z)
+      supportOf.set(movedKey, tripod)
+      target = tripod
+      if (type !== 'wire_gauze' && !onGauze) {
+        warningToast.value = 'Put a wire gauze on the tripod first - the flame spreads out under the gauze so the glass heats evenly and does not crack.'
+        setTimeout(() => { warningToast.value = null }, 5000)
+      }
+    }
+  } else if (type === 'thermometer') {
+    const container = nearestOfType(LIQUID_CONTAINER_TYPES, g.position, THERMO_SNAP)
+    if (container && (containerVolumes.get(container) ?? 0) > 0) { seatThermometer(movedKey, container); target = container }
+    else seatThermometer(movedKey, null)
+  }
+
+  // Whatever rides on it moves with it (flask and thermometer on a tripod, thermometer in a flask)
+  const shift = g.position.clone().sub(before)
+  if (shift.lengthSq() > 0) ridersOf(movedKey).forEach((k) => groups.get(k)?.position.add(shift))
+  return target
+}
+
+/**
+ * The Heat action, done the way a real lab does it: the vessel goes on a tripod and wire gauze
+ * over the burner (never straight on the flame) and the burner is lit. If no tripod has been set
+ * out over that burner, one is set up for it - a plain stand and gauze that are part of the burner's
+ * set-up rather than apparatus of their own.
+ */
+const heatStands = new Map<string, THREE.Group>()
+function heatOverBurner(burnerKey: string, vesselKey: string) {
+  const b = groups.get(burnerKey)
+  const v = groups.get(vesselKey)
+  if (!b || !v) return
+  const tripod = nearestOfType(['tripod_stand'], b.position, 0.25)
+  const before = v.position.clone()
+  if (tripod) {
+    const onGauze = !!gauzeOn(tripod)
+    v.position.set(b.position.x, TRIPOD_TOP_Y + (onGauze ? GAUZE_T : 0), b.position.z)
+    supportOf.set(vesselKey, tripod)
+  } else {
+    if (!heatStands.has(burnerKey)) {
+      const stand = new THREE.Group()
+      const tri = createObjectMesh('tripod_stand', `heatstand:${burnerKey}`, 'Tripod Stand', {})
+      const gauze = createObjectMesh('wire_gauze', `heatgauze:${burnerKey}`, 'Wire Gauze', {})
+      gauze.position.y = TRIPOD_TOP_Y
+      stand.add(tri, gauze)
+      stand.traverse((c) => { if (c.userData.role === 'label') c.visible = false })
+      scene.add(stand)
+      heatStands.set(burnerKey, stand)
+    }
+    heatStands.get(burnerKey)!.position.set(b.position.x, 0, b.position.z)
+    v.position.set(b.position.x, TRIPOD_TOP_Y + GAUZE_T, b.position.z)
+    heldOver.set(vesselKey, burnerKey)
+  }
+  // A thermometer standing in it comes along
+  const shift = v.position.clone().sub(before)
+  thermometerIn.forEach((container, thermo) => { if (container === vesselKey) groups.get(thermo)?.position.add(shift) })
+  setFlame(burnerKey, true)
+}
+
+/** Apparatus authored already assembled (gauze resting on a tripod, thermometer in a flask) is linked up. */
+function relinkRig() {
+  groups.forEach((g, k) => {
+    const type = typeOf(k) ?? ''
+    if ((type === 'wire_gauze' || HEATABLE_TYPES.includes(type)) && g.position.y > 0.5 && !supportOf.has(k)) {
+      const tripod = nearestOfType(['tripod_stand'], g.position, 0.2)
+      if (tripod) supportOf.set(k, tripod)
+    }
+    if (type === 'bunsen_burner' && !flameOn.has(k)) flameOn.set(k, mergedProps(k).flame === 'on')
+  })
+}
+
+// Flame flicker, heating, the mercury column, bubbles and steam - run every frame
+const bubbles = new Map<string, THREE.Group>()
+const steam = new Map<string, THREE.Group>()
+let rigClock = 0
+function liquidTop(containerKey: string): number {
+  let top = 0
+  groups.get(containerKey)?.traverse((c) => { if (c.userData.role === 'liquid') top = Math.max(top, c.position.y * 2) })
+  return top
+}
+function effectGroup(store: Map<string, THREE.Group>, key: string, make: () => THREE.Group) {
+  let g = store.get(key)
+  if (!g) { g = make(); store.set(key, g); groups.get(key)?.add(g) }
+  return g
+}
+// --- Boiling: bubbles in the liquid and steam from the mouth, in the stages real water goes through ---
+// ~40 °C: tiny bubbles of air appear on the bottom. ~70 °C: bubbles break away and rise, but shrink
+// and vanish on the way up (the water above is cooler). ~90 °C and over: big bubbles roll all the
+// way to the surface. White steam starts curling out of the mouth at ~50 °C and thickens to a plume.
+const BUBBLE_POOL = 70
+const STEAM_POOL = 28
+/** Inside radius of the liquid at height y in a container (scene units, the container's own frame) */
+function innerRadiusAt(type: string, y: number) {
+  if (type === 'conical_flask' || type === 'amber_conical_flask') return Math.max(0.03, (0.282 - (0.172 * y) / 0.41) * 0.82)
+  if (type === 'test_tube') return 0.03
+  return 0.14
+}
+/** Height of the container's mouth, where steam comes out */
+function mouthHeight(type: string, containerKey: string) {
+  if (type === 'conical_flask' || type === 'amber_conical_flask') return 0.64
+  return liquidTop(containerKey) + 0.12
+}
+let steamTexture: THREE.Texture | null = null
+function steamTex() {
+  if (steamTexture) return steamTexture
+  const cv = document.createElement('canvas'); cv.width = cv.height = 128
+  const ctx = cv.getContext('2d')!
+  // A soft, slightly lumpy puff rather than a perfect disc
+  for (let i = 0; i < 9; i++) {
+    const x = 64 + (Math.random() - 0.5) * 40, y = 64 + (Math.random() - 0.5) * 40, r = 26 + Math.random() * 26
+    const g = ctx.createRadialGradient(x, y, 1, x, y, r)
+    g.addColorStop(0, 'rgba(255,255,255,0.35)'); g.addColorStop(1, 'rgba(255,255,255,0)')
+    ctx.fillStyle = g; ctx.fillRect(0, 0, 128, 128)
+  }
+  steamTexture = new THREE.CanvasTexture(cv)
+  return steamTexture
+}
+const clamp01 = (v: number) => Math.max(0, Math.min(1, v))
+function resetBubble(s: THREE.Object3D, type: string) {
+  const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * innerRadiusAt(type, 0.02)
+  s.position.set(Math.cos(a) * r, 0.012, Math.sin(a) * r)
+  // The bubble geometry is a unit sphere (as big as the flask): always start it invisible-small
+  s.scale.setScalar(0.0001)
+  s.userData.base = 0.4 + Math.random() * 0.6
+  s.userData.speed = 0.6 + Math.random() * 0.8
+  s.userData.wob = Math.random() * 10
+  s.userData.stuck = 0.5 + Math.random() * 2.5 // seconds it clings to the glass before letting go
+}
+function animateBoiling(key: string, type: string, temp: number, dt: number) {
+  const top = liquidTop(key)
+  const warm = clamp01((temp - 40) / 55)  // how many bubbles
+  const rising = clamp01((temp - 68) / 22) // how freely they rise
+  const boil = clamp01((temp - 92) / 8)    // full rolling boil
+  const showBubbles = warm > 0 && top > 0.02
+  if (showBubbles || bubbles.has(key)) {
+    const b = effectGroup(bubbles, key, () => {
+      const grp = new THREE.Group()
+      const geo = new THREE.SphereGeometry(1, 8, 6)
+      // Plain shiny material: a transmission (glass) material would make three.js render the whole room twice every frame
+      const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.75, roughness: 0.05, emissive: 0xbfe3f2, emissiveIntensity: 0.35, depthWrite: false })
+      for (let i = 0; i < BUBBLE_POOL; i++) { const s = new THREE.Mesh(geo, mat); resetBubble(s, type); grp.add(s) }
+      return grp
+    })
+    b.visible = showBubbles
+    if (showBubbles) {
+      const active = Math.round(BUBBLE_POOL * (0.15 + 0.85 * warm) * (0.35 + 0.65 * Math.max(rising, boil)))
+      b.children.forEach((s, i) => {
+        s.visible = i < active
+        if (!s.visible) return
+        const d = s.userData
+        // Size: specks when warm, big wobbling bubbles at a full boil
+        const size = (0.004 + 0.008 * rising + 0.02 * boil) * d.base
+        if (d.stuck > 0 && s.position.y < 0.02) {
+          d.stuck -= dt * (0.3 + 2 * rising)
+          s.scale.setScalar(size * (0.5 + 0.5 * clamp01(1 - d.stuck)))
+          return
+        }
+        // Below ~68 °C bubbles only cling to the bottom as specks: send any loose one back down
+        if (rising === 0) { resetBubble(s, type); s.scale.setScalar(size * 0.5); return }
+        s.position.y += d.speed * (0.06 + 0.22 * rising + 0.35 * boil) * dt
+        const r = innerRadiusAt(type, s.position.y)
+        s.position.x += Math.sin(rigClock * 9 + d.wob) * 0.02 * dt
+        const rr = Math.hypot(s.position.x, s.position.z)
+        if (rr > r) { s.position.x *= r / rr; s.position.z *= r / rr }
+        // Before a full boil, rising bubbles collapse in the cooler water above
+        const climb = clamp01(s.position.y / Math.max(top, 0.01))
+        const shrink = boil > 0.5 ? 1 : 1 - climb * (1 - boil) * 1.15
+        s.scale.setScalar(Math.max(0, size * shrink) * (1 + Math.sin(rigClock * 20 + d.wob) * 0.12 * boil))
+        if (s.position.y > top - 0.005 || shrink <= 0.05) resetBubble(s, type)
+      })
+    }
+  }
+  // Steam / white vapour from the mouth
+  const vapour = clamp01((temp - 50) / 45)
+  if (vapour > 0 || steam.has(key)) {
+    const st = effectGroup(steam, key, () => {
+      const grp = new THREE.Group()
+      for (let i = 0; i < STEAM_POOL; i++) {
+        const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: steamTex(), transparent: true, depthWrite: false, opacity: 0 }))
+        sp.userData.phase = i / STEAM_POOL
+        sp.userData.drift = (Math.random() - 0.5) * 2
+        sp.userData.spin = Math.random() * 10
+        grp.add(sp)
+      }
+      return grp
+    })
+    st.visible = vapour > 0
+    st.position.y = mouthHeight(type, key)
+    if (vapour > 0) {
+      const shown = Math.round(STEAM_POOL * (0.2 + 0.8 * vapour))
+      const speed = 0.12 + 0.3 * vapour
+      st.children.forEach((sp, i) => {
+        sp.visible = i < shown
+        if (!sp.visible) return
+        const d = sp.userData
+        const life = (d.phase + rigClock * speed) % 1
+        // Curls upward, widening and drifting, fading in at the mouth and out at the top
+        sp.position.set(
+          Math.sin(life * 6 + d.spin) * 0.03 * (1 + life * 2) + d.drift * life * 0.12,
+          life * (0.35 + 0.55 * vapour),
+          Math.cos(life * 5 + d.spin) * 0.02 * (1 + life * 2),
+        )
+        sp.scale.setScalar(0.07 + life * (0.18 + 0.3 * vapour))
+        ;(sp as THREE.Sprite).material.rotation = d.spin + life * 1.5
+        const fade = clamp01(life / 0.15) * (1 - life)
+        ;((sp as THREE.Sprite).material as THREE.SpriteMaterial).opacity = fade * (0.25 + 0.6 * vapour)
+      })
+    }
+  }
+}
+
+function animateRig(dt: number) {
+  rigClock += dt
+  // Flames: a lively flicker in height, width and light
+  flameOn.forEach((on, key) => {
+    if (!on) return
+    // Under a tripod carrying gauze (or a vessel), the flame hits it and spreads out flat
+    const tripod = nearestOfType(['tripod_stand'], groups.get(key)?.position ?? new THREE.Vector3(), 0.25)
+    const covered = (!!tripod && [...supportOf.values()].includes(tripod)) || [...heldOver.values()].includes(key)
+    groups.get(key)?.traverse((c) => {
+      const layer = c.userData.flameLayer
+      if (!layer) return
+      const n = Math.sin(rigClock * 23 + key.length) * 0.5 + Math.sin(rigClock * 37.7) * 0.3 + Math.sin(rigClock * 61.3) * 0.2
+      if (layer === 'outer') { c.scale.set(1 + n * 0.05, 1 + n * 0.12, 1 + n * 0.05); c.rotation.z = Math.sin(rigClock * 7.3) * 0.04 }
+      else if (layer === 'tongue') { c.scale.set(1 - n * 0.06, 1 + n * 0.18, 1 - n * 0.06); c.rotation.z = Math.sin(rigClock * 11.1 + 1) * 0.07 }
+      else if (layer === 'inner') c.scale.set(1, 1 + n * 0.05, 1)
+      else if (layer === 'spread') { c.visible = covered; c.scale.set(1 + n * 0.08, 0.22 + n * 0.03, 1 + n * 0.08) }
+      else if (layer === 'light' && c instanceof THREE.PointLight) c.intensity = 0.8 + n * 0.25
+    })
+  })
+  // Temperatures: up towards boiling over a lit burner, slowly back to room temperature otherwise
+  props.sceneObjects.forEach((o) => {
+    if (!HEATABLE_TYPES.includes(o.object_type) || !groups.has(o.key)) return
+    const t = liquidTemp.get(o.key) ?? ROOM_TEMP
+    const heating = isHeatingNow(o.key) && (containerVolumes.get(o.key) ?? 0) > 0
+    const next = heating ? Math.min(100, t + 0.03 * (102 - t) * dt) : t - 0.004 * (t - ROOM_TEMP) * dt
+    liquidTemp.set(o.key, next)
+    animateBoiling(o.key, o.object_type, next, dt)
+  })
+  // Thermometers: the red column follows whatever the bulb is sitting in, with a real lag
+  props.sceneObjects.forEach((o) => {
+    if (o.object_type !== 'thermometer' || !groups.has(o.key)) return
+    const inKey = thermometerIn.get(o.key)
+    const actual = inKey ? simulatedTemperature(inKey) : ROOM_TEMP
+    const shown = thermoShown.get(o.key) ?? ROOM_TEMP
+    const now = shown + (actual - shown) * Math.min(1, dt * 0.8)
+    thermoShown.set(o.key, now)
+    groups.get(o.key)!.traverse((c) => {
+      if (c.userData.role !== 'mercury') return
+      // Scale: 0 °C at y 0.218, 100 °C at y 0.721 (matches the printed scale); column rises from the bulb
+      const topY = 0.218 + (Math.max(0, Math.min(100, now)) / 100) * 0.503
+      const len = Math.max(0.01, topY - 0.15)
+      c.scale.y = len / 0.45
+      c.position.y = 0.15 + len / 2
+    })
+  })
+}
+
 function simulatedTemperature(targetKey: string): number {
+  if (liquidTemp.has(targetKey) && (!heatingStarted.has(targetKey) || supportOf.has(targetKey))) return Math.round(liquidTemp.get(targetKey)! * 10) / 10
   const start = heatingStarted.get(targetKey)
   if (!start) return 25
   const elapsedSec = (Date.now() - start) / 1000
@@ -1075,6 +1440,16 @@ function beginMeasure(key: string) {
     armedAction.value = 'measure'
     return
   }
+  if (type === 'thermometer' && thermometerIn.has(key)) {
+    // Standing in the liquid already: just read the scale, like a real thermometer
+    const container = thermometerIn.get(key)!
+    measureMode.value = 'readonly'
+    measureUnit.value = '°C'
+    measureReading.value = Math.round(thermoShown.get(key) ?? simulatedTemperature(container))
+    measureTargetKey.value = container
+    measurePromptFor.value = key
+    return
+  }
   if (type === 'ruler' || type === 'metre_rule' || type === 'thermometer') {
     measureTargetPickerFor.value = type === 'thermometer' ? 'thermometer' : 'ruler'
     armedAction.value = 'measure'
@@ -1151,6 +1526,7 @@ function handleActionButton(action: LabAction) {
     }
     if (selectedObjectType.value === 'microscope') updateMicroscopeDisplay(selectedKey.value)
     if (selectedObjectType.value === 'ray_box') recomputeOptics()
+    if (selectedObjectType.value === 'bunsen_burner') setFlame(selectedKey.value, action === 'switch_on')
     emit('action', { objectKey: selectedKey.value, action, value: null })
     return
   }
@@ -1297,6 +1673,11 @@ function commitArmedManipulation() {
       const basin = basinAt(group.position)
       group.position.y = basin >= 0 ? SINK_BASINS[basin].floorY : 0
     }
+    // Heating rig: a tripod over a burner, gauze on the tripod, a flask on the gauze, a
+    // thermometer into the water - it snaps into place and that is what it was put on/in
+    const rigTarget = snapIntoRig(movedKey)
+    if (rigTarget) nearby = rigTarget
+    thermometerIn.forEach((container, thermo) => { if (container === movedKey) seatThermometer(thermo, movedKey) })
     emit('action', { objectKey: selectedKey.value, action: 'move', value: nearby, springLoadG, safetyIssue: springOverloaded, position: group ? { x: group.position.x, y: group.position.y, z: group.position.z } : undefined })
   } else if (armedAction.value === 'rotate') {
     const group = groups.get(selectedKey.value)
@@ -1340,9 +1721,20 @@ function raycastGroupKey(): string | null {
   groups.forEach((g) => objects.push(g))
   const hits = raycaster.intersectObjects(objects, true)
   if (hits.length === 0) return null
-  let obj: THREE.Object3D | null = hits[0].object
-  while (obj && !obj.userData.objectKey) obj = obj.parent
-  return obj ? (obj.userData.objectKey as string) : null
+  const keyOf = (o: THREE.Object3D | null) => {
+    while (o && !o.userData.objectKey) o = o.parent
+    return o ? (o.userData.objectKey as string) : null
+  }
+  const first = keyOf(hits[0].object)
+  // A thermometer standing in a flask is behind the flask's glass: a click that goes through the
+  // glass and reaches the thermometer picks the thermometer, as it would in a real lab
+  if (first && [...thermometerIn.values()].includes(first)) {
+    for (const h of hits) {
+      const k = keyOf(h.object)
+      if (k && thermometerIn.get(k) === first) return k
+    }
+  }
+  return first
 }
 
 let dragStart: { x: number; y: number } | null = null
@@ -1372,8 +1764,11 @@ function onPointerMove(ev: PointerEvent) {
     raycaster.ray.intersectPlane(groundPlane, point)
     const group = groups.get(selectedKey.value)
     if (group && point) {
+      const dx = point.x - group.position.x, dz = point.z - group.position.z
       group.position.x = point.x
       group.position.z = point.z
+      // Carried together: a flask's thermometer, a tripod's gauze and flask
+      ridersOf(selectedKey.value).forEach((k) => { const r = groups.get(k); if (r) { r.position.x += dx; r.position.z += dz } })
     }
   } else if (armedAction.value === 'rotate') {
     const deltaX = ev.clientX - rotateStartX
@@ -1451,7 +1846,10 @@ function onPointerUp(ev: PointerEvent) {
     }
 
     if (action === 'heat') {
-      heatingStarted.set(key, Date.now())
+      const burner = typeOf(from) === 'bunsen_burner' ? from : typeOf(key) === 'bunsen_burner' ? key : null
+      const vessel = burner === from ? key : from
+      if (burner && HEATABLE_TYPES.includes(typeOf(vessel) ?? '')) heatOverBurner(burner, vessel)
+      else heatingStarted.set(key, Date.now())
       emit('action', { objectKey: from, action, value: key })
       armedAction.value = null
       controls.enabled = true
@@ -1589,6 +1987,7 @@ function buildScene() {
     }
     placeObject(cfg)
   })
+  relinkRig()
 
   ;(props.connections || []).forEach((c) => {
     const a = groups.get(c.from), b = groups.get(c.to)
@@ -1608,6 +2007,7 @@ function buildScene() {
 
   let sinceStopwatchTick = 0
   room.onFrame((dt) => {
+    animateRig(dt)
     // Throttled - regenerating a canvas texture every frame would be wasteful; a tenth-of-a-
     // second display only needs updating a few times a second to read as "live".
     sinceStopwatchTick += dt
@@ -1905,12 +2305,8 @@ function setObjectState(key: string, patch: Record<string, any>) {
       const mat = child.material as THREE.MeshStandardMaterial
       mat.emissiveIntensity = patch.state === 'on' ? 1.2 : 0
     }
-    if (child.userData.role === 'flame' && 'flame' in patch && child instanceof THREE.Mesh) {
-      const mat = child.material as THREE.MeshStandardMaterial
-      mat.emissiveIntensity = patch.flame === 'on' ? 1 : 0
-      mat.opacity = patch.flame === 'on' ? 0.9 : 0
-    }
   })
+  if ('flame' in patch) setFlame(key, patch.flame === 'on')
 }
 
 defineExpose({ setObjectState, goToView })

@@ -117,9 +117,32 @@ class NotificationService
         }
     }
 
+    /**
+     * Leaves out notifications about something that has since been deleted (an assessment, eNote,
+     * book, video, Item Bank paper, live class or Virtual Lab assignment - by an admin, the teacher,
+     * or with a deleted teacher), and "new assessment" ones for assessments closed with a deleted
+     * teacher. Read-time, so it covers notifications sent before the delete, and they come back if
+     * the work is restored. Keys per type are the ones the senders put in `data`.
+     */
+    private function hideStaleSql(string $n = 'notifications'): string
+    {
+        $gone = static fn(string $table, string $key, string $extra = '') =>
+            "EXISTS (SELECT 1 FROM {$table} x WHERE x.id = JSON_UNQUOTE(JSON_EXTRACT({$n}.data, '$.{$key}')) AND (x.deleted_at IS NOT NULL{$extra}))";
+        $closed = \eSpace\App\Support\AssignmentRemoval::hasColumn() ? " OR ({$n}.type = 'new_assessment' AND x.removed_at IS NOT NULL)" : '';
+        return " AND NOT ({$n}.data IS NOT NULL AND ("
+            . "({$n}.type IN ('new_assessment', 'assignment_graded') AND " . $gone('assignments', 'assignment_id', $closed) . ")"
+            . " OR ({$n}.type = 'new_enote' AND " . $gone('enote_topics', 'topic_id') . ")"
+            . " OR ({$n}.type = 'new_library_resource' AND " . $gone('library_books', 'book_id') . ")"
+            . " OR ({$n}.type = 'new_item_bank_resource' AND " . $gone('item_bank_questions', 'resource_id') . ")"
+            . " OR ({$n}.type = 'new_video' AND " . $gone('videos', 'video_id') . ")"
+            . " OR ({$n}.type = 'new_live_class' AND " . $gone('live_classes', 'live_class_id') . ")"
+            . " OR ({$n}.type = 'new_virtual_lab' AND " . $gone('virtual_lab_assignments', 'assignment_id') . ")"
+            . "))";
+    }
+
     public function listForUser(int $userId, string $userRole, bool $unreadOnly, int $limit): array
     {
-        $where = 'user_id = :user_id AND user_role = :user_role';
+        $where = 'user_id = :user_id AND user_role = :user_role' . $this->hideStaleSql();
         $params = ['user_id' => $userId, 'user_role' => $userRole];
         if ($unreadOnly) {
             $where .= ' AND is_read = 0';
@@ -144,7 +167,7 @@ class NotificationService
     public function unreadCount(int $userId, string $userRole): int
     {
         $stmt = $this->getDb()->prepare(
-            'SELECT COUNT(*) AS c FROM notifications WHERE user_id = :user_id AND user_role = :user_role AND is_read = 0'
+            'SELECT COUNT(*) AS c FROM notifications WHERE user_id = :user_id AND user_role = :user_role AND is_read = 0' . $this->hideStaleSql()
         );
         $stmt->execute(['user_id' => $userId, 'user_role' => $userRole]);
         return (int) $stmt->fetch()['c'];

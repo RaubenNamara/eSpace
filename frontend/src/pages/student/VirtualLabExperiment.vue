@@ -66,20 +66,7 @@
             <p class="text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">{{ CATEGORY_LABELS[attempt.experiment.category] }} Apparatus</p>
             <div class="flex items-center gap-2 ml-auto">
               <!-- Camera views of the room - same as the Apparatus Playground -->
-              <div v-if="roomCameraSupported" class="inline-flex flex-wrap rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm p-1 gap-1">
-                <button
-                  v-for="v in CAMERA_VIEWS"
-                  :key="v.key"
-                  type="button"
-                  @click="goToView(v.key)"
-                  class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-colors"
-                  :class="cameraView === v.key ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'"
-                  :title="v.title"
-                >
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.55-2.28A1 1 0 0121 8.62v6.76a1 1 0 01-1.45.9L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                  {{ v.label }}
-                </button>
-              </div>
+              <LabCameraToggles v-if="roomCameraSupported" :cams="cams" />
               <button @click="enterMaximize" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm whitespace-nowrap" title="Fill the whole screen with the lab">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>
                 Full Screen Lab
@@ -225,17 +212,7 @@
                 <span>{{ toast.correct ? '✅' : '⚠️' }}</span><span class="truncate">{{ toast.text }}</span>
               </span>
               <!-- Camera views of the room - same as the Apparatus Playground -->
-              <div v-if="roomCameraSupported" class="hidden md:inline-flex flex-shrink-0 flex-wrap rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-1 gap-1">
-                <button
-                  v-for="v in CAMERA_VIEWS"
-                  :key="v.key"
-                  type="button"
-                  @click="goToView(v.key)"
-                  class="inline-flex items-center px-2 py-1 text-[11px] font-semibold rounded-lg transition-colors"
-                  :class="cameraView === v.key ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'"
-                  :title="v.title"
-                >{{ v.label }}</button>
-              </div>
+              <LabCameraToggles v-if="roomCameraSupported" :cams="cams" compact class="hidden md:inline-flex flex-shrink-0" />
               <button v-if="attempt.status === 'in_progress' && currentStep?.is_safety_check && !allStepsDone" @click="acknowledgeSafety" class="flex-shrink-0 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-amber-600 text-white hover:bg-amber-700">I Understand</button>
               <button v-else-if="pendingInterstitialQuestion" @click="exitMaximize" class="flex-shrink-0 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700">Answer Question</button>
               <button
@@ -259,10 +236,12 @@
               </button>
             </div>
             <div :class="labMaximized ? 'relative flex flex-1 min-h-0' : ''">
+              <!-- The lab: the main camera, and a column beside it with any other cameras that are on -->
               <div
-                class="relative overflow-hidden"
+                class="relative overflow-hidden flex"
                 :class="labMaximized ? 'flex-1 min-w-0 min-h-0' : 'h-[68svh] min-h-[340px] sm:h-[72svh] lg:h-[calc(100svh-7rem)] lg:min-h-[560px] rounded-2xl shadow-lg ring-1 ring-gray-900/5'"
               >
+                <div class="relative flex-1 min-w-0 h-full">
                 <component
                   :is="guidedExperiment ?? VirtualLabScene"
                   ref="sceneRef"
@@ -275,6 +254,8 @@
                   :bench-length="3"
                   @action="onSceneAction"
                 />
+                </div>
+                <LabCameraWindows v-if="roomCameraSupported" :cams="cams" />
               </div>
 
               <!-- Full screen steps: a side panel beside the lab, a slide-over drawer on phones -->
@@ -719,6 +700,9 @@ import { useFullscreenLab } from '@/components/virtuallab/lab3d/useFullscreenLab
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import VirtualLabScene, { type CameraView } from '@/components/virtuallab/VirtualLabScene.vue'
+import LabCameraToggles from '@/components/virtuallab/LabCameraToggles.vue'
+import LabCameraWindows from '@/components/virtuallab/LabCameraWindows.vue'
+import { useLabCameras } from '@/components/virtuallab/lab3d/useLabCameras'
 import VirtualLabGraph from '@/components/virtuallab/VirtualLabGraph.vue'
 import { RESULT_COLUMN_LABELS, resultColumnLabel, resultCell, resultCellClass, SILVER_DENSITY_BAND } from '@/components/virtuallab/resultColumns'
 import VirtualLabStepList from '@/components/virtuallab/VirtualLabStepList.vue'
@@ -922,17 +906,8 @@ const guidedExperiment = computed(() => {
 // open-field room setting and keeps its own richer launcher/field/trajectory camera system instead.
 // The plane-mirror pin practical is a flat top view of the soft board - no room to look around.
 const roomCameraSupported = computed(() => !['projectile', 'projectile_range', 'plane_mirror_pins', 'frog_dissection'].includes(attempt.value?.experiment.render_component ?? ''))
-const CAMERA_VIEWS: { key: CameraView; label: string; title: string }[] = [
-  { key: 'bench', label: 'Bench', title: 'Back to the apparatus on the bench' },
-  { key: 'entrance', label: 'Entrance', title: 'Look at the lab entrance' },
-  { key: 'left', label: 'Left', title: 'Look at the left wall' },
-  { key: 'right', label: 'Right', title: 'Look at the right wall' },
-]
-const cameraView = ref<CameraView>('bench')
-const goToView = (v: CameraView) => {
-  cameraView.value = v
-  sceneRef.value?.goToView?.(v)
-}
+// Camera toggles: any number on, the first is the main view and the rest live windows (useLabCameras)
+const cams = useLabCameras({ benchView: () => sceneRef.value?.goToView?.('bench') })
 
 const apparatusList = computed(() => {
   if (!attempt.value) return []
