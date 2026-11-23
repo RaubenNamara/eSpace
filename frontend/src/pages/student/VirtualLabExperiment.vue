@@ -248,7 +248,7 @@
                   :scene-objects="attempt.experiment.scene_objects"
                   :object-catalog="objectCatalog"
                   :read-only="sceneReadOnly"
-                  v-bind="isBulbExperiment || isGravityExperiment || isEmfExperiment || isRuleMassExperiment || isPlaneMirrorExperiment || isProjectileRangeExperiment || isFrogDissectionExperiment ? { currentStep } : {}"
+                  v-bind="isBulbExperiment || isGravityExperiment || isEmfExperiment || isRuleMassExperiment || isPlaneMirrorExperiment || isProjectileRangeExperiment || isFrogDissectionExperiment || isFoodTestsExperiment ? { currentStep } : {}"
                   cupboard
                   wall-shelves
                   :bench-length="3"
@@ -1244,6 +1244,8 @@ const saveEmfAnalysis = (extra: Record<string, any>) => queueBulbSave(() => {
 
 // --- Dissection of a frog (frog_dissection) - labelled diagram and questions, no results table ----------
 const isFrogDissectionExperiment = computed(() => attempt.value?.experiment.render_component === 'frog_dissection')
+/** The food-test bench needs the current step for its burner (lit / turned off as steps) */
+const isFoodTestsExperiment = computed(() => attempt.value?.experiment.render_component === 'food_tests')
 const frogRecord = computed(() => (calcEntries.value.find(n => n.label === 'Dissection record')?.extra as FrogRecord | undefined) ?? null)
 const frogAnalysisEntry = computed(() => calcEntries.value.find(n => n.label === 'Frog dissection analysis') ?? null)
 const frogBlocker = ref<string | null>(null)

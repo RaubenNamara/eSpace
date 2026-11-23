@@ -128,7 +128,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import * as THREE from 'three'
 import { canvasTexture } from './lab3d/labRoom'
 import { useLabScene } from './lab3d/useLabScene'
@@ -160,12 +160,15 @@ const props = defineProps<{
   objectCatalog: LabObjectDef[]
   connections?: { from: string; to: string }[]
   readOnly?: boolean
+  /** The step the student is on (for the burner's "light it" / "turn it off" steps) */
+  currentStep?: { required_action: string; target_object_key: string | null; expected_value: string | null } | null
 }>()
 const emit = defineEmits<{
   action: [{ objectKey: string | null; action: LabAction; value: string | null; unit?: string | null; label?: string | null; safetyIssue?: boolean; targetObjectKey?: string | null }]
 }>()
 
 const PAPER = 'paper1'
+const BURNER = 'burner'
 const ROOM_TEMP = 25
 
 // --- What the practical provides -----------------------------------------------------------------
@@ -287,7 +290,21 @@ function toggleBurner() {
   if (props.readOnly) return
   burnerOn.value = !burnerOn.value
   flash(burnerOn.value ? 'Burner lit: wait for the water to boil before heating the tubes.' : 'Burner off. Turn it off whenever you are not heating.')
+  reportBurner()
 }
+/**
+ * Lighting / turning off the burner completes its step when that is the step the student is on.
+ * At any other time it is just good lab practice (turning it off between boils, lighting it a
+ * little early), never counted as a mistake. If the burner is already as the step asks when the
+ * step comes up, the step completes by itself.
+ */
+function reportBurner() {
+  const s = props.currentStep
+  if (props.readOnly || !s || s.target_object_key !== BURNER) return
+  if (s.required_action === 'switch_on' && burnerOn.value) emit('action', { objectKey: BURNER, action: 'switch_on', value: null })
+  else if (s.required_action === 'switch_off' && !burnerOn.value) emit('action', { objectKey: BURNER, action: 'switch_off', value: null })
+}
+watch(() => props.currentStep, () => reportBurner())
 function putIn(k: string, bathKey: string) {
   const bath = baths.value.find(b => b.key === bathKey)
   if (bath && bath.temp >= BOILING && !boiling.value) {

@@ -488,12 +488,39 @@ $insDept = $db->prepare('INSERT INTO virtual_lab_experiment_departments (experim
 $skills = new \eSpace\App\Services\PracticalSkillService();
 
 $refresh = null;
-foreach ($argv as $arg) if (str_starts_with($arg, '--refresh=')) $refresh = substr($arg, 10);
+// --refresh=<template_key>[,<template_key>...] rewrites those templates in place
+foreach ($argv as $arg) if (str_starts_with($arg, '--refresh=')) $refresh = array_filter(explode(',', substr($arg, 10)));
+
+/**
+ * Practicals that boil get the Bunsen burner as steps of their own: lit just before the first
+ * "boil" step (the water must be boiling first), turned off once the boiling is over (after the
+ * step that follows the last boil, e.g. recording the colour or using the boiled juice).
+ */
+function withBurnerSteps(array $steps): array
+{
+    $boils = array_keys(array_filter($steps, fn ($s) => $s[2] === 'heat' && $s[3] === 'bath_boil'));
+    if (!$boils) {
+        return $steps;
+    }
+    $first = $boils[0];
+    $offAfter = min(count($steps) - 1, end($boils) + 1);
+    $out = [];
+    foreach ($steps as $i => $s) {
+        if ($i === $first) {
+            $out[] = ['Light the Bunsen burner under the water bath and wait for the water to boil.', 'burner', 'switch_on', null, null, 'Press "Light the burner" (or click the burner) and wait until it shows Boiling.'];
+        }
+        $out[] = $s;
+        if ($i === $offAfter) {
+            $out[] = ['Turn off the Bunsen burner: the heating is finished.', 'burner', 'switch_off', null, null, 'Press "Turn off burner". Never leave a burner lit when you are not heating.'];
+        }
+    }
+    return $out;
+}
 
 function writeChildren(int $id, array $t): void
 {
     global $insStep, $insQ;
-    foreach ($t['steps'] as $i => [$text, $target, $action, $expected, $tol, $hint]) {
+    foreach (withBurnerSteps($t['steps']) as $i => [$text, $target, $action, $expected, $tol, $hint]) {
         $insStep->execute([$id, $i + 1, $text, $target, $action, $expected, $tol, $hint, $action === 'acknowledge' ? 1 : 0]);
     }
     foreach ($t['questions'] as $i => $q) {
@@ -506,7 +533,7 @@ foreach ($templates as $t) {
     $exists->execute([$t['template_key']]);
     $existingId = (int) $exists->fetchColumn();
     $engine = $t['render_component'] . '-v1';
-    if ($existingId && $refresh === $t['template_key']) {
+    if ($existingId && $refresh && in_array($t['template_key'], $refresh, true)) {
         $used = $db->prepare('SELECT COUNT(*) FROM virtual_lab_assignments WHERE experiment_id = ?');
         $used->execute([$existingId]);
         if ((int) $used->fetchColumn() > 0) { echo "NOT refreshed (already given to a class): {$t['title']}\n"; continue; }
