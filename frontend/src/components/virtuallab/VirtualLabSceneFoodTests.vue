@@ -454,8 +454,11 @@ function buildTube(k: string, pos: THREE.Vector3): TubeMesh {
   lip.rotation.x = Math.PI / 2
   lip.position.y = TUBE_H + TUBE_R
   const liquid = new THREE.Mesh(new THREE.CylinderGeometry(TUBE_R * 0.9, TUBE_R * 0.9, 1, 24), new THREE.MeshStandardMaterial({ color: 0xe9f2f6, transparent: true, opacity: 0.4, roughness: 0.15 }))
+  // Drawn after the glass and the bath water, so the colour shows through them
+  liquid.renderOrder = 3
   liquid.visible = false
   const ppt = new THREE.Mesh(new THREE.CylinderGeometry(TUBE_R * 0.88, TUBE_R * 0.7, 1, 20), new THREE.MeshStandardMaterial({ color: 0xc2410c, roughness: 0.8 }))
+  ppt.renderOrder = 4
   ppt.visible = false
   const specks = new THREE.Group()
   for (let i = 0; i < 10; i++) {
@@ -474,7 +477,7 @@ function drawTube(k: string, tm: TubeMesh) {
   const t = tubeOf(k)
   const list = contents.get(k) ?? []
   const vol = list.reduce((v, item) => v + (/10 cm³/.test(item) ? 10 : /drop/.test(item) ? 0.25 : 1), 0)
-  const h = Math.min(TUBE_H * 0.85, vol * 0.014)
+  const h = Math.min(TUBE_H * 0.85, vol * 0.02)
   tm.liquid.visible = h > 0.0005
   if (!tm.liquid.visible) { tm.ppt.visible = false; tm.specks.visible = false; return }
   const look = lookOf(t)
@@ -482,7 +485,12 @@ function drawTube(k: string, tm: TubeMesh) {
   tm.liquid.position.y = TUBE_R * 0.3 + h / 2
   const mat = tm.liquid.material as THREE.MeshStandardMaterial
   mat.color.set(look.color)
-  mat.opacity = 0.35 + look.cloudy * 0.6
+  // A coloured solution (Benedict's blue, iodine's blue-black, a brick-red precipitate) shows
+  // strongly, a colourless one faintly; a little glow keeps it visible on the dark bench
+  const { s: sat, l: light } = mat.color.getHSL({ h: 0, s: 0, l: 0 })
+  const coloured = sat > 0.25 && light < 0.85
+  mat.opacity = Math.min(0.95, (coloured ? 0.82 : 0.4) + look.cloudy * 0.4)
+  mat.emissive.copy(mat.color).multiplyScalar(coloured ? 0.22 : 0.05)
   if (look.precipitate) {
     const ph = h * look.precipitate.amount * 0.5
     tm.ppt.visible = true
@@ -596,6 +604,13 @@ function buildBench(scene: THREE.Object3D) {
     const beaker = createObjectMesh('beaker', b.key, b.label, { color: b.temp <= 12 ? '#dbeafe' : '#cfe8f3' })
     beaker.scale.setScalar(F)
     beaker.position.y = topY
+    // Clear water, as in a real bath, that never hides the test tube standing in it
+    beaker.traverse((c) => {
+      if (c.userData.role !== 'liquid' || !(c instanceof THREE.Mesh)) return
+      const m = c.material as THREE.MeshStandardMaterial
+      m.opacity = 0.22
+      m.depthWrite = false
+    })
     g.add(beaker)
     if (b.temp <= 12) {
       for (let j = 0; j < 7; j++) {
