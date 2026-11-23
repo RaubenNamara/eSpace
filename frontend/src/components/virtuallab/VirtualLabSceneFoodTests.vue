@@ -91,12 +91,12 @@
           <LabButton size="sm" :disabled="readOnly || !foodSource" @click="paperDrops">3 drops</LabButton>
         </div>
         <div class="flex gap-1">
-          <LabButton size="sm" variant="secondary" :disabled="readOnly || !paper.food || paper.dried" @click="dryPaper">Dry near the flame</LabButton>
+          <LabButton size="sm" variant="secondary" :disabled="readOnly || !paper.food || paper.dried" @click="dryPaper">Leave to dry</LabButton>
           <LabButton size="sm" variant="ghost" :disabled="readOnly" @click="resetPaper">New paper</LabButton>
         </div>
         <div class="rounded-lg border p-2 space-y-1.5" :class="paperLook.observation ? 'border-emerald-300 bg-emerald-50/70 dark:bg-emerald-900/20' : 'border-gray-200 dark:border-gray-700'">
           <p v-if="!paper.food" class="text-amber-700 dark:text-amber-300">Put 3 drops of the food at the centre of the paper.</p>
-          <p v-else-if="!paper.dried" class="text-amber-700 dark:text-amber-300">Let it dry near the heat, then hold it against the light.</p>
+          <p v-else-if="!paper.dried" class="text-amber-700 dark:text-amber-300">Leave it to dry in the air, then hold it against the light.</p>
           <template v-if="paperLook.observation">
             <p class="text-[10px] font-bold uppercase tracking-wide text-emerald-700">Observation (held against the light)</p>
             <p class="text-gray-800 dark:text-gray-100">{{ paperLook.observation }}</p>
@@ -348,7 +348,8 @@ function paperDrops() {
 }
 function dryPaper() {
   paper.dried = true
-  emit('action', { objectKey: PAPER, action: 'heat', value: baths.value.find(b => b.temp >= 95)?.key ?? 'burner' })
+  // Dried in the air, as in a real lab: no flame near the ethanol on this bench
+  emit('action', { objectKey: PAPER, action: 'move', value: 'air' })
   redrawPaper()
 }
 function resetPaper() { paper.food = null; paper.dried = false; deduction.value = ''; redrawPaper() }
@@ -366,6 +367,12 @@ function flash(text: string, ms = 4000) { hint.value = text; setTimeout(() => { 
 const TUBE_R = 0.009
 const TUBE_H = 0.15
 const F = 0.2 // factory models are built 5 units to the metre
+/** Heating rig, in factory model units: the tripod (ring at 0.8) stretched so its gauze sits here */
+const TRIPOD_STRETCH = 1.18
+const GAUZE_Y = 0.8 * TRIPOD_STRETCH + 0.012
+const BURNER_MOUTH = 0.625
+/** The outer flame (0.3 tall) shortened to reach the gauze and no further */
+const FLAME_UNDER_GAUZE = (GAUZE_Y - BURNER_MOUTH) / 0.3
 interface TubeMesh { group: THREE.Group; liquid: THREE.Mesh; ppt: THREE.Mesh; specks: THREE.Group; home: THREE.Vector3 }
 const tubeMeshes = new Map<string, TubeMesh>()
 const bathMeshes = new Map<string, { group: THREE.Group; water: THREE.Vector3; topY: number; bubbles: THREE.Group | null }>()
@@ -530,11 +537,17 @@ function buildBench(scene: THREE.Object3D) {
       const burner = createObjectMesh('bunsen_burner', 'burner', 'Bunsen Burner', { flame: 'on' })
       const tripod = createObjectMesh('tripod_stand', 'tripod', 'Tripod Stand', {})
       const gauze = createObjectMesh('wire_gauze', 'gauze', 'Wire Gauze', {})
-      gauze.position.y = 0.81
       ;[burner, tripod, gauze].forEach(m => { m.scale.setScalar(F); g.add(m) })
-      burner.traverse((c) => { if (c.userData.flameLayer === 'spread') c.visible = true })
+      // A taller tripod than the factory's, so there is a clear gap with the flame in it between
+      // the burner and the gauze (as on a real bench), and the beaker is plainly on the gauze
+      tripod.scale.y = F * TRIPOD_STRETCH
+      gauze.position.y = GAUZE_Y * F
+      gauze.scale.set(F * 1.15, F, F * 1.15)
+      burner.traverse((c) => {
+        if (c.userData.flameLayer === 'spread') { c.visible = true; c.position.y = GAUZE_Y - BURNER_MOUTH - 0.012 }
+      })
       burnerGroup = burner
-      topY = 0.818 * F
+      topY = (GAUZE_Y + 0.02) * F
     }
     const beaker = createObjectMesh('beaker', b.key, b.label, { color: b.temp <= 12 ? '#dbeafe' : '#cfe8f3' })
     beaker.scale.setScalar(F)
@@ -619,8 +632,11 @@ function frame(dt: number) {
     const layer = c.userData.flameLayer
     if (!layer) return
     const n = Math.sin(clock * 23) * 0.5 + Math.sin(clock * 37.7) * 0.3 + Math.sin(clock * 61.3) * 0.2
-    if (layer === 'outer') c.scale.set(1 + n * 0.05, 1 + n * 0.12, 1 + n * 0.05)
-    else if (layer === 'tongue') c.scale.set(1 - n * 0.06, 1 + n * 0.18, 1 - n * 0.06)
+    // The burner is always under the tripod and gauze here: the flame reaches the gauze and spreads
+    // out flat under it, never up through it to the beaker
+    if (layer === 'outer') c.scale.set(1 + n * 0.05, FLAME_UNDER_GAUZE * (1 + n * 0.06), 1 + n * 0.05)
+    else if (layer === 'tongue') c.scale.set(1 - n * 0.06, FLAME_UNDER_GAUZE * (1 + n * 0.08), 1 - n * 0.06)
+    else if (layer === 'spread') c.scale.set(1 + n * 0.08, 0.22 + n * 0.03, 1 + n * 0.08)
     else if (layer === 'light' && c instanceof THREE.PointLight) c.intensity = (0.8 + n * 0.25) * F
   })
   baths.value.filter(b => b.temp >= 95).forEach((b) => {

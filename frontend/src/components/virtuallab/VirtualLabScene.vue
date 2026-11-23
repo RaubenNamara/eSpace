@@ -960,8 +960,11 @@ function animateRig(dt: number) {
       const layer = c.userData.flameLayer
       if (!layer) return
       const n = Math.sin(rigClock * 23 + key.length) * 0.5 + Math.sin(rigClock * 37.7) * 0.3 + Math.sin(rigClock * 61.3) * 0.2
-      if (layer === 'outer') { c.scale.set(1 + n * 0.05, 1 + n * 0.12, 1 + n * 0.05); c.rotation.z = Math.sin(rigClock * 7.3) * 0.04 }
-      else if (layer === 'tongue') { c.scale.set(1 - n * 0.06, 1 + n * 0.18, 1 - n * 0.06); c.rotation.z = Math.sin(rigClock * 11.1 + 1) * 0.07 }
+      // Covered: the flame only reaches the gauze (burner mouth to gauze is about 0.6 of the free
+      // flame's height) and spreads under it, instead of rising through it round the vessel
+      const tall = covered ? 0.58 : 1
+      if (layer === 'outer') { c.scale.set(1 + n * 0.05, tall * (1 + n * 0.12 * tall), 1 + n * 0.05); c.rotation.z = Math.sin(rigClock * 7.3) * 0.04 }
+      else if (layer === 'tongue') { c.scale.set(1 - n * 0.06, tall * (1 + n * 0.18 * tall), 1 - n * 0.06); c.rotation.z = Math.sin(rigClock * 11.1 + 1) * 0.07 }
       else if (layer === 'inner') c.scale.set(1, 1 + n * 0.05, 1)
       else if (layer === 'spread') { c.visible = covered; c.scale.set(1 + n * 0.08, 0.22 + n * 0.03, 1 + n * 0.08) }
       else if (layer === 'light' && c instanceof THREE.PointLight) c.intensity = 0.8 + n * 0.25

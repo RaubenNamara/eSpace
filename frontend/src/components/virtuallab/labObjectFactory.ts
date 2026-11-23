@@ -1006,6 +1006,11 @@ export function createObjectMesh(objectType: string, key: string, displayName: s
         ctx.fillStyle = '#f5f5f4'; ctx.beginPath(); ctx.arc(w / 2, h / 2, w * 0.28, 0, Math.PI * 2); ctx.fill()
       })
       add(mesh(new THREE.BoxGeometry(0.62, 0.008, 0.62), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.6, metalness: 0.4 }), 0, 0.004))
+      // The folded metal edge round a real gauze: visible even from bench height, side on
+      const rim = metal(0x3f3f46)
+      for (const [x, z, w, d] of [[0, 0.31, 0.64, 0.02], [0, -0.31, 0.64, 0.02], [0.31, 0, 0.02, 0.64], [-0.31, 0, 0.02, 0.64]] as const) {
+        add(mesh(new THREE.BoxGeometry(w, 0.022, d), rim, x, 0.008, z))
+      }
       break
     }
     case 'filter_funnel': {
