@@ -31,11 +31,26 @@
       >{{ flightState === 'flying' ? 'In flight...' : 'Fire' }}</button>
       <p class="mt-1.5 text-[10px] text-gray-400 dark:text-gray-500 text-center">Or drag the barrel tip to aim.</p>
       <p class="mt-1 text-[10px] text-gray-400 dark:text-gray-500 text-center">The flight is shown in slow motion.</p>
+      <!-- the measuring tape's panel, right under Fire, once the tape is clicked -->
+      <div v-if="selectedKey === rulerKey" class="mt-2.5 pt-2.5 border-t border-gray-200 dark:border-gray-700">
+        <div class="flex items-center justify-between gap-2 mb-2">
+          <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Measuring Tape</p>
+          <button @click="selectedKey = null" class="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs leading-none">&times;</button>
+        </div>
+        <LabButton v-if="!measureArmed && !pendingReading" size="sm" :disabled="readOnly" @click="armMeasure">Measure</LabButton>
+        <div v-if="measureArmed" class="text-[11px] text-amber-600 dark:text-amber-400">Click the ball where it landed - the glowing ring.</div>
+        <div v-if="pendingReading" class="pt-1">
+          <p class="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Reading</p>
+          <div class="flex items-center gap-2">
+            <span class="flex-1 text-base font-bold text-gray-900 dark:text-white">{{ pendingReading.value }}<span class="text-xs font-medium text-gray-400 ml-1">m</span></span>
+            <LabButton size="sm" variant="success" @click="confirmReading">Record</LabButton>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- Measure panel -->
-    <!-- top left (the tray is empty by now): the camera frames each shot with the landing point low on the right, where a panel would cover the ball -->
-    <div v-if="selectedKey === rulerKey" class="absolute left-2 top-2 sm:left-3 sm:top-3 bg-white/95 dark:bg-gray-800/95 backdrop-blur rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 w-44">
+    <!-- Measure panel, on its own only when the launcher is not out (it normally sits under Fire) -->
+    <div v-if="selectedKey === rulerKey && !launcherPlaced" class="absolute right-2 top-2 sm:right-3 sm:top-3 bg-white/95 dark:bg-gray-800/95 backdrop-blur rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 w-44">
       <div class="flex items-center justify-between gap-2 mb-2">
         <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Measuring Tape</p>
         <button @click="selectedKey = null" class="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs leading-none">&times;</button>
@@ -75,7 +90,7 @@ import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { canvasTexture, labMaterials } from './lab3d/labRoom'
 import { useLabScene } from './lab3d/useLabScene'
-import { playLaunchSound, playLandingSound } from './lab3d/launcherSound'
+import { playLaunchSound, playLandingSound, startFlightSound, type FlightSound } from './lab3d/launcherSound'
 import LabUnsupported from './lab3d/LabUnsupported.vue'
 import LabButton from './ui/LabButton.vue'
 import type { SceneObjectConfig, LabObjectDef, LabAction } from '@/types/virtualLab'
@@ -190,6 +205,15 @@ function positionAt(t: number, out: THREE.Vector3) {
 }
 
 let firedAngle = 0
+// The ball's sound in flight, and where a point is across the screen (-1 left .. 1 right) for it
+let flightSound: FlightSound | null = null
+const _pan = new THREE.Vector3()
+function screenPan(at: THREE.Vector3): number {
+  const cam = room.value?.camera
+  if (!cam) return 0
+  _pan.copy(at).project(cam)
+  return Math.max(-1, Math.min(1, _pan.x * 0.85))
+}
 function fire() {
   if (props.readOnly || flightState.value === 'flying' || !launcherPlaced.value) return
   if (guided.value) {
@@ -218,7 +242,10 @@ function fire() {
   landingMark.visible = false
 
   flightState.value = 'flying'
-  playLaunchSound()
+  // the spring where the launcher is, then the ball's whoosh for the whole flight (see animate)
+  playLaunchSound(screenPan(muzzle()))
+  flightSound?.stop()
+  flightSound = startFlightSound()
   viewMode = 'setup'
   if (room.value) cameraGoal = zoomed(trajectoryView())
   emit('action', { objectKey: launcherCfg.value?.key ?? null, action: 'switch_on', value: null })
@@ -524,11 +551,20 @@ function syncScene(dt: number) {
     if (flightT >= shot.T) {
       flightT = shot.T
       flightState.value = 'landed'
-      playLandingSound()
+      flightSound?.stop()
+      flightSound = null
+      positionAt(shot.T, ballPos)
+      playLandingSound(screenPan(ballPos))
       landingMark.position.set(shot.x0 + shot.vx * shot.T, 0.006, 0)
       landingMark.visible = true
     }
     positionAt(flightT, ballPos)
+    // the whoosh follows the ball across the screen, louder when it is fast, softer at the top
+    if (flightSound) {
+      const vy = shot.vy - GRAVITY * flightT
+      const top = Math.hypot(shot.vx, shot.vy) || 1
+      flightSound.update(screenPan(ballPos), Math.hypot(shot.vx, vy) / top)
+    }
     const shown = Math.max(2, Math.ceil((flightT / shot.T) * 79) + 1)
     trail.geometry.setDrawRange(0, shown)
     trail.visible = true
@@ -688,6 +724,7 @@ onMounted(() => {
   props.sceneObjects.forEach((o) => { if (!o.in_tray) placedKeys.add(o.key) })
 })
 onBeforeUnmount(() => {
+  flightSound?.stop()
   window.removeEventListener('pointermove', onAimMove)
   window.removeEventListener('pointerup', onPointerUp)
 })
