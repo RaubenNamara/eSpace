@@ -3,6 +3,8 @@
     <!-- Completion screen: shown in place of the redirect that used to happen silently after
          submitting. The destination depends on how the student got here - see submitAssignment(). -->
     <div v-if="showCompletionScreen" class="flex items-center justify-center py-16 px-4">
+      <!-- congratulations: flowers fall from the top of the screen -->
+      <FlowerShower />
       <div class="max-w-md w-full text-center">
         <div class="mx-auto mb-4 w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
           <svg class="w-8 h-8 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -10,7 +12,7 @@
           </svg>
         </div>
         <h1 class="text-xl font-bold text-gray-900 dark:text-white mb-2">
-          {{ completionOrigin === 'enote' ? 'Learning Outcome Complete!' : 'Assignment Submitted' }}
+          {{ completionOrigin === 'enote' ? 'Learning Outcome Complete!' : 'Congratulations! Your work is handed in' }}
         </h1>
         <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
           You've completed "{{ assignment?.title }}"{{ completionTimingLabel }}.
@@ -545,6 +547,7 @@
 
 <script setup lang="ts">
 import { safeHtml } from '@/utils/safeHtml'
+import FlowerShower from '@/components/common/FlowerShower.vue'
 import { fmtMarks } from '@/utils/marks'
 import AppIcon from '@/components/common/AppIcon.vue'
 import { ref, computed, watch, onMounted, onUnmounted, defineAsyncComponent } from 'vue'
@@ -1194,7 +1197,8 @@ const submitAssignment = async () => {
       const auto = response.data.data?.auto_marked
       if (auto && response.data.data?.id) {
         toast.success(`You scored ${fmtMarks(auto.marks_awarded)} / ${fmtMarks(auto.total_marks)} (${fmtMarks(auto.percentage)}%)`)
-        router.replace(`/student/assignments/${route.params.id}/result/${response.data.data.id}`)
+        // the result opens with congratulations (falling flowers) - celebrate=1 is dropped there
+        router.replace(`/student/assignments/${route.params.id}/result/${response.data.data.id}?celebrate=1`)
         return
       }
       toast.success(submittedOffline.value ? 'Submitted on this device - it will be sent when you\'re online' : `Assignment submitted successfully${timingLabel}`)

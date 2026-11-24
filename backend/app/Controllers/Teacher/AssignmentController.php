@@ -1779,24 +1779,71 @@ class AssignmentController extends Controller
                 $stmt->execute($params);
             }
 
-            // Update options if provided
+            // Update options if provided. The existing choices keep their ids (a learner's handed-in
+            // answer is the id of the choice they picked): each incoming choice takes the id of an
+            // existing one with the same words, else the one in the same place; only choices no longer
+            // there are deleted. Replacing them all would leave every handed-in answer pointing at
+            // nothing.
+            $keyChanged = false;
             if (isset($data['options']) && is_array($data['options'])) {
-                // Delete existing options
-                $stmt = $db->prepare("DELETE FROM assignment_question_options WHERE question_id = :question_id");
-                $stmt->execute(['question_id' => $questionId]);
+                $stmt = $db->prepare('SELECT id, option_text, is_correct, display_order FROM assignment_question_options WHERE question_id = ? ORDER BY display_order ASC, id ASC');
+                $stmt->execute([$questionId]);
+                $existing = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+                $correctBefore = array_map(fn ($o) => trim((string) $o['option_text']), array_filter($existing, fn ($o) => (int) $o['is_correct'] === 1));
 
-                // Add new options
-                foreach ($data['options'] as $index => $option) {
-                    $sql = "INSERT INTO assignment_question_options (question_id, option_text, is_correct, display_order, created_at, updated_at)
-                            VALUES (:question_id, :option_text, :is_correct, :display_order, NOW(), NOW())";
-                    $stmt = $db->prepare($sql);
-                    $stmt->execute([
-                        'question_id' => $questionId,
-                        'option_text' => $option['option_text'],
-                        'is_correct' => $option['is_correct'] ?? 0,
-                        'display_order' => $index
-                    ]);
+                $incoming = array_values($data['options']);
+                $used = [];
+                $byText = [];
+                foreach ($existing as $o) {
+                    $byText[trim((string) $o['option_text'])][] = (int) $o['id'];
                 }
+                $plan = [];
+                // same words first
+                foreach ($incoming as $i => $option) {
+                    $text = trim((string) ($option['option_text'] ?? ''));
+                    foreach ($byText[$text] ?? [] as $id) {
+                        if (!isset($used[$id])) {
+                            $plan[$i] = $id;
+                            $used[$id] = true;
+                            break;
+                        }
+                    }
+                }
+                // then the same place
+                foreach ($incoming as $i => $option) {
+                    if (isset($plan[$i])) {
+                        continue;
+                    }
+                    $same = $existing[$i]['id'] ?? null;
+                    if ($same !== null && !isset($used[(int) $same])) {
+                        $plan[$i] = (int) $same;
+                        $used[(int) $same] = true;
+                    }
+                }
+
+                $update = $db->prepare('UPDATE assignment_question_options SET option_text = ?, is_correct = ?, display_order = ?, updated_at = NOW() WHERE id = ? AND question_id = ?');
+                $insert = $db->prepare('INSERT INTO assignment_question_options (question_id, option_text, is_correct, display_order, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())');
+                $correctAfter = [];
+                foreach ($incoming as $index => $option) {
+                    $text = (string) ($option['option_text'] ?? '');
+                    $correct = !empty($option['is_correct']) ? 1 : 0;
+                    if ($correct) {
+                        $correctAfter[] = trim($text);
+                    }
+                    if (isset($plan[$index])) {
+                        $update->execute([$text, $correct, $index, $plan[$index], $questionId]);
+                    } else {
+                        $insert->execute([$questionId, $text, $correct, $index]);
+                    }
+                }
+                $gone = array_diff(array_map(fn ($o) => (int) $o['id'], $existing), array_keys($used));
+                if ($gone) {
+                    $in = implode(',', array_map('intval', $gone));
+                    $db->exec("DELETE FROM assignment_question_options WHERE question_id = " . (int) $questionId . " AND id IN ($in)");
+                }
+                sort($correctBefore);
+                sort($correctAfter);
+                $keyChanged = $correctBefore !== $correctAfter;
             }
 
             // Update sub-questions if provided (for scenario questions)
@@ -1827,6 +1874,20 @@ class AssignmentController extends Controller
             }
 
             Database::commit();
+
+            // The right answer changed on an all multiple-choice assessment: the scripts already
+            // handed in are marked again against it, so no learner keeps a mark from a wrong key.
+            if ($keyChanged && \eSpace\App\Services\ObjectiveAutoMark::isObjectiveOnly($db, $assignmentId)) {
+                try {
+                    $subs = $db->prepare("SELECT id FROM assignment_submissions WHERE assignment_id = ? AND deleted_at IS NULL AND submitted_at IS NOT NULL AND status NOT IN ('new', 'in_progress')");
+                    $subs->execute([$assignmentId]);
+                    foreach ($subs->fetchAll(\PDO::FETCH_COLUMN) as $submissionId) {
+                        \eSpace\App\Services\ObjectiveAutoMark::markAndRelease($db, (int) $submissionId, $assignmentId);
+                    }
+                } catch (\Throwable $e) {
+                    error_log('Re-marking after an answer-key change failed: ' . $e->getMessage());
+                }
+            }
 
             $this->success([],'Question updated successfully');
 

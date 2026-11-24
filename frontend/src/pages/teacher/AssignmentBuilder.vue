@@ -865,6 +865,30 @@
             </div>
           </div>
       </div>
+
+      <!-- Save, preview and publish from the page itself (they are also in the question window's
+           footer). Stays at the foot of the screen while scrolling. -->
+      <div v-if="!isPreview" class="page-actions sticky bottom-0 z-20 mt-4 -mx-1 sm:mx-0">
+        <div class="flex flex-wrap items-center gap-2 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-800/95 backdrop-blur px-3 py-2.5 sm:px-4 shadow-[0_-6px_20px_-12px_rgba(15,23,42,0.35)]">
+          <p class="hidden md:block flex-1 min-w-0 text-xs truncate" :class="publishLeft.length ? 'text-gray-600 dark:text-gray-300' : 'text-emerald-700 dark:text-emerald-300 font-medium'">
+            {{ loadedStatus === 'published' ? 'Published - learners can see it. Saving keeps your changes.' : publishLeft.length ? `Before publishing: ${publishLeft[0].label}` : 'Ready to publish' }}
+          </p>
+          <div class="grid grid-cols-3 md:flex gap-2 w-full md:w-auto">
+            <button type="button" :disabled="footerBusy" class="q-foot-btn q-foot-plain" title="See the assessment as a learner will" @click="previewAssignment()">
+              <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.5 12s3.5-7 9.5-7 9.5 7 9.5 7-3.5 7-9.5 7-9.5-7-9.5-7z" /><circle cx="12" cy="12" r="3" /></svg>
+              Preview
+            </button>
+            <button type="button" :disabled="footerBusy" class="q-foot-btn q-foot-plain" :title="loadedStatus === 'published' ? 'Save your changes' : 'Save it as a draft (learners cannot see it yet)'" @click="saveDraft()">
+              <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 4h11l3 3v13H5zM8 4v5h7V4M8 20v-6h8v6" /></svg>
+              {{ saving ? 'Saving...' : loadedStatus === 'published' ? 'Save' : 'Save draft' }}
+            </button>
+            <button type="button" :disabled="footerBusy" class="q-foot-btn q-foot-main" title="Publish the assessment to learners" @click="publishAssignment()">
+              <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12l14-7-5 14-2.5-5.5L5 12z" /></svg>
+              {{ publishing ? 'Publishing...' : loadedStatus === 'published' ? 'Update' : 'Publish' }}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Add/Edit Question Modal -->
@@ -1183,6 +1207,7 @@
                     v-model="option.is_correct"
                     type="checkbox"
                     class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                    @change="onlyOneCorrect(index)"
                   >
                   <span class="ml-1 text-sm text-gray-700 dark:text-gray-300">Correct</span>
                 </label>
@@ -2028,7 +2053,8 @@ const loadAssignment = async () => {
       if (assignment.questions && Array.isArray(assignment.questions)) {
         questions.value = assignment.questions.map((q: any) => ({
           ...q,
-          options: q.options || []
+          // the server sends "correct" as 1 / 0 - a tick box only shows true as ticked
+          options: (q.options || []).map((o: any) => ({ ...o, is_correct: Number(o.is_correct) === 1 || o.is_correct === true }))
         }))
       }
 
@@ -2487,6 +2513,13 @@ const formatQuestionType = (type: QuestionType) => {
   return typeMap[type] || type
 }
 
+// Multiple choice - single answer: one correct choice, so ticking one unticks the rest
+const onlyOneCorrect = (index: number) => {
+  if (questionForm.value.question_type !== 'multiple_choice_single') return
+  if (!questionForm.value.options[index]?.is_correct) return
+  questionForm.value.options.forEach((o, i) => { if (i !== index) o.is_correct = false })
+}
+
 const addOption = () => {
   questionForm.value.options.push({ option_text: '', is_correct: false })
 }
@@ -2864,7 +2897,7 @@ const editQuestion = (question: AssignmentQuestion) => {
     allow_drawing: question.allow_drawing,
     options: (question.options || []).map(opt => ({
       option_text: opt.option_text,
-      is_correct: opt.is_correct
+      is_correct: Number(opt.is_correct) === 1 || (opt.is_correct as unknown) === true
     })),
     sub_questions: qWithSubs.sub_questions || [],
     response_type: question.response_type || 'text',

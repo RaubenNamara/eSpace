@@ -967,7 +967,11 @@ class AssignmentController extends Controller
         $submissionId = $this->routeParam('submission_id');
 
         try {
-            $sql = "SELECT sub.*, a.title as assignment_title, a.total_marks, a.pass_mark
+            $sql = "SELECT sub.*, a.title as assignment_title, a.total_marks, a.pass_mark,
+                           a.due_date AS assignment_due_date, a.attempts_allowed, a.show_answers_after_submission,
+                           (a.due_date IS NULL OR a.due_date <= NOW()) AS assignment_past_due,
+                           (SELECT MAX(s2.attempt_number) FROM assignment_submissions s2
+                             WHERE s2.assignment_id = a.id AND s2.student_id = sub.student_id AND s2.deleted_at IS NULL) AS attempts_used
                     FROM assignment_submissions sub
                     INNER JOIN assignments a ON sub.assignment_id = a.id
                     WHERE sub.id = :submission_id
@@ -1000,6 +1004,27 @@ class AssignmentController extends Controller
 
             $questions = $this->loadQuestionsWithLayers((int) $assignmentId, (int) $submissionId, true);
 
+            // The correct answer to each multiple-choice / true-false question, as soon as this learner has
+            // handed in their last try (with a try left, it waits, so it cannot be copied into the next).
+            $attemptsLeft = (int) ($submission['attempts_allowed'] ?? 1) > (int) ($submission['attempts_used'] ?? 1);
+            $revealAnswers = !$attemptsLeft;
+            if ($revealAnswers) {
+                $correctStmt = $this->pdo->prepare('SELECT id FROM assignment_question_options WHERE question_id = :qid AND is_correct = 1 ORDER BY display_order ASC');
+                foreach ($questions as &$question) {
+                    if (in_array($question['question_type'], ['multiple_choice_single', 'multiple_choice_multiple', 'true_false'], true)) {
+                        $correctStmt->execute(['qid' => $question['id']]);
+                        $question['correct_option_ids'] = array_map('intval', $correctStmt->fetchAll(\PDO::FETCH_COLUMN));
+                    }
+                }
+                unset($question);
+            }
+            $answersReveal = [
+                'shown' => $revealAnswers,
+                'after' => $revealAnswers || $attemptsLeft ? null : $submission['assignment_due_date'],
+                'attempts_left' => $attemptsLeft,
+            ];
+            unset($submission['attempts_allowed'], $submission['attempts_used'], $submission['assignment_past_due'], $submission['assignment_due_date'], $submission['show_answers_after_submission']);
+
             $summary = Grading::computeSummary(
                 (float) ($submission['total_score'] ?? 0),
                 (float) ($submission['total_marks'] ?? 0)
@@ -1018,7 +1043,8 @@ class AssignmentController extends Controller
                 'answers' => $answers,
                 'questions' => $questions,
                 'summary' => $summary,
-                'school' => $school
+                'school' => $school,
+                'answers_reveal' => $answersReveal
             ]);
         } catch (\Exception $e) {
             $this->serverError('Failed to load result: ' . $e->getMessage());

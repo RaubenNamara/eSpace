@@ -18,7 +18,9 @@ export interface ImportedMcq {
 
 const QUESTION = /^\s*(?:q(?:uestion)?\s*)?(\d{1,3})\s*[.):-]\s*(.*)$/i
 const OPTION = /^\s*(\*)?\s*\(?([a-f])\s*[.):\-]\s*(\*)?\s*(.+?)\s*(\*)?\s*$/i
-const ANSWER = /^\s*(?:correct\s+)?(?:answer|ans)\s*[:.\-]?\s*\(?([a-f])\)?\b/i
+// "Answer: B", "Ans - (b)", "Correct answer: C. Keyboard"; or "Answer B" with nothing after it (so a
+// line like "Answer a question below" is not taken for an answer)
+const ANSWER = /^\s*(?:correct\s+)?(?:answer|ans)\s*(?:[:.\-]\s*\(?([a-f])\)?(?![a-z0-9])|\s+\(?([a-f])\)?[.)]?\s*$)/i
 
 export function parseMcqText(raw: string): ImportedMcq[] {
   const lines = raw.replace(/\r\n?/g, '\n').split('\n').map(l => l.replace(/ /g, ' ').trimEnd())
@@ -47,7 +49,7 @@ export function parseMcqText(raw: string): ImportedMcq[] {
     const afterGap = gap
     gap = false
     const ans = line.match(ANSWER)
-    if (ans && cur) { cur.answer = ans[1].toLowerCase(); continue }
+    if (ans && cur) { cur.answer = (ans[1] || ans[2]).toLowerCase(); continue }
     const q = line.match(QUESTION)
     // a numbered line starts a question - unless we are still in one with no choices yet
     // (then "1." inside the text, e.g. a numbered stem, is just more of the question)

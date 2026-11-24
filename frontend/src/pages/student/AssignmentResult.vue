@@ -43,6 +43,28 @@
         </RouterLink>
       </div>
 
+      <!-- Congratulations straight after handing in: flowers fall, and a word of praise with the score -->
+      <template v-if="celebrating && mode === 'result' && !oversightRole">
+        <FlowerShower />
+        <div class="mb-4 sm:mb-6 rounded-2xl border border-emerald-200 dark:border-emerald-800 bg-gradient-to-r from-emerald-50 to-pink-50 dark:from-emerald-900/20 dark:to-pink-900/10 px-4 py-3.5 flex items-center gap-3" role="status">
+          <span class="w-10 h-10 flex-shrink-0 rounded-full bg-emerald-500 text-white flex items-center justify-center" aria-hidden="true">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+          </span>
+          <div class="min-w-0 flex-1">
+            <p class="font-semibold text-gray-900 dark:text-white">Congratulations, your work is handed in!</p>
+            <p v-if="summary" class="text-sm text-gray-600 dark:text-gray-300">You scored {{ fmtMarks(summary.marks_awarded) }} out of {{ fmtMarks(summary.total_marks) }} ({{ summary.percentage }}%). {{ praise }}</p>
+          </div>
+          <button type="button" class="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-white/60 dark:hover:bg-gray-800" aria-label="Close" @click="celebrating = false">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M6 6l12 12M18 6L6 18" /></svg>
+          </button>
+        </div>
+      </template>
+
+      <!-- Still has a try left: the correct answers wait until the last one -->
+      <p v-if="mode === 'result' && !oversightRole && hasObjective && answersReveal && !answersReveal.shown" class="mb-4 sm:mb-6 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 px-4 py-2.5 text-sm text-indigo-900 dark:text-indigo-200">
+        You can try again. The correct answers will show after your last try.
+      </p>
+
       <!-- The result as a certificate: cream paper in a gold frame, the school's crest, and the
            grade - in a gold seal for an A or B (result mode only) -->
       <section v-if="(mode === 'result' || oversightRole) && summary" class="result-cert mb-4 sm:mb-6">
@@ -110,11 +132,24 @@
             <p class="text-gray-700 dark:text-gray-300 whitespace-pre-line break-words text-justify [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="safeHtml(question.scenario_text)"></p>
           </div>
 
-          <!-- Objective (MCQ/true-false) questions: the answer in words -->
-          <div v-if="isObjective(question)" class="ml-3 sm:ml-6 p-3 sm:p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">{{ oversightRole ? "Student's answer" : "Your answer" }}</p>
-            <p class="text-gray-900 dark:text-white whitespace-pre-line break-words text-justify">{{ objectiveAnswerText(question, answerFor(question.id)) || '(No answer provided)' }}</p>
-          </div>
+          <!-- Objective (MCQ/true-false) questions: the answer in words, and the correct one when it was missed -->
+          <template v-if="isObjective(question)">
+            <div class="ml-3 sm:ml-6 p-3 sm:p-4 rounded-lg" :class="objectiveRight(question) === true ? 'bg-emerald-50 dark:bg-emerald-900/20 ring-1 ring-emerald-200 dark:ring-emerald-800' : objectiveRight(question) === false ? 'bg-rose-50 dark:bg-rose-900/20 ring-1 ring-rose-200 dark:ring-rose-800' : 'bg-gray-50 dark:bg-gray-700/50'">
+              <!-- in plain words: what they chose, and whether it was right -->
+              <p class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                <span class="text-sm text-gray-600 dark:text-gray-300">{{ oversightRole ? 'Learner chose:' : 'You chose:' }}</span>
+                <span class="text-gray-900 dark:text-white font-medium break-words">{{ objectiveAnswerText(question, answerFor(question.id)) || 'Nothing (no answer)' }}</span>
+                <span v-if="objectiveRight(question) === true" class="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-600 text-white text-xs font-semibold">✓ Right</span>
+                <span v-else-if="objectiveRight(question) === false" class="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-600 text-white text-xs font-semibold">✗ Wrong</span>
+              </p>
+            </div>
+            <div v-if="objectiveRight(question) === false && correctAnswerText(question)" class="mt-2 ml-3 sm:ml-6 p-3 sm:p-4 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 ring-1 ring-emerald-200 dark:ring-emerald-800">
+              <p class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                <span class="text-sm font-semibold text-emerald-800 dark:text-emerald-300">The correct answer was:</span>
+                <span class="text-gray-900 dark:text-white font-medium whitespace-pre-line break-words">{{ correctAnswerText(question) }}</span>
+              </p>
+            </div>
+          </template>
 
           <!-- An ICT practical: the work, in the app it was made in, view only -->
           <PracticalWorkView
@@ -197,7 +232,8 @@ import { fmtMarks } from '@/utils/marks'
 import VoiceNote from '@/components/assignment/VoiceNote.vue'
 import PracticalWorkView from '@/components/practical/PracticalWorkView.vue'
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import FlowerShower from '@/components/common/FlowerShower.vue'
 import axios from 'axios'
 import type { AnnotationLayerJSON } from '@/types'
 import { TYPED_ANSWER_PAGE } from '@/types'
@@ -208,6 +244,7 @@ import { isPlaceholderAttachmentName } from '@/utils/answerAttachment'
 import { objectiveAnswerText } from '@/utils/objectiveAnswer'
 
 const route = useRoute()
+const router = useRouter()
 
 const API_BASE = '/api'
 
@@ -228,7 +265,9 @@ const school = ref<{ name: string | null; logo: string | null } | null>(null)
 const logoFailed = ref(false)
 const honours = computed(() => isHonours(summary.value?.grade))
 // An honours result is worth a moment: confetti, once, as it opens
-watch(honours, (h) => { if (h) setTimeout(() => confetti(), 600) }, { immediate: true })
+// (not on top of the falling flowers straight after handing in)
+const arrivedFromSubmit = route.query.celebrate === '1'
+watch(honours, (h) => { if (h && !arrivedFromSubmit) setTimeout(() => confetti(), 600) }, { immediate: true })
 const evidenceImageDims = ref<Record<number, { width: number; height: number }>>({})
 const additionalFileImageDims = ref<Record<number, { width: number; height: number }>>({})
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp']
@@ -309,6 +348,31 @@ const OBJECTIVE_TYPES = ['multiple_choice_single', 'multiple_choice_multiple', '
 function isObjective(question: any): boolean {
   return OBJECTIVE_TYPES.includes(question.question_type)
 }
+const hasObjective = computed(() => questions.value.some(q => isObjective(q)))
+// right or not, from the marks it got (null when it has not been marked)
+function objectiveRight(question: any): boolean | null {
+  const m = question.question_mark
+  if (!m || m.marks_awarded === null || m.marks_awarded === undefined) return null
+  return Number(m.marks_awarded) >= Number(question.marks)
+}
+// the correct choice(s) in words ("B. Metre"), once the server sends them (see answers_reveal)
+function correctAnswerText(question: any): string {
+  const ids: number[] = question.correct_option_ids || []
+  if (!ids.length) return ''
+  const options: { id: number | string; option_text: string }[] = question.options || []
+  return ids.map(id => {
+    const i = options.findIndex(o => String(o.id) === String(id))
+    return i < 0 ? '' : `${String.fromCharCode(65 + i)}. ${options[i].option_text}`
+  }).filter(Boolean).join('\n')
+}
+
+// congratulations after handing in (the answer page opens this with ?celebrate=1)
+const celebrating = ref(arrivedFromSubmit)
+const praise = computed(() => {
+  const pct = Number(summary.value?.percentage ?? 0)
+  return pct >= 80 ? 'Excellent work!' : pct >= 60 ? 'Well done!' : pct >= 40 ? 'Good effort, keep going!' : 'Keep practising, you will get there!'
+})
+const answersReveal = ref<{ shown: boolean; after: string | null; attempts_left: boolean } | null>(null)
 
 // FreeResponseAnswer.vue silently auto-uploads a blank placeholder (named "Assignment file.*" or
 // "Blank canvas.png") for every free-response question on mount, purely so its Write-mode canvas
@@ -464,7 +528,10 @@ const load = async () => {
       questions.value = response.data.data.questions || []
       summary.value = response.data.data.summary || null
       school.value = response.data.data.school || null
+      answersReveal.value = response.data.data.answers_reveal || null
       measureImages()
+      // drop ?celebrate=1, so a refresh does not throw the flowers again
+      if (route.query.celebrate) router.replace({ query: {} })
     } else {
       error.value = response.data.message || 'Failed to load submission'
     }

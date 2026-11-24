@@ -109,7 +109,7 @@ export const GUIDE: GuidePart[] = [
       {
         id: 's-assess', title: 'Attempting assessments', icon: 'pencil',
         intro: 'Assessments are grouped by what needs doing: Overdue, In progress, To do, Waiting for marks, Marked.',
-        steps: ['Open Assessments and tap Start (or Continue for one you began).', 'Answer each question - type, choose, draw or upload as the question asks.', 'Your answers are saved as you go, so you can come back.', 'Tap Submit when you\'re finished. You can\'t change answers after submitting.', 'When it\'s marked, tap See result for your score and your teacher\'s feedback.'],
+        steps: ['Open Assessments and tap Start (or Continue for one you began).', 'Answer each question - type, choose, draw or upload as the question asks.', 'Your answers are saved as you go, so you can come back.', 'Tap Submit when you\'re finished. You can\'t change answers after submitting.', 'When it\'s marked, tap See result for your score and your teacher\'s feedback.', 'Multiple-choice work is marked as soon as you hand it in: you see your mark straight away, with each answer shown right or not right. For any you got wrong, it tells you the correct answer (after your last try, if you are allowed more than one).'],
         tips: ['When a teacher sets a new assessment you get a notification, it shows under Pending assessments on your dashboard, and a red number on Assessments in the menu (Work on a phone) counts the new ones you have not started.', 'LOA, AOI and EOC show what kind of assessment it is - each one counts on your Learning Map.', 'Late work can only be handed in if your teacher allows it.']
       },
       {
