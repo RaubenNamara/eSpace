@@ -75,6 +75,7 @@ import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { canvasTexture, labMaterials } from './lab3d/labRoom'
 import { useLabScene } from './lab3d/useLabScene'
+import { playLaunchSound, playLandingSound } from './lab3d/launcherSound'
 import LabUnsupported from './lab3d/LabUnsupported.vue'
 import LabButton from './ui/LabButton.vue'
 import type { SceneObjectConfig, LabObjectDef, LabAction } from '@/types/virtualLab'
@@ -217,6 +218,7 @@ function fire() {
   landingMark.visible = false
 
   flightState.value = 'flying'
+  playLaunchSound()
   viewMode = 'setup'
   if (room.value) cameraGoal = zoomed(trajectoryView())
   emit('action', { objectKey: launcherCfg.value?.key ?? null, action: 'switch_on', value: null })
@@ -522,6 +524,7 @@ function syncScene(dt: number) {
     if (flightT >= shot.T) {
       flightT = shot.T
       flightState.value = 'landed'
+      playLandingSound()
       landingMark.position.set(shot.x0 + shot.vx * shot.T, 0.006, 0)
       landingMark.visible = true
     }
