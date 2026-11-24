@@ -909,6 +909,19 @@
             </select>
           </div>
 
+          <!-- Many multiple-choice questions at once: paste or open a file, pick each answer, add them all -->
+          <div v-if="questionForm.question_type === 'multiple_choice_single' && !editingQuestion" class="rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50/60 dark:bg-indigo-900/15 p-3 flex flex-col sm:flex-row sm:items-center gap-2">
+            <p class="flex-1 text-sm text-indigo-900 dark:text-indigo-100">
+              <span class="font-semibold">Have many questions ready?</span>
+              <span class="text-indigo-800/80 dark:text-indigo-200/80"> Import them all at once from typed text or a Word file, then choose each correct answer.</span>
+            </p>
+            <button type="button" class="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 flex-shrink-0" @click="mcqImportOpen = true">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0-12l-4 4m4-4l4 4" /></svg>
+              Bulk import
+            </button>
+          </div>
+          <McqBulkImport v-if="mcqImportOpen" :marks-left="remainingMarksBudget" :default-marks="questionForm.marks || 1" @close="mcqImportOpen = false" @add="addImportedMcqs" />
+
           <!-- Multiple choice: a time limit for the whole assessment. The clock starts when a learner
                opens it and their answers are handed in by themselves when it runs out. -->
           <div v-if="isObjectiveQuestion" class="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/70 dark:bg-amber-900/15 p-3 flex flex-col sm:flex-row sm:items-center gap-3">
@@ -1327,6 +1340,8 @@ import { PRACTICAL_APPS, practicalInfo } from '@/components/practical/apps'
 import AoiScenarioSuggest from '@/components/assignment/AoiScenarioSuggest.vue'
 import { scenarioHtml, markingGuideJson, type AoiSuggestion } from '@/utils/aoiDraft'
 import ItemPickerModal from '@/components/enotes/ItemPickerModal.vue'
+import McqBulkImport from '@/components/assignment/McqBulkImport.vue'
+import type { ImportedMcq } from '@/utils/mcqImport'
 import { fetchPaper, toAssessmentQuestion } from '@/utils/itemBankQuestions'
 import PdfAnnotationViewer from '@/components/assignment/PdfAnnotationViewer.vue'
 import SupportFiles from '@/components/assignment/SupportFiles.vue'
@@ -2745,6 +2760,53 @@ const saveQuestion = async (addAnother = false) => {
 
   closeQuestionModal()
   return true
+}
+
+// Bulk import of multiple-choice questions: each one is added just as "Save & add another" would add
+// it - the same marks rules and the same outcome / topic as the question being set - with the
+// correct answer the teacher chose, so marking knows it. Each can be opened and changed afterwards.
+const mcqImportOpen = ref(false)
+const escapeHtml = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+const addImportedMcqs = (items: ImportedMcq[]) => {
+  const total = items.reduce((n, q) => n + Number(q.marks), 0)
+  if (total > remainingMarksBudget.value) {
+    showToast('error', `These come to ${total} marks, but only ${remainingMarksBudget.value} are left out of the 100-mark total.`)
+    return
+  }
+  const base = questionForm.value as any
+  const now = new Date().toISOString()
+  items.forEach((q, i) => {
+    questions.value.push({
+      ...base,
+      id: Date.now() + i,
+      assignment_id: 0,
+      parent_question_id: undefined,
+      created_at: now,
+      updated_at: now,
+      deleted_at: undefined,
+      question_type: 'multiple_choice_single',
+      question_text: `<p>${escapeHtml(q.question_text)}</p>`,
+      scenario_title: '',
+      scenario_description: '',
+      scenario_image: '',
+      scenario_text: '',
+      marks: Number(q.marks),
+      allow_drawing: false,
+      attachment_path: undefined,
+      attachment_type: 'none',
+      pdfFile: null,
+      practical_app: undefined,
+      practicalStarter: undefined,
+      removeStarter: undefined,
+      practical_starter_path: undefined,
+      sub_questions: [],
+      options: q.options.map((o, idx) => ({ id: 0, question_id: 0, option_text: o.option_text, is_correct: o.is_correct, display_order: idx, created_at: now, updated_at: now })),
+      display_order: questions.value.length,
+    } as any)
+  })
+  mcqImportOpen.value = false
+  closeQuestionModal()
+  showToast('success', `Added ${items.length} multiple-choice ${items.length === 1 ? 'question' : 'questions'}. Open any of them to change it.`)
 }
 
 // Save & preview / Save & publish, from inside the question window. After "Save & add another"
