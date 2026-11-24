@@ -114,6 +114,8 @@
       </div>
 
       <BulkActionBar :count="selected.size" @clear="selected.clear()">
+        <button v-if="selectedLibrary.length" @click="openShareMany" class="px-2.5 py-1 min-h-[32px] text-xs font-semibold rounded-lg bg-sky-600 text-white hover:bg-sky-700" :title="`Share ${selectedLibrary.length} library ${selectedLibrary.length === 1 ? 'experiment' : 'experiments'} with departments`">Share with departments</button>
+        <button v-if="selectedLibrary.length" @click="openPublishMany" class="px-2.5 py-1 min-h-[32px] text-xs font-semibold rounded-lg bg-violet-600 text-white hover:bg-violet-700" :title="`Publish ${selectedLibrary.length} library ${selectedLibrary.length === 1 ? 'experiment' : 'experiments'} to classes`">Publish to classes</button>
         <button @click="setStatusMany('disabled')" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">Hide from students</button>
         <button @click="deleteMany" class="px-2.5 py-1 min-h-[32px] text-xs font-medium rounded-lg bg-red-600 text-white hover:bg-red-700">Delete</button>
       </BulkActionBar>
@@ -330,13 +332,43 @@
       </div>
     </div>
 
+    <!-- Share many experiments with departments at once. It only adds: a department every chosen
+         experiment already has is shown done and locked, and one some have is given to the rest. -->
+    <div v-if="shareMany.length" class="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4" @click.self="shareMany = []">
+      <div class="bg-white dark:bg-gray-800 w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[90dvh] flex flex-col">
+        <div class="px-5 pt-4 pb-3 border-b border-gray-100 dark:border-gray-700 flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <h3 class="font-bold text-gray-900 dark:text-white">Share with departments</h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400">{{ shareMany.length }} {{ shareMany.length === 1 ? 'experiment' : 'experiments' }} selected</p>
+          </div>
+          <button @click="shareMany = []" aria-label="Close" class="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">✕</button>
+        </div>
+        <div class="px-5 py-3 overflow-y-auto flex-1">
+          <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Tick the departments to share them with. An experiment a department already has is not shared again.</p>
+          <div v-if="loadingDepartments" class="py-6 text-center text-xs text-gray-400">Loading departments...</div>
+          <div v-else class="space-y-1.5">
+            <label v-for="d in departments" :key="d.id" class="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700" :class="[shareHaveCount(d.id) === shareMany.length ? 'opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-900/40' : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50', shareManySelection.has(d.id) ? 'border-sky-300 dark:border-sky-700 bg-sky-50/60 dark:bg-sky-900/20' : '']">
+              <input type="checkbox" :checked="shareHaveCount(d.id) === shareMany.length || shareManySelection.has(d.id)" :disabled="shareHaveCount(d.id) === shareMany.length" @change="shareManySelection.has(d.id) ? shareManySelection.delete(d.id) : shareManySelection.add(d.id)" class="w-4 h-4 rounded border-gray-300 text-sky-600 focus:ring-sky-500">
+              <span class="flex-1 text-sm text-gray-800 dark:text-gray-100">{{ d.name }}</span>
+              <span v-if="shareHaveCount(d.id) === shareMany.length" class="text-[11px] font-medium text-emerald-700 dark:text-emerald-300">Already shared</span>
+              <span v-else-if="shareHaveCount(d.id)" class="text-[11px] text-gray-500 dark:text-gray-400">{{ shareHaveCount(d.id) }} of {{ shareMany.length }} already have it</span>
+            </label>
+          </div>
+        </div>
+        <div class="px-5 py-3 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-2">
+          <button @click="shareMany = []" class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">Cancel</button>
+          <button @click="saveShareMany" :disabled="savingShare || !shareManySelection.size" class="px-4 py-2 text-sm font-semibold rounded-lg bg-sky-600 text-white hover:bg-sky-700 disabled:opacity-50">{{ savingShare ? 'Sharing...' : 'Share' }}</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Publish to a class -->
     <div v-if="publishTarget" class="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4" @click.self="publishTarget = null">
       <div class="bg-white dark:bg-gray-800 w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[90dvh] flex flex-col">
         <div class="px-5 pt-4 pb-3 border-b border-gray-100 dark:border-gray-700 flex items-start justify-between gap-3">
           <div class="min-w-0">
-            <h3 class="font-bold text-gray-900 dark:text-white">Publish to a class</h3>
-            <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ publishTarget.title }}</p>
+            <h3 class="font-bold text-gray-900 dark:text-white">Publish to {{ publishTargets.length > 1 ? 'classes' : 'a class' }}</h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ publishTargets.length > 1 ? `${publishTargets.length} experiments selected` : publishTarget.title }}</p>
           </div>
           <button @click="publishTarget = null" aria-label="Close" class="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">✕</button>
         </div>
@@ -359,19 +391,21 @@
             <p v-else-if="!deptClasses.length" class="py-3 text-xs text-amber-600 dark:text-amber-400">No students are enrolled in this department yet.</p>
             <div v-else class="mt-1 space-y-2">
               <div v-for="g in classLevels" :key="g.level" class="rounded-xl border p-2.5" :class="selectedLevels.has(g.level) ? 'border-violet-300 dark:border-violet-700 bg-violet-50/60 dark:bg-violet-900/20' : 'border-gray-200 dark:border-gray-700'">
-                <label class="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" :checked="selectedLevels.has(g.level)" @change="toggleLevel(g.level)" class="w-4 h-4 rounded border-gray-300 text-violet-600 focus:ring-violet-500">
+                <label class="flex items-center gap-2" :class="levelHave(g.level) === publishTargets.length ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'">
+                  <input type="checkbox" :checked="levelHave(g.level) === publishTargets.length || selectedLevels.has(g.level)" :disabled="levelHave(g.level) === publishTargets.length" @change="toggleLevel(g.level)" class="w-4 h-4 rounded border-gray-300 text-violet-600 focus:ring-violet-500">
                   <span class="text-sm font-semibold text-gray-800 dark:text-gray-100">{{ g.level }} - all streams</span>
                   <span class="text-[11px] text-gray-400">({{ g.classes.length }})</span>
+                  <span v-if="levelHave(g.level) === publishTargets.length" class="ml-auto text-[11px] font-medium text-emerald-700 dark:text-emerald-300">Already published</span>
+                  <span v-else-if="levelHave(g.level)" class="ml-auto text-[11px] text-gray-500 dark:text-gray-400">{{ levelHave(g.level) }} of {{ publishTargets.length }} already have it</span>
                 </label>
                 <div class="flex flex-wrap gap-x-4 gap-y-1.5 mt-2 pl-6">
-                  <label v-for="c in g.classes" :key="c.id" class="flex items-center gap-1.5 text-sm" :class="selectedLevels.has(g.level) ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 dark:text-gray-200 cursor-pointer'">
-                    <input type="checkbox" :checked="selectedLevels.has(g.level) || selectedClassIds.has(c.id)" :disabled="selectedLevels.has(g.level)" @change="toggleClass(c.id)" class="w-4 h-4 rounded border-gray-300 text-violet-600 focus:ring-violet-500 disabled:opacity-60">
+                  <label v-for="c in g.classes" :key="c.id" :title="classHave(c) === publishTargets.length ? 'Already published here this term' : classHave(c) ? `${classHave(c)} of ${publishTargets.length} already have it` : undefined" class="flex items-center gap-1.5 text-sm" :class="selectedLevels.has(g.level) || classHave(c) === publishTargets.length ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 dark:text-gray-200 cursor-pointer'">
+                    <input type="checkbox" :checked="selectedLevels.has(g.level) || selectedClassIds.has(c.id) || classHave(c) === publishTargets.length" :disabled="selectedLevels.has(g.level) || classHave(c) === publishTargets.length" @change="toggleClass(c.id)" class="w-4 h-4 rounded border-gray-300 text-violet-600 focus:ring-violet-500 disabled:opacity-60">
                     {{ c.label }}
                   </label>
                 </div>
               </div>
-              <p class="text-[11px] text-gray-400">"All streams" publishes to the whole class level as one assignment, including any stream added to it later.</p>
+              <p class="text-[11px] text-gray-400">"All streams" publishes to the whole class level as one assignment, including any stream added to it later. A class that already has an experiment this term is not given it again.</p>
             </div>
           </div>
           <label class="block">
@@ -388,7 +422,7 @@
             </label>
             <label class="block">
               <span class="text-xs font-semibold text-gray-600 dark:text-gray-300">Marks</span>
-              <input v-model="publishForm.marks" type="number" min="1" step="1" :placeholder="String(publishTarget.marks)" class="input-field w-full text-sm mt-1">
+              <input v-model="publishForm.marks" type="number" min="1" step="1" :placeholder="publishTargets.length > 1 ? 'Each its own' : String(publishTarget.marks)" class="input-field w-full text-sm mt-1">
             </label>
           </div>
         </div>
@@ -570,10 +604,46 @@ const publicationsByDepartment = (e: ExperimentSummary) => {
   return [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([name, items]) => ({ name, items }))
 }
 
+// --- Sharing many experiments with departments at once (adds only) ---
+const shareMany = ref<ExperimentSummary[]>([])
+const shareManySelection = reactive(new Set<number>())
+const shareHaveCount = (deptId: number) => shareMany.value.filter(e => (e.shared_departments || []).some(d => d.id === deptId)).length
+const openShareMany = async () => {
+  shareMany.value = selectedLibrary.value
+  shareManySelection.clear()
+  await loadDepartments()
+}
+const saveShareMany = async () => {
+  if (!shareManySelection.size) return
+  savingShare.value = true
+  let shared = 0
+  let skipped = 0
+  const failed: string[] = []
+  for (const e of shareMany.value) {
+    const have = new Set((e.shared_departments || []).map(d => d.id))
+    const add = [...shareManySelection].filter(id => !have.has(id))
+    if (!add.length) { skipped++; continue }
+    try {
+      await axios.put(`${API_BASE}/experiments/${e.id}/departments`, { department_ids: [...have, ...add] })
+      shared++
+    } catch (err: any) {
+      failed.push(`${e.title}: ${err.response?.data?.message || 'could not share'}`)
+    }
+  }
+  savingShare.value = false
+  if (shared) toast.success(`Shared ${shared} ${shared === 1 ? 'experiment' : 'experiments'}${skipped ? ` (${skipped} already had ${shareManySelection.size === 1 ? 'that department' : 'those departments'})` : ''}`)
+  else if (!failed.length) toast.success('Every selected experiment already had those departments - nothing was shared again')
+  if (failed.length) toast.error(failed.join(' | '))
+  if (!failed.length) shareMany.value = []
+  if (shared) await loadExperiments()
+}
+
 // --- Admin publishing straight to a department's class ---
 interface DeptClass { id: number; name: string; label: string }
 interface TermOption { id: number; label: string; is_current: boolean }
 const publishTarget = ref<ExperimentSummary | null>(null)
+// the experiments being published: the one opened, or every ticked library experiment
+const publishTargets = ref<ExperimentSummary[]>([])
 const publishForm = reactive({ department_id: 0, term_id: 0, due_date: '', marks: '' as string | number })
 const deptClasses = ref<DeptClass[]>([])
 const loadingClasses = ref(false)
@@ -605,6 +675,14 @@ const selectedTargetCount = computed(() => selectedLevels.size + selectedClassId
 
 const canPublish = computed(() => !!publishForm.department_id && !!publishForm.term_id && selectedTargetCount.value > 0)
 
+// Already there this term: a class level published "all streams", or a stream (itself, or its whole
+// level). How many of the experiments being published already have it - those are not sent again.
+const pubsThisTerm = (e: ExperimentSummary) => (e.publications || []).filter(p => p.term_id === publishForm.term_id && p.department_id === publishForm.department_id)
+const hasLevel = (e: ExperimentSummary, level: string) => pubsThisTerm(e).some(p => p.class_group_name === level)
+const hasClass = (e: ExperimentSummary, c: DeptClass) => pubsThisTerm(e).some(p => p.class_id === c.id || p.class_group_name === c.name)
+const levelHave = (level: string) => publishTargets.value.filter(e => hasLevel(e, level)).length
+const classHave = (c: DeptClass) => publishTargets.value.filter(e => hasClass(e, c)).length
+
 const loadTerms = async () => {
   if (terms.value.length) return
   try {
@@ -620,8 +698,14 @@ const loadTerms = async () => {
   }
 }
 
-const openPublish = async (e: ExperimentSummary) => {
+const openPublishMany = () => {
+  const list = selectedLibrary.value
+  if (!list.length) return
+  openPublish(list[0], list)
+}
+const openPublish = async (e: ExperimentSummary, many?: ExperimentSummary[]) => {
   publishTarget.value = e
+  publishTargets.value = many && many.length ? many : [e]
   Object.assign(publishForm, { department_id: 0, term_id: 0, due_date: '', marks: '' })
   selectedLevels.clear()
   selectedClassIds.clear()
@@ -631,9 +715,9 @@ const openPublish = async (e: ExperimentSummary) => {
     publishForm.department_id = hodDepartment.value?.id ?? 0
     return
   }
-  // Start from the department it is already shared with, when there is just one
+  // Start from the department it is already shared with, when there is just one (one experiment)
   const shared = e.shared_departments || []
-  if (shared.length === 1) publishForm.department_id = shared[0].id
+  if (publishTargets.value.length === 1 && shared.length === 1) publishForm.department_id = shared[0].id
 }
 
 watch(() => publishForm.department_id, async (id) => {
@@ -653,38 +737,45 @@ watch(() => publishForm.department_id, async (id) => {
 })
 
 const savePublish = async () => {
-  const e = publishTarget.value
-  if (!e || !canPublish.value) return
+  if (!publishTargets.value.length || !canPublish.value) return
   publishing.value = true
-  // One assignment per ticked level (all streams) and per ticked single stream
+  // One assignment per ticked level (all streams) and per ticked single stream, for each experiment
+  // that does not have it there this term yet
   const targets = [
-    ...[...selectedLevels].map(level => ({ label: `${level} (All Streams)`, body: { scope: 'all_streams', class_group_name: level, class_id: null } })),
-    ...[...selectedClassIds].map(id => ({ label: deptClasses.value.find(c => c.id === id)?.label ?? 'class', body: { scope: 'stream', class_id: id, class_group_name: null } })),
+    ...[...selectedLevels].map(level => ({ label: `${level} (All Streams)`, level, cls: null as DeptClass | null, body: { scope: 'all_streams', class_group_name: level, class_id: null } })),
+    ...[...selectedClassIds].map(id => {
+      const cls = deptClasses.value.find(c => c.id === id) ?? null
+      return { label: cls?.label ?? 'class', level: null as string | null, cls, body: { scope: 'stream', class_id: id, class_group_name: null } }
+    }),
   ]
-  const done: string[] = []
+  let done = 0
+  let skipped = 0
   const failed: string[] = []
-  for (const t of targets) {
-    try {
-      await axios.post(`${API_BASE}/experiments/${e.id}/publish`, {
-        department_id: publishForm.department_id,
-        ...t.body,
-        term_id: publishForm.term_id,
-        due_date: publishForm.due_date || null,
-        marks: publishForm.marks === '' ? null : Number(publishForm.marks),
-      })
-      done.push(t.label)
-      if (t.body.class_id) selectedClassIds.delete(t.body.class_id)
-      else selectedLevels.delete(t.body.class_group_name as string)
-    } catch (err: any) {
-      const errors = err.response?.data?.errors
-      failed.push(`${t.label}: ${(errors && Object.values(errors)[0]) || err.response?.data?.message || 'could not publish'}`)
+  for (const e of publishTargets.value) {
+    for (const t of targets) {
+      if (t.level ? hasLevel(e, t.level) : t.cls && hasClass(e, t.cls)) { skipped++; continue }
+      try {
+        await axios.post(`${API_BASE}/experiments/${e.id}/publish`, {
+          department_id: publishForm.department_id,
+          ...t.body,
+          term_id: publishForm.term_id,
+          due_date: publishForm.due_date || null,
+          marks: publishForm.marks === '' ? null : Number(publishForm.marks),
+        })
+        done++
+      } catch (err: any) {
+        const errors = err.response?.data?.errors
+        failed.push(`${e.title} - ${t.label}: ${(errors && Object.values(errors)[0]) || err.response?.data?.message || 'could not publish'}`)
+      }
     }
   }
   publishing.value = false
-  if (done.length) toast.success(`"${e.title}" published to ${done.join(', ')}`)
+  const many = publishTargets.value.length > 1
+  if (done) toast.success(many ? `Published ${done} ${done === 1 ? 'time' : 'times'} across ${publishTargets.value.length} experiments${skipped ? ` (${skipped} skipped - already there)` : ''}` : `"${publishTargets.value[0].title}" published to ${targets.filter(t => !(t.level ? hasLevel(publishTargets.value[0], t.level) : t.cls && hasClass(publishTargets.value[0], t.cls))).map(t => t.label).join(', ')}`)
+  else if (!failed.length) toast.success('Already published there - nothing was published again')
   if (failed.length) toast.error(failed.join(' | '))
-  if (!failed.length) publishTarget.value = null
-  if (done.length) await Promise.all([loadExperiments(), loadAnalytics()])
+  if (!failed.length) { publishTarget.value = null; publishTargets.value = [] }
+  if (done) await Promise.all([loadExperiments(), loadAnalytics()])
 }
 
 const withdraw = async (e: ExperimentSummary, p: ExperimentPublication) => {
@@ -729,6 +820,8 @@ const saveShare = async () => {
 const selected = reactive(new Set<number>())
 const allSelected = computed(() => visibleExperiments.value.length > 0 && visibleExperiments.value.every(e => selected.has(e.id)))
 const toggle = (id: number) => (selected.has(id) ? selected.delete(id) : selected.add(id))
+// the ticked experiments that can be shared or published (library ones)
+const selectedLibrary = computed(() => experiments.value.filter(e => selected.has(e.id) && e.is_template))
 const toggleAll = () => {
   if (allSelected.value) selected.clear()
   else visibleExperiments.value.forEach(e => selected.add(e.id))

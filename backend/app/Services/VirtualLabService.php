@@ -278,6 +278,10 @@ class VirtualLabService
                     : trim(($r['class_name'] ?? 'Class') . ($r['stream_name'] ? ' - ' . $r['stream_name'] : '')),
                 'department_id' => $r['department_id'] !== null ? (int) $r['department_id'] : null,
                 'department_name' => $r['department_name'],
+                // where exactly, so a page can tell a class (or class level) that already has it this term
+                'class_id' => $r['class_id'] !== null ? (int) $r['class_id'] : null,
+                'class_group_name' => $r['class_group_name'] ?: null,
+                'term_id' => $r['term_id'] !== null ? (int) $r['term_id'] : null,
                 'by_admin' => $r['teacher_id'] === null && $r['published_by_hod'] === null,
                 'by_hod' => $r['teacher_id'] === null && $r['published_by_hod'] !== null,
                 'published_by' => $r['teacher_id'] !== null

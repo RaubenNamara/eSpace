@@ -148,6 +148,9 @@ export interface ExperimentPublication {
   class_label: string
   department_id: number | null
   department_name: string | null
+  class_id?: number | null
+  class_group_name?: string | null
+  term_id?: number | null
   by_admin: boolean
   by_hod?: boolean
   published_by: string
