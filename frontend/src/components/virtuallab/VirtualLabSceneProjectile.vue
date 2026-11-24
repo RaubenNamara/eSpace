@@ -14,8 +14,11 @@
       </div>
     </div>
 
+    <!-- Right-hand column: the launcher's Fire card, and under it (a card of its own) the measuring
+         tape's Measure card while a shot is being measured -->
+    <div v-if="launcherPlaced" class="absolute right-2 top-2 sm:right-3 sm:top-3 w-44 sm:w-48 max-h-[calc(100%-1rem)] sm:max-h-[calc(100%-1.5rem)] overflow-y-auto flex flex-col gap-3">
     <!-- Launcher controls -->
-    <div v-if="launcherPlaced" class="absolute right-2 top-2 sm:right-3 sm:top-3 bg-white/95 dark:bg-gray-800/95 backdrop-blur rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 w-44 sm:w-48 max-h-[calc(100%-1rem)] sm:max-h-[calc(100%-1.5rem)] overflow-y-auto">
+    <div class="bg-white/95 dark:bg-gray-800/95 backdrop-blur rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3">
       <p class="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Launch Velocity: {{ velocity }} m/s<span v-if="guided"> (fixed)</span></p>
       <input v-if="!guided" v-model.number="velocity" type="range" min="6" max="16" step="1" class="w-full accent-indigo-600" :disabled="readOnly || flightState === 'flying'">
       <p class="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mt-2 mb-1">Launch Angle: <span class="text-sky-600 dark:text-sky-400">{{ Math.round(angleDeg) }}&deg;</span></p>
@@ -31,29 +34,29 @@
       >{{ flightState === 'flying' ? 'In flight...' : 'Fire' }}</button>
       <p class="mt-1.5 text-[10px] text-gray-400 dark:text-gray-500 text-center">Or drag the barrel tip to aim.</p>
       <p class="mt-1 text-[10px] text-gray-400 dark:text-gray-500 text-center">The flight is shown in slow motion.</p>
-      <!-- the measuring tape's panel, right under Fire, once the tape is clicked -->
-      <div v-if="selectedKey === rulerKey" class="mt-2.5 pt-2.5 border-t border-gray-200 dark:border-gray-700">
-        <div class="flex items-center justify-between gap-2 mb-2">
-          <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Measuring Tape</p>
-          <button @click="selectedKey = null" class="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs leading-none">&times;</button>
-        </div>
-        <LabButton v-if="!measureArmed && !pendingReading" size="sm" :disabled="readOnly" @click="armMeasure">Measure</LabButton>
-        <div v-if="measureArmed" class="text-[11px] text-amber-600 dark:text-amber-400">Click the ball where it landed - the glowing ring.</div>
-        <div v-if="pendingReading" class="pt-1">
-          <p class="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Reading</p>
-          <div class="flex items-center gap-2">
-            <span class="flex-1 text-base font-bold text-gray-900 dark:text-white">{{ pendingReading.value }}<span class="text-xs font-medium text-gray-400 ml-1">m</span></span>
-            <LabButton size="sm" variant="success" @click="confirmReading">Record</LabButton>
-          </div>
+    </div>
+    <!-- The measuring tape's card: opens when the tape is clicked, stays until the reading is recorded,
+         then goes until the next shot is measured -->
+    <div v-if="selectedKey === rulerKey" class="bg-white/95 dark:bg-gray-800/95 backdrop-blur rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3">
+      <div class="flex items-center justify-between gap-2 mb-2">
+        <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Measuring Tape</p>
+      </div>
+      <LabButton v-if="!measureArmed && !pendingReading" size="sm" :disabled="readOnly" @click="armMeasure">Measure</LabButton>
+      <div v-if="measureArmed" class="text-[11px] text-amber-600 dark:text-amber-400">Click the ball where it landed - the glowing ring.</div>
+      <div v-if="pendingReading" class="pt-1">
+        <p class="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Reading</p>
+        <div class="flex items-center gap-2">
+          <span class="flex-1 text-base font-bold text-gray-900 dark:text-white">{{ pendingReading.value }}<span class="text-xs font-medium text-gray-400 ml-1">m</span></span>
+          <LabButton size="sm" variant="success" @click="confirmReading">Record</LabButton>
         </div>
       </div>
+    </div>
     </div>
 
     <!-- Measure panel, on its own only when the launcher is not out (it normally sits under Fire) -->
     <div v-if="selectedKey === rulerKey && !launcherPlaced" class="absolute right-2 top-2 sm:right-3 sm:top-3 bg-white/95 dark:bg-gray-800/95 backdrop-blur rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 w-44">
       <div class="flex items-center justify-between gap-2 mb-2">
         <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Measuring Tape</p>
-        <button @click="selectedKey = null" class="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs leading-none">&times;</button>
       </div>
       <LabButton v-if="!measureArmed && !pendingReading" size="sm" :disabled="readOnly" @click="armMeasure">Measure</LabButton>
       <div v-if="measureArmed" class="text-[11px] text-amber-600 dark:text-amber-400">Click the ball where it landed - the glowing ring.</div>
@@ -709,6 +712,8 @@ function confirmReading() {
     : undefined
   emit('action', { objectKey: rulerKey.value, action: 'measure', value: pendingReading.value.value, unit: 'm', label: 'Range', targetObjectKey: ballCfg.value?.key ?? null, projectileTrial: trial })
   pendingReading.value = null
+  // measured: the card goes until the next shot (the tape itself stays on the ground)
+  selectedKey.value = null
 }
 
 const { room, unsupported, pick, pointOnPlane } = useLabScene(
