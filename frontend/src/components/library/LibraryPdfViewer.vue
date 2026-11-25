@@ -228,7 +228,7 @@
           </div>
           <div
             v-else
-            class="w-full h-full flex justify-center items-center transition-transform duration-200"
+            class="w-full h-full flex justify-center items-center px-3 py-4 sm:px-5 sm:py-5 transition-transform duration-200"
             :style="{ transform: `scale(${zoomLevel})`, transformOrigin: zoomLevel > MIN_ZOOM ? 'top center' : 'center' }"
           >
             <BookFlipbook
@@ -468,11 +468,12 @@ const zoomOut = () => { zoomLevel.value = Math.max(MIN_ZOOM, Math.round((zoomLev
 // picking a tint in one reader carries over to the other.
 const showTintPanel = ref(false)
 const readingTint = usePersistedRef('espace:reading-tint', 'none')
+// The green tint was taken away - anyone who had it reads without a tint
+if (readingTint.value === 'green') readingTint.value = 'none'
 const READING_TINTS = [
   { value: 'none', label: 'None', class: '', swatchClass: 'bg-white dark:bg-gray-800' },
   { value: 'sepia', label: 'Sepia', class: 'bg-amber-700/10', swatchClass: 'bg-amber-200' },
   { value: 'blue', label: 'Cool Blue', class: 'bg-blue-500/10', swatchClass: 'bg-blue-200' },
-  { value: 'green', label: 'Soft Green', class: 'bg-emerald-500/10', swatchClass: 'bg-emerald-200' },
   { value: 'rose', label: 'Warm Rose', class: 'bg-rose-500/10', swatchClass: 'bg-rose-200' },
 ]
 

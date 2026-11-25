@@ -1,5 +1,12 @@
 <template>
-  <div ref="rootRef" class="relative w-full h-full" :class="{ 'mx-auto max-w-[560px]': capWidthForToggle }">
+  <div ref="rootRef" class="relative isolate w-full h-full" :class="{ 'mx-auto max-w-[560px]': capWidthForToggle }">
+    <!-- The book's hard cover: a board a little bigger than the pages, lying under them, with the
+         book's shadow on the desk - so the pages read as a real, thick book rather than flat pictures -->
+    <div
+      v-if="box"
+      class="book-board"
+      :style="{ left: `${box.left - 9}px`, top: `${box.top - 7}px`, width: `${box.width + 18}px`, height: `${box.height + 16}px` }"
+    ></div>
     <!-- v-if (not just a :key bump) forces Vue to fully unmount and later remount this element on
          every rebuild - StPageFlip's own destroy() calls `this.block.remove()` on this exact node
          (raw DOM removal, entirely outside Vue's reconciliation), permanently detaching it from
@@ -19,6 +26,13 @@
       <div v-if="stackLeft" class="page-stack page-stack--left" :style="{ left: `${box.left}px`, top: `${box.top}px`, height: `${box.height}px`, width: `${stackLeft}px` }"></div>
       <div v-if="stackRight" class="page-stack page-stack--right" :style="{ left: `${box.left + box.width - stackRight}px`, top: `${box.top}px`, height: `${box.height}px`, width: `${stackRight}px` }"></div>
     </template>
+
+    <!-- The fold at the spine of an open two-page spread: the paper curving down into the binding -->
+    <div
+      v-if="box && spread"
+      class="book-spine"
+      :style="{ left: `${box.left + box.width / 2 - 28}px`, top: `${box.top}px`, height: `${box.height}px` }"
+    ></div>
 
     <!-- A far jump turns a whole bundle of pages at once: several sheets hinged at the spine swing
          over together, slightly fanned, instead of the new page just appearing. -->
@@ -207,6 +221,8 @@ function markEdgeHover(e: MouseEvent) {
 
 // Where the book sits inside this component (not the viewport), for the overlays above
 const box = ref<{ left: number; top: number; width: number; height: number } | null>(null)
+// Two pages side by side (an open book) rather than one page at a time
+const spread = ref(false)
 const pageTotal = ref(0)
 const pageCurrent = ref(0)
 const MAX_STACK = 14
@@ -354,6 +370,14 @@ function build() {
     restoreScroll()
   } else {
     flip.loadFromImages(props.images)
+    // page-flip paints its whole canvas white before every frame, which would hide the book's
+    // cover board and the desk around it - clear it to transparent instead, so only the pages show
+    const canvasRender = (flip as any).getRender?.()
+    if (canvasRender?.ctx && canvasRender?.canvas) {
+      canvasRender.clear = function (this: { ctx: CanvasRenderingContext2D; canvas: HTMLCanvasElement }) {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
+      }
+    }
     // Image mode draws every page onto one <canvas>, and page-flip only ever sets that canvas's
     // actual bitmap resolution (not just its CSS box) once, during its own internal construction -
     // at a point that, empirically (verified with headless-browser measurements taken at several
@@ -421,8 +445,10 @@ function build() {
     emit('flip', target)
   }
 
-  emit('orientation', flip.getOrientation() === 'portrait' ? 'portrait' : 'landscape')
+  spread.value = flip.getOrientation() !== 'portrait'
+  emit('orientation', spread.value ? 'landscape' : 'portrait')
   flip.on('changeOrientation', (e) => {
+    spread.value = e.data !== 'portrait'
     emit('orientation', e.data === 'portrait' ? 'portrait' : 'landscape')
     measureSoon()
   })
@@ -632,6 +658,44 @@ defineExpose({ flipNext, flipPrev, turnToPage, getCurrentPageIndex, rebuild, set
 .book-flipbook-host.near-flip-edge,
 .book-flipbook-host.near-flip-edge :deep(*) {
   cursor: pointer;
+}
+
+/* The hard cover under the pages, and the book's shadow on the desk */
+.book-board {
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 6px;
+  background: #1f2f5c;
+  border: 1px solid #16224a;
+  box-shadow:
+    inset 0 0 0 3px rgba(255, 255, 255, 0.06),
+    0 2px 4px rgba(0, 0, 0, 0.25),
+    0 18px 28px -6px rgba(0, 0, 0, 0.45),
+    0 34px 60px -18px rgba(0, 0, 0, 0.5);
+  transition: left 0.3s ease, width 0.3s ease;
+}
+
+.dark .book-board {
+  background: #141b33;
+  border-color: #0b1024;
+}
+
+/* The fold at the spine: the pages darken as they curve into the binding */
+.book-spine {
+  position: absolute;
+  z-index: 6;
+  width: 56px;
+  pointer-events: none;
+  background: linear-gradient(to right,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(0, 0, 0, 0.05) 30%,
+    rgba(0, 0, 0, 0.2) 47%,
+    rgba(0, 0, 0, 0.32) 50%,
+    rgba(0, 0, 0, 0.2) 53%,
+    rgba(0, 0, 0, 0.05) 70%,
+    rgba(0, 0, 0, 0) 100%);
+  mix-blend-mode: multiply;
 }
 
 /* Page edges beside the book: fine cream lines, shaded toward the book */

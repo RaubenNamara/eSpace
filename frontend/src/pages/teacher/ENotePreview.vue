@@ -1176,11 +1176,12 @@ const effectivePageHeight = computed(() => dynamicPageHeight.value)
 // anything saved server-side.
 const showTintPanel = ref(false)
 const readingTint = usePersistedRef('espace:reading-tint', 'none')
+// The green tint was taken away - anyone who had it reads without a tint
+if (readingTint.value === 'green') readingTint.value = 'none'
 const READING_TINTS = [
   { value: 'none', label: 'None', class: '', swatchClass: 'bg-white dark:bg-gray-800' },
   { value: 'sepia', label: 'Sepia', class: 'bg-amber-700/10', swatchClass: 'bg-amber-200' },
   { value: 'blue', label: 'Cool Blue', class: 'bg-indigo-500/10', swatchClass: 'bg-indigo-200' },
-  { value: 'green', label: 'Soft Green', class: 'bg-emerald-500/10', swatchClass: 'bg-emerald-200' },
   { value: 'rose', label: 'Warm Rose', class: 'bg-rose-500/10', swatchClass: 'bg-rose-200' },
 ]
 
