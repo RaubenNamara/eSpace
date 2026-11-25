@@ -233,7 +233,7 @@
                 </template>
                 <template v-else>
                   <span class="text-sm font-semibold text-gray-900 dark:text-white">Drop a video here, or tap to choose</span>
-                  <span class="text-xs text-gray-500 dark:text-gray-400">MP4, WebM, OGG or MOV, up to 300MB</span>
+                  <span class="text-xs text-gray-500 dark:text-gray-400">MP4, WebM, OGG or MOV, up to 95MB</span>
                 </template>
               </label>
             </div>
@@ -537,7 +537,13 @@ const closeVideoModal = () => {
 }
 
 // A chosen file names the video too, if the teacher hasn't typed a title yet
+// The site sits behind Cloudflare, which turns away any upload over 100 MB, so videos stop at 95 MB.
+const MAX_VIDEO_MB = 95
 const pickFile = (file: File | null) => {
+  if (file && file.size > MAX_VIDEO_MB * 1024 * 1024) {
+    toast.warning(`This video is ${fileSize(file.size)}. Videos can be up to ${MAX_VIDEO_MB} MB. Please make it smaller (for example, save or record it at 720p) and try again.`)
+    return
+  }
   videoForm.value.file = file
   if (file && !videoForm.value.title.trim()) {
     videoForm.value.title = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim()

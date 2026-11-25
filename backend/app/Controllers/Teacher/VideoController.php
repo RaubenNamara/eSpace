@@ -17,7 +17,8 @@ use eSpace\App\Services\NotificationService;
  */
 class VideoController extends Controller
 {
-    private const MAX_FILE_SIZE = 300 * 1024 * 1024; // 300MB
+    // 95MB: the site is behind Cloudflare, which refuses any upload over 100 MB
+    private const MAX_FILE_SIZE = 95 * 1024 * 1024;
     private const UPLOAD_SUBDIR = 'videos';
     private const ALLOWED_MIME = [
         'video/mp4' => 'mp4',
@@ -835,7 +836,7 @@ class VideoController extends Controller
         $file = $_FILES['file'];
 
         if ($file['size'] > self::MAX_FILE_SIZE) {
-            $this->error('File exceeds maximum size of 300MB', 400);
+            $this->error('This video is too big. Videos can be up to 95 MB. Please make it smaller (for example, 720p) and try again', 400);
             return null;
         }
 
