@@ -14,6 +14,7 @@ import * as pdfjsLib from 'pdfjs-dist'
 // eslint-disable-next-line import/no-unresolved
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { resolveAssetUrl } from '@/utils/url'
+import { pdfSource } from '@/utils/pdfOpen'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl
 
@@ -30,7 +31,8 @@ const draw = async () => {
   state.value = 'loading'
   try {
     const src = resolveAssetUrl(props.url)
-    if (!docs.has(src)) docs.set(src, pdfjsLib.getDocument({ url: src, withCredentials: true }).promise)
+    // only the pieces of the file this page needs (see utils/pdfOpen.ts)
+    if (!docs.has(src)) docs.set(src, pdfSource(pdfjsLib, src, { withCredentials: true }).then(source => pdfjsLib.getDocument(source).promise))
     const doc = await docs.get(src)!
     const page = await doc.getPage(Math.min(Math.max(1, props.page), doc.numPages))
     const width = (wrap.value?.clientWidth || 600) * (window.devicePixelRatio || 1)

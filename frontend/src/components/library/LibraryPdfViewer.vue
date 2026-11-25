@@ -22,20 +22,19 @@
                  the footer controls. -->
             <div v-if="bookImages.length > 0" class="hidden sm:flex items-center gap-2 mt-1.5 max-w-xs">
               <div class="relative flex-1 h-1.5 rounded-full bg-white/20 overflow-hidden">
-                <!-- lighter: how much of the book is ready; bright: where the reader is -->
-                <div class="absolute inset-y-0 left-0 bg-white/35 rounded-full transition-all" :style="{ width: `${(prepared / totalPages) * 100}%` }"></div>
+                <!-- where the reader is -->
                 <div class="absolute inset-y-0 left-0 bg-white rounded-full transition-all" :style="{ width: `${(currentPage / totalPages) * 100}%` }"></div>
               </div>
               <span class="text-[11px] text-emerald-100 flex-shrink-0">{{ currentPage }}/{{ totalPages }}</span>
             </div>
-            <!-- The book opens after page 1 with every other page as a loading placeholder - this says
-                 the rest is still being prepared in the background (pages near the reader first). -->
+            <!-- The book opens after page 1 with every other page as a loading placeholder; pages are
+                 drawn as the reader gets near them - this shows while some are being drawn. -->
             <div v-if="bookImagesLoadingMore" class="flex items-center gap-1.5 mt-1 text-[11px] text-emerald-100">
               <svg class="w-3 h-3 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
               </svg>
-              <span>Loading more pages… ({{ prepared }}/{{ totalPages }})</span>
+              <span>Loading the next pages…</span>
             </div>
           </div>
           <div class="flex items-center gap-2 flex-shrink-0">
@@ -224,10 +223,8 @@
           <div v-if="loading" class="text-gray-500 dark:text-gray-300 py-20 text-sm">Loading document…</div>
           <div v-else-if="error" class="text-red-400 py-20 text-sm">{{ error }}</div>
           <div v-else-if="preparing" class="w-full max-w-xs text-center">
-            <p class="text-sm text-gray-500 dark:text-gray-300 mb-2">Preparing your book… {{ prepared }} / {{ totalPages }}</p>
-            <div class="h-1.5 rounded-full bg-gray-300 dark:bg-gray-700 overflow-hidden">
-              <div class="h-full bg-emerald-600 transition-all" :style="{ width: `${totalPages ? (prepared / totalPages) * 100 : 0}%` }"></div>
-            </div>
+            <p class="text-sm text-gray-500 dark:text-gray-300 mb-2">Opening your book…</p>
+            <div class="h-1.5 rounded-full bg-emerald-600/60 animate-pulse"></div>
           </div>
           <div
             v-else
@@ -667,12 +664,14 @@ async function prepareBook() {
     prepared.value++
   }
 
-  // Next page to render: the unrendered page closest to the reader, looking ahead first
+  // Next page to render: the unrendered page closest to the reader, looking ahead first - but only
+  // within a few pages of where they are. A page is drawn when the reader gets near it, so a long
+  // book never downloads (or holds in memory) pages nobody has turned to.
   const claimed = new Set<number>()
   const claim = (): number | null => {
     const here = Math.min(Math.max(currentPage.value - 1, 0), totalCount - 1)
-    for (let d = 0; d < totalCount; d++) {
-      for (const i of d === 0 ? [here] : [here + d, here - d]) {
+    for (let d = 0; d <= RENDER_AHEAD; d++) {
+      for (const i of d === 0 ? [here] : d <= RENDER_BEHIND ? [here + d, here - d] : [here + d]) {
         if (i >= 0 && i < totalCount && !done[i] && !claimed.has(i)) {
           claimed.add(i)
           return i
@@ -680,6 +679,21 @@ async function prepareBook() {
       }
     }
     return null
+  }
+
+  // Pages far from the reader give their picture back (a 500-page book of full pictures would run
+  // a phone out of memory); they're drawn again if the reader comes back to them
+  const forgetFarPages = () => {
+    const here = currentPage.value - 1
+    for (let i = 0; i < totalCount; i++) {
+      if (done[i] && Math.abs(i - here) > KEEP_PAGES) {
+        done[i] = false
+        claimed.delete(i)
+        bookImages.value[i] = PENDING_PAGE
+        flipbookRef.value?.setPageImage(i, PENDING_PAGE)
+        prepared.value--
+      }
+    }
   }
 
   try {
@@ -693,23 +707,54 @@ async function prepareBook() {
     claimed.add(0)
     prepared.value = 1
     preparing.value = false
-    bookImagesLoadingMore.value = totalCount > 1
 
+    // Workers render what's near the reader, then wait until the reader moves on
+    let busy = 0
     const worker = async () => {
       const canvas = document.createElement('canvas')
-      for (let i = claim(); i !== null; i = claim()) {
-        place(i, await renderToImage(i + 1, canvas))
+      while (!bookClosed) {
+        const i = claim()
+        if (i === null) {
+          await new Promise<void>(resolve => wakeWorkers.push(resolve))
+          continue
+        }
+        busy++
+        bookImagesLoadingMore.value = true
+        try {
+          const src = await renderToImage(i + 1, canvas)
+          if (!bookClosed && claimed.has(i)) place(i, src)
+        } finally {
+          busy--
+          bookImagesLoadingMore.value = busy > 0
+        }
       }
     }
-    await Promise.all(Array.from({ length: Math.min(PREPARE_CONCURRENCY, totalCount - 1) }, () => worker()))
+    stopFollowingReader = watch(currentPage, () => {
+      forgetFarPages()
+      wakeWorkers.splice(0).forEach(resolve => resolve())
+    })
+    // not awaited: they run for as long as the book is open
+    for (let w = 0; w < Math.min(PREPARE_CONCURRENCY, totalCount - 1); w++) void worker()
   } catch (err: any) {
     console.error('Library PDF: failed to prepare book', err)
     error.value = err?.message || 'Failed to prepare this document for reading. Please try again.'
-  } finally {
     preparing.value = false
-    bookImagesLoadingMore.value = false
   }
 }
+
+// How far around the reader pages are drawn (ahead and behind), and how far they're kept once drawn
+const RENDER_AHEAD = 6
+const RENDER_BEHIND = 2
+const KEEP_PAGES = 20
+let bookClosed = false
+let wakeWorkers: Array<() => void> = []
+let stopFollowingReader: (() => void) | null = null
+onBeforeUnmount(() => {
+  bookClosed = true
+  stopFollowingReader?.()
+  wakeWorkers.splice(0).forEach(resolve => resolve())
+  pdfDoc.value?.destroy?.()
+})
 
 const onFlip = (page: number) => {
   currentPage.value = page + 1 // StPageFlip is 0-indexed; the rest of this viewer is 1-indexed

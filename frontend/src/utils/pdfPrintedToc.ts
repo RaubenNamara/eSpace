@@ -15,7 +15,11 @@ interface Line {
   x: number
 }
 
-const SCAN_PAGES = 25
+// A book's contents page is near the front. Kept small: reading a page's text also downloads the
+// page's pictures (pdf.js loads an image to see what it is), so a scanned page costs its whole scan
+const SCAN_PAGES = 15
+// A scanned book with no text layer has nothing to read - stop once this many pages had no text
+const TEXTLESS_STOP = 3
 // "Title ....... 12", "Title 12", "Chapter 3: Title – 45"
 const ENTRY = /^(.{2,160}?)[\s.·•…_\-–—]*?(?:\s|\.{2,}|…)(\d{1,4})$/
 const CONTENTS_HEADING = /^\s*(table\s+of\s+)?contents\s*$/i
@@ -64,8 +68,10 @@ export async function extractPrintedToc(doc: any): Promise<PrintedTocEntry[]> {
   //    lines; a contents list running over several pages is followed while pages keep looking alike.
   let entries: { title: string; printed: number; x: number }[] = []
   let tocEnd = 0
+  let textless = 0
   for (let n = 1; n <= scanTo; n++) {
     const lines = await linesOf(n)
+    if (!lines.length && ++textless >= TEXTLESS_STOP && textless === n) return []
     const parsed = lines.map(parseEntry).filter(Boolean) as { title: string; printed: number; x: number }[]
     const hasHeading = lines.slice(0, 6).some(l => CONTENTS_HEADING.test(l.text))
     const looksLikeToc = parsed.length >= 5 && parsed.length >= lines.length * 0.4

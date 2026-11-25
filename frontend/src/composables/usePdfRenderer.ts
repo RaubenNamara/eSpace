@@ -3,6 +3,7 @@ import * as pdfjsLib from 'pdfjs-dist'
 // eslint-disable-next-line import/no-unresolved
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { offlinePdfData } from '@/utils/offline/docs'
+import { pdfSource } from '@/utils/pdfOpen'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl
 
@@ -105,8 +106,9 @@ export function usePdfRenderer(pdfUrl: Ref<string>, options: UsePdfRendererOptio
       // A copy saved for offline reading (see utils/offline/docs.ts) opens from this device -
       // with or without a network - instead of being fetched again
       const saved = await offlinePdfData(pdfUrl.value)
+      // Online: only the pieces of the file the pages being read need (see utils/pdfOpen.ts)
       const loadingTask = pdfjsLib.getDocument({
-        ...(saved ? { data: saved } : { url: pdfUrl.value }),
+        ...(saved ? { data: saved } : await pdfSource(pdfjsLib, pdfUrl.value)),
         standardFontDataUrl: '/pdfjs/standard_fonts/',
         cMapUrl: '/pdfjs/cmaps/',
         cMapPacked: true,

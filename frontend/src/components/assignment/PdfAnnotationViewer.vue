@@ -50,6 +50,7 @@ import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import type { AnnotationLayerJSON, AnnotationLayerMode, AnnotationTool } from '@/types'
 import AnnotationCanvas from './AnnotationCanvas.vue'
 import { offlinePdfData } from '@/utils/offline/docs'
+import { pdfSource } from '@/utils/pdfOpen'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl
 
@@ -182,7 +183,7 @@ async function loadPdf() {
   try {
     const saved = await offlinePdfData(props.pdfUrl)
     const doc = await pdfjsLib.getDocument({
-      ...(saved ? { data: saved } : { url: props.pdfUrl }),
+      ...(saved ? { data: saved } : await pdfSource(pdfjsLib, props.pdfUrl)),
       standardFontDataUrl: '/pdfjs/standard_fonts/',
       cMapUrl: '/pdfjs/cmaps/',
       cMapPacked: true,

@@ -1,7 +1,6 @@
 // Renders the first page of a library PDF in the browser as a JPEG "book cover", so the eLibrary
 // shelf can show each book's real cover. pdf.js is imported on demand (it's large), and
-// disableAutoFetch/disableStream make it fetch only the byte ranges page 1 needs - not the whole
-// file - since library PDFs are static files Apache serves with range support.
+// pdfSource (utils/pdfOpen.ts) makes it fetch only the byte ranges page 1 needs - not the whole file.
 
 const COVER_WIDTH = 480
 
@@ -15,8 +14,9 @@ export async function renderPdfCover(url: string): Promise<PdfCover> {
   const { default: workerUrl } = await import('pdfjs-dist/build/pdf.worker.min.mjs?url')
   pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl
 
+  const { pdfSource } = await import('./pdfOpen')
   const doc = await pdfjsLib.getDocument({
-    url,
+    ...(await pdfSource(pdfjsLib, url)),
     standardFontDataUrl: '/pdfjs/standard_fonts/',
     cMapUrl: '/pdfjs/cmaps/',
     cMapPacked: true,
