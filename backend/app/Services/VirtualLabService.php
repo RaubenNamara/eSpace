@@ -970,7 +970,7 @@ class VirtualLabService
                AND sde.status = 'active' AND sde.deleted_at IS NULL
                AND (sde.class_id = a.class_id
                     OR (a.class_group_name IS NOT NULL AND EXISTS (SELECT 1 FROM classes c WHERE c.id = sde.class_id AND c.name = a.class_group_name)))
-               AND a.created_at BETWEEN sde.start_date AND COALESCE(sde.end_date, NOW())
+               AND a.created_at BETWEEN LEAST(sde.start_date, COALESCE((SELECT ay_w.start_date FROM academic_years ay_w WHERE ay_w.name = sde.academic_year AND ay_w.deleted_at IS NULL LIMIT 1), sde.start_date)) AND COALESCE(sde.end_date, NOW())
              WHERE a.id = :id AND a.deleted_at IS NULL AND a.status = 'active'
                AND NOT EXISTS (
                    SELECT 1 FROM student_teacher_enrollments ste
@@ -1100,10 +1100,10 @@ class VirtualLabService
         // EXISTS just checks membership rather than joining, so it can never multiply a row per
         // matching enrollment the way an INNER JOIN would. Virtual Lab assignments have no
         // separate publish step - creating one *is* publishing it, so a.created_at stands in for
-        // published_at here. Bounded both sides (unlike the resource-type visibility rule): an
-        // assignment must have existed while this specific enrollment was active, so a promoted
-        // student doesn't suddenly see an assignment a teacher created for the class before they
-        // joined it - matches how the assignments module itself behaves.
+        // published_at here. Bounded both sides (unlike the resource-type visibility rule), the same
+        // window as the assignments module: from the start of the enrollment's academic year (or the
+        // enrollment itself, if earlier) to its end. A student enrolled mid-year still sees the lab
+        // work their class was set earlier that year; work from a past year stays out.
         $where[] = "EXISTS (
             SELECT 1 FROM student_department_enrollments sde
             LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
@@ -1114,7 +1114,7 @@ class VirtualLabService
               AND sde.student_id = :student_id AND sde.deleted_at IS NULL
               AND sde.status = 'active'
               AND sde.department_id = COALESCE(a.department_id, (SELECT department_id FROM subjects WHERE id = a.subject_id))
-              AND a.created_at BETWEEN sde.start_date AND COALESCE(sde.end_date, NOW())
+              AND a.created_at BETWEEN LEAST(sde.start_date, COALESCE((SELECT ay_w.start_date FROM academic_years ay_w WHERE ay_w.name = sde.academic_year AND ay_w.deleted_at IS NULL LIMIT 1), sde.start_date)) AND COALESCE(sde.end_date, NOW())
         )";
         $where[] = "NOT EXISTS (
             SELECT 1 FROM student_teacher_enrollments ste
@@ -1232,7 +1232,7 @@ class VirtualLabService
                  ) AND sde.student_id = :student_id AND sde.deleted_at IS NULL
                 AND sde.status = 'active'
                 AND sde.department_id = COALESCE(a.department_id, (SELECT department_id FROM subjects WHERE id = a.subject_id))
-                AND a.created_at BETWEEN sde.start_date AND COALESCE(sde.end_date, NOW())
+                AND a.created_at BETWEEN LEAST(sde.start_date, COALESCE((SELECT ay_w.start_date FROM academic_years ay_w WHERE ay_w.name = sde.academic_year AND ay_w.deleted_at IS NULL LIMIT 1), sde.start_date)) AND COALESCE(sde.end_date, NOW())
              WHERE a.id = :assignment_id AND a.deleted_at IS NULL
                AND EXISTS (SELECT 1 FROM virtual_lab_experiments ve WHERE ve.id = a.experiment_id AND ve.deleted_at IS NULL AND ve.status <> 'disabled')
                AND NOT EXISTS (

@@ -270,7 +270,7 @@ class SearchService
                 WHERE lb.status = 'published' AND lb.deleted_at IS NULL
                   AND EXISTS (SELECT 1 FROM student_department_enrollments sde
                               WHERE sde.student_id = {$p} AND sde.department_id = lb.department_id
-                                AND sde.deleted_at IS NULL AND (lb.class_id IS NULL OR sde.class_id = lb.class_id))";
+                                AND sde.deleted_at IS NULL AND sde.status = 'active')";
         }
 
         if ($want('assignment')) {

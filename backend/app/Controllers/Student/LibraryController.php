@@ -37,8 +37,9 @@ class LibraryController extends Controller
 
     /**
      * Visibility rule shared by index() and show(): the book must be published, and the
-     * student must have a department enrollment matching the book's department where, if the
-     * book targets a specific class, that enrollment's class also matches. The enrollment must
+     * student must have a department enrollment matching the book's department. Books are for the
+     * whole department: a class or stream the teacher picked does not narrow who can read it
+     * (notes, videos, assessments and lab work stay tied to the class). The enrollment must
      * also have existed by the time the book was published (sde.end_date, NULL for a still-
      * active enrollment) - this is what lets a promoted student keep seeing everything already
      * published for their new class (no lower bound: content from before they joined still
@@ -49,16 +50,10 @@ class LibraryController extends Controller
     {
         return "lb.status = 'published' AND lb.deleted_at IS NULL AND EXISTS (
             SELECT 1 FROM student_department_enrollments sde
-            LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
             WHERE sde.student_id = :student_id
               AND sde.department_id = lb.department_id
               AND sde.deleted_at IS NULL
               AND sde.status = 'active'
-              AND (
-                (lb.class_id IS NULL AND lb.class_group_name IS NULL)
-                OR sde.class_id = lb.class_id
-                OR (lb.class_group_name IS NOT NULL AND sde_c.name = lb.class_group_name)
-              )
               AND lb.published_at <= COALESCE(sde.end_date, NOW())
         ) AND NOT EXISTS (
             SELECT 1 FROM student_teacher_enrollments ste

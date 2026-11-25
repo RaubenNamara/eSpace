@@ -66,16 +66,10 @@ class PageNoteController extends Controller
     {
         return "lb.status = 'published' AND lb.deleted_at IS NULL AND EXISTS (
             SELECT 1 FROM student_department_enrollments sde
-            LEFT JOIN classes sde_c ON sde_c.id = sde.class_id
             WHERE sde.student_id = :student_id
               AND sde.department_id = lb.department_id
               AND sde.deleted_at IS NULL
               AND sde.status = 'active'
-              AND (
-                (lb.class_id IS NULL AND lb.class_group_name IS NULL)
-                OR sde.class_id = lb.class_id
-                OR (lb.class_group_name IS NOT NULL AND sde_c.name = lb.class_group_name)
-              )
               AND lb.published_at <= COALESCE(sde.end_date, NOW())
         ) AND NOT EXISTS (
             SELECT 1 FROM student_teacher_enrollments ste
