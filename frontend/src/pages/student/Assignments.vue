@@ -43,66 +43,106 @@
       <button type="button" class="text-sm font-semibold text-indigo-600 dark:text-indigo-300 hover:underline" @click="clearFilters">Clear filters</button>
     </EmptyState>
 
-    <!-- One card per kind of assessment: LOA and AOI side by side on a wide screen, exams across the bottom -->
-    <div v-if="!loading && !error && (focusCard || (assignments.length && visible.length && viewFilter !== 'marked'))" class="grid grid-cols-1 gap-4 items-start" :class="focusCard ? '' : 'lg:grid-cols-2'">
+    <!-- One card per kind of assessment, one under the other: LOA, then AOI, then exams (EOC) -->
+    <div v-if="!loading && !error && (focusCard || (assignments.length && visible.length && viewFilter !== 'marked'))" class="flex flex-col gap-5">
       <section
         v-for="card in (focusCard ? [focusCard] : shownCards)"
         :key="card.key"
-        class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/80 dark:border-gray-700 shadow-sm overflow-hidden flex flex-col min-w-0"
-        :class="card.key === 'EOC' && !focusCard ? 'lg:col-span-2' : ''"
+        class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/80 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow overflow-hidden min-w-0"
       >
-        <!-- Heading: a coloured band with the kind's icon, its name, and how many there are -->
-        <header class="relative flex items-center gap-3 px-4 py-3.5 bg-gradient-to-r to-white dark:to-gray-800" :class="CARD_LOOK[card.key].band">
-          <span class="absolute inset-y-0 left-0 w-1" :class="CARD_LOOK[card.key].solid"></span>
-          <span class="w-10 h-10 flex-shrink-0 rounded-xl flex items-center justify-center text-white shadow-md" :class="[CARD_LOOK[card.key].solid, CARD_LOOK[card.key].glow]">
+        <!-- Heading on a cream bar (like the other cards' title bars): icon, name and what this kind is,
+             how many, and a summary of where they stand -->
+        <header class="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 sm:px-5 py-3.5 bg-[#f8f0dc] border-b border-[#ecdfbd] dark:bg-gray-800 dark:border-gray-700">
+          <span class="w-10 h-10 flex-shrink-0 rounded-xl flex items-center justify-center bg-white shadow-sm ring-1 ring-[#ecdfbd] dark:bg-gray-900/50 dark:ring-gray-700" :class="CARD_LOOK[card.key].text">
             <AppIcon :name="CARD_LOOK[card.key].icon" class="w-5 h-5" />
           </span>
           <div class="min-w-0 flex-1">
-            <h2 class="text-base font-bold leading-tight text-indigo-800 dark:text-indigo-300 truncate">{{ card.title }}</h2>
+            <div class="flex items-center gap-2 min-w-0">
+              <h2 class="text-base sm:text-[17px] font-bold leading-tight text-[#061a55] dark:text-white truncate">{{ card.title }}</h2>
+              <span class="flex-shrink-0 px-2 py-0.5 rounded-full text-[11px] font-bold tabular-nums" :class="CARD_LOOK[card.key].chip">{{ card.items.length }}</span>
+            </div>
+            <p class="mt-0.5 text-xs text-[#6b5a35] dark:text-gray-400 truncate">{{ CARD_LOOK[card.key].about }}</p>
           </div>
-          <span class="flex-shrink-0 inline-flex items-baseline gap-1 px-2.5 py-1 rounded-full bg-white/80 dark:bg-gray-900/50 ring-1 ring-black/5 dark:ring-white/10">
-            <span class="text-sm font-extrabold tabular-nums" :class="CARD_LOOK[card.key].text">{{ card.items.length }}</span>
-            <span class="text-[10px] font-medium text-gray-500 dark:text-gray-400">{{ card.items.length === 1 ? 'item' : 'items' }}</span>
-          </span>
+          <div v-if="card.items.length" class="basis-full sm:basis-auto flex flex-wrap items-center gap-1.5 pl-[3.75rem] sm:pl-0">
+            <span
+              v-for="s in cardSummary(card.items)"
+              :key="s.key"
+              class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white dark:bg-gray-900/40 ring-1 ring-[#ecdfbd] dark:ring-gray-700 text-[11px] font-semibold text-gray-700 dark:text-gray-300"
+            >
+              <span class="w-1.5 h-1.5 rounded-full" :class="s.dot"></span>{{ s.n }} {{ s.label }}
+            </span>
+          </div>
         </header>
 
-        <p v-if="!card.items.length" class="flex-1 px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500"><template v-if="finished.some(a => cardOf(a) === card.key) && !subjectFilter && !searchQuery.trim() && !viewFilter">All done here - your marked work is under Finished work.</template><template v-else>No {{ card.key === 'EOC' ? 'exams' : `${card.short} assessments` }}{{ subjectFilter || searchQuery.trim() || viewFilter ? ' match' : ' yet' }}.</template></p>
-        <ul v-else class="divide-y divide-gray-100 dark:divide-gray-700">
-          <li v-for="a in (focusCard ? card.items : card.items.slice(0, CARD_FIRST))" :key="a.id" class="p-3 sm:p-4 hover:bg-gray-50/70 dark:hover:bg-gray-700/30 transition-colors flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-            <div class="min-w-0 flex-1">
-              <p class="flex items-center gap-2 min-w-0">
-                <span class="flex-shrink-0 inline-flex items-center gap-1 text-[10px] font-semibold text-gray-500 dark:text-gray-400">
+        <div v-if="!card.items.length" class="mx-4 sm:mx-5 my-5 flex items-center gap-3 rounded-xl border border-dashed border-gray-200 dark:border-gray-700 px-4 py-5">
+          <AppIcon name="check-circle" class="w-5 h-5 flex-shrink-0 text-gray-300 dark:text-gray-600" />
+          <p class="text-sm text-gray-500 dark:text-gray-400"><template v-if="finished.some(a => cardOf(a) === card.key) && !subjectFilter && !searchQuery.trim() && !viewFilter">All done here - your marked work is under Finished work.</template><template v-else>No {{ card.key === 'EOC' ? 'exams' : `${card.short} assessments` }}{{ subjectFilter || searchQuery.trim() || viewFilter ? ' match' : ' yet' }}.</template></p>
+        </div>
+        <ul v-else class="px-2 sm:px-3 py-2 space-y-1">
+          <li
+            v-for="a in (focusCard ? card.items : card.items.slice(0, CARD_FIRST))"
+            :key="a.id"
+            class="group flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 px-3 py-2.5 rounded-xl ring-1 ring-transparent hover:ring-gray-200 dark:hover:ring-gray-700 hover:bg-gray-50/80 dark:hover:bg-gray-700/30 transition"
+          >
+            <div class="flex items-center gap-3 min-w-0 flex-1">
+              <!-- the deadline as a small calendar tile -->
+              <span class="hidden sm:flex w-12 h-12 flex-shrink-0 rounded-xl flex-col items-center justify-center leading-none" :class="groupOf(a) === 'overdue' ? 'bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-300' : CARD_LOOK[card.key].soft">
+                <template v-if="dueParts(a)">
+                  <span class="text-[9px] font-bold uppercase tracking-wider opacity-80">{{ dueParts(a)!.month }}</span>
+                  <span class="mt-0.5 text-lg font-extrabold tabular-nums">{{ dueParts(a)!.day }}</span>
+                </template>
+                <AppIcon v-else name="clock" class="w-5 h-5" />
+              </span>
+              <div class="min-w-0 flex-1">
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold" :class="STATUS_PILL[groupOf(a)]">
                   <span class="w-1.5 h-1.5 rounded-full" :class="GROUP_META[groupOf(a)].dot"></span>{{ GROUP_META[groupOf(a)].title }}
                 </span>
-                <span class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ a.title }}</span>
-              </p>
-              <p class="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ a.subject_name }}<template v-if="a.teacher_name"> · {{ a.teacher_name }}</template> · {{ Number(a.total_marks) }} {{ Number(a.total_marks) === 1 ? 'mark' : 'marks' }}</p>
+                <p class="mt-1 text-sm font-semibold text-gray-900 dark:text-white truncate group-hover:text-indigo-700 dark:group-hover:text-indigo-300 transition-colors">{{ a.title }}</p>
+                <p class="mt-0.5 flex items-center gap-1.5 min-w-0 text-[11px] text-gray-500 dark:text-gray-400">
+                  <span v-if="a.subject_name" class="flex-shrink-0 px-1.5 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700 font-semibold text-gray-600 dark:text-gray-300">{{ a.subject_name }}</span>
+                  <span class="truncate xl:hidden"><template v-if="a.teacher_name">{{ a.teacher_name }} · </template>{{ Number(a.total_marks) }} {{ Number(a.total_marks) === 1 ? 'mark' : 'marks' }}</span>
+                </p>
+              </div>
             </div>
 
-            <div class="flex items-center justify-between sm:justify-end gap-3 flex-shrink-0">
-              <!-- Marked: the score; otherwise when it's due -->
-              <div v-if="a.status === 'marked' && a.submission" class="text-right">
+            <!-- On a wide screen the teacher and the marks get columns of their own, so the row reads straight across -->
+            <div class="hidden xl:flex items-center gap-2 w-52 flex-shrink-0 min-w-0">
+              <span class="w-7 h-7 flex-shrink-0 rounded-full flex items-center justify-center text-[10px] font-bold bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ initials(a.teacher_name) }}</span>
+              <div class="min-w-0">
+                <p class="text-[10px] uppercase tracking-wide text-gray-400">Teacher</p>
+                <p class="text-xs font-medium text-gray-700 dark:text-gray-200 truncate">{{ a.teacher_name || '-' }}</p>
+              </div>
+            </div>
+            <div class="hidden xl:block w-20 flex-shrink-0 text-center">
+              <p class="text-[10px] uppercase tracking-wide text-gray-400">Marks</p>
+              <p class="text-sm font-bold tabular-nums text-gray-800 dark:text-gray-100">{{ Number(a.total_marks) }}</p>
+            </div>
+
+            <div class="flex items-center justify-between sm:justify-end gap-3 flex-shrink-0 pl-0 sm:pl-2">
+              <div v-if="a.status === 'marked' && a.submission" class="text-right xl:w-36">
                 <p class="text-lg font-extrabold tabular-nums leading-none" :class="scoreTone(a.submission.percentage)">{{ Math.round(Number(a.submission.percentage)) }}%</p>
                 <p class="text-[10px] text-gray-400">{{ Number(a.submission.total_score) }} / {{ Number(a.total_marks) }}</p>
               </div>
-              <div v-else class="text-left sm:text-right text-[11px]">
+              <div v-else class="text-left sm:text-right text-[11px] leading-snug xl:w-36">
                 <p class="font-semibold" :class="due(a).tone">{{ due(a).label }}</p>
                 <p class="text-gray-400">{{ due(a).sub }}</p>
               </div>
 
-              <button v-if="a.status === 'new' || a.status === 'in_progress'" type="button" class="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700" @click="startAssignment(a)">
+              <button v-if="a.status === 'new' || a.status === 'in_progress'" type="button" class="inline-flex items-center justify-center gap-1.5 xl:w-28 px-4 py-2 rounded-full text-xs font-bold text-white shadow-sm transition active:scale-95" :class="a.status === 'new' ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-amber-500 hover:bg-amber-600'" @click="startAssignment(a)">
                 {{ a.status === 'new' ? 'Start' : 'Continue' }}
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
               </button>
-              <span v-else-if="a.status === 'overdue'" class="px-3 py-2 text-xs font-semibold text-rose-700 dark:text-rose-300">Closed</span>
-              <button v-else-if="a.status === 'marked'" type="button" class="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700" @click="viewResult(a)">See result</button>
-              <button v-else-if="a.status === 'submitted'" type="button" class="px-4 py-2 rounded-xl text-xs font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700" @click="viewSubmission(a)">Your answers</button>
+              <span v-else-if="a.status === 'overdue'" class="xl:w-28 text-center px-3 py-1.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">Closed</span>
+              <button v-else-if="a.status === 'marked'" type="button" class="xl:w-28 px-4 py-2 rounded-full text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm transition active:scale-95" @click="viewResult(a)">See result</button>
+              <button v-else-if="a.status === 'submitted'" type="button" class="xl:w-28 px-4 py-2 rounded-full text-xs font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition" @click="viewSubmission(a)">Your answers</button>
             </div>
           </li>
         </ul>
         <RouterLink
           v-if="!focusCard && card.items.length > CARD_FIRST"
           :to="{ path: '/student/assignments', query: { kind: card.key } }"
-          class="mt-auto flex items-center justify-center gap-1.5 py-3 border-t border-gray-100 dark:border-gray-700 text-sm font-semibold text-indigo-700 dark:text-indigo-300 hover:bg-gray-50 dark:hover:bg-gray-700/40"
+          class="flex items-center justify-center gap-1.5 py-3 border-t border-gray-100 dark:border-gray-700 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-700/40"
+          :class="CARD_LOOK[card.key].text"
         >
           Show more ({{ card.items.length - CARD_FIRST }})
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
@@ -209,10 +249,18 @@ interface StudentAssignment {
 type GroupKey = 'overdue' | 'todo' | 'started' | 'waiting' | 'marked'
 
 // Each kind's colour and icon for its card heading
-const CARD_LOOK: Record<'LOA' | 'AOI' | 'EOC', { icon: string; solid: string; glow: string; band: string; text: string }> = {
-  LOA: { icon: 'target', solid: 'bg-indigo-600', glow: 'shadow-indigo-500/30', band: 'from-indigo-50 dark:from-indigo-950/40', text: 'text-indigo-700 dark:text-indigo-300' },
-  AOI: { icon: 'bulb', solid: 'bg-violet-600', glow: 'shadow-violet-500/30', band: 'from-violet-50 dark:from-violet-950/40', text: 'text-violet-700 dark:text-violet-300' },
-  EOC: { icon: 'clipboard', solid: 'bg-amber-500', glow: 'shadow-amber-500/30', band: 'from-amber-50 dark:from-amber-950/40', text: 'text-amber-700 dark:text-amber-300' }
+const CARD_LOOK: Record<'LOA' | 'AOI' | 'EOC', { icon: string; solid: string; glow: string; soft: string; chip: string; text: string; about: string }> = {
+  LOA: { icon: 'target', solid: 'bg-indigo-600', glow: 'shadow-indigo-500/30', soft: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300', chip: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-200', text: 'text-indigo-700 dark:text-indigo-300', about: 'Short checks on each learning outcome' },
+  AOI: { icon: 'bulb', solid: 'bg-violet-600', glow: 'shadow-violet-500/30', soft: 'bg-violet-50 text-violet-600 dark:bg-violet-900/30 dark:text-violet-300', chip: 'bg-violet-100 text-violet-700 dark:bg-violet-900/50 dark:text-violet-200', text: 'text-violet-700 dark:text-violet-300', about: 'Real-life tasks that bring what you learnt together' },
+  EOC: { icon: 'clipboard', solid: 'bg-amber-500', glow: 'shadow-amber-500/30', soft: 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-300', chip: 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200', text: 'text-amber-700 dark:text-amber-300', about: 'Exams set by your teachers' }
+}
+// The coloured pill that says where a piece of work stands
+const STATUS_PILL: Record<GroupKey, string> = {
+  overdue: 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300',
+  started: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+  todo: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300',
+  waiting: 'bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300',
+  marked: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
 }
 
 const router = useRouter()
@@ -269,8 +317,21 @@ const CARDS: { key: CardKey; short: string; title: string }[] = [
   { key: 'AOI', short: 'AOI', title: 'Activities of Integration (AOI)' },
   { key: 'EOC', short: 'Exams', title: 'Exams (EOC)' }
 ]
-// Exams only show once there is one
-const shownCards = computed(() => cards.value.filter(c => c.key !== 'EOC' || c.items.length))
+// A kind shows only when it has work in it: no LOA, AOI or exam set (or left to do) means no card
+const shownCards = computed(() => cards.value.filter(c => c.items.length))
+// The little counts in a card's heading: how many overdue, in progress, to do and waiting
+const cardSummary = (items: StudentAssignment[]) => (['overdue', 'started', 'todo', 'waiting'] as GroupKey[])
+  .map(k => ({ key: k, n: items.filter(a => groupOf(a) === k).length, label: k === 'started' ? 'in progress' : k === 'waiting' ? 'waiting' : GROUP_META[k].title.toLowerCase(), dot: GROUP_META[k].dot }))
+  .filter(x => x.n)
+// A teacher's initials for the small round badge
+const initials = (name?: string | null) => (name || '').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]!.toUpperCase()).join('') || '?'
+// The deadline's month and day, for the calendar tile
+const dueParts = (a: StudentAssignment) => {
+  const t = at(a.due_date)
+  if (isNaN(t)) return null
+  const d = new Date(t)
+  return { month: d.toLocaleDateString(undefined, { month: 'short' }), day: d.getDate() }
+}
 // Marked work leaves the cards for "Finished work"; the most recently set first
 const CARD_FIRST = 6
 const recentFirst = (x: StudentAssignment, y: StudentAssignment) =>
