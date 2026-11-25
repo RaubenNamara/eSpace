@@ -93,11 +93,8 @@
                 </template>
                 <AppIcon v-else name="clock" class="w-5 h-5" />
               </span>
-              <div class="min-w-0 flex-1">
-                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold" :class="STATUS_PILL[groupOf(a)]">
-                  <span class="w-1.5 h-1.5 rounded-full" :class="GROUP_META[groupOf(a)].dot"></span>{{ GROUP_META[groupOf(a)].title }}
-                </span>
-                <p class="mt-1 text-sm font-semibold text-gray-900 dark:text-white truncate group-hover:text-indigo-700 dark:group-hover:text-indigo-300 transition-colors">{{ a.title }}</p>
+              <div class="min-w-0 flex-1">
+                <p class="text-sm font-semibold text-gray-900 dark:text-white truncate group-hover:text-indigo-700 dark:group-hover:text-indigo-300 transition-colors">{{ a.title }}</p>
                 <p class="mt-0.5 flex items-center gap-1.5 min-w-0 text-[11px] text-gray-500 dark:text-gray-400">
                   <span v-if="a.subject_name" class="flex-shrink-0 px-1.5 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700 font-semibold text-gray-600 dark:text-gray-300">{{ a.subject_name }}</span>
                   <span class="truncate xl:hidden"><template v-if="a.teacher_name">{{ a.teacher_name }} · </template>{{ Number(a.total_marks) }} {{ Number(a.total_marks) === 1 ? 'mark' : 'marks' }}</span>
@@ -125,7 +122,6 @@
               </div>
               <div v-else class="text-left sm:text-right text-[11px] leading-snug xl:w-36">
                 <p class="font-semibold" :class="due(a).tone">{{ due(a).label }}</p>
-                <p class="text-gray-400">{{ due(a).sub }}</p>
               </div>
 
               <button v-if="a.status === 'new' || a.status === 'in_progress'" type="button" class="inline-flex items-center justify-center gap-1.5 xl:w-28 px-4 py-2 rounded-full text-xs font-bold text-white shadow-sm transition active:scale-95" :class="a.status === 'new' ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-amber-500 hover:bg-amber-600'" @click="startAssignment(a)">
@@ -253,14 +249,6 @@ const CARD_LOOK: Record<'LOA' | 'AOI' | 'EOC', { icon: string; solid: string; gl
   LOA: { icon: 'target', solid: 'bg-indigo-600', glow: 'shadow-indigo-500/30', soft: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300', chip: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-200', text: 'text-indigo-700 dark:text-indigo-300', about: 'Short checks on each learning outcome' },
   AOI: { icon: 'bulb', solid: 'bg-violet-600', glow: 'shadow-violet-500/30', soft: 'bg-violet-50 text-violet-600 dark:bg-violet-900/30 dark:text-violet-300', chip: 'bg-violet-100 text-violet-700 dark:bg-violet-900/50 dark:text-violet-200', text: 'text-violet-700 dark:text-violet-300', about: 'Real-life tasks that bring what you learnt together' },
   EOC: { icon: 'clipboard', solid: 'bg-amber-500', glow: 'shadow-amber-500/30', soft: 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-300', chip: 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200', text: 'text-amber-700 dark:text-amber-300', about: 'Exams set by your teachers' }
-}
-// The coloured pill that says where a piece of work stands
-const STATUS_PILL: Record<GroupKey, string> = {
-  overdue: 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300',
-  started: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
-  todo: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300',
-  waiting: 'bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300',
-  marked: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
 }
 
 const router = useRouter()
