@@ -421,7 +421,13 @@ function build() {
       }
       canvasResizeObserver = new ResizeObserver(() => {
         const { w, h } = wantedSize()
-        if (canvasEl.width !== w || canvasEl.height !== h) flip?.update()
+        // PageFlip.update() only re-lays out the pages - it never re-sizes the canvas (that's the
+        // UI's resizeCanvas), so a book that grew without a rebuild (going into Read Mode) kept
+        // its old, smaller bitmap and drew part of the spread as a black patch
+        if (canvasEl.width !== w || canvasEl.height !== h) {
+          ui?.resizeCanvas()
+          flip?.update()
+        }
       })
       canvasResizeObserver.observe(canvasEl)
       const ctx = canvasEl.getContext('2d')

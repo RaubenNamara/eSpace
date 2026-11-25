@@ -6,30 +6,29 @@
   >
     <div
       class="bg-white dark:bg-gray-800 w-full h-full shadow-2xl overflow-hidden flex flex-col"
-      :class="readMode ? '' : 'lg:h-[98vh] lg:max-w-7xl lg:rounded-2xl'"
+      :class="readMode ? '' : 'lg:h-[98vh] lg:max-w-[min(97vw,1760px)] lg:rounded-2xl'"
     >
       <!-- Header - hidden entirely in Read Mode, replaced by floating overlay controls. -->
-      <div v-if="!readMode" class="relative flex-shrink-0 bg-emerald-600 px-3 sm:px-6 py-2 sm:py-3">
-        <div class="flex items-start justify-between gap-3">
-          <div class="min-w-0 flex-1">
-            <h2 class="text-sm sm:text-lg font-bold text-white leading-tight truncate">{{ book.title }}</h2>
-            <div class="flex flex-wrap items-center gap-2 mt-0.5 text-xs text-emerald-100">
-              <span v-if="book.subject_name" class="px-2 py-0.5 rounded-full bg-white/20 font-medium">{{ book.subject_name }}</span>
-              <span v-if="teacherName" class="truncate">By {{ teacherName }}</span>
-            </div>
+      <div v-if="!readMode" class="relative flex-shrink-0 bg-[#f8f0dc] dark:bg-gray-800 border-b border-[#ecdfbd] dark:border-gray-700 px-3 sm:px-5 py-1.5">
+        <!-- One slim row: title, subject, progress and the buttons - the book gets the height -->
+        <div class="flex items-center justify-between gap-3">
+          <div class="min-w-0 flex-1 flex items-center gap-x-3 gap-y-0.5 flex-wrap">
+            <h2 class="min-w-0 max-w-full sm:max-w-[45%] text-sm sm:text-base font-bold text-[#061a55] dark:text-white leading-tight truncate">{{ book.title }}</h2>
+            <span v-if="book.subject_name" class="flex-shrink-0 px-2 py-0.5 rounded-full bg-[#ecdfbd] dark:bg-gray-700 text-[11px] font-medium text-[#6b5a35] dark:text-gray-300">{{ book.subject_name }}</span>
+            <span v-if="teacherName" class="hidden xl:inline text-xs text-[#6b5a35] dark:text-gray-300 truncate">By {{ teacherName }}</span>
             <!-- Reading progress - same "status readout sharing the title's own bar" pattern as
                  the AI Tutor widget in the eNotes reader, so it's visible without looking down at
                  the footer controls. -->
-            <div v-if="bookImages.length > 0" class="hidden sm:flex items-center gap-2 mt-1.5 max-w-xs">
-              <div class="relative flex-1 h-1.5 rounded-full bg-white/20 overflow-hidden">
+            <div v-if="bookImages.length > 0" class="hidden sm:flex items-center gap-2 w-44 flex-shrink-0">
+              <div class="relative flex-1 h-1.5 rounded-full bg-[#ecdfbd] dark:bg-gray-700 overflow-hidden">
                 <!-- where the reader is -->
-                <div class="absolute inset-y-0 left-0 bg-white rounded-full transition-all" :style="{ width: `${(currentPage / totalPages) * 100}%` }"></div>
+                <div class="absolute inset-y-0 left-0 bg-[#061a55] dark:bg-white rounded-full transition-all" :style="{ width: `${(currentPage / totalPages) * 100}%` }"></div>
               </div>
-              <span class="text-[11px] text-emerald-100 flex-shrink-0">{{ currentPage }}/{{ totalPages }}</span>
+              <span class="text-[11px] text-[#6b5a35] dark:text-gray-300 flex-shrink-0">{{ currentPage }}/{{ totalPages }}</span>
             </div>
             <!-- The book opens after page 1 with every other page as a loading placeholder; pages are
                  drawn as the reader gets near them - this shows while some are being drawn. -->
-            <div v-if="bookImagesLoadingMore" class="flex items-center gap-1.5 mt-1 text-[11px] text-emerald-100">
+            <div v-if="bookImagesLoadingMore" class="hidden md:flex items-center gap-1.5 text-[11px] text-[#6b5a35] dark:text-gray-300">
               <svg class="w-3 h-3 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
@@ -43,7 +42,7 @@
             <button
               v-if="bookImages.length > 0 && canReadMode"
               @click="enterReadMode"
-              class="flex items-center gap-1.5 px-3 py-2 bg-white text-emerald-700 font-medium text-sm rounded-lg hover:bg-emerald-50 transition-colors shadow-sm"
+              class="flex items-center gap-1.5 px-3 py-1.5 bg-[#061a55] text-white font-medium text-sm rounded-lg hover:bg-[#0b2a7a] transition-colors shadow-sm"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
@@ -56,26 +55,26 @@
                  when the base size isn't big enough. -->
             <!-- Zoom and fullscreen are left off phones so the title and the close button fit
                  (Read Mode gives the whole screen there) -->
-            <div v-if="bookImages.length > 0" class="hidden sm:flex items-center bg-white/10 rounded-lg">
+            <div v-if="bookImages.length > 0" class="hidden sm:flex items-center bg-white dark:bg-gray-700 ring-1 ring-[#ecdfbd] dark:ring-gray-600 rounded-lg">
               <button
                 @click="zoomOut"
                 :disabled="zoomLevel <= MIN_ZOOM"
-                class="p-2 rounded-lg hover:bg-white/25 transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
+                class="p-1.5 rounded-lg hover:bg-[#fff8e8] dark:hover:bg-gray-600 transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
                 title="Zoom out"
               >
-                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-5 h-5 text-[#061a55] dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11h6"></path>
                 </svg>
               </button>
-              <span v-if="zoomLevel > MIN_ZOOM" class="text-xs text-white/90 font-medium px-0.5 min-w-[2.5rem] text-center select-none">{{ Math.round(zoomLevel * 100) }}%</span>
+              <span v-if="zoomLevel > MIN_ZOOM" class="text-xs text-[#061a55] dark:text-white font-medium px-0.5 min-w-[2.5rem] text-center select-none">{{ Math.round(zoomLevel * 100) }}%</span>
               <button
                 @click="zoomIn"
                 :disabled="zoomLevel >= MAX_ZOOM"
-                class="p-2 rounded-lg hover:bg-white/25 transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
+                class="p-1.5 rounded-lg hover:bg-[#fff8e8] dark:hover:bg-gray-600 transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
                 title="Zoom in"
               >
-                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-5 h-5 text-[#061a55] dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 8v6M8 11h6"></path>
                 </svg>
@@ -86,13 +85,13 @@
             <button
               v-if="bookImages.length > 0"
               @click="preferSinglePage = !preferSinglePage"
-              class="hidden lg:flex p-2 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
+              class="hidden lg:flex p-1.5 rounded-lg bg-white dark:bg-gray-700 ring-1 ring-[#ecdfbd] dark:ring-gray-600 hover:bg-[#fff8e8] dark:hover:bg-gray-600 transition-colors"
               :title="preferSinglePage ? 'Switch to two-page view' : 'Switch to single-page view'"
             >
-              <svg v-if="preferSinglePage" class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg v-if="preferSinglePage" class="w-5 h-5 text-[#061a55] dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <rect x="7" y="4" width="10" height="16" rx="1" stroke-width="2"></rect>
               </svg>
-              <svg v-else class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg v-else class="w-5 h-5 text-[#061a55] dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <rect x="3" y="4" width="8" height="16" rx="1" stroke-width="2"></rect>
                 <rect x="13" y="4" width="8" height="16" rx="1" stroke-width="2"></rect>
               </svg>
@@ -100,13 +99,13 @@
             <button
               v-if="bookImages.length > 0"
               @click="isMuted = !isMuted"
-              class="p-2 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
+              class="p-1.5 rounded-lg bg-white dark:bg-gray-700 ring-1 ring-[#ecdfbd] dark:ring-gray-600 hover:bg-[#fff8e8] dark:hover:bg-gray-600 transition-colors"
               :title="isMuted ? 'Unmute page-turn sound' : 'Mute page-turn sound'"
             >
-              <svg v-if="isMuted" class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg v-if="isMuted" class="w-5 h-5 text-[#061a55] dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M11 5L6 9H2v6h4l5 4V5z"></path>
               </svg>
-              <svg v-else class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg v-else class="w-5 h-5 text-[#061a55] dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5L6 9H2v6h4l5 4V5z"></path>
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.54 8.46a5 5 0 010 7.07M18.36 5.64a9 9 0 010 12.73"></path>
               </svg>
@@ -114,10 +113,10 @@
             <button
               v-if="bookImages.length > 0"
               @click="toggleFullscreen"
-              class="hidden sm:flex p-2 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
+              class="hidden sm:flex p-1.5 rounded-lg bg-white dark:bg-gray-700 ring-1 ring-[#ecdfbd] dark:ring-gray-600 hover:bg-[#fff8e8] dark:hover:bg-gray-600 transition-colors"
               title="Fullscreen"
             >
-              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-5 h-5 text-[#061a55] dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4"></path>
               </svg>
             </button>
@@ -125,10 +124,10 @@
             <div v-if="bookImages.length > 0" class="relative">
               <button
                 @click="showTintPanel = !showTintPanel"
-                class="p-2 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
+                class="p-1.5 rounded-lg bg-white dark:bg-gray-700 ring-1 ring-[#ecdfbd] dark:ring-gray-600 hover:bg-[#fff8e8] dark:hover:bg-gray-600 transition-colors"
                 title="Reading focus color"
               >
-                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-5 h-5 text-[#061a55] dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h10a2 2 0 002-2v-4a2 2 0 00-2-2h-2.5"></path>
                 </svg>
               </button>
@@ -153,21 +152,21 @@
             <button
               v-if="bookImages.length > 0 && notesEnabled"
               @click="toggleFirstNote"
-              class="p-2 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
-              :class="{ 'ring-2 ring-white/50': anyNoteOpen }"
+              class="p-1.5 rounded-lg bg-white dark:bg-gray-700 ring-1 ring-[#ecdfbd] dark:ring-gray-600 hover:bg-[#fff8e8] dark:hover:bg-gray-600 transition-colors"
+              :class="{ 'ring-2 ring-[#061a55]/40': anyNoteOpen }"
               title="My notes for this page"
             >
-              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-5 h-5 text-[#061a55] dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
               </svg>
             </button>
             <button
               v-if="bookImages.length > 0"
               @click="showToc = !showToc"
-              class="p-2 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
+              class="p-1.5 rounded-lg bg-white dark:bg-gray-700 ring-1 ring-[#ecdfbd] dark:ring-gray-600 hover:bg-[#fff8e8] dark:hover:bg-gray-600 transition-colors"
               title="Contents"
             >
-              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-5 h-5 text-[#061a55] dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
               </svg>
             </button>
@@ -175,18 +174,18 @@
               v-if="allowDownload"
               :href="pdfUrl"
               download
-              class="p-2 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
+              class="p-1.5 rounded-lg bg-white dark:bg-gray-700 ring-1 ring-[#ecdfbd] dark:ring-gray-600 hover:bg-[#fff8e8] dark:hover:bg-gray-600 transition-colors"
               title="Download"
             >
-              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-5 h-5 text-[#061a55] dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"></path>
               </svg>
             </a>
             <button
               @click="$emit('close')"
-              class="p-2 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
+              class="p-1.5 rounded-lg bg-white dark:bg-gray-700 ring-1 ring-[#ecdfbd] dark:ring-gray-600 hover:bg-[#fff8e8] dark:hover:bg-gray-600 transition-colors"
             >
-              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-5 h-5 text-[#061a55] dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
             </button>
@@ -206,7 +205,7 @@
              scrolls to - inside the scrolling area it scrolled away with the top of the page. -->
         <div class="relative flex-1 min-w-0 flex">
         <div
-          class="relative flex-1 min-w-0 p-0 lg:p-3 bg-gray-200 dark:bg-gray-900"
+          class="relative flex-1 min-w-0 p-0 bg-gray-200 dark:bg-gray-900"
           :class="[
             zoomLevel > MIN_ZOOM ? 'overflow-auto' : 'overflow-hidden flex justify-center items-center',
             // Read Mode fallback: the book is sized to fit the screen exactly, but a scrollbar
@@ -228,7 +227,8 @@
           </div>
           <div
             v-else
-            class="w-full h-full flex justify-center items-center px-3 py-4 sm:px-5 sm:py-5 transition-transform duration-200"
+            ref="bookAreaRef"
+            class="w-full h-full flex justify-center items-center px-3 py-3 sm:px-4 sm:py-4 transition-transform duration-200"
             :style="{ transform: `scale(${zoomLevel})`, transformOrigin: zoomLevel > MIN_ZOOM ? 'top center' : 'center' }"
           >
             <BookFlipbook
@@ -239,6 +239,7 @@
               :start-page="currentPage - 1"
               :muted="isMuted"
               :prefer-single-page="preferSinglePage"
+              :style="bookFitStyle"
               class="max-w-full max-h-full transition-shadow duration-300 hover:drop-shadow-2xl"
               @flip="onFlip"
               @orientation="bookOrientation = $event"
@@ -497,6 +498,37 @@ const noteSaveTimers: Record<number, ReturnType<typeof setTimeout>> = {}
 // the two-page view the left page and the right page (the cover and a lone last page show on
 // just one side). page-flip reports the left page of a spread as the current page.
 const bookOrientation = ref<'portrait' | 'landscape'>('landscape')
+
+// The space the book has, and the book's size within it: as wide as fits, but never taller than
+// the space (page-flip works out the height from the width, so a tall page in a wide reader would
+// otherwise run off the bottom). Room is left for the cover board around the pages.
+const bookAreaRef = ref<HTMLElement | null>(null)
+const bookArea = ref({ w: 0, h: 0 })
+let bookAreaObserver: ResizeObserver | null = null
+watch(bookAreaRef, el => {
+  bookAreaObserver?.disconnect()
+  if (!el) return
+  const read = () => {
+    const cs = getComputedStyle(el)
+    bookArea.value = {
+      w: el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight),
+      h: el.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)
+    }
+  }
+  bookAreaObserver = new ResizeObserver(read)
+  bookAreaObserver.observe(el)
+  read()
+})
+onBeforeUnmount(() => bookAreaObserver?.disconnect())
+const BOARD_ROOM = 20
+const bookFitStyle = computed(() => {
+  const { w, h } = bookArea.value
+  if (!bookPageWidth.value || !bookPageHeight.value || w <= 0 || h <= 0) return {}
+  const pagesShown = bookOrientation.value === 'portrait' ? 1 : 2
+  const ratio = (bookPageWidth.value / bookPageHeight.value) * pagesShown
+  const width = Math.max(200, Math.min(w - BOARD_ROOM, Math.floor((h - BOARD_ROOM) * ratio)))
+  return { width: `${width}px`, height: `${Math.round(width / ratio)}px` }
+})
 const NOTE_GAP = '12px'
 const noteSlots = computed(() => {
   const page = currentPage.value
@@ -853,11 +885,8 @@ const enterReadMode = () => {
   viewerRef.value?.requestFullscreen?.().catch(() => {})
 }
 
-const stopWaitingForBook = watch(() => bookImages.value.length, (count) => {
-  if (!count) return
-  if (props.startInReadMode && canReadMode.value && !readMode.value) enterReadMode()
-  stopWaitingForBook()
-})
+// "Start reading" on the shelf (startInReadMode) opens the book in this normal view - the
+// student sees the whole page in the book first; the Read button gives the whole-screen Read Mode
 
 const exitReadMode = () => {
   readMode.value = false
