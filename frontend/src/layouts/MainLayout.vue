@@ -23,11 +23,25 @@
           title="Close menu"
           @click="sidebarOpen = false"
         >
-          <img v-if="isIconOnly" src="/favicon.svg" alt="" class="w-9 h-9 rounded-xl">
-          <span v-else class="block min-w-0">
-            <span class="block leading-none"><Wordmark size="md" /></span>
-            <span class="block font-nav text-[10.5px] font-semibold uppercase tracking-[0.16em] text-gold-300/90 leading-tight mt-1.5">{{ consoleName }}</span>
-          </span>
+          <!-- The school's own crest and name (Admin > Settings) - each school sees only itself. A
+               school that has not set them yet shows the Tusome word logo. -->
+          <template v-if="school?.name">
+            <span class="school-crest" :class="isIconOnly ? 'w-10 h-10' : 'w-11 h-11'">
+              <img v-if="school.logo" :src="resolveAssetUrl(school.logo)" alt="" class="w-full h-full object-contain">
+              <span v-else class="school-crest-initials">{{ schoolInitials }}</span>
+            </span>
+            <span v-if="!isIconOnly" class="block min-w-0">
+              <span class="school-name block">{{ school.name }}</span>
+              <span class="block font-nav text-[10px] font-semibold uppercase tracking-[0.16em] text-gold-300/90 leading-tight mt-1">{{ consoleName }}</span>
+            </span>
+          </template>
+          <template v-else>
+            <img v-if="isIconOnly" src="/favicon.svg" alt="" class="w-9 h-9 rounded-xl">
+            <span v-else class="block min-w-0">
+              <span class="block leading-none"><Wordmark size="md" /></span>
+              <span class="block font-nav text-[10.5px] font-semibold uppercase tracking-[0.16em] text-gold-300/90 leading-tight mt-1.5">{{ consoleName }}</span>
+            </span>
+          </template>
         </button>
       </div>
 
@@ -64,17 +78,13 @@
         </ul>
       </nav>
 
-      <!-- Under the menu, where the sidebar is tall enough: the robot and its line for learners, a
-           quote with a gold sweep under it for staff -->
-      <div v-if="!isIconOnly" class="student-mascot" aria-hidden="true">
-        <template v-if="menuRole === 'student'">
-          <img src="/images/student-mascot.webp" alt="">
-          <p>{{ mascotLine }}</p>
+      <!-- Under the menu: the school's own motto (when it has one), and Tusome, the system it runs on -->
+      <div v-if="!isIconOnly" class="sidebar-foot-note">
+        <template v-if="school?.motto">
+          <span class="sidebar-rule" aria-hidden="true"></span>
+          <p class="sidebar-motto">{{ school.motto }}</p>
         </template>
-        <template v-else>
-          <p class="mascot-quote">{{ mascotQuote }}</p>
-          <svg class="mascot-sweep" viewBox="0 0 120 14" aria-hidden="true"><path d="M4 11C34 3 74 1 116 4" fill="none" stroke="#f5b301" stroke-width="3" stroke-linecap="round" /></svg>
-        </template>
+        <p v-if="school?.name" class="sidebar-on-tusome">on <Wordmark size="sm" light /></p>
       </div>
 
       <!-- Footer -->
@@ -163,7 +173,17 @@
       >
         <div class="flex items-center justify-between px-3 sm:px-6 py-2.5 sm:py-3">
           <div class="flex items-center gap-2 flex-shrink-0">
-            <RouterLink v-if="showStudentTabs" to="/student/dashboard" class="lg:hidden leading-none" aria-label="Tusome home"><Wordmark size="sm" /></RouterLink>
+            <!-- a learner's phone: their school's own crest and name (the Tusome logo for a school that has not set them) -->
+            <RouterLink v-if="showStudentTabs" to="/student/dashboard" class="lg:hidden leading-none flex items-center gap-2 min-w-0" :aria-label="school?.name ? `${school.name} - home` : 'Tusome home'">
+              <template v-if="school?.name">
+                <span class="school-crest w-8 h-8 !p-0.5">
+                  <img v-if="school.logo" :src="resolveAssetUrl(school.logo)" alt="" class="w-full h-full object-contain">
+                  <span v-else class="school-crest-initials !text-[0.8rem]">{{ schoolInitials }}</span>
+                </span>
+                <span class="topbar-school-name">{{ school.name }}</span>
+              </template>
+              <Wordmark v-else size="sm" />
+            </RouterLink>
             <!-- shown only while the sidebar is closed (the sidebar has its own close button) -->
             <button
               v-if="!sidebarOpen"
@@ -581,6 +601,7 @@ import { usePersistedRef } from '@/composables/usePersistedRef'
 import { usePublicationsAccess } from '@/composables/usePublicationsAccess'
 import { useReportCardAccess } from '@/composables/useReportCardAccess'
 import Wordmark from '@/components/brand/Wordmark.vue'
+import { useSchoolIdentity } from '@/composables/useSchoolIdentity'
 import { SUPPORT_EMAIL } from '@/data/site'
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { HUBS, type Hub, type HubTab } from '@/data/navHubs'
@@ -891,8 +912,7 @@ const roleName = computed(() => {
   const name = r.replace(/_/g, ' ')
   return name.charAt(0).toUpperCase() + name.slice(1)
 })
-const mascotQuote = computed(() => (menuRole.value === 'admin' || menuRole.value === 'super_admin' ? '"Lead Today, Transform Tomorrow"' : '"Teach Today, Transform Tomorrow"'))
-const mascotLine = computed(() => (menuRole.value === 'student' ? 'Learn · Practice · Excel' : menuRole.value === 'teacher' || menuRole.value === 'hod' ? 'Teach · Inspire · Excel' : 'Lead · Support · Excel'))
+const { identity: school, initials: schoolInitials, reset: resetSchool } = useSchoolIdentity()
 const consoleName = computed(() => (menuRole.value === 'student' ? 'Student portal' : `${roleName.value} console`))
 const activeRole = computed(() => authStore.activeRole || authStore.userRole || 'Guest')
 const hasDualRoles = computed(() => authStore.hasDualRoles)
@@ -1023,6 +1043,7 @@ function toggleTheme() {
 
 async function handleLogout() {
   await authStore.logout()
+  resetSchool()
   router.push('/login')
 }
 

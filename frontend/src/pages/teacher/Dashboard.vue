@@ -7,7 +7,7 @@
     <SkyHeader :period="dayPeriod" :narrow="narrowSky">
     <header class="flex flex-col sm:flex-row sm:items-end gap-x-3 gap-y-2">
       <div class="min-w-0 flex-1">
-        <p class="sky-sub text-sm font-semibold text-indigo-600 dark:text-indigo-300">{{ todayLabel }}</p>
+        <p class="sky-sub text-sm font-semibold text-indigo-600 dark:text-indigo-300 sm:truncate">{{ todayLabel }}<span v-if="termLine" class="max-sm:block"><span class="max-sm:hidden"> · </span>{{ termLine }}</span></p>
         <h1 class="sky-text font-heading text-2xl sm:text-[1.8rem] font-bold text-gray-900 dark:text-white truncate">{{ greeting }}, {{ firstName }}</h1>
       </div>
       <div class="flex flex-wrap items-center gap-2">
@@ -90,7 +90,7 @@
 
         <!-- Shortcuts to the main modules -->
         <section class="dash-box">
-          <h2 class="dash-bar">Jump in</h2>
+          <h2 class="dash-bar">Quick links</h2>
           <TransitionGroup tag="nav" name="dash-pop" class="grid grid-cols-4 gap-1 sm:gap-2 p-2 sm:p-3" aria-label="Shortcuts">
             <RouterLink v-for="s in shortcuts" :key="s.to" :to="s.to" class="group flex flex-col items-center gap-1.5 rounded-xl py-2.5 px-1 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition min-w-0">
               <span class="w-11 h-11 rounded-2xl flex items-center justify-center bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100 dark:bg-indigo-950/50 dark:text-indigo-300 dark:ring-indigo-900 group-hover:bg-indigo-600 group-hover:text-white transition"><AppIcon :name="s.icon" class="w-5 h-5" /></span>
@@ -327,6 +327,7 @@ import { ref, onMounted, computed } from 'vue'
 import NoticesTicker from '@/components/dashboard/NoticesTicker.vue'
 import UsageStatCards from '@/components/dashboard/teacher/UsageStatCards.vue'
 import SkyHeader from '@/components/dashboard/SkyHeader.vue'
+import { useSchoolIdentity } from '@/composables/useSchoolIdentity'
 import { useDayPeriod } from '@/composables/useDayPeriod'
 import AppIcon from '@/components/common/AppIcon.vue'
 import MyUsage from '@/components/dashboard/teacher/MyUsage.vue'
@@ -393,6 +394,7 @@ const firstName = computed(() => {
   const n = overview.value?.teacher.first_name || authStore.userName || ''
   return n === n.toUpperCase() ? n.charAt(0) + n.slice(1).toLowerCase() : n
 })
+const { termLine } = useSchoolIdentity()
 const todayLabel = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
 
 // ---- each card shows a few, and opens up to show the rest

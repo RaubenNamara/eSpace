@@ -147,6 +147,7 @@ import { ref, onMounted } from 'vue'
 import apiService from '@/services/api'
 import { resolveAssetUrl } from '@/utils/url'
 import { useToastStore } from '@/stores/toast'
+import { useSchoolIdentity } from '@/composables/useSchoolIdentity'
 
 // A logo whose file is missing (e.g. a copied database) shows the empty logo box, not a broken picture
 const logoBroken = ref(false)
@@ -222,6 +223,9 @@ const fetchSettings = async () => {
   }
 }
 
+// the sidebar and dashboards show the school's name, motto and crest: refresh them after a save
+const { reload: reloadSchool } = useSchoolIdentity()
+
 const saveSettings = async () => {
   saving.value = true
   try {
@@ -237,6 +241,7 @@ const saveSettings = async () => {
     })
     if (response.data.success) {
       showSuccess('School settings saved')
+      reloadSchool()
     } else {
       toast.error(response.data.message || 'Failed to save settings')
     }
@@ -264,6 +269,7 @@ const handleLogoSelect = async (event: Event) => {
       settings.value.logo_path = response.data.data.logo_path
       logoBroken.value = false
       showSuccess('Logo updated')
+      reloadSchool()
     } else {
       toast.error(response.data.message || 'Failed to upload logo')
     }

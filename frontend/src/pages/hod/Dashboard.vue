@@ -8,7 +8,7 @@
     <SkyHeader :period="dayPeriod" :narrow="narrowSky">
     <header class="flex flex-col sm:flex-row sm:items-end gap-x-3 gap-y-2">
       <div class="min-w-0 flex-1">
-        <p class="sky-sub text-sm font-semibold text-indigo-600 dark:text-indigo-300">{{ todayLabel }}</p>
+        <p class="sky-sub text-sm font-semibold text-indigo-600 dark:text-indigo-300 sm:truncate">{{ todayLabel }}<span v-if="termLine" class="max-sm:block"><span class="max-sm:hidden"> · </span>{{ termLine }}</span></p>
         <h1 class="sky-text font-heading text-2xl sm:text-[1.8rem] font-bold text-gray-900 dark:text-white truncate">{{ greeting }}, {{ firstName }}</h1>
       </div>
       <div class="flex flex-wrap items-center gap-2">
@@ -55,7 +55,7 @@
 
         <!-- Shortcuts -->
         <section class="dash-box">
-          <h2 class="dash-bar">Jump in</h2>
+          <h2 class="dash-bar">Quick links</h2>
           <TransitionGroup tag="nav" name="dash-pop" class="grid grid-cols-4 gap-1 sm:gap-2 p-2 sm:p-3" aria-label="Shortcuts">
             <RouterLink v-for="q in QUICK" :key="q.to" :to="q.to" class="group flex flex-col items-center gap-1.5 rounded-xl py-2.5 px-1 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition min-w-0">
               <span class="w-11 h-11 rounded-2xl flex items-center justify-center bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100 dark:bg-indigo-950/50 dark:text-indigo-300 dark:ring-indigo-900 group-hover:bg-indigo-600 group-hover:text-white transition"><AppIcon :name="q.icon" class="w-5 h-5" /></span>
@@ -119,6 +119,7 @@ import AppIcon from '@/components/common/AppIcon.vue'
 import NoticesTicker from '@/components/dashboard/NoticesTicker.vue'
 import UsageStatCards from '@/components/dashboard/teacher/UsageStatCards.vue'
 import SkyHeader from '@/components/dashboard/SkyHeader.vue'
+import { useSchoolIdentity } from '@/composables/useSchoolIdentity'
 import TeacherWorkChart from '@/components/dashboard/hod/TeacherWorkChart.vue'
 import { useDayPeriod } from '@/composables/useDayPeriod'
 import { initials, niceName, timeAgo } from '@/components/dashboard/teacher/time'
@@ -149,6 +150,7 @@ const firstName = computed(() => niceName(String(authStore.userName || '').split
 // the greeting and the banner's sky follow the time of day together
 const { period: dayPeriod, narrow: narrowSky, greeting } = useDayPeriod()
 const usageDays = ref<7 | 30>(30)
+const { termLine } = useSchoolIdentity()
 const todayLabel = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
 
 const stats = ref<Stats | null>(null)

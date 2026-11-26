@@ -97,14 +97,21 @@
           <div class="wa-chat-bg flex-1 overflow-y-auto px-4 py-4 space-y-0.5">
             <div v-if="loadingMessages" class="text-center py-8 text-gray-400 text-sm">Loading messages...</div>
             <template v-else>
-              <MessageBubble
-                v-for="msg in messages"
-                :key="msg.id"
-                :message="msg"
-                :show-sender-name="true"
-                :read-only="true"
-                @preview-image="previewImage = $event"
-              />
+              <!-- who sent each message: a name and a small avatar on the first of each sender's run,
+                   as the members see it (the bubble only names a sender on that first message) -->
+              <template v-for="row in messageRows" :key="row.msg.id">
+                <div v-if="row.day" class="flex justify-center my-3">
+                  <span class="px-3 py-1.5 rounded-lg text-[12.5px] bg-[var(--wa-date)] text-[var(--wa-muted)] shadow-sm">{{ row.day }}</span>
+                </div>
+                <MessageBubble
+                  :message="row.msg"
+                  :tail="row.tail"
+                  :show-avatar="row.tail"
+                  :show-sender-name="true"
+                  :read-only="true"
+                  @preview-image="previewImage = $event"
+                />
+              </template>
               <p v-if="messages.length === 0" class="text-center text-sm text-gray-400 py-8">No messages in this chat yet.</p>
             </template>
           </div>
@@ -152,6 +159,25 @@ const loadingMessages = ref(false)
 const previewImage = ref<string | null>(null)
 const departments = ref<{ id: number; name: string }[]>([])
 const departmentFilter = ref('')
+
+// each message with a day chip when the day changes, and whether it starts a sender's run (tail):
+// the bubble names its sender only on the first message of a run
+const dayKey = (s: string) => new Date(s.replace(' ', 'T')).toDateString()
+const dayLabel = (s: string) => {
+  const d = new Date(s.replace(' ', 'T'))
+  const today = new Date()
+  const yesterday = new Date(); yesterday.setDate(today.getDate() - 1)
+  if (d.toDateString() === today.toDateString()) return 'Today'
+  if (d.toDateString() === yesterday.toDateString()) return 'Yesterday'
+  if (today.getTime() - d.getTime() < 6 * 86400000) return d.toLocaleDateString('en-US', { weekday: 'long' })
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+const messageRows = computed(() => messages.value.map((msg, i) => {
+  const prev = messages.value[i - 1]
+  const newDay = !prev || dayKey(prev.created_at) !== dayKey(msg.created_at)
+  const sameSender = !!prev && prev.sender_id === msg.sender_id && prev.sender_role === msg.sender_role
+  return { msg, day: newDay ? dayLabel(msg.created_at) : '', tail: newDay || !sameSender }
+}))
 
 // which kind of chat the list shows
 type Kind = 'all' | 'class' | 'group' | 'direct'
