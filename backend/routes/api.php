@@ -85,9 +85,6 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
     Router::put('/auth/password', 'eSpace\App\Controllers\AuthController@changePassword');
     Router::post('/auth/profile-photo', 'eSpace\App\Controllers\AuthController@uploadProfilePhoto');
 
-    // The signed-in user's own school (name, motto, crest) and the term and week, for the app's frame
-    Router::get('/school/identity', 'eSpace\App\Controllers\SchoolIdentityController@show');
-
     // A short-lived link to one uploaded file, for Microsoft's Office viewer
     Router::get('/files/link', 'eSpace\App\Controllers\FileLinkController@link');
 

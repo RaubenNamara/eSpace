@@ -39,7 +39,7 @@ const labs = (r: string): Hub => ({
 
 export const HUBS: Record<string, Hub[]> = {
   student: [
-    { key: 'home', label: 'Home', icon: 'DashboardIcon', tabs: [{ path: '/student/dashboard', label: 'Home', icon: 'DashboardIcon' }], also: ['/student/notices', '/student/search', '/student/settings'] },
+    { key: 'home', label: 'eClass', icon: 'DashboardIcon', tabs: [{ path: '/student/dashboard', label: 'eClass', icon: 'DashboardIcon' }], also: ['/student/notices', '/student/search', '/student/settings'] },
     {
       key: 'learn', label: 'Learn', icon: 'NoteIcon', divider: true,
       tabs: [

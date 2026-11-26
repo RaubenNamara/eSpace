@@ -10,14 +10,16 @@
       <span class="px-3 py-1 rounded-lg bg-white text-red-700 text-sm font-bold">Join</span>
     </RouterLink>
 
-    <!-- The masthead: the date, the term and week, and the greeting (the school's own crest faint on the right) -->
-    <section class="sky-header academic-mast relative overflow-hidden mb-4">
-      <img v-if="school?.logo" :src="resolveAssetUrl(school.logo)" alt="" class="mast-crest" aria-hidden="true">
-      <div class="relative px-4 sm:px-6 py-3.5 sm:py-4 flex items-center gap-3">
-        <div class="min-w-0 flex-1">
-          <p class="sky-sub text-sm font-semibold text-indigo-600 dark:text-indigo-300 sm:truncate">{{ todayLabel }}<span v-if="termLine" class="max-sm:block"><span class="max-sm:hidden"> · </span>{{ termLine }}</span></p>
-          <h1 class="sky-text font-heading text-2xl sm:text-[1.8rem] font-bold text-gray-900 dark:text-white truncate">{{ greeting }}, {{ firstName }}</h1>
+    <!-- The welcome banner -->
+    <!-- tucked up under the top bar (into the page's top padding), and kept short -->
+    <section class="sd-hero relative overflow-hidden -mt-3 sm:-mt-5 mb-4 rounded-[1.25rem] h-[108px] sm:h-[118px] xl:h-[130px] shadow-sm" :class="`sd-hero-${period}`">
+      <DaySky :period="period" :narrow="narrowSky" />
+      <div class="relative h-full flex flex-col justify-center pl-4 sm:pl-6 pr-24 sm:pr-56 xl:pr-[32%]">
+        <div class="flex min-w-0 items-center gap-2 sm:gap-3">
+          <h1 class="min-w-0 font-brand text-[1.15rem] sm:text-[1.45rem] xl:text-[1.65rem] font-extrabold tracking-tight leading-tight truncate" :class="period === 'night' ? 'text-white' : 'text-[#061a55] dark:text-white'">{{ greeting }}, {{ firstName }}!</h1>
         </div>
+        <p class="mt-0.5 font-brand text-[0.78rem] sm:text-[0.9rem] xl:text-base font-semibold leading-snug" :class="period === 'night' ? 'text-blue-50' : 'text-[#10296e] dark:text-blue-100'">{{ dayLine }}</p>
+        <p class="mt-0.5 sm:mt-1 text-[0.7rem] sm:text-[0.8rem] italic" :class="period === 'night' ? 'text-blue-200' : 'text-[#1d3a86] dark:text-blue-200'">"Small steps make big progress."</p>
       </div>
     </section>
 
@@ -117,9 +119,9 @@
           </button>
         </section>
 
-        <!-- Quick links -->
+        <!-- Jump In -->
         <section class="dash-box order-4 lg:order-none">
-          <h2 class="dash-bar"><AppIcon name="bolt" class="w-4 h-4" /> Quick links</h2>
+          <h2 class="dash-bar"><AppIcon name="bolt" class="w-4 h-4" /> Jump In</h2>
           <TransitionGroup tag="nav" name="dash-pop" class="grid grid-cols-4 xl:grid-cols-5 gap-1.5 sm:gap-2 xl:gap-1.5 min-[1800px]:gap-2 p-2.5 sm:p-3" aria-label="Shortcuts">
             <RouterLink v-for="s in shortcuts" :key="s.to" :to="s.to" class="sd-jump flex-col items-center min-w-0 lg:!px-0 lg:!py-2 min-[1800px]:!py-2.5" :class="[s.tile, s.wideOnly ? 'hidden xl:flex' : 'flex']">
               <AppIcon :name="s.icon" class="w-6 h-6 lg:w-5 lg:h-5 min-[1800px]:w-6 min-[1800px]:h-6" :class="s.ink" />
@@ -189,9 +191,7 @@ import axios from 'axios'
 import AppIcon from '@/components/common/AppIcon.vue'
 import NoticesTicker from '@/components/dashboard/NoticesTicker.vue'
 import GeneralPerformance from '@/components/dashboard/GeneralPerformance.vue'
-import type { DayPeriod } from '@/components/dashboard/DaySky.vue'
-import { useSchoolIdentity } from '@/composables/useSchoolIdentity'
-import { resolveAssetUrl } from '@/utils/url'
+import DaySky, { type DayPeriod } from '@/components/dashboard/DaySky.vue'
 import SubjectMonogram from '@/components/dashboard/SubjectMonogram.vue'
 import { useLiveRefresh } from '@/composables/useLiveRefresh'
 import { usePublicationsAccess } from '@/composables/usePublicationsAccess'
@@ -231,9 +231,13 @@ const narrowSky = ref(narrowQuery.matches)
 const onNarrow = (e: MediaQueryListEvent) => { narrowSky.value = e.matches }
 narrowQuery.addEventListener('change', onNarrow)
 onUnmounted(() => { window.clearInterval(periodTimer); narrowQuery.removeEventListener('change', onNarrow) })
-const { identity: school, termLine } = useSchoolIdentity()
-const todayLabel = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
 const greeting = computed(() => (period.value === 'morning' ? 'Good morning' : period.value === 'afternoon' ? 'Good afternoon' : 'Good evening'))
+const dayLine = computed(() => ({
+  morning: 'A fresh day to learn something new.',
+  afternoon: "Keep learning. You're doing great!",
+  evening: 'A little revision this evening goes a long way.',
+  night: "Rest well. Tomorrow's lessons are waiting.",
+})[period.value])
 const toDate = (v: string) => new Date(v.replace(' ', 'T'))
 const isToday = (d: Date) => d.toDateString() === new Date().toDateString()
 const dueText = (v: string | null) => {

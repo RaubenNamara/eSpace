@@ -1,9 +1,9 @@
 <template>
-  <!-- A dashboard's masthead: a plain, formal band (a gold rule along the top, the school's own crest
-       faint on the right) holding whatever the page puts in it - the date and term, the greeting and
-       its badges. It used to be a sky for the time of day; the name is kept so the pages need no change. -->
-  <section class="sky-header academic-mast relative overflow-hidden mb-4">
-    <img v-if="identity?.logo" :src="resolveAssetUrl(identity.logo)" alt="" class="mast-crest" aria-hidden="true">
+  <!-- A dashboard's top banner: the sky for the time of day (sun by day, moon at night) behind
+       whatever the page puts in it - the greeting, its badges and the like. -->
+  <section class="sky-header sd-hero relative overflow-hidden rounded-[1.25rem] shadow-sm mb-4 min-h-[104px] sm:min-h-[112px] flex flex-col justify-center" :class="`sd-hero-${period}`">
+    <!-- the sun or moon sits left of the badges on the right -->
+    <DaySky :period="period" :narrow="narrow" :sun-x="1090" />
     <div class="relative px-4 sm:px-6 py-3.5 sm:py-4">
       <slot />
     </div>
@@ -11,11 +11,7 @@
 </template>
 
 <script setup lang="ts">
-import type { DayPeriod } from '@/components/dashboard/DaySky.vue'
-import { useSchoolIdentity } from '@/composables/useSchoolIdentity'
-import { resolveAssetUrl } from '@/utils/url'
+import DaySky, { type DayPeriod } from '@/components/dashboard/DaySky.vue'
 
-// period / narrow are still passed by the dashboards (the greeting uses the time of day)
-defineProps<{ period?: DayPeriod; narrow?: boolean }>()
-const { identity } = useSchoolIdentity()
+defineProps<{ period: DayPeriod; narrow?: boolean }>()
 </script>
