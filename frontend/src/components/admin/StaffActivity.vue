@@ -138,7 +138,7 @@
         </div>
         <p v-else-if="data && !data.students.length" class="py-6 text-center text-sm text-gray-500 dark:text-gray-400">No student signed in {{ periodLabel }}.</p>
         <ul v-else-if="data" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-4">
-          <StudentRow v-for="st in data.students" :key="st.id" :person="st" />
+          <StudentRow v-for="st in data.students" :key="st.id" :person="st" @view="viewing = $event" />
         </ul>
         <RouterLink
           v-if="data && data.students_total > data.students.length"
@@ -147,12 +147,14 @@
         >See all {{ data.students_total }} students →</RouterLink>
       </div>
     </section>
+    <StudentActivityModal :person="viewing" :days="days" @close="viewing = null" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import apiService from '@/services/api'
+import StudentActivityModal from './StudentActivityModal.vue'
 import { periodPhrase, when, tickNow, signIns, properName, Avatar, StatusText, DeviceText, StudentRow, type SignInPerson } from './signInParts'
 
 interface Activity { type: string; label: string; title: string | null; count: number; at: string }
@@ -202,6 +204,8 @@ const search = ref('')
 const open = ref<number | null>(null)
 const openHod = ref<number | null>(null)
 const showAll = ref(false)
+/** the student whose activity is open (the eye on their row) */
+const viewing = ref<SignInPerson | null>(null)
 
 const periodLabel = computed(() => periodPhrase(days.value))
 const filteredTeachers = computed(() => {

@@ -93,7 +93,8 @@ export const DeviceText = defineComponent({
 /** one student: name and class, when last seen with how many sign-ins, the device */
 export const StudentRow = defineComponent({
   props: { person: { type: Object as PropType<SignInPerson>, required: true } },
-  setup(p) {
+  emits: ['view'],
+  setup(p, { emit }) {
     return () => h('li', { class: 'flex items-center gap-3 py-2 border-b border-gray-100 dark:border-gray-700/60 min-w-0' }, [
       h(Avatar, { person: p.person }),
       h('span', { class: 'min-w-0 flex-1' }, [
@@ -103,6 +104,19 @@ export const StudentRow = defineComponent({
         ]),
         h('span', { class: 'block text-xs text-gray-500 dark:text-gray-400 truncate' }, [h(StatusText, { person: p.person }), ` · ${signIns(p.person.logins)}`]),
         p.person.device ? h('span', { class: 'block text-xs text-gray-500 dark:text-gray-400 truncate' }, [h(DeviceText, { person: p.person })]) : null,
+      ]),
+      // the eye: what this student did on eSpace
+      h('button', {
+        type: 'button',
+        class: 'flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 dark:text-gray-400 dark:hover:text-indigo-200 dark:hover:bg-indigo-900/40 focus:outline-none focus:ring-2 focus:ring-indigo-500',
+        title: 'See what this student did',
+        'aria-label': `See what ${properName(p.person.name)} did`,
+        onClick: () => emit('view', p.person),
+      }, [
+        h('svg', { class: 'w-[18px] h-[18px]', fill: 'none', stroke: 'currentColor', 'stroke-width': '2', viewBox: '0 0 24 24', 'aria-hidden': 'true' }, [
+          h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', d: 'M2.04 12.32a1 1 0 010-.64C3.42 7.51 7.36 4.5 12 4.5c4.64 0 8.57 3 9.96 7.18a1 1 0 010 .64C20.58 16.49 16.64 19.5 12 19.5c-4.64 0-8.57-3-9.96-7.18z' }),
+          h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
+        ]),
       ]),
     ])
   },

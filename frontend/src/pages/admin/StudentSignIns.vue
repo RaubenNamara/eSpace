@@ -56,13 +56,14 @@
           {{ search || klass || device ? 'No student matches.' : `No student signed in ${periodLabel}.` }}
         </p>
         <ul v-else-if="data" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-4">
-          <StudentRow v-for="st in filtered.slice(0, shown)" :key="st.id" :person="st" />
+          <StudentRow v-for="st in filtered.slice(0, shown)" :key="st.id" :person="st" @view="viewing = $event" />
         </ul>
         <button v-if="filtered.length > shown" type="button" class="text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:underline" @click="shown += PAGE">
           Show more ({{ filtered.length - shown }} left)
         </button>
       </div>
     </section>
+    <StudentActivityModal :person="viewing" :days="days" @close="viewing = null" />
   </div>
 </template>
 
@@ -70,6 +71,7 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import apiService from '@/services/api'
+import StudentActivityModal from '@/components/admin/StudentActivityModal.vue'
 import { PERIODS, periodPhrase, tickNow, StudentRow, type SignInPerson } from '@/components/admin/signInParts'
 
 interface StudentSignInData { days: number; since: string; online_minutes: number; students: SignInPerson[]; students_total: number }
@@ -83,6 +85,8 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 const search = ref('')
 const klass = ref('')
+/** the student whose activity is open (the eye on their row) */
+const viewing = ref<SignInPerson | null>(null)
 const device = ref('')
 const shown = ref(PAGE)
 

@@ -96,6 +96,169 @@ class StaffActivityController extends Controller
         ]);
     }
 
+    /**
+     * What one student did on eSpace during the period, newest first: tests submitted, eNote
+     * pages read, books read, videos watched, live classes joined, labs done, notes written and so
+     * on - read from the work itself, like the teachers' activity (there is no general action log).
+     * Rows done since the student's latest sign-in are marked, so "this visit" can be shown.
+     * GET /admin/student-activity/{id}?days=7
+     */
+    public function student(): void
+    {
+        if (!$this->isAdmin()) {
+            $this->forbidden();
+            return;
+        }
+        $id = (int) $this->routeParam('id', 0);
+        $days = (int) $this->query('days', 7);
+        if (!in_array($days, [1, 7, 30], true)) {
+            $days = 7;
+        }
+        $since = (new \DateTimeImmutable('today'))->modify('-' . ($days - 1) . ' days')->format('Y-m-d 00:00:00');
+
+        $stmt = $this->db->prepare('SELECT id FROM students WHERE id = ? AND deleted_at IS NULL');
+        $stmt->execute([$id]);
+        if (!$stmt->fetchColumn()) {
+            $this->error('Student not found', 404);
+            return;
+        }
+        $stmt = $this->db->prepare("SELECT MAX(logged_in_at) FROM login_logs WHERE role = 'student' AND user_id = ?");
+        $stmt->execute([$id]);
+        $lastLogin = $stmt->fetchColumn() ?: null;
+
+        $list = $this->studentActivities($id, $since)[$id] ?? [];
+        usort($list, fn ($a, $b) => strcmp($b['at'], $a['at']));
+        $sinceLogin = 0;
+        foreach ($list as &$a) {
+            $a['this_visit'] = $lastLogin !== null && $a['at'] >= $lastLogin;
+            if ($a['this_visit']) {
+                $sinceLogin += $a['count'];
+            }
+        }
+        unset($a);
+
+        $byType = [];
+        foreach ($list as $a) {
+            $byType[$a['group']] = ($byType[$a['group']] ?? 0) + $a['count'];
+        }
+        arsort($byType);
+
+        $this->success([
+            'student_id' => $id,
+            'days' => $days,
+            'since' => $since,
+            'last_login_at' => $lastLogin,
+            'activity_count' => array_sum(array_column($list, 'count')),
+            'this_visit_count' => $sinceLogin,
+            'by_group' => $byType,
+            'activities' => array_slice($list, 0, 200),
+            'more' => max(0, count($list) - 200),
+        ]);
+    }
+
+    /**
+     * A student's activity since $since, as [student_id => [{type, group, label, title, count, at}]].
+     * Reading is grouped per piece and per day ("Read 6 pages · Photosynthesis").
+     */
+    private function studentActivities(int $studentId, string $since): array
+    {
+        $sources = [
+            "SELECT s.student_id, 'test_submitted', a.title, 1, s.submitted_at
+             FROM assignment_submissions s INNER JOIN assignments a ON a.id = s.assignment_id
+             WHERE s.deleted_at IS NULL AND s.student_id IN (?) AND s.submitted_at >= ?",
+            "SELECT s.student_id, 'test_started', a.title, 1, s.started_at
+             FROM assignment_submissions s INNER JOIN assignments a ON a.id = s.assignment_id
+             WHERE s.deleted_at IS NULL AND s.submitted_at IS NULL AND s.student_id IN (?) AND s.started_at >= ?",
+            "SELECT v.student_id, 'enote_pages_read', t.title, COUNT(*), MAX(v.last_viewed_at)
+             FROM enote_page_views v INNER JOIN enote_topics t ON t.id = v.topic_id
+             WHERE v.student_id IN (?) AND v.last_viewed_at >= ?
+             GROUP BY v.student_id, v.topic_id, t.title, DATE(v.last_viewed_at)",
+            "SELECT n.student_id, 'enote_note', t.title, COUNT(*), MAX(n.updated_at)
+             FROM enote_page_notes n INNER JOIN enote_pages p ON p.id = n.page_id INNER JOIN enote_topics t ON t.id = p.topic_id
+             WHERE n.student_id IN (?) AND n.updated_at >= ?
+             GROUP BY n.student_id, t.id, t.title, DATE(n.updated_at)",
+            "SELECT h.student_id, 'enote_highlight', t.title, COUNT(*), MAX(h.created_at)
+             FROM enote_page_highlights h INNER JOIN enote_pages p ON p.id = h.page_id INNER JOIN enote_topics t ON t.id = p.topic_id
+             WHERE h.student_id IN (?) AND h.created_at >= ?
+             GROUP BY h.student_id, t.id, t.title, DATE(h.created_at)",
+            "SELECT b.student_id, 'enote_bookmark', t.title, COUNT(*), MAX(b.created_at)
+             FROM enote_bookmarks b INNER JOIN enote_topics t ON t.id = b.topic_id
+             WHERE b.student_id IN (?) AND b.created_at >= ?
+             GROUP BY b.student_id, t.id, t.title, DATE(b.created_at)",
+            "SELECT q.student_id, 'enote_question', t.title, COUNT(*), MAX(q.created_at)
+             FROM enote_questions q INNER JOIN enote_topics t ON t.id = q.topic_id
+             WHERE q.deleted_at IS NULL AND q.student_id IN (?) AND q.created_at >= ?
+             GROUP BY q.student_id, t.id, t.title, DATE(q.created_at)",
+            "SELECT e.student_id, 'enote_explanation', t.title, COUNT(*), MAX(e.updated_at)
+             FROM enote_explanations e INNER JOIN enote_topics t ON t.id = e.topic_id
+             WHERE e.student_id IN (?) AND e.updated_at >= ?
+             GROUP BY e.student_id, t.id, t.title, DATE(e.updated_at)",
+            "SELECT lp.student_id, 'book_read', b.title, 1, lp.last_read_at
+             FROM library_progress lp INNER JOIN library_books b ON b.id = lp.book_id
+             WHERE lp.student_id IN (?) AND lp.last_read_at >= ?",
+            "SELECT n.student_id, 'book_note', b.title, COUNT(*), MAX(n.updated_at)
+             FROM library_page_notes n INNER JOIN library_books b ON b.id = n.book_id
+             WHERE n.student_id IN (?) AND n.updated_at >= ?
+             GROUP BY n.student_id, b.id, b.title, DATE(n.updated_at)",
+            "SELECT bm.student_id, 'book_bookmark', b.title, COUNT(*), MAX(bm.created_at)
+             FROM library_bookmarks bm INNER JOIN library_books b ON b.id = bm.book_id
+             WHERE bm.student_id IN (?) AND bm.created_at >= ?
+             GROUP BY bm.student_id, b.id, b.title, DATE(bm.created_at)",
+            "SELECT np.student_id, 'notes_read', n.title, 1, np.last_read_at
+             FROM notes_progress np INNER JOIN notes n ON n.id = np.note_id
+             WHERE np.student_id IN (?) AND np.last_read_at >= ?",
+            "SELECT vv.student_id, 'video_watched', v.title, 1, vv.last_watched_at
+             FROM video_views vv INNER JOIN videos v ON v.id = vv.video_id
+             WHERE vv.student_id IN (?) AND vv.last_watched_at >= ?",
+            "SELECT la.student_id, 'live_class_joined', lc.title, 1, COALESCE(la.join_time, la.created_at)
+             FROM live_class_attendance la INNER JOIN live_classes lc ON lc.id = la.live_class_id
+             WHERE la.student_id IN (?) AND COALESCE(la.join_time, la.created_at) >= ?",
+            "SELECT p.student_id, 'live_quiz_played', a.title, 1, p.joined_at
+             FROM live_quiz_players p INNER JOIN live_quizzes q ON q.id = p.quiz_id LEFT JOIN assignments a ON a.id = q.assignment_id
+             WHERE p.student_id IN (?) AND p.joined_at >= ?",
+            "SELECT at.student_id, IF(at.submitted_at IS NULL, 'lab_started', 'lab_submitted'), x.title, 1, COALESCE(at.submitted_at, at.started_at, at.created_at)
+             FROM virtual_lab_attempts at
+             LEFT JOIN virtual_lab_assignments vla ON vla.id = at.assignment_id
+             LEFT JOIN virtual_lab_experiments x ON x.id = vla.experiment_id
+             WHERE at.student_id IN (?) AND COALESCE(at.submitted_at, at.started_at, at.created_at) >= ?",
+            "SELECT student_id, 'ict_practice', REPLACE(activity_key, '-', ' '), 1, completed_at
+             FROM ict_lab_attempts WHERE student_id IN (?) AND completed_at >= ?",
+            "SELECT student_id, 'item_bank_practice', NULL, COUNT(*), MAX(attempted_at)
+             FROM item_bank_attempts WHERE student_id IN (?) AND attempted_at >= ?
+             GROUP BY student_id, DATE(attempted_at)",
+            "SELECT student_id, 'revision_cards', NULL, COUNT(*), MAX(last_seen_at)
+             FROM revision_cards WHERE student_id IN (?) AND last_seen_at >= ?
+             GROUP BY student_id, DATE(last_seen_at)",
+            "SELECT student_id, 'notes_helper', NULL, COUNT(*), MAX(created_at)
+             FROM student_note_questions WHERE student_id IN (?) AND created_at >= ?
+             GROUP BY student_id, DATE(created_at)",
+            "SELECT sender_id, 'chat_sent', NULL, COUNT(*), MAX(created_at)
+             FROM chat_messages WHERE sender_role = 'student' AND sender_id IN (?) AND created_at >= ?
+             GROUP BY sender_id, DATE(created_at)",
+        ];
+        $out = $this->runSources($sources, [$studentId], $since);
+        foreach ($out as &$list) {
+            foreach ($list as &$a) {
+                $a['group'] = self::STUDENT_GROUPS[$a['type']] ?? 'Other';
+            }
+            unset($a);
+        }
+        unset($list);
+        return $out;
+    }
+
+    /** the heading each kind of student activity is counted under */
+    private const STUDENT_GROUPS = [
+        'test_submitted' => 'Assessments', 'test_started' => 'Assessments',
+        'enote_pages_read' => 'eNotes', 'enote_note' => 'eNotes', 'enote_highlight' => 'eNotes',
+        'enote_bookmark' => 'eNotes', 'enote_question' => 'eNotes', 'enote_explanation' => 'eNotes', 'notes_read' => 'eNotes',
+        'book_read' => 'eLibrary', 'book_note' => 'eLibrary', 'book_bookmark' => 'eLibrary',
+        'video_watched' => 'Videos', 'live_class_joined' => 'Live classes', 'live_quiz_played' => 'Live quizzes',
+        'lab_started' => 'Labs', 'lab_submitted' => 'Labs', 'ict_practice' => 'Labs',
+        'item_bank_practice' => 'Practice', 'revision_cards' => 'Practice', 'notes_helper' => 'Practice',
+        'chat_sent' => 'Chat',
+    ];
+
     /** how many different people of a role signed in since $since */
     private function countSignedIn(string $role, string $since): int
     {
@@ -434,6 +597,27 @@ class StaffActivityController extends Controller
             'attendance_updated' => $s('Updated attendance for 1 student', 'Updated attendance for {n} students'),
             'book_uploaded' => 'Uploaded a library book',
             'sba_uploaded' => $s('Uploaded 1 SBA evidence file', 'Uploaded {n} SBA evidence files'),
+            'test_submitted' => 'Submitted an assessment',
+            'test_started' => 'Started an assessment',
+            'enote_pages_read' => $s('Read 1 eNote page', 'Read {n} eNote pages'),
+            'enote_note' => $s('Wrote a note on an eNote page', 'Wrote notes on {n} eNote pages'),
+            'enote_highlight' => $s('Highlighted 1 passage', 'Highlighted {n} passages'),
+            'enote_bookmark' => $s('Bookmarked an eNote page', 'Bookmarked {n} eNote pages'),
+            'enote_question' => $s('Asked a question on an eNote', 'Asked {n} questions on an eNote'),
+            'enote_explanation' => $s('Explained a page in their own words', 'Explained {n} pages in their own words'),
+            'notes_read' => 'Read notes',
+            'book_read' => 'Read a library book',
+            'book_note' => $s('Wrote a note in a book', 'Wrote {n} notes in a book'),
+            'book_bookmark' => $s('Bookmarked a book page', 'Bookmarked {n} book pages'),
+            'video_watched' => 'Watched a video',
+            'live_class_joined' => 'Joined a live class',
+            'live_quiz_played' => 'Played a live quiz',
+            'lab_started' => 'Started a virtual lab',
+            'lab_submitted' => 'Submitted a virtual lab',
+            'ict_practice' => 'Did an ICT lab practical',
+            'item_bank_practice' => $s('Practised 1 item bank question', 'Practised {n} item bank questions'),
+            'revision_cards' => $s('Revised 1 card', 'Revised {n} cards'),
+            'notes_helper' => $s('Asked the notes helper 1 question', 'Asked the notes helper {n} questions'),
             'book_approved' => 'Approved a library book',
             'notes_approved' => 'Approved notes',
             'questions_approved' => $s('Approved 1 item bank question', 'Approved {n} item bank questions'),
