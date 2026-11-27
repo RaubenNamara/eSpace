@@ -66,7 +66,7 @@
                 :class="look.theme === t.key ? 'ring-2 ring-[var(--wa-green)]' : 'ring-black/10 dark:ring-white/10'"
                 :style="{ background: t.wall }"
               >
-                <span class="absolute left-1.5 top-2 w-6 h-2.5 rounded-full bg-white shadow-sm"></span>
+                <span class="absolute left-1.5 top-2 w-6 h-2.5 rounded-full shadow-sm" :style="{ background: t.in }"></span>
                 <span class="absolute right-1.5 bottom-2 w-7 h-2.5 rounded-full" :style="{ background: t.out }"></span>
                 <span v-if="look.theme === t.key" class="absolute inset-0 flex items-center justify-center bg-black/25">
                   <svg class="w-5 h-5 text-white drop-shadow" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>

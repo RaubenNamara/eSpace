@@ -9,14 +9,14 @@ import { computed, reactive, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 
 export const CHAT_THEMES = [
-  { key: 'classic', label: 'Tusome', out: '#dce4f8', outText: '#111b21', accent: '#1b3fa0', wall: '#faf5e8' },
-  { key: 'ocean', label: 'Ocean', out: '#0284c7', outText: '#ffffff', accent: '#0284c7', wall: '#eaf6fb' },
-  { key: 'violet', label: 'Violet', out: 'linear-gradient(135deg,#6d28d9,#a855f7)', outText: '#ffffff', accent: '#7c3aed', wall: '#f4f1fd' },
-  { key: 'sunset', label: 'Sunset', out: 'linear-gradient(135deg,#f97316,#e11d74)', outText: '#ffffff', accent: '#ea580c', wall: '#fff5ec' },
-  { key: 'forest', label: 'Forest', out: '#047857', outText: '#ffffff', accent: '#059669', wall: '#ecf7f1' },
-  { key: 'blush', label: 'Blush', out: '#ffd9e4', outText: '#3b0d1c', accent: '#db2777', wall: '#fff4f7' },
-  { key: 'mint', label: 'Mint', out: '#c9f5e3', outText: '#06281d', accent: '#0d9488', wall: '#f0fbf7' },
-  { key: 'graphite', label: 'Graphite', out: '#18181b', outText: '#fafafa', accent: '#27272a', wall: '#f1f1f3' },
+  { key: 'classic', label: 'Tusome', in: '#ffffff', out: '#dce4f8', outText: '#111b21', accent: '#1b3fa0', wall: '#faf5e8' },
+  { key: 'ocean', label: 'Ocean', in: '#d6edfb', out: '#0284c7', outText: '#ffffff', accent: '#0284c7', wall: '#eaf6fb' },
+  { key: 'violet', label: 'Violet', in: '#e9e2fd', out: 'linear-gradient(135deg,#6d28d9,#a855f7)', outText: '#ffffff', accent: '#7c3aed', wall: '#f4f1fd' },
+  { key: 'sunset', label: 'Sunset', in: '#ffe4cf', out: 'linear-gradient(135deg,#f97316,#e11d74)', outText: '#ffffff', accent: '#ea580c', wall: '#fff5ec' },
+  { key: 'forest', label: 'Forest', in: '#d1f0e0', out: '#047857', outText: '#ffffff', accent: '#059669', wall: '#ecf7f1' },
+  { key: 'blush', label: 'Blush', in: '#ffe6ee', out: '#ffd9e4', outText: '#3b0d1c', accent: '#db2777', wall: '#fff4f7' },
+  { key: 'mint', label: 'Mint', in: '#dcecea', out: '#c9f5e3', outText: '#06281d', accent: '#0d9488', wall: '#f0fbf7' },
+  { key: 'graphite', label: 'Graphite', in: '#e2e2e6', out: '#18181b', outText: '#fafafa', accent: '#27272a', wall: '#f1f1f3' },
 ] as const
 
 /**

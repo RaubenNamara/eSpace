@@ -203,9 +203,12 @@
 .wa[data-chat-fontstyle] .wa-bubble .float-right { font-size: 11px; }
 .wa[data-chat-fontstyle] .wa-bubble code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 
-/* Colour themes. 'classic' is the base above. Each sets the same names in light and dark. */
+/* Colour themes. 'classic' is the base above. Each sets the same names in light and dark. Other
+   people's bubbles (--wa-bubble-in) take a soft tint of the theme, between the wallpaper and your
+   own bubble's colour; classic keeps white, its own bubbles being pale already. */
 .wa[data-chat-theme='ocean'] {
   --wa-green: #0284c7; --wa-green-dark: #075985; --wa-chip-on: #e0f2fe; --wa-chip-on-text: #075985; --wa-active: #e0f2fe;
+  --wa-bubble-in: #d6edfb;
   --wa-bubble-out: #0284c7; --wa-bubble-out-tail: #0284c7;
   --wa-out-text: #ffffff; --wa-out-muted: rgba(255, 255, 255, 0.78); --wa-out-quote: rgba(255, 255, 255, 0.16); --wa-out-accent: #ffffff;
   --wa-out-tick-read: #a7f3d0; --wa-out-played: #ffffff; --wa-out-unplayed: rgba(255, 255, 255, 0.4);
@@ -213,6 +216,7 @@
 }
 .dark .wa[data-chat-theme='ocean'] {
   --wa-green: #38bdf8; --wa-green-dark: #7dd3fc; --wa-chip-on: #0c3a52; --wa-chip-on-text: #7dd3fc; --wa-active: #12303f;
+  --wa-bubble-in: #10293a;
   --wa-bubble-out: #0369a1; --wa-bubble-out-tail: #0369a1;
   --wa-out-text: #ffffff; --wa-out-muted: rgba(255, 255, 255, 0.72); --wa-out-quote: rgba(255, 255, 255, 0.12); --wa-out-accent: #e0f2fe;
   --wa-out-tick-read: #a7f3d0; --wa-out-played: #ffffff; --wa-out-unplayed: rgba(255, 255, 255, 0.35);
@@ -221,6 +225,7 @@
 
 .wa[data-chat-theme='violet'] {
   --wa-green: #7c3aed; --wa-green-dark: #5b21b6; --wa-chip-on: #ede9fe; --wa-chip-on-text: #5b21b6; --wa-active: #ede9fe;
+  --wa-bubble-in: #e9e2fd;
   --wa-bubble-out: linear-gradient(135deg, #6d28d9, #a855f7); --wa-bubble-out-tail: #8b31ec;
   --wa-out-text: #ffffff; --wa-out-muted: rgba(255, 255, 255, 0.78); --wa-out-quote: rgba(255, 255, 255, 0.16); --wa-out-accent: #ffffff;
   --wa-out-tick-read: #a7f3d0; --wa-out-played: #ffffff; --wa-out-unplayed: rgba(255, 255, 255, 0.4);
@@ -228,6 +233,7 @@
 }
 .dark .wa[data-chat-theme='violet'] {
   --wa-green: #a78bfa; --wa-green-dark: #c4b5fd; --wa-chip-on: #2e1065; --wa-chip-on-text: #c4b5fd; --wa-active: #241a3d;
+  --wa-bubble-in: #241a3d;
   --wa-bubble-out: linear-gradient(135deg, #5b21b6, #7e22ce); --wa-bubble-out-tail: #6c21c4;
   --wa-out-text: #ffffff; --wa-out-muted: rgba(255, 255, 255, 0.72); --wa-out-quote: rgba(255, 255, 255, 0.12); --wa-out-accent: #ede9fe;
   --wa-out-tick-read: #a7f3d0; --wa-out-played: #ffffff; --wa-out-unplayed: rgba(255, 255, 255, 0.35);
@@ -236,6 +242,7 @@
 
 .wa[data-chat-theme='sunset'] {
   --wa-green: #ea580c; --wa-green-dark: #9a3412; --wa-chip-on: #ffedd5; --wa-chip-on-text: #9a3412; --wa-active: #ffedd5;
+  --wa-bubble-in: #ffe4cf;
   --wa-bubble-out: linear-gradient(135deg, #f97316, #e11d74); --wa-bubble-out-tail: #ee4a45;
   --wa-out-text: #ffffff; --wa-out-muted: rgba(255, 255, 255, 0.82); --wa-out-quote: rgba(255, 255, 255, 0.18); --wa-out-accent: #ffffff;
   --wa-out-tick-read: #fef08a; --wa-out-played: #ffffff; --wa-out-unplayed: rgba(255, 255, 255, 0.45);
@@ -243,6 +250,7 @@
 }
 .dark .wa[data-chat-theme='sunset'] {
   --wa-green: #fb923c; --wa-green-dark: #fdba74; --wa-chip-on: #431407; --wa-chip-on-text: #fdba74; --wa-active: #2f1a10;
+  --wa-bubble-in: #33201a;
   --wa-bubble-out: linear-gradient(135deg, #c2410c, #be185d); --wa-bubble-out-tail: #c02c37;
   --wa-out-text: #ffffff; --wa-out-muted: rgba(255, 255, 255, 0.75); --wa-out-quote: rgba(255, 255, 255, 0.13); --wa-out-accent: #ffedd5;
   --wa-out-tick-read: #fef08a; --wa-out-played: #ffffff; --wa-out-unplayed: rgba(255, 255, 255, 0.35);
@@ -251,6 +259,7 @@
 
 .wa[data-chat-theme='forest'] {
   --wa-green: #059669; --wa-green-dark: #065f46; --wa-chip-on: #d1fae5; --wa-chip-on-text: #065f46; --wa-active: #d1fae5;
+  --wa-bubble-in: #d1f0e0;
   --wa-bubble-out: #047857; --wa-bubble-out-tail: #047857;
   --wa-out-text: #ffffff; --wa-out-muted: rgba(255, 255, 255, 0.78); --wa-out-quote: rgba(255, 255, 255, 0.16); --wa-out-accent: #ffffff;
   --wa-out-tick-read: #fde68a; --wa-out-played: #ffffff; --wa-out-unplayed: rgba(255, 255, 255, 0.4);
@@ -258,6 +267,7 @@
 }
 .dark .wa[data-chat-theme='forest'] {
   --wa-green: #34d399; --wa-green-dark: #6ee7b7; --wa-chip-on: #064e3b; --wa-chip-on-text: #6ee7b7; --wa-active: #0d2b21;
+  --wa-bubble-in: #10291f;
   --wa-bubble-out: #065f46; --wa-bubble-out-tail: #065f46;
   --wa-out-text: #ffffff; --wa-out-muted: rgba(255, 255, 255, 0.72); --wa-out-quote: rgba(255, 255, 255, 0.12); --wa-out-accent: #d1fae5;
   --wa-out-tick-read: #fde68a; --wa-out-played: #ffffff; --wa-out-unplayed: rgba(255, 255, 255, 0.35);
@@ -266,6 +276,7 @@
 
 .wa[data-chat-theme='blush'] {
   --wa-green: #db2777; --wa-green-dark: #9d174d; --wa-chip-on: #fce7f3; --wa-chip-on-text: #9d174d; --wa-active: #fce7f3;
+  --wa-bubble-in: #ffe6ee;
   --wa-bubble-out: #ffd9e4; --wa-bubble-out-tail: #ffd9e4;
   --wa-out-text: #3b0d1c; --wa-out-muted: rgba(59, 13, 28, 0.6); --wa-out-quote: rgba(157, 23, 77, 0.08); --wa-out-accent: #9d174d;
   --wa-out-tick-read: #db2777; --wa-out-played: #db2777; --wa-out-unplayed: rgba(59, 13, 28, 0.25);
@@ -273,6 +284,7 @@
 }
 .dark .wa[data-chat-theme='blush'] {
   --wa-green: #f472b6; --wa-green-dark: #f9a8d4; --wa-chip-on: #500724; --wa-chip-on-text: #f9a8d4; --wa-active: #2c1220;
+  --wa-bubble-in: #2d1421;
   --wa-bubble-out: #831843; --wa-bubble-out-tail: #831843;
   --wa-out-text: #ffffff; --wa-out-muted: rgba(255, 255, 255, 0.72); --wa-out-quote: rgba(255, 255, 255, 0.1); --wa-out-accent: #fbcfe8;
   --wa-out-tick-read: #f9a8d4; --wa-out-played: #fbcfe8; --wa-out-unplayed: rgba(255, 255, 255, 0.3);
@@ -281,6 +293,7 @@
 
 .wa[data-chat-theme='mint'] {
   --wa-green: #0d9488; --wa-green-dark: #115e59; --wa-chip-on: #ccfbf1; --wa-chip-on-text: #115e59; --wa-active: #ccfbf1;
+  --wa-bubble-in: #dcecea;
   --wa-bubble-out: #c9f5e3; --wa-bubble-out-tail: #c9f5e3;
   --wa-out-text: #06281d; --wa-out-muted: rgba(6, 40, 29, 0.6); --wa-out-quote: rgba(13, 148, 136, 0.1); --wa-out-accent: #0f766e;
   --wa-out-tick-read: #0891b2; --wa-out-played: #0d9488; --wa-out-unplayed: rgba(6, 40, 29, 0.25);
@@ -288,6 +301,7 @@
 }
 .dark .wa[data-chat-theme='mint'] {
   --wa-green: #2dd4bf; --wa-green-dark: #5eead4; --wa-chip-on: #134e4a; --wa-chip-on-text: #5eead4; --wa-active: #10302c;
+  --wa-bubble-in: #0f2a26;
   --wa-bubble-out: #115e59; --wa-bubble-out-tail: #115e59;
   --wa-out-text: #ffffff; --wa-out-muted: rgba(255, 255, 255, 0.72); --wa-out-quote: rgba(255, 255, 255, 0.1); --wa-out-accent: #99f6e4;
   --wa-out-tick-read: #5eead4; --wa-out-played: #99f6e4; --wa-out-unplayed: rgba(255, 255, 255, 0.3);
@@ -296,6 +310,7 @@
 
 .wa[data-chat-theme='graphite'] {
   --wa-green: #27272a; --wa-green-dark: #18181b; --wa-chip-on: #e4e4e7; --wa-chip-on-text: #18181b; --wa-active: #ececee;
+  --wa-bubble-in: #e2e2e6;
   --wa-bubble-out: #18181b; --wa-bubble-out-tail: #18181b;
   --wa-out-text: #fafafa; --wa-out-muted: rgba(250, 250, 250, 0.65); --wa-out-quote: rgba(255, 255, 255, 0.12); --wa-out-accent: #ffffff;
   --wa-out-tick-read: #60a5fa; --wa-out-played: #ffffff; --wa-out-unplayed: rgba(255, 255, 255, 0.35);
@@ -303,6 +318,7 @@
 }
 .dark .wa[data-chat-theme='graphite'] {
   --wa-green: #e4e4e7; --wa-green-dark: #fafafa; --wa-chip-on: #3f3f46; --wa-chip-on-text: #fafafa; --wa-active: #27272a;
+  --wa-bubble-in: #232326;
   --wa-bubble-out: #f4f4f5; --wa-bubble-out-tail: #f4f4f5;
   --wa-out-text: #18181b; --wa-out-muted: rgba(24, 24, 27, 0.6); --wa-out-quote: rgba(0, 0, 0, 0.08); --wa-out-accent: #18181b;
   --wa-out-tick-read: #2563eb; --wa-out-played: #18181b; --wa-out-unplayed: rgba(0, 0, 0, 0.25);
