@@ -16,3 +16,34 @@ DOMPurify.addHook('afterSanitizeAttributes', node => {
 export function safeHtml(html?: string | null): string {
   return html ? DOMPurify.sanitize(html, { ADD_ATTR: ['target'] }) : ''
 }
+
+// Embedded players a teacher may put in rich content; any other iframe is removed
+const PLAYER_HOSTS = /^https:\/\/(www\.)?(youtube\.com|youtube-nocookie\.com|player\.vimeo\.com|dailymotion\.com)\//i
+DOMPurify.addHook('uponSanitizeElement', (node, data) => {
+  if (data.tagName === 'iframe' && !PLAYER_HOSTS.test((node as Element).getAttribute?.('src') || '')) {
+    node.parentNode?.removeChild(node)
+  }
+})
+
+/**
+ * Like safeHtml, for whole pages of teacher-written notes: also keeps YouTube/Vimeo players and
+ * the editor's <oembed url="..."> video placeholders (autoEmbedYoutube turns those into players
+ * afterwards - clean first, then embed).
+ */
+export function safeRichHtml(html?: string | null): string {
+  return html
+    ? DOMPurify.sanitize(html, {
+        ADD_TAGS: ['iframe', 'oembed'],
+        ADD_ATTR: ['target', 'allow', 'allowfullscreen', 'frameborder', 'url', 'loading'],
+      })
+    : ''
+}
+
+// Formatted chat messages: only what the chat toolbar makes (the server, ChatHtml.php, already
+// cleaned it to this list - cleaned again here so a message never runs anything in the browser)
+const CHAT_TAGS = ['p', 'br', 'strong', 'em', 'u', 's', 'code', 'pre', 'ul', 'ol', 'li', 'blockquote', 'hr', 'a']
+export function safeChatHtml(html?: string | null): string {
+  return html
+    ? DOMPurify.sanitize(html, { ALLOWED_TAGS: CHAT_TAGS, ALLOWED_ATTR: ['href', 'target', 'rel'], ALLOWED_URI_REGEXP: /^(?:https?:\/\/|mailto:)/i })
+    : ''
+}

@@ -16,6 +16,7 @@
       <button
         v-for="(emoji, idx) in activeEmojis"
         :key="idx"
+        @mousedown.prevent
         @click="$emit('select', emoji)"
         class="text-xl leading-none w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
       >

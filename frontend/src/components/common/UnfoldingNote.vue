@@ -19,8 +19,8 @@
       <button
         v-if="!open && (hasText || showAdd)"
         type="button"
-        class="note-tab pointer-events-auto inline-flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-full shadow-lg ring-1 ring-black/5 dark:ring-white/10 text-xs font-semibold hover:shadow-xl hover:-translate-y-0.5 transition-all"
-        :class="hasText ? 'bg-white/95 dark:bg-gray-800/95 text-gray-700 dark:text-gray-100' : 'bg-white/80 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400'"
+        class="note-tab pointer-events-auto inline-flex items-center gap-2 pl-1.5 py-1.5 rounded-full shadow-lg ring-1 ring-black/5 dark:ring-white/10 text-xs font-semibold hover:shadow-xl hover:-translate-y-0.5 transition-all"
+        :class="[hasText ? 'bg-white/95 dark:bg-gray-800/95 text-gray-700 dark:text-gray-100' : 'bg-white/80 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400', iconOnly ? 'pr-1.5' : 'pr-3']"
         :title="hasText ? 'Open my note on this page' : 'Write a note on this page'"
         @click="emit('update:open', true)"
       >
@@ -33,8 +33,8 @@
             <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14"></path>
           </svg>
         </span>
-        <span>{{ hasText ? tabLabel : addLabel }}</span>
-        <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <span v-if="!iconOnly">{{ hasText ? tabLabel : addLabel }}</span>
+        <svg v-if="!iconOnly" class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
         </svg>
       </button>
@@ -90,7 +90,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import SummaryColorPicker from '@/components/enotes/SummaryColorPicker.vue'
 import { useNotesStyle } from '@/composables/useNotesStyle'
 import { summaryStyleOf, type SummaryColor } from '@/composables/useSummaryColor'
@@ -118,6 +118,15 @@ const props = withDefaults(defineProps<{
   tabLabel: 'My note',
   addLabel: 'Add my note'
 })
+
+// Floating over a book on a narrow screen, or a short one (a phone held sideways): the tab is just
+// its icon, so it covers less of the page (the label shows on bigger screens)
+const compactMq = typeof window !== 'undefined' ? window.matchMedia('(max-width: 639px), (max-height: 500px)') : null
+const compactScreen = ref(compactMq?.matches ?? false)
+const onCompactChange = (e: MediaQueryListEvent) => { compactScreen.value = e.matches }
+onMounted(() => compactMq?.addEventListener('change', onCompactChange))
+onBeforeUnmount(() => compactMq?.removeEventListener('change', onCompactChange))
+const iconOnly = computed(() => !!props.floating && !props.pinned && compactScreen.value)
 
 const emit = defineEmits<{
   'update:modelValue': [value: string]

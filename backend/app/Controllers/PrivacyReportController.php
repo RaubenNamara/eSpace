@@ -46,6 +46,10 @@ class PrivacyReportController extends Controller
      */
     public function store(): void
     {
+        if ($wait = \eSpace\App\Support\RequestLimit::hit('privacy_report', 10)) {
+            $this->error(\eSpace\App\Support\RequestLimit::message($wait), 429);
+            return;
+        }
         // `website` is a field people never see - only bots fill it in. Pretend it worked.
         if (trim((string) $this->input('website', '')) !== '') {
             $this->success([], 'Thank you - your report has been sent.');

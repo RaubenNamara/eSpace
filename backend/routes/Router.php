@@ -253,9 +253,8 @@ class Router
                 header('Content-Type: application/json');
                 echo json_encode([
                     'success' => false,
-                    'message' => 'Failed to instantiate controller: ' . $controllerClass,
-                    'error' => $e->getMessage()
-                ]);
+                    'message' => 'Something went wrong on the server. Please try again.',
+                ] + (\eSpace\Config\Config::isDebug() ? ['error' => $controllerClass . ': ' . $e->getMessage()] : []));
                 exit;
             }
         } else {
@@ -278,12 +277,12 @@ class Router
             if ($controller) {
                 
                 if (!method_exists($controller, $method)) {
-                    error_log("ERROR: Method does not exist!");
-                    http_response_code(500);
+                    error_log('Route points at a missing method: ' . get_class($controller) . '@' . $method);
+                    http_response_code(404);
                     header('Content-Type: application/json');
                     echo json_encode([
                         'success' => false,
-                        'message' => 'Method does not exist: ' . $method
+                        'message' => 'Route not found'
                     ]);
                     exit;
                 }
@@ -313,9 +312,8 @@ class Router
             header('Content-Type: application/json');
             echo json_encode([
                 'success' => false,
-                'message' => 'Handler execution failed',
-                'error' => $e->getMessage()
-            ]);
+                'message' => 'Something went wrong on the server. Please try again.',
+            ] + (\eSpace\Config\Config::isDebug() ? ['error' => $e->getMessage()] : []));
             exit;
         }
         

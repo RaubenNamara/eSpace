@@ -54,7 +54,7 @@ if (!$signed) {
     if (!$signedIn || Tenant::guardSession() !== null) {
         refuse(401, 'Please sign in to Tusome to open this file.');
     }
-    if (!FileAccess::userMayOpen($rel, $_SESSION['role'] ?? null, (int) ($_SESSION['user_id'] ?? 0))) {
+    if (!FileAccess::userMayOpen($rel, $_SESSION['role'] ?? null, (int) ($_SESSION['user_id'] ?? 0), isset($_SESSION['teacher_id']) ? (int) $_SESSION['teacher_id'] : null)) {
         refuse(403, 'You do not have access to this file.');
     }
 }

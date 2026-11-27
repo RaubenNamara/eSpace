@@ -218,7 +218,14 @@ class ChatController extends Controller
             return;
         }
         $data = $this->input();
-        $message = trim((string) ($data['message'] ?? ''));
+        // a formatted message comes as message_html (cleaned on the server, ChatHtml); message is
+        // then worked out from it here, never taken from the browser
+        try {
+            [$message, $messageHtml] = ChatService::messageFrom($data);
+        } catch (\InvalidArgumentException $e) {
+            $this->validationError(['message' => $e->getMessage()]);
+            return;
+        }
         $replyToId = !empty($data['reply_to_id']) ? (int) $data['reply_to_id'] : null;
         $attachment = null;
         if (isset($_FILES['file'])) {
@@ -231,7 +238,7 @@ class ChatController extends Controller
             $this->validationError(['message' => 'Message text or an attachment is required']);
             return;
         }
-        $messageId = $this->chat->sendMessage($conversationId, $me['id'], 'hod', htmlspecialchars($message, ENT_QUOTES, 'UTF-8'), $attachment, $replyToId);
+        $messageId = $this->chat->sendMessage($conversationId, $me['id'], 'hod', htmlspecialchars($message, ENT_QUOTES, 'UTF-8'), $attachment, $replyToId, $messageHtml);
         $this->success(['id' => $messageId], 'Message sent');
     }
 

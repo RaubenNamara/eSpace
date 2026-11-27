@@ -20,6 +20,10 @@ class LearnerRequestController extends Controller
     /** POST /api/learner-requests   { first_name, last_name, email?, phone?, level, gender?, message?, website? } */
     public function store(): void
     {
+        if ($wait = \eSpace\App\Support\RequestLimit::hit('learner_request', 5)) {
+            $this->error(\eSpace\App\Support\RequestLimit::message($wait), 429);
+            return;
+        }
         // `website` is a field people never see - only bots fill it in. Pretend it worked.
         if (trim((string) $this->input('website', '')) !== '') {
             $this->success([], 'Thank you - we will contact you.');

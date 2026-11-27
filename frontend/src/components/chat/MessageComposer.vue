@@ -1,13 +1,16 @@
 <template>
-  <!-- WhatsApp Web style composer (assets/whatsapp.css): grey bar, white rounded input, grey icons -->
+  <!-- WhatsApp Web style composer (assets/whatsapp.css): grey bar, white rounded input, grey icons.
+       The message box is a small Tiptap editor: Enter sends, Shift+Enter starts a new line, web
+       addresses become links, and Ctrl+B / Ctrl+I / Ctrl+U still format. The server cleans what is
+       sent (backend ChatHtml). -->
   <div class="bg-[var(--wa-panel-header)] px-2 sm:px-4 py-2.5">
     <!-- Reply preview -->
     <div v-if="replyingTo" class="flex items-start justify-between gap-2 mb-2 px-3 py-2 rounded-lg bg-[var(--wa-input)] border-l-4 border-[var(--wa-green)]">
       <div class="min-w-0">
         <p class="text-xs font-medium text-[var(--wa-green-dark)] dark:text-[var(--wa-green)]">Replying to {{ replyingTo.sender_name }}</p>
-        <p class="text-xs text-gray-600 dark:text-gray-300 truncate">{{ replyingTo.message || 'Attachment' }}</p>
+        <p class="text-xs text-gray-600 dark:text-gray-300 truncate">{{ chatText(replyingTo.message) || 'Attachment' }}</p>
       </div>
-      <button @click="$emit('cancel-reply')" class="p-1 hover:bg-gray-200 dark:hover:bg-[rgb(75_85_99)] rounded flex-shrink-0">
+      <button @click="$emit('cancel-reply')" class="p-1 hover:bg-gray-200 dark:hover:bg-[rgb(75_85_99)] rounded flex-shrink-0" aria-label="Cancel reply">
         <svg class="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
         </svg>
@@ -23,7 +26,7 @@
         </svg>
         <span class="text-sm text-gray-700 dark:text-gray-300 truncate">{{ pendingFile.name }}</span>
       </div>
-      <button @click="pendingFile = null" class="p-1 hover:bg-gray-200 dark:hover:bg-[rgb(75_85_99)] rounded flex-shrink-0">
+      <button @click="pendingFile = null" class="p-1 hover:bg-gray-200 dark:hover:bg-[rgb(75_85_99)] rounded flex-shrink-0" aria-label="Remove attachment">
         <svg class="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
         </svg>
@@ -38,13 +41,14 @@
       <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse flex-shrink-0"></span>
       <span class="text-[15px] text-[var(--wa-text)] tabular-nums">{{ formatDuration(recorder.seconds.value) }}</span>
       <span class="flex-1 text-[13px] text-[var(--wa-muted)] truncate">Recording…</span>
-      <button type="button" @click="stopAndSend" class="w-[38px] h-[38px] rounded-full bg-[var(--wa-green)] hover:brightness-95 text-white flex items-center justify-center" title="Send voice message" aria-label="Send voice message">
+      <button type="button" @click="stopAndSend" class="w-[38px] h-[38px] rounded-full bg-[var(--wa-green)] hover:brightness-95 text-[var(--wa-on-accent)] flex items-center justify-center" title="Send voice message" aria-label="Send voice message">
         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M3.4 20.4l17.45-7.48a1 1 0 000-1.84L3.4 3.6a.993.993 0 00-1.39.91L2 9.12c0 .5.37.93.87.99L17 12 2.87 13.88c-.5.07-.87.5-.87 1l.01 4.61c0 .71.73 1.2 1.39.91z" /></svg>
       </button>
     </div>
 
-    <!-- Normal row: one rounded bar with attach, emoji, the message box and mic / send -->
-    <div v-else class="flex items-end gap-1 min-h-[46px] pl-1.5 pr-1.5 py-[5px] rounded-[24px] bg-[var(--wa-input)]">
+    <!-- Normal row: one rounded bar with attach, emoji, the message box and mic / send. Kept
+         (hidden) while recording, so a half-written message is still there afterwards. -->
+    <div v-show="!recorder.isRecording.value" class="flex items-end gap-1 min-h-[46px] pl-1.5 pr-1.5 py-[5px] rounded-[24px] bg-[var(--wa-input)]">
       <div class="relative flex-shrink-0" ref="attachWrapperRef">
         <button type="button" @click="showAttachMenu = !showAttachMenu" class="w-9 h-9 rounded-full flex items-center justify-center text-[var(--wa-icon)] hover:bg-black/5 dark:hover:bg-white/5 transition-transform" :class="showAttachMenu ? 'rotate-45 bg-black/5 dark:bg-white/10' : ''" title="Attach" aria-label="Attach">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14" /></svg>
@@ -75,22 +79,18 @@
         <EmojiPicker v-if="showEmojiPicker" @select="insertEmoji" />
       </div>
 
-      <textarea
-        v-model="text"
-        rows="1"
-        placeholder="Type a message"
-        class="flex-1 min-w-0 resize-none px-2 py-[8px] border-0 bg-transparent text-[var(--wa-text)] placeholder-[var(--wa-muted)] text-[15px] leading-5 focus:ring-0 focus:outline-none max-h-32"
-        @keydown.enter.exact.prevent="handleSend"
-        ref="textareaRef"
-        @input="autoGrow(); emit('activity', text.trim() ? 'typing' : null)"
-      ></textarea>
+      <!-- the message box -->
+      <div class="relative flex-1 min-w-0 self-center">
+        <span v-if="isEmpty" class="absolute left-2 top-1/2 -translate-y-1/2 text-[15px] text-[var(--wa-muted)] pointer-events-none select-none truncate max-w-full">Type a message</span>
+        <EditorContent :editor="editor" class="max-h-32 overflow-y-auto wa-scroll" />
+      </div>
 
       <button
-        v-if="text.trim() || pendingFile"
+        v-if="hasText || pendingFile"
         type="button"
         @click="handleSend"
         :disabled="sending"
-        class="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center bg-[var(--wa-green)] hover:brightness-95 text-white disabled:opacity-50"
+        class="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center bg-[var(--wa-green)] hover:brightness-95 text-[var(--wa-on-accent)] disabled:opacity-50"
         title="Send"
         aria-label="Send"
       >
@@ -106,24 +106,29 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
+import { useEditor, EditorContent } from '@tiptap/vue-3'
+import { Extension } from '@tiptap/core'
+import StarterKit from '@tiptap/starter-kit'
+import Underline from '@tiptap/extension-underline'
+import Link from '@tiptap/extension-link'
 import { useAudioRecorder } from '@/composables/useAudioRecorder'
+import { chatText } from '@/utils/chatText'
 import EmojiPicker from './EmojiPicker.vue'
 import CameraCapture from './CameraCapture.vue'
 import type { ChatMessage } from '@/types/chat'
 
 const props = defineProps<{ replyingTo: ChatMessage | null; sending?: boolean }>()
 const emit = defineEmits<{
-  send: [{ message: string; file: File | null; replyToId: number | null }]
+  /** html: the formatted message (null when it is plain text); message: its plain text */
+  send: [{ message: string; html: string | null; file: File | null; replyToId: number | null }]
   'cancel-reply': []
   /** typing / recording a voice note, or stopped - the others see "typing..." / "recording audio..." */
   activity: ['typing' | 'recording' | null]
 }>()
 
-const text = ref('')
 const pendingFile = ref<File | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 const showCamera = ref(false)
-const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const showEmojiPicker = ref(false)
 const showAttachMenu = ref(false)
 const attachWrapperRef = ref<HTMLElement | null>(null)
@@ -137,18 +142,60 @@ const pickFile = (accept: string) => {
 const emojiWrapperRef = ref<HTMLElement | null>(null)
 const recorder = useAudioRecorder()
 
+// ---- the editor ---------------------------------------------------------------------------------
+const isEmpty = ref(true)
+const hasText = ref(false)
+
+/** Enter sends (as before); Shift+Enter: a new list item inside a list, a new line anywhere else */
+const SendKeys = Extension.create({
+  name: 'chatSendKeys',
+  addKeyboardShortcuts() {
+    return {
+      Enter: () => { handleSend(); return true },
+      'Shift-Enter': ({ editor }) => editor.commands.first(({ commands }) => [
+        () => commands.splitListItem('listItem'),
+        () => commands.splitBlock(),
+      ]),
+    }
+  },
+})
+
+const editor = useEditor({
+  extensions: [
+    // only what the bar offers: no headings, code blocks, images or tables
+    StarterKit.configure({ heading: false, codeBlock: false, dropcursor: false, gapcursor: false }),
+    Underline,
+    Link.configure({
+      openOnClick: false,
+      autolink: true,
+      linkOnPaste: true,
+      defaultProtocol: 'https',
+      HTMLAttributes: { target: '_blank', rel: 'noopener noreferrer nofollow' },
+      isAllowedUri: (url: string) => /^(https?:\/\/|mailto:|www\.)/i.test(url.trim()),
+    }),
+    SendKeys,
+  ],
+  editorProps: {
+    attributes: { class: 'wa-rich wa-editor px-2 py-[8px] text-[15px] leading-5 text-[var(--wa-text)]', 'aria-label': 'Message', role: 'textbox', 'aria-multiline': 'true' },
+  },
+  onUpdate: ({ editor: ed }) => {
+    const text = ed.getText().trim()
+    isEmpty.value = ed.isEmpty
+    hasText.value = text !== ''
+    emit('activity', text ? 'typing' : null)
+  },
+})
+
+/** HTML with anything beyond plain paragraphs and line breaks */
+const isFormatted = (html: string) => /<(?!\/?(p|br)\b)[a-z]/i.test(html)
+
+// ---- the rest of the composer ------------------------------------------------------------------
 const pendingPreviewUrl = computed(() => {
   if (pendingFile.value && pendingFile.value.type.startsWith('image/')) {
     return URL.createObjectURL(pendingFile.value)
   }
   return null
 })
-
-const autoGrow = () => {
-  if (!textareaRef.value) return
-  textareaRef.value.style.height = 'auto'
-  textareaRef.value.style.height = Math.min(textareaRef.value.scrollHeight, 128) + 'px'
-}
 
 const handleFileSelect = (event: Event) => {
   const target = event.target as HTMLInputElement
@@ -162,27 +209,15 @@ const handleCameraCapture = (file: File) => {
 }
 
 const insertEmoji = (emoji: string) => {
-  const el = textareaRef.value
-  if (!el) {
-    text.value += emoji
-    return
-  }
-  const start = el.selectionStart ?? text.value.length
-  const end = el.selectionEnd ?? text.value.length
-  text.value = text.value.slice(0, start) + emoji + text.value.slice(end)
-  requestAnimationFrame(() => {
-    el.focus()
-    const cursor = start + emoji.length
-    el.setSelectionRange(cursor, cursor)
-    autoGrow()
-  })
+  editor.value?.chain().focus().insertContent(emoji).run()
 }
 
 const handleClickOutside = (event: MouseEvent) => {
-  if (showEmojiPicker.value && emojiWrapperRef.value && !emojiWrapperRef.value.contains(event.target as Node)) {
+  const target = event.target as Node
+  if (showEmojiPicker.value && emojiWrapperRef.value && !emojiWrapperRef.value.contains(target)) {
     showEmojiPicker.value = false
   }
-  if (showAttachMenu.value && attachWrapperRef.value && !attachWrapperRef.value.contains(event.target as Node)) {
+  if (showAttachMenu.value && attachWrapperRef.value && !attachWrapperRef.value.contains(target)) {
     showAttachMenu.value = false
   }
 }
@@ -192,14 +227,19 @@ watch([() => recorder.isRecording.value, () => recorder.seconds.value], ([record
   emit('activity', recording ? 'recording' : null)
 })
 
-const handleSend = () => {
-  if (props.sending || (!text.value.trim() && !pendingFile.value)) return
+function handleSend() {
+  const ed = editor.value
+  if (!ed || props.sending) return
+  const message = ed.getText({ blockSeparator: '\n' }).trim()
+  if (!message && !pendingFile.value) return
+  const html = ed.getHTML()
   emit('activity', null)
-  emit('send', { message: text.value.trim(), file: pendingFile.value, replyToId: props.replyingTo?.id ?? null })
-  text.value = ''
+  emit('send', { message, html: message && isFormatted(html) ? html : null, file: pendingFile.value, replyToId: props.replyingTo?.id ?? null })
+  ed.commands.clearContent(true)
+  // the next message starts plain: no bold (or other style) carried over from the last word typed
+  ed.view.dispatch(ed.state.tr.setStoredMarks([]))
   pendingFile.value = null
   showEmojiPicker.value = false
-  if (textareaRef.value) textareaRef.value.style.height = 'auto'
 }
 
 const startRecording = () => {
@@ -210,7 +250,7 @@ const stopAndSend = async () => {
   const blob = await recorder.stop()
   if (!blob) return
   const file = new File([blob], `voice-note-${Date.now()}.webm`, { type: blob.type || 'audio/webm' })
-  emit('send', { message: '', file, replyToId: props.replyingTo?.id ?? null })
+  emit('send', { message: '', html: null, file, replyToId: props.replyingTo?.id ?? null })
 }
 
 const formatDuration = (secs: number) => {

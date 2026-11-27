@@ -19,6 +19,8 @@ class AuthService extends Service
     private UserRepository $userRepository;
     private int $maxLoginAttempts = 5;
     private int $lockoutTime = 900; // 15 minutes
+    /** a real Argon2id hash of a random string, checked when no account matches (see login) */
+    private const DUMMY_HASH = '$argon2id$v=19$m=65536,t=4,p=3$WDdsSGhUQWFBYVlkc2pxeg$bxL5nfQcrP6+L0twuJmTekq6SN/E0N2tXqFBPvkCMrE';
 
     /**
      * Constructor
@@ -44,7 +46,10 @@ class AuthService extends Service
         $user = $this->userRepository->findByUsernameOrEmail($identifier);
 
         if (!$user) {
-            error_log("Login failed: User not found for identifier: " . $identifier);
+            // the same slow password check as a real account, so the time taken doesn't tell
+            // whether an account exists (nothing typed is written to the log: people sometimes
+            // type their password into the username box)
+            password_verify($password, self::DUMMY_HASH);
             $this->recordFailedAttempt($identifier);
             return [
                 'success' => false,
@@ -52,19 +57,6 @@ class AuthService extends Service
             ];
         }
 
-
-        // Check if user is active - on the account that was actually found: ids repeat across the
-        // role tables, so looking the id up again (users first) could read someone else's flag
-        $active = array_key_exists('is_active', $user)
-            ? (bool) $user['is_active']
-            : $this->userRepository->isActive((int) $user['id'], $user['table_name'] ?? null);
-        if (!$active) {
-            error_log("Login failed: User inactive");
-            return [
-                'success' => false,
-                'message' => 'Your account is suspended. Please contact the administrator.'
-            ];
-        }
 
         // Verify password
         $passwordMatch = $this->verifyPassword($password, $user['password']);
@@ -74,6 +66,19 @@ class AuthService extends Service
             return [
                 'success' => false,
                 'message' => 'Invalid credentials'
+            ];
+        }
+
+        // Only now say an account is suspended: before the password was checked, anyone could
+        // find out which accounts are suspended. Checked on the account that was actually found:
+        // ids repeat across the role tables, so looking the id up again could read someone else's flag
+        $active = array_key_exists('is_active', $user)
+            ? (bool) $user['is_active']
+            : $this->userRepository->isActive((int) $user['id'], $user['table_name'] ?? null);
+        if (!$active) {
+            return [
+                'success' => false,
+                'message' => 'Your account is suspended. Please contact the administrator.'
             ];
         }
 

@@ -2,17 +2,18 @@
   <!-- The admin's read-only view of the school's chats. A class or group chat shows how many are in
        it and how many are online - never a list of its learners' names; a direct chat names its two
        people. Nothing can be sent from here. -->
-  <div class="wa h-[100dvh] flex bg-gray-100 dark:bg-gray-950">
+  <div class="wa h-[100dvh] flex bg-gray-100 dark:bg-gray-950" v-bind="chatLookAttrs">
     <div class="flex-1 flex overflow-hidden bg-white dark:bg-[rgb(17_24_39)]">
       <!-- The list of chats -->
       <aside class="w-full md:w-80 lg:w-[23rem] flex-shrink-0 md:border-r border-gray-200 dark:border-white/5 bg-white dark:bg-[rgb(17_24_39)] flex flex-col" :class="activeConversation ? 'hidden md:flex' : 'flex'">
         <div class="chat-bar px-4 pt-3.5 pb-3 bg-indigo-800">
           <div class="flex items-center gap-1.5">
             <AppMenuButton />
-            <div class="min-w-0">
+            <div class="min-w-0 flex-1">
               <h1 class="text-lg font-semibold text-white leading-tight">Chat monitoring</h1>
               <p class="text-xs mt-0.5">Read only · {{ conversations.length }} {{ conversations.length === 1 ? 'chat' : 'chats' }} across the school</p>
             </div>
+            <button type="button" class="w-9 h-9 rounded-full flex items-center justify-center text-white/90 hover:bg-white/10" title="Chat look: colours, font and text size" aria-label="Chat look" @click="showLook = true"><svg class="w-[22px] h-[22px]" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 110-18c4.97 0 9 3.58 9 8 0 2.76-2.24 4-5 4h-1.5a1.5 1.5 0 00-1.2 2.4c.43.57.2 1.6-.7 2.1-.2.1-.4.2-.6.2z" /><circle cx="7.5" cy="10.5" r="1.2" fill="currentColor" stroke="none" /><circle cx="11" cy="7" r="1.2" fill="currentColor" stroke="none" /><circle cx="15.5" cy="7.5" r="1.2" fill="currentColor" stroke="none" /></svg></button>
           </div>
           <select v-model="departmentFilter" class="cm-select mt-3 w-full px-3 py-2 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-white/40" aria-label="Department" @change="loadConversations">
             <option value="">All departments</option>
@@ -137,6 +138,7 @@
     <div v-if="previewImage" class="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4 cursor-zoom-out" @click="previewImage = null">
       <img :src="previewImage" alt="" class="max-w-full max-h-full rounded-lg">
     </div>
+    <ChatLookPanel v-if="showLook" @close="showLook = false" />
   </div>
 </template>
 
@@ -145,10 +147,16 @@ import { niceName } from '@/components/dashboard/teacher/time'
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import axios from 'axios'
 import MessageBubble from '@/components/chat/MessageBubble.vue'
+import ChatLookPanel from '@/components/chat/ChatLookPanel.vue'
+import { useChatLook } from '@/composables/useChatLook'
 import AppMenuButton from '@/components/chat/AppMenuButton.vue'
 import type { Conversation, ChatMessage } from '@/types/chat'
 
 const API_BASE = '/api/admin/chat'
+
+// Chat look: colour theme, font, text size, bubbles, wallpaper (ChatLookPanel)
+const { rootAttrs: chatLookAttrs } = useChatLook()
+const showLook = ref(false)
 
 const conversations = ref<Conversation[]>([])
 const conversationSearch = ref('')

@@ -14,8 +14,35 @@
         </div>
         <label class="block"><span :class="LABEL">Email</span><input v-model="creds.email" type="email" autocomplete="username" :class="INPUT"></label>
         <label class="block"><span :class="LABEL">Password</span><input v-model="creds.password" type="password" autocomplete="current-password" :class="INPUT"></label>
+        <label v-if="needsCode" class="block">
+          <span :class="LABEL">Code from your authenticator app</span>
+          <input ref="codeInput" v-model="creds.code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6 digits" :class="[INPUT, 'tracking-[0.3em] font-mono']">
+        </label>
         <p v-if="loginError" class="text-sm text-rose-600">{{ loginError }}</p>
         <button type="submit" :disabled="busy" class="w-full py-2.5 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-700 disabled:opacity-50">{{ busy ? 'Checking...' : 'Login' }}</button>
+      </form>
+    </div>
+
+    <!-- Two-step sign-in: set up once, before anything else in the portal opens -->
+    <div v-else-if="!admin.two_step" class="min-h-screen flex items-center justify-center px-4 py-8">
+      <form class="w-full max-w-sm rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 space-y-4" @submit.prevent="confirmTwoStep">
+        <div>
+          <p class="text-xs font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">One-time set-up</p>
+          <h1 class="text-xl font-bold">Turn on the sign-in code</h1>
+          <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">From now on the portal asks for a password <b>and</b> a code from your phone. Open an authenticator app (Google Authenticator, Microsoft Authenticator or Authy), add an account and scan this.</p>
+        </div>
+        <div class="flex justify-center">
+          <img v-if="twoStep.qr" :src="twoStep.qr" alt="QR code for your authenticator app" class="w-48 h-48 rounded-lg bg-white p-2 ring-1 ring-gray-200">
+          <div v-else class="w-48 h-48 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse"></div>
+        </div>
+        <p v-if="twoStep.secret" class="text-xs text-gray-500 dark:text-gray-400">Can't scan? Type this key into the app: <span class="font-mono text-gray-800 dark:text-gray-100 break-all">{{ twoStep.secret }}</span></p>
+        <label class="block">
+          <span :class="LABEL">The 6-digit code the app now shows</span>
+          <input v-model="twoStep.code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6 digits" :class="[INPUT, 'tracking-[0.3em] font-mono']">
+        </label>
+        <p v-if="twoStep.error" class="text-sm text-rose-600">{{ twoStep.error }}</p>
+        <button type="submit" :disabled="busy || !twoStep.secret" class="w-full py-2.5 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-700 disabled:opacity-50">{{ busy ? 'Checking...' : 'Turn it on' }}</button>
+        <button type="button" class="w-full text-sm text-gray-500 hover:underline" @click="logout">Sign out</button>
       </form>
     </div>
 
@@ -219,6 +246,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import axios from 'axios'
+import QRCode from 'qrcode'
 
 interface School { id: number; code: string; name: string; kind: string; status: string; is_master: number | string; database: string; students: number | null; teachers: number | null; last_login: string | null; reachable: boolean; content: Record<string, number> | null }
 type ReqStatus = 'new' | 'contacted' | 'activated' | 'declined'
@@ -236,9 +264,13 @@ const REQ_STATUS: Record<ReqStatus, { label: string; chip: string }> = {
   declined: { label: 'Declined', chip: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300' }
 }
 
-const admin = ref<{ id: number; name: string; email: string } | null>(null)
-const creds = ref({ email: '', password: '' })
+const admin = ref<{ id: number; name: string; email: string; two_step: boolean } | null>(null)
+const creds = ref({ email: '', password: '', code: '' })
 const loginError = ref('')
+// the second step: a code from the authenticator app (asked for once the password is right)
+const needsCode = ref(false)
+const codeInput = ref<HTMLInputElement | null>(null)
+const twoStep = ref({ secret: '', qr: '', code: '', error: '' })
 const busy = ref(false)
 const tab = ref<'schools' | 'learners' | 'updates' | 'activity'>('schools')
 const schools = ref<School[]>([])
@@ -341,7 +373,7 @@ onBeforeUnmount(() => robots?.remove())
 onMounted(async () => {
   try {
     admin.value = (await axios.get(`${API}/me`)).data.data.admin
-    await loadAll()
+    await afterSignIn()
   } catch { /* not signed in */ }
 })
 
@@ -351,9 +383,46 @@ const login = async () => {
   try {
     admin.value = (await axios.post(`${API}/login`, creds.value)).data.data.admin
     creds.value.password = ''
+    creds.value.code = ''
+    needsCode.value = false
+    await afterSignIn()
+  } catch (err: any) {
+    const data = err.response?.data
+    if (data?.needs_code) {
+      // the password was right: now the code (the first time, that's a prompt, not an error)
+      loginError.value = needsCode.value ? data.message : ''
+      needsCode.value = true
+      creds.value.code = ''
+      setTimeout(() => codeInput.value?.focus())
+    } else {
+      loginError.value = data?.message || 'Could not sign in'
+    }
+  } finally {
+    busy.value = false
+  }
+}
+/** Into the portal, or first to the two-step set-up for someone who hasn't turned it on */
+async function afterSignIn() {
+  if (admin.value?.two_step) {
+    await loadAll()
+    return
+  }
+  try {
+    const d = (await axios.post(`${API}/two-step/setup`)).data.data
+    twoStep.value = { secret: d.secret, qr: await QRCode.toDataURL(d.uri, { margin: 1, width: 384 }), code: '', error: '' }
+  } catch (err: any) {
+    twoStep.value.error = err.response?.data?.message || 'Could not start the set-up'
+  }
+}
+async function confirmTwoStep() {
+  busy.value = true
+  twoStep.value.error = ''
+  try {
+    admin.value = (await axios.post(`${API}/two-step/confirm`, { code: twoStep.value.code })).data.data.admin
+    twoStep.value = { secret: '', qr: '', code: '', error: '' }
     await loadAll()
   } catch (err: any) {
-    loginError.value = err.response?.data?.message || 'Could not sign in'
+    twoStep.value.error = err.response?.data?.message || 'Could not turn it on'
   } finally {
     busy.value = false
   }

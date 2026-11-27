@@ -40,7 +40,7 @@
         </p>
         <span
           v-if="conversation.unread_count"
-          class="flex-shrink-0 min-w-[20px] h-5 px-1.5 rounded-full bg-[var(--wa-green)] text-white text-[12px] font-semibold flex items-center justify-center"
+          class="flex-shrink-0 min-w-[20px] h-5 px-1.5 rounded-full bg-[var(--wa-green)] text-[var(--wa-on-accent)] text-[12px] font-semibold flex items-center justify-center"
         >
           {{ conversation.unread_count > 999 ? '999+' : conversation.unread_count }}
         </span>

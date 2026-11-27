@@ -20,7 +20,7 @@ class FileLinkController extends Controller
             $this->notFound('File not found');
             return;
         }
-        if (!FileAccess::userMayOpen($rel, $this->getCurrentUserRole(), (int) $this->getCurrentUserId())) {
+        if (!FileAccess::userMayOpen($rel, $this->getCurrentUserRole(), (int) $this->getCurrentUserId(), isset($_SESSION['teacher_id']) ? (int) $_SESSION['teacher_id'] : null)) {
             $this->forbidden('You do not have access to this file');
             return;
         }

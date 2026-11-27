@@ -251,7 +251,14 @@ class ChatController extends Controller
         }
 
         $data = $this->input();
-        $message = trim((string) ($data['message'] ?? ''));
+        // a formatted message comes as message_html (cleaned on the server, ChatHtml); message is
+        // then worked out from it here, never taken from the browser
+        try {
+            [$message, $messageHtml] = ChatService::messageFrom($data);
+        } catch (\InvalidArgumentException $e) {
+            $this->validationError(['message' => $e->getMessage()]);
+            return;
+        }
         $replyToId = !empty($data['reply_to_id']) ? (int) $data['reply_to_id'] : null;
 
         $attachment = null;
@@ -273,7 +280,8 @@ class ChatController extends Controller
             'teacher',
             htmlspecialchars($message, ENT_QUOTES, 'UTF-8'),
             $attachment,
-            $replyToId
+            $replyToId,
+            $messageHtml
         );
 
         $this->success(['id' => $messageId], 'Message sent');

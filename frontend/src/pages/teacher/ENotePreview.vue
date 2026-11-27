@@ -1027,6 +1027,7 @@
 </template>
 
 <script setup lang="ts">
+import { safeRichHtml } from '@/utils/safeHtml'
 import AppIcon from '@/components/common/AppIcon.vue'
 import TopicQuestions from '@/components/enotes/TopicQuestions.vue'
 import ExplainItBack from '@/components/enotes/ExplainItBack.vue'
@@ -1757,7 +1758,7 @@ const formatContent = (content: string): string => {
   // YouTube: handles the CKEditor <oembed> placeholder (any URL form, including youtu.be short
   // links - the previous hand-rolled regex here only matched youtube.com/watch?v= and silently
   // left youtu.be oembeds unrendered), plain <a> links, and bare pasted URLs.
-  let formatted = autoEmbedYoutube(content)
+  let formatted = autoEmbedYoutube(safeRichHtml(content))
 
   // Vimeo only ever appears as an oembed placeholder from the media-embed tool.
   formatted = formatted.replace(

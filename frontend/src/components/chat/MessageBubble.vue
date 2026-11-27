@@ -9,10 +9,10 @@
 
     <div class="group relative max-w-[85%] sm:max-w-[65%]">
       <div
-        class="wa-bubble px-2 pt-1.5 pb-1.5 text-[14.2px] leading-[19px]"
+        class="wa-bubble px-2 pt-1.5 pb-1.5"
         :class="[message.is_mine ? 'wa-bubble-out' : 'wa-bubble-in', tail ? (message.is_mine ? 'wa-tail-out' : 'wa-tail-in') : '']"
       >
-        <p v-if="showSenderName && tail" class="text-[12.8px] font-medium leading-5 -mt-0.5 mb-0.5" :style="{ color: nameColor }">
+        <p v-if="showSenderName && tail" class="text-[0.88em] font-semibold leading-5 -mt-0.5 mb-0.5" :style="{ color: nameColor }">
           {{ niceName(message.sender_name || '') }}
         </p>
 
@@ -49,9 +49,13 @@
           <span class="text-sm truncate">{{ message.attachment_name || 'File' }}</span>
         </a>
 
-        <!-- text, with the time and ticks floating into its last line like WhatsApp -->
+        <!-- a formatted message (cleaned on the server and again here): its own block, the time under it -->
+        <div v-if="richHtml" class="wa-rich" v-html="richHtml"></div>
+
+        <!-- text, with the time and ticks floating into its last line like WhatsApp; web addresses
+             in a plain message become links (built as elements - the text is never HTML) -->
         <p class="flow-root whitespace-pre-wrap break-words">
-          <span v-if="message.message">{{ chatText(message.message) }}</span>
+          <span v-if="!richHtml && message.message"><template v-for="(part, i) in textParts" :key="i"><a v-if="part.href" :href="part.href" target="_blank" rel="noopener noreferrer nofollow" class="wa-link">{{ part.text }}</a><template v-else>{{ part.text }}</template></template></span>
           <span class="float-right ml-2.5 mt-1.5 -mb-0.5 flex items-center gap-0.5 text-[11px] leading-[15px] text-[var(--wa-muted)] select-none">
             {{ formatTime(message.created_at) }}
             <!-- one grey = sent, two grey = delivered, two blue = read -->
@@ -89,7 +93,8 @@ import { computed } from 'vue'
 import AudioPlayer from './AudioPlayer.vue'
 import type { ChatMessage } from '@/types/chat'
 import { resolveAssetUrl } from '@/utils/url'
-import { chatText } from '@/utils/chatText'
+import { chatText, linkParts } from '@/utils/chatText'
+import { safeChatHtml } from '@/utils/safeHtml'
 import { niceName } from '@/components/dashboard/teacher/time'
 import '@/assets/whatsapp.css'
 
@@ -103,6 +108,10 @@ const props = defineProps<{
   showAvatar?: boolean
 }>()
 defineEmits<{ reply: [ChatMessage]; 'scroll-to': [number]; 'preview-image': [string] }>()
+
+// computed once per message, not on every render of a long conversation
+const richHtml = computed(() => safeChatHtml(props.message.message_html))
+const textParts = computed(() => linkParts(chatText(props.message.message)))
 
 // older servers only send is_read
 const tick = computed(() => props.message.status ?? (props.message.is_read ? 'read' : 'sent'))

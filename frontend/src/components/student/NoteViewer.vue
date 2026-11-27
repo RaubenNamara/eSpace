@@ -97,6 +97,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { autoEmbedYoutube, injectLazyLoading } from '@/utils/richContent'
+import { safeRichHtml } from '@/utils/safeHtml'
 
 interface Note {
   id: number
@@ -132,7 +133,7 @@ const hasPrevious = computed(() => currentIndex.value > 0)
 const hasNext = computed(() => currentIndex.value < props.allNotes.length - 1)
 
 const readingProgress = computed(() => maxScrollPercent.value)
-const renderedContent = computed(() => injectLazyLoading(autoEmbedYoutube(props.note?.content || '')))
+const renderedContent = computed(() => injectLazyLoading(autoEmbedYoutube(safeRichHtml(props.note?.content))))
 
 // Content sometimes contains <img> tags with a missing/deleted source - hide those instead of
 // showing the browser's broken-image icon. 'error' doesn't bubble, so this must be a

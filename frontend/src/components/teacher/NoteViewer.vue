@@ -37,7 +37,7 @@
         <div class="p-8">
           <div 
             class="prose prose-lg dark:prose-invert max-w-none"
-            v-html="note?.content"
+            v-html="safeRichHtml(note?.content)"
           ></div>
         </div>
       </div>
@@ -83,6 +83,7 @@
 </template>
 
 <script setup lang="ts">
+import { safeRichHtml } from '@/utils/safeHtml'
 import { computed } from 'vue'
 
 interface Note {

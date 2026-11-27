@@ -2,7 +2,7 @@
   <!-- WhatsApp Web layout (assets/whatsapp.css): an icon rail, the chat list, and the open
        conversation on a doodle wallpaper. Full screen - the app's own menu and top bar are hidden
        on chat (route meta fullScreenChat, see MainLayout) and the menu buttons bring the menu in. -->
-  <div class="wa h-[100dvh] flex overflow-hidden bg-[var(--wa-panel)]">
+  <div class="wa h-[100dvh] flex overflow-hidden bg-[var(--wa-panel)]" v-bind="chatLookAttrs">
     <!-- Icon rail (tablet and up) -->
     <nav class="hidden md:flex w-16 flex-shrink-0 flex-col items-center justify-between py-3 bg-[var(--wa-rail)] border-r border-[var(--wa-border)]" aria-label="Chat">
       <div class="flex flex-col items-center gap-1.5">
@@ -11,8 +11,9 @@
         </button>
         <button type="button" class="relative w-10 h-10 rounded-full flex items-center justify-center text-[var(--wa-text)] bg-black/5 dark:bg-white/10" title="Chats" aria-current="page">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
-          <span v-if="totalUnread" class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--wa-green)] text-white text-[10px] font-bold leading-[18px] text-center">{{ totalUnread > 99 ? '99+' : totalUnread }}</span>
+          <span v-if="totalUnread" class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--wa-green)] text-[var(--wa-on-accent)] text-[10px] font-bold leading-[18px] text-center">{{ totalUnread > 99 ? '99+' : totalUnread }}</span>
         </button>
+        <button type="button" class="w-10 h-10 rounded-full flex items-center justify-center text-[var(--wa-icon)] hover:bg-black/5 dark:hover:bg-white/5" title="Chat look: colours, font and text size" aria-label="Chat look" @click="showLook = true"><svg class="w-[22px] h-[22px]" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 110-18c4.97 0 9 3.58 9 8 0 2.76-2.24 4-5 4h-1.5a1.5 1.5 0 00-1.2 2.4c.43.57.2 1.6-.7 2.1-.2.1-.4.2-.6.2z" /><circle cx="7.5" cy="10.5" r="1.2" fill="currentColor" stroke="none" /><circle cx="11" cy="7" r="1.2" fill="currentColor" stroke="none" /><circle cx="15.5" cy="7.5" r="1.2" fill="currentColor" stroke="none" /></svg></button>
         <button type="button" class="w-10 h-10 rounded-full flex items-center justify-center text-[var(--wa-icon)] hover:bg-black/5 dark:hover:bg-white/5" title="New chat" @click="showNewChat = true">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8.5v7M8.5 12h7" /></svg>
         </button>
@@ -22,7 +23,7 @@
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
         </router-link>
         <img v-if="myPhoto" :src="myPhoto" alt="" class="w-9 h-9 rounded-full object-cover" :title="myName">
-        <div v-else class="w-9 h-9 rounded-full bg-[var(--wa-green)] text-white text-xs font-semibold flex items-center justify-center" :title="myName">{{ myInitials }}</div>
+        <div v-else class="w-9 h-9 rounded-full bg-[var(--wa-green)] text-[var(--wa-on-accent)] text-xs font-semibold flex items-center justify-center" :title="myName">{{ myInitials }}</div>
       </div>
     </nav>
 
@@ -30,6 +31,7 @@
     <section class="w-full md:w-[340px] lg:w-[400px] flex-shrink-0 flex flex-col bg-[var(--wa-panel)] md:border-r border-[var(--wa-border)]" :class="activeConversation ? 'hidden md:flex' : 'flex'">
       <header class="h-16 flex-shrink-0 px-4 flex items-center justify-between">
         <div class="flex items-center gap-2"><AppMenuButton class="md:hidden text-[var(--wa-icon)]" /><h1 class="text-[22px] font-bold text-[var(--wa-text)]">Chats</h1></div>
+        <button type="button" class="w-10 h-10 rounded-full flex items-center justify-center text-[var(--wa-icon)] hover:bg-black/5 dark:hover:bg-white/5" title="Chat look: colours, font and text size" aria-label="Chat look" @click="showLook = true"><svg class="w-[22px] h-[22px]" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 110-18c4.97 0 9 3.58 9 8 0 2.76-2.24 4-5 4h-1.5a1.5 1.5 0 00-1.2 2.4c.43.57.2 1.6-.7 2.1-.2.1-.4.2-.6.2z" /><circle cx="7.5" cy="10.5" r="1.2" fill="currentColor" stroke="none" /><circle cx="11" cy="7" r="1.2" fill="currentColor" stroke="none" /><circle cx="15.5" cy="7.5" r="1.2" fill="currentColor" stroke="none" /></svg></button>
         <button type="button" class="w-10 h-10 rounded-full flex items-center justify-center text-[var(--wa-icon)] hover:bg-black/5 dark:hover:bg-white/5" title="New chat" @click="showNewChat = true">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8.5v7M8.5 12h7" /></svg>
         </button>
@@ -57,7 +59,7 @@
         <!-- Creating a study group happens here in Chats -->
         <button v-if="!conversationSearch" type="button" class="w-full flex items-center gap-3 pl-3 pr-0 text-left transition-colors rounded-lg hover:bg-[var(--wa-hover)]" @click="showNewGroup = true">
           <div class="flex-shrink-0 py-2.5">
-            <div class="w-[49px] h-[49px] rounded-full flex items-center justify-center text-white bg-[var(--wa-green)]">
+            <div class="w-[49px] h-[49px] rounded-full flex items-center justify-center text-[var(--wa-on-accent)] bg-[var(--wa-green)]">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-4-4" /></svg>
             </div>
           </div>
@@ -113,6 +115,7 @@
               </button>
               <div v-if="showThreadMenu" class="absolute right-0 top-full mt-1 w-52 rounded-lg shadow-xl bg-[var(--wa-panel)] py-2 z-20 border border-[var(--wa-border)]">
                 <button @click="showThreadMenu = false; toggleThreadSearch()" class="w-full text-left px-5 py-2.5 text-[14.5px] text-[var(--wa-text)] hover:bg-[var(--wa-hover)]">Search</button>
+                <button @click="showThreadMenu = false; showLook = true" class="w-full text-left px-5 py-2.5 text-[14.5px] text-[var(--wa-text)] hover:bg-[var(--wa-hover)]">Chat look</button>
                 <button @click="clearActiveChat" class="w-full text-left px-5 py-2.5 text-[14.5px] text-[var(--wa-text)] hover:bg-[var(--wa-hover)]">Clear chat</button>
                 <template v-if="activeConversation.type === 'group'">
                   <button @click="openGroupDate" class="w-full text-left px-5 py-2.5 text-[14.5px] text-[var(--wa-text)] hover:bg-[var(--wa-hover)]">Change the date</button>
@@ -210,6 +213,7 @@
     <div v-if="previewImage" @click="previewImage = null" class="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4 cursor-zoom-out">
       <img :src="previewImage" class="max-w-full max-h-full rounded-lg">
     </div>
+    <ChatLookPanel v-if="showLook" @close="showLook = false" />
   </div>
 </template>
 
@@ -220,6 +224,8 @@ import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import ConversationListItem from '@/components/chat/ConversationListItem.vue'
 import MessageBubble from '@/components/chat/MessageBubble.vue'
+import ChatLookPanel from '@/components/chat/ChatLookPanel.vue'
+import { useChatLook } from '@/composables/useChatLook'
 import AppMenuButton from '@/components/chat/AppMenuButton.vue'
 import MessageComposer from '@/components/chat/MessageComposer.vue'
 import NewChatModal from '@/components/chat/NewChatModal.vue'
@@ -263,6 +269,10 @@ const teachers = ref<ChatContact[]>([])
 const classGroups = ref<ChatClassGroup[]>([])
 
 const showThreadMenu = ref(false)
+
+// Chat look: colour theme, font, text size, bubbles, wallpaper (ChatLookPanel)
+const { rootAttrs: chatLookAttrs } = useChatLook()
+const showLook = ref(false)
 const threadMenuRef = ref<HTMLElement | null>(null)
 
 const contactTabs = computed(() => [
@@ -477,7 +487,7 @@ const startClassChat = async (cls: ChatClassGroup) => {
   }
 }
 
-const sendMessage = async ({ message, file, replyToId }: { message: string; file: File | null; replyToId: number | null }) => {
+const sendMessage = async ({ message, html, file, replyToId }: { message: string; html: string | null; file: File | null; replyToId: number | null }) => {
   if (!activeConversation.value) return
   sending.value = true
   try {
@@ -485,13 +495,15 @@ const sendMessage = async ({ message, file, replyToId }: { message: string; file
     if (file) {
       const formData = new FormData()
       formData.append('message', message)
+      // the formatted version (bold, lists, links...); the server cleans it and keeps message as its plain text
+      if (html) formData.append('message_html', html)
       formData.append('file', file)
       if (replyToId) formData.append('reply_to_id', String(replyToId))
       response = await axios.post(`${API_BASE}/conversations/${activeConversation.value.id}/send`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
     } else {
-      response = await axios.post(`${API_BASE}/conversations/${activeConversation.value.id}/send`, { message, reply_to_id: replyToId })
+      response = await axios.post(`${API_BASE}/conversations/${activeConversation.value.id}/send`, { message, ...(html ? { message_html: html } : {}), reply_to_id: replyToId })
     }
     if (response.data.success) {
       replyingTo.value = null

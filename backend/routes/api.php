@@ -38,6 +38,9 @@ Router::post('/api/learner-requests', 'eSpace\App\Controllers\LearnerRequestCont
 Router::post('/api/devportal/login', 'eSpace\App\Controllers\DevPortalController@login');
 Router::post('/api/devportal/logout', 'eSpace\App\Controllers\DevPortalController@logout');
 Router::get('/api/devportal/me', 'eSpace\App\Controllers\DevPortalController@me');
+// The portal's two-step sign-in (a code from an authenticator app), set up once per team member
+Router::post('/api/devportal/two-step/setup', 'eSpace\App\Controllers\DevPortalController@setupTwoStep');
+Router::post('/api/devportal/two-step/confirm', 'eSpace\App\Controllers\DevPortalController@confirmTwoStep');
 Router::get('/api/devportal/schools', 'eSpace\App\Controllers\DevPortalController@schools');
 Router::post('/api/devportal/schools', 'eSpace\App\Controllers\DevPortalController@createSchool');
 Router::put('/api/devportal/schools/{id}', 'eSpace\App\Controllers\DevPortalController@updateSchool');

@@ -209,7 +209,8 @@ class NoteController extends Controller
         $sanitizedData = [
             'title' => htmlspecialchars(trim($data['title']), ENT_QUOTES, 'UTF-8'),
             'subject_id' => (int) $data['subject_id'],
-            'content' => $data['content'], // Keep HTML content
+            // formatting kept; anything that could run (scripts, on...= handlers, javascript: links) removed
+            'content' => \eSpace\App\Utils\HtmlSanitizer::sanitize((string) $data['content']),
             'topic_id' => !empty($data['topic_id']) ? (int) $data['topic_id'] : null,
             'subtopic_id' => !empty($data['subtopic_id']) ? (int) $data['subtopic_id'] : null,
             'is_published' => !empty($data['is_published']) ? 1 : 0,
@@ -303,7 +304,7 @@ class NoteController extends Controller
                     $params['title'] = htmlspecialchars(trim($data['title']), ENT_QUOTES, 'UTF-8');
                 } elseif ($field === 'content') {
                     $updates[] = "content = :content";
-                    $params['content'] = $data['content']; // Keep HTML content
+                    $params['content'] = \eSpace\App\Utils\HtmlSanitizer::sanitize((string) $data['content']);
                 } elseif (in_array($field, ['subject_id', 'topic_id', 'subtopic_id', 'assigned_id'])) {
                     $updates[] = "{$field} = :{$field}";
                     $params[$field] = !empty($data[$field]) ? (int) $data[$field] : null;

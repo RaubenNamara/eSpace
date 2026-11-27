@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace eSpace\App\Services;
 
 use eSpace\App\Utils\MimeType;
+use eSpace\App\Utils\ChatHtml;
 use PDO;
 
 /**
@@ -570,6 +571,8 @@ class ChatService
                 'is_read' => $status === 'read',
                 'status' => $status,
                 'message' => $row['message'],
+                // the formatted version (cleaned when it was sent), or null for a plain message
+                'message_html' => $row['message_html'] ?? null,
                 'attachment' => $row['attachment'],
                 'attachment_type' => self::isVoiceNoteName($row['attachment_name'] ?? null) ? 'audio' : $row['attachment_type'],
                 'attachment_name' => $row['attachment_name'],
@@ -592,20 +595,56 @@ class ChatService
     }
 
     /**
+     * The text of a message being sent, from the request: [plain text, formatted HTML or null].
+     * A formatted message (message_html) is cleaned by ChatHtml, and its plain text - kept in
+     * `message` for previews, search, notifications and older apps - is made from that cleaned
+     * HTML, not taken from the browser. Throws InvalidArgumentException for a message that is
+     * too long.
+     *
+     * @return array{0: string, 1: ?string}
+     */
+    public static function messageFrom(array $data): array
+    {
+        $html = $data['message_html'] ?? null;
+        if (is_string($html) && trim($html) !== '') {
+            $clean = ChatHtml::clean($html);
+            return [$clean['text'], $clean['html']];
+        }
+        $message = trim((string) ($data['message'] ?? ''));
+        if (mb_strlen($message) > ChatHtml::MAX_TEXT) {
+            throw new \InvalidArgumentException('This message is too long.');
+        }
+        return [$message, null];
+    }
+
+    /** chat_messages.message_html (migration 168), added here too if a database hasn't had it yet */
+    private function ensureHtmlColumn(): void
+    {
+        static $done = false;
+        if (!$done) {
+            $this->getDb()->exec('ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS message_html MEDIUMTEXT NULL AFTER message');
+            $done = true;
+        }
+    }
+
+    /**
      * Send a message (text and/or an already-uploaded attachment) into a conversation and bump
      * the conversation's updated_at so it sorts to the top of the list.
      */
-    public function sendMessage(int $conversationId, int $senderId, string $senderRole, string $message, ?array $attachment, ?int $replyToId): int
+    public function sendMessage(int $conversationId, int $senderId, string $senderRole, string $message, ?array $attachment, ?int $replyToId, ?string $messageHtml = null): int
     {
         $db = $this->getDb();
+        if ($messageHtml !== null) {
+            $this->ensureHtmlColumn();
+        }
 
         $stmt = $db->prepare(
             "INSERT INTO chat_messages
-                (conversation_id, sender_id, sender_role, message, reply_to_id, attachment, attachment_type, attachment_name, attachment_size, created_at)
+                (conversation_id, sender_id, sender_role, message, " . ($messageHtml !== null ? 'message_html, ' : '') . "reply_to_id, attachment, attachment_type, attachment_name, attachment_size, created_at)
              VALUES
-                (:cid, :sender_id, :sender_role, :message, :reply_to_id, :attachment, :attachment_type, :attachment_name, :attachment_size, NOW())"
+                (:cid, :sender_id, :sender_role, :message, " . ($messageHtml !== null ? ':message_html, ' : '') . ":reply_to_id, :attachment, :attachment_type, :attachment_name, :attachment_size, NOW())"
         );
-        $stmt->execute([
+        $stmt->execute(($messageHtml !== null ? ['message_html' => $messageHtml] : []) + [
             'cid' => $conversationId,
             'sender_id' => $senderId,
             'sender_role' => $senderRole,
@@ -744,6 +783,8 @@ class ChatService
                 'sender_role' => $row['sender_role'],
                 'sender_name' => $this->getUserName((int) $row['sender_id'], $row['sender_role']),
                 'message' => $row['message'],
+                // the formatted version (cleaned when it was sent), or null for a plain message
+                'message_html' => $row['message_html'] ?? null,
                 'attachment' => $row['attachment'],
                 'attachment_type' => self::isVoiceNoteName($row['attachment_name'] ?? null) ? 'audio' : $row['attachment_type'],
                 'attachment_name' => $row['attachment_name'],

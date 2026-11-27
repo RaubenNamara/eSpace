@@ -155,6 +155,7 @@ import AppIcon from '@/components/common/AppIcon.vue'
 import { timeAgo } from '@/components/dashboard/teacher/time'
 import { condense, diffHtml } from '@/utils/textDiff'
 import { resolveContentAssetUrls } from '@/utils/richContent'
+import { safeRichHtml } from '@/utils/safeHtml'
 
 type Action = 'snapshot' | 'create' | 'edit' | 'duplicate' | 'move' | 'delete' | 'restore'
 interface Entry {
@@ -288,7 +289,7 @@ const openVersion = async (id: number) => {
 
 const diff = computed(() => (viewing.value?.previous ? diffHtml(viewing.value.previous.content || '', viewing.value.version.content || '') : null))
 const condensed = computed(() => (diff.value ? condense(diff.value.parts) : []))
-const pageHtml = computed(() => resolveContentAssetUrls(viewing.value?.version.content || '') || '<p class="text-gray-400">This version is empty.</p>')
+const pageHtml = computed(() => resolveContentAssetUrls(safeRichHtml(viewing.value?.version.content)) || '<p class="text-gray-400">This version is empty.</p>')
 
 const restoreHint = computed(() => {
   const v = viewing.value?.version

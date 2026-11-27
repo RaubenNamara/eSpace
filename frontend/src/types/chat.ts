@@ -71,7 +71,10 @@ export interface ChatMessage {
   is_read?: boolean
   /** is_mine messages: one grey tick (sent), two grey (delivered), two blue (read) */
   status?: 'sent' | 'delivered' | 'read' | null
+  /** plain text (HTML-escaped by the server) - always there, also for formatted messages */
   message: string
+  /** the formatted version (bold, lists, links...), cleaned by the server; null when plain */
+  message_html?: string | null
   attachment: string | null
   attachment_type: AttachmentType | null
   attachment_name: string | null

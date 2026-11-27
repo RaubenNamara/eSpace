@@ -28,13 +28,52 @@ final class FileAccess
         return $rel;
     }
 
-    /** A student's own hand-in is theirs: answer_<question>_<student>_... - staff may open any */
-    public static function userMayOpen(string $rel, ?string $role, int $userId): bool
+    /**
+     * Whether this signed-in user may open the file:
+     *  - a student's hand-in (answer_<question>_<student>_...) and practical work
+     *    (work_<question>_<student>_...): only that student; staff may open any
+     *  - a chat attachment: only people in a conversation it was sent in (admins too, who
+     *    oversee the school's chats)
+     *  - anything else (notes, books, videos, question papers...): any signed-in user
+     * $teacherId: the teacher account behind an HOD, who may chat as either.
+     */
+    public static function userMayOpen(string $rel, ?string $role, int $userId, ?int $teacherId = null): bool
     {
-        if ($role === 'student' && preg_match('#^assignment_submissions/answer_\d+_(\d+)_#', $rel, $m)) {
+        if ($role === 'student' && preg_match('#^(?:assignment_submissions/answer|practicals/work)_\d+_(\d+)_#', $rel, $m)) {
             return (int) $m[1] === $userId;
         }
+        if (str_starts_with($rel, 'chat/')) {
+            return in_array($role, ['admin', 'super_admin'], true) || self::inChatWith($rel, $role, $userId, $teacherId);
+        }
         return true;
+    }
+
+    /** Is the user in a conversation where this attachment was sent? */
+    private static function inChatWith(string $rel, ?string $role, int $userId, ?int $teacherId): bool
+    {
+        $as = [];
+        if (in_array($role, ['student', 'teacher', 'hod'], true) && $userId > 0) {
+            $as[] = [$role, $userId];
+        }
+        if ($role === 'hod' && $teacherId) {
+            $as[] = ['teacher', $teacherId];
+        }
+        if (!$as) {
+            return false;
+        }
+        try {
+            $db = \eSpace\Config\Database::getInstance();
+            $who = implode(' OR ', array_fill(0, count($as), '(p.user_role = ? AND p.user_id = ?)'));
+            $stmt = $db->prepare(
+                "SELECT 1 FROM chat_messages m INNER JOIN chat_participants p ON p.conversation_id = m.conversation_id
+                 WHERE m.attachment = ? AND ($who) LIMIT 1"
+            );
+            $stmt->execute(['/uploads/' . $rel, ...array_merge(...$as)]);
+            return (bool) $stmt->fetchColumn();
+        } catch (\Throwable $e) {
+            error_log('Chat file check failed: ' . $e->getMessage());
+            return false;
+        }
     }
 
     /** The query string that lets this one file be opened without signing in, for a while */

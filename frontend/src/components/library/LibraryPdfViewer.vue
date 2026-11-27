@@ -4,12 +4,13 @@
     class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50"
     :class="readMode ? 'p-0' : 'p-0 lg:p-3'"
   >
+    <!-- no card behind the book: the book and its two bars float over the dimmed page -->
     <div
-      class="bg-white dark:bg-gray-800 w-full h-full shadow-2xl overflow-hidden flex flex-col"
-      :class="readMode ? '' : 'lg:h-[98vh] lg:max-w-[min(97vw,1760px)] lg:rounded-2xl'"
+      class="w-full h-full overflow-hidden flex flex-col"
+      :class="readMode ? '' : 'lg:h-[98vh] lg:max-w-[min(97vw,1760px)]'"
     >
       <!-- Header - hidden entirely in Read Mode, replaced by floating overlay controls. -->
-      <div v-if="!readMode" class="relative flex-shrink-0 bg-[#f8f0dc] dark:bg-gray-800 border-b border-[#ecdfbd] dark:border-gray-700 px-3 sm:px-5 py-1.5">
+      <div v-if="!readMode" class="relative z-20 flex-shrink-0 mx-2 sm:mx-3 mt-2 sm:mt-1 bg-[#f8f0dc]/95 dark:bg-gray-800/95 backdrop-blur ring-1 ring-[#ecdfbd] dark:ring-gray-700 shadow-xl shadow-black/20 rounded-2xl px-3 sm:px-4 py-1.5">
         <!-- One slim row: title, subject, progress and the buttons - the book gets the height -->
         <div class="flex items-center justify-between gap-3">
           <div class="min-w-0 flex-1 flex items-center gap-x-3 gap-y-0.5 flex-wrap">
@@ -170,17 +171,6 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
               </svg>
             </button>
-            <a
-              v-if="allowDownload"
-              :href="pdfUrl"
-              download
-              class="p-1.5 rounded-lg bg-white dark:bg-gray-700 ring-1 ring-[#ecdfbd] dark:ring-gray-600 hover:bg-[#fff8e8] dark:hover:bg-gray-600 transition-colors"
-              title="Download"
-            >
-              <svg class="w-5 h-5 text-[#061a55] dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"></path>
-              </svg>
-            </a>
             <button
               @click="$emit('close')"
               class="p-1.5 rounded-lg bg-white dark:bg-gray-700 ring-1 ring-[#ecdfbd] dark:ring-gray-600 hover:bg-[#fff8e8] dark:hover:bg-gray-600 transition-colors"
@@ -198,14 +188,14 @@
         <!-- Mobile/tablet backdrop for the contents drawer - absolute (not fixed) since this
              viewer is a centered modal below the lg breakpoint, not a full-viewport page; fixed
              positioning would pin the drawer/backdrop to the browser window instead of the card. -->
-        <div v-if="showToc" @click="showToc = false" class="absolute inset-0 bg-black/50 z-30 lg:hidden"></div>
+        <div v-if="showToc" @click="showToc = false" class="absolute inset-0 bg-black/30 z-30"></div>
 
         <!-- The book's frame: it stays put while the book scrolls inside it (Read Mode, or zoomed
              in), so the reading tint laid over the frame covers every part of the page the reader
              scrolls to - inside the scrolling area it scrolled away with the top of the page. -->
-        <div class="relative flex-1 min-w-0 flex">
+        <div ref="noteFrameRef" class="relative flex-1 min-w-0 flex">
         <div
-          class="relative flex-1 min-w-0 p-0 bg-gray-200 dark:bg-gray-900"
+          class="relative flex-1 min-w-0 p-0"
           :class="[
             zoomLevel > MIN_ZOOM ? 'overflow-auto' : 'overflow-hidden flex justify-center items-center',
             // Read Mode fallback: the book is sized to fit the screen exactly, but a scrollbar
@@ -219,10 +209,10 @@
           ]"
           @contextmenu.prevent
         >
-          <div v-if="loading" class="text-gray-500 dark:text-gray-300 py-20 text-sm">Loading document…</div>
+          <div v-if="loading" class="text-white/80 py-20 text-sm">Loading document…</div>
           <div v-else-if="error" class="text-red-400 py-20 text-sm">{{ error }}</div>
           <div v-else-if="preparing" class="w-full max-w-xs text-center">
-            <p class="text-sm text-gray-500 dark:text-gray-300 mb-2">Opening your book…</p>
+            <p class="text-sm text-white/80 mb-2">Opening your book…</p>
             <div class="h-1.5 rounded-full bg-emerald-600/60 animate-pulse"></div>
           </div>
           <div
@@ -234,7 +224,7 @@
             <BookFlipbook
               ref="flipbookRef"
               :images="bookImages"
-              :page-width="bookPageWidth"
+              :page-width="shownPageWidth"
               :page-height="bookPageHeight"
               :start-page="currentPage - 1"
               :muted="isMuted"
@@ -250,8 +240,9 @@
 
           <!-- Each page on show has its own note, folded away as a tab at the foot of that page:
                "My note" where the student has written one, "Add my note" where not. In the two-page
-               view the left and right pages each get one (the book is centred, so the spine is the
-               middle of this area); clicking a tab unfolds that page's note (UnfoldingNote).
+               view the left page's tab sits in its bottom-left corner and the right page's in its
+               bottom-right corner (measured from the book itself, bookCorners); clicking a tab
+               unfolds that page's note (UnfoldingNote).
                Laid over the frame, not inside the scrolling area, so a zoomed-in or Read Mode page
                scrolls under the notes instead of carrying them away. -->
           <template v-if="notesEnabled && !preparing && bookImages.length">
@@ -286,12 +277,12 @@
              Hidden entirely in Read Mode, same as the eNotes reader's TOC sidebar. -->
         <div
           v-if="bookImages.length > 0 && !readMode"
-          class="absolute lg:static inset-y-0 right-0 z-40 w-64 max-w-[80vw] bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col transform transition-transform duration-300 lg:translate-x-0"
-          :class="showToc ? 'translate-x-0' : 'translate-x-full'"
+          class="absolute top-2 bottom-2 right-2 sm:right-3 z-40 w-64 max-w-[80vw] bg-white/95 dark:bg-gray-800/95 backdrop-blur rounded-2xl shadow-2xl ring-1 ring-black/5 dark:ring-white/10 overflow-hidden flex flex-col transform transition-all duration-300"
+          :class="showToc ? 'translate-x-0 opacity-100' : 'translate-x-[110%] opacity-0 pointer-events-none'"
         >
           <div class="p-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
             <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Contents</h3>
-            <button @click="showToc = false" class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors lg:hidden">
+            <button @click="showToc = false" class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors" aria-label="Close contents">
               <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
@@ -318,7 +309,7 @@
       </div>
 
       <!-- Controls - replaced by floating overlay arrows in Read Mode. -->
-      <div v-if="!readMode" class="flex items-center justify-center gap-3 sm:gap-6 px-3 sm:px-6 py-1.5 sm:py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 flex-shrink-0">
+      <div v-if="!readMode" class="self-center flex items-center justify-center gap-3 sm:gap-5 mb-2 sm:mb-1 px-2 py-1 rounded-full bg-white/95 dark:bg-gray-800/95 backdrop-blur shadow-xl shadow-black/20 ring-1 ring-black/5 dark:ring-white/10 flex-shrink-0">
         <button type="button" class="nav-btn" :disabled="currentPage <= 1" @click="goPrev">‹ Prev</button>
         <span class="text-xs sm:text-sm text-gray-600 dark:text-gray-300 min-w-[100px] text-center">Page {{ currentPage }} of {{ totalPages || '…' }}</span>
         <button type="button" class="nav-btn" :disabled="currentPage >= totalPages" @click="goNext">Next ›</button>
@@ -330,7 +321,8 @@
       <button
         @click="goPrev"
         :disabled="currentPage <= 1"
-        class="fixed left-2 sm:left-4 top-1/2 -translate-y-1/2 z-50 p-3 sm:p-4 rounded-full bg-gray-900/40 hover:bg-gray-900/60 text-white backdrop-blur-sm shadow-lg transition-colors disabled:opacity-0 disabled:pointer-events-none"
+        v-if="!compactControls"
+        class="fixed left-4 top-1/2 -translate-y-1/2 z-50 p-4 rounded-full bg-gray-900/40 hover:bg-gray-900/60 text-white backdrop-blur-sm shadow-lg transition-colors disabled:opacity-0 disabled:pointer-events-none"
         title="Previous page"
       >
         <svg class="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -340,7 +332,8 @@
       <button
         @click="goNext"
         :disabled="currentPage >= totalPages"
-        class="fixed right-2 sm:right-4 top-1/2 -translate-y-1/2 z-50 p-3 sm:p-4 rounded-full bg-gray-900/40 hover:bg-gray-900/60 text-white backdrop-blur-sm shadow-lg transition-colors disabled:opacity-0 disabled:pointer-events-none"
+        v-if="!compactControls"
+        class="fixed right-4 top-1/2 -translate-y-1/2 z-50 p-4 rounded-full bg-gray-900/40 hover:bg-gray-900/60 text-white backdrop-blur-sm shadow-lg transition-colors disabled:opacity-0 disabled:pointer-events-none"
         title="Next page"
       >
         <svg class="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -357,6 +350,16 @@
         </svg>
         <span class="text-xs font-medium hidden sm:inline">Exit</span>
       </button>
+      <!-- phone (upright or sideways): previous / page / next in one small pill at the bottom, clear of the text -->
+      <div v-if="compactControls" class="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 p-1 rounded-full bg-gray-900/55 text-white backdrop-blur-sm shadow-lg">
+        <button type="button" class="w-9 h-9 rounded-full flex items-center justify-center hover:bg-white/15 disabled:opacity-30" :disabled="currentPage <= 1" title="Previous page" aria-label="Previous page" @click="goPrev">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+        </button>
+        <span class="min-w-[3.5rem] text-center text-xs font-semibold tabular-nums">{{ currentPage }} / {{ totalPages || '…' }}</span>
+        <button type="button" class="w-9 h-9 rounded-full flex items-center justify-center hover:bg-white/15 disabled:opacity-30" :disabled="currentPage >= totalPages" title="Next page" aria-label="Next page" @click="goNext">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+        </button>
+      </div>
     </template>
   </div>
 </template>
@@ -400,7 +403,6 @@ const isMuted = usePersistedRef('espace:flipbook-muted', false)
 const preferSinglePage = usePersistedRef('espace:flipbook-single-page-preferred', false)
 
 const pdfUrl = computed(() => resolveAssetUrl(props.book.file_path))
-const allowDownload = computed(() => !!props.book.allow_download)
 
 const {
   loading, error, pdfDoc, currentPage, totalPages, scale,
@@ -521,22 +523,102 @@ watch(bookAreaRef, el => {
 })
 onBeforeUnmount(() => bookAreaObserver?.disconnect())
 const BOARD_ROOM = 20
+// A phone held sideways opens the book as a two-page spread (BookFlipbook allows it there), so the
+// book is sized for two pages from the start, not for the narrow single page it would otherwise be
+const sidewaysMq = typeof window !== 'undefined' ? window.matchMedia('(max-width: 1023px) and (orientation: landscape)') : null
+const isSideways = ref(sidewaysMq?.matches ?? false)
+const onSidewaysChange = (e: MediaQueryListEvent) => { isSideways.value = e.matches }
+onMounted(() => sidewaysMq?.addEventListener('change', onSidewaysChange))
+onBeforeUnmount(() => sidewaysMq?.removeEventListener('change', onSidewaysChange))
+// A narrow screen, or a short one (a phone held sideways): Read Mode uses one small pill at the
+// bottom instead of the big side arrows, which would cover the page
+const compactMq = typeof window !== 'undefined' ? window.matchMedia('(max-width: 639px), (max-height: 500px)') : null
+const compactControls = ref(compactMq?.matches ?? false)
+const onCompactChange = (e: MediaQueryListEvent) => { compactControls.value = e.matches }
+onMounted(() => compactMq?.addEventListener('change', onCompactChange))
+onBeforeUnmount(() => compactMq?.removeEventListener('change', onCompactChange))
+const pagesShown = computed(() => (isSideways.value && !preferSinglePage.value) || bookOrientation.value !== 'portrait' ? 2 : 1)
+/**
+ * Read Mode: the pages are widened to the screen's shape, so the open book fills the whole screen
+ * instead of standing in the middle with empty sides. Each page's picture keeps its own shape,
+ * centred on the wider white sheet (BookFlipbook draws it that way), so nothing is squashed.
+ * Never narrower than the real page, at most twice as wide, rounded so a small resize doesn't
+ * rebuild the book. Outside Read Mode the page keeps its real shape.
+ */
+const shownPageWidth = computed(() => {
+  const natural = bookPageWidth.value
+  const { w, h } = bookArea.value
+  if (!readMode.value || !natural || !bookPageHeight.value || w <= BOARD_ROOM || h <= BOARD_ROOM) return natural
+  const screenPageRatio = (w - BOARD_ROOM) / (h - BOARD_ROOM) / pagesShown.value
+  const wanted = Math.round((bookPageHeight.value * screenPageRatio) / 10) * 10
+  return Math.min(natural * 2, Math.max(natural, wanted))
+})
 const bookFitStyle = computed(() => {
   const { w, h } = bookArea.value
-  if (!bookPageWidth.value || !bookPageHeight.value || w <= 0 || h <= 0) return {}
-  const pagesShown = bookOrientation.value === 'portrait' ? 1 : 2
-  const ratio = (bookPageWidth.value / bookPageHeight.value) * pagesShown
+  if (!shownPageWidth.value || !bookPageHeight.value || w <= 0 || h <= 0) return {}
+  const ratio = (shownPageWidth.value / bookPageHeight.value) * pagesShown.value
   const width = Math.max(200, Math.min(w - BOARD_ROOM, Math.floor((h - BOARD_ROOM) * ratio)))
   return { width: `${width}px`, height: `${Math.round(width / ratio)}px` }
 })
 const NOTE_GAP = '12px'
+// Where the book's outer edges are inside the reading frame, so each page's note tab can sit in
+// that page's outer bottom corner: left page bottom-left, right page bottom-right. Measured from
+// the book itself (it is centred and sized to fit, and moves when zoomed or scrolled).
+const noteFrameRef = ref<HTMLElement | null>(null)
+const bookCorners = ref<{ left: number; right: number; bottom: number } | null>(null)
+/** inside the page, clear of the cover's board */
+const NOTE_INSET = 16
+function measureBookCorners() {
+  const frame = noteFrameRef.value
+  const book = (flipbookRef.value as any)?.$el as HTMLElement | undefined
+  if (!frame || !book?.getBoundingClientRect) { bookCorners.value = null; return }
+  const f = frame.getBoundingClientRect()
+  const r = book.getBoundingClientRect()
+  if (!r.width || !r.height) { bookCorners.value = null; return }
+  // kept inside the frame, so a zoomed-in book scrolled sideways still shows its tabs
+  bookCorners.value = {
+    left: Math.max(8, r.left - f.left + NOTE_INSET),
+    right: Math.max(8, f.right - r.right + NOTE_INSET),
+    bottom: Math.max(8, f.bottom - r.bottom + NOTE_INSET),
+  }
+}
+let cornerObserver: ResizeObserver | null = null
+let cornerFrame = 0
+const remeasureCorners = () => {
+  cancelAnimationFrame(cornerFrame)
+  cornerFrame = requestAnimationFrame(measureBookCorners)
+}
+watch([noteFrameRef, flipbookRef], ([frame, book]) => {
+  cornerObserver?.disconnect()
+  if (!frame) return
+  cornerObserver = new ResizeObserver(remeasureCorners)
+  cornerObserver.observe(frame)
+  const el = (book as any)?.$el
+  if (el instanceof Element) cornerObserver.observe(el)
+  remeasureCorners()
+}, { flush: 'post' })
+onMounted(() => {
+  window.addEventListener('resize', remeasureCorners)
+  // a zoomed-in book scrolls inside the frame: the corners move with it
+  noteFrameRef.value?.addEventListener('scroll', remeasureCorners, true)
+})
+onBeforeUnmount(() => {
+  cornerObserver?.disconnect()
+  cancelAnimationFrame(cornerFrame)
+  window.removeEventListener('resize', remeasureCorners)
+  noteFrameRef.value?.removeEventListener('scroll', remeasureCorners, true)
+})
+
 const noteSlots = computed(() => {
   const page = currentPage.value
   const total = totalPages.value
   if (!page) return []
-  const whole = { left: NOTE_GAP, right: NOTE_GAP }
-  const leftHalf = { left: NOTE_GAP, right: `calc(50% + ${NOTE_GAP})` }
-  const rightHalf = { left: `calc(50% + ${NOTE_GAP})`, right: NOTE_GAP }
+  const c = bookCorners.value
+  // the right page's tab (and its note) lines up on the right
+  const alignRight = { display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }
+  const whole = c ? { left: `${c.left}px`, right: `${c.right}px`, bottom: `${c.bottom}px` } : { left: NOTE_GAP, right: NOTE_GAP }
+  const leftHalf = c ? { left: `${c.left}px`, right: 'auto', bottom: `${c.bottom}px` } : { left: NOTE_GAP, right: `calc(50% + ${NOTE_GAP})` }
+  const rightHalf = c ? { left: 'auto', right: `${c.right}px`, bottom: `${c.bottom}px`, ...alignRight } : { left: `calc(50% + ${NOTE_GAP})`, right: NOTE_GAP, ...alignRight }
   if (bookOrientation.value === 'portrait') return [{ page, side: 'single', style: whole }]
   // The cover stands alone on the right; a lone back page on the left
   if (page === 1) return [{ page, side: 'right', style: rightHalf }]

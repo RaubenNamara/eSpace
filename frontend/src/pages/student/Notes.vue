@@ -377,6 +377,7 @@
 import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import axios from 'axios'
 import { autoEmbedYoutube, injectLazyLoading } from '@/utils/richContent'
+import { safeRichHtml } from '@/utils/safeHtml'
 
 interface Note {
   id: number
@@ -551,10 +552,10 @@ const coverLearningOutcomes = computed(() => {
 const renderedContent = computed(() => {
   if (!activeItemDetail.value) return ''
   if (activeItemDetail.value.itemType === 'note') {
-    return injectLazyLoading(autoEmbedYoutube(activeItemDetail.value.content || ''))
+    return injectLazyLoading(autoEmbedYoutube(safeRichHtml(activeItemDetail.value.content)))
   }
   if (isCoverPage.value) return ''
-  return injectLazyLoading(autoEmbedYoutube(currentPage.value?.content || ''))
+  return injectLazyLoading(autoEmbedYoutube(safeRichHtml(currentPage.value?.content)))
 })
 
 const teacherName = computed(() => {

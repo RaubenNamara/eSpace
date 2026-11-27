@@ -29,7 +29,7 @@
     <!-- The task, as the teacher wrote it -->
     <div v-if="instructions && showTask" class="flex-shrink-0 max-h-[30vh] overflow-y-auto border-b border-gray-200 dark:border-gray-800 bg-amber-50 dark:bg-amber-900/15 px-4 py-3">
       <p class="text-[11px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-200 mb-1">Task</p>
-      <div class="prose prose-sm max-w-none dark:prose-invert text-gray-800 dark:text-gray-100" v-html="instructions"></div>
+      <div class="prose prose-sm max-w-none dark:prose-invert text-gray-800 dark:text-gray-100" v-html="safeHtml(instructions)"></div>
     </div>
 
     <div class="flex-1 min-h-0 flex">
@@ -150,6 +150,7 @@
 </template>
 
 <script setup lang="ts">
+import { safeHtml } from '@/utils/safeHtml'
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, shallowRef } from 'vue'
 import { useToastStore } from '@/stores/toast'
 import { resolveAssetUrl } from '@/utils/url'

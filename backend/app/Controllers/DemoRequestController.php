@@ -38,6 +38,10 @@ class DemoRequestController extends Controller
      */
     public function store(): void
     {
+        if ($wait = \eSpace\App\Support\RequestLimit::hit('demo_request', 5)) {
+            $this->error(\eSpace\App\Support\RequestLimit::message($wait), 429);
+            return;
+        }
         // `website` is a field people never see - only bots fill it in. Pretend it worked.
         if (trim((string) $this->input('website', '')) !== '') {
             $this->success([], 'Thank you - we will be in touch.');

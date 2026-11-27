@@ -891,6 +891,7 @@
 </template>
 
 <script setup lang="ts">
+import { safeRichHtml } from '@/utils/safeHtml'
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute, onBeforeRouteLeave } from 'vue-router'
 import axios from 'axios'
@@ -1385,7 +1386,7 @@ const hasMeaningfulTitle = (title: string): boolean => {
 // becomes in the reader, silently letting a video-containing page pass as "fits" when it doesn't.
 const formatProbeContent = (content: string): string => {
   if (!content) return ''
-  let formatted = autoEmbedYoutube(content)
+  let formatted = autoEmbedYoutube(safeRichHtml(content))
   formatted = formatted.replace(
     /<oembed url="https:\/\/vimeo\.com\/(\d+)"><\/oembed>/gi,
     '<iframe width="560" height="315" src="https://player.vimeo.com/video/$1" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>'

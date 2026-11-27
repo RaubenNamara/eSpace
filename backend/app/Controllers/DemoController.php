@@ -36,6 +36,10 @@ class DemoController extends Controller
 
     public function enter(): void
     {
+        if ($wait = \eSpace\App\Support\RequestLimit::hit('demo_enter', 60)) {
+            $this->error(\eSpace\App\Support\RequestLimit::message($wait), 429);
+            return;
+        }
         $request = DemoRequestController::activeLink((string) $this->input('token', ''));
         if (!$request) {
             $this->error('This demo link has ended or is not right. Ask us for a new one.', 403);

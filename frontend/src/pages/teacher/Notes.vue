@@ -66,7 +66,7 @@
           <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
             {{ note.title }}
           </h3>
-          <p class="text-sm text-gray-600 dark:text-gray-400 line-clamp-3 mb-4" v-html="stripHtml(note.content)"></p>
+          <p class="text-sm text-gray-600 dark:text-gray-400 line-clamp-3 mb-4" >{{ stripHtml(note.content) }}</p>
           <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
             <span>{{ formatDate(note.created_at) }}</span>
             <div class="flex items-center space-x-2">
@@ -316,11 +316,8 @@ const formatDate = (dateString: string) => {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-const stripHtml = (html: string) => {
-  const tmp = document.createElement('DIV')
-  tmp.innerHTML = html
-  return tmp.textContent || tmp.innerText || ''
-}
+// DOMParser builds an inert document: unlike a detached <div>, nothing in it loads or runs
+const stripHtml = (html: string) => new DOMParser().parseFromString(html || '', 'text/html').body.textContent || ''
 
 const loadNotes = async () => {
   loading.value = true

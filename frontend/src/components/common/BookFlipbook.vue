@@ -136,6 +136,12 @@ let lastFlipSoundAt = 0
 const MOBILE_QUERY = '(max-width: 1023px)'
 const mq = typeof window !== 'undefined' ? window.matchMedia(MOBILE_QUERY) : null
 const isMobile = ref(mq?.matches ?? false)
+// A phone (or small tablet) held sideways: wide but short, so one page would be a narrow strip in
+// the middle. It opens like a real book instead - two pages side by side - which needs page-flip
+// to allow a spread on a much narrower book than its usual 2 x 300px.
+const SIDEWAYS_QUERY = '(max-width: 1023px) and (orientation: landscape)'
+const sidewaysMq = typeof window !== 'undefined' ? window.matchMedia(SIDEWAYS_QUERY) : null
+const isSideways = ref(sidewaysMq?.matches ?? false)
 
 // A phone/tablet is already narrower than the natural single/two-page threshold below (minWidth
 // 300 * 2 = 600px), so StPageFlip already renders it single-page at its own full natural width -
@@ -324,9 +330,9 @@ function build() {
     width: props.pageWidth,
     height: props.pageHeight,
     size: 'stretch',
-    minWidth: 300,
+    minWidth: isSideways.value ? 120 : 300,
     maxWidth: 2000,
-    minHeight: 400,
+    minHeight: 120,
     maxHeight: 2800,
     showCover: props.showCover,
     maxShadowOpacity: 0.5,
@@ -376,6 +382,26 @@ function build() {
     if (canvasRender?.ctx && canvasRender?.canvas) {
       canvasRender.clear = function (this: { ctx: CanvasRenderingContext2D; canvas: HTMLCanvasElement }) {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
+      }
+      // page-flip stretches each page's picture to the page size. A page wider (or taller) than
+      // its picture - the reader widens pages to fill the screen in Read Mode, and scanned books
+      // mix page sizes - would squash the text, so the picture keeps its own shape, centred on a
+      // white sheet. Pictures already the page's shape are drawn exactly as before.
+      const ctx = canvasRender.ctx as CanvasRenderingContext2D
+      const drawRaw = ctx.drawImage.bind(ctx) as (...args: any[]) => void
+      ;(ctx as any).drawImage = (img: CanvasImageSource, ...at: number[]) => {
+        if (at.length === 4 && img instanceof HTMLImageElement && img.naturalWidth && img.naturalHeight) {
+          const [x, y, w, h] = at
+          const scale = Math.min(w / img.naturalWidth, h / img.naturalHeight)
+          const dw = img.naturalWidth * scale
+          const dh = img.naturalHeight * scale
+          if (w - dw > 1 || h - dh > 1) {
+            ctx.fillStyle = '#ffffff'
+            ctx.fillRect(x, y, w, h)
+            return drawRaw(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh)
+          }
+        }
+        return drawRaw(img, ...at)
       }
     }
     // Image mode draws every page onto one <canvas>, and page-flip only ever sets that canvas's
@@ -528,13 +554,20 @@ function handleMqChange(e: MediaQueryListEvent) {
   isMobile.value = e.matches
   rebuild()
 }
+function handleSidewaysChange(e: MediaQueryListEvent) {
+  if (e.matches === isSideways.value) return
+  isSideways.value = e.matches
+  rebuild()
+}
 
 onMounted(() => {
   nextTick(build)
   mq?.addEventListener('change', handleMqChange)
+  sidewaysMq?.addEventListener('change', handleSidewaysChange)
 })
 onBeforeUnmount(() => {
   mq?.removeEventListener('change', handleMqChange)
+  sidewaysMq?.removeEventListener('change', handleSidewaysChange)
   if (pageSizeRebuildTimer) clearTimeout(pageSizeRebuildTimer)
   destroy()
 })
@@ -659,6 +692,15 @@ defineExpose({ flipNext, flipPrev, turnToPage, getCurrentPageIndex, rebuild, set
   width: 100%;
   height: 100%;
   box-sizing: border-box;
+}
+
+/* page-flip writes min-width/min-height (300 x 400px) on its own block. On a short screen - a
+   phone held sideways is about 260px tall - that made the pages taller than the space given to
+   the book, cutting off the bottom of every page. The book is sized by its parent, so no floor. */
+.book-flipbook-host :deep(.stf__parent),
+.book-flipbook-host.stf__parent {
+  min-width: 0 !important;
+  min-height: 0 !important;
 }
 
 .book-flipbook-host.near-flip-edge,

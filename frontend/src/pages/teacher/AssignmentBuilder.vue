@@ -787,7 +787,7 @@
                       <!-- Scenario display with sub-questions -->
                       <div v-if="question.question_type === 'scenario'" class="mt-3">
                         <div v-if="question.scenario_text" class="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg mb-2 overflow-x-auto">
-                          <p class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.scenario_text"></p>
+                          <p class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="safeHtml(question.scenario_text)"></p>
                         </div>
                         <div v-if="(question as any).sub_questions && (question as any).sub_questions.length > 0" class="space-y-2">
                           <div
@@ -806,7 +806,7 @@
 
                       <!-- Regular question display -->
                       <div v-else class="overflow-x-auto">
-                        <p class="text-gray-900 dark:text-white mb-2 break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.question_text"></p>
+                        <p class="text-gray-900 dark:text-white mb-2 break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="safeHtml(question.question_text)"></p>
                         <div v-if="question.options && question.options.length > 0" class="mt-2">
                           <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Options:</p>
                           <ul class="text-sm text-gray-600 dark:text-gray-400">
@@ -1312,12 +1312,12 @@
                   <!-- Scenario Question -->
                   <div v-if="question.question_type === 'scenario'">
                     <div v-if="question.scenario_text" class="mb-4 overflow-x-auto">
-                      <div class="text-gray-900 dark:text-white text-justify break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.scenario_text"></div>
+                      <div class="text-gray-900 dark:text-white text-justify break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="safeHtml(question.scenario_text)"></div>
                     </div>
                   </div>
                   <!-- Regular Question -->
                   <div v-else class="overflow-x-auto">
-                    <div class="text-gray-900 dark:text-white font-medium mb-2 break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="question.question_text"></div>
+                    <div class="text-gray-900 dark:text-white font-medium mb-2 break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="safeHtml(question.question_text)"></div>
                     <!-- Options for objective questions -->
                     <div v-if="question.options && question.options.length > 0" class="mt-3 space-y-2">
                       <div
@@ -1355,6 +1355,7 @@
 </template>
 
 <script setup lang="ts">
+import { safeHtml } from '@/utils/safeHtml'
 import { fmtMarks } from '@/utils/marks'
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter, useRoute, onBeforeRouteLeave } from 'vue-router'

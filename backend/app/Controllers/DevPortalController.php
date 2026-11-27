@@ -38,17 +38,44 @@ class DevPortalController extends Controller
             $this->error('The platform database is not set up yet (database/platform/001_platform.sql).', 503);
             return false;
         }
+        $admin = $this->signedInAdmin();
+        if (!$admin) {
+            $this->unauthorized();
+            return false;
+        }
+        // nothing in the portal opens until the two-step sign-in is set up (see setupTwoStep)
+        if (empty($admin['totp_secret'])) {
+            $this->json(['success' => false, 'message' => 'Set up the sign-in code first.', 'needs_2fa_setup' => true], 403);
+            return false;
+        }
+        return true;
+    }
+
+    /** The signed-in team member (active), or null - signing the session out when there is none */
+    private function signedInAdmin(): ?array
+    {
         $id = $this->adminId();
-        if ($id) {
-            $stmt = $this->platform->prepare('SELECT id FROM platform_admins WHERE id = ? AND is_active = 1');
+        if ($id && $this->platform) {
+            $this->ensureTwoStepColumns();
+            $stmt = $this->platform->prepare('SELECT id, name, email, totp_secret FROM platform_admins WHERE id = ? AND is_active = 1');
             $stmt->execute([$id]);
-            if ($stmt->fetch()) {
-                return true;
+            if ($row = $stmt->fetch(\PDO::FETCH_ASSOC)) {
+                return $row;
             }
         }
         unset($_SESSION['dev_admin_id']);
-        $this->unauthorized();
-        return false;
+        return null;
+    }
+
+    /** The authenticator-app secret and the last code step used (so a code can't be used twice) */
+    private function ensureTwoStepColumns(): void
+    {
+        static $done = false;
+        if ($done) {
+            return;
+        }
+        $this->platform->exec('ALTER TABLE platform_admins ADD COLUMN IF NOT EXISTS totp_secret VARCHAR(64) NULL, ADD COLUMN IF NOT EXISTS totp_last_step BIGINT NULL');
+        $done = true;
     }
 
     private function audit(string $action, ?string $target = null, ?string $details = null): void
@@ -70,7 +97,8 @@ class DevPortalController extends Controller
             $this->error(\eSpace\App\Support\LoginThrottle::message($wait), 429);
             return;
         }
-        $stmt = $this->platform->prepare('SELECT id, name, email, password FROM platform_admins WHERE email = ? AND is_active = 1');
+        $this->ensureTwoStepColumns();
+        $stmt = $this->platform->prepare('SELECT id, name, email, password, totp_secret, totp_last_step FROM platform_admins WHERE email = ? AND is_active = 1');
         $stmt->execute([$email]);
         $admin = $stmt->fetch(\PDO::FETCH_ASSOC);
         if (!$admin || !password_verify((string) $this->input('password', ''), $admin['password'])) {
@@ -78,30 +106,94 @@ class DevPortalController extends Controller
             $this->error('Wrong email or password', 401);
             return;
         }
+        // Second step: the 6-digit code from the authenticator app
+        if (!empty($admin['totp_secret'])) {
+            $code = trim((string) $this->input('code', ''));
+            if ($code === '') {
+                $this->json(['success' => false, 'message' => 'Enter the 6-digit code from your authenticator app.', 'needs_code' => true], 401);
+                return;
+            }
+            $step = \eSpace\App\Support\Totp::verify($admin['totp_secret'], $code, $admin['totp_last_step'] !== null ? (int) $admin['totp_last_step'] : null);
+            if ($step === null) {
+                \eSpace\App\Support\LoginThrottle::failed('dev', $email);
+                $this->json(['success' => false, 'message' => 'That code is wrong or has expired. Enter the newest one.', 'needs_code' => true], 401);
+                return;
+            }
+            $this->platform->prepare('UPDATE platform_admins SET totp_last_step = ? WHERE id = ?')->execute([$step, $admin['id']]);
+        }
         \eSpace\App\Support\LoginThrottle::succeeded('dev', $email);
-        session_regenerate_id(true);
         session_regenerate_id(true);
         $_SESSION['dev_admin_id'] = (int) $admin['id'];
         $this->platform->prepare('UPDATE platform_admins SET last_login_at = NOW() WHERE id = ?')->execute([$admin['id']]);
         $this->audit('login');
-        $this->success(['admin' => ['id' => (int) $admin['id'], 'name' => $admin['name'], 'email' => $admin['email']]]);
+        $this->success(['admin' => $this->adminOut($admin)]);
+    }
+
+    private function adminOut(array $admin): array
+    {
+        return ['id' => (int) $admin['id'], 'name' => $admin['name'], 'email' => $admin['email'], 'two_step' => !empty($admin['totp_secret'])];
+    }
+
+    /**
+     * POST /api/devportal/two-step/setup - a new secret for the authenticator app (kept in the
+     * session until a code from it is confirmed). Only for a team member who has none yet: a lost
+     * phone is reset on the server (backend/scripts/reset_dev_two_step.php).
+     */
+    public function setupTwoStep(): void
+    {
+        $admin = $this->platform ? $this->signedInAdmin() : null;
+        if (!$admin) {
+            $this->unauthorized();
+            return;
+        }
+        if (!empty($admin['totp_secret'])) {
+            $this->error('The sign-in code is already set up.', 409);
+            return;
+        }
+        $secret = $_SESSION['dev_totp_pending'] ??= \eSpace\App\Support\Totp::newSecret();
+        $this->success(['secret' => $secret, 'uri' => \eSpace\App\Support\Totp::uri($secret, (string) $admin['email'])]);
+    }
+
+    /** POST /api/devportal/two-step/confirm  { code } - turns the two-step sign-in on */
+    public function confirmTwoStep(): void
+    {
+        $admin = $this->platform ? $this->signedInAdmin() : null;
+        if (!$admin) {
+            $this->unauthorized();
+            return;
+        }
+        $secret = (string) ($_SESSION['dev_totp_pending'] ?? '');
+        if (!empty($admin['totp_secret']) || $secret === '') {
+            $this->error('Start the set-up again.', 409);
+            return;
+        }
+        $step = \eSpace\App\Support\Totp::verify($secret, (string) $this->input('code', ''));
+        if ($step === null) {
+            $this->error('That code is wrong or has expired. Enter the newest one from the app.', 422);
+            return;
+        }
+        $this->platform->prepare('UPDATE platform_admins SET totp_secret = ?, totp_last_step = ? WHERE id = ?')->execute([$secret, $step, $admin['id']]);
+        unset($_SESSION['dev_totp_pending']);
+        $this->audit('two-step sign-in set up');
+        $admin['totp_secret'] = $secret;
+        $this->success(['admin' => $this->adminOut($admin)], 'The sign-in code is on.');
     }
 
     /** GET /api/devportal/me */
     public function me(): void
     {
-        if (!$this->guard()) {
+        $admin = $this->platform ? $this->signedInAdmin() : null;
+        if (!$admin) {
+            $this->unauthorized();
             return;
         }
-        $stmt = $this->platform->prepare('SELECT id, name, email FROM platform_admins WHERE id = ?');
-        $stmt->execute([$this->adminId()]);
-        $this->success(['admin' => $stmt->fetch(\PDO::FETCH_ASSOC)]);
+        $this->success(['admin' => $this->adminOut($admin)]);
     }
 
     /** POST /api/devportal/logout - ends the portal sign-in only (a school sign-in in the same browser stays) */
     public function logout(): void
     {
-        unset($_SESSION['dev_admin_id']);
+        unset($_SESSION['dev_admin_id'], $_SESSION['dev_totp_pending']);
         $this->success([], 'Signed out');
     }
 
