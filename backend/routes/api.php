@@ -1206,6 +1206,11 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
     Router::group(['middleware' => 'auth'], function () {
         Router::get('/anatomy/config', 'eSpace\App\Controllers\AnatomyController@config');
     });
+
+    // The weather now, for every dashboard's sky - shared across every role, see WeatherService
+    Router::group(['middleware' => 'auth'], function () {
+        Router::get('/weather', 'eSpace\App\Controllers\WeatherController@current');
+    });
 }); // End of auth group
 
 // Dispatch the request

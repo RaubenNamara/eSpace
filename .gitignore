@@ -110,3 +110,6 @@ backend/storage/throttle/
 
 # Cases: evidence about learners (photos, PDFs) - never in git
 backend/storage/cases/
+
+# Weather readings cached by WeatherService (15 minutes)
+backend/storage/cache/

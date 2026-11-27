@@ -3,7 +3,7 @@
        whatever the page puts in it - the greeting, its badges and the like. -->
   <section class="sky-header sd-hero relative overflow-hidden rounded-[1.25rem] shadow-sm mb-4 min-h-[104px] sm:min-h-[112px] flex flex-col justify-center" :class="`sd-hero-${period}`">
     <!-- the sun or moon sits left of the badges on the right -->
-    <DaySky :period="period" :narrow="narrow" :sun-x="1090" />
+    <DaySky :period="period" :narrow="narrow" :sun-x="1090" no-label />
     <div class="relative px-4 sm:px-6 py-3.5 sm:py-4">
       <slot />
     </div>
