@@ -500,6 +500,11 @@ const noteSaveTimers: Record<number, ReturnType<typeof setTimeout>> = {}
 // the two-page view the left page and the right page (the cover and a lone last page show on
 // just one side). page-flip reports the left page of a spread as the current page.
 const bookOrientation = ref<'portrait' | 'landscape'>('landscape')
+// The book is sized from the orientation page-flip last reported, and page-flip picks it from the
+// book's size - so going back to two pages, a one-page-wide book (under 600px on a laptop) only
+// ever came back as one page again. The switch sizes the book for its choice at once; the rebuilt
+// book then reports what it really shows (one page anyway when the screen is too narrow).
+watch(preferSinglePage, single => { bookOrientation.value = single ? 'portrait' : 'landscape' })
 
 // The space the book has, and the book's size within it: as wide as fits, but never taller than
 // the space (page-flip works out the height from the width, so a tall page in a wide reader would

@@ -576,7 +576,9 @@ onBeforeUnmount(() => {
   destroy()
 })
 
-watch(() => props.preferSinglePage, () => rebuild())
+// After the DOM update: a parent that re-sizes the book for the new choice (LibraryPdfViewer) must
+// have its new size on screen before page-flip measures it
+watch(() => props.preferSinglePage, () => nextTick(rebuild))
 
 // PageFlip captures width/height once at construction (`new PageFlip(...)`) and never re-reads
 // them - the host's own resizeObserver below only re-fits the *existing* aspect ratio to a
