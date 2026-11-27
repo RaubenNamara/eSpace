@@ -330,7 +330,11 @@ function build() {
     width: props.pageWidth,
     height: props.pageHeight,
     size: 'stretch',
-    minWidth: isSideways.value ? 120 : 300,
+    // In stretch mode page-flip shows one page when the book is narrower than 2 x minWidth, and
+    // minWidth does nothing else here (its CSS min-width is stripped below). So the single-page
+    // choice forces it with a minWidth no screen reaches - the max-w-[560px] cap alone failed
+    // wherever the parent sizes the book itself (the eLibrary reader's max-w-full beat it).
+    minWidth: props.preferSinglePage ? 5000 : isSideways.value ? 120 : 300,
     maxWidth: 2000,
     minHeight: 120,
     maxHeight: 2800,
