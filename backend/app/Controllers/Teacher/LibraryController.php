@@ -472,6 +472,7 @@ class LibraryController extends Controller
             ], 'Book uploaded successfully');
         } catch (\PDOException $e) {
             @unlink($upload['path']);
+            \eSpace\App\Services\PresentationToPdf::remove($upload['path']);
             error_log('Failed to save library book: ' . $e->getMessage());
             $this->error('Failed to save library book', 500);
         }
@@ -640,7 +641,7 @@ class LibraryController extends Controller
     }
 
     /**
-     * Replace the underlying file (e.g. a corrected PPTX) without touching title/description/
+     * Replace the underlying file (e.g. a corrected PDF) without touching title/description/
      * subject/class/status/allow_download or losing the book's id/history. Same validation as a
      * fresh upload; the old physical file is deleted only after the new one is confirmed valid
      * and the DB row is updated, so a failed replace never leaves the book without a file.
@@ -704,6 +705,7 @@ class LibraryController extends Controller
                 if (is_file($oldPath)) {
                     @unlink($oldPath);
                 }
+                \eSpace\App\Services\PresentationToPdf::remove($oldPath);
             }
 
             $this->success([
@@ -713,6 +715,7 @@ class LibraryController extends Controller
             ], 'File replaced successfully');
         } catch (\PDOException $e) {
             @unlink($upload['path']);
+            \eSpace\App\Services\PresentationToPdf::remove($upload['path']);
             error_log('Failed to replace library book file: ' . $e->getMessage());
             $this->error('Failed to replace file', 500);
         }
@@ -1147,23 +1150,21 @@ class LibraryController extends Controller
     }
 
     /**
-     * MIME type -> [our short type label, file extension to store]. PPTX (and DOCX/XLSX) are all
-     * ZIP containers with identical magic bytes, so MIME/extension alone can't tell a renamed
-     * .zip/.docx/.xlsx apart from a real .pptx - verifyFileContent() does the real check by
-     * looking inside the archive for a PowerPoint-only entry.
+     * MIME type -> [our short type label, file extension to store]. verifyFileContent() then
+     * checks the saved bytes really start with %PDF-.
      */
+    // PDF only, so every book opens in the book reader. (Books uploaded earlier as PPT/PPTX
+    // still open: their PDF copy is made by scripts/convert_library_presentations.php.)
     private const ALLOWED_TYPES = [
         'application/pdf' => ['pdf', 'pdf'],
-        'application/vnd.ms-powerpoint' => ['ppt', 'ppt'],
-        'application/vnd.openxmlformats-officedocument.presentationml.presentation' => ['pptx', 'pptx'],
     ];
 
-    private const ALLOWED_EXTENSIONS = ['pdf', 'ppt', 'pptx'];
+    private const ALLOWED_EXTENSIONS = ['pdf'];
 
-    private const REJECT_MESSAGE = 'Only PDF and PowerPoint (PPT/PPTX) files are allowed.';
+    private const REJECT_MESSAGE = 'Only PDF files are allowed. For a PowerPoint, save it as PDF first (File > Save As > PDF).';
 
     /**
-     * Validate and store an uploaded PDF/PPT/PPTX, returning its public URL/type/size, or null
+     * Validate and store an uploaded PDF, returning its public URL/type/size, or null
      * (having already sent an error response) if validation fails.
      */
     private function handleUpload(): ?array

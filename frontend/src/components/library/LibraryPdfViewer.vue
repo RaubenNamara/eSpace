@@ -209,7 +209,7 @@
           ]"
           @contextmenu.prevent
         >
-          <div v-if="loading" class="text-white/80 py-20 text-sm">Loading document…</div>
+          <div v-if="loading" class="text-white/80 py-20 text-sm">Loading book…</div>
           <div v-else-if="error" class="text-red-400 py-20 text-sm">{{ error }}</div>
           <div v-else-if="preparing" class="w-full max-w-xs text-center">
             <p class="text-sm text-white/80 mb-2">Opening your book…</p>

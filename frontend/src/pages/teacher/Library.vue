@@ -284,7 +284,7 @@
                   <button type="button" @click="coverFileInput?.click()" :disabled="coverBusy" class="px-2.5 py-1.5 text-xs font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">
                     Upload picture
                   </button>
-                  <button v-if="editingBook.file_type === 'pdf'" type="button" @click="useFirstPageCover" :disabled="coverBusy" class="px-2.5 py-1.5 text-xs font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">
+                  <button v-if="readerPdfPath(editingBook)" type="button" @click="useFirstPageCover" :disabled="coverBusy" class="px-2.5 py-1.5 text-xs font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">
                     Use first page
                   </button>
                   <button v-if="editingBook.cover_image" type="button" @click="removeCover" :disabled="coverBusy" class="px-2.5 py-1.5 text-xs font-medium rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-50">
@@ -392,7 +392,7 @@
                 </template>
                 <template v-else>
                   <span class="text-sm font-semibold text-gray-900 dark:text-white">Drop a file here, or tap to choose</span>
-                  <span class="text-xs text-gray-500 dark:text-gray-400">PDF, PPT or PPTX, up to 50MB - students read it in the browser</span>
+                  <span class="text-xs text-gray-500 dark:text-gray-400">PDF only, up to 50MB - students read it as a book in the browser. For a PowerPoint, save it as PDF first.</span>
                 </template>
               </label>
               <p v-if="fileError" class="text-xs text-red-600 dark:text-red-400 mt-1">{{ fileError }}</p>
@@ -427,7 +427,7 @@
                   @change="handleReplaceFileSelect"
                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white text-sm"
                 >
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">PDF, PPT, or PPTX, up to 50MB. Replaces the file immediately - metadata below is saved separately via "Update Book".</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">PDF only, up to 50MB. Replaces the file immediately - metadata below is saved separately via "Update Book".</p>
                 <p v-if="fileError" class="text-xs text-red-600 dark:text-red-400 mt-1">{{ fileError }}</p>
                 <button
                   type="button"
@@ -478,7 +478,7 @@
     <LibraryDocumentViewer v-if="previewBook" :book="previewBook" @close="previewBook = null" />
     <!-- A colleague's book, in the reader students use -->
     <LibraryPdfViewer v-if="deptBook && (deptBook.file_type || 'pdf') === 'pdf'" :book="deptBook" start-in-read-mode student-view @close="deptBook = null" />
-    <LibraryDocumentViewer v-else-if="deptBook" :book="deptBook" @close="deptBook = null" />
+    <LibraryDocumentViewer v-else-if="deptBook" :book="deptBook" start-in-read-mode student-view @close="deptBook = null" />
     <AudiencePanel
       v-if="readersFor"
       :title="readersFor.title"
@@ -506,6 +506,7 @@ import PickerDropdown, { type PickerOption } from '@/components/common/PickerDro
 import AppIcon from '@/components/common/AppIcon.vue'
 import AudiencePanel from '@/components/common/AudiencePanel.vue'
 import LibraryDocumentViewer from '@/components/library/LibraryDocumentViewer.vue'
+import { readerPdfPath } from '@/utils/libraryReader'
 import LibraryCoverEditor from '@/components/library/LibraryCoverEditor.vue'
 import { parseCoverDesign } from '@/utils/enoteCover'
 import TeacherClassSelector from '@/components/teacher/TeacherClassSelector.vue'
@@ -819,11 +820,11 @@ const generateMissingCovers = async () => {
   generatingCovers = true
   try {
     for (;;) {
-      const book = books.value.find(b => b.file_type === 'pdf' && !b.cover_image && !coverAttempted.has(b.id))
+      const book = books.value.find(b => readerPdfPath(b) && !b.cover_image && !coverAttempted.has(b.id))
       if (!book) break
       coverAttempted.add(book.id)
       try {
-        const { blob, totalPages } = await renderPdfCover(resolveAssetUrl(book.file_path))
+        const { blob, totalPages } = await renderPdfCover(resolveAssetUrl(readerPdfPath(book)!))
         await uploadCover(book.id, blob, true, totalPages)
       } catch (error) {
         console.warn(`Could not create a cover for book ${book.id}:`, error)
@@ -879,7 +880,7 @@ const useFirstPageCover = async () => {
   if (!editingBook.value) return
   coverBusy.value = true
   try {
-    const { blob, totalPages } = await renderPdfCover(resolveAssetUrl(editingBook.value.file_path))
+    const { blob, totalPages } = await renderPdfCover(resolveAssetUrl(readerPdfPath(editingBook.value)!))
     // A deliberate choice, so it replaces a custom picture too: clear first, then upload as auto
     if (editingBook.value.cover_image && !isAutoCover(editingBook.value.cover_image)) {
       await axios.delete(`${libApi}/${editingBook.value.id}/cover`)
@@ -1073,7 +1074,7 @@ const saveBook = async () => {
       })
     } else {
       if (!bookForm.value.file) {
-        toast.warning('Please select a PDF, PPT, or PPTX file')
+        toast.warning('Please select a PDF file')
         return
       }
       const formData = new FormData()

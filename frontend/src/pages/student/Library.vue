@@ -83,7 +83,7 @@
 
     <!-- Document Preview -->
     <LibraryPdfViewer v-if="previewBook && previewBook.file_type === 'pdf'" :book="previewBook" :start-in-read-mode="readFromShelf" @close="closeReader" />
-    <LibraryDocumentViewer v-else-if="previewBook" :book="previewBook" @close="closeReader" />
+    <LibraryDocumentViewer v-else-if="previewBook" :book="previewBook" :start-in-read-mode="readFromShelf" @close="closeReader" />
 
     <!-- Opening a book: it comes off the shelf, waits with Start reading / Cancel, then opens into
          the reader (or goes back to its place) -->
