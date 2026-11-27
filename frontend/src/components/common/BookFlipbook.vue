@@ -110,7 +110,7 @@ let pageSizeRebuildTimer: ReturnType<typeof setTimeout> | null = null
 
 // How long one flip's turning animation takes - also passed to PageFlip's own `flippingTime`
 // setting below, so the two stay in sync.
-const FLIPPING_TIME = 700
+const FLIPPING_TIME = 450
 
 // The flip sound only plays when a page is actually seen turning - a drag, a click on the page's
 // edge, the Prev/Next buttons, or a bundle of pages turning on a far jump. Page changes with no

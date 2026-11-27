@@ -2,7 +2,7 @@
   <!-- On a desktop the app's header (4rem) and the page padding (2 x 1.5rem) are still showing
        outside Read Mode, so the reader takes what's left of the screen rather than a full screen's
        height - otherwise the whole page runs past the bottom and the Previous/Next bar with it. -->
-  <div class="flex flex-col bg-gray-50 dark:bg-gray-950" :class="readMode ? 'h-screen' : 'h-screen lg:h-[calc(100vh-7rem)]'">
+  <div class="flex flex-col bg-[#4a4b50] dark:bg-gray-950" :class="readMode ? 'h-screen' : 'h-screen lg:h-[calc(100vh-7rem)]'">
     <!-- Header - hidden entirely in Read Mode (replaced by floating overlay controls), and also
          auto-collapses while the reader scrolls down through a page's content, reappearing on
          scroll-up - same idea as the app shell's own header (MainLayout.vue), applied here so
@@ -11,45 +11,45 @@
          slid-away header. -->
     <div
       v-if="!readMode"
-      class="relative bg-indigo-600 px-3 sm:px-6 flex items-center justify-between gap-2 flex-shrink-0 shadow-sm transition-[max-height,padding,opacity] duration-300"
-      :class="headerHidden ? 'max-h-0 !py-0 opacity-0 overflow-hidden' : 'max-h-24 py-1.5 sm:py-2 opacity-100 overflow-visible'">
+      class="relative z-20 mx-2 sm:mx-3 mt-2 bg-[#f8f0dc]/95 dark:bg-gray-800/95 backdrop-blur ring-1 ring-[#ecdfbd] dark:ring-gray-700 shadow-xl shadow-black/20 rounded-2xl px-3 sm:px-4 flex items-center justify-between gap-2 flex-shrink-0 transition-[max-height,padding,opacity,margin] duration-300"
+      :class="headerHidden ? 'max-h-0 !py-0 !mt-0 opacity-0 overflow-hidden' : 'max-h-24 py-1.5 sm:py-2 opacity-100 overflow-visible'">
       <div class="flex items-center gap-2 sm:gap-3 min-w-0">
         <button
           @click="goBack"
-          class="p-1.5 rounded-lg bg-white/10 hover:bg-white/25 transition-colors flex-shrink-0"
+          class="p-1.5 rounded-lg bg-white dark:bg-gray-700 ring-1 ring-[#ecdfbd] dark:ring-gray-600 hover:bg-[#fff8e8] dark:hover:bg-gray-600 transition-colors flex-shrink-0"
         >
-          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-5 h-5 text-[#061a55] dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
           </svg>
         </button>
         <!-- Table of contents toggle - sidebar is an overlay below lg -->
         <button
           @click="showToc = !showToc"
-          class="p-1.5 rounded-lg bg-white/10 hover:bg-white/25 transition-colors flex-shrink-0 lg:hidden"
+          class="p-1.5 rounded-lg bg-white dark:bg-gray-700 ring-1 ring-[#ecdfbd] dark:ring-gray-600 hover:bg-[#fff8e8] dark:hover:bg-gray-600 transition-colors flex-shrink-0 lg:hidden"
           title="Table of contents"
         >
-          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-5 h-5 text-[#061a55] dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
           </svg>
         </button>
-        <div class="hidden sm:flex w-8 h-8 rounded-lg bg-white/15 items-center justify-center flex-shrink-0">
-          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="hidden sm:flex w-8 h-8 rounded-lg bg-[#ecdfbd] dark:bg-gray-700 items-center justify-center flex-shrink-0">
+          <svg class="w-4 h-4 text-[#061a55] dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
           </svg>
         </div>
         <div class="min-w-0">
-          <h1 class="text-sm sm:text-lg font-bold text-white truncate leading-tight">{{ topic?.title }}</h1>
+          <h1 class="text-sm sm:text-lg font-bold text-[#061a55] dark:text-white truncate leading-tight">{{ topic?.title }}</h1>
           <div class="flex items-center gap-2 mt-0.5">
-            <span class="text-xs sm:text-sm text-indigo-100 truncate">{{ topic?.subject_name }}</span>
-            <span v-if="isPreviewMode" class="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium bg-white/20 text-white">
+            <span class="text-xs sm:text-sm text-[#6b5a35] dark:text-gray-300 truncate">{{ topic?.subject_name }}</span>
+            <span v-if="isPreviewMode" class="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#ecdfbd] dark:bg-gray-700 text-[#6b5a35] dark:text-gray-200">
               Preview
             </span>
             <span
               v-else-if="topic?.status"
               class="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium capitalize"
               :class="topic.status === 'published'
-                ? 'bg-emerald-400/20 text-emerald-100'
-                : 'bg-white/15 text-white'"
+                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200'
+                : 'bg-[#ecdfbd] text-[#6b5a35] dark:bg-gray-700 dark:text-gray-200'"
             >
               {{ topic.status }}
             </span>
@@ -62,7 +62,7 @@
         <div v-if="isStudentMode && currentPage" class="relative flex-shrink-0">
           <button
             @click="onTutorHeaderClick"
-            class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-white/10 hover:bg-white/25 text-white text-xs font-medium rounded-lg transition-colors"
+            class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-white dark:bg-gray-700 ring-1 ring-[#ecdfbd] dark:ring-gray-600 hover:bg-[#fff8e8] dark:hover:bg-gray-600 text-[#061a55] dark:text-white text-xs font-medium rounded-lg transition-colors"
           >
             <svg v-if="tutorStatus === 'loading'" class="w-3.5 h-3.5 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -72,8 +72,8 @@
             <span>
               AI Tutor<template v-if="tutorStatus === 'ready' && tutorProgress.total > 0"> · {{ tutorProgress.current }}/{{ tutorProgress.total }}</template>
             </span>
-            <div v-if="tutorStatus === 'ready' && tutorProgress.total > 0" class="w-10 h-1.5 rounded-full bg-white/20 overflow-hidden">
-              <div class="h-full bg-white rounded-full transition-all" :style="{ width: `${(tutorProgress.current / tutorProgress.total) * 100}%` }"></div>
+            <div v-if="tutorStatus === 'ready' && tutorProgress.total > 0" class="w-10 h-1.5 rounded-full bg-[#ecdfbd] dark:bg-gray-600 overflow-hidden">
+              <div class="h-full bg-[#061a55] dark:bg-white rounded-full transition-all" :style="{ width: `${(tutorProgress.current / tutorProgress.total) * 100}%` }"></div>
             </div>
           </button>
 
@@ -94,6 +94,13 @@
         </div>
       </div>
 
+      <!-- Reading progress in the bar itself, as in the eLibrary reader (phones and Read Mode keep the row below) -->
+      <div v-if="isStudentMode && pages.length" class="hidden md:flex items-center gap-2 w-40 xl:w-52 flex-shrink-0 mx-1">
+        <div class="relative flex-1 h-1.5 rounded-full bg-[#ecdfbd] dark:bg-gray-700 overflow-hidden">
+          <div class="absolute inset-y-0 left-0 rounded-full transition-all duration-300" :class="progressPercentage >= 100 ? 'bg-emerald-500' : 'bg-[#061a55] dark:bg-white'" :style="{ width: `${progressPercentage}%` }"></div>
+        </div>
+        <span class="text-[11px] text-[#6b5a35] dark:text-gray-300 flex-shrink-0 tabular-nums">{{ currentPageNumber }}/{{ pages.length }} · {{ progressPercentage }}%</span>
+      </div>
       <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
         <!-- Read Mode - whole screen given over to the book, floating overlay controls replace
              every other piece of chrome. Only for students, who are the ones this is meant to
@@ -102,7 +109,7 @@
         <button
           v-if="isStudentMode && currentPage"
           @click="enterReadMode"
-          class="flex items-center gap-1.5 px-3 py-1.5 bg-white text-indigo-700 font-medium text-sm rounded-lg hover:bg-indigo-50 transition-colors shadow-sm"
+          class="flex items-center gap-1.5 px-3 py-1.5 bg-[#061a55] text-white font-medium text-sm rounded-lg hover:bg-[#0b2a7a] transition-colors shadow-sm"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
@@ -115,26 +122,26 @@
              base size isn't big enough, without page-flip itself needing any zoom support. -->
         <!-- Zoom and fullscreen are left off phones, where the title needs the room (Read Mode
              already gives the whole screen there) -->
-        <div v-if="currentPage" class="hidden sm:flex items-center bg-white/10 rounded-lg">
+        <div v-if="currentPage" class="hidden sm:flex items-center bg-white dark:bg-gray-700 ring-1 ring-[#ecdfbd] dark:ring-gray-600 rounded-lg">
           <button
             @click="zoomOut"
             :disabled="zoomLevel <= MIN_ZOOM"
-            class="p-1.5 rounded-lg hover:bg-white/25 transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
+            class="p-1.5 rounded-lg hover:bg-[#fff8e8] dark:hover:bg-gray-600 transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
             title="Zoom out"
           >
-            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5 text-[#061a55] dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11h6"></path>
             </svg>
           </button>
-          <span v-if="zoomLevel > MIN_ZOOM" class="text-xs text-white/90 font-medium px-0.5 min-w-[2.5rem] text-center select-none">{{ Math.round(zoomLevel * 100) }}%</span>
+          <span v-if="zoomLevel > MIN_ZOOM" class="text-xs text-[#061a55] dark:text-white font-medium px-0.5 min-w-[2.5rem] text-center select-none">{{ Math.round(zoomLevel * 100) }}%</span>
           <button
             @click="zoomIn"
             :disabled="zoomLevel >= MAX_ZOOM"
-            class="p-1.5 rounded-lg hover:bg-white/25 transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
+            class="p-1.5 rounded-lg hover:bg-[#fff8e8] dark:hover:bg-gray-600 transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
             title="Zoom in"
           >
-            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5 text-[#061a55] dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 8v6M8 11h6"></path>
             </svg>
@@ -145,13 +152,13 @@
         <button
           v-if="currentPage"
           @click="preferSinglePage = !preferSinglePage"
-          class="hidden lg:flex p-1.5 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
+          class="hidden lg:flex p-1.5 rounded-lg bg-white dark:bg-gray-700 ring-1 ring-[#ecdfbd] dark:ring-gray-600 hover:bg-[#fff8e8] dark:hover:bg-gray-600 transition-colors"
           :title="preferSinglePage ? 'Switch to two-page view' : 'Switch to single-page view'"
         >
-          <svg v-if="preferSinglePage" class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg v-if="preferSinglePage" class="w-5 h-5 text-[#061a55] dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <rect x="7" y="4" width="10" height="16" rx="1" stroke-width="2"></rect>
           </svg>
-          <svg v-else class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg v-else class="w-5 h-5 text-[#061a55] dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <rect x="3" y="4" width="8" height="16" rx="1" stroke-width="2"></rect>
             <rect x="13" y="4" width="8" height="16" rx="1" stroke-width="2"></rect>
           </svg>
@@ -159,13 +166,13 @@
         <button
           v-if="currentPage"
           @click="isMuted = !isMuted"
-          class="p-1.5 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
+          class="p-1.5 rounded-lg bg-white dark:bg-gray-700 ring-1 ring-[#ecdfbd] dark:ring-gray-600 hover:bg-[#fff8e8] dark:hover:bg-gray-600 transition-colors"
           :title="isMuted ? 'Unmute page-turn sound' : 'Mute page-turn sound'"
         >
-          <svg v-if="isMuted" class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg v-if="isMuted" class="w-5 h-5 text-[#061a55] dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M11 5L6 9H2v6h4l5 4V5z"></path>
           </svg>
-          <svg v-else class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg v-else class="w-5 h-5 text-[#061a55] dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5L6 9H2v6h4l5 4V5z"></path>
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.54 8.46a5 5 0 010 7.07M18.36 5.64a9 9 0 010 12.73"></path>
           </svg>
@@ -174,19 +181,19 @@
         <button
           v-if="qaRole"
           @click="qaOpen = true"
-          class="relative p-1.5 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
+          class="relative p-1.5 rounded-lg bg-white dark:bg-gray-700 ring-1 ring-[#ecdfbd] dark:ring-gray-600 hover:bg-[#fff8e8] dark:hover:bg-gray-600 transition-colors"
           title="Questions on this topic"
           aria-label="Questions on this topic"
         >
-          <AppIcon name="chat" class="w-5 h-5 text-white" />
+          <AppIcon name="chat" class="w-5 h-5 text-[#061a55] dark:text-white" />
           <span v-if="qaCount" class="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-amber-400 text-[10px] font-bold leading-4 text-slate-900">{{ qaCount }}</span>
         </button>
         <button
           @click="toggleFullscreen"
-          class="hidden sm:flex p-1.5 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
+          class="hidden sm:flex p-1.5 rounded-lg bg-white dark:bg-gray-700 ring-1 ring-[#ecdfbd] dark:ring-gray-600 hover:bg-[#fff8e8] dark:hover:bg-gray-600 transition-colors"
           title="Toggle Fullscreen"
         >
-          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-5 h-5 text-[#061a55] dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
           </svg>
         </button>
@@ -195,10 +202,10 @@
         <div v-if="currentPage" class="relative">
           <button
             @click="showTintPanel = !showTintPanel"
-            class="p-1.5 rounded-lg bg-white/10 hover:bg-white/25 transition-colors"
+            class="p-1.5 rounded-lg bg-white dark:bg-gray-700 ring-1 ring-[#ecdfbd] dark:ring-gray-600 hover:bg-[#fff8e8] dark:hover:bg-gray-600 transition-colors"
             title="Reading focus color"
           >
-            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5 text-[#061a55] dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h10a2 2 0 002-2v-4a2 2 0 00-2-2h-2.5"></path>
             </svg>
           </button>
@@ -223,7 +230,7 @@
         <div v-if="!isReadOnly" class="relative">
           <button
             @click="showVoicePanel = !showVoicePanel"
-            class="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-white/10 hover:bg-white/25 text-white font-medium text-sm sm:text-base rounded-lg transition-colors"
+            class="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-white dark:bg-gray-700 ring-1 ring-[#ecdfbd] dark:ring-gray-600 hover:bg-[#fff8e8] dark:hover:bg-gray-600 text-[#061a55] dark:text-white font-medium text-sm sm:text-base rounded-lg transition-colors"
           >
             <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-14 0m7 7v3m-3 0h6M12 15a3 3 0 003-3V6a3 3 0 00-6 0v6a3 3 0 003 3z"></path>
@@ -284,7 +291,7 @@
         <button
           v-if="!isReadOnly && topic && !topic.linked_assignment"
           @click="showQuickAssessment = true"
-          class="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-white/10 hover:bg-white/25 text-white font-medium text-sm sm:text-base rounded-lg transition-colors"
+          class="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-white dark:bg-gray-700 ring-1 ring-[#ecdfbd] dark:ring-gray-600 hover:bg-[#fff8e8] dark:hover:bg-gray-600 text-[#061a55] dark:text-white font-medium text-sm sm:text-base rounded-lg transition-colors"
         >
           <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
@@ -294,7 +301,7 @@
         <button
           v-else-if="!isReadOnly && topic?.linked_assignment"
           @click="router.push(`/teacher/assignments/${topic!.linked_assignment!.id}/edit`)"
-          class="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-white/10 hover:bg-white/25 text-white font-medium text-sm sm:text-base rounded-lg transition-colors"
+          class="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-white dark:bg-gray-700 ring-1 ring-[#ecdfbd] dark:ring-gray-600 hover:bg-[#fff8e8] dark:hover:bg-gray-600 text-[#061a55] dark:text-white font-medium text-sm sm:text-base rounded-lg transition-colors"
           title="This topic already has a linked assessment"
         >
           <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -306,7 +313,7 @@
         <button
           v-if="!isReadOnly"
           @click="editTopic"
-          class="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-white text-indigo-700 font-medium text-sm sm:text-base rounded-lg hover:bg-indigo-50 transition-colors shadow-sm"
+          class="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-[#061a55] text-white font-medium text-sm sm:text-base rounded-lg hover:bg-[#0b2a7a] transition-colors shadow-sm"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
@@ -359,11 +366,12 @@
       </div>
     </div>
 
-    <!-- A learner's progress through this topic, always in view while reading (Read Mode too: the reader opens in it) -->
-    <div v-if="isStudentMode && pages.length" class="flex-shrink-0 flex items-center gap-2.5 sm:gap-3 pl-3 sm:pl-6 py-1.5 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800" :class="readMode ? 'pr-[3.75rem] sm:pr-24' : 'pr-3 sm:pr-6'" role="progressbar" :aria-valuenow="progressPercentage" aria-valuemin="0" aria-valuemax="100" aria-label="Your progress through this topic">
-      <span class="flex-shrink-0 text-xs font-medium text-gray-600 dark:text-gray-300">Page {{ currentPageNumber }} of {{ pages.length }}</span>
-      <span class="flex-1 h-2 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden"><span class="block h-full rounded-full transition-all duration-300" :class="progressPercentage >= 100 ? 'bg-emerald-500' : 'bg-indigo-600'" :style="{ width: `${progressPercentage}%` }"></span></span>
-      <span class="flex-shrink-0 text-xs font-bold text-gray-900 dark:text-white tabular-nums">{{ progressPercentage }}%</span>
+    <!-- A learner's progress through this topic: in the top bar on wider screens, this row on phones;
+         Read Mode gives the whole screen to the book (the progress still counts as they read) -->
+    <div v-if="isStudentMode && pages.length && !readMode" class="flex-shrink-0 flex items-center gap-2.5 sm:gap-3 pl-3 sm:pl-6 py-1.5 bg-[#f8f0dc] dark:bg-gray-900 pr-3 sm:pr-6 mx-2 mt-2 rounded-xl ring-1 ring-[#ecdfbd] dark:ring-gray-700 md:hidden" role="progressbar" :aria-valuenow="progressPercentage" aria-valuemin="0" aria-valuemax="100" aria-label="Your progress through this topic">
+      <span class="flex-shrink-0 text-xs font-medium text-[#6b5a35] dark:text-gray-300">Page {{ currentPageNumber }} of {{ pages.length }}</span>
+      <span class="flex-1 h-2 rounded-full bg-[#ecdfbd] dark:bg-gray-700 overflow-hidden"><span class="block h-full rounded-full transition-all duration-300" :class="progressPercentage >= 100 ? 'bg-emerald-500' : 'bg-[#061a55] dark:bg-white'" :style="{ width: `${progressPercentage}%` }"></span></span>
+      <span class="flex-shrink-0 text-xs font-bold text-[#061a55] dark:text-white tabular-nums">{{ progressPercentage }}%</span>
     </div>
 
     <!-- Main Content -->
@@ -379,7 +387,7 @@
            the desktop-docked version, so the book claims that width too. -->
       <div
         v-if="!readMode"
-        class="order-2 fixed lg:static inset-y-0 right-0 z-40 w-56 max-w-[75vw] mt-2 lg:mt-3 lg:mb-3 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 rounded-tl-2xl overflow-hidden flex flex-col transform transition-[transform,width] duration-300 lg:translate-x-0 lg:relative"
+        class="order-2 fixed lg:static inset-y-0 right-0 z-40 w-56 max-w-[75vw] mt-2 lg:mt-3 lg:mb-3 lg:mr-3 bg-[#f8f0dc] dark:bg-gray-800 ring-1 ring-[#ecdfbd] dark:ring-gray-700 shadow-xl shadow-black/20 rounded-l-2xl lg:rounded-2xl overflow-hidden flex flex-col transform transition-[transform,width] duration-300 lg:translate-x-0 lg:relative"
         :class="[showToc ? 'translate-x-0' : 'translate-x-full', sidebarCollapsed ? 'lg:!w-14' : 'lg:!w-56']"
       >
         <!-- Desktop-only collapse toggle, so the reader can reclaim the sidebar's width for the
@@ -493,7 +501,8 @@
       </div>
 
       <!-- Main Content Area -->
-      <div class="flex-1 overflow-y-auto flex flex-col" :class="{ 'lg:block': !readMode }">
+      <!-- A column at every size: the book takes all the height between the top bar and the Prev/Next pill -->
+      <div class="flex-1 overflow-y-auto flex flex-col">
         <!-- Below `lg` this becomes a flex column filling the full remaining height (no vh
              guessing) so the book claims every pixel between the header and the screen edge -
              at `lg`+ it reverts to plain block flow with its old fixed sizing, where there's
@@ -501,7 +510,7 @@
              breakpoint, on top of the header/sidebar/nav-buttons already being gone entirely. -->
         <div
           class="w-full max-w-5xl xl:max-w-7xl 2xl:max-w-[1800px] mx-auto flex-1 min-h-0 flex flex-col"
-          :class="readMode ? 'p-0' : 'p-0 lg:p-4 2xl:p-6 lg:block'"
+          :class="readMode ? 'p-0 !max-w-none' : 'p-0 lg:px-2 lg:pt-2'"
         >
           <template v-if="currentPage">
             <!-- Read-aloud + AI tutor controls for whichever page is open right now - kept
@@ -534,7 +543,7 @@
                  students' page summaries laid over it never scroll away with the page -->
             <div
               class="relative"
-              :class="readMode ? 'flex-1 min-h-0' : 'flex-1 min-h-0 lg:flex-none lg:h-[calc(100vh-16.5rem)] lg:min-h-[420px] lg:mb-3'"
+              :class="readMode ? 'p-2.5 flex-1 min-h-0' : 'p-2.5 flex-1 min-h-[420px]'"
             >
             <div
               ref="bookWrapRef"
@@ -568,7 +577,7 @@
                     <!-- page-flip sets display on the page element itself, so the column layout that
                          pushes the footer to the foot of a short page lives on this inner wrapper -->
                     <div class="enote-page-inner">
-                    <div class="p-5 sm:p-8">
+                    <div class="enote-fit p-5 sm:p-8">
                       <div class="paper-meta">
                         <span class="paper-label">Page {{ pageIdx + 1 }} of {{ pages.length }}</span>
                         <span>{{ getPageWordCount(page.content) }} words</span>
@@ -735,6 +744,14 @@
             </div>
           </template>
 
+          <!-- Still loading: a page waiting on the desk, the eLibrary's "Loading book..." -->
+          <div v-else-if="topicLoading" class="flex-1 min-h-[420px] flex items-center justify-center p-3">
+            <div class="w-full max-w-md rounded-xl bg-[#f8f0dc] dark:bg-gray-800 ring-1 ring-[#ecdfbd] dark:ring-gray-700 shadow-xl shadow-black/20 px-8 py-10 text-center">
+              <div class="w-12 h-12 mx-auto mb-4 rounded-full border-4 border-[#ecdfbd] border-t-[#061a55] dark:border-gray-600 dark:border-t-white animate-spin"></div>
+              <p class="text-sm font-semibold text-[#061a55] dark:text-white">Opening the book…</p>
+            </div>
+          </div>
+
           <!-- Empty state -->
           <div v-else class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-12 mb-6 mx-3 lg:mx-0 flex-shrink-0 text-center">
             <div class="w-14 h-14 mx-auto mb-3 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
@@ -748,29 +765,26 @@
           <!-- Navigation Buttons - replaced by floating overlay arrows in Read Mode. On a desktop the
                bar sticks to the bottom of the screen, so turning the page is always in reach,
                however far down the reader has scrolled. -->
-          <div v-if="!readMode" class="grid grid-cols-[1fr_auto_1fr] items-center gap-2 flex-shrink-0 px-3 pb-3 pt-2 lg:px-0 lg:py-2 lg:sticky lg:bottom-0 lg:z-30 lg:bg-gray-50/90 lg:dark:bg-gray-950/90 lg:backdrop-blur-sm">
+          <div v-if="!readMode && !topicLoading" class="self-center w-fit mx-auto flex items-center justify-center gap-3 sm:gap-5 flex-shrink-0 mb-2 lg:mb-1 px-2 py-1 rounded-full bg-white/95 dark:bg-gray-800/95 backdrop-blur shadow-xl shadow-black/20 ring-1 ring-black/5 dark:ring-white/10 lg:sticky lg:bottom-1 lg:z-30">
             <button
               @click="handlePrevious"
               :disabled="!hasPreviousPage"
-              class="justify-self-start flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base font-medium bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              class="flex items-center gap-1 px-2.5 py-1.5 text-[13px] font-medium bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-              </svg>
-              <span class="hidden min-[400px]:inline">Previous</span>
+              <span aria-hidden="true">‹</span>
+              <span>Prev</span>
             </button>
+            <span class="text-xs sm:text-sm text-gray-600 dark:text-gray-300 min-w-[100px] text-center tabular-nums">Page {{ currentPageNumber }} of {{ pages.length }}</span>
 
 
             <button
               v-if="!(isStudentMode && !hasNextPage)"
               @click="handleNext"
               :disabled="!hasNextPage"
-              class="col-start-3 justify-self-end flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2 text-sm sm:text-base font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm hover:shadow-md hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-sm transition-all"
+              class="flex items-center gap-1 px-2.5 py-1.5 text-[13px] font-medium bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <span>Next</span>
-              <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-              </svg>
+              <span aria-hidden="true">›</span>
             </button>
           </div>
         </div>
@@ -785,7 +799,7 @@
       <button
         @click="handlePrevious"
         :disabled="!hasPreviousPage"
-        class="fixed left-3 sm:left-5 bottom-5 z-50 p-2.5 sm:p-4 rounded-full bg-gray-900/40 hover:bg-gray-900/60 text-white backdrop-blur-sm shadow-lg transition-colors disabled:opacity-0 disabled:pointer-events-none"
+        class="fixed left-3 sm:left-5 top-1/2 -translate-y-1/2 z-50 p-2.5 sm:p-4 rounded-full bg-gray-900/40 hover:bg-gray-900/60 text-white backdrop-blur-sm shadow-lg transition-colors disabled:opacity-0 disabled:pointer-events-none"
         title="Previous page"
       >
         <svg class="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -797,7 +811,7 @@
         v-if="!(isStudentMode && !hasNextPage)"
         @click="handleNext"
         :disabled="!hasNextPage"
-        class="fixed right-3 sm:right-5 bottom-5 z-50 p-2.5 sm:p-4 rounded-full bg-gray-900/40 hover:bg-gray-900/60 text-white backdrop-blur-sm shadow-lg transition-colors disabled:opacity-0 disabled:pointer-events-none"
+        class="fixed right-3 sm:right-5 top-1/2 -translate-y-1/2 z-50 p-2.5 sm:p-4 rounded-full bg-gray-900/40 hover:bg-gray-900/60 text-white backdrop-blur-sm shadow-lg transition-colors disabled:opacity-0 disabled:pointer-events-none"
         title="Next page"
       >
         <svg class="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1065,6 +1079,9 @@ const previewRole = computed(() => route.meta.previewRole as string | undefined)
 const isPreviewMode = computed(() => !!previewRole.value)
 const isStudentMode = computed(() => route.meta.studentMode === true)
 const topic = ref<ENoteTopic | null>(null)
+// Until the topic has arrived the reader shows "Opening the book..." on a page, not an empty dark
+// desk (a hard refresh showed a blank black reader with "no pages yet" while it loaded)
+const topicLoading = ref(true)
 // a colleague's topic this teacher may not change (Services/DepartmentContent) reads like a preview
 const isReadOnly = computed(() => isPreviewMode.value || isStudentMode.value || (topic.value as any)?.can_edit === false)
 
@@ -1151,6 +1168,130 @@ const updateDynamicAspect = () => {
   if (!widthChanged && heightJump < HEIGHT_CHANGE_TO_RESIZE) return
   dynamicPageWidth.value = el.clientWidth
   dynamicPageHeight.value = el.clientHeight
+}
+
+// Every page fits on its page: when a page's writing runs longer than the page, it is shrunk (CSS
+// zoom on .enote-fit, so the text and the notebook's ruled lines shrink together and the text
+// re-wraps to the width) just enough that nothing has to be scrolled. Never below FIT_MIN, so it
+// stays readable: a page that still doesn't fit at that size keeps its scrollbar. Pages the book
+// isn't showing (page-flip hides them with display:none) are laid out off-screen at the shown
+// page's size to be measured, so a page is already fitted when it turns into view.
+const FIT_MIN = 0.55
+// Pages are fitted together, in lockstep: each round sets every page's trial size, then reads every
+// page - one layout of the book per round, instead of one per page per trial (a 36-page book took
+// ~300 layouts and froze for over a second going into Read Mode). The first trial is an estimate
+// (shrinking text by z makes it about z^2 as tall: its lines get both smaller and longer), then a
+// short search close to it. Each page remembers its size for each size of book, so going in and out
+// of Read Mode reuses it.
+const fitsPage = (el: HTMLElement) => el.scrollHeight <= el.clientHeight + 1
+const setZoom = (c: HTMLElement, z: number | null) => { c.style.zoom = z === null || z >= 1 ? '' : String(z) }
+const fitMemory = new WeakMap<HTMLElement, Map<string, number>>()
+function fitTogether(pageEls: HTMLElement[], sizeKey: string, keepIfFits = false, fresh = false): void {
+  type Item = { el: HTMLElement; content: HTMLElement; lo: number; hi: number; mid: number }
+  let work = pageEls
+    .map(el => ({ el, content: el.querySelector<HTMLElement>('.enote-fit') }))
+    .filter((x): x is { el: HTMLElement; content: HTMLElement } => !!x.content)
+  if (keepIfFits) {
+    // one read, and a refit only for a page something has made taller
+    work = work.filter(x => !fitsPage(x.el))
+  } else if (!fresh) {
+    // a size this page was already fitted at: use it - unless something on the page has made it
+    // taller since (one read for all of them)
+    const known = work.filter(x => {
+      const z = fitMemory.get(x.el)?.get(sizeKey)
+      if (z === undefined) return false
+      setZoom(x.content, z)
+      return true
+    })
+    const grown = new Set(known.filter(x => !fitsPage(x.el)))
+    work = work.filter(x => !known.includes(x) || grown.has(x))
+  }
+  if (!work.length) return
+  const remember = (x: { el: HTMLElement }, z: number) => {
+    let m = fitMemory.get(x.el)
+    if (!m) fitMemory.set(x.el, (m = new Map()))
+    m.set(sizeKey, z)
+  }
+  work.forEach(x => setZoom(x.content, null))
+  const heights = work.map(x => [x.el.scrollHeight, x.el.clientHeight] as const)
+  const over: Item[] = []
+  work.forEach((x, i) => {
+    const [content, room] = heights[i]
+    if (content <= room + 1) { remember(x, 1); return }
+    const guess = Math.max(FIT_MIN, Math.min(1, Math.sqrt(room / content)))
+    over.push({ ...x, lo: FIT_MIN, hi: 1, mid: guess })
+  })
+  if (!over.length) return
+  // the estimate, then a narrow bracket around it
+  over.forEach(x => setZoom(x.content, x.mid))
+  over.forEach(x => {
+    if (fitsPage(x.el)) { x.lo = x.mid; x.hi = Math.min(1, x.mid * 1.15) } else { x.hi = x.mid; x.lo = Math.max(FIT_MIN, x.mid * 0.85) }
+  })
+  // the bottom of a bracket that was guessed (not measured) is checked; too long even at the
+  // smallest size: it stays there and scrolls
+  const unsure = over.filter(x => x.lo < x.mid && x.lo > FIT_MIN)
+  unsure.forEach(x => setZoom(x.content, x.lo))
+  unsure.forEach(x => { if (!fitsPage(x.el)) { x.hi = x.lo; x.lo = FIT_MIN } })
+  for (let round = 0; round < 3; round++) {
+    over.forEach(x => { x.mid = (x.lo + x.hi) / 2; setZoom(x.content, x.mid) })
+    over.forEach(x => { if (fitsPage(x.el)) x.lo = x.mid; else x.hi = x.mid })
+  }
+  over.forEach(x => { const z = Math.floor(x.lo * 1000) / 1000; setZoom(x.content, z); remember(x, z) })
+}
+
+const whenIdle = (fn: () => void) => {
+  const ric = (window as any).requestIdleCallback as ((cb: () => void, o?: { timeout: number }) => number) | undefined
+  if (ric) ric(fn, { timeout: 600 })
+  else setTimeout(fn, 30)
+}
+
+// The pages in view are fitted at once; their neighbours (the spreads either side - where a turn
+// goes next) when the browser is free, so a page is ready before it turns into view. Pages further
+// away are fitted as the reader comes near them: fitting every page of a long topic up front cost
+// a layout of the whole book per round and froze going into Read Mode.
+const FIT_AHEAD = 4
+function fitPages(onlyShown = false): void {
+  const wrap = bookWrapRef.value
+  if (!wrap) return
+  const all = Array.from(wrap.querySelectorAll<HTMLElement>('.enote-flip-page'))
+  const shownIdx = all.map((el, i) => (el.clientHeight >= MIN_PLAUSIBLE_CONTAINER_SIZE ? i : -1)).filter(i => i >= 0)
+  if (!shownIdx.length) return
+  const size = all[shownIdx[0]]
+  const w = size.clientWidth
+  const h = size.clientHeight
+  const sizeKey = `${w}x${h}`
+  // just turned into view: measured as they really are (an off-screen guess can be off - a picture
+  // not loaded yet takes its room there), so a page never stays smaller than it needs to be
+  fitTogether(shownIdx.map(i => all[i]), sizeKey, false, onlyShown)
+  const from = Math.max(0, shownIdx[0] - FIT_AHEAD)
+  const to = Math.min(all.length - 1, shownIdx[shownIdx.length - 1] + FIT_AHEAD)
+  whenIdle(() => {
+    if (bookWrapRef.value !== wrap) return
+    // laid out off-screen at the shown page's size (page-flip hides them with display:none),
+    // fitted together, and hidden again
+    const near = all.slice(from, to + 1).filter(el => el.isConnected && el.clientHeight < MIN_PLAUSIBLE_CONTAINER_SIZE)
+    const saved = near.map(el => el.style.cssText)
+    near.forEach(el => { el.style.cssText = `display:block;position:absolute;left:-100000px;top:0;visibility:hidden;width:${w}px;height:${h}px;` })
+    try {
+      fitTogether(near, sizeKey)
+    } finally {
+      near.forEach((el, i) => { el.style.cssText = saved[i] })
+    }
+  })
+}
+
+let fitTimer: ReturnType<typeof setTimeout> | null = null
+let fitAllPending = false
+function scheduleFit(delay = 120, onlyShown = false): void {
+  // a refit of just the shown pages never cancels a pending refit of them all
+  fitAllPending = fitAllPending || !onlyShown
+  if (fitTimer) clearTimeout(fitTimer)
+  fitTimer = setTimeout(() => {
+    fitTimer = null
+    const all = fitAllPending
+    fitAllPending = false
+    fitPages(!all)
+  }, delay)
 }
 
 // BookFlipbook caps its own container width to 560px specifically for the desktop manual
@@ -1480,8 +1621,8 @@ const loadTopic = async () => {
         }
         // "Start from the beginning" on the shelf: page 1 becomes their place straight away
         if (resumeIndex < 0 && route.query.opened === '1') saveReadingPlace()
-        // Chose to read from the shelf: straight into Read Mode (the whole screen for the notes)
-        if (route.query.opened === '1') enterReadMode()
+        // Opened from the shelf: the book opens in the normal view (contents, progress, Prev/Next);
+        // Read Mode is the student's own choice, with the Read button
         loadStudentPageData()
       }
       if (resumeIndex >= 0) {
@@ -1492,6 +1633,8 @@ const loadTopic = async () => {
     }
   } catch (error) {
     console.error('Failed to load topic:', error)
+  } finally {
+    topicLoading.value = false
   }
 }
 
@@ -1531,15 +1674,20 @@ const summarySlots = computed(() => {
   if (bookOrientation.value !== 'landscape' || !right) {
     return [{ page: pages.value[index], number: index + 1, style: { left: NOTE_GAP, right: NOTE_GAP } }]
   }
+  // the left page's tab in its bottom-left corner, the right page's in its bottom-right corner
+  // (its note opening from there too), as in the eLibrary
+  const alignRight = { display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }
   return [
     { page: pages.value[index], number: index + 1, style: { left: NOTE_GAP, right: `calc(50% + ${NOTE_GAP})` } },
-    { page: right, number: index + 2, style: { left: `calc(50% + ${NOTE_GAP})`, right: NOTE_GAP } },
+    { page: right, number: index + 2, style: { left: `calc(50% + ${NOTE_GAP})`, right: NOTE_GAP, ...alignRight } },
   ]
 })
 
 const onBookFlip = (index: number) => {
   // Turning past the last spread can report a page beyond the end - stay where we are
   if (index < 0 || index >= pages.value.length) return
+  // the pages now in view are fitted again (anything loaded on them since makes them taller)
+  scheduleFit(60, true)
   const from = lastBookIndex
   // Moving forward past a page with a Learning Outcome Assessment the student hasn't attempted
   // (or chosen to skip) - by any means: Next, dragging or clicking the page edge, the keyboard,
@@ -1752,8 +1900,19 @@ const openPageAssessment = (a: PageAssignment, page: ENotePage | null) => {
   router.push(`/student/assignments/${a.id}/answer?${params.toString()}`)
 }
 
+// Every page is drawn from its content alone, and every page re-renders whenever the reader turns
+// a page - so each page's cleaned-up HTML is made once and kept (sanitising all 36 pages on every
+// turn was most of the work of a page turn)
+const formattedCache = new Map<string, string>()
 const formatContent = (content: string): string => {
   if (!content) return ''
+  const cached = formattedCache.get(content)
+  if (cached !== undefined) return cached
+  const html = formatContentUncached(content)
+  formattedCache.set(content, html)
+  return html
+}
+const formatContentUncached = (content: string): string => {
 
   // YouTube: handles the CKEditor <oembed> placeholder (any URL form, including youtu.be short
   // links - the previous hand-rolled regex here only matched youtube.com/watch?v= and silently
@@ -1830,9 +1989,15 @@ const hasMeaningfulTitle = (title: string): boolean => {
   return !GENERIC_PAGE_TITLES.includes(normalized)
 }
 
+const wordCountCache = new Map<string, number>()
 const getPageWordCount = (content: string): number => {
   if (!content) return 0
-  return content.trim().split(/\s+/).filter(word => word.length > 0).length
+  let n = wordCountCache.get(content)
+  if (n === undefined) {
+    n = content.trim().split(/\s+/).filter(word => word.length > 0).length
+    wordCountCache.set(content, n)
+  }
+  return n
 }
 
 const getReadingTime = (content: string): number => {
@@ -2005,6 +2170,13 @@ watch(currentPage, (page) => {
   if (page) visitedPageIds.value.add(page.id)
   showTutorPanel.value = false
 }, { immediate: true })
+// In the two-page view the page on the right is open too, so it is ticked as well (the contents
+// list ticked every other page: only the left page counted as visited)
+watch([currentPage, bookOrientation], ([page, orientation]) => {
+  if (!page || orientation !== 'landscape') return
+  const right = pages.value[pages.value.findIndex(p => p.id === page.id) + 1]
+  if (right) visitedPageIds.value.add(right.id)
+}, { immediate: true })
 
 // bookWrapRef only exists once currentPage is set (it's inside `v-if="currentPage"`), which
 // happens asynchronously once loadTopic()'s request resolves - watching the ref itself (rather
@@ -2016,6 +2188,20 @@ watch(bookWrapRef, (el) => {
   updateDynamicAspect()
   bookWrapResizeObserver = new ResizeObserver(updateDynamicAspect)
   bookWrapResizeObserver.observe(el)
+})
+
+// The book is (re)built, resized, or its pages change: fit them all again
+watch(() => [pages.value, effectivePageWidth.value, effectivePageHeight.value, bookOrientation.value, orientationKnown.value, preferSinglePage.value, outcomesOpen.value, readMode.value], () => scheduleFit(250))
+// a picture finishing loading makes its page taller
+const onBookContentLoad = (e: Event) => { if ((e.target as HTMLElement)?.tagName === 'IMG') scheduleFit(300) }
+watch(bookWrapRef, (el, old) => {
+  old?.removeEventListener('load', onBookContentLoad, true)
+  el?.addEventListener('load', onBookContentLoad, true)
+  if (el) {
+    scheduleFit(400)
+    // practice questions and the like load after the page itself
+    setTimeout(() => scheduleFit(0), 1800)
+  }
 })
 
 const handleAspectMqChange = (e: MediaQueryListEvent) => { isMobileForAspect.value = e.matches }
@@ -2039,6 +2225,8 @@ onBeforeUnmount(() => {
   document.removeEventListener('scroll', handlePageScroll, true)
   mq?.removeEventListener('change', handleAspectMqChange)
   bookWrapResizeObserver?.disconnect()
+  if (fitTimer) clearTimeout(fitTimer)
+  bookWrapRef.value?.removeEventListener('load', onBookContentLoad, true)
   // Safety net for navigating away without pressing Exit (back button, a TOC/search jump, ...) -
   // otherwise the app shell's chrome would stay hidden on whatever page the reader lands on next.
   readModeStore.exit()
@@ -2148,6 +2336,9 @@ onBeforeUnmount(() => {
   height: 100%;
   overflow-y: auto;
   box-sizing: border-box;
+  /* a page's layout is its own: fitting one page (its zoom, then measuring it) re-lays out just that
+     page, not the whole book and the app around it */
+  contain: layout paint;
 }
 
 .enote-page-inner {

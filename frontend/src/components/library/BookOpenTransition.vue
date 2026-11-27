@@ -202,10 +202,13 @@ const phase = ref<Phase>('arriving')
 
 // Learning outcomes: as many as fit on a page, each ticked in turn with time to read it; a full
 // page is turned over and the list carries on on the next
-const OUTCOME_STEP = 1300 // between one outcome and the next
-const PAGE_HOLD = 1800 // a full page stays up this long before it's turned
-const TURN_TIME = 1100
-const FINAL_HOLD = 2600 // the last page stays up this long before the notes open
+// Kept short: at 1.3 s an outcome, a topic with 11 outcomes took over 20 s to open. The list now
+// takes about 3 s however long it is (each outcome 0.25-0.6 s); Skip still ends it at once.
+const OUTCOMES_TOTAL = 3000
+const outcomeStep = () => Math.min(600, Math.max(250, Math.round(OUTCOMES_TOTAL / Math.max(1, outcomeList.value.length))))
+const PAGE_HOLD = 700 // a full page stays up this long before it's turned
+const TURN_TIME = 650
+const FINAL_HOLD = 900 // the last page stays up this long before the notes open
 const outcomeList = computed(() => (props.outcomes ?? []).map(o => String(o).trim()).filter(Boolean))
 const chunks = ref<string[][]>([])
 const pageCount = computed(() => chunks.value.length)
@@ -296,7 +299,7 @@ async function revealPage(page: number) {
   const count = chunks.value[page]?.length ?? 0
   for (let i = 1; i <= count && !stopped; i++) {
     revealedBy.value = { ...revealedBy.value, [page]: i }
-    await wait(reduced ? 0 : OUTCOME_STEP)
+    await wait(reduced ? 0 : outcomeStep())
   }
 }
 
@@ -340,7 +343,7 @@ async function turnPage(front: number, back: number) {
   if (paused.value) turn.pause()
   await turn.finished.catch(() => {})
   turning = null
-  await wait(reduced ? 0 : 300)
+  await wait(reduced ? 0 : 150)
 }
 
 const backdrop = ref<HTMLElement | null>(null)
@@ -352,9 +355,9 @@ const startButton = ref<HTMLButtonElement | null>(null)
 const EASE_OUT = 'cubic-bezier(0.2, 0.8, 0.2, 1)'
 const EASE_IN_OUT = 'cubic-bezier(0.65, 0, 0.35, 1)'
 const FLY_AT = 150
-const FLY_TIME = 1500
-const OPEN_TIME = 1500
-const HOLD_OPEN = 450
+const FLY_TIME = 900
+const OPEN_TIME = 900
+const HOLD_OPEN = 250
 const CANCEL_SPEED = 3.5
 
 // The animations that bring the book out, played backwards to put it back
@@ -439,7 +442,7 @@ function startReading(how: 'resume' | 'fresh' = 'fresh') {
 
   paginate()
   // A returning reader goes straight back to their page - the outcomes are listed on a fresh start
-  const listed = wait(time - 200).then(() => (how === 'fresh' && outcomeList.value.length ? listOutcomes() : wait(reduced ? 0 : 900)))
+  const listed = wait(time - 200).then(() => (how === 'fresh' && outcomeList.value.length ? listOutcomes() : wait(reduced ? 0 : 400)))
 
   Promise.all([ready, listed]).then(() => {
     if (stopped) return
