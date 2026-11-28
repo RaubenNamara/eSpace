@@ -38,7 +38,7 @@ import axios from 'axios'
 import AppIcon from '@/components/common/AppIcon.vue'
 import { resolveAssetUrl } from '@/utils/url'
 
-interface SupportFile { id: number; file_path: string; original_name: string; file_size: number | null }
+interface SupportFile { id: number; file_path: string; original_name: string; file_size: number | null; question_id?: number | null }
 
 // assumeIct: before the assessment is saved there is no id to ask the server with - the
 // builder's guess from the subject's name decides whether the card shows until then
@@ -59,7 +59,8 @@ const load = async () => {
   if (!props.assignmentId) return
   try {
     const d = (await axios.get(`/api/teacher/assignments/${props.assignmentId}/resources`)).data.data
-    files.value = d.files
+    // a question's own files are shown with that question in the question form
+    files.value = (d.files as SupportFile[]).filter(f => !f.question_id)
     allowed.value = !!d.allowed
   } catch { /* the card stays as it was */ }
 }

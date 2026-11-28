@@ -291,6 +291,15 @@
                 <div v-if="entry.question.scenario_text" class="bg-indigo-50/50 dark:bg-indigo-900/10 border-l-4 border-indigo-300 dark:border-indigo-700 p-3 sm:p-4 rounded-lg mb-4 overflow-x-auto">
                   <p class="text-gray-700 dark:text-gray-300 whitespace-pre-line break-words [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full" v-html="safeHtml(entry.question.scenario_text)"></p>
                 </div>
+                <QuestionSupportFiles :files="filesFor(entry.question.id)" />
+                <div v-if="(entry.question as any).sub_questions?.length && questionPaperUrl(entry.question)" class="mb-4">
+                  <a :href="questionPaperUrl(entry.question)!" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 mb-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
+                    <AppIcon name="book" class="w-4 h-4" /> Open the scenario paper in a new tab
+                  </a>
+                  <div class="max-h-[70vh] overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg">
+                    <PdfAnnotationViewer :pdf-url="questionPaperUrl(entry.question)!" mode="readonly" readonly />
+                  </div>
+                </div>
               </div>
 
               <!-- Sub-questions -->
@@ -363,6 +372,19 @@
                 </p>
                 <div class="text-lg sm:text-xl font-semibold leading-snug text-gray-900 dark:text-white break-words [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_table]:max-w-full" v-html="safeHtml(entry.question.question_text)"></div>
                 <p v-if="entry.question.question_type === 'multiple_choice_multiple'" class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">Choose all that are correct.</p>
+              </div>
+              <QuestionSupportFiles :files="filesFor(entry.question.id)" />
+
+              <!-- A multiple-choice question set on a PDF paper: read it, then pick below (a written
+                   answer shows its PDF inside FreeResponseAnswer) -->
+              <div v-if="isObjectiveQuestion(entry.question) && questionPaperUrl(entry.question)" class="mb-5">
+                <div class="flex items-center justify-between gap-2 mb-1">
+                  <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Question (PDF)</p>
+                  <a :href="questionPaperUrl(entry.question)!" target="_blank" rel="noopener" class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">Open in a new tab</a>
+                </div>
+                <div class="max-h-[70vh] overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg">
+                  <PdfAnnotationViewer :pdf-url="questionPaperUrl(entry.question)!" mode="readonly" readonly />
+                </div>
               </div>
 
               <!-- Multiple Choice Single -->
@@ -446,6 +468,7 @@
                 :assignment-id="Number(route.params.id)"
                 :saved-files="practicalFilesByQuestion[entry.question.id] || []"
                 :readonly="isLocked"
+                :support-files="filesFor(entry.question.id)"
                 :title="assignment?.title || 'Practical'"
                 @saved="(files: PracticalFile[], sid: number) => { practicalFilesByQuestion[entry.question.id] = files; if (sid) submissionId = sid }"
               />
@@ -550,6 +573,7 @@ import { safeHtml } from '@/utils/safeHtml'
 import FlowerShower from '@/components/common/FlowerShower.vue'
 import { fmtMarks } from '@/utils/marks'
 import AppIcon from '@/components/common/AppIcon.vue'
+import QuestionSupportFiles, { type QuestionFile } from '@/components/assignment/QuestionSupportFiles.vue'
 import { ref, computed, watch, onMounted, onUnmounted, defineAsyncComponent } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
@@ -559,6 +583,15 @@ import type { AdditionalAnswerFile } from '@/components/assignment/FreeResponseA
 // Loaded only when a question needs it: it brings the answer editor and the drawing tool (some
 // 260 KB), which a multiple-choice test never uses - the page opens without waiting for them
 const FreeResponseAnswer = defineAsyncComponent(() => import('@/components/assignment/FreeResponseAnswer.vue'))
+const PdfAnnotationViewer = defineAsyncComponent(() => import('@/components/assignment/PdfAnnotationViewer.vue'))
+// The question paper the teacher uploaded as a PDF (not the blank answer sheet every question
+// starts with). Shown here above a scenario's sub-questions and above multiple-choice options; a
+// written answer (essay, or a scenario without sub-questions) shows it inside FreeResponseAnswer.
+const questionPaperUrl = (q: AssignmentQuestion): string | null => {
+  const path = (q as any).attachment_path as string | undefined
+  if ((q as any).attachment_type !== 'pdf' || !path || path === '/uploads/defaults/default_answer_sheet.pdf') return null
+  return resolveAssetUrl(path)
+}
 import QuestionProgress from '@/components/assignment/QuestionProgress.vue'
 import SubmitConfirmDialog from '@/components/assignment/SubmitConfirmDialog.vue'
 import PracticalAnswerCard, { type PracticalFile } from '@/components/practical/PracticalAnswerCard.vue'
@@ -859,7 +892,10 @@ const loadedOffline = ref(false)
 const submittedOffline = ref(false)
 const lastLoad = ref<any>(null)
 // ICT: support files to download, and Office files may be handed in (Student\AssignmentController show())
-const supportFiles = computed<{ id: number; file_path: string; original_name: string }[]>(() => lastLoad.value?.resources ?? [])
+// files with a question_id belong to that question and are shown with it; the rest are for the whole assessment
+const allSupportFiles = computed<QuestionFile[]>(() => lastLoad.value?.resources ?? [])
+const supportFiles = computed(() => allSupportFiles.value.filter(f => !f.question_id))
+const filesFor = (questionId: number) => allSupportFiles.value.filter(f => Number(f.question_id) === Number(questionId))
 const officeUploads = computed(() => !!lastLoad.value?.office_uploads)
 const savingOffline = ref(false)
 const savedOffline = computed(() => offline.assessments[Number(route.params.id)] ?? null)

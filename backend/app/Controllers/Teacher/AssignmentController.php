@@ -728,8 +728,28 @@ class AssignmentController extends Controller
             $optionStmt->execute(['question_id' => $question['id']]);
             $question['options'] = $optionStmt->fetchAll();
         }
+        unset($question);
 
-        $assignment['questions'] = $questions;
+        // A scenario's parts (a, b, c...) go inside it as sub_questions, the way the builder saves
+        // them. Sent as questions of their own, reopening the scenario showed no parts, and saving
+        // it then sent an empty list, which deleted every part.
+        $byParent = [];
+        $top = [];
+        foreach ($questions as $q) {
+            if ($q['parent_question_id'] !== null) {
+                $byParent[(int) $q['parent_question_id']][] = $q;
+            } else {
+                $top[] = $q;
+            }
+        }
+        foreach ($top as &$q) {
+            if ($q['question_type'] === 'scenario' || isset($byParent[(int) $q['id']])) {
+                $q['sub_questions'] = $byParent[(int) $q['id']] ?? [];
+            }
+        }
+        unset($q);
+
+        $assignment['questions'] = $top;
 
         $this->success($assignment);
     }
@@ -1476,10 +1496,8 @@ class AssignmentController extends Controller
 
             // Which streams see it, the topics / learning outcomes it assesses, and its support files
             // (the copy points at the same stored files)
+            // (support files are copied after the questions: a file can belong to one question)
             $tables = ['assignment_classes', 'assignment_curriculum_topics', 'assignment_learning_outcomes'];
-            if ($db->query("SHOW TABLES LIKE 'assignment_resources'")->fetch()) {
-                $tables[] = 'assignment_resources';
-            }
             foreach ($tables as $table) {
                 $stmt = $db->prepare("SELECT * FROM {$table} WHERE assignment_id = ?");
                 $stmt->execute([$assignmentId]);
@@ -1513,6 +1531,22 @@ class AssignmentController extends Controller
                 $marks->execute([$question['id']]);
                 foreach ($marks->fetchAll() as $mark) {
                     $this->copyRow($db, 'question_annotations', ['question_id' => $newQuestionId, 'teacher_id' => $teacherId] + $mark, ['id', 'created_at', 'updated_at']);
+                }
+            }
+
+            // Support files (the copy points at the same stored files); a question's own files go
+            // with that question's copy, and are left out if the question wasn't copied
+            if ($db->query("SHOW TABLES LIKE 'assignment_resources'")->fetch()) {
+                $stmt = $db->prepare('SELECT * FROM assignment_resources WHERE assignment_id = ?');
+                $stmt->execute([$assignmentId]);
+                foreach ($stmt->fetchAll() as $row) {
+                    if (!empty($row['question_id'])) {
+                        if (!isset($newIdFor[(int) $row['question_id']])) {
+                            continue;
+                        }
+                        $row['question_id'] = $newIdFor[(int) $row['question_id']];
+                    }
+                    $this->copyRow($db, 'assignment_resources', ['assignment_id' => $newAssignmentId] + $row, ['id', 'created_at']);
                 }
             }
 
@@ -1581,8 +1615,10 @@ class AssignmentController extends Controller
         // For scenario questions, scenario_text is required instead of question_text
         if ($data['question_type'] === 'scenario') {
             $required = ['question_type', 'marks'];
-            if (empty($data['scenario_text'])) {
-                $this->validationError(['scenario_text' => 'Scenario text is required']);
+            // an uploaded PDF can carry the scenario instead of typing it (as for other questions)
+            $pdfPending = ($data['attachment_type'] ?? 'none') === 'pdf';
+            if (empty($data['scenario_text']) && empty($data['attachment_path']) && !$pdfPending) {
+                $this->validationError(['scenario_text' => 'Scenario text or an attached PDF is required']);
                 return;
             }
         } else {
@@ -1679,6 +1715,7 @@ class AssignmentController extends Controller
 
             // Add sub-questions if provided (for scenario questions) - always free-response, so
             // they get the same default answer document as any other free-response question.
+            $subIds = [];
             if (isset($data['sub_questions']) && is_array($data['sub_questions']) && $data['question_type'] === 'scenario') {
                 foreach ($data['sub_questions'] as $index => $subQuestion) {
                     $sql = "INSERT INTO assignment_questions (
@@ -1698,12 +1735,14 @@ class AssignmentController extends Controller
                         'marks' => $subQuestion['marks'],
                         'display_order' => $subQuestion['display_order'] ?? $index
                     ]);
+                    $subIds[] = (int) Database::lastInsertId();
                 }
             }
 
             Database::commit();
 
-            $this->success(['id' => $questionId], 'Question added successfully');
+            // the parts' ids, in order: the builder keeps them, so a later save updates these parts
+            $this->success(['id' => $questionId, 'sub_question_ids' => $subIds], 'Question added successfully');
 
         } catch (Exception $e) {
             Database::rollback();
@@ -1752,6 +1791,27 @@ class AssignmentController extends Controller
                 $updateFields[] = 'practical_app = :practical_app';
                 $params['practical_app'] = \eSpace\App\Utils\Practical::app($data['practical_app']);
                 unset($data['practical_app']);
+            }
+
+            // Multiple choice: the teacher picks one or several correct answers while marking the
+            // answers, so the question can move between the two kinds - but only until a learner
+            // has answered it (one choice and a list of choices are stored differently)
+            $mcq = ['multiple_choice_single', 'multiple_choice_multiple'];
+            if (in_array($data['question_type'] ?? null, $mcq, true)) {
+                $cur = $db->prepare("SELECT question_type FROM assignment_questions WHERE id = :id AND assignment_id = :assignment_id AND deleted_at IS NULL");
+                $cur->execute(['id' => $questionId, 'assignment_id' => $assignmentId]);
+                $currentType = $cur->fetchColumn();
+                if (in_array($currentType, $mcq, true) && $currentType !== $data['question_type']) {
+                    $answered = $db->prepare("SELECT COUNT(*) FROM assignment_answers WHERE question_id = :id");
+                    $answered->execute(['id' => $questionId]);
+                    if ((int) $answered->fetchColumn() > 0) {
+                        Database::rollback();
+                        $this->error('Learners have already answered this question, so it can no longer change between one and several correct answers', 409);
+                        return;
+                    }
+                    $updateFields[] = 'question_type = :question_type';
+                    $params['question_type'] = $data['question_type'];
+                }
             }
 
             $allowedFields = ['question_text', 'scenario_text', 'marks', 'display_order', 'allow_drawing', 'response_type', 'attachment_path', 'attachment_type', 'curriculum_topic_id', 'learning_outcome_id'];
@@ -1848,11 +1908,36 @@ class AssignmentController extends Controller
 
             // Update sub-questions if provided (for scenario questions)
             if (isset($data['sub_questions']) && is_array($data['sub_questions'])) {
-                // Soft-delete existing sub-questions no longer present, then replace
-                $stmt = $db->prepare("UPDATE assignment_questions SET deleted_at = NOW() WHERE parent_question_id = :question_id");
+                // Each part sent with its id is updated in place (so learners' answers to it stay
+                // linked), a part without one is added, and only parts no longer in the list are
+                // removed. Replacing them all gave every part a new id on each save.
+                $stmt = $db->prepare("SELECT id FROM assignment_questions WHERE parent_question_id = :question_id AND deleted_at IS NULL");
                 $stmt->execute(['question_id' => $questionId]);
+                $existingIds = array_map('intval', $stmt->fetchAll(\PDO::FETCH_COLUMN));
 
-                foreach ($data['sub_questions'] as $index => $subQuestion) {
+                $kept = [];
+                $newParts = [];
+                foreach (array_values($data['sub_questions']) as $index => $subQuestion) {
+                    $sid = (int) ($subQuestion['id'] ?? 0);
+                    if ($sid && in_array($sid, $existingIds, true) && !in_array($sid, $kept, true)) {
+                        $db->prepare("UPDATE assignment_questions SET question_text = :question_text, marks = :marks, display_order = :display_order, updated_at = NOW() WHERE id = :id")
+                            ->execute([
+                                'question_text' => $subQuestion['question_text'],
+                                'marks' => $subQuestion['marks'],
+                                'display_order' => $subQuestion['display_order'] ?? $index,
+                                'id' => $sid,
+                            ]);
+                        $kept[] = $sid;
+                    } else {
+                        $newParts[$index] = $subQuestion;
+                    }
+                }
+                $gone = array_diff($existingIds, $kept);
+                if ($gone) {
+                    $db->exec("UPDATE assignment_questions SET deleted_at = NOW() WHERE id IN (" . implode(',', array_map('intval', $gone)) . ")");
+                }
+
+                foreach ($newParts as $index => $subQuestion) {
                     $sql = "INSERT INTO assignment_questions (
                         assignment_id, parent_question_id, question_type, question_text,
                         marks, display_order, attachment_path, attachment_type, created_at, updated_at

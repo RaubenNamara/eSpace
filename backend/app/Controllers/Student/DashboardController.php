@@ -66,9 +66,10 @@ class DashboardController extends Controller
         }
 
         // Assignments - same status computation as Student\AssignmentController::index() so the
-        // dashboard numbers always agree with the Assignments page.
+        // dashboard numbers always agree with the Assignments page (a redo date counts as the deadline).
+        \eSpace\App\Utils\AssignmentRedo::ensureSchema($db);
         $stmt = $db->prepare(
-            "SELECT a.id, a.title, a.due_date, s.name as subject_name,
+            "SELECT a.id, a.title, " . \eSpace\App\Utils\AssignmentRedo::dueSql((string) (int) $studentId) . " AS due_date, s.name as subject_name,
                     sub.status as submission_status, sub.percentage
              FROM assignments a
              INNER JOIN subjects s ON a.subject_id = s.id

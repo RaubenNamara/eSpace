@@ -42,6 +42,7 @@
             <p class="font-semibold text-gray-900 dark:text-white">How to write them</p>
             <p>Number each question (1. or 1) or Q1.), then put its choices on their own lines starting A. B. C. D. (or a) b) c) d)).</p>
             <p>To give the answer, add a line like <span class="font-mono">Answer: B</span> or put a <span class="font-mono">*</span> before the right choice. If you leave it out, you can pick it on the next screen.</p>
+            <p>A question with more than one right answer: <span class="font-mono">Answer: A, C</span>, or a <span class="font-mono">*</span> before each right choice. You can also tick "More than one correct answer" on the next screen.</p>
           </div>
         </div>
 
@@ -67,7 +68,13 @@
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 7h12M9 7V5h6v2m-7 0l1 12h6l1-12" /></svg>
               </button>
             </div>
-            <p class="mt-2 ml-8 text-[11px] text-gray-500 dark:text-gray-400">Tap the letter of the correct answer</p>
+            <div class="mt-2 ml-8 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+              <p class="text-[11px] text-gray-500 dark:text-gray-400">{{ q.multiple ? 'Tap the letter of every correct answer' : 'Tap the letter of the correct answer' }}</p>
+              <label class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+                <input type="checkbox" class="w-3.5 h-3.5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" :checked="q.multiple" @change="setMultiple(q, ($event.target as HTMLInputElement).checked)">
+                More than one correct answer
+              </label>
+            </div>
             <ul class="mt-1 ml-8 space-y-1.5">
               <li v-for="(o, oi) in q.options" :key="oi" class="flex items-center gap-2">
                 <button
@@ -75,7 +82,7 @@
                   class="w-7 h-7 flex-shrink-0 rounded-full text-xs font-semibold border transition-colors"
                   :class="o.is_correct ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-emerald-500'"
                   :aria-pressed="o.is_correct"
-                  :aria-label="`Make ${LETTERS[oi]} the correct answer to question ${qi + 1}`"
+                  :aria-label="q.multiple ? `${LETTERS[oi]} is a correct answer to question ${qi + 1}` : `Make ${LETTERS[oi]} the correct answer to question ${qi + 1}`"
                   @click="choose(q, oi)"
                 >{{ LETTERS[oi] }}</button>
                 <input v-model="o.option_text" type="text" class="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg border text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white" :class="o.is_correct ? 'border-emerald-400 dark:border-emerald-700' : 'border-gray-300 dark:border-gray-700'" :aria-label="`Choice ${LETTERS[oi]}`">
@@ -166,7 +173,19 @@ const toCheck = () => {
   step.value = 'check'
 }
 const applyMarksEach = () => { items.value.forEach(q => { q.marks = Math.max(1, marksEach.value || 1) }) }
-const choose = (q: Item, oi: number) => { q.options.forEach((o, i) => { o.is_correct = i === oi }) }
+// one correct answer: tapping a letter picks it; several: tapping a letter turns it on or off
+const choose = (q: Item, oi: number) => {
+  if (q.multiple) q.options[oi].is_correct = !q.options[oi].is_correct
+  else q.options.forEach((o, i) => { o.is_correct = i === oi })
+}
+const setMultiple = (q: Item, on: boolean) => {
+  q.multiple = on
+  if (!on) {
+    // back to one: keep the first one marked
+    let kept = false
+    q.options.forEach(o => { if (o.is_correct) { if (kept) o.is_correct = false; kept = true } })
+  }
+}
 
 const totalMarks = computed(() => items.value.reduce((n, q) => n + (Number(q.marks) || 0), 0))
 const missingAnswers = computed(() => items.value.filter(q => !q.options.some(o => o.is_correct && o.option_text.trim())).length)

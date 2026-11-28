@@ -856,6 +856,121 @@ class MarkingController extends Controller
     }
 
     /**
+     * Delete a learner's work on this assessment so they can do it again from the start, e.g. when
+     * they handed in the wrong thing. Their answers, files, the marks and comments on them and the
+     * "marked" notification go; the assessment is then new to them again. If the deadline has passed
+     * they get redo_days (1-14, default 3) to do it again (Utils\AssignmentRedo). Only the teacher
+     * who set the assessment can do this.
+     * POST /teacher/assignments/{id}/submissions/{submissionId}/clear-for-redo  { redo_days?, reason? }
+     */
+    public function clearForRedo(): void
+    {
+        $this->requireAuth();
+        $this->requireRole('teacher');
+
+        $teacherId = (int) $this->getTeacherId();
+        $assignmentId = (int) $this->routeParam('id');
+        $submissionId = (int) $this->routeParam('submissionId');
+
+        $sub = $this->verifySubmissionOwnership($submissionId, $teacherId);
+        if (!$sub || (int) $sub['assignment_id'] !== $assignmentId) {
+            $this->forbidden('Only the teacher who set this assessment can delete a learner\'s work');
+            return;
+        }
+
+        $data = $this->input();
+        $days = max(1, min(14, (int) ($data['redo_days'] ?? 3)));
+        $reason = trim(mb_substr(strip_tags((string) ($data['reason'] ?? '')), 0, 255));
+        $studentId = (int) $sub['student_id'];
+        $db = $this->getDb();
+
+        try {
+            \eSpace\App\Utils\Practical::ensureSchema($db);
+            \eSpace\App\Utils\AssignmentRedo::ensureSchema($db);
+
+            // the learner's files (and the teacher's voice comment on this script), removed after
+            $files = [];
+            $q = $db->prepare('SELECT student_attachment_path FROM assignment_answers WHERE submission_id = ? AND student_attachment_path IS NOT NULL');
+            $q->execute([$submissionId]);
+            $files = array_merge($files, $q->fetchAll(PDO::FETCH_COLUMN));
+            $q = $db->prepare('SELECT file_path FROM assignment_answer_attachments WHERE submission_id = ?');
+            $q->execute([$submissionId]);
+            $files = array_merge($files, $q->fetchAll(PDO::FETCH_COLUMN));
+            $q = $db->prepare('SELECT path FROM assignment_practical_files WHERE submission_id = ?');
+            $q->execute([$submissionId]);
+            $files = array_merge($files, $q->fetchAll(PDO::FETCH_COLUMN));
+            if (!empty($sub['voice_feedback_path'])) {
+                $files[] = $sub['voice_feedback_path'];
+            }
+
+            $stmt = $db->prepare('SELECT title, COALESCE(deadline_at, due_date) < NOW() AS past FROM assignments WHERE id = ?');
+            $stmt->execute([$assignmentId]);
+            $a = $stmt->fetch(PDO::FETCH_ASSOC) ?: ['title' => 'an assessment', 'past' => 0];
+            $redoUntil = null;
+
+            Database::beginTransaction();
+            $db->prepare('DELETE FROM assignment_practical_files WHERE submission_id = ?')->execute([$submissionId]);
+            // answers, their files, annotations and marks go with it (foreign keys ON DELETE CASCADE)
+            $db->prepare('DELETE FROM assignment_submissions WHERE id = ?')->execute([$submissionId]);
+            $db->prepare(
+                "DELETE FROM notifications WHERE user_role = 'student' AND user_id = ? AND type = 'assignment_graded'
+                   AND CAST(JSON_UNQUOTE(JSON_EXTRACT(data, '$.submission_id')) AS UNSIGNED) = ?"
+            )->execute([$studentId, $submissionId]);
+            if ((int) $a['past'] === 1) {
+                $redoUntil = date('Y-m-d H:i:s', strtotime("+{$days} days", (int) strtotime((string) $db->query('SELECT NOW()')->fetchColumn())));
+                $db->prepare(
+                    'INSERT INTO assignment_redo_grants (assignment_id, student_id, redo_until, granted_by, reason) VALUES (?, ?, ?, ?, ?)
+                     ON DUPLICATE KEY UPDATE redo_until = VALUES(redo_until), granted_by = VALUES(granted_by), reason = VALUES(reason), created_at = NOW()'
+                )->execute([$assignmentId, $studentId, $redoUntil, $teacherId, $reason !== '' ? $reason : null]);
+            }
+            Database::commit();
+        } catch (Exception $e) {
+            if (Database::getInstance()->inTransaction()) {
+                Database::rollback();
+            }
+            error_log('clearForRedo failed: ' . $e->getMessage());
+            $this->serverError('The work could not be deleted');
+            return;
+        }
+
+        // files nothing else points at any more (never the shared blank answer sheet)
+        $public = realpath(__DIR__ . '/../../../public');
+        foreach (array_unique(array_filter($files)) as $path) {
+            $path = (string) $path;
+            if (!str_starts_with($path, '/uploads/') || str_starts_with($path, '/uploads/defaults/') || str_contains($path, '..')) {
+                continue;
+            }
+            $still = $db->prepare(
+                'SELECT (SELECT COUNT(*) FROM assignment_answers WHERE student_attachment_path = ?)
+                      + (SELECT COUNT(*) FROM assignment_answer_attachments WHERE file_path = ?)
+                      + (SELECT COUNT(*) FROM assignment_practical_files WHERE path = ?)'
+            );
+            $still->execute([$path, $path, $path]);
+            if ((int) $still->fetchColumn() === 0 && $public && is_file($public . $path)) {
+                @unlink($public . $path);
+            }
+        }
+
+        try {
+            $by = $redoUntil ? ' by ' . date('j M Y, g:i a', (int) strtotime($redoUntil)) : '';
+            (new NotificationService())->notify(
+                $studentId,
+                'student',
+                'assignment_redo',
+                'Do this assessment again',
+                'Your teacher cleared your work on "' . $a['title'] . '" so you can do it again from the start' . $by . '.' . ($reason !== '' ? ' ' . $reason : ''),
+                ['assignment_id' => $assignmentId]
+            );
+        } catch (\Throwable $e) {
+            error_log('redo notification failed: ' . $e->getMessage());
+        }
+
+        $this->success(['redo_until' => $redoUntil], $redoUntil
+            ? 'Work deleted. They can do it again until ' . date('j M Y, g:i a', (int) strtotime($redoUntil)) . '.'
+            : 'Work deleted. They can do it again before the deadline.');
+    }
+
+    /**
      * Marking one question across the whole class: every handed-in script's answer to that
      * question side by side, with its mark and comment - so a teacher marks question 1 for
      * everyone, then question 2, instead of one whole script at a time. Saving uses the same

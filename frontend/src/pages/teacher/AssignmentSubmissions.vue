@@ -188,6 +188,40 @@
             </button>
           </div>
 
+          <!-- Deleting the work, so the learner can do it again -->
+          <Teleport to="body">
+            <div v-if="redoOpen" class="fixed inset-0 z-[70] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4" @click.self="redoOpen = false">
+              <div class="w-full sm:max-w-md bg-white dark:bg-gray-900 rounded-t-2xl sm:rounded-2xl shadow-xl p-5" role="dialog" aria-modal="true" aria-labelledby="redo-title">
+                <h2 id="redo-title" class="text-lg font-bold text-gray-900 dark:text-white">Delete {{ markingData.submission.student_name }}'s work?</h2>
+                <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                  Everything they handed in for this assessment is deleted: their answers, files, and any marks and comments on them.
+                  The assessment becomes new for them again, so they can do it from the start and hand it in afresh. This can't be undone.
+                </p>
+                <label v-if="deadlinePassed" class="mt-4 block">
+                  <span class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">The deadline has passed. Time to redo it</span>
+                  <select v-model.number="redoDays" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white">
+                    <option v-for="d in [1, 2, 3, 5, 7, 14]" :key="d" :value="d">{{ d }} {{ d === 1 ? 'day' : 'days' }} from now</option>
+                  </select>
+                </label>
+                <p v-else class="mt-3 text-xs text-gray-500 dark:text-gray-400">They have until the assessment's deadline to do it again.</p>
+                <label class="mt-4 block">
+                  <span class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Message to the student (optional)</span>
+                  <input v-model="redoReason" type="text" maxlength="200" placeholder="e.g. You uploaded the wrong file. Please do it again." class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white">
+                </label>
+                <label class="mt-4 flex items-start gap-2 text-sm text-gray-700 dark:text-gray-200 cursor-pointer">
+                  <input v-model="redoSure" type="checkbox" class="mt-0.5 w-4 h-4 rounded border-gray-300 text-rose-600 focus:ring-rose-500">
+                  <span>Yes, delete {{ markingData.submission.student_name }}'s work on this assessment</span>
+                </label>
+                <div class="mt-5 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                  <button type="button" class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800" @click="redoOpen = false">Cancel</button>
+                  <button type="button" class="px-4 py-2 rounded-lg text-sm font-semibold bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed" :disabled="redoBusy || !redoSure" @click="clearForRedo">
+                    {{ redoBusy ? 'Deleting…' : 'Delete work and let them redo' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </Teleport>
+
           <div
             v-for="(question, index) in markingData.questions"
             :key="question.id"
@@ -220,6 +254,20 @@
                 :student-name="markingData.submission.student_name"
               />
             </template>
+          </div>
+
+          <!-- Handed in the wrong work: delete it so they can do the assessment again. Kept down here,
+               after the whole script and away from the marking tools, so it isn't pressed by
+               mistake. The teacher who set it only (a colleague sharing the marking can't load the
+               assessment, and the server refuses them too). -->
+          <div v-if="assignment" class="rounded-2xl border border-dashed border-gray-300 dark:border-gray-600 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div class="min-w-0 flex-1">
+              <p class="text-sm font-semibold text-gray-800 dark:text-gray-100">Handed in the wrong work?</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">You can delete {{ markingData.submission.student_name }}'s script so they can do this assessment again from the start.</p>
+            </div>
+            <button type="button" class="flex-shrink-0 px-3 py-1.5 rounded-lg text-sm font-semibold border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-900/20" @click="openRedo">
+              Delete script for a redo…
+            </button>
           </div>
         </div>
 
@@ -424,6 +472,38 @@ const selectSubmission = async (submission: any) => {
 const backToList = () => {
   markingData.value = null
   loadSubmissions()
+}
+
+// ---- Delete a learner's work so they can do it again (Teacher\MarkingController::clearForRedo)
+const redoOpen = ref(false)
+const redoDays = ref(3)
+const redoReason = ref('')
+const redoBusy = ref(false)
+// ticked by hand each time: the delete button stays off until then
+const redoSure = ref(false)
+const deadlinePassed = computed(() => submissions.value.some(s => s.deadline_passed))
+const openRedo = () => {
+  redoDays.value = 3
+  redoReason.value = ''
+  redoSure.value = false
+  redoOpen.value = true
+}
+const clearForRedo = async () => {
+  if (!markingData.value || !redoSure.value) return
+  redoBusy.value = true
+  try {
+    const res = await axios.post(`${API_BASE}/teacher/assignments/${assignmentId.value}/submissions/${markingData.value.submission.id}/clear-for-redo`, {
+      redo_days: redoDays.value,
+      reason: redoReason.value.trim()
+    })
+    toast.success(res.data?.message || 'Work deleted. They can do it again.')
+    redoOpen.value = false
+    backToList()
+  } catch (err: any) {
+    toast.error(err.response?.data?.message || 'The work could not be deleted')
+  } finally {
+    redoBusy.value = false
+  }
 }
 
 const onStatusChanged = (status: string) => {

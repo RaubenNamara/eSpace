@@ -13,7 +13,7 @@
           <template v-else-if="saver"> · <span :class="status === 'error' ? 'font-semibold text-amber-200' : ''">{{ statusText }}</span></template>
         </p>
       </div>
-      <button v-if="instructions" type="button" class="hidden sm:inline-flex px-2.5 py-1.5 rounded-md text-xs font-semibold hover:bg-white/15" :aria-expanded="showTask" @click="showTask = !showTask">{{ showTask ? 'Hide task' : 'Task' }}</button>
+      <button v-if="instructions || files.length" type="button" class="hidden sm:inline-flex px-2.5 py-1.5 rounded-md text-xs font-semibold hover:bg-white/15" :aria-expanded="showTask" @click="showTask = !showTask">{{ showTask ? 'Hide task' : 'Task' }}</button>
       <label v-if="canImport && !readonly && info.opens" class="px-2.5 py-1.5 rounded-md text-xs font-semibold hover:bg-white/15 cursor-pointer" :title="`Open a ${info.opens} file from your computer`">
         Open file
         <input type="file" class="hidden" :accept="info.opens" @change="onImport">
@@ -26,10 +26,25 @@
       </button>
     </header>
 
-    <!-- The task, as the teacher wrote it -->
-    <div v-if="instructions && showTask" class="flex-shrink-0 max-h-[30vh] overflow-y-auto border-b border-gray-200 dark:border-gray-800 bg-amber-50 dark:bg-amber-900/15 px-4 py-3">
+    <!-- The task, as the teacher wrote it, and the files that go with it. Colours pasted in with the
+         text (a white highlight, black writing from Word) are dropped so it reads clearly here,
+         in light or dark. -->
+    <div v-if="(instructions || files.length) && showTask" class="flex-shrink-0 max-h-[35vh] overflow-y-auto border-b border-amber-200 dark:border-gray-800 bg-amber-50 dark:bg-amber-900/15 px-4 sm:px-6 py-3">
       <p class="text-[11px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-200 mb-1">Task</p>
-      <div class="prose prose-sm max-w-none dark:prose-invert text-gray-800 dark:text-gray-100" v-html="safeHtml(instructions)"></div>
+      <div
+        v-if="instructions"
+        class="prose max-w-none dark:prose-invert text-[15px] leading-relaxed text-gray-900 dark:text-gray-100 [&_*]:!bg-transparent [&_*]:!text-inherit [&_p]:my-1"
+        v-html="safeHtml(instructions)"
+      ></div>
+      <div v-if="files.length" class="mt-2 flex flex-wrap items-center gap-2">
+        <span class="text-xs font-semibold text-amber-900 dark:text-amber-100">{{ files.length === 1 ? 'Support file:' : 'Support files:' }}</span>
+        <span v-for="f in files" :key="f.id" class="inline-flex items-center gap-2 max-w-full px-2.5 py-1 rounded-lg border border-amber-300 dark:border-amber-800 bg-white dark:bg-gray-900 text-xs">
+          <span class="font-bold uppercase text-[10px] text-amber-800 dark:text-amber-300">{{ (f.original_name.split('.').pop() || '').slice(0, 5) }}</span>
+          <span class="truncate text-gray-800 dark:text-gray-100" :title="f.original_name">{{ f.original_name }}</span>
+          <a v-if="/\.(pdf|png|jpe?g|gif|webp|txt)$/i.test(f.original_name)" :href="resolveAssetUrl(f.file_path)" target="_blank" rel="noopener" class="font-semibold text-sky-700 dark:text-sky-300 hover:underline">View</a>
+          <a :href="resolveAssetUrl(f.file_path)" :download="f.original_name" class="font-semibold text-indigo-700 dark:text-indigo-300 hover:underline">Download</a>
+        </span>
+      </div>
     </div>
 
     <div class="flex-1 min-h-0 flex">
@@ -162,6 +177,8 @@ const props = withDefaults(defineProps<{
   title: string
   subtitle?: string
   instructions?: string | null
+  /** the support files the teacher attached to this practical (a zip of files...), shown with the task */
+  files?: { id: number; file_path: string; original_name: string }[]
   /** the saved work (or the teacher's starting file) to open */
   src?: string | null
   readonly?: boolean
@@ -176,7 +193,7 @@ const props = withDefaults(defineProps<{
   marking?: { max: number; mark: number | null; comment: string; locked?: boolean; save: (mark: number | null, comment: string) => Promise<void>; layers?: Record<number, AnnotationLayerJSON>; saveLayer?: (page: number, layer: AnnotationLayerJSON) => Promise<void> } | null
   /** the teacher's pen marks, shown to whoever looks at marked work */
   markupLayers?: Record<number, AnnotationLayerJSON> | null
-}>(), { subtitle: '', instructions: null, src: null, readonly: false, canImport: false, saver: null, doneLabel: 'Done', fileName: '', marking: null, markupLayers: null })
+}>(), { subtitle: '', instructions: null, files: () => [], src: null, readonly: false, canImport: false, saver: null, doneLabel: 'Done', fileName: '', marking: null, markupLayers: null })
 const emit = defineEmits<{ close: [] }>()
 
 const toast = useToastStore()
@@ -196,7 +213,7 @@ const initial = shallowRef<ArrayBuffer | null>(null)
 const loaded = ref(false)
 const ready = ref(false)
 const loadError = ref('')
-const showTask = ref(!!props.instructions && !props.readonly)
+const showTask = ref((!!props.instructions || !!props.files?.length) && !props.readonly)
 
 onMounted(async () => {
   document.documentElement.style.overflow = 'hidden'

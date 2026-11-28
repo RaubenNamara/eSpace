@@ -410,6 +410,7 @@ Router::group(['prefix' => '/api', 'middleware' => ['auth']], function () {
         Router::post('/assignments/{id}/submissions/{submissionId}/complete-marking', 'eSpace\App\Controllers\Teacher\MarkingController@completeMarking');
         Router::post('/assignments/{id}/submissions/{submissionId}/return', 'eSpace\App\Controllers\Teacher\MarkingController@returnToStudent');
         Router::post('/assignments/{id}/submissions/{submissionId}/reopen', 'eSpace\App\Controllers\Teacher\MarkingController@reopenSubmission');
+        Router::post('/assignments/{id}/submissions/{submissionId}/clear-for-redo', 'eSpace\App\Controllers\Teacher\MarkingController@clearForRedo');
 
         // Dropdown Data for Assignment Builder
         Router::get('/subjects', 'eSpace\App\Controllers\Teacher\AssignmentController@subjects');

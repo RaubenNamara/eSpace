@@ -58,6 +58,7 @@
         :app="openTile.app"
         :title="title"
         :instructions="question.question_text"
+        :files="supportFiles || []"
         :src="openTile.file?.path || (openTile.app === main ? question.practical_starter_path : null) || null"
         :readonly="openTile.locked"
         :saver="openTile.locked ? null : (blob: Blob) => save(openTile!.app, blob)"
@@ -84,6 +85,8 @@ const props = defineProps<{
   savedFiles?: PracticalFile[] | null
   readonly?: boolean
   title: string
+  /** the teacher's support files for this question, shown with the task in the workspace */
+  supportFiles?: { id: number; file_path: string; original_name: string }[]
 }>()
 const emit = defineEmits<{ saved: [files: PracticalFile[], submissionId: number] }>()
 const confirmDialog = useConfirmStore()

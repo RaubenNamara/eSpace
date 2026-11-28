@@ -81,9 +81,32 @@
                 <RibbonIcon name="fill" />
                 <input type="color" class="absolute inset-0 opacity-0 cursor-pointer" :value="para.shading || '#ffffff'" @input="setPara('shading', ($event.target as HTMLInputElement).value)">
               </label>
-              <select class="rb-select w-[70px]" title="Borders" :value="para.border || ''" @change="setPara('border', ($event.target as HTMLSelectElement).value || null)">
-                <option value="">No border</option><option value="box">Box</option><option value="bottom">Bottom</option><option value="top">Top</option>
-              </select>
+              <!-- Borders, as Word's: on the paragraph, or on the table's cells when in a table -->
+              <div class="relative">
+                <button type="button" class="rb-ic !w-auto px-0.5 inline-flex items-center" :title="inTable ? 'Borders (table)' : 'Borders'" aria-haspopup="menu" :aria-expanded="menu === 'borders'" @click="toggleMenu('borders')">
+                  <svg viewBox="0 0 16 16" class="w-4 h-4" fill="none" aria-hidden="true"><path :d="BORDER_GRID" stroke="#9ca3af" stroke-width="1" stroke-dasharray="1 1.5" /><path :d="borderIcon(lastBorder)" stroke="currentColor" stroke-width="1.6" /></svg>
+                  <span class="text-[9px] ml-px leading-none">▾</span>
+                </button>
+                <div v-if="menu === 'borders'" :class="menuCls" class="w-60" role="menu">
+                  <template v-for="it in BORDER_ITEMS" :key="it.key">
+                    <div v-if="it.sep" class="my-1 border-t border-gray-200 dark:border-gray-700"></div>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      :class="[menuItem, 'flex items-center gap-2', borderItemDisabled(it.key) ? 'opacity-40 cursor-not-allowed hover:!bg-transparent' : '']"
+                      :disabled="borderItemDisabled(it.key)"
+                      @click="borderAction(it.key)"
+                    >
+                      <svg viewBox="0 0 16 16" class="w-4 h-4 flex-shrink-0" fill="none" aria-hidden="true">
+                        <template v-if="it.icon"><path :d="it.icon" stroke="currentColor" stroke-width="1.3" /></template>
+                        <template v-else><path :d="BORDER_GRID" stroke="#9ca3af" stroke-width="1" stroke-dasharray="1 1.5" /><path :d="borderIcon(it.key)" stroke="currentColor" stroke-width="1.6" /></template>
+                      </svg>
+                      <span class="flex-1">{{ it.label }}</span>
+                      <span v-if="it.key === 'gridlines' && showGridlines" aria-label="on">✓</span>
+                    </button>
+                  </template>
+                </div>
+              </div>
             </div>
           </div>
         </RibbonGroup>
@@ -496,6 +519,54 @@
           <button type="button" class="text-gray-500" @click="dialog = null">✕</button>
         </div>
         <div class="p-4 text-sm space-y-3">
+          <!-- Borders and Shading -->
+          <div v-if="dialog === 'borders'" class="space-y-3">
+            <div class="flex flex-wrap gap-4">
+              <div>
+                <p class="text-xs font-semibold mb-1">Setting</p>
+                <div class="flex gap-1">
+                  <button v-for="s in BS_SETTINGS.filter(x => bs.applyTo === 'table' || x.v !== 'all')" :key="s.v" type="button" class="px-2.5 py-1 rounded border text-xs" :class="bs.setting === s.v ? 'border-[#185abd] bg-blue-50 dark:bg-blue-900/30' : 'border-gray-300 dark:border-gray-600'" @click="setBsSetting(s.v)">{{ s.label }}</button>
+                </div>
+              </div>
+              <label class="text-xs">Apply to
+                <select v-model="bs.applyTo" class="block mt-1 rb-select w-36">
+                  <option value="paragraph">Paragraph</option>
+                  <option v-if="inTable" value="table">{{ cellsSelected ? 'Selected cells' : 'Table' }}</option>
+                </select>
+              </label>
+            </div>
+            <div class="flex flex-wrap gap-4">
+              <label class="text-xs">Style
+                <select v-model="bs.style" class="block mt-1 rb-select w-32">
+                  <option value="solid">Single line</option><option value="double">Double line</option><option value="dashed">Dashed</option><option value="dotted">Dotted</option>
+                </select>
+              </label>
+              <label class="text-xs">Colour <input v-model="bs.color" type="color" class="block mt-1 w-12 h-7"></label>
+              <label class="text-xs">Width
+                <select v-model.number="bs.width" class="block mt-1 rb-select w-24">
+                  <option v-for="w in BORDER_WIDTHS" :key="w" :value="w">{{ w }} pt</option>
+                </select>
+              </label>
+            </div>
+            <div class="flex items-start gap-4">
+              <div>
+                <p class="text-xs font-semibold mb-1">Preview <span class="font-normal text-gray-500">(click the sides)</span></p>
+                <div class="relative w-36 h-24 bg-white rounded-sm" :style="bsPreviewStyle">
+                  <button v-for="s in (['t', 'r', 'b', 'l'] as const)" :key="s" type="button" class="absolute" :class="{ t: 'top-0 inset-x-0 h-3', r: 'right-0 inset-y-0 w-3', b: 'bottom-0 inset-x-0 h-3', l: 'left-0 inset-y-0 w-3' }[s]" :aria-label="`${{ t: 'Top', r: 'Right', b: 'Bottom', l: 'Left' }[s]} border`" :aria-pressed="bs.sides[s]" @click="bs.sides[s] = !bs.sides[s]; bs.setting = 'custom'"></button>
+                  <div class="absolute inset-4 flex flex-col justify-center gap-1 pointer-events-none" aria-hidden="true"><span v-for="i in 4" :key="i" class="h-1 rounded bg-gray-300"></span></div>
+                </div>
+              </div>
+              <div class="text-xs space-y-1">
+                <p class="font-semibold">Shading</p>
+                <label class="flex items-center gap-2"><input v-model="bs.shadingOn" type="checkbox"> Fill</label>
+                <input v-model="bs.shading" type="color" class="w-12 h-7" :disabled="!bs.shadingOn">
+              </div>
+            </div>
+            <div class="flex justify-end gap-2 pt-1">
+              <button type="button" class="px-3 py-1.5 rounded border" @click="dialog = null">Cancel</button>
+              <button type="button" class="px-3 py-1.5 rounded bg-[#185abd] text-white" @click="applyBordersDialog">OK</button>
+            </div>
+          </div>
           <!-- Word Count -->
           <table v-if="dialog === 'wordcount'" class="w-full">
             <tbody>
@@ -573,6 +644,7 @@ import Table from '@tiptap/extension-table'
 import TableRow from '@tiptap/extension-table-row'
 import TableHeader from '@tiptap/extension-table-header'
 import TableCell from '@tiptap/extension-table-cell'
+import { CellSelection, TableMap } from '@tiptap/pm/tables'
 import { useToastStore } from '@/stores/toast'
 import OfficeRibbon from './ribbon/OfficeRibbon.vue'
 import RibbonGroup from './ribbon/RibbonGroup.vue'
@@ -658,7 +730,7 @@ const EQUATION_PARTS = [
   { label: '∑', tex: '\\sum_{i=1}^{n}' }, { label: '∫', tex: '\\int_{a}^{b}' }, { label: 'π', tex: '\\pi' }, { label: '±', tex: '\\pm' },
   { label: '×', tex: '\\times' }, { label: '÷', tex: '\\div' }, { label: '≤', tex: '\\le' }, { label: '≥', tex: '\\ge' }, { label: 'θ', tex: '\\theta' }, { label: '°', tex: '^{\\circ}' }
 ]
-const DIALOG_TITLES: Record<string, string> = { wordcount: 'Word Count', zoom: 'Zoom', chart: 'Insert Chart', equation: 'Insert Equation', recipients: 'Mail Merge Recipients' }
+const DIALOG_TITLES: Record<string, string> = { borders: 'Borders and Shading', wordcount: 'Word Count', zoom: 'Zoom', chart: 'Insert Chart', equation: 'Insert Equation', recipients: 'Mail Merge Recipients' }
 const menuCls = 'absolute z-30 top-full left-0 mt-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg py-1 text-left'
 const menuItem = 'block w-full text-left px-3 py-1 text-xs hover:bg-blue-50 dark:hover:bg-gray-700'
 
@@ -684,13 +756,61 @@ const ParagraphLook = Extension.create({
         spaceBefore: { default: null, parseHTML: el => num(el as HTMLElement, 'marginTop'), renderHTML: a => (a.spaceBefore !== null && a.spaceBefore !== undefined ? { style: `margin-top: ${a.spaceBefore}pt` } : {}) },
         spaceAfter: { default: null, parseHTML: el => num(el as HTMLElement, 'marginBottom'), renderHTML: a => (a.spaceAfter !== null && a.spaceAfter !== undefined ? { style: `margin-bottom: ${a.spaceAfter}pt` } : {}) },
         shading: { default: null, parseHTML: el => (el as HTMLElement).getAttribute('data-shading'), renderHTML: a => (a.shading ? { 'data-shading': a.shading, style: `background-color: ${a.shading}` } : {}) },
-        border: { default: null, parseHTML: el => (el as HTMLElement).getAttribute('data-border'), renderHTML: a => (a.border ? { 'data-border': a.border, style: a.border === 'box' ? 'border: 1px solid #000; padding: 2pt 4pt' : `border-${a.border}: 1px solid #000; padding-${a.border}: 2pt` } : {}) },
+        // the sides with a border ("top bottom", "box" for all four) and their line ("0.75pt solid #000000")
+        border: { default: null, parseHTML: el => (el as HTMLElement).getAttribute('data-border'), renderHTML: a => (a.border ? { 'data-border': a.border, style: paraBorderCss(a.border, a.borderLine) } : {}) },
+        borderLine: { default: null, parseHTML: el => (el as HTMLElement).getAttribute('data-border-line'), renderHTML: a => (a.border && a.borderLine ? { 'data-border-line': a.borderLine } : {}) },
         docStyle: { default: null, parseHTML: el => (el as HTMLElement).getAttribute('data-style'), renderHTML: a => (a.docStyle ? { 'data-style': a.docStyle, class: `doc-${a.docStyle}` } : {}) },
         bookmark: { default: null, parseHTML: el => (el as HTMLElement).getAttribute('id'), renderHTML: a => (a.bookmark ? { id: a.bookmark } : {}) }
       }
     }]
   }
 })
+// ---- borders ----
+type Side = 't' | 'r' | 'b' | 'l'
+const SIDE_NAME: Record<Side, string> = { t: 'top', r: 'right', b: 'bottom', l: 'left' }
+const DEFAULT_LINE = '0.75pt solid #000000'
+const sidesOfPara = (border: string | null | undefined): Side[] => {
+  if (!border) return []
+  if (border === 'box' || border === 'all') return ['t', 'r', 'b', 'l']
+  return border.split(/\s+/).map(w => (({ top: 't', right: 'r', bottom: 'b', left: 'l' }) as Record<string, Side>)[w]).filter(Boolean)
+}
+// on screen a double line needs some width to show as two lines (Word draws it at any width)
+const screenLine = (spec: string) => spec.replace(/^([\d.]+)pt double/, (_m, w) => `${Math.max(Number(w), 2.25)}pt double`)
+function paraBorderCss(border: string, line: string | null) {
+  const l = screenLine(line || DEFAULT_LINE)
+  return sidesOfPara(border).map(s => `border-${SIDE_NAME[s]}: ${l}; padding-${SIDE_NAME[s]}: ${s === 't' || s === 'b' ? '1pt' : '4pt'}`).join('; ')
+}
+// a table cell's own borders (null = Word's default: a thin black line on every side) and fill
+type CellSides = Record<Side, string>
+const cellSides = (v: string | null | undefined): CellSides => {
+  const all: CellSides = { t: DEFAULT_LINE, r: DEFAULT_LINE, b: DEFAULT_LINE, l: DEFAULT_LINE }
+  if (!v) return all
+  try { return { ...all, ...JSON.parse(v) } } catch { return all }
+}
+const cellBorderAttrs = {
+  cellBorder: {
+    default: null,
+    parseHTML: (el: HTMLElement) => el.getAttribute('data-cell-border'),
+    renderHTML: (a: Record<string, any>) => {
+      if (!a.cellBorder) return {}
+      const s = cellSides(a.cellBorder)
+      const none = (['t', 'r', 'b', 'l'] as Side[]).filter(k => s[k] === 'none')
+      return {
+        'data-cell-border': a.cellBorder,
+        ...(none.length ? { 'data-nb': none.join(' ') } : {}),
+        style: (['t', 'r', 'b', 'l'] as Side[]).map(k => `border-${SIDE_NAME[k]}: ${screenLine(s[k])}`).join('; ')
+      }
+    }
+  },
+  cellShading: {
+    default: null,
+    parseHTML: (el: HTMLElement) => el.getAttribute('data-cell-shading'),
+    renderHTML: (a: Record<string, any>) => (a.cellShading ? { 'data-cell-shading': a.cellShading, style: `background-color: ${a.cellShading}` } : {})
+  }
+}
+const BorderedCell = TableCell.extend({ addAttributes() { return { ...this.parent?.(), ...cellBorderAttrs } } })
+const BorderedHeader = TableHeader.extend({ addAttributes() { return { ...this.parent?.(), ...cellBorderAttrs } } })
+
 const PageBreak = Node.create({
   name: 'pageBreak', group: 'block', atom: true,
   parseHTML: () => [{ tag: 'div.page-break' }],
@@ -793,7 +913,7 @@ onMounted(() => {
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       WordImage.configure({ inline: false, allowBase64: true }),
       Link.configure({ openOnClick: false }),
-      Table.configure({ resizable: !props.readonly }), TableRow, TableHeader, TableCell
+      Table.configure({ resizable: !props.readonly }), TableRow, BorderedHeader, BorderedCell
     ],
     editorProps: { attributes: { spellcheck: 'false' } },
     onUpdate: () => { tick.value++; emit('change') },
@@ -816,10 +936,14 @@ const closeMenus = (e: MouseEvent) => {
 const onKey = (e: KeyboardEvent) => {
   if (!(e.ctrlKey || e.metaKey) || props.readonly) return
   if (e.key === 'f' || e.key === 'h') { e.preventDefault(); openFind(e.key === 'h') }
-  else if (['l', 'e', 'r', 'j'].includes(e.key)) {
+  // Word's alignment keys - but not Ctrl+R: that is the browser's reload, and learners pressing it
+  // to refresh had their text moved to the right instead (Align Right is on the ribbon)
+  else if (['l', 'e', 'j'].includes(e.key)) {
     if (!editor.value?.isFocused) return
     e.preventDefault()
-    editor.value.chain().focus().setTextAlign(({ l: 'left', e: 'center', r: 'right', j: 'justify' } as Record<string, string>)[e.key]).run()
+    const align = ({ l: 'left', e: 'center', j: 'justify' } as Record<string, string>)[e.key]
+    editor.value.chain().focus().setTextAlign(align).run()
+    if (align !== 'left') toast.info(`Text ${align === 'justify' ? 'justified' : 'centred'} (Ctrl+${e.key.toUpperCase()}). Press Ctrl+L to align it left again.`)
   }
 }
 
@@ -839,12 +963,169 @@ const para = computed(() => {
   void tick.value
   const a = paraAttrs()
   return {
-    lineHeight: a.lineHeight || '1.15', shading: a.shading || null, border: a.border || null,
+    lineHeight: a.lineHeight || '1.15', shading: a.shading || null, border: a.border || null, borderLine: a.borderLine || null,
     indentIn: (Number(a.indent || 0) / 2), rightIn: a.indentRight || 0,
     before: a.spaceBefore ?? 0, after: a.spaceAfter ?? 8
   }
 })
 const setPara = (k: string, v: unknown) => chain().updateAttributes('paragraph', { [k]: v }).updateAttributes('heading', { [k]: v }).run()
+
+// ---- Borders (Home > Paragraph), as Word's menu: on the paragraph, or on the table's cells (the
+// selected ones, or the whole table) when the cursor is in a table. New borders use the pen set in
+// Borders and Shading (default: a thin black single line).
+const BORDER_GRID = 'M2.5 2.5h11v11h-11z M8 2.5v11 M2.5 8h11'
+const BORDER_ICONS: Record<string, string> = {
+  bottom: 'M2.5 13.5h11', top: 'M2.5 2.5h11', left: 'M2.5 2.5v11', right: 'M13.5 2.5v11', none: '',
+  all: 'M2.5 2.5h11v11h-11z M8 2.5v11 M2.5 8h11', outside: 'M2.5 2.5h11v11h-11z', inside: 'M8 2.5v11 M2.5 8h11',
+  insideH: 'M2.5 8h11', insideV: 'M8 2.5v11', diagDown: 'M2.5 2.5l11 11', diagUp: 'M2.5 13.5l11-11'
+}
+const borderIcon = (k: string) => BORDER_ICONS[k] ?? ''
+const BORDER_ITEMS: { key: string; label: string; sep?: boolean; icon?: string }[] = [
+  { key: 'bottom', label: 'Bottom Border' }, { key: 'top', label: 'Top Border' }, { key: 'left', label: 'Left Border' }, { key: 'right', label: 'Right Border' },
+  { key: 'none', label: 'No Border', sep: true }, { key: 'all', label: 'All Borders' }, { key: 'outside', label: 'Outside Borders' }, { key: 'inside', label: 'Inside Borders' },
+  { key: 'insideH', label: 'Inside Horizontal Border', sep: true }, { key: 'insideV', label: 'Inside Vertical Border' },
+  { key: 'diagDown', label: 'Diagonal Down Border' }, { key: 'diagUp', label: 'Diagonal Up Border' },
+  { key: 'hr', label: 'Horizontal Line', sep: true, icon: 'M2 8h12 M2 4.5h7 M2 11.5h9' },
+  { key: 'drawTable', label: 'Draw Table', icon: 'M2.5 3.5h11v9h-11z M2.5 8h11 M8 3.5v9' },
+  { key: 'gridlines', label: 'View Gridlines', icon: 'M2.5 2.5h11v11h-11z M6.2 2.5v11 M9.8 2.5v11 M2.5 6.2h11 M2.5 9.8h11' },
+  { key: 'dialog', label: 'Borders and Shading...', icon: 'M3 2.5h10v11H3z M5.5 5.5h5 M5.5 8h5 M5.5 10.5h3' }
+]
+const BORDER_WIDTHS = [0.25, 0.5, 0.75, 1, 1.5, 2.25, 3, 4.5, 6]
+const lastBorder = ref('bottom')
+const showGridlines = ref(true)
+const pen = reactive({ style: 'solid', width: 0.75, color: '#000000' })
+const penLine = () => `${pen.width}pt ${pen.style} ${pen.color}`
+const inTable = computed(() => { void tick.value; return !!editor.value?.isActive('table') })
+const cellsSelected = computed(() => { void tick.value; return editor.value?.state.selection instanceof CellSelection })
+// diagonals: like Word, not for paragraphs (and not kept in a .docx made here); the inside ones need a table
+const borderItemDisabled = (k: string) => k === 'diagDown' || k === 'diagUp' || (!inTable.value && ['inside', 'insideH', 'insideV'].includes(k))
+
+const setParaBorder = (sides: Side[], line = penLine()) => {
+  const order: Side[] = ['t', 'r', 'b', 'l']
+  const v = sides.length === 4 ? 'box' : order.filter(s => sides.includes(s)).map(s => SIDE_NAME[s]).join(' ')
+  const attrs = { border: sides.length ? v : null, borderLine: sides.length ? line : null }
+  chain().updateAttributes('paragraph', attrs).updateAttributes('heading', attrs).run()
+}
+const toggleParaSide = (s: Side) => {
+  const cur = sidesOfPara(para.value.border)
+  setParaBorder(cur.includes(s) ? cur.filter(x => x !== s) : [...cur, s])
+}
+
+// the cells to work on (selected ones, else the whole table) and each one's place in that block
+const applyCellBorders = (preset: string, line = penLine(), sidesPick?: Partial<Record<Side, boolean>>, shading?: string | null) => {
+  const e = editor.value
+  if (!e) return
+  const { state } = e
+  const sel = state.selection
+  const $from = sel.$from
+  let table = null as any
+  let tablePos = -1
+  for (let d = $from.depth; d > 0; d--) {
+    if ($from.node(d).type.name === 'table') { table = $from.node(d); tablePos = $from.before(d); break }
+  }
+  if (!table) return
+  const map = TableMap.get(table)
+  const start = tablePos + 1
+  const rect = sel instanceof CellSelection
+    ? map.rectBetween(sel.$anchorCell.pos - start, sel.$headCell.pos - start)
+    : { left: 0, top: 0, right: map.width, bottom: map.height }
+  const cells = map.cellsInRect(rect)
+  // a single side (Top, Bottom...): turned off again if every cell on that edge already has it
+  const edge = (r: { left: number; top: number; right: number; bottom: number }, s: Side) =>
+    (s === 't' && r.top === rect.top) || (s === 'b' && r.bottom === rect.bottom) || (s === 'l' && r.left === rect.left) || (s === 'r' && r.right === rect.right)
+  const single = ({ top: 't', bottom: 'b', left: 'l', right: 'r' } as Record<string, Side>)[preset]
+  let turnOff = false
+  if (single) {
+    turnOff = cells.every(pos => {
+      const r = map.findCell(pos)
+      return !edge(r, single) || cellSides(table.nodeAt(pos)?.attrs.cellBorder)[single] !== 'none'
+    }) && cells.some(pos => edge(map.findCell(pos), single) && table.nodeAt(pos)?.attrs.cellBorder)
+  }
+  const tr = state.tr
+  for (const pos of cells) {
+    const node = table.nodeAt(pos)
+    if (!node) continue
+    const r = map.findCell(pos)
+    const s = cellSides(node.attrs.cellBorder)
+    for (const k of ['t', 'r', 'b', 'l'] as Side[]) {
+      const outer = edge(r, k)
+      const horizontalInner = !outer && (k === 't' || k === 'b')
+      const verticalInner = !outer && (k === 'l' || k === 'r')
+      if (preset === 'all') s[k] = line
+      else if (preset === 'none') s[k] = 'none'
+      else if (preset === 'outside') { if (outer) s[k] = line }
+      else if (preset === 'inside') { if (!outer) s[k] = line }
+      else if (preset === 'insideH') { if (horizontalInner) s[k] = line }
+      else if (preset === 'insideV') { if (verticalInner) s[k] = line }
+      else if (preset === 'custom') { if (outer) s[k] = sidesPick?.[k] ? line : 'none' }
+      else if (single === k && outer) s[k] = turnOff ? 'none' : line
+    }
+    const attrs: Record<string, unknown> = { ...node.attrs, cellBorder: JSON.stringify(s) }
+    if (shading !== undefined) attrs.cellShading = shading
+    tr.setNodeMarkup(start + pos, undefined, attrs)
+  }
+  e.view.dispatch(tr)
+  e.commands.focus()
+}
+
+const borderAction = (k: string) => {
+  menu.value = null
+  if (borderItemDisabled(k)) return
+  if (k === 'hr') { chain().setHorizontalRule().run(); return }
+  if (k === 'drawTable') { insertTable(2, 2); return }
+  if (k === 'gridlines') { showGridlines.value = !showGridlines.value; return }
+  if (k === 'dialog') { openBordersDialog(); return }
+  lastBorder.value = k
+  if (inTable.value) { applyCellBorders(k); return }
+  if (k === 'none') setParaBorder([])
+  else if (k === 'all' || k === 'outside') setParaBorder(['t', 'r', 'b', 'l'])
+  else toggleParaSide(({ top: 't', bottom: 'b', left: 'l', right: 'r' } as Record<string, Side>)[k])
+}
+
+// ---- Borders and Shading dialog ----
+const BS_SETTINGS = [{ v: 'none', label: 'None' }, { v: 'box', label: 'Box' }, { v: 'all', label: 'All' }, { v: 'custom', label: 'Custom' }]
+const bs = reactive({ setting: 'box', applyTo: 'paragraph', style: 'solid', width: 0.75, color: '#000000', sides: { t: true, r: true, b: true, l: true } as Record<Side, boolean>, shadingOn: false, shading: '#fff2cc' })
+const setBsSetting = (v: string) => {
+  bs.setting = v
+  const on = v !== 'none'
+  bs.sides = { t: on, r: on, b: on, l: on }
+}
+const bsLine = () => `${bs.width}pt ${bs.style} ${bs.color}`
+const bsPreviewStyle = computed(() => {
+  const l = `${Math.max(1, bs.width * 1.33)}px ${bs.style} ${bs.color}`
+  return {
+    borderTop: bs.sides.t ? l : '1px dashed #d1d5db', borderRight: bs.sides.r ? l : '1px dashed #d1d5db',
+    borderBottom: bs.sides.b ? l : '1px dashed #d1d5db', borderLeft: bs.sides.l ? l : '1px dashed #d1d5db',
+    backgroundColor: bs.shadingOn ? bs.shading : '#ffffff'
+  }
+})
+const openBordersDialog = () => {
+  const p = para.value
+  const sides = sidesOfPara(p.border)
+  const m = String(p.borderLine || '').match(/([\d.]+)pt\s+(\w+)\s+(#[0-9a-fA-F]{6})/)
+  Object.assign(bs, {
+    applyTo: inTable.value ? 'table' : 'paragraph',
+    setting: inTable.value ? 'all' : sides.length === 4 ? 'box' : sides.length ? 'custom' : 'none',
+    style: m ? m[2] : pen.style, width: m ? Number(m[1]) : pen.width, color: m ? m[3] : pen.color,
+    sides: inTable.value ? { t: true, r: true, b: true, l: true } : { t: sides.includes('t'), r: sides.includes('r'), b: sides.includes('b'), l: sides.includes('l') },
+    shadingOn: !inTable.value && !!p.shading && p.shading !== '#ffffff', shading: (!inTable.value && p.shading) || '#fff2cc'
+  })
+  dialog.value = 'borders'
+}
+const applyBordersDialog = () => {
+  // the pen the menu uses next
+  Object.assign(pen, { style: bs.style, width: bs.width, color: bs.color })
+  const line = bsLine()
+  const picked = (['t', 'r', 'b', 'l'] as Side[]).filter(s => bs.sides[s])
+  if (bs.applyTo === 'table' && inTable.value) {
+    const preset = bs.setting === 'none' ? 'none' : bs.setting === 'all' ? 'all' : bs.setting === 'box' ? 'outside' : 'custom'
+    applyCellBorders(preset, line, bs.sides, bs.shadingOn ? bs.shading : null)
+  } else {
+    setParaBorder(bs.setting === 'none' ? [] : picked, line)
+    setPara('shading', bs.shadingOn ? bs.shading : null)
+  }
+  dialog.value = null
+}
 const blockStyle = computed(() => {
   void tick.value
   const e = editor.value
@@ -1311,7 +1592,7 @@ const styleSet = computed(() => STYLE_SETS.find(s => s.key === page.styleSet) ||
 const PARA_GAP: Record<string, string> = { compact: '2pt', normal: '8pt', open: '12pt', double: '18pt' }
 const pageClasses = computed(() => ({
   'is-readonly': props.readonly, 'show-marks': showMarks.value, 'line-numbers': page.lineNumbers, 'hyphenate': page.hyphenation,
-  'hide-fields': !highlightFields.value, [`border-${page.pageBorder}`]: !!page.pageBorder,
+  'hide-fields': !highlightFields.value, [`border-${page.pageBorder}`]: !!page.pageBorder, 'show-grid': showGridlines.value,
   'shadow-lg': viewMode.value !== 'web', 'is-web': viewMode.value === 'web', 'is-read': viewMode.value === 'read'
 }))
 // ---- marking on the document: a layer over whole sheets of paper, so a mark stays where it was put ----
@@ -1400,7 +1681,90 @@ const exportHtml = (html: string) => {
   doc.querySelectorAll('h1, h2, h3').forEach(el => el.setAttribute('style', `${el.getAttribute('style') || ''};color:${headingColor.value};font-family:${styleSet.value.heading}`))
   doc.querySelectorAll('span.merge-field').forEach(el => { el.textContent = `«${el.getAttribute('data-field')}»` })
   doc.querySelectorAll('img[data-wrap="center"]').forEach(el => el.parentElement?.setAttribute('style', 'text-align:center'))
-  return doc.body.firstElementChild!.innerHTML
+  // A bordered paragraph (a run of them with the same border, as Word joins them) goes in a table of
+  // one cell with those borders: the .docx maker drops borders on paragraphs, but keeps cells
+  const root = doc.body.firstElementChild!
+  const bordered = (el: Element | null) => !!el && /^(P|H[1-6])$/.test(el.tagName) && !!el.getAttribute('data-border') && !el.closest('td, th')
+  const sig = (el: Element) => `${el.getAttribute('data-border')}|${el.getAttribute('data-border-line') || ''}`
+  Array.from(root.querySelectorAll('p[data-border], h1[data-border], h2[data-border], h3[data-border], h4[data-border], h5[data-border], h6[data-border]')).forEach(el => {
+    if (!bordered(el) || !el.parentElement || bordered(el.previousElementSibling) && sig(el.previousElementSibling!) === sig(el)) return
+    const run = [el]
+    let next = el.nextElementSibling
+    while (bordered(next) && sig(next!) === sig(el)) { run.push(next!); next = next!.nextElementSibling }
+    const sides = sidesOfPara(el.getAttribute('data-border'))
+    const line = el.getAttribute('data-border-line') || DEFAULT_LINE
+    const spec: CellSides = { t: 'none', r: 'none', b: 'none', l: 'none' }
+    sides.forEach(s => { spec[s] = line })
+    const table = doc.createElement('table')
+    table.setAttribute('style', 'width:100%;border-collapse:collapse')
+    const td = table.appendChild(doc.createElement('tr')).appendChild(doc.createElement('td'))
+    td.setAttribute('data-bdr', JSON.stringify(spec))
+    td.setAttribute('style', `${(['t', 'r', 'b', 'l'] as Side[]).map(k => `border-${SIDE_NAME[k]}:${spec[k]}`).join(';')};padding:2pt 4pt`)
+    el.parentElement.insertBefore(table, el)
+    run.forEach(p => {
+      const st = (p as HTMLElement).style
+      ;['top', 'right', 'bottom', 'left'].forEach(s => { st.removeProperty(`border-${s}`); st.removeProperty(`padding-${s}`) })
+      td.appendChild(p)
+    })
+  })
+  // every cell says its borders, for the .docx (applyDocxBorders) and printing
+  root.querySelectorAll('td, th').forEach(c => {
+    if (c.hasAttribute('data-bdr')) return
+    const s = cellSides(c.getAttribute('data-cell-border'))
+    c.setAttribute('data-bdr', JSON.stringify(s))
+    c.setAttribute('style', `${c.getAttribute('style') || ''};${(['t', 'r', 'b', 'l'] as Side[]).map(k => `border-${SIDE_NAME[k]}:${s[k]}`).join(';')}`)
+  })
+  return root.innerHTML
+}
+// After the .docx is made: each table cell's borders exactly as set here (the maker only keeps the
+// outer edges of a table, all alike). Its cells come in the same order as the page's; if they
+// don't match up (merged rows add cells), the file is left as the maker made it.
+const W_NS = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
+const docxLine = (spec: string | undefined) => {
+  if (!spec || spec === 'none') return { val: 'nil', sz: 0, color: 'auto' }
+  const m = spec.match(/([\d.]+)pt\s+(\w+)\s+#?([0-9a-fA-F]{6})/)
+  if (!m) return { val: 'single', sz: 6, color: '000000' }
+  return { val: ({ solid: 'single', double: 'double', dashed: 'dashed', dotted: 'dotted' } as Record<string, string>)[m[2]] || 'single', sz: Math.max(2, Math.round(Number(m[1]) * 8)), color: m[3].toUpperCase() }
+}
+const applyDocxBorders = async (docx: Blob, html: string): Promise<Blob> => {
+  try {
+    const specs = Array.from(new DOMParser().parseFromString(`<div>${html}</div>`, 'text/html').querySelectorAll('td, th'))
+      .map(c => { try { return JSON.parse(c.getAttribute('data-bdr') || '') as CellSides } catch { return null } })
+    if (!specs.length) return docx
+    const { default: JSZip } = await import('jszip')
+    const zip = await JSZip.loadAsync(docx, { createFolders: false })
+    const file = zip.file('word/document.xml')
+    if (!file) return docx
+    const xml = new DOMParser().parseFromString(await file.async('string'), 'application/xml')
+    const tcs = Array.from(xml.getElementsByTagNameNS(W_NS, 'tc'))
+    if (tcs.length !== specs.length) return docx
+    const AFTER = ['shd', 'noWrap', 'tcMar', 'textDirection', 'tcFitText', 'vAlign', 'hideMark']
+    tcs.forEach((tc, i) => {
+      const s = specs[i]
+      if (!s) return
+      let pr = Array.from(tc.children).find(n => n.localName === 'tcPr')
+      if (!pr) { pr = xml.createElementNS(W_NS, 'w:tcPr'); tc.insertBefore(pr, tc.firstChild) }
+      Array.from(pr.children).filter(n => n.localName === 'tcBorders').forEach(n => pr!.removeChild(n))
+      const box = xml.createElementNS(W_NS, 'w:tcBorders')
+      for (const [side, k] of [['top', 't'], ['left', 'l'], ['bottom', 'b'], ['right', 'r']] as [string, Side][]) {
+        const d = docxLine(s[k])
+        const el = xml.createElementNS(W_NS, `w:${side}`)
+        el.setAttributeNS(W_NS, 'w:val', d.val)
+        if (d.val !== 'nil') {
+          el.setAttributeNS(W_NS, 'w:sz', String(d.sz))
+          el.setAttributeNS(W_NS, 'w:space', '0')
+          el.setAttributeNS(W_NS, 'w:color', d.color)
+        }
+        box.appendChild(el)
+      }
+      pr.insertBefore(box, Array.from(pr.children).find(n => AFTER.includes(n.localName)) || null)
+    })
+    zip.file('word/document.xml', new XMLSerializer().serializeToString(xml))
+    return await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })
+  } catch (err) {
+    console.warn('Cell borders could not be written into the .docx', err)
+    return docx
+  }
 }
 const twip = (px: number) => Math.round(px * 15)
 const toDocx = async (html: string) => {
@@ -1411,7 +1775,8 @@ const toDocx = async (html: string) => {
   const [w, h] = pageSize.value
   const m = margin.value
   const footer = [page.footer ? escapeHtml(page.footer) : ''].filter(Boolean).join(' ')
-  const out = await HTMLtoDOCX(`<!doctype html><html><body>${exportHtml(html)}</body></html>`,
+  const body = exportHtml(html)
+  const out = await HTMLtoDOCX(`<!doctype html><html><body>${body}</body></html>`,
     page.header ? `<p style="text-align:center">${escapeHtml(page.header)}</p>` : null,
     {
       font: styleSet.value.body, fontSize: 22, orientation: page.orientation, table: { row: { cantSplit: true } },
@@ -1420,7 +1785,8 @@ const toDocx = async (html: string) => {
       header: !!page.header, footer: !!(footer || page.pageNumbers), pageNumber: !!page.pageNumbers
     } as any,
     footer ? `<p style="text-align:center">${footer}</p>` : null)
-  return out instanceof Blob ? out : new Blob([out as ArrayBuffer], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })
+  const made = out instanceof Blob ? out : new Blob([out as ArrayBuffer], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })
+  return applyDocxBorders(made, body)
 }
 
 // ---- the editor's side of the workspace (apps.ts PracticalEditorApi) ----
@@ -1494,6 +1860,12 @@ defineExpose({
 .word-page :deep(table) { border-collapse: collapse; width: 100%; margin: 4pt 0 8pt; table-layout: fixed; }
 .word-page :deep(td), .word-page :deep(th) { border: 1px solid #000; padding: 2px 6px; vertical-align: top; position: relative; }
 .word-page :deep(td p), .word-page :deep(th p) { margin: 0; }
+/* View Gridlines: a faint dashed line where a cell has no border (on screen only) */
+.word-page.show-grid :deep(td[data-nb])::before, .word-page.show-grid :deep(th[data-nb])::before { content: ''; position: absolute; inset: -1px; pointer-events: none; border: 1px solid transparent; }
+.word-page.show-grid :deep([data-nb~="t"])::before { border-top: 1px dashed #93a4bf; }
+.word-page.show-grid :deep([data-nb~="r"])::before { border-right: 1px dashed #93a4bf; }
+.word-page.show-grid :deep([data-nb~="b"])::before { border-bottom: 1px dashed #93a4bf; }
+.word-page.show-grid :deep([data-nb~="l"])::before { border-left: 1px dashed #93a4bf; }
 .word-page :deep(th) { font-weight: 700; }
 .word-page :deep(.selectedCell)::after { content: ''; position: absolute; inset: 0; background: rgba(24, 90, 189, 0.15); pointer-events: none; }
 .word-page :deep(.column-resize-handle) { position: absolute; right: -2px; top: 0; bottom: 0; width: 4px; background: #185abd; pointer-events: none; }

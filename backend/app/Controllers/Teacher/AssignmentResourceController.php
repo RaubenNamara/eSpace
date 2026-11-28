@@ -22,6 +22,26 @@ class AssignmentResourceController extends Controller
         return \eSpace\Config\Database::getInstance();
     }
 
+    /**
+     * assignment_resources.question_id (migration 170): a file for one question, e.g. the zip for an
+     * ICT practical. Added here the first time if the migration hasn't run.
+     */
+    public static function ensureQuestionColumn(\PDO $db): void
+    {
+        static $checked = false;
+        if ($checked) {
+            return;
+        }
+        $checked = true;
+        try {
+            if (!$db->query("SHOW COLUMNS FROM assignment_resources LIKE 'question_id'")->fetch()) {
+                $db->exec('ALTER TABLE assignment_resources ADD COLUMN question_id INT UNSIGNED NULL DEFAULT NULL AFTER assignment_id, ADD KEY idx_assignment_resources_question (question_id)');
+            }
+        } catch (\Throwable $e) {
+            error_log('assignment_resources.question_id check failed: ' . $e->getMessage());
+        }
+    }
+
     /** The assessment, when this teacher owns it - else null (the response is already sent) */
     private function ownAssignment(int $id): ?array
     {
@@ -46,7 +66,8 @@ class AssignmentResourceController extends Controller
         if (!$this->ownAssignment((int) $id)) {
             return;
         }
-        $stmt = $this->db()->prepare('SELECT id, file_path, original_name, file_size, created_at FROM assignment_resources WHERE assignment_id = ? ORDER BY id');
+        self::ensureQuestionColumn($this->db());
+        $stmt = $this->db()->prepare('SELECT id, question_id, file_path, original_name, file_size, created_at FROM assignment_resources WHERE assignment_id = ? ORDER BY id');
         $stmt->execute([(int) $id]);
         $this->success([
             'allowed' => FileKinds::assignmentIsIct($this->db(), (int) $id),
@@ -55,7 +76,7 @@ class AssignmentResourceController extends Controller
         ]);
     }
 
-    /** POST /teacher/assignments/{id}/resources   multipart: file */
+    /** POST /teacher/assignments/{id}/resources   multipart: file, question_id? (a file for that question only) */
     public function store($id): void
     {
         if (!$this->isAuthenticated()) {
@@ -69,6 +90,17 @@ class AssignmentResourceController extends Controller
             $this->error('Support files are for ICT assessments - choose an ICT subject first.', 422);
             return;
         }
+        // for one question of this assessment (a top-level one), or the whole assessment
+        $questionId = (int) ($_POST['question_id'] ?? 0) ?: null;
+        if ($questionId !== null) {
+            $q = $this->db()->prepare('SELECT 1 FROM assignment_questions WHERE id = ? AND assignment_id = ? AND parent_question_id IS NULL AND deleted_at IS NULL');
+            $q->execute([$questionId, (int) $id]);
+            if (!$q->fetchColumn()) {
+                $this->error('That question is not part of this assessment', 422);
+                return;
+            }
+        }
+        self::ensureQuestionColumn($this->db());
         $file = $_FILES['file'] ?? null;
         if (!$file || $file['error'] !== UPLOAD_ERR_OK) {
             $this->error('No file uploaded', 400);
@@ -94,10 +126,11 @@ class AssignmentResourceController extends Controller
             $this->serverError('The file could not be saved');
             return;
         }
-        $this->db()->prepare('INSERT INTO assignment_resources (assignment_id, file_path, original_name, file_size) VALUES (?, ?, ?, ?)')
-            ->execute([(int) $id, '/uploads/assignment_resources/' . $stored, $name, (int) $file['size']]);
+        $this->db()->prepare('INSERT INTO assignment_resources (assignment_id, question_id, file_path, original_name, file_size) VALUES (?, ?, ?, ?, ?)')
+            ->execute([(int) $id, $questionId, '/uploads/assignment_resources/' . $stored, $name, (int) $file['size']]);
         $this->success([
             'id' => (int) $this->db()->lastInsertId(),
+            'question_id' => $questionId,
             'file_path' => '/uploads/assignment_resources/' . $stored,
             'original_name' => $name,
             'file_size' => (int) $file['size'],

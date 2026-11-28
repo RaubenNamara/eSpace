@@ -96,9 +96,21 @@ class AssignmentPreviewService
      */
     public function buildPreviewPayload(array $assignment, array $questions): array
     {
+        // the support files, as learners get them (question_id: shown with that question)
+        $resources = [];
+        try {
+            $db = \eSpace\Config\Database::getInstance();
+            \eSpace\App\Controllers\Teacher\AssignmentResourceController::ensureQuestionColumn($db);
+            $r = $db->prepare('SELECT id, question_id, file_path, original_name, file_size FROM assignment_resources WHERE assignment_id = ? ORDER BY id');
+            $r->execute([(int) $assignment['id']]);
+            $resources = $r->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (\Throwable $e) {
+            // no support files table yet
+        }
         return [
             'assignment' => $assignment,
             'questions' => $questions,
+            'resources' => $resources,
             'curriculum' => $this->getCurriculumStructure((int) $assignment['id'], $assignment['assessment_category'] ?? null, $assignment['construct_id'] ?? null),
             'submission_id' => null,
             'submission_status' => 'preview',

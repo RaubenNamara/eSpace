@@ -818,6 +818,51 @@
                           </ul>
                         </div>
                       </div>
+
+                      <!-- The question's support files (ICT practical), and any waiting to upload -->
+                      <div v-if="filesOfQuestion(question).length || (question as any).supportUploads?.length" class="mt-3 flex flex-wrap items-center gap-2">
+                        <span class="inline-flex items-center gap-1 text-xs font-semibold text-sky-800 dark:text-sky-200">
+                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                          Support files:
+                        </span>
+                        <a
+                          v-for="f in filesOfQuestion(question)"
+                          :key="f.id"
+                          :href="resolveAssetUrl(f.file_path)"
+                          :download="f.original_name"
+                          class="inline-flex items-center gap-1.5 max-w-full px-2.5 py-1 rounded-lg border border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-900/20 text-xs text-sky-900 dark:text-sky-100 hover:bg-sky-100 dark:hover:bg-sky-900/40"
+                          :title="`Download ${f.original_name}`"
+                        >
+                          <span class="font-bold uppercase text-[10px] text-sky-700 dark:text-sky-300">{{ (f.original_name.split('.').pop() || '').slice(0, 5) }}</span>
+                          <span class="truncate">{{ f.original_name }}</span>
+                          <span class="text-sky-600/70 dark:text-sky-300/70 tabular-nums">{{ fileSize(f.file_size) }}</span>
+                        </a>
+                        <span
+                          v-for="(f, i) in (question as any).supportUploads || []"
+                          :key="`p-${i}`"
+                          class="inline-flex items-center gap-1.5 max-w-full px-2.5 py-1 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 text-xs text-gray-600 dark:text-gray-300"
+                        >
+                          <span class="truncate">{{ f.name }}</span>
+                          <span class="text-gray-400">· uploads when saved</span>
+                        </span>
+                      </div>
+
+                      <!-- The uploaded question paper, as learners will see it -->
+                      <div v-if="questionPdfOf(question)" class="mt-3">
+                        <div class="flex items-center flex-wrap gap-x-3 gap-y-1">
+                          <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:ring-indigo-800">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                            Question paper (PDF)
+                          </span>
+                          <button type="button" class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline" :aria-expanded="isPdfShown(question)" @click="togglePdf(question)">
+                            {{ isPdfShown(question) ? 'Hide' : 'Show' }}
+                          </button>
+                          <a :href="questionPdfOf(question)!" target="_blank" rel="noopener" class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">Open in a new tab</a>
+                        </div>
+                        <div v-if="isPdfShown(question)" class="mt-2 max-h-[70vh] overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg">
+                          <PdfAnnotationViewer :pdf-url="questionPdfOf(question)!" mode="readonly" readonly />
+                        </div>
+                      </div>
                     </div>
                     <div v-if="!isPreview" class="flex items-center gap-1 flex-wrap sm:flex-nowrap pt-2 sm:pt-0 border-t border-gray-100 dark:border-gray-700 sm:border-t-0 sm:ml-4 sm:flex-shrink-0">
                       <button
@@ -917,20 +962,58 @@
         <div ref="questionModalBody" class="space-y-4 px-[max(1rem,calc((100%-1400px)/2+2rem))] pt-3 pb-6 overflow-y-auto flex-1">
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Question Type *</label>
+            <div class="flex items-center gap-2">
             <select
               v-model="questionKind"
-              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+              class="flex-1 min-w-0 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
               :disabled="!!editingQuestion"
             >
-              <option value="multiple_choice_single">Multiple Choice - Single Answer</option>
+              <option value="multiple_choice_single">Multiple Choice</option>
               <option
-                v-if="['multiple_choice_multiple', 'true_false', 'structured', 'fill_blank', 'short_answer'].includes(questionForm.question_type)"
+                v-if="['true_false', 'structured', 'fill_blank', 'short_answer'].includes(questionForm.question_type)"
                 :value="questionForm.question_type"
               >{{ formatQuestionType(questionForm.question_type) }} (legacy)</option>
               <option value="essay">Essay</option>
               <option value="scenario">Scenario-based Question</option>
               <option v-if="isIct || questionForm.practical_app" value="practical">ICT practical (Word, Excel, PowerPoint, Access)</option>
             </select>
+            <!-- Upload a PDF question paper instead of typing the question out -->
+            <label
+              v-if="canAttachQuestionPdf && !isObjectiveQuestion && !hasQuestionPdf"
+              class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer flex-shrink-0 whitespace-nowrap focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-1"
+              :title="questionForm.question_type === 'scenario' ? 'Upload the scenario as a PDF instead of typing it' : 'Upload a PDF question paper instead of typing the question'"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+              <span><span class="hidden sm:inline">Upload </span>PDF</span>
+              <input type="file" accept="application/pdf" class="sr-only" @change="onQuestionPdfSelected">
+            </label>
+            </div>
+          </div>
+
+          <!-- The attached PDF question paper (or scenario) -->
+          <div v-if="canAttachQuestionPdf && hasQuestionPdf" class="rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-900/10 p-3">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 mb-2">
+              <a :href="questionPdfPreviewUrl || undefined" target="_blank" rel="noopener" class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline truncate min-w-0">
+                {{ questionForm.pdfFile ? questionForm.pdfFile.name : 'View attached PDF' }} (opens in new tab)
+              </a>
+              <div class="flex items-center gap-3 flex-shrink-0">
+                <label class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer">
+                  Replace
+                  <input type="file" accept="application/pdf" class="hidden" @change="onQuestionPdfSelected">
+                </label>
+                <button type="button" @click="removeQuestionPdf" class="text-sm text-red-600 dark:text-red-400 hover:underline">
+                  Remove
+                </button>
+              </div>
+            </div>
+            <div v-if="questionPdfPreviewUrl" class="max-h-[70vh] overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg">
+              <PdfAnnotationViewer
+                :key="questionPdfPreviewUrl"
+                :pdf-url="questionPdfPreviewUrl"
+                mode="readonly"
+                readonly
+              />
+            </div>
           </div>
 
           <!-- Many multiple-choice questions at once: paste or open a file, pick each answer, add them all -->
@@ -987,7 +1070,28 @@
                 Preview as a learner
               </button>
               <button v-if="hasPracticalStarter" type="button" class="px-3 py-1.5 rounded-lg text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20" @click="removePracticalStarter">Remove</button>
+              <!-- Support files for this practical (a zip of files to work on, a starting workbook...):
+                   learners view or download them with the question; uploaded when it is saved -->
+              <label class="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-sky-600 text-white hover:bg-sky-700 cursor-pointer focus-within:ring-2 focus-within:ring-sky-500 focus-within:ring-offset-1" title="Files learners need for this practical, often a zip. Word, Excel, PowerPoint, Publisher, Access, PDF, pictures, text, zip/rar/7z. Up to 50 MB each.">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0-12l-4 4m4-4l4 4" /></svg>
+                Support file
+                <input type="file" multiple class="sr-only" :accept="SUPPORT_ACCEPT" @change="onQuestionFilesPicked">
+              </label>
             </div>
+            <ul v-if="savedFilesOfForm.length || questionForm.supportUploads?.length" class="divide-y divide-gray-100 dark:divide-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+              <li v-for="f in savedFilesOfForm" :key="`s-${f.id}`" class="flex items-center gap-2.5 px-3 py-2">
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ (f.original_name.split('.').pop() || '').slice(0, 5) }}</span>
+                <a :href="resolveAssetUrl(f.file_path)" :download="f.original_name" class="flex-1 min-w-0 truncate text-sm text-indigo-700 dark:text-indigo-300 hover:underline">{{ f.original_name }}</a>
+                <span class="text-xs text-gray-400 tabular-nums">{{ fileSize(f.file_size) }}</span>
+                <button type="button" class="text-xs font-semibold text-rose-600 hover:underline" @click="removeSavedFile(f.id)">Remove</button>
+              </li>
+              <li v-for="(f, i) in questionForm.supportUploads || []" :key="`p-${i}-${f.name}`" class="flex items-center gap-2.5 px-3 py-2">
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-200">{{ (f.name.split('.').pop() || '').slice(0, 5) }}</span>
+                <span class="flex-1 min-w-0 truncate text-sm text-gray-800 dark:text-gray-100">{{ f.name }}</span>
+                <span class="text-[11px] text-gray-400">{{ fileSize(f.size) }} · uploads when saved</span>
+                <button type="button" class="text-xs font-semibold text-rose-600 hover:underline" @click="removePickedFile(i)">Remove</button>
+              </li>
+            </ul>
           </div>
           <Teleport to="body">
             <PracticalWorkspace
@@ -1015,7 +1119,7 @@
           <AoiScenarioSuggest v-if="showAoiSuggest" :topic-ids="aoiScenarioTopicIds" @close="showAoiSuggest = false" @use="useAoiScenario" />
 
           <div v-if="questionForm.question_type === 'scenario'">
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Scenario Description</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ hasQuestionPdf ? 'Scenario Description (optional - PDF attached above)' : 'Scenario Description' }}</label>
             <CKEditor
               v-model="questionForm.scenario_description!"
               :height="100"
@@ -1112,45 +1216,6 @@
             </div>
           </div>
 
-          <!-- Upload a PDF instead of typing the question out -->
-          <div v-if="questionForm.question_type !== 'scenario' && !questionForm.practical_app" class="border-2 border-dashed border-indigo-300 dark:border-indigo-700 rounded-lg p-4 bg-indigo-50/50 dark:bg-indigo-900/10">
-            <label class="block text-sm font-semibold text-indigo-900 dark:text-indigo-300 mb-2">
-              Upload a PDF question paper instead
-            </label>
-            <div v-if="!hasQuestionPdf">
-              <input
-                type="file"
-                accept="application/pdf"
-                class="block w-full text-sm text-gray-700 dark:text-gray-300 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-indigo-600 file:text-white file:text-sm hover:file:bg-indigo-700 file:cursor-pointer cursor-pointer"
-                @change="onQuestionPdfSelected"
-              >
-            </div>
-            <div v-else>
-              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 mb-2">
-                <a :href="questionPdfPreviewUrl || undefined" target="_blank" rel="noopener" class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline truncate min-w-0">
-                  {{ questionForm.pdfFile ? questionForm.pdfFile.name : 'View attached PDF' }} (opens in new tab)
-                </a>
-                <div class="flex items-center gap-3 flex-shrink-0">
-                  <label class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer">
-                    Replace
-                    <input type="file" accept="application/pdf" class="hidden" @change="onQuestionPdfSelected">
-                  </label>
-                  <button type="button" @click="removeQuestionPdf" class="text-sm text-red-600 dark:text-red-400 hover:underline">
-                    Remove
-                  </button>
-                </div>
-              </div>
-              <div v-if="questionPdfPreviewUrl" class="max-h-[70vh] overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg">
-                <PdfAnnotationViewer
-                  :key="questionPdfPreviewUrl"
-                  :pdf-url="questionPdfPreviewUrl"
-                  mode="readonly"
-                  readonly
-                />
-              </div>
-            </div>
-          </div>
-
           <div v-if="questionForm.question_type !== 'scenario'">
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {{ questionForm.practical_app ? 'The task: what learners must do *' : hasQuestionPdf ? 'Question Text (optional - PDF attached above)' : 'Question Text *' }}
@@ -1185,6 +1250,23 @@
               >
                 + Add Option
               </button>
+            </div>
+            <!-- Multiple choice: one correct answer, or several (learners then tick all that are correct) -->
+            <div v-if="isMcq" class="flex flex-wrap items-center gap-x-3 gap-y-2 mb-3">
+              <span id="mcq-mode-label" class="text-sm text-gray-600 dark:text-gray-300">Correct answers:</span>
+              <div class="inline-flex rounded-lg border border-gray-300 dark:border-gray-600 p-0.5 bg-gray-50 dark:bg-gray-800" role="radiogroup" aria-labelledby="mcq-mode-label">
+                <button
+                  v-for="m in ([['one', 'One answer'], ['several', 'More than one']] as const)"
+                  :key="m[0]"
+                  type="button"
+                  role="radio"
+                  :aria-checked="mcqMode === m[0]"
+                  class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
+                  :class="mcqMode === m[0] ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700'"
+                  @click="mcqMode = m[0]"
+                >{{ m[1] }}</button>
+              </div>
+              <span class="text-xs text-gray-500 dark:text-gray-400">{{ mcqMode === 'several' ? 'Tick every correct answer. Learners are asked to choose all that are correct.' : 'Tick the one correct answer.' }}</span>
             </div>
             <p v-if="hasQuestionPdf" class="text-xs text-gray-500 dark:text-gray-400 mb-2">
               The PDF above supplies the question itself - the system still needs the answer options typed below (with the correct one marked) to grade a student's selection automatically.
@@ -1331,6 +1413,13 @@
                       </div>
                     </div>
                   </div>
+                  <!-- The uploaded question paper, as learners will see it -->
+                  <div v-if="questionPdfOf(question)" class="mt-3">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Question paper (PDF)</p>
+                    <div class="max-h-[70vh] overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg">
+                      <PdfAnnotationViewer :pdf-url="questionPdfOf(question)!" mode="readonly" readonly />
+                    </div>
+                  </div>
                   <div class="mt-3 flex items-center flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
                     <span>Type: {{ question.question_type }}</span>
                     <span>Marks: {{ fmtMarks(question.marks) }}</span>
@@ -1420,6 +1509,10 @@ interface QuestionForm {
   practical_starter_path?: string | null
   practicalStarter?: Blob | null
   removeStarter?: boolean
+  // Transient, like pdfFile: support files picked for this question (uploaded in syncQuestions()
+  // once it has a real id), and saved ones the teacher removed
+  supportUploads?: File[]
+  supportRemoveIds?: number[]
 }
 
 const router = useRouter()
@@ -1770,8 +1863,12 @@ const questionEditorHeight = computed(() => Math.round(Math.min(560, Math.max(16
 const isIct = ref(false)
 const PRACTICAL_APP_LIST = Object.values(PRACTICAL_APPS)
 const questionKind = computed({
-  get: () => (questionForm.value.practical_app ? 'practical' : questionForm.value.question_type),
+  // one "Multiple Choice" kind: one or several correct answers is chosen with the answers (mcqMode)
+  get: () => (questionForm.value.practical_app ? 'practical'
+    : questionForm.value.question_type === 'multiple_choice_multiple' ? 'multiple_choice_single'
+    : questionForm.value.question_type),
   set: (v: string) => {
+    if (v === 'multiple_choice_single' && questionForm.value.question_type === 'multiple_choice_multiple' && !questionForm.value.practical_app) return
     if (v === 'practical') {
       questionForm.value.question_type = 'essay'
       questionForm.value.practical_app ||= 'word'
@@ -1935,6 +2032,77 @@ const hasQuestionPdf = computed(() => {
     !!questionForm.value.attachment_path &&
     questionForm.value.attachment_path !== DEFAULT_ANSWER_DOCUMENT_PATH
 })
+
+// ---- Support files for one question (ICT: a zip of files for a practical, a starting workbook...)
+// Saved ones come from the assessment's support files (those with this question_id); picked ones
+// wait in questionForm.supportUploads until the question is saved (syncQuestionFiles)
+const SUPPORT_ACCEPT = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.pub,.mdb,.accdb,.odt,.ods,.odp,.rtf,.txt,.csv,.zip,.rar,.7z,.jpg,.jpeg,.png,.gif,.webp'
+const questionFiles = ref<{ id: number; question_id: number | null; file_path: string; original_name: string; file_size: number | null }[]>([])
+const savedAssignmentId = computed(() => (isEdit.value ? (route.params.id as string) : createdId.value) || null)
+const loadQuestionFiles = async () => {
+  if (!savedAssignmentId.value) return
+  try {
+    const d = (await axios.get(`${API_BASE}/teacher/assignments/${savedAssignmentId.value}/resources`)).data.data
+    questionFiles.value = (d.files || []).filter((f: any) => f.question_id)
+  } catch { /* the list stays as it was */ }
+}
+// a question's saved support files, less any the teacher has removed but not saved yet
+const filesOfQuestion = (q: any) => {
+  const removed: number[] = q?.supportRemoveIds || []
+  return questionFiles.value.filter(f => Number(f.question_id) === Number(q?.id) && !removed.includes(f.id))
+}
+// ICT practicals only (worked in Tusome's Word, Excel, PowerPoint or Access)
+const showQuestionFiles = computed(() => !!questionForm.value.practical_app)
+const savedFilesOfForm = computed(() => {
+  const id = Number(questionForm.value.id)
+  if (!id || id > 1000000) return []
+  const removed = questionForm.value.supportRemoveIds || []
+  return questionFiles.value.filter(f => Number(f.question_id) === id && !removed.includes(f.id))
+})
+const onQuestionFilesPicked = (e: Event) => {
+  const input = e.target as HTMLInputElement
+  const picked = Array.from(input.files || [])
+  input.value = ''
+  const ok = picked.filter(f => {
+    if (f.size > 50 * 1024 * 1024) { showToast('error', `${f.name} is bigger than 50 MB`); return false }
+    const ext = '.' + (f.name.split('.').pop() || '').toLowerCase()
+    if (!SUPPORT_ACCEPT.split(',').includes(ext)) { showToast('error', `${f.name}: that kind of file can't be attached`); return false }
+    return true
+  })
+  questionForm.value.supportUploads = [...(questionForm.value.supportUploads || []), ...ok]
+}
+const removePickedFile = (i: number) => { questionForm.value.supportUploads?.splice(i, 1) }
+const removeSavedFile = (id: number) => {
+  questionForm.value.supportRemoveIds = [...(questionForm.value.supportRemoveIds || []), id]
+}
+const fileSize = (b: number | null | undefined) => (!b ? '' : b >= 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`)
+
+// every kind of question but an ICT practical (worked in Tusome's Office apps) can be a PDF paper
+const canAttachQuestionPdf = computed(() => !questionForm.value.practical_app)
+
+// A question's uploaded PDF paper (not the blank answer sheet): the saved file, or the one picked
+// for a question not saved yet. Shown in the list (and the preview) the way learners see it.
+const pdfFileUrls = new WeakMap<File, string>()
+const questionPdfOf = (q: any): string | null => {
+  if (q?.practical_app) return null
+  const file: File | null | undefined = q?.pdfFile
+  if (file) {
+    let url = pdfFileUrls.get(file)
+    if (!url) { url = URL.createObjectURL(file); pdfFileUrls.set(file, url) }
+    return url
+  }
+  const path = q?.attachment_path as string | undefined
+  if (q?.attachment_type !== 'pdf' || !path || path === DEFAULT_ANSWER_DOCUMENT_PATH) return null
+  return resolveAssetUrl(path)
+}
+// which list questions have their PDF open (all of them on the preview page)
+const shownPdfs = ref(new Set<string | number>())
+const isPdfShown = (q: any) => isPreview.value || shownPdfs.value.has(q.id)
+const togglePdf = (q: any) => {
+  const s = new Set(shownPdfs.value)
+  if (s.has(q.id)) s.delete(q.id); else s.add(q.id)
+  shownPdfs.value = s
+}
 
 const questionPdfPreviewUrl = computed(() => {
   if (questionForm.value.pdfFile) return URL.createObjectURL(questionForm.value.pdfFile)
@@ -2502,8 +2670,8 @@ const linkQuestion = (question: AssignmentQuestion, groupKey: string) => {
 
 const formatQuestionType = (type: QuestionType) => {
   const typeMap: Record<QuestionType, string> = {
-    multiple_choice_single: 'MCQ Single',
-    multiple_choice_multiple: 'MCQ Multiple',
+    multiple_choice_single: 'Multiple choice · one answer',
+    multiple_choice_multiple: 'Multiple choice · several answers',
     true_false: 'True/False',
     fill_blank: 'Fill Blank',
     short_answer: 'Short Answer',
@@ -2513,6 +2681,20 @@ const formatQuestionType = (type: QuestionType) => {
   }
   return typeMap[type] || type
 }
+
+// Multiple choice: the teacher says, while marking the answers, whether one or several are correct
+const mcqMode = computed<'one' | 'several'>({
+  get: () => (questionForm.value.question_type === 'multiple_choice_multiple' ? 'several' : 'one'),
+  set: (m) => {
+    questionForm.value.question_type = m === 'several' ? 'multiple_choice_multiple' : 'multiple_choice_single'
+    if (m === 'one') {
+      // keep only the first answer marked correct
+      let kept = false
+      questionForm.value.options.forEach(o => { if (o.is_correct) { if (kept) o.is_correct = false; kept = true } })
+    }
+  }
+})
+const isMcq = computed(() => ['multiple_choice_single', 'multiple_choice_multiple'].includes(questionForm.value.question_type))
 
 // Multiple choice - single answer: one correct choice, so ticking one unticks the rest
 const onlyOneCorrect = (index: number) => {
@@ -2633,6 +2815,7 @@ const addSubQuestion = () => {
   })
 }
 
+
 const removeSubQuestion = (index: number) => {
   if (questionForm.value.sub_questions) {
     questionForm.value.sub_questions.splice(index, 1)
@@ -2664,8 +2847,8 @@ const questionModalBody = ref<HTMLElement | null>(null)
 const saveQuestion = async (addAnother = false) => {
   // For scenario questions, validate sub-questions if they exist
   if (questionForm.value.question_type === 'scenario') {
-    if (!questionForm.value.scenario_description) {
-      showToast('error', 'Please provide a scenario description')
+    if (!questionForm.value.scenario_description && !hasQuestionPdf.value) {
+      showToast('error', 'Please provide a scenario description, or upload it as a PDF')
       return
     }
     // Sub-questions are now optional - only validate if they exist
@@ -2778,13 +2961,15 @@ const saveQuestion = async (addAnother = false) => {
       scenario_image: '',
       scenario_text: '',
       options: (prev.options || []).map((o: any) => ({ ...o, id: 0, option_text: isTrueFalse ? o.option_text : '', is_correct: false })),
-      sub_questions: (prev.sub_questions || []).map((sq: any) => ({ ...sq, id: 0, question_text: '' })),
+      sub_questions: (prev.sub_questions || []).map((sq: any, i: number) => ({ ...sq, id: Date.now() + i, question_text: '' })),
       attachment_path: undefined,
       attachment_type: 'none',
       pdfFile: null,
       practicalStarter: undefined,
       removeStarter: undefined,
-      practical_starter_path: undefined
+      practical_starter_path: undefined,
+      supportUploads: [],
+      supportRemoveIds: []
     } as any
     addedInRow.value++
     await nextTick()
@@ -2818,7 +3003,7 @@ const addImportedMcqs = (items: ImportedMcq[]) => {
       created_at: now,
       updated_at: now,
       deleted_at: undefined,
-      question_type: 'multiple_choice_single',
+      question_type: q.multiple && q.options.filter(o => o.is_correct).length > 1 ? 'multiple_choice_multiple' : 'multiple_choice_single',
       question_text: `<p>${escapeHtml(q.question_text)}</p>`,
       scenario_title: '',
       scenario_description: '',
@@ -2900,7 +3085,9 @@ const editQuestion = (question: AssignmentQuestion) => {
       option_text: opt.option_text,
       is_correct: Number(opt.is_correct) === 1 || (opt.is_correct as unknown) === true
     })),
-    sub_questions: qWithSubs.sub_questions || [],
+    // a copy: changing a part here must not change the question in the list until it is saved
+    // (Cancel keeps it as it was)
+    sub_questions: (qWithSubs.sub_questions || []).map((sq: SubQuestion) => ({ ...sq })),
     response_type: question.response_type || 'text',
     attachment_path: question.attachment_path,
     attachment_type: question.attachment_type || 'none',
@@ -2910,9 +3097,13 @@ const editQuestion = (question: AssignmentQuestion) => {
     practical_app: qWithSubs.practical_app ?? null,
     practical_starter_path: qWithSubs.practical_starter_path ?? null,
     practicalStarter: qWithSubs.practicalStarter ?? null,
-    removeStarter: qWithSubs.removeStarter ?? false
+    removeStarter: qWithSubs.removeStarter ?? false,
+    supportUploads: [...(qWithSubs.supportUploads || [])],
+    supportRemoveIds: [...(qWithSubs.supportRemoveIds || [])]
   }
   showAddQuestionModal.value = true
+  // its saved support files
+  if (showQuestionFiles.value) loadQuestionFiles()
 }
 
 const deleteQuestion = async (index: number) => {
@@ -2956,18 +3147,54 @@ const moveQuestionDown = (index: number) => {
 const uploadQuestionPdf = async (questionId: number, file: File) => {
   const formData = new FormData()
   formData.append('attachment', file)
-  await axios.post(`${API_BASE}/teacher/assignments/questions/${questionId}/attachment`, formData, {
+  const res = await axios.post(`${API_BASE}/teacher/assignments/questions/${questionId}/attachment`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   })
+  return res.data?.data as { attachment_path?: string, attachment_type?: string } | undefined
+}
+
+// A question's own support files (an ICT practical's zip...): removed ones deleted, picked ones
+// uploaded for this question. False when one failed (the teacher is told; kept for the next save).
+const syncQuestionFiles = async (assignmentId: number | string, questionId: number, uploads: File[], removeIds: number[]): Promise<boolean> => {
+  const failed: string[] = []
+  for (const rid of removeIds) {
+    try {
+      await axios.delete(`${API_BASE}/teacher/assignments/${assignmentId}/resources/${rid}`)
+    } catch (err: any) {
+      if (err.response?.status !== 404) failed.push(err.response?.data?.message || 'A file could not be removed')
+    }
+  }
+  const left: File[] = []
+  for (const file of uploads) {
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('question_id', String(questionId))
+    try {
+      await axios.post(`${API_BASE}/teacher/assignments/${assignmentId}/resources`, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+    } catch (err: any) {
+      failed.push(`${file.name}: ${err.response?.data?.message || 'could not be added'}`)
+      left.push(file)
+    }
+  }
+  await loadQuestionFiles()
+  if (failed.length) {
+    showToast('error', failed.join('\n'))
+    const q = questions.value.find(x => x.id === questionId) as any
+    if (q) { q.supportUploads = left; q.supportRemoveIds = [] }
+    return false
+  }
+  return true
 }
 
 const syncQuestions = async (assignmentId: number | string) => {
   for (const question of questions.value) {
-    const { id, assignment_id, created_at, updated_at, deleted_at, sub_questions, pdfFile, practicalStarter, removeStarter, practical_starter_path, ...questionData } = question as any
+    const { id, assignment_id, created_at, updated_at, deleted_at, sub_questions, pdfFile, practicalStarter, removeStarter, practical_starter_path, supportUploads, supportRemoveIds, ...questionData } = question as any
     const questionPayload = {
       assignment_id: assignmentId,
       ...questionData,
       sub_questions: (sub_questions || []).map((sq: SubQuestion, idx: number) => ({
+        // a saved part keeps its id (updated in place); a new one (temporary Date.now() id) is added
+        ...(sq.id > 0 && sq.id <= 1000000 ? { id: sq.id } : {}),
         question_text: sq.question_text,
         marks: sq.marks,
         display_order: sq.display_order ?? idx
@@ -2980,14 +3207,28 @@ const syncQuestions = async (assignmentId: number | string) => {
       const response = await axios.post(`${API_BASE}/teacher/assignments/${assignmentId}/questions`, questionPayload)
       realQuestionId = response.data.data.id
       question.id = realQuestionId
+      // its parts now exist too: keep their ids so the next save updates them
+      const subIds: number[] = response.data.data.sub_question_ids || []
+      ;((question as any).sub_questions || []).forEach((sq: SubQuestion, i: number) => { if (subIds[i]) sq.id = subIds[i] })
     } else {
       // Existing question - persist any edits made via the Edit Question modal
       await axios.put(`${API_BASE}/teacher/assignments/${assignmentId}/questions/${id}`, questionPayload)
     }
 
     if (pdfFile) {
-      await uploadQuestionPdf(realQuestionId, pdfFile)
+      const saved = await uploadQuestionPdf(realQuestionId, pdfFile)
+      // keep showing the paper in the list, now from the server
+      if (saved?.attachment_path) {
+        question.attachment_path = saved.attachment_path
+        question.attachment_type = (saved.attachment_type || 'pdf') as any
+      }
       ;(question as any).pdfFile = null
+    }
+    if ((supportUploads?.length || supportRemoveIds?.length) && !(await syncQuestionFiles(assignmentId, realQuestionId, supportUploads || [], supportRemoveIds || []))) {
+      // kept to try again on the next save
+    } else {
+      ;(question as any).supportUploads = []
+      ;(question as any).supportRemoveIds = []
     }
     if (questionData.practical_app && (practicalStarter || removeStarter)) {
       const url = `${API_BASE}/teacher/assignments/questions/${realQuestionId}/practical-starter`
@@ -3348,7 +3589,7 @@ const autosaveRefused = ref('')
 // Everything a save sends - question ids and picked PDFs left out, as a save changes those itself
 const snapshot = () => JSON.stringify({
   form: form.value,
-  questions: questions.value.map(q => { const { id, pdfFile, ...rest } = q as any; return rest }),
+  questions: questions.value.map(q => { const { id, pdfFile, supportUploads, ...rest } = q as any; return { ...rest, supportPending: supportUploads?.length || 0 } }),
   classes: selectedClassIds.value,
   topics: selectedTopicIds.value,
   outcomes: selectedLearningOutcomeIds.value,
@@ -3424,7 +3665,7 @@ const saveBackup = () => {
     localStorage.setItem(backupKey(), JSON.stringify({
       at: Date.now(),
       form: form.value,
-      questions: questions.value.map(q => { const { pdfFile, ...rest } = q as any; return rest })
+      questions: questions.value.map(q => { const { pdfFile, supportUploads, supportRemoveIds, ...rest } = q as any; return rest })
     }))
   } catch { /* storage full or blocked - the server save still runs */ }
 }
@@ -3451,7 +3692,7 @@ const checkBackup = () => {
     if (!raw) return
     const data = JSON.parse(raw)
     const sameQuestions = JSON.stringify((data.questions || []).map((q: any) => { const { id, ...r } = q; return r }))
-      === JSON.stringify(questions.value.map(q => { const { id, pdfFile, ...r } = q as any; return r }))
+      === JSON.stringify(questions.value.map(q => { const { id, pdfFile, supportUploads, supportRemoveIds, ...r } = q as any; return r }))
     if (sameQuestions && JSON.stringify(data.form) === JSON.stringify(form.value)) { clearBackup(); return }
     backupOffer.value = {
       questions: (data.questions || []).length,
@@ -3534,10 +3775,10 @@ onMounted(async () => {
   await loadDropdownData()
 
   if (isEdit.value) {
+    // "View" (?preview=true) shows the assessment's page itself - no pop-up over it
     await loadAssignment()
-    if (isPreview.value) {
-      showPreviewModal.value = true
-    }
+    // the questions' support files, shown with each question in the list
+    loadQuestionFiles()
     const fromItem = Number(route.query.itembank)
     const fromPage = Number(route.query.itembank_page)
     if (fromItem && fromPage) {

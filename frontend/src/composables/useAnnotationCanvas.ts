@@ -375,17 +375,21 @@ export function createTypedAnswerLayer(text: string, width: number, look: TypedA
 
 export function createMarkObject(tool: 'tick' | 'cross', point: { x: number; y: number }, color: string, useInkColor = false): Path {
   const size = 24
+  // the tick: a neat, modern checkmark in red - a short stroke down that rounds off at the bottom
+  // (no sharp corner), then a smooth stroke up to the right about twice as long (about 34 x 26)
   const path =
     tool === 'tick'
-      ? `M ${-size * 0.5} 0 L ${-size * 0.15} ${size * 0.4} L ${size * 0.5} ${-size * 0.4}`
+      ? 'M -13.5 3 C -11.5 6.5 -9.5 9.5 -7 10.5 C -5 11.5 -3 9.5 0 6 C 6 -1 12 -9 18 -15'
       : `M ${-size * 0.35} ${-size * 0.35} L ${size * 0.35} ${size * 0.35} M ${size * 0.35} ${-size * 0.35} L ${-size * 0.35} ${size * 0.35}`
   const obj = new Path(path, {
     left: point.x,
     top: point.y,
     originX: 'center',
     originY: 'center',
-    stroke: useInkColor ? color : tool === 'tick' ? '#16a34a' : '#dc2626',
-    strokeWidth: 4,
+    stroke: useInkColor ? color : '#dc2626',
+    // a clean pen line: firm enough to read as red, not bold
+    strokeWidth: tool === 'tick' ? 1.8 : 4,
+    strokeLineJoin: 'round',
     fill: '',
     strokeLineCap: 'round'
   })

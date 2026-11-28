@@ -33,13 +33,14 @@ class AssignmentController extends Controller
         ENoteAssessmentReach::backfillOnce(Database::getInstance());
 
         try {
+            \eSpace\App\Utils\AssignmentRedo::ensureSchema($this->pdo);
             $sql = "SELECT
                 a.id,
                 a.title,
                 a.instructions,
                 a.open_at,
                 COALESCE(a.published_at, a.created_at) AS set_at,
-                a.due_date,
+                " . \eSpace\App\Utils\AssignmentRedo::dueSql((string) (int) $studentId) . " AS due_date,
                 a.total_marks,
                 a.pass_mark,
                 a.duration_minutes,
@@ -158,13 +159,14 @@ class AssignmentController extends Controller
         $studentId = (int) $this->getCurrentUserId();
 
         try {
+            \eSpace\App\Utils\AssignmentRedo::ensureSchema($this->pdo);
             $stmt = $this->pdo->prepare(
                 "SELECT COUNT(DISTINCT a.id)
                  FROM assignments a
                  INNER JOIN subjects s ON a.subject_id = s.id
                  WHERE a.status = 'published' AND a.deleted_at IS NULL" . AssignmentRemoval::openOrSubmitted((string) $studentId) . "
                    AND (a.open_at IS NULL OR a.open_at <= NOW())
-                   AND (a.due_date IS NULL OR a.due_date > NOW())
+                   AND (" . \eSpace\App\Utils\AssignmentRedo::dueSql((string) $studentId) . " IS NULL OR " . \eSpace\App\Utils\AssignmentRedo::dueSql((string) $studentId) . " > NOW())
                    AND NOT EXISTS (SELECT 1 FROM assignment_submissions sb WHERE sb.assignment_id = a.id AND sb.student_id = ? AND sb.deleted_at IS NULL)
                    AND " . \eSpace\App\Services\AssignmentAccess::clause()
             );
@@ -176,12 +178,18 @@ class AssignmentController extends Controller
         }
     }
 
-    /** True once the deadline has gone by, on the database's clock. No deadline: never. */
+    /**
+     * True once the deadline has gone by, on the database's clock. No deadline: never. A learner
+     * whose work the teacher deleted to be done again has until the redo date instead.
+     */
     private function pastDeadline(int $assignmentId): bool
     {
         $stmt = $this->pdo->prepare('SELECT COALESCE(deadline_at, due_date) < NOW() FROM assignments WHERE id = :id');
         $stmt->execute(['id' => $assignmentId]);
-        return (bool) $stmt->fetchColumn();
+        if (!(bool) $stmt->fetchColumn()) {
+            return false;
+        }
+        return \eSpace\App\Utils\AssignmentRedo::until($this->pdo, $assignmentId, (int) $this->getCurrentUserId()) === null;
     }
 
     /** The refusal the answering page recognises, so it can lock instead of retrying */
@@ -250,6 +258,13 @@ class AssignmentController extends Controller
             }
             // the marking rubric is for teachers
             unset($assignment['rubric']);
+            // work deleted by the teacher to be done again: the redo date is this learner's deadline
+            $redoUntil = \eSpace\App\Utils\AssignmentRedo::until($this->pdo, (int) $assignmentId, (int) $studentId);
+            if ($redoUntil !== null) {
+                $assignment['due_date'] = $redoUntil;
+                $assignment['deadline_at'] = $redoUntil;
+                $assignment['redo_until'] = $redoUntil;
+            }
 
             // A timed paper: the questions come only once the student begins, and that starts the
             // clock. Time already run out: what was saved is handed in.
@@ -403,7 +418,9 @@ class AssignmentController extends Controller
             // whether Office files may be handed in
             $resources = [];
             try {
-                $r = $this->pdo->prepare('SELECT id, file_path, original_name, file_size FROM assignment_resources WHERE assignment_id = ? ORDER BY id');
+                // question_id: a file for that question only (shown with it), else for the whole assessment
+                \eSpace\App\Controllers\Teacher\AssignmentResourceController::ensureQuestionColumn($this->pdo);
+                $r = $this->pdo->prepare('SELECT id, question_id, file_path, original_name, file_size FROM assignment_resources WHERE assignment_id = ? ORDER BY id');
                 $r->execute([$assignmentId]);
                 $resources = $r->fetchAll();
             } catch (\PDOException $e) {
@@ -1273,7 +1290,7 @@ class AssignmentController extends Controller
     {
         $stmt = $this->pdo->prepare('SELECT due_date IS NOT NULL AND due_date < NOW() AND NOT allow_late_submission FROM assignments WHERE id = ?');
         $stmt->execute([$assignmentId]);
-        if ((bool) $stmt->fetchColumn()) {
+        if ((bool) $stmt->fetchColumn() && \eSpace\App\Utils\AssignmentRedo::until($this->pdo, $assignmentId, (int) $this->getCurrentUserId()) === null) {
             return 'The deadline has passed and late work is not allowed.';
         }
         return $submissionId !== null && $this->attemptTimeIsUp($submissionId) ? 'Time is up for this assessment.' : null;

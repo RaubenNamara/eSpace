@@ -8,12 +8,15 @@
  *   Answer: B                                (or "Ans: B", "Correct answer: B")
  *
  * A question's text may run over several lines before its first choice. The answer is optional:
- * the teacher picks any that are missing before the questions are added.
+ * the teacher picks any that are missing before the questions are added. A question can have more
+ * than one right choice: "Answer: A, C" (or "A and C", "A & C", "A/C"), or several starred.
  */
 export interface ImportedMcq {
   question_text: string
   options: { option_text: string; is_correct: boolean }[]
   marks: number
+  /** more than one correct answer (learners choose all that are correct) */
+  multiple: boolean
 }
 
 const QUESTION = /^\s*(?:q(?:uestion)?\s*)?(\d{1,3})\s*[.):-]\s*(.*)$/i
@@ -21,24 +24,24 @@ const OPTION = /^\s*(\*)?\s*\(?([a-f])\s*[.):\-]\s*(\*)?\s*(.+?)\s*(\*)?\s*$/i
 // "Answer: B", "Ans - (b)", "Correct answer: C. Keyboard"; or "Answer B" with nothing after it (so a
 // line like "Answer a question below" is not taken for an answer)
 const ANSWER = /^\s*(?:correct\s+)?(?:answer|ans)\s*(?:[:.\-]\s*\(?([a-f])\)?(?![a-z0-9])|\s+\(?([a-f])\)?[.)]?\s*$)/i
+// several: "Answers: A, C", "Ans: (a) and (d)", "Correct answers - B/C/D" (the whole line is letters)
+const ANSWERS = /^\s*(?:correct\s+)?(?:answers?|ans)\s*[:.\-]?\s*(\(?[a-f]\)?(?:\s*(?:,|and|&|\/)\s*\(?[a-f]\)?)+)\s*\.?\s*$/i
 
 export function parseMcqText(raw: string): ImportedMcq[] {
   const lines = raw.replace(/\r\n?/g, '\n').split('\n').map(l => l.replace(/ /g, ' ').trimEnd())
   const out: ImportedMcq[] = []
-  let cur: { text: string[]; options: { option_text: string; is_correct: boolean }[]; answer: string | null } | null = null
+  let cur: { text: string[]; options: { option_text: string; is_correct: boolean }[]; answer: string[] | null } | null = null
 
   const finish = () => {
     if (!cur) return
     const text = cur.text.join(' ').replace(/\s+/g, ' ').trim()
     if (text && cur.options.length >= 2) {
       if (cur.answer) {
-        const i = cur.answer.charCodeAt(0) - 97
-        cur.options.forEach((o, j) => { o.is_correct = j === i })
+        const picked = cur.answer.map(a => a.charCodeAt(0) - 97)
+        cur.options.forEach((o, j) => { o.is_correct = picked.includes(j) })
       }
-      // only one right answer: if several were starred, keep the first
-      let seen = false
-      cur.options.forEach(o => { if (o.is_correct) { if (seen) o.is_correct = false; seen = true } })
-      out.push({ question_text: text, options: cur.options, marks: 1 })
+      const correct = cur.options.filter(o => o.is_correct).length
+      out.push({ question_text: text, options: cur.options, marks: 1, multiple: correct > 1 })
     }
     cur = null
   }
@@ -48,8 +51,13 @@ export function parseMcqText(raw: string): ImportedMcq[] {
     if (!line.trim()) { gap = true; continue }
     const afterGap = gap
     gap = false
+    const many = line.match(ANSWERS)
+    if (many && cur) {
+      cur.answer = [...new Set((many[1].toLowerCase().match(/\b[a-f]\b/g) || []))]
+      continue
+    }
     const ans = line.match(ANSWER)
-    if (ans && cur) { cur.answer = (ans[1] || ans[2]).toLowerCase(); continue }
+    if (ans && cur) { cur.answer = [(ans[1] || ans[2]).toLowerCase()]; continue }
     const q = line.match(QUESTION)
     // a numbered line starts a question - unless we are still in one with no choices yet
     // (then "1." inside the text, e.g. a numbered stem, is just more of the question)

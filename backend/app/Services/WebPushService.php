@@ -351,7 +351,7 @@ class WebPushService
         $data = $data ?? [];
         return match ($type) {
             'new_live_class' => $base . '/live-classes?join=' . rawurlencode((string) ($data['live_class_id'] ?? '')),
-            'new_assessment' => $base . '/assignments/' . (int) ($data['assignment_id'] ?? 0) . '/answer',
+            'new_assessment', 'assignment_redo' => $base . '/assignments/' . (int) ($data['assignment_id'] ?? 0) . '/answer',
             'assignment_graded' => $base . '/assignments/' . (int) ($data['assignment_id'] ?? 0) . '/result/' . (int) ($data['submission_id'] ?? 0),
             'new_enote' => $base . '/enotes/' . (int) ($data['topic_id'] ?? 0),
             'new_video', 'new_video_resource' => $base . '/videos',

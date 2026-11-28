@@ -92,6 +92,7 @@ function routeForNotification(n: NotificationItem): { path: string; query?: Reco
       // handling of the `join` query param.
       return { path: `${base}/live-classes`, query: { join: String(data.live_class_id) } }
     case 'new_assessment':
+    case 'assignment_redo':
       return { path: `${base}/assignments/${data.assignment_id}/answer` }
     case 'assignment_graded':
       return { path: `${base}/assignments/${data.assignment_id}/result/${data.submission_id}` }

@@ -491,8 +491,10 @@ html.dark .dash-bar {
 .data-table-box { max-height: 70vh; overflow: auto; }
 
 /* Keyboard focus: a clear gold outline on whatever has focus - shown only for keyboard use, not
-   for a mouse click or a tap. Overrides the focus:outline-none many controls carry. */
-:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+   for a mouse click or a tap. Overrides the focus:outline-none many controls carry. Not on a
+   typing surface (a document page, a rich text box): the browser counts those as keyboard focus
+   even when clicked, which framed the whole Word page in gold; the caret shows where you are. */
+:where(a, button, input, select, textarea, summary, [tabindex]):not([contenteditable="true"]):focus-visible {
   outline: 2px solid #d9a520 !important;
   outline-offset: 2px;
 }
