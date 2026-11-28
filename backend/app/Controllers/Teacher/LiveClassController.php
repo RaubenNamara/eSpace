@@ -25,6 +25,22 @@ class LiveClassController extends Controller
                        s.name as subject_name, s.code as subject_code,
                        c.name as class_name, c.level as class_level, c.stream_name as class_stream_name";
 
+    /** How long after it ended a class can still be resumed by its teacher */
+    private const RESUME_HOURS = 3;
+
+    /** Open the class's meeting on BBB (if it is still open there, BBB simply keeps it) */
+    private function createBbbMeeting(array $class): void
+    {
+        (new BBBService())->createMeeting([
+            'meetingID' => $class['meeting_id'],
+            'name' => $class['title'],
+            'attendeePW' => $class['attendee_password'],
+            'moderatorPW' => $class['moderator_password'],
+            'record' => $class['is_recorded'] ? 'true' : 'false',
+            'welcome' => 'Welcome to ' . $class['title'],
+        ]);
+    }
+
     private function getDb()
     {
         return \eSpace\Config\Database::getInstance();
@@ -463,15 +479,7 @@ class LiveClassController extends Controller
         }
 
         try {
-            $bbb = new BBBService();
-            $bbb->createMeeting([
-                'meetingID' => $class['meeting_id'],
-                'name' => $class['title'],
-                'attendeePW' => $class['attendee_password'],
-                'moderatorPW' => $class['moderator_password'],
-                'record' => $class['is_recorded'] ? 'true' : 'false',
-                'welcome' => 'Welcome to ' . $class['title'],
-            ]);
+            $this->createBbbMeeting($class);
         } catch (\RuntimeException $e) {
             $this->error($e->getMessage(), 502);
             return;
@@ -566,6 +574,21 @@ class LiveClassController extends Controller
         if (!$class) {
             $this->notFound('Live class not found');
             return;
+        }
+
+        // A class that ended in the last few hours can be resumed: it may have been closed while
+        // still going (before the fix to LiveClassService::reconcileStatus, a student's page could
+        // end a class the teacher had only just started). The same meeting is opened again.
+        if ($class['status'] === 'ended' && $class['actual_end'] && strtotime((string) $class['actual_end']) > strtotime('-' . self::RESUME_HOURS . ' hours')) {
+            try {
+                $this->createBbbMeeting($class);
+            } catch (\RuntimeException $e) {
+                $this->error($e->getMessage(), 502);
+                return;
+            }
+            $db->prepare("UPDATE live_classes SET status = 'started', actual_end = NULL, updated_at = NOW() WHERE id = :id")
+                ->execute(['id' => $id]);
+            $class['status'] = 'started';
         }
 
         if ($class['status'] !== 'started') {

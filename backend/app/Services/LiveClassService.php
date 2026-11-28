@@ -16,6 +16,9 @@ use RuntimeException;
  */
 class LiveClassService
 {
+    /** A class is never auto-ended this soon after Start (see reconcileStatus) */
+    private const START_GRACE_MINUTES = 10;
+
     private function getDb()
     {
         return \eSpace\Config\Database::getInstance();
@@ -111,22 +114,33 @@ class LiveClassService
             return 'started';
         }
 
+        // "Running" is false until someone is inside: right after Start the teacher is still on the
+        // way into the room, and a student's page asking then used to end the class before it
+        // began. So the class only ends once BBB has no such meeting at all (BBB removes an empty
+        // meeting a few minutes after the last person leaves, or at once on End).
         try {
-            if ($bbb->isMeetingRunning($meetingId)) {
+            if ($bbb->isMeetingRunning($meetingId) || $bbb->meetingExists($meetingId)) {
                 return 'started';
             }
         } catch (RuntimeException $e) {
-            error_log("BBB isMeetingRunning check failed for live class {$liveClassId}: " . $e->getMessage());
+            error_log("BBB meeting check failed for live class {$liveClassId}: " . $e->getMessage());
             return 'started';
         }
 
         $db = $this->getDb();
         $actualEnd = date('Y-m-d H:i:s');
+        // never in the first minutes after Start, whatever BBB says
         $stmt = $db->prepare(
             "UPDATE live_classes SET status = 'ended', actual_end = :actual_end, updated_at = NOW()
-             WHERE id = :id AND status = 'started'"
+             WHERE id = :id AND status = 'started'
+               AND (actual_start IS NULL OR actual_start < NOW() - INTERVAL " . self::START_GRACE_MINUTES . " MINUTE)"
         );
         $stmt->execute(['id' => $liveClassId, 'actual_end' => $actualEnd]);
+        if ($stmt->rowCount() === 0) {
+            $now = $db->prepare("SELECT status FROM live_classes WHERE id = :id");
+            $now->execute(['id' => $liveClassId]);
+            return (string) ($now->fetchColumn() ?: 'started');
+        }
 
         $this->closeAttendance($liveClassId, $actualStart ?? $actualEnd, $actualEnd);
 

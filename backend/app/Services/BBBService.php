@@ -92,6 +92,25 @@ class BBBService
     }
 
     /**
+     * Whether the meeting still exists on the BBB server, even with nobody in it. isMeetingRunning()
+     * says false until the first person is inside (and for a moment if everyone drops out), so it
+     * can't tell "not in yet" from "over"; a meeting that is over is removed by BBB (or by End).
+     * Throws on any error other than "no such meeting".
+     */
+    public function meetingExists(string $meetingId): bool
+    {
+        try {
+            $this->call('getMeetingInfo', ['meetingID' => $meetingId]);
+            return true;
+        } catch (RuntimeException $e) {
+            if ($e->getCode() === 404) {
+                return false;
+            }
+            throw $e;
+        }
+    }
+
+    /**
      * Get live info about a running meeting (participant count, etc.)
      */
     public function getMeetingInfo(string $meetingId, string $password): array
@@ -249,7 +268,9 @@ class BBBService
         $returnCode = (string) ($xml->returncode ?? '');
         if ($returnCode !== 'SUCCESS') {
             $message = (string) ($xml->message ?? 'Unknown BigBlueButton error');
-            throw new RuntimeException("BigBlueButton error: {$message}");
+            // code 404: BBB has no such meeting (messageKey notFound), as opposed to any other failure
+            $notFound = (string) ($xml->messageKey ?? '') === 'notFound';
+            throw new RuntimeException("BigBlueButton error: {$message}", $notFound ? 404 : 0);
         }
 
         return $xml;

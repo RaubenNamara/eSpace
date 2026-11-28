@@ -111,6 +111,7 @@
               </div>
             </div>
             <div class="flex flex-wrap gap-1.5 sm:justify-end">
+              <button v-if="canResume(cls)" type="button" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-red-600 text-white hover:bg-red-700 disabled:opacity-60" :disabled="actingId === cls.id" title="Open this class again and join it" @click="resumeClass(cls)">Resume class</button>
               <button v-if="cls.status === 'ended'" type="button" class="px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700" @click="openAttendance(cls)">Attendance</button>
               <button v-if="cls.status === 'ended' && cls.is_recorded" type="button" class="px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700" @click="openRecordings(cls)">Recordings</button>
               <button type="button" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-200" @click="scheduleAgain(cls)">Schedule again</button>
@@ -587,6 +588,13 @@ const joinClass = async (cls: LiveClass) => {
   } finally {
     actingId.value = null
   }
+}
+
+// A class that ended in the last 3 hours can be opened again (same as RESUME_HOURS on the server)
+const canResume = (cls: LiveClass) => cls.status === 'ended' && !!cls.actual_end && now.value - at(cls.actual_end) < 3 * 3600_000
+const resumeClass = async (cls: LiveClass) => {
+  await joinClass(cls)
+  await loadClasses()
 }
 
 const deleteClass = async (id: number) => {
