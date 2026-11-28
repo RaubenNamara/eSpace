@@ -42,6 +42,7 @@
 </template>
 
 <script setup lang="ts">
+import { openMeetingTab, sendToMeeting, closeMeetingTab } from '@/utils/meetingTab'
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
@@ -119,7 +120,29 @@ function routeForNotification(n: NotificationItem): { path: string; query?: Reco
   }
 }
 
+// A student clicking "new live class": straight into the class in a new tab. The tab must open on
+// the click itself (before anything is awaited) or the browser blocks it as a pop-up; if the class
+// can't be joined (not started yet, or over) the tab closes and the Live Classes page says why.
+const joinLiveClassFrom = async (n: NotificationItem): Promise<boolean> => {
+  const id = n.data?.live_class_id
+  if (n.type !== 'new_live_class' || authStore.userRole !== 'student' || !id) return false
+  const tab = openMeetingTab()
+  try {
+    const res = await axios.post(`/api/student/live-classes/${id}/join`)
+    const url = res.data?.data?.join_url
+    if (!res.data?.success || !url) throw new Error('no link')
+    sendToMeeting(tab, url)
+    emit('navigate')
+    router.push({ path: '/student/live-classes' })
+    return true
+  } catch {
+    closeMeetingTab(tab)
+    return false
+  }
+}
+
 const onItemClick = async (n: NotificationItem) => {
+  const joining = joinLiveClassFrom(n)
   if (!n.is_read) {
     n.is_read = true
     try {
@@ -130,6 +153,7 @@ const onItemClick = async (n: NotificationItem) => {
     }
   }
 
+  if (await joining) return
   const target = routeForNotification(n)
   if (target) {
     emit('navigate')

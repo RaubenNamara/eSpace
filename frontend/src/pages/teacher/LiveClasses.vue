@@ -202,10 +202,10 @@
               </div>
             </div>
 
-            <label class="flex items-center gap-2 mb-6 cursor-pointer">
-              <input v-model="form.is_recorded" type="checkbox" class="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500">
-              <span class="text-sm text-gray-700 dark:text-gray-300">Record this session</span>
-            </label>
+            <p class="flex items-center gap-2 mb-6 text-sm text-gray-600 dark:text-gray-300">
+              <span class="w-2.5 h-2.5 rounded-full bg-red-600" aria-hidden="true"></span>
+              Every lesson is recorded automatically, so students can watch it later.
+            </p>
 
             <div class="flex justify-end gap-3">
               <button type="button" @click="closeModal" class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
@@ -357,7 +357,7 @@ function blankForm(): LiveClassForm {
   return {
     title: '', description: '', subject_id: '',
     classTarget: { scope: 'stream', class_id: null, class_group_name: null },
-    scheduled_start: '', scheduled_end: '', is_recorded: false
+    scheduled_start: '', scheduled_end: '', is_recorded: true
   }
 }
 

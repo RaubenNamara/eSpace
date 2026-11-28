@@ -28,6 +28,12 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close()
   const url = new URL((event.notification.data && event.notification.data.url) || '/', self.location.origin).href
   event.waitUntil((async () => {
+    // A live class: always a new tab, which goes straight into the class (?join=, see
+    // student LiveClasses.vue), so the Tusome tab the student was using stays as it was
+    if (/\/live-classes\?join=/.test(url)) {
+      await self.clients.openWindow(url)
+      return
+    }
     const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
     const open = windows.find((w) => new URL(w.url).origin === self.location.origin)
     if (open) {

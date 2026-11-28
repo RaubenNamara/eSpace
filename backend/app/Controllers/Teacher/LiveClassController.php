@@ -28,7 +28,11 @@ class LiveClassController extends Controller
     /** How long after it ended a class can still be resumed by its teacher */
     private const RESUME_HOURS = 3;
 
-    /** Open the class's meeting on BBB (if it is still open there, BBB simply keeps it) */
+    /**
+     * Open the class's meeting on BBB (if it is still open there, BBB simply keeps it). Every
+     * lesson is recorded, from the moment the room opens until it ends: nobody has to tick a box
+     * or press BBB's record button, and it can't be stopped halfway by mistake.
+     */
     private function createBbbMeeting(array $class): void
     {
         (new BBBService())->createMeeting([
@@ -36,9 +40,14 @@ class LiveClassController extends Controller
             'name' => $class['title'],
             'attendeePW' => $class['attendee_password'],
             'moderatorPW' => $class['moderator_password'],
-            'record' => $class['is_recorded'] ? 'true' : 'false',
-            'welcome' => 'Welcome to ' . $class['title'],
+            'record' => 'true',
+            'autoStartRecording' => 'true',
+            'allowStartStopRecording' => 'false',
+            'welcome' => 'Welcome to ' . $class['title'] . '. This lesson is being recorded.',
         ]);
+        if (empty($class['is_recorded']) && !empty($class['id'])) {
+            $this->getDb()->prepare("UPDATE live_classes SET is_recorded = 1 WHERE id = :id")->execute(['id' => (int) $class['id']]);
+        }
     }
 
     private function getDb()
@@ -257,7 +266,7 @@ class LiveClassController extends Controller
         $meetingId = 'espace_' . bin2hex(random_bytes(12));
         $moderatorPassword = bin2hex(random_bytes(8));
         $attendeePassword = bin2hex(random_bytes(8));
-        $isRecorded = !empty($data['is_recorded']) ? 1 : 0;
+        $isRecorded = 1; // every lesson is recorded (see createBbbMeeting)
 
         $sql = "INSERT INTO live_classes
                     (subject_id, class_id, class_group_name, department_id, title, description, scheduled_start, scheduled_end,
@@ -376,10 +385,7 @@ class LiveClassController extends Controller
             $params['scheduled_end'] = date('Y-m-d H:i:s', $end);
         }
 
-        if (array_key_exists('is_recorded', $data)) {
-            $updates[] = 'is_recorded = :is_recorded';
-            $params['is_recorded'] = !empty($data['is_recorded']) ? 1 : 0;
-        }
+        // every lesson is recorded (see createBbbMeeting): is_recorded is no longer a choice
 
         if (empty($updates)) {
             $this->error('No fields to update', 400);
