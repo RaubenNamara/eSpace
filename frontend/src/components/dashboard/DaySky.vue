@@ -82,7 +82,7 @@ export type DayPeriod = 'morning' | 'afternoon' | 'evening' | 'night'
 // noLabel: a banner whose own content runs across the sky (badges, cards) leaves out the words
 const props = defineProps<{ period: DayPeriod; narrow?: boolean; sunX?: number; noLabel?: boolean }>()
 const uid = Math.random().toString(36).slice(2, 8)
-const { weather } = useWeather()
+const { weather, label } = useWeather()
 
 const looks: Record<DayPeriod, { sky: string[]; glow: string; glowR: number; sun: string; sunLight: string; cloud: string; hillBack: string; hillFront: string; x: number; y: number }> = {
   morning: { sky: ['#eaf3ff', '#e2efff', '#ffe6c8', '#ffd2a1'], glow: '#ffd27a', glowR: 150, sun: '#ffab2e', sunLight: '#ffe58a', cloud: '#ffffff', hillBack: '#a9dbb2', hillFront: '#74c088', x: 1400, y: 126 },
@@ -171,14 +171,6 @@ const drops = computed(() => {
 const fogBands: [number, number, number, number][] = [
   [700, 70, 520, 0.55], [980, 96, 600, 0.6], [820, 122, 700, 0.5], [1100, 146, 480, 0.55], [600, 158, 640, 0.45],
 ]
-
-const label = computed(() => {
-  const w = weather.value
-  if (!w) return ''
-  const t = w.temp_c !== null ? `${w.temp_c}°` : ''
-  const words = w.rain_soon ? 'Rain likely soon' : w.description
-  return [t, words].filter(Boolean).join(' · ')
-})
 
 const stars: [number, number, number][] = [
   [720, 60, 1.6], [800, 110, 1.2], [880, 50, 1.8], [960, 90, 1.3], [1040, 46, 1.5], [1110, 120, 1.2], [1180, 64, 1.9],

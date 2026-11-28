@@ -1,4 +1,4 @@
-import { onUnmounted, ref } from 'vue'
+import { computed, onUnmounted, ref } from 'vue'
 import api from '@/services/api'
 
 /**
@@ -26,6 +26,14 @@ const PLACE_KEY = 'tusome.weatherPlace'
 const PLACE_HOURS = 6
 
 const weather = ref<Weather | null>(null)
+/** The weather in words for a banner, e.g. "24° · Partly cloudy" ('' while there is none) */
+const label = computed(() => {
+  const w = weather.value
+  if (!w) return ''
+  const t = w.temp_c !== null ? `${w.temp_c}°` : ''
+  const words = w.rain_soon ? 'Rain likely soon' : w.description
+  return [t, words].filter(Boolean).join(' · ')
+})
 let lastFetch = 0
 let inFlight: Promise<void> | null = null
 let users = 0
@@ -98,5 +106,5 @@ export function useWeather() {
       timer = undefined
     }
   })
-  return { weather }
+  return { weather, label }
 }
