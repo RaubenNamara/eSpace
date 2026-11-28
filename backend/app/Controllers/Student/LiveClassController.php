@@ -219,7 +219,7 @@ class LiveClassController extends Controller
             $stmt = $db->prepare(
                 "INSERT INTO live_class_attendance (live_class_id, student_id, join_time, created_at)
                  VALUES (:live_class_id, :student_id, NOW(), NOW())
-                 ON DUPLICATE KEY UPDATE join_time = NOW(), leave_time = NULL, duration_minutes = NULL, attendance_status = 'present'"
+                 ON DUPLICATE KEY UPDATE join_time = IF(leave_time IS NULL, join_time, NOW()), leave_time = NULL, duration_minutes = NULL, attendance_status = 'present'"
             );
             $stmt->execute(['live_class_id' => $id, 'student_id' => $studentId]);
         } catch (\PDOException $e) {

@@ -33,10 +33,11 @@
           </div>
           <button
             type="button"
-            :disabled="actingId === cls.id || isAlreadyJoined(cls)"
+            :disabled="actingId === cls.id"
             class="px-6 py-2.5 rounded-xl text-sm font-bold bg-white text-red-700 hover:bg-red-50 disabled:opacity-70 disabled:cursor-not-allowed"
+            :title="isAlreadyJoined(cls) ? 'Open the class again (if its tab was closed or never opened)' : undefined"
             @click="joinClass(cls)"
-          >{{ actingId === cls.id ? 'Joining…' : (isAlreadyJoined(cls) ? 'You\'re in - check the other tab' : 'Join now') }}</button>
+          >{{ actingId === cls.id ? 'Joining…' : (isAlreadyJoined(cls) ? 'You\'re in · open the class' : 'Join now') }}</button>
         </div>
       </div>
 
@@ -144,6 +145,7 @@
 </template>
 
 <script setup lang="ts">
+import { openMeetingTab, sendToMeeting, closeMeetingTab } from '@/utils/meetingTab'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import StatStrip, { type StatItem } from '@/components/ui/StatStrip.vue'
@@ -303,20 +305,31 @@ const loadClasses = async () => {
   }
 }
 
-const joinClass = async (cls: LiveClass) => {
-  if (isAlreadyJoined(cls)) return
+// fromClick: the class tab opens on the click itself (see utils/meetingTab); without a click
+// (joining from a notification) the class opens in this tab
+const joinClass = async (cls: LiveClass, fromClick = true) => {
+  // its tab is still open: just go back to it
+  const open = openPopups.get(cls.id)
+  if (open && !open.closed) {
+    open.focus()
+    return
+  }
+  const tab = fromClick ? openMeetingTab() : null
   actingId.value = cls.id
   try {
     const response = await axios.post(`${API_BASE}/student/live-classes/${cls.id}/join`)
     if (response.data.success) {
       joinedIds.value.add(cls.id)
-      const popup = window.open(response.data.data.join_url, '_blank')
+      const popup = sendToMeeting(tab, response.data.data.join_url)
       if (popup) {
         openPopups.set(cls.id, popup)
         startPopupWatcher()
       }
+    } else {
+      closeMeetingTab(tab)
     }
   } catch (err: any) {
+    closeMeetingTab(tab)
     toast.error(err.response?.data?.message || 'Failed to join the class')
   } finally {
     actingId.value = null
@@ -357,7 +370,7 @@ const handleAutoJoin = async () => {
   }
 
   if (cls.status === 'started') {
-    await joinClass(cls)
+    await joinClass(cls, false)
   } else if (cls.status === 'scheduled') {
     autoJoinNotice.value = `"${cls.title}" hasn't started yet - you'll see a Join button here as soon as the teacher goes live.`
   } else {

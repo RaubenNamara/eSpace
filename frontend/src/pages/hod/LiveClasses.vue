@@ -142,6 +142,7 @@
 </template>
 
 <script setup lang="ts">
+import { openMeetingTab, sendToMeeting, closeMeetingTab } from '@/utils/meetingTab'
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import PageHeader from '@/components/ui/PageHeader.vue'
@@ -236,13 +237,17 @@ const loadClasses = async () => {
   }
 }
 const joinClass = async (cls: LiveClass) => {
+  const tab = openMeetingTab() // on the click, so the browser doesn't block it as a pop-up
   actingId.value = cls.id
   try {
     const response = await axios.post(`${API_BASE}/hod/live-classes/${cls.id}/join`)
     if (response.data.success) {
-      window.open(response.data.data.join_url, '_blank')
+      sendToMeeting(tab, response.data.data.join_url)
+    } else {
+      closeMeetingTab(tab)
     }
   } catch (error: any) {
+    closeMeetingTab(tab)
     toast.error(error.response?.data?.message || 'Failed to join the class')
   } finally {
     actingId.value = null
