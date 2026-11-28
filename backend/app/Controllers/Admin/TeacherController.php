@@ -780,6 +780,9 @@ class TeacherController extends Controller
             $sql = "UPDATE teachers SET " . implode(', ', $updates) . " WHERE id = :id";
             $stmt = $db->prepare($sql);
             $stmt->execute($params);
+            if (isset($params['password'])) {
+                (new \eSpace\App\Repositories\UserRepository())->syncLinkedPassword('teachers', (int) $id, $params['password']);
+            }
         }
 
         // Keep the membership table in sync if a caller still updates department_id directly
@@ -1028,6 +1031,8 @@ class TeacherController extends Controller
         $result = $stmt->execute(['password' => $hashedPassword, 'id' => $id]);
 
         if ($result) {
+            // a teacher who is also an HOD signs in through the HOD row: same new password there
+            (new \eSpace\App\Repositories\UserRepository())->syncLinkedPassword('teachers', $id, $hashedPassword);
             $this->success([], 'Password reset successfully');
 
             // Log the action (without storing the password)

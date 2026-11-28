@@ -314,6 +314,9 @@ class HODController extends Controller
             $sql = "UPDATE hods SET " . implode(', ', $updates) . " WHERE id = :id";
             $stmt = $this->db->prepare($sql);
             $stmt->execute($params);
+            if (isset($params['password'])) {
+                (new \eSpace\App\Repositories\UserRepository())->syncLinkedPassword('hods', (int) $id, $params['password']);
+            }
         }
 
         $this->success([], 'HOD updated successfully');

@@ -216,7 +216,29 @@ class UserRepository extends Repository
 
         $db = \eSpace\Config\Database::getInstance();
         $stmt = $db->prepare("UPDATE {$table} SET password = :password WHERE id = :id");
-        return $stmt->execute(['password' => $hashedPassword, 'id' => $id]) && $stmt->rowCount() > 0;
+        $ok = $stmt->execute(['password' => $hashedPassword, 'id' => $id]) && $stmt->rowCount() > 0;
+        if ($ok) {
+            $this->syncLinkedPassword($table, $id, $hashedPassword);
+        }
+        return $ok;
+    }
+
+    /**
+     * A teacher who is also an HOD has two rows (teachers + hods, same username) and signs in
+     * through the HOD row, which findByUsernameOrEmail() checks first. Their password is one
+     * password: whenever either row's password changes, the linked row gets the same hash, or a
+     * reset on one side would never reach the row the sign-in actually checks.
+     */
+    public function syncLinkedPassword(string $table, int $id, string $hashedPassword): void
+    {
+        $db = \eSpace\Config\Database::getInstance();
+        if ($table === 'teachers') {
+            $db->prepare("UPDATE hods SET password = :password WHERE teacher_id = :id AND deleted_at IS NULL")
+                ->execute(['password' => $hashedPassword, 'id' => $id]);
+        } elseif ($table === 'hods') {
+            $db->prepare("UPDATE teachers t JOIN hods h ON h.teacher_id = t.id SET t.password = :password WHERE h.id = :id AND t.deleted_at IS NULL")
+                ->execute(['password' => $hashedPassword, 'id' => $id]);
+        }
     }
 
     /**
@@ -239,6 +261,7 @@ class UserRepository extends Repository
         $stmt = $db->prepare("UPDATE teachers SET password = :password WHERE id = :id");
         $result = $stmt->execute(['password' => $hashedPassword, 'id' => $userId]);
         if ($result && $stmt->rowCount() > 0) {
+            $this->syncLinkedPassword('teachers', $userId, $hashedPassword);
             return true;
         }
 
@@ -253,6 +276,7 @@ class UserRepository extends Repository
         $stmt = $db->prepare("UPDATE hods SET password = :password WHERE id = :id");
         $result = $stmt->execute(['password' => $hashedPassword, 'id' => $userId]);
         if ($result && $stmt->rowCount() > 0) {
+            $this->syncLinkedPassword('hods', $userId, $hashedPassword);
             return true;
         }
 
